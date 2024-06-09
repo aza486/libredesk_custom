@@ -18,12 +18,12 @@ import (
 // Config loads config files into koanf.
 func Config(ko *koanf.Koanf) {
 	for _, f := range ko.Strings("config") {
-		log.Println("reading config file: ", f)
+		log.Println("reading config file:", f)
 		if err := ko.Load(file.Provider(f), toml.Parser()); err != nil {
 			if os.IsNotExist(err) {
 				log.Fatal("config file not found.")
 			}
-			log.Fatalf("loading config from file: %v.", err)
+			log.Fatalf("error loading config from file: %v.", err)
 		}
 	}
 }
@@ -48,7 +48,7 @@ func DB(ko *koanf.Koanf) *sqlx.DB {
 	db, err := sqlx.Connect("postgres",
 		fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s %s", c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode, c.Params))
 	if err != nil {
-		log.Fatalf("connecting to DB %v", err)
+		log.Fatalf("error connecting to DB %v", err)
 	}
 
 	db.SetMaxOpenConns(c.MaxOpen)
@@ -67,13 +67,13 @@ func Redis(ko *koanf.Koanf) *redis.Client {
 }
 
 // Logger initialies a logf logger.
-func Logger(lvl string, env string) logf.Logger {
+func Logger(lvl string, env, src string) logf.Logger {
 	lo := logf.New(logf.Opts{
 		Level:                getLogLevel(lvl),
 		EnableColor:          getColor(env),
 		EnableCaller:         true,
 		CallerSkipFrameCount: 3,
-		DefaultFields:        []any{"sc", "artemis"},
+		DefaultFields:        []any{"sc", src},
 	})
 	return lo
 }

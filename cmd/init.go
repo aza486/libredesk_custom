@@ -6,15 +6,25 @@ import (
 	"log"
 	"os"
 
+	"github.com/abhinavxd/artemis/internal/attachment"
+	"github.com/abhinavxd/artemis/internal/attachment/stores/s3"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
-	"github.com/abhinavxd/artemis/internal/conversations"
-	"github.com/abhinavxd/artemis/internal/media"
-	"github.com/abhinavxd/artemis/internal/media/stores/s3"
-	"github.com/abhinavxd/artemis/internal/tags"
-	user "github.com/abhinavxd/artemis/internal/userdb"
+	"github.com/abhinavxd/artemis/internal/contact"
+	"github.com/abhinavxd/artemis/internal/conversation"
+	convtag "github.com/abhinavxd/artemis/internal/conversation/tag"
+	"github.com/abhinavxd/artemis/internal/inbox"
+	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
+	"github.com/abhinavxd/artemis/internal/message"
+	mmodels "github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/tag"
+	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/user"
+	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
+	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/posflag"
+	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 	flag "github.com/spf13/pflag"
 	"github.com/vividvilla/simplesessions"
@@ -24,8 +34,8 @@ import (
 
 // consts holds the app constants.
 type consts struct {
-	ChatReferenceNumberPattern   string
-	AllowedMediaUploadExtensions []string
+	AppBaseURL                  string
+	AllowedFileUploadExtensions []string
 }
 
 func initFlags() {
@@ -51,15 +61,15 @@ func initFlags() {
 	}
 }
 
-func initConstants(ko *koanf.Koanf) consts {
+func initConstants() consts {
 	return consts{
-		ChatReferenceNumberPattern:   ko.String("app.constants.chat_reference_number_pattern"),
-		AllowedMediaUploadExtensions: ko.Strings("app.constants.allowed_media_upload_extensions"),
+		AppBaseURL:                  ko.String("app.constants.base_url"),
+		AllowedFileUploadExtensions: ko.Strings("app.constants.allowed_file_upload_extensions"),
 	}
 }
 
 // initSessionManager initializes and returns a simplesessions.Manager instance.
-func initSessionManager(rd *redis.Client, ko *koanf.Koanf) *simplesessions.Manager {
+func initSessionManager(rd *redis.Client) *simplesessions.Manager {
 	ttl := ko.Duration("app.session.cookie_ttl")
 	s := simplesessions.New(simplesessions.Options{
 		CookieName:       ko.MustString("app.session.cookie_name"),
@@ -86,59 +96,103 @@ func initSessionManager(rd *redis.Client, ko *koanf.Koanf) *simplesessions.Manag
 	return s
 }
 
-func initUserDB(DB *sqlx.DB, lo *logf.Logger, ko *koanf.Koanf) *user.UserDB {
-	udb, err := user.New(user.Opts{
+func initUserDB(DB *sqlx.DB, lo *logf.Logger) *user.Manager {
+	mgr, err := user.New(user.Opts{
 		DB:         DB,
 		Lo:         lo,
 		BcryptCost: ko.MustInt("app.user.password_bcypt_cost"),
 	})
 	if err != nil {
-		log.Fatalf("error initializing userdb: %v", err)
+		log.Fatalf("error initializing user manager: %v", err)
 	}
-	return udb
+	return mgr
 }
 
-func initConversations(db *sqlx.DB, lo *logf.Logger, ko *koanf.Koanf) *conversations.Conversations {
-	c, err := conversations.New(conversations.Opts{
-		DB: db,
-		Lo: lo,
+func initConversations(db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
+	c, err := conversation.New(conversation.Opts{
+		DB:                  db,
+		Lo:                  lo,
+		ReferenceNumPattern: ko.String("app.constants.conversation_reference_number_pattern"),
 	})
 	if err != nil {
-		log.Fatalf("error initializing conversations: %v", err)
+		log.Fatalf("error initializing conversation manager: %v", err)
 	}
 	return c
 }
 
-func initTags(db *sqlx.DB, lo *logf.Logger) *tags.Tags {
-	t, err := tags.New(tags.Opts{
+func initConversationTags(db *sqlx.DB, lo *logf.Logger) *convtag.Manager {
+	mgr, err := convtag.New(convtag.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing conversation tags: %v", err)
+	}
+	return mgr
+}
+
+func initTags(db *sqlx.DB, lo *logf.Logger) *tag.Manager {
+	mgr, err := tag.New(tag.Opts{
 		DB: db,
 		Lo: lo,
 	})
 	if err != nil {
 		log.Fatalf("error initializing tags: %v", err)
 	}
-	return t
+	return mgr
 }
 
-func initCannedResponse(db *sqlx.DB, lo *logf.Logger) *cannedresp.CannedResp {
+func initCannedResponse(db *sqlx.DB, lo *logf.Logger) *cannedresp.Manager {
 	c, err := cannedresp.New(cannedresp.Opts{
 		DB: db,
 		Lo: lo,
 	})
 	if err != nil {
-		log.Fatalf("error initializing canned responses: %v", err)
+		log.Fatalf("error initializing canned responses manager: %v", err)
 	}
 	return c
 }
 
-func initMediaManager(ko *koanf.Koanf, db *sqlx.DB) *media.Manager {
+func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
+	m, err := contact.New(contact.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing contact manager: %v", err)
+	}
+	return m
+}
+
+func initMessages(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager, conversationMgr *conversation.Manager, inboxMgr *inbox.Manager) *message.Manager {
+	mgr, err := message.New(incomingMsgQ, wsHub, contactMgr, attachmentMgr, inboxMgr, conversationMgr, message.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing message manager: %v", err)
+	}
+	return mgr
+}
+
+func initTeamMgr(db *sqlx.DB, lo *logf.Logger) *team.Manager {
+	mgr, err := team.New(team.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing team manager: %v", err)
+	}
+	return mgr
+}
+
+func initAttachmentsManager(db *sqlx.DB, lo *logf.Logger) *attachment.Manager {
 	var (
-		manager *media.Manager
-		store   media.Store
-		err     error
+		mgr   *attachment.Manager
+		store attachment.Store
+		err   error
 	)
-	// First init the store.
-	switch s := ko.MustString("app.media_store"); s {
+	switch s := ko.MustString("app.attachment_store"); s {
 	case "s3":
 		store, err = s3.New(s3.Opt{
 			URL:        ko.String("s3.url"),
@@ -155,13 +209,84 @@ func initMediaManager(ko *koanf.Koanf, db *sqlx.DB) *media.Manager {
 			log.Fatalf("error initializing s3 %v", err)
 		}
 	default:
-		log.Fatal("media store not available.")
+		log.Fatalf("media store: %s not available", s)
 	}
 
-	manager, err = media.New(store, db)
+	mgr, err = attachment.New(attachment.Opts{
+		Store:      store,
+		Lo:         lo,
+		DB:         db,
+		AppBaseURL: ko.String("app.constants.base_url"),
+	})
 	if err != nil {
-		log.Fatalf("initializing media manager %v", err)
+		log.Fatalf("initializing attachments manager %v", err)
+	}
+	return mgr
+}
+
+// initInboxManager initializes the inbox manager and the `active` inboxes.
+func initInboxManager(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.IncomingMessage) *inbox.Manager {
+	mgr, err := inbox.New(lo, db, incomingMsgQ)
+	if err != nil {
+		log.Fatalf("error initializing inbox manager: %v", err)
 	}
 
-	return manager
+	inboxRecords, err := mgr.GetActiveInboxes()
+	if err != nil {
+		log.Fatalf("error fetching active inboxes %v", err)
+	}
+
+	for _, inboxR := range inboxRecords {
+		switch inboxR.Channel {
+		case "email":
+			log.Printf("initializing `Email` inbox: %s", inboxR.Name)
+			inbox, err := initEmailInbox(inboxR)
+			if err != nil {
+				log.Fatalf("error initializing email inbox %v", err)
+			}
+			mgr.Register(inbox)
+		default:
+			log.Printf("WARNING: Unknown inbox channel: %s", inboxR.Name)
+		}
+	}
+	return mgr
+}
+
+// initEmailInbox initializes the email inbox.
+func initEmailInbox(inboxRecord inbox.InboxRecord) (inbox.Inbox, error) {
+	var config email.Config
+
+	// Load JSON data into Koanf.
+	if err := ko.Load(rawbytes.Provider([]byte(inboxRecord.Config)), json.Parser()); err != nil {
+		log.Fatalf("error loading config: %v", err)
+	}
+
+	if err := ko.UnmarshalWithConf("", &config, koanf.UnmarshalConf{Tag: "json"}); err != nil {
+		log.Fatalf("error unmarshalling `%s` %s config: %v", inboxRecord.Channel, inboxRecord.Name, err)
+	}
+
+	if len(config.SMTP) == 0 {
+		log.Printf("WARNING: Zero SMTP servers configured for `%s` inbox: Name: `%s`", inboxRecord.Channel, inboxRecord.Name)
+	}
+
+	if len(config.IMAP) == 0 {
+		log.Printf("WARNING: Zero IMAP clients configured for `%s` inbox: Name: `%s`", inboxRecord.Channel, inboxRecord.Name)
+	}
+
+	// Set from addr.
+	config.From = inboxRecord.From
+
+	inbox, err := email.New(email.Opts{
+		ID:     inboxRecord.ID,
+		Config: config,
+	})
+
+	if err != nil {
+		log.Fatalf("ERROR: initalizing `%s` inbox: `%s` error : %v", inboxRecord.Channel, inboxRecord.Name, err)
+		return nil, err
+	}
+
+	log.Printf("`%s` inbox: `%s` successfully initalized. %d smtp servers. %d imap clients.", inboxRecord.Channel, inboxRecord.Name, len(config.SMTP), len(config.IMAP))
+
+	return inbox, nil
 }

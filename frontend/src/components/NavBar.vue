@@ -19,7 +19,7 @@ defineProps({
 const route = useRoute();
 
 const getButtonVariant = (title) => {
-    return route.name === title.toLowerCase() ? "default" : "ghost"
+    return route.name === title.toLowerCase() ? "secondary" : "ghost"
 }
 
 </script>
@@ -40,7 +40,7 @@ const getButtonVariant = (title) => {
                                     link.variant === getButtonVariant(link.title)
                                     && 'dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white',
                                 )">
-                                    <Icon :icon="link.icon" class="size-4" />
+                                    <Icon :icon="link.icon" class="size-5" />
                                     <span class="sr-only">{{ link.title }}</span>
                                 </span>
                             </TooltipTrigger>
@@ -61,7 +61,7 @@ const getButtonVariant = (title) => {
                     && 'dark:bg-muted dark:text-white dark:hover:bg-muted dark:hover:text-white',
                     'justify-start',
                 )">
-                    <Icon :icon="link.icon" class="mr-2 size-4" />
+                    <Icon :icon="link.icon" class="mr-2 size-5" />
                     {{ link.title }}
                     <span v-if="link.label" :class="cn(
                         'ml-auto',

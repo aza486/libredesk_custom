@@ -2,58 +2,42 @@
   <div class="p-3">
     <div>
       <Avatar class="size-20">
-        <AvatarImage :src=conversationStore.conversation.data.contact_avatar_url />
+        <AvatarImage :src=conversationStore.conversation.data.avatar_url  v-if="conversationStore.conversation.data.avatar_url"/>
         <AvatarFallback>
-          {{ conversationStore.conversation.data.contact_first_name.toUpperCase().substring(0, 2) }}
+          {{ conversationStore.conversation.data.first_name.toUpperCase().substring(0, 2) }}
         </AvatarFallback>
       </Avatar>
       <h4 class="text-l ">
-        {{ conversationStore.conversation.data.contact_first_name + ' ' +
-          conversationStore.conversation.data.contact_last_name }}
+        {{ conversationStore.conversation.data.first_name + ' ' +
+          conversationStore.conversation.data.last_name }}
       </h4>
-      <p class="text-sm text-muted-foreground flex gap-2 mt-1" v-if="conversationStore.conversation.data.contact_email">
+      <p class="text-sm text-muted-foreground flex gap-2 mt-1" v-if="conversationStore.conversation.data.email">
         <Mail class="size-3 mt-1"></Mail>
-        {{ conversationStore.conversation.data.contact_email }}
+        {{ conversationStore.conversation.data.email }}
       </p>
       <p class="text-sm text-muted-foreground flex gap-2 mt-1"
-        v-if="conversationStore.conversation.data.contact_phone_number">
+        v-if="conversationStore.conversation.data.phone_number">
         <Phone class="size-3 mt-1"></Phone>
-        {{ conversationStore.conversation.data.contact_phone_number }}
+        {{ conversationStore.conversation.data.phone_number }}
       </p>
     </div>
-    <Accordion type="single" collapsible class="border-t mt-4">
+    <Accordion type="single" collapsible class="border-t mt-4" :default-value="actionAccordion.title">
       <AccordionItem :value="actionAccordion.title">
         <AccordionTrigger>
           <p>{{ actionAccordion.title }}</p>
         </AccordionTrigger>
         <AccordionContent>
 
-          <!-- Assigned agent -->
-          <!-- <Select v-model="conversationStore.conversation.data.assigned_agent_uuid"
-            @update:modelValue="handleAssignedAgentChange" id="select-agent">
-            <SelectTrigger class="mb-3">
-              <SelectValue placeholder="Assigned agent" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Assigned agent</SelectLabel>
-                <SelectItem :value="agent.uuid" v-for="(agent) in agents" :key="agent.uuid">
-                  {{ agent.first_name + ' ' + agent.last_name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select> -->
-
-
+          <!-- Agent assign -->
           <div class="mb-3">
             <Popover v-model:open="agentSelectDropdownOpen">
               <PopoverTrigger as-child>
                 <Button variant="outline" role="combobox" :aria-expanded="agentSelectDropdownOpen"
                   class="w-full justify-between">
-                  {{ conversationStore.conversation.data.assigned_agent_uuid
+                  {{ conversationStore.conversation.data.assigned_user_uuid
                     ? agents.find((agent) => agent.uuid ===
-                      conversationStore.conversation.data.assigned_agent_uuid)?.first_name + ' ' + agents.find((agent) =>
-                        agent.uuid === conversationStore.conversation.data.assigned_agent_uuid)?.last_name
+                      conversationStore.conversation.data.assigned_user_uuid)?.first_name + ' ' + agents.find((agent) =>
+                        agent.uuid === conversationStore.conversation.data.assigned_user_uuid)?.last_name
                     : "Select agent..." }}
 
                   <CaretSortIcon class="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -66,16 +50,17 @@
                   <CommandList>
                     <CommandGroup>
                       <CommandItem v-for="agent in agents" :key="agent.uuid"
-                        :value="agent.first_name + ' ' + agent.last_name" @select="(ev) => {
+                        :value="agent.uuid + ':' + agent.first_name + agent.last_name" @select="(ev) => {
                           if (typeof ev.detail.value === 'string') {
-                            conversationStore.conversation.data.assigned_agent_uuid = ev.detail.value
+                            const uuid = ev.detail.value.split(':')[0]
+                            conversationStore.conversation.data.assigned_user_uuid = uuid;
                           }
                           agentSelectDropdownOpen = false
                         }">
                         {{ agent.first_name + ' ' + agent.last_name }}
                         <CheckIcon :class="cn(
                           'ml-auto h-4 w-4',
-                          conversationStore.conversation.data.assigned_agent_uuid === agent.uuid ? 'opacity-100' : 'opacity-0',
+                          conversationStore.conversation.data.assigned_user_uuid === agent.uuid ? 'opacity-100' : 'opacity-0',
                         )" />
                       </CommandItem>
                     </CommandGroup>
@@ -84,25 +69,9 @@
               </PopoverContent>
             </Popover>
           </div>
+          <!-- Agent assign end -->
 
-          <!-- Assigned agent end -->
-
-          <!-- Assigned team  -->
-          <!-- <Select v-model="conversationStore.conversation.data.assigned_team_uuid"
-            @update:modelValue="handleAssignedTeamChange">
-            <SelectTrigger class="mb-3">
-              <SelectValue placeholder="Assigned team" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Assigned team</SelectLabel>
-                <SelectItem :value="team.uuid" v-for="(team) in teams" :key="team.uuid">
-                  {{ team.name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select> -->
-
+          <!-- Team assign -->
           <div class="mb-3">
             <Popover v-model:open="teamSelectDropdownOpen">
               <PopoverTrigger as-child>
@@ -121,13 +90,10 @@
                   <CommandEmpty>No team found.</CommandEmpty>
                   <CommandList>
                     <CommandGroup>
-                      <CommandItem v-for="team in teams" :key="team.uuid" :value="team.name" @select="(ev) => {
+                      <CommandItem v-for="team in teams" :key="team.uuid" :value="team.uuid + ':' + team.name" @select="(ev) => {
                         if (ev.detail.value) {
-                          const selectedTeamName = ev.detail.value;
-                          const selectedTeam = teams.find(team => team.name === selectedTeamName);
-                          if (selectedTeam) {
-                            conversationStore.conversation.data.assigned_team_uuid = selectedTeam.uuid;
-                          }
+                          const uuid = ev.detail.value.split(':')[0]
+                          conversationStore.conversation.data.assigned_team_uuid = uuid;
                         }
                         teamSelectDropdownOpen = false
                       }">
@@ -143,8 +109,7 @@
               </PopoverContent>
             </Popover>
           </div>
-
-          <!-- assigned team end -->
+          <!-- Team assign end -->
 
           <!-- Priority  -->
           <Select v-model="conversationStore.conversation.data.priority" @update:modelValue="handlePriorityChange">
@@ -166,7 +131,7 @@
               </SelectGroup>
             </SelectContent>
           </Select>
-          <!-- Priority -->
+          <!-- Priority end -->
 
           <!-- Tags -->
           <TagsInput class="px-0 gap-0 w-full" :model-value="tagsSelected" @update:modelValue="handleUpsertTags">
@@ -216,8 +181,7 @@
     </Accordion>
 
 
-
-    <Accordion type="single" collapsible>
+    <Accordion type="single" collapsible :default-value="infoAccordion.title">
       <AccordionItem :value="infoAccordion.title">
         <AccordionTrigger>
           <p>{{ infoAccordion.title }}</p>
@@ -256,10 +220,10 @@
           </div>
 
 
-          <div class="flex flex-col gap-1 mb-5">
+          <!-- <div class="flex flex-col gap-1 mb-5">
             <p class="font-medium">SLA</p>
-            <p>48 hours remaining</p>
-          </div>
+            <p v-if="conversationStore.conversation.data.sla_remaining">48 hours remaining</p>
+          </div> -->
 
         </AccordionContent>
       </AccordionItem>
@@ -299,21 +263,20 @@ import { Mail, Phone } from "lucide-vue-next"
 
 // Stores, states.
 const conversationStore = useConversationStore();
+
 const agents = ref([])
 const teams = ref([])
 const agentSelectDropdownOpen = ref(false)
 const teamSelectDropdownOpen = ref(false)
+const tagsSelected = computed(() => conversationStore.conversation.data.tags);
 const tags = ref([])
 const tagIDMap = {}
-const tagsSelected = ref(conversationStore.conversation.data.tags)
 const tagDropdownOpen = ref(false)
 const tagSearchTerm = ref('')
-const teamSearchTerm = ref('')
 const tagsFiltered = computed(() => tags.value.filter(i => !tagsSelected.value.includes(i.label)))
-// const agentsFiltered = computed(() => tags.value.filter(i => !tagsSelected.value.includes(i.label)))
 
 const actionAccordion = {
-  "title": "Action"
+  "title": "Actions"
 }
 const infoAccordion = {
   "title": "Information"
@@ -321,7 +284,7 @@ const infoAccordion = {
 
 // Functions, methods.
 onMounted(() => {
-  api.getAgents().then((resp) => {
+  api.getUsers().then((resp) => {
     agents.value = resp.data.data;
   }).catch(error => {
     console.log(error)
@@ -347,12 +310,12 @@ onMounted(() => {
 
 const handleAssignedAgentChange = (v) => {
   conversationStore.updateAssignee("agent", {
-    "assignee_uuid": v
+    "assignee_uuid": v.split(":")[0]
   })
 }
 const handleAssignedTeamChange = (v) => {
   conversationStore.updateAssignee("team", {
-    "assignee_uuid": v
+    "assignee_uuid": v.split(":")[0]
   })
 }
 

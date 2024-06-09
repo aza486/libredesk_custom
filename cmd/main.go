@@ -1,68 +1,110 @@
 package main
 
 import (
+	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
-	"github.com/abhinavxd/artemis/internal/conversations"
+	"github.com/abhinavxd/artemis/internal/contact"
+	"github.com/abhinavxd/artemis/internal/conversation"
+	convtag "github.com/abhinavxd/artemis/internal/conversation/tag"
+	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/initz"
-	"github.com/abhinavxd/artemis/internal/media"
-	"github.com/abhinavxd/artemis/internal/tags"
-	user "github.com/abhinavxd/artemis/internal/userdb"
+	"github.com/abhinavxd/artemis/internal/message"
+	"github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/tag"
+	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/user"
+	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/knadh/koanf/v2"
 	"github.com/valyala/fasthttp"
 	"github.com/vividvilla/simplesessions"
-	"github.com/zerodha/fastcache/v4"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
 )
 
-var (
-	ko = koanf.New(".")
-)
+var ko = koanf.New(".")
 
-// App is the global app context which is passed and injected everywhere.
+// App is the global app context which is passed and injected in the http handlers.
 type App struct {
-	constants     consts
-	lo            *logf.Logger
-	conversations *conversations.Conversations
-	userDB        *user.UserDB
-	sess          *simplesessions.Manager
-	mediaManager  *media.Manager
-	tags          *tags.Tags
-	cannedResp    *cannedresp.CannedResp
-	fc            *fastcache.FastCache
+	constants           consts
+	lo                  *logf.Logger
+	cntctMgr            *contact.Manager
+	userMgr             *user.Manager
+	teamMgr             *team.Manager
+	sessMgr             *simplesessions.Manager
+	tagMgr              *tag.Manager
+	msgMgr              *message.Manager
+	inboxMgr            *inbox.Manager
+	attachmentMgr       *attachment.Manager
+	cannedRespMgr       *cannedresp.Manager
+	conversationMgr     *conversation.Manager
+	conversationTagsMgr *convtag.Manager
 }
 
 func main() {
-	// Command line flags.
+	// Load command line flags into Koanf.
 	initFlags()
 
 	// Load the config file into Koanf.
 	initz.Config(ko)
 
-	lo := initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"))
-	rd := initz.Redis(ko)
-	db := initz.DB(ko)
+	var (
+		shutdownCh = make(chan struct{})
+		ctx, stop  = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+		// Incoming messages from all inboxes are pushed to this queue.
+		incomingMsgQ = make(chan models.IncomingMessage, ko.MustInt("message.incoming_queue_size"))
+
+		lo = initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "artemis")
+		rd = initz.Redis(ko)
+		db = initz.DB(ko)
+
+		attachmentMgr   = initAttachmentsManager(db, &lo)
+		cntctMgr        = initContactManager(db, &lo)
+		conversationMgr = initConversations(db, &lo)
+		inboxMgr        = initInboxManager(db, &lo, incomingMsgQ)
+
+		// Websocket hub.
+		wsHub = ws.NewHub()
+	)
 
 	// Init the app.
 	var app = &App{
-		lo:            &lo,
-		constants:     initConstants(ko),
-		conversations: initConversations(db, &lo, ko),
-		sess:          initSessionManager(rd, ko),
-		userDB:        initUserDB(db, &lo, ko),
-		mediaManager:  initMediaManager(ko, db),
-		tags:          initTags(db, &lo),
-		cannedResp:    initCannedResponse(db, &lo),
+		lo:                  &lo,
+		cntctMgr:            cntctMgr,
+		inboxMgr:            inboxMgr,
+		attachmentMgr:       attachmentMgr,
+		conversationMgr:     conversationMgr,
+		constants:           initConstants(),
+		msgMgr:              initMessages(db, &lo, incomingMsgQ, wsHub, cntctMgr, attachmentMgr, conversationMgr, inboxMgr),
+		sessMgr:             initSessionManager(rd),
+		userMgr:             initUserDB(db, &lo),
+		teamMgr:             initTeamMgr(db, &lo),
+		tagMgr:              initTags(db, &lo),
+		cannedRespMgr:       initCannedResponse(db, &lo),
+		conversationTagsMgr: initConversationTags(db, &lo),
 	}
 
-	// HTTP server.
+	// Start receivers for all active inboxes.
+	inboxMgr.Receive()
+
+	// Start message inserter and dispatchers.
+	go app.msgMgr.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
+	go app.msgMgr.StartDispatcher(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+
+	// Init fastglue http server.
 	g := fastglue.NewGlue()
+
+	// Add app the request context.
 	g.SetContext(app)
 
-	// Handlers.
-	initHandlers(g, app, ko)
+	// Init the handlers.
+	initHandlers(g, wsHub)
 
 	s := &fasthttp.Server{
 		Name:                 ko.MustString("app.server.name"),
@@ -73,9 +115,16 @@ func main() {
 		ReadBufferSize:       ko.MustInt("app.server.max_body_size"),
 	}
 
-	// Start the HTTP server
+	// Goroutine for handling interrupt signals & gracefully shutting down the server.
+	go func() {
+		<-ctx.Done()
+		shutdownCh <- struct{}{}
+		stop()
+	}()
+
+	// Start the HTTP server.
 	log.Printf("server listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
-	if err := g.ListenAndServe(ko.String("app.server.address"), ko.String("server.socket"), s); err != nil {
+	if err := g.ListenServeAndWaitGracefully(ko.String("app.server.address"), ko.String("server.socket"), s, shutdownCh); err != nil {
 		log.Fatalf("error starting frontend server: %v", err)
 	}
 	log.Println("bye")

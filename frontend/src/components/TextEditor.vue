@@ -1,46 +1,30 @@
 <template>
-    <div v-if="showResponses && filteredCannedResponses.length > 0"
-        class="w-full drop-shadow-sm overflow-hidden p-2 border-t">
-        <ScrollArea>
-            <ul class="space-y-2 max-h-96">
-                <li v-for="(response, index) in filteredCannedResponses" :key="response.id"
-                    @click="selectResponse(response.content)" class="cursor-pointer rounded p-1"
-                    :class="{ 'bg-secondary': cannedResponseIndex === index }"
-                    :ref="el => cannedResponseRefItems.push(el)">
-                    <span class="font-semibold">{{ response.title }}</span> - {{ response.content }}
-                </li>
-            </ul>
-        </ScrollArea>
-    </div>
-    <div class="relative w-auto rounded-none border-y mb-[49px] fullscreen">
-        <div class="flex justify-between bg-[#F5F5F4] dark:bg-white">
-            <Tabs default-value="account">
+    <div>
+        <div class="flex justify-between bg-[#F5F5F4] px-1">
+            <Tabs v-model:model-value="messageType">
                 <TabsList>
-                    <TabsTrigger value="account">
+                    <TabsTrigger value="reply">
                         Reply
                     </TabsTrigger>
-                    <TabsTrigger value="password">
-                        Internal note
+                    <TabsTrigger value="private_note">
+                        Private note
                     </TabsTrigger>
                 </TabsList>
             </Tabs>
-            <!-- <Toggle class="px-2 py-2 bg-white" variant="outline" @click="toggleFullScreen">
-                <Fullscreen class="w-full h-full" />
-            </Toggle> -->
         </div>
-        <EditorContent :editor="editor" @keyup="checkTrigger" @keydown="navigateResponses" />
-        <div class="flex justify-between items-center border h-14 p-1 px-2">
+        <EditorContent :editor="editor" class="max-h-[600px]" />
+        <AttachmentsPreview :attachments="uploadedFiles" :onDelete="handleOnFileDelete" />
+        <div class="flex justify-between items-center border-y h-14 p-1 px-2">
             <div class="flex justify-items-start gap-2">
-                <Toggle class="px-2 py-2 " variant="outline" @click="applyBold" :pressed="isBold">
-                    <Bold class="w-full h-full" />
+                <input type="file" class="hidden" ref="attachmentInput" multiple @change="handleFileUpload">
+                <Toggle class="px-2 py-2 border-0" variant="outline" @click="applyBold" :pressed="isBold">
+                    <Bold class="h-4 w-4" />
                 </Toggle>
-                <Toggle class="px-2 py-2 " variant="outline" @click="applyItalic" :pressed="isItalic">
-                    <Italic class="w-full h-full" />
+                <Toggle class="px-2 py-2 border-0" variant="outline" @click="applyItalic" :pressed="isItalic">
+                    <Italic class="h-4 w-4" />
                 </Toggle>
-                <!-- File Upload -->
-                <input type="files" class="hidden" ref="fileInput" multiple>
-                <Toggle class="px-2 py-2" variant="outline" @click="handleFileUpload">
-                    <Paperclip class="w-full h-full" />
+                <Toggle class="px-2 py-2 border-0" variant="outline" @click="triggerFileUpload">
+                    <Paperclip class="h-4 w-4" />
                 </Toggle>
             </div>
             <Button class="h-8 w-6 px-8 " @click="handleSend" :disabled="!hasText">
@@ -56,46 +40,101 @@ import { Button } from '@/components/ui/button'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import Placeholder from "@tiptap/extension-placeholder"
 import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
+import ImageResize from 'tiptap-extension-resize-image';
 import { Toggle } from '@/components/ui/toggle'
 import { Paperclip, Bold, Italic } from "lucide-vue-next"
-import { ScrollArea } from '@/components/ui/scroll-area'
+import AttachmentsPreview from "./AttachmentsPreview.vue"
 import {
     Tabs,
     TabsList,
     TabsTrigger,
 } from '@/components/ui/tabs'
+import api from '@/api';
+import {
+    useLocalStorage,
+} from '@vueuse/core'
 
 const emit = defineEmits(['send'])
 
 const props = defineProps({
-    identifier: String,  // Unique identifier for the editor could be the uuid of conversation.
+    conversationuuid: String,
     cannedResponses: Array
 })
 
+
+const getPlaceholder = () => {
+    return `Shift + Enter to add a new line; Press '/' to select a Canned Response.`
+}
+
+const getDraftLocalStorageKey = () => {
+    return `draft.${props.identifier}`
+}
+
+const editorContent = useLocalStorage(getDraftLocalStorageKey(), '')
+const messageType = ref("reply")
+const cannedResponseRefItems = ref([])
+const inputText = ref('')
+const isBold = ref(false)
+const isItalic = ref(false)
+const attachmentInput = ref(null)
+const imageInput = ref(null)
+const cannedResponseIndex = ref(0)
+const uploadedFiles = ref([])
+
+
 const editor = ref(useEditor({
-    content: '',
+    content: editorContent.value,
     extensions: [
         StarterKit,
         Placeholder.configure({
-            placeholder: "Type a message...",
+            placeholder: getPlaceholder(),
             keyboardShortcuts: {
                 'Control-b': () => applyBold(),
                 'Control-i': () => applyItalic(),
             }
         }),
+        Image.configure({
+            inline: false,
+            HTMLAttributes: {
+                class: 'tiptap-editor-image',
+            },
+        }),
+        ImageResize,
     ],
     autofocus: true,
     editorProps: {
         attributes: {
             class: "outline-none",
         },
+        handleKeyDown: (_, event) => {
+            if (filteredCannedResponses.value.length > 0) {
+                switch (event.key) {
+                    case 'ArrowDown':
+                        event.preventDefault()
+                        cannedResponseIndex.value = (cannedResponseIndex.value + 1) % filteredCannedResponses.value.length
+                        break
+                    case 'ArrowUp':
+                        event.preventDefault()
+                        cannedResponseIndex.value = (cannedResponseIndex.value - 1 + filteredCannedResponses.value.length) % filteredCannedResponses.value.length
+                        break
+                    case 'Enter':
+                        selectResponse(filteredCannedResponses.value[cannedResponseIndex.value].content)
+                        break
+                }
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                handleSend()
+                return true
+            }
+            return false
+        }
     },
 }))
 
 const saveEditorContent = () => {
     if (editor.value && props.identifier) {
-        // Skip single `/`
-        if (editor.value.getText() === "/") {
+        if (editor.value.getText() === "/" || editor.value.getText() === "@") {
             return
         }
         const content = editor.value.getHTML()
@@ -103,15 +142,7 @@ const saveEditorContent = () => {
     }
 }
 
-const cannedResponseRefItems = ref([])
-const inputText = ref('')
-const isBold = ref(false)
-const isItalic = ref(false)
-const fileInput = ref(null)
-const cannedResponseIndex = ref(0)
 const contentSaverInterval = setInterval(saveEditorContent, 200)
-const showResponses = ref(false)
-
 
 watchEffect(() => {
     if (editor.value) {
@@ -134,19 +165,24 @@ watch(cannedResponseIndex, () => {
     })
 })
 
-onMounted(() => {
+// Moving cursor to the end.
+onMounted(async () => {
     if (editor.value) {
-        const draftContent = localStorage.getItem(getDraftLocalStorageKey())
-        editor.value.commands.setContent(draftContent)
+        // hack.
+        setTimeout(() => {
+            editor.value.commands.focus()
+            editor.value.commands.setTextSelection(editor.value.state.doc.content.size)
+        })
     }
 })
 
+// Cleanup.
 onUnmounted(() => {
     clearInterval(contentSaverInterval)
 })
 
 const filteredCannedResponses = computed(() => {
-    if (inputText.value.startsWith('/')) {
+    if (inputText.value.endsWith('/')) {
         const searchQuery = inputText.value.slice(1).toLowerCase()
         return props.cannedResponses.filter(response => response.title.toLowerCase().includes(searchQuery))
     }
@@ -160,42 +196,20 @@ const hasText = computed(() => {
     return false
 })
 
-const getDraftLocalStorageKey = () => {
-    return `content.${props.identifier}`
-}
-
-const navigateResponses = (event) => {
-    if (!showResponses.value) return
-
-    switch (event.key) {
-        case 'ArrowDown':
-            event.preventDefault()
-            cannedResponseIndex.value = (cannedResponseIndex.value + 1) % filteredCannedResponses.value.length
-            break
-        case 'ArrowUp':
-            event.preventDefault()
-            cannedResponseIndex.value = (cannedResponseIndex.value - 1 + filteredCannedResponses.value.length) % filteredCannedResponses.value.length
-            break
-        case 'Enter':
-            selectResponse(filteredCannedResponses.value[cannedResponseIndex.value].content)
-            break
-    }
-}
-
-const checkTrigger = (e) => {
-    if (e.key === "/")
-        showResponses.value = true
-}
-
 const selectResponse = (message) => {
-    editor.value.commands.setContent(message)
-    showResponses.value = false
-    editor.value.chain().focus()
+    editor.value.chain().setContent(message).focus().run()
 }
 
 const handleSend = () => {
-    emit('send', editor.value.getHTML())
+    const attachmentUUIDs = uploadedFiles.value.map((file) => file.uuid)
+    emit('send', {
+        html: editor.value.getHTML(),
+        text: editor.value.getText(),
+        private: messageType.value === "private_note",
+        attachments: attachmentUUIDs,
+    })
     editor.value.commands.clearContent()
+    uploadedFiles.value = []
 }
 
 const applyBold = () => {
@@ -206,21 +220,44 @@ const applyItalic = () => {
     editor.value.chain().focus().toggleItalic().run()
 }
 
-const handleFileUpload = (event) => {
-    const files = Array.from(event.target.files)
-    console.log(files)
+const triggerFileUpload = () => {
+    attachmentInput.value.click()
+};
+
+const triggerImageUpload = () => {
+    imageInput.value.click()
 }
 
-function toggleFullScreen () {
-    const editorElement = editor.value?.editorView?.dom
-    if (editorElement && editorElement.requestFullscreen) {
-        editorElement.requestFullscreen().catch(err => {
-            console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`)
+const handleFileUpload = event => {
+    for (const file of event.target.files) {
+        api.uploadAttachment({
+            files: file,
+            disposition: "attachment",
+        }).then((resp) => {
+            uploadedFiles.value.push(resp.data.data)
+        }).catch((err) => {
+            console.error(err)
         })
-    } else {
-        console.error("Fullscreen API is not available.")
     }
-}
+};
+
+const handleOnFileDelete = uuid => {
+    uploadedFiles.value = uploadedFiles.value.filter(item => item.uuid !== uuid);
+};
+
+const handleImageUpload = event => {
+    const file = event.target.files[0];
+    if (file) {
+        api.uploadAttachment({
+            files: file
+        }).then((resp) => {
+            editor.value.chain().focus().setImage({ src: resp?.data?.data?.url }).run()
+        }).catch((err) => {
+            console.error(err)
+        })
+    }
+};
+
 </script>
 
 

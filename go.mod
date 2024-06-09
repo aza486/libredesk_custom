@@ -4,22 +4,25 @@ go 1.22.3
 
 require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.3
+	github.com/fasthttp/websocket v1.5.9
 	github.com/go-redis/redis/v8 v8.5.0
 	github.com/jhillyerd/enmime v1.2.0
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/k3a/html2text v1.2.1
 	github.com/knadh/goyesql/v2 v2.2.0
+	github.com/knadh/koanf/parsers/json v0.1.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
 	github.com/knadh/koanf/providers/file v0.1.0
 	github.com/knadh/koanf/providers/posflag v0.1.0
+	github.com/knadh/koanf/providers/rawbytes v0.1.0
 	github.com/knadh/koanf/v2 v2.1.1
 	github.com/knadh/smtppool v1.1.0
 	github.com/lib/pq v1.10.9
-	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rhnvrm/simples3 v0.8.3
 	github.com/spf13/pflag v1.0.5
-	github.com/valyala/fasthttp v1.53.0
+	github.com/valyala/fasthttp v1.54.0
 	github.com/vividvilla/simplesessions v0.2.0
-	github.com/zerodha/fastcache/v4 v4.1.0
+	github.com/volatiletech/null/v9 v9.0.0
 	github.com/zerodha/fastglue v1.8.0
 	github.com/zerodha/logf v0.5.5
 	golang.org/x/crypto v0.23.0
@@ -49,7 +52,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/savsgio/gotils v0.0.0-20240303185622-093b76447511 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.9.0 // indirect

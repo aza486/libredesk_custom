@@ -41,7 +41,7 @@
                         <Button class="w-full" @click.prevent="loginAction" :disabled="loading" type="submit">
                             Login
                         </Button>
-                        <Error v-if="errorMessage" :errorMessage="errorMessage"></Error>
+                        <Error :errorMessage="errorMessage" :border="true"></Error>
                         <div>
                             <a href="#" class="text-xs">Forgot ID or Password?</a>
                         </div>
@@ -100,7 +100,6 @@ const loginAction = () => {
         }
     }).catch((error) => {
         errorMessage.value = handleHTTPError(error).message
-        // Shake the login container.
         useTemporaryClass("login-container", "animate-shake")
     }).finally(() => {
         loading.value = false

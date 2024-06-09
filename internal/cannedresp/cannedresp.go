@@ -14,7 +14,7 @@ var (
 	efs embed.FS
 )
 
-type CannedResp struct {
+type Manager struct {
 	q  queries
 	lo *logf.Logger
 }
@@ -31,25 +31,25 @@ type Opts struct {
 }
 
 type queries struct {
-	GetAllCannedResponses *sqlx.Stmt `query:"get-all-canned-responses"`
+	GetAll *sqlx.Stmt `query:"get-all"`
 }
 
-func New(opts Opts) (*CannedResp, error) {
+func New(opts Opts) (*Manager, error) {
 	var q queries
 
 	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 
-	return &CannedResp{
+	return &Manager{
 		q:  q,
 		lo: opts.Lo,
 	}, nil
 }
 
-func (t *CannedResp) GetAllCannedResponses() ([]CannedResponse, error) {
+func (t *Manager) GetAll() ([]CannedResponse, error) {
 	var c []CannedResponse
-	if err := t.q.GetAllCannedResponses.Select(&c); err != nil {
+	if err := t.q.GetAll.Select(&c); err != nil {
 		t.lo.Error("fetching canned responses", "error", err)
 		return c, fmt.Errorf("error fetching canned responses")
 	}

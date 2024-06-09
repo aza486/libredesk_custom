@@ -23,7 +23,7 @@ const userStore = useUserStore()
 <template>
     <div class="tab-container-default">
         <div v-if="userStore.getFullName">
-            <h4 class="scroll-m-20 text-3xl font-semibold tracking-tight">
+            <h4 class="scroll-m-20 text-2xl font-semibold tracking-tight">
                 <p>Good morning, {{ userStore.getFullName }}</p>
                 <p class="text-xl text-muted-foreground">🌤️ {{ format(new Date(), "EEEE, MMMM d HH:mm a") }}</p>
             </h4>

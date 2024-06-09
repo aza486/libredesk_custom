@@ -1,10 +1,10 @@
-import axios from 'axios';
-import qs from 'qs';
+import axios from 'axios'
+import qs from 'qs'
 
 const http = axios.create({
     timeout: 10000,
     responseType: "json",
-});
+})
 
 // Request interceptor.
 http.interceptors.request.use((request) => {
@@ -16,32 +16,48 @@ http.interceptors.request.use((request) => {
     return request
 })
 
-const login = (data) => http.post(`/api/login`, data);
+const login = (data) => http.post(`/api/login`, data)
 const getTeams = () => http.get("/api/teams")
-const getAgents = () => http.get("/api/agents")
-const getAgentProfile = () => http.get("/api/profile")
+const getUsers = () => http.get("/api/users")
+const getCurrentUser = () => http.get("/api/users/me")
 const getTags = () => http.get("/api/tags")
-const upsertTags = (uuid, data) => http.post(`/api/conversation/${uuid}/tags`, data);
-const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/conversation/${uuid}/assignee/${assignee_type}`, data);
-const updateStatus = (uuid, data) => http.put(`/api/conversation/${uuid}/status`, data);
-const updatePriority = (uuid, data) => http.put(`/api/conversation/${uuid}/priority`, data);
-const getMessages = (uuid) => http.get(`/api/conversation/${uuid}/messages`);
-const getConversation = (uuid) => http.get(`/api/conversation/${uuid}`);
-const getConversations = () => http.get('/api/conversations');
-const getCannedResponses = () => http.get('/api/canned_responses');
+const upsertTags = (uuid, data) => http.post(`/api/conversation/${uuid}/tags`, data)
+const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/conversation/${uuid}/assignee/${assignee_type}`, data)
+const updateStatus = (uuid, data) => http.put(`/api/conversation/${uuid}/status`, data)
+const updatePriority = (uuid, data) => http.put(`/api/conversation/${uuid}/priority`, data)
+const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversation/${uuid}/last-seen`)
+const getMessage = (uuid) => http.get(`/api/message/${uuid}`)
+const retryMessage = (uuid) => http.get(`/api/message/${uuid}/retry`)
+const getMessages = (uuid) => http.get(`/api/conversation/${uuid}/messages`)
+const sendMessage = (uuid, data) => http.post(`/api/conversation/${uuid}/message`, data)
+const getConversation = (uuid) => http.get(`/api/conversation/${uuid}`)
+const getConversationParticipants = (uuid) => http.get(`/api/conversation/${uuid}/participants`)
+const getConversations = () => http.get('/api/conversations')
+const getCannedResponses = () => http.get('/api/canned-responses')
+const uploadAttachment = (data) => http.post('/api/attachment', data, {
+    headers: {
+        'Content-Type': 'multipart/form-data'
+    }
+})
 
 export default {
     login,
     getTags,
     getTeams,
-    getAgents,
+    getUsers,
     getConversation,
     getConversations,
+    getConversationParticipants,
+    getMessage,
     getMessages,
-    getAgentProfile,
+    sendMessage,
+    getCurrentUser,
     updateAssignee,
     updateStatus,
     updatePriority,
     upsertTags,
+    retryMessage,
+    updateAssigneeLastSeen,
     getCannedResponses,
+    uploadAttachment,
 }

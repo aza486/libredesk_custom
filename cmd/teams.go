@@ -10,7 +10,7 @@ func handleGetTeams(r *fastglue.Request) error {
 	var (
 		app              = r.Context.(*App)
 	)
-	teams, err := app.userDB.GetTeams()
+	teams, err := app.teamMgr.GetAll()
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Something went wrong, try again later.", nil, "")
 	}
