@@ -2,10 +2,9 @@ package contact
 
 import (
 	"embed"
-	"fmt"
 
 	"github.com/abhinavxd/artemis/internal/contact/models"
-	"github.com/abhinavxd/artemis/internal/utils"
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -32,7 +31,7 @@ type queries struct {
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 
@@ -42,9 +41,8 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
-func (m *Manager) Upsert(con models.Contact) (int64, error) {
-	fmt.Println("con em", con.Email)
-	var contactID int64
+func (m *Manager) Upsert(con models.Contact) (int, error) {
+	var contactID int
 	if err := m.q.InsertContact.QueryRow(con.Source, con.SourceID, con.InboxID,
 		con.FirstName, con.LastName, con.Email, con.PhoneNumber, con.AvatarURL).Scan(&contactID); err != nil {
 		m.lo.Error("inserting contact", "error", err)

@@ -7,7 +7,8 @@ import (
 	"slices"
 
 	"github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/utils"
+	"github.com/abhinavxd/artemis/internal/dbutils"
+	"github.com/abhinavxd/artemis/internal/stringutils"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/zerodha/logf"
@@ -50,6 +51,7 @@ type queries struct {
 	GetUUID                      *sqlx.Stmt `query:"get-uuid"`
 	GetInboxID                   *sqlx.Stmt `query:"get-inbox-id"`
 	GetConversation              *sqlx.Stmt `query:"get-conversation"`
+	GetUnassigned                *sqlx.Stmt `query:"get-unassigned"`
 	GetConversationParticipants  *sqlx.Stmt `query:"get-conversation-participants"`
 	GetConversations             *sqlx.Stmt `query:"get-conversations"`
 	GetAssignedConversations     *sqlx.Stmt `query:"get-assigned-conversations"`
@@ -64,7 +66,7 @@ type queries struct {
 
 func New(opts Opts) (*Manager, error) {
 	var q queries
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 	c := &Manager{
@@ -76,9 +78,9 @@ func New(opts Opts) (*Manager, error) {
 	return c, nil
 }
 
-func (c *Manager) Create(contactID int64, inboxID int, meta string) (int64, error) {
+func (c *Manager) Create(contactID int, inboxID int, meta string) (int, error) {
 	var (
-		id        int64
+		id        int
 		refNum, _ = c.generateRefNum(c.ReferenceNumPattern)
 	)
 	if err := c.q.InsertConversation.QueryRow(refNum, contactID, StatusOpen, inboxID, meta).Scan(&id); err != nil {
@@ -127,8 +129,18 @@ func (c *Manager) AddParticipant(userID int, convUUID string) error {
 	return nil
 }
 
-func (c *Manager) GetID(uuid string) (int64, error) {
-	var id int64
+func (c *Manager) GetUnassigned() ([]models.Conversation, error) {
+	var conv []models.Conversation
+	if err := c.q.GetUnassigned.Get(&conv); err != nil {
+		if err != sql.ErrNoRows {
+			return conv, fmt.Errorf("conversation not found")
+		}
+	}
+	return conv, nil
+}
+
+func (c *Manager) GetID(uuid string) (int, error) {
+	var id int
 	if err := c.q.GetID.QueryRow(uuid).Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
 			return id, fmt.Errorf("conversation not found: %w", err)
@@ -139,7 +151,7 @@ func (c *Manager) GetID(uuid string) (int64, error) {
 	return id, nil
 }
 
-func (c *Manager) GetUUID(id int64) (string, error) {
+func (c *Manager) GetUUID(id int) (string, error) {
 	var uuid string
 	if err := c.q.GetUUID.QueryRow(id).Scan(&uuid); err != nil {
 		if err == sql.ErrNoRows {
@@ -223,11 +235,10 @@ func (c *Manager) generateRefNum(pattern string) (string, error) {
 	if len(pattern) <= 5 {
 		pattern = "01234567890"
 	}
-	randomNumbers, err := utils.GenerateRandomNumericString(len(pattern))
+	randomNumbers, err := stringutils.RandomNumericString(len(pattern))
 	if err != nil {
 		return "", err
 	}
-
 	result := []byte(pattern)
 	randomIndex := 0
 	for i := range result {
@@ -236,6 +247,5 @@ func (c *Manager) generateRefNum(pattern string) (string, error) {
 			randomIndex++
 		}
 	}
-
 	return string(result), nil
 }

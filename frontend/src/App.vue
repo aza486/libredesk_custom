@@ -1,4 +1,5 @@
 <template>
+  <Toaster />
   <TooltipProvider :delay-duration=200>
     <div class="bg-background text-foreground">
       <div v-if="$route.path !== '/login'">
@@ -20,6 +21,7 @@
         <RouterView />
       </div>
     </div>
+
   </TooltipProvider>
 </template>
 
@@ -31,6 +33,7 @@ import { useUserStore } from '@/stores/user'
 import { initWS } from "./websocket.js"
 import api from '@/api';
 
+import { Toaster } from '@/components/ui/toast'
 import NavBar from './components/NavBar.vue'
 import {
   ResizableHandle,
@@ -40,6 +43,7 @@ import {
 import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
+
 
 
 // State

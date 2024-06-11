@@ -70,7 +70,7 @@ func handleUpdateAssignee(r *fastglue.Request) error {
 		uuid         = r.RequestCtx.UserValue("conversation_uuid").(string)
 		assigneeType = r.RequestCtx.UserValue("assignee_type").(string)
 		userUUID     = r.RequestCtx.UserValue("user_uuid").(string)
-		userID       = r.RequestCtx.UserValue("user_id").(int64)
+		userID       = r.RequestCtx.UserValue("user_id").(int)
 	)
 
 	if err := app.conversationMgr.UpdateAssignee(uuid, assigneeUUID, assigneeType); err != nil {
@@ -115,7 +115,7 @@ func handleUpdatePriority(r *fastglue.Request) error {
 		priority = p.Peek("priority")
 		uuid     = r.RequestCtx.UserValue("conversation_uuid").(string)
 		userUUID = r.RequestCtx.UserValue("user_uuid").(string)
-		userID   = r.RequestCtx.UserValue("user_id").(int64)
+		userID   = r.RequestCtx.UserValue("user_id").(int)
 	)
 	if err := app.conversationMgr.UpdatePriority(uuid, priority); err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
@@ -139,7 +139,7 @@ func handleUpdateStatus(r *fastglue.Request) error {
 		status   = p.Peek("status")
 		uuid     = r.RequestCtx.UserValue("conversation_uuid").(string)
 		userUUID = r.RequestCtx.UserValue("user_uuid").(string)
-		userID   = r.RequestCtx.UserValue("user_id").(int64)
+		userID   = r.RequestCtx.UserValue("user_id").(int)
 	)
 	if err := app.conversationMgr.UpdateStatus(uuid, status); err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")

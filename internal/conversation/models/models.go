@@ -5,23 +5,26 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/contact/models"
+	"github.com/volatiletech/null/v9"
 )
 
 type Conversation struct {
-	ID                 int64      `db:"id" json:"-"`
-	CreatedAt          time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt          time.Time  `db:"updated_at" json:"updated_at"`
-	UUID               string     `db:"uuid" json:"uuid"`
-	ClosedAt           *time.Time `db:"closed_at" json:"closed_at,omitempty"`
-	ResolvedAt         *time.Time `db:"resolved_at" json:"resolved_at,omitempty"`
-	ReferenceNumber    *string    `db:"reference_number" json:"reference_number,omitempty"`
-	Priority           *string    `db:"priority" json:"priority"`
-	Status             *string    `db:"status" json:"status"`
-	AssigneeLastSeenAt *time.Time `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
-
+	ID                 int         `db:"id" json:"-"`
+	CreatedAt          time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt          time.Time   `db:"updated_at" json:"updated_at"`
+	UUID               string      `db:"uuid" json:"uuid"`
+	ClosedAt           null.Time   `db:"closed_at" json:"closed_at,omitempty"`
+	ResolvedAt         null.Time   `db:"resolved_at" json:"resolved_at,omitempty"`
+	ReferenceNumber    null.String `db:"reference_number" json:"reference_number,omitempty"`
+	Priority           null.String `db:"priority" json:"priority"`
+	Status             null.String `db:"status" json:"status"`
+	AssignedUserID     null.Int    `db:"assigned_user_id" json:"-"`
+	AssignedTeamID     null.Int    `db:"assigned_team_id" json:"-"`
+	AssigneeLastSeenAt *time.Time  `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
 	models.Contact
-
-	// Fields not in schema.
+	// Psuedo fields.
+	FirstMessage       string
+	Subject            string           `db:"subject" json:"subject"`
 	UnreadMessageCount int              `db:"unread_message_count" json:"unread_message_count"`
 	InboxName          string           `db:"inbox_name" json:"inbox_name"`
 	InboxChannel       string           `db:"inbox_channel" json:"inbox_channel"`

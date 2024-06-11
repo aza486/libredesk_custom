@@ -4,7 +4,7 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/abhinavxd/artemis/internal/utils"
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -37,7 +37,7 @@ type queries struct {
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 

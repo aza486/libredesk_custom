@@ -100,7 +100,6 @@ func (i *IMAP) ReadIncomingMessages(inboxID int, incomingMsgQ chan<- models.Inco
 				ReturnCount: true,
 			},
 		)
-
 		searchData, err := searchCMD.Wait()
 
 		if err != nil {

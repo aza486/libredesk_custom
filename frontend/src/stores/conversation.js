@@ -160,10 +160,14 @@ export const useConversationStore = defineStore('conversation', () => {
 
     // Websocket updates.
     function updateConversationList (msg) {
-        const conversation = conversations.value.data.find(c => c.uuid === msg.conversation_uuid);
-        if (conversation) {
-            conversation.last_message = msg.last_message;
-            conversation.last_message_at = msg.last_message_at;
+        const updatedConversation = conversations.value.data.find(c => c.uuid === msg.conversation_uuid);
+        if (updatedConversation) {
+            updatedConversation.last_message = msg.last_message;
+            updatedConversation.last_message_at = msg.last_message_at;
+            // If updated conversation is open do not increment the count.
+            if (updatedConversation.uuid !== conversation.value.data.uuid) {
+                updatedConversation.unread_message_count += 1
+            }
         }
     }
     function updateMessageList (msg) {

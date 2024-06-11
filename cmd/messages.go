@@ -95,7 +95,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	_, _, err := app.msgMgr.RecordMessage(
 		mmodels.Message{
 			ConversationUUID: conversationUUID,
-			SenderID:         int64(userID),
+			SenderID:         userID,
 			Type:             message.TypeOutgoing,
 			SenderType:       "user",
 			Status:           status,

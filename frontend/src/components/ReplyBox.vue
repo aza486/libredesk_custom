@@ -22,7 +22,6 @@ import { useCannedResponses } from '@/stores/canned_responses'
 const conversationStore = useConversationStore()
 const cannedResponsesStore = useCannedResponses()
 
-
 onMounted(() => {
     cannedResponsesStore.fetchAll()
 })
@@ -34,7 +33,7 @@ const sendMessage = async (message) => {
         message: message.html,
         attachments: JSON.stringify(message.attachments),
     })
-    conversationStore.fetchMessages(conversationStore.conversation.data.uuid)
+    api.updateAssigneeLastSeen(conversationStore.conversation.data.uuid)
 }
 
 </script>

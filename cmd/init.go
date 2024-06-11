@@ -8,6 +8,8 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/attachment/stores/s3"
+	"github.com/abhinavxd/artemis/internal/autoassigner"
+	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
@@ -164,8 +166,9 @@ func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
 	return m
 }
 
-func initMessages(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager, conversationMgr *conversation.Manager, inboxMgr *inbox.Manager) *message.Manager {
-	mgr, err := message.New(incomingMsgQ, wsHub, contactMgr, attachmentMgr, inboxMgr, conversationMgr, message.Opts{
+func initMessages(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager,
+	conversationMgr *conversation.Manager, inboxMgr *inbox.Manager, automationEngine *automation.Engine) *message.Manager {
+	mgr, err := message.New(incomingMsgQ, wsHub, contactMgr, attachmentMgr, inboxMgr, conversationMgr, automationEngine, message.Opts{
 		DB: db,
 		Lo: lo,
 	})
@@ -250,6 +253,25 @@ func initInboxManager(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.In
 		}
 	}
 	return mgr
+}
+
+func initAutomationEngine(convMgr *conversation.Manager, db *sqlx.DB, lo *logf.Logger) *automation.Engine {
+	engine, err := automation.New(convMgr, automation.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing automation engine: %v", err)
+	}
+	return engine
+}
+
+func initAutoAssignmentEngine(teamMgr *team.Manager, userMgr *user.Manager, convMgr *conversation.Manager, lo *logf.Logger) *autoassigner.Engine {
+	engine, err := autoassigner.New(teamMgr, userMgr, convMgr, lo)
+	if err != nil {
+		log.Fatalf("error initializing auto assignment engine: %v", err)
+	}
+	return engine
 }
 
 // initEmailInbox initializes the email inbox.

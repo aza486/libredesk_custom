@@ -12,11 +12,13 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
+	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
+	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/message/models"
-	"github.com/abhinavxd/artemis/internal/utils"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/k3a/html2text"
@@ -66,6 +68,7 @@ type Manager struct {
 	attachmentMgr          *attachment.Manager
 	conversationMgr        *conversation.Manager
 	inboxMgr               *inbox.Manager
+	automationEngine       *automation.Engine
 	wsHub                  *ws.Hub
 	incomingMsgQ           chan models.IncomingMessage
 	outgoingMsgQ           chan models.Message
@@ -92,10 +95,11 @@ type queries struct {
 	MessageExists        *sqlx.Stmt `query:"message-exists"`
 }
 
-func New(incomingMsgQ chan models.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager, inboxMgr *inbox.Manager, conversationMgr *conversation.Manager, opts Opts) (*Manager, error) {
+func New(incomingMsgQ chan models.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager, inboxMgr *inbox.Manager,
+	conversationMgr *conversation.Manager, automationEngine *automation.Engine, opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 	return &Manager{
@@ -106,6 +110,7 @@ func New(incomingMsgQ chan models.IncomingMessage, wsHub *ws.Hub, contactMgr *co
 		attachmentMgr:          attachmentMgr,
 		conversationMgr:        conversationMgr,
 		inboxMgr:               inboxMgr,
+		automationEngine:       automationEngine,
 		incomingMsgQ:           incomingMsgQ,
 		outgoingMsgQ:           make(chan models.Message, opts.OutgoingMsgQueueSize),
 		outgoingProcessingMsgs: sync.Map{},
@@ -139,9 +144,9 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 }
 
 // RecordMessage inserts a message and attaches the attachments to the message.
-func (m *Manager) RecordMessage(msg models.Message) (int64, string, error) {
+func (m *Manager) RecordMessage(msg models.Message) (int, string, error) {
 	var (
-		msgID          int64
+		msgID          int
 		msgUUID        string
 		query          *sqlx.Stmt
 		convIdentifier interface{}
@@ -172,7 +177,7 @@ func (m *Manager) RecordMessage(msg models.Message) (int64, string, error) {
 	return msgID, msgUUID, nil
 }
 
-func (m *Manager) RecordActivity(activityType, value, conversationUUID, userName string, userID int64) error {
+func (m *Manager) RecordActivity(activityType, value, conversationUUID, userName string, userID int) error {
 	var content = m.getActivityContent(activityType, value, userName)
 	if content == "" {
 		m.lo.Error("invalid activity for inserting message", "activity", activityType)
@@ -214,15 +219,13 @@ func (m *Manager) StartDispatcher(ctx context.Context, concurrency int, readInte
 		case <-dbScanner.C:
 			var (
 				pendingMsgs = []models.Message{}
-				msgIDs      = m.getProcessingMsgIDs()
+				msgIDs      = m.getOutgoingProcessingMsgIDs()
 			)
 
 			// Skip the currently processing msg ids.
 			if err := m.q.GetPendingMessages.Select(&pendingMsgs, pq.Array(msgIDs)); err != nil {
 				m.lo.Error("error fetching pending messages from db", "error", err)
 			}
-
-			fmt.Printf("pendings msg %+v \n", pendingMsgs)
 
 			// Prepare and push the message to the outgoing queue.
 			for _, msg := range pendingMsgs {
@@ -254,7 +257,7 @@ func (m *Manager) DispatchWorker() {
 
 		if inbox.Channel() == "email" {
 			msg.InReplyTo, _ = m.GetInReplyTo(msg.ConversationID)
-			m.lo.Debug("set in reply to", "in_reply_to", msg.InReplyTo)
+			m.lo.Debug("set in reply to for outgoing email message", "in_reply_to", msg.InReplyTo)
 		}
 
 		err = inbox.Send(msg)
@@ -279,7 +282,7 @@ func (m *Manager) DispatchWorker() {
 	}
 }
 
-func (m *Manager) GetToAddress(convID int64, channel string) ([]string, error) {
+func (m *Manager) GetToAddress(convID int, channel string) ([]string, error) {
 	var addr []string
 	if err := m.q.GetToAddress.Select(&addr, convID, channel); err != nil {
 		m.lo.Error("error fetching to address for msg", "error", err, "conv_id", convID)
@@ -288,7 +291,7 @@ func (m *Manager) GetToAddress(convID int64, channel string) ([]string, error) {
 	return addr, nil
 }
 
-func (m *Manager) GetInReplyTo(convID int64) (string, error) {
+func (m *Manager) GetInReplyTo(convID int) (string, error) {
 	var out string
 	if err := m.q.GetInReplyTo.Get(&out, convID); err != nil {
 		if err == sql.ErrNoRows {
@@ -339,13 +342,11 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	}
 
 	// This message already exists?
-	m.lo.Debug("searching for message with id", "source_id", in.Message.SourceID.String)
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
 	if err != nil && err != ErrConversationNotFound {
 		return err
 	}
 	if conversationID > 0 {
-		m.lo.Debug("conversation already exists for message", "source_id", in.Message.SourceID.String)
 		return nil
 	}
 
@@ -367,7 +368,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return fmt.Errorf("uploading message attachments: %w", err)
 	}
 
-	// WS update.
+	// Send WS update.
 	cuuid, err := m.conversationMgr.GetUUID(in.Message.ConversationID)
 	if err != nil {
 		m.lo.Error("error fetching uuid for conversation", "conversation_id", in.Message.ConversationID, "error", err)
@@ -390,6 +391,15 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		})
 	}
 
+	// Pass this conversation for evaluating automation rules.
+	if newConv {
+		m.automationEngine.ProcessConversation(cmodels.Conversation{
+			UUID:         cuuid,
+			FirstMessage: in.Message.Content,
+			Subject:      in.Message.Subject,
+		})
+	}
+
 	return nil
 }
 
@@ -404,9 +414,9 @@ func (m *Manager) TrimMsg(msg string) string {
 
 func (m *Manager) uploadAttachments(in *models.Message) error {
 	var (
-		inlineAttachments = false
-		msgID             = in.ID
-		msgUUID           = in.UUID
+		hasInline = false
+		msgID     = in.ID
+		msgUUID   = in.UUID
 	)
 	for _, att := range in.Attachments {
 		reader := bytes.NewReader(att.Content)
@@ -416,13 +426,13 @@ func (m *Manager) uploadAttachments(in *models.Message) error {
 			return errors.New("error uploading attachments for incoming message")
 		}
 		if att.ContentDisposition == attachment.DispositionInline {
-			inlineAttachments = true
+			hasInline = true
 			in.Content = strings.ReplaceAll(in.Content, "cid:"+att.ContentID, url)
 		}
 	}
 
 	// Update the msg content the `cid:content_id` urls have been replaced.
-	if inlineAttachments {
+	if hasInline {
 		if _, err := m.q.UpdateMessageContent.Exec(in.Content, msgID); err != nil {
 			m.lo.Error("error updating message content", "message_uuid", msgUUID)
 			return fmt.Errorf("updating msg content: %w", err)
@@ -431,23 +441,21 @@ func (m *Manager) uploadAttachments(in *models.Message) error {
 	return nil
 }
 
-func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int64, conversationMeta string) (int64, bool, error) {
+func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int, conversationMeta string) (int, bool, error) {
 	var (
-		conversationID int64
+		conversationID int
 		newConv        bool
 		err            error
 	)
 
 	// Search for existing conversation.
 	if conversationID == 0 && in.InReplyTo > "" {
-		m.lo.Debug("searching for message with id", "source_id", in.InReplyTo)
 		conversationID, err = m.findConversationID([]string{in.InReplyTo})
 		if err != nil && err != ErrConversationNotFound {
 			return conversationID, newConv, err
 		}
 	}
 	if conversationID == 0 && len(in.References) > 0 {
-		m.lo.Debug("searching for message with id", "source_id", in.References)
 		conversationID, err = m.findConversationID(in.References)
 		if err != nil && err != ErrConversationNotFound {
 			return conversationID, newConv, err
@@ -485,8 +493,8 @@ func (m *Manager) getActivityContent(activityType, value, userName string) strin
 }
 
 // findConversationID finds the conversation ID from the message source ID.
-func (m *Manager) findConversationID(sourceIDs []string) (int64, error) {
-	var conversationID int64
+func (m *Manager) findConversationID(sourceIDs []string) (int, error) {
+	var conversationID int
 	if err := m.q.MessageExists.QueryRow(pq.Array(sourceIDs)).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
 			return conversationID, ErrConversationNotFound
@@ -518,11 +526,11 @@ func (m *Manager) attachAttachments(msg *models.Message) error {
 	return nil
 }
 
-// getProcessingMsgIDs returns outgoing msg ids currently being processed.
-func (m *Manager) getProcessingMsgIDs() []int64 {
-	var out = make([]int64, 0)
+// getOutgoingProcessingMsgIDs returns outgoing msg ids currently being processed.
+func (m *Manager) getOutgoingProcessingMsgIDs() []int {
+	var out = make([]int, 0)
 	m.outgoingProcessingMsgs.Range(func(key, _ any) bool {
-		if k, ok := key.(int64); ok {
+		if k, ok := key.(int); ok {
 			out = append(out, k)
 		}
 		return true

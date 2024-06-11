@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/utils"
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -16,7 +16,7 @@ var (
 )
 
 type Tag struct {
-	ID        int64     `db:"id" json:"id"`
+	ID        int     `db:"id" json:"id"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	Name      string    `db:"name" json:"name"`
 }
@@ -40,7 +40,7 @@ type queries struct {
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 

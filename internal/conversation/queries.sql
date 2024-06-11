@@ -34,7 +34,7 @@ SELECT
     (
         SELECT COUNT(*)
         FROM messages m
-        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
+        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at AND m.type = 'incoming'
     ) AS unread_message_count
 FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id
@@ -138,3 +138,6 @@ VALUES($1, (select id from conversations where uuid = $2));
 
 -- name: get-assigned-uuids
 select uuids from conversations where assigned_user_id = $1;
+
+-- name: get-unassigned
+SELECT id, uuid, assigned_team_id from conversations where assigned_user_id is NULL and assigned_team_id is not null;

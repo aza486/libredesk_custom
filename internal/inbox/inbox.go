@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/abhinavxd/artemis/internal/message/models"
-	"github.com/abhinavxd/artemis/internal/utils"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -85,7 +84,7 @@ func New(lo *logf.Logger, db *sqlx.DB, incomingMsgQ chan models.IncomingMessage)
 	var q queries
 
 	// Scan the sql	file into the queries struct.
-	if err := utils.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
 		return nil, err
 	}
 

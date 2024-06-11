@@ -1,4 +1,4 @@
-// Package user provides functions to login, logout and fetch user details.
+// Package user handles user login, logout and provides functions to fetch user details.
 package user
 
 import (
@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/abhinavxd/artemis/internal/user/models"
-	"github.com/abhinavxd/artemis/internal/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 	"golang.org/x/crypto/bcrypt"
@@ -46,7 +46,7 @@ type queries struct {
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 

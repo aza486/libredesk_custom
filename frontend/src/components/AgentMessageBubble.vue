@@ -3,7 +3,7 @@
 
         <div class="pr-[47px] mb-1">
             <p class="text-muted-foreground text-sm">
-                {{ getFullName(message) }}
+                {{ getFullName }}
             </p>
         </div>
 
@@ -26,7 +26,7 @@
                 <Spinner v-if="message.status === 'pending'" />
                 <div class="flex items-center space-x-2 mt-2">
                     <span class="text-slate-500 capitalize text-xs" v-if="message.status != 'pending'">{{
-                        message.status}}</span>
+                        message.status }}</span>
                     <RotateCcw size="10" @click="retryMessage(message)" class="cursor-pointer"
                         v-if="message.status === 'failed'"></RotateCcw>
                 </div>
@@ -34,7 +34,7 @@
             <Avatar class="cursor-pointer">
                 <AvatarImage :src=getAvatar />
                 <AvatarFallback>
-                    {{ avatarFallback(message) }}
+                    {{ avatarFallback }}
                 </AvatarFallback>
             </Avatar>
 
@@ -56,9 +56,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
-import api from '@/api';
+import api from '@/api'
 
 import {
     Tooltip,
@@ -71,34 +72,26 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import MessageAttachmentPreview from "./MessageAttachmentPreview.vue"
 
 
-defineProps({
+const props = defineProps({
     message: Object,
 })
 const convStore = useConversationStore()
 
-const getAvatar = (msg) => {
-    if (msg.sender_uuid && convStore.conversation.participants) {
-        let participant = convStore.conversation.participants[msg.sender_uuid]
-        return participant.avatar_url ? participant.avatar_url : ''
-    }
-    return ''
-}
+const participant = computed(() => {
+    return convStore.conversation?.participants[props.message.sender_uuid] || {};
+});
 
-const getFullName = (msg) => {
-    if (msg.sender_uuid && convStore.conversation.participants) {
-        let participant = convStore.conversation.participants[msg.sender_uuid]
-        return participant.first_name + ' ' + participant.last_name
-    }
-    return ''
-}
+const getFullName = computed(() => {
+    return `${participant.value?.first_name} ${participant.value.last_name}`;
+});
 
-const avatarFallback = (msg) => {
-    if (msg.sender_uuid && convStore.conversation.participants) {
-        let participant = convStore.conversation.participants[msg.sender_uuid]
-        return participant.first_name.toUpperCase().substring(0, 2)
-    }
-    return ''
-}
+const getAvatar = computed(() => {
+    return participant.value.avatar_url || '';
+});
+
+const avatarFallback = computed(() => {
+    return participant.value?.first_name.toUpperCase().substring(0, 2);
+});
 
 const retryMessage = (msg) => {
     api.retryMessage(msg.uuid)

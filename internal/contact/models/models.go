@@ -3,7 +3,7 @@ package models
 import "time"
 
 type Contact struct {
-	ID          int64     `db:"id" json:"id"`
+	ID          int     `db:"id" json:"id"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 	FirstName   string    `db:"first_name" json:"first_name"`
 	LastName    string    `db:"last_name" json:"last_name"`

@@ -8,7 +8,7 @@ import (
 	"net/textproto"
 
 	"github.com/abhinavxd/artemis/internal/attachment/models"
-	"github.com/abhinavxd/artemis/internal/utils"
+	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -55,7 +55,8 @@ func New(opt Opts) (*Manager, error) {
 	var q queries
 
 	// Scan SQL file
-	if err := utils.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
+
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
 		return nil, err
 	}
 	return &Manager{
@@ -93,7 +94,7 @@ func (m *Manager) Upload(msgUUID, fileName, contentType, contentDisposition, fil
 }
 
 // AttachMessage attaches given attachments to a message.
-func (m *Manager) AttachMessage(attachments models.Attachments, msgID int64) error {
+func (m *Manager) AttachMessage(attachments models.Attachments, msgID int) error {
 	var err error
 	for _, attachment := range attachments {
 		if attachment.UUID == "" {
@@ -111,7 +112,7 @@ func (m *Manager) AttachMessage(attachments models.Attachments, msgID int64) err
 	return nil
 }
 
-func (m *Manager) GetMessageAttachments(msgID int64) (models.Attachments, error) {
+func (m *Manager) GetMessageAttachments(msgID int) (models.Attachments, error) {
 	var attachments models.Attachments
 	if err := m.queries.GetMessageAttachments.Select(&attachments, msgID); err != nil {
 		m.lo.Error("error fetching message attachments", "error", err)

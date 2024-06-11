@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -50,7 +51,7 @@ func main() {
 	// Load command line flags into Koanf.
 	initFlags()
 
-	// Load the config file into Koanf.
+	// Load the config files into Koanf.
 	initz.Config(ko)
 
 	var (
@@ -64,27 +65,30 @@ func main() {
 		rd = initz.Redis(ko)
 		db = initz.DB(ko)
 
-		attachmentMgr   = initAttachmentsManager(db, &lo)
-		cntctMgr        = initContactManager(db, &lo)
-		conversationMgr = initConversations(db, &lo)
-		inboxMgr        = initInboxManager(db, &lo, incomingMsgQ)
+		attachmentMgr      = initAttachmentsManager(db, &lo)
+		cntctMgr           = initContactManager(db, &lo)
+		conversationMgr    = initConversations(db, &lo)
+		inboxMgr           = initInboxManager(db, &lo, incomingMsgQ)
+		automationEngine   = initAutomationEngine(conversationMgr, db, &lo)
+		teamMgr            = initTeamMgr(db, &lo)
+		userMgr            = initUserDB(db, &lo)
+		autoAssignerEngine = initAutoAssignmentEngine(teamMgr, userMgr, conversationMgr, &lo)
 
-		// Websocket hub.
+		// Init Websocket hub.
 		wsHub = ws.NewHub()
 	)
 
-	// Init the app.
+	// Init the app
 	var app = &App{
-		lo:                  &lo,
-		cntctMgr:            cntctMgr,
-		inboxMgr:            inboxMgr,
-		attachmentMgr:       attachmentMgr,
-		conversationMgr:     conversationMgr,
-		constants:           initConstants(),
-		msgMgr:              initMessages(db, &lo, incomingMsgQ, wsHub, cntctMgr, attachmentMgr, conversationMgr, inboxMgr),
-		sessMgr:             initSessionManager(rd),
-		userMgr:             initUserDB(db, &lo),
-		teamMgr:             initTeamMgr(db, &lo),
+		lo:              &lo,
+		cntctMgr:        cntctMgr,
+		inboxMgr:        inboxMgr,
+		attachmentMgr:   attachmentMgr,
+		conversationMgr: conversationMgr,
+		constants:       initConstants(),
+		msgMgr:          initMessages(db, &lo, incomingMsgQ, wsHub, cntctMgr, attachmentMgr, conversationMgr, inboxMgr, automationEngine),
+		sessMgr:         initSessionManager(rd),
+
 		tagMgr:              initTags(db, &lo),
 		cannedRespMgr:       initCannedResponse(db, &lo),
 		conversationTagsMgr: initConversationTags(db, &lo),
@@ -93,9 +97,15 @@ func main() {
 	// Start receivers for all active inboxes.
 	inboxMgr.Receive()
 
-	// Start message inserter and dispatchers.
+	// Start incoming msg inserter and outgoing msg dispatchers.
 	go app.msgMgr.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
 	go app.msgMgr.StartDispatcher(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+
+	// Start automation rule engine.
+	go automationEngine.Serve()
+
+	// Start auto assigner enginer.
+	go autoAssignerEngine.Serve(ctx, 10*time.Second)
 
 	// Init fastglue http server.
 	g := fastglue.NewGlue()
@@ -123,7 +133,7 @@ func main() {
 	}()
 
 	// Start the HTTP server.
-	log.Printf("server listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
+	log.Printf("🚀 server listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
 	if err := g.ListenServeAndWaitGracefully(ko.String("app.server.address"), ko.String("server.socket"), s, shutdownCh); err != nil {
 		log.Fatalf("error starting frontend server: %v", err)
 	}

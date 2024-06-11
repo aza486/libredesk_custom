@@ -1,7 +1,7 @@
 package models
 
 type User struct {
-	ID        int64   `db:"id" json:"-"`
+	ID        int     `db:"id" json:"-"`
 	UUID      string  `db:"uuid" json:"uuid"`
 	FirstName string  `db:"first_name" json:"first_name"`
 	LastName  string  `db:"last_name" json:"last_name"`
@@ -9,6 +9,7 @@ type User struct {
 	AvatarURL *string `db:"avatar_url" json:"avatar_url"`
 	Disabled  string  `db:"disabled" json:"disabled"`
 	Password  string  `db:"password" json:"-"`
+	TeamID    int     `db:"team_id" json:"-"`
 }
 
 func (u *User) FullName() string {

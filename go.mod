@@ -18,6 +18,7 @@ require (
 	github.com/knadh/koanf/v2 v2.1.1
 	github.com/knadh/smtppool v1.1.0
 	github.com/lib/pq v1.10.9
+	github.com/mr-karan/balance v0.0.0-20230131075323-e0d55eb3e4b9
 	github.com/rhnvrm/simples3 v0.8.3
 	github.com/spf13/pflag v1.0.5
 	github.com/valyala/fasthttp v1.54.0

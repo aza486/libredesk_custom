@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/abhinavxd/artemis/internal/utils"
+	"github.com/abhinavxd/artemis/internal/dbutils"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -17,7 +18,7 @@ var (
 )
 
 type Team struct {
-	ID   string `db:"id" json:"-"`
+	ID   int    `db:"id" json:"-"`
 	Name string `db:"name" json:"name"`
 	UUID string `db:"uuid" json:"uuid"`
 }
@@ -33,14 +34,15 @@ type Opts struct {
 }
 
 type queries struct {
-	GetTeams *sqlx.Stmt `query:"get-teams"`
-	GetTeam  *sqlx.Stmt `query:"get-team"`
+	GetTeams       *sqlx.Stmt `query:"get-teams"`
+	GetTeam        *sqlx.Stmt `query:"get-team"`
+	GetTeamMembers *sqlx.Stmt `query:"get-team-members"`
 }
 
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := utils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 
@@ -72,4 +74,16 @@ func (u *Manager) GetTeam(uuid string) (Team, error) {
 		return team, fmt.Errorf("error fetching team")
 	}
 	return team, nil
+}
+
+func (u *Manager) GetTeamMembers(name string) ([]umodels.User, error) {
+	var users []umodels.User
+	if err := u.q.GetTeamMembers.Select(&users, name); err != nil {
+		if errors.Is(sql.ErrNoRows, err) {
+			return users, nil
+		}
+		u.lo.Error("error fetching team members from db", "team_name", name, "error", err)
+		return users, fmt.Errorf("fetching team members: %w", err)
+	}
+	return users, nil
 }
