@@ -6,6 +6,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/artemis/internal/systeminfo"
 )
 
 func (e *Engine) processConversations(conv cmodels.Conversation) {
@@ -121,10 +122,21 @@ func (e *Engine) executeActions(conv cmodels.Conversation) {
 func (e *Engine) processAction(action models.Action, conv cmodels.Conversation) error {
 	switch action.Type {
 	case models.ActionAssignTeam:
-		return e.convMgr.UpdateAssignee(conv.UUID, []byte(action.Action), "team")
+		if err := e.convUpdater.UpdateAssignee(conv.UUID, []byte(action.Action), "team"); err != nil {
+			return err
+		}
+		if err := e.msgRecorder.RecordAssigneeUserChange(action.Action, conv.UUID, systeminfo.SystemUserUUID); err != nil {
+			return err
+		}
 	case models.ActionAssignAgent:
-		return e.convMgr.UpdateStatus(conv.UUID, []byte(action.Action))
+		if err := e.convUpdater.UpdateStatus(conv.UUID, []byte(action.Action)); err != nil {
+			return err
+		}
+		if err := e.msgRecorder.RecordStatusChange(action.Action, conv.UUID, systeminfo.SystemUserUUID); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("rule action not recognized: %s", action.Type)
 	}
+	return nil
 }

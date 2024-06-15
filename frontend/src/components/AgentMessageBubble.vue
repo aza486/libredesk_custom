@@ -6,7 +6,6 @@
                 {{ getFullName }}
             </p>
         </div>
-
         <div class="flex flex-row gap-2 justify-end">
             <div class="
                 flex
@@ -14,7 +13,9 @@
                 message-bubble
                 justify-end
                 items-end
-                relative" :class="{
+                relative
+                !rounded-tr-none
+                " :class="{
                     'bg-[#FEF1E1]': message.private,
                     'bg-white': !message.private,
                     'opacity-50 animate-pulse': message.status === 'pending',
@@ -75,28 +76,30 @@ import MessageAttachmentPreview from "./MessageAttachmentPreview.vue"
 const props = defineProps({
     message: Object,
 })
-const convStore = useConversationStore()
+const convStore = useConversationStore();
 
 const participant = computed(() => {
-    return convStore.conversation?.participants[props.message.sender_uuid] || {};
+    return convStore.conversation?.participants?.[props.message.sender_uuid] ?? {};
 });
 
 const getFullName = computed(() => {
-    return `${participant.value?.first_name} ${participant.value.last_name}`;
+    const firstName = participant.value?.first_name ?? 'Unknown'
+    const lastName = participant.value?.last_name ?? 'User'
+    return `${firstName} ${lastName}`;
 });
 
 const getAvatar = computed(() => {
-    return participant.value.avatar_url || '';
+    return participant.value?.avatar_url
 });
 
 const avatarFallback = computed(() => {
-    return participant.value?.first_name.toUpperCase().substring(0, 2);
+    const firstName = participant.value?.first_name ?? 'A'
+    return firstName.toUpperCase().substring(0, 2);
 });
 
 const retryMessage = (msg) => {
     api.retryMessage(msg.uuid)
-    msg.status = 'pending'
-    convStore.updateMessageStatus(msg)
+    convStore.updateMessageStatus(msg.uuid, 'pending')
 }
 
 </script>

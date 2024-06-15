@@ -15,6 +15,9 @@ import (
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
+	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/user"
+
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/abhinavxd/artemis/internal/inbox"
@@ -38,7 +41,7 @@ const (
 	TypeOutgoing = "outgoing"
 	TypeActivity = "activity"
 
-	SenderTypeAgent   = "agent"
+	SenderTypeUser    = "user"
 	SenderTypeContact = "contact"
 
 	StatusPending   = "pending"
@@ -48,12 +51,12 @@ const (
 	StatusFailed    = "failed"
 	StatusReceived  = "received"
 
-	ActivityStatusChange        = "status_change"
-	ActivityPriorityChange      = "priority_change"
-	ActivityAssignedAgentChange = "assigned_agent_change"
-	ActivityAssignedTeamChange  = "assigned_team_change"
-	ActivitySelfAssign          = "self_assign"
-	ActivityTagChange           = "tag_change"
+	ActivityStatusChange       = "status_change"
+	ActivityPriorityChange     = "priority_change"
+	ActivityAssignedUserChange = "assigned_user_change"
+	ActivityAssignedTeamChange = "assigned_team_change"
+	ActivitySelfAssign         = "self_assign"
+	ActivityTagChange          = "tag_change"
 
 	ContentTypeText = "text"
 	ContentTypeHTML = "html"
@@ -68,6 +71,8 @@ type Manager struct {
 	attachmentMgr          *attachment.Manager
 	conversationMgr        *conversation.Manager
 	inboxMgr               *inbox.Manager
+	userMgr                *user.Manager
+	teamMgr                *team.Manager
 	automationEngine       *automation.Engine
 	wsHub                  *ws.Hub
 	incomingMsgQ           chan models.IncomingMessage
@@ -95,8 +100,16 @@ type queries struct {
 	MessageExists        *sqlx.Stmt `query:"message-exists"`
 }
 
-func New(incomingMsgQ chan models.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager, inboxMgr *inbox.Manager,
-	conversationMgr *conversation.Manager, automationEngine *automation.Engine, opts Opts) (*Manager, error) {
+func New(incomingMsgQ chan models.IncomingMessage,
+	wsHub *ws.Hub,
+	userMgr *user.Manager,
+	teamMgr *team.Manager,
+	contactMgr *contact.Manager,
+	attachmentMgr *attachment.Manager,
+	inboxMgr *inbox.Manager,
+	conversationMgr *conversation.Manager,
+	automationEngine *automation.Engine,
+	opts Opts) (*Manager, error) {
 	var q queries
 
 	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
@@ -106,6 +119,8 @@ func New(incomingMsgQ chan models.IncomingMessage, wsHub *ws.Hub, contactMgr *co
 		q:                      q,
 		lo:                     opts.Lo,
 		wsHub:                  wsHub,
+		userMgr:                userMgr,
+		teamMgr:                teamMgr,
 		contactMgr:             contactMgr,
 		attachmentMgr:          attachmentMgr,
 		conversationMgr:        conversationMgr,
@@ -144,10 +159,8 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 }
 
 // RecordMessage inserts a message and attaches the attachments to the message.
-func (m *Manager) RecordMessage(msg models.Message) (int, string, error) {
+func (m *Manager) RecordMessage(msg *models.Message) error {
 	var (
-		msgID          int
-		msgUUID        string
 		query          *sqlx.Stmt
 		convIdentifier interface{}
 	)
@@ -160,41 +173,19 @@ func (m *Manager) RecordMessage(msg models.Message) (int, string, error) {
 		query = m.q.InsertMessageByID
 		convIdentifier = msg.ConversationID
 	} else {
-		return msgID, msgUUID, errors.New("conversation id or uuid is required to insert a message")
+		return errors.New("conversation id or uuid is required to insert a message")
 	}
 
-	if err := query.QueryRow(msg.Type, msg.Status, convIdentifier, msg.Content, msg.SenderID, msg.SenderType, msg.Private, msg.ContentType, msg.SourceID, msg.InboxID, msg.Meta).Scan(&msgID, &msgUUID); err != nil {
+	if err := query.QueryRow(msg.Type, msg.Status, convIdentifier, msg.Content, msg.SenderID, msg.SenderType, msg.Private, msg.ContentType, msg.SourceID, msg.InboxID, msg.Meta).Scan(&msg.ID, &msg.UUID); err != nil {
 		m.lo.Error("inserting message in db", "error", err)
-		return msgID, msgUUID, fmt.Errorf("inserting message: %w", err)
+		return fmt.Errorf("inserting message: %w", err)
 	}
 
 	// Attach the attachments.
-	if err := m.attachmentMgr.AttachMessage(msg.Attachments, msgID); err != nil {
+	if err := m.attachmentMgr.AttachMessage(msg.Attachments, msg.ID); err != nil {
 		m.lo.Error("error attaching attachments to the message", "error", err)
-		return msgID, msgUUID, errors.New("error attaching attachments to the message")
+		return errors.New("error attaching attachments to the message")
 	}
-
-	return msgID, msgUUID, nil
-}
-
-func (m *Manager) RecordActivity(activityType, value, conversationUUID, userName string, userID int) error {
-	var content = m.getActivityContent(activityType, value, userName)
-	if content == "" {
-		m.lo.Error("invalid activity for inserting message", "activity", activityType)
-		return errors.New("invalid activity type for inserting message")
-	}
-
-	m.RecordMessage(models.Message{
-		Type:             TypeActivity,
-		Status:           StatusSent,
-		Content:          content,
-		ContentType:      ContentTypeText,
-		ConversationUUID: conversationUUID,
-		Private:          true,
-		SenderID:         userID,
-		SenderType:       "user",
-		Meta:             "{}",
-	})
 
 	return nil
 }
@@ -325,6 +316,88 @@ func (m *Manager) InsertWorker(ctx context.Context) {
 	}
 }
 
+func (m *Manager) RecordAssigneeUserChange(updatedValue, convUUID, actorUUID string) error {
+	if updatedValue == actorUUID {
+		return m.RecordActivity(ActivitySelfAssign, updatedValue, convUUID, actorUUID)
+	}
+	assignee, err := m.userMgr.GetUser(0, updatedValue)
+	if err != nil {
+		m.lo.Error("Error fetching user to record assignee change", "error", err)
+		return err
+	}
+	updatedValue = assignee.FullName()
+	return m.RecordActivity(ActivityAssignedUserChange, updatedValue, convUUID, actorUUID)
+}
+
+func (m *Manager) RecordAssigneeTeamChange(updatedValue, convUUID, actorUUID string) error {
+	team, err := m.teamMgr.GetTeam(updatedValue)
+	if err != nil {
+		return err
+	}
+	updatedValue = team.Name
+	return m.RecordActivity(ActivityAssignedTeamChange, updatedValue, convUUID, actorUUID)
+}
+
+func (m *Manager) RecordPriorityChange(updatedValue, convUUID, actorUUID string) error {
+	return m.RecordActivity(ActivityPriorityChange, updatedValue, convUUID, actorUUID)
+}
+
+func (m *Manager) RecordStatusChange(updatedValue, convUUID, actorUUID string) error {
+	return m.RecordActivity(ActivityStatusChange, updatedValue, convUUID, actorUUID)
+}
+
+func (m *Manager) RecordActivity(activityType, updatedValue, conversationUUID, actorUUID string) error {
+	var (
+		actor, err = m.userMgr.GetUser(0, actorUUID)
+	)
+	if err != nil {
+		m.lo.Error("Error fetching user for recording message activity", "error", err)
+		return err
+	}
+
+	var content = m.getActivityContent(activityType, updatedValue, actor.FullName())
+	if content == "" {
+		m.lo.Error("Error invalid activity for recording activity", "activity", activityType)
+		return errors.New("invalid activity type for recording activity")
+	}
+
+	msg := models.Message{
+		Type:             TypeActivity,
+		Status:           StatusSent,
+		Content:          content,
+		ContentType:      ContentTypeText,
+		ConversationUUID: conversationUUID,
+		Private:          true,
+		SenderID:         actor.ID,
+		SenderType:       SenderTypeUser,
+		Meta:             "{}",
+	}
+
+	m.RecordMessage(&msg)
+	m.BroadcastNewMsg(msg)
+
+	return nil
+}
+
+func (m *Manager) getActivityContent(activityType, newValue, actorName string) string {
+	var content = ""
+	switch activityType {
+	case ActivityAssignedUserChange:
+		content = fmt.Sprintf("Assigned to %s by %s", newValue, actorName)
+	case ActivityAssignedTeamChange:
+		content = fmt.Sprintf("Assigned to %s team by %s", newValue, actorName)
+	case ActivitySelfAssign:
+		content = fmt.Sprintf("%s self-assigned this conversation", actorName)
+	case ActivityPriorityChange:
+		content = fmt.Sprintf("%s changed priority to %s", actorName, newValue)
+	case ActivityStatusChange:
+		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
+	case ActivityTagChange:
+		content = fmt.Sprintf("%s added tags %s", actorName, newValue)
+	}
+	return content
+}
+
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var (
 		conversationMeta = "{}"
@@ -341,7 +414,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return err
 	}
 
-	// This message already exists?
+	// This message already exists? Return.
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
 	if err != nil && err != ErrConversationNotFound {
 		return err
@@ -350,15 +423,13 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return nil
 	}
 
-	conversationID, newConv, err := m.findOrCreateConversation(&in.Message, in.InboxID, in.Message.SenderID, conversationMeta)
+	in.Message.ConversationID, in.Message.ConversationUUID, in.Message.NewConversation, err = m.findOrCreateConversation(&in.Message, in.InboxID, in.Message.SenderID, conversationMeta)
 	if err != nil {
 		m.lo.Error("error creating conversation", "error", err)
 		return err
 	}
-	in.Message.ConversationID = conversationID
 
-	in.Message.ID, in.Message.UUID, err = m.RecordMessage(in.Message)
-	if err != nil {
+	if err = m.RecordMessage(&in.Message); err != nil {
 		m.lo.Error("error inserting conversation message", "error", err)
 		return fmt.Errorf("inserting conversation message: %w", err)
 	}
@@ -369,32 +440,14 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	}
 
 	// Send WS update.
-	cuuid, err := m.conversationMgr.GetUUID(in.Message.ConversationID)
-	if err != nil {
-		m.lo.Error("error fetching uuid for conversation", "conversation_id", in.Message.ConversationID, "error", err)
-	} else if cuuid > "" {
-		// Broastcast new msg to all conversation subscribers.
-		content := m.TrimMsg(in.Message.Content)
-		if newConv {
-			content = m.TrimMsg(in.Message.Subject)
-		}
-		now := time.Now().Format(time.DateTime)
-		m.wsHub.BroadcastNewMsg(cuuid, map[string]interface{}{
-			"conversation_uuid": cuuid,
-			"uuid":              in.Message.UUID,
-			"last_message":      content,
-			"first_name":        in.Contact.FirstName,
-			"last_name":         in.Contact.LastName,
-			"avatar_url":        "",
-			"last_message_at":   now,
-			"private":           false,
-		})
+	if in.Message.ConversationUUID > "" {
+		m.BroadcastNewMsg(in.Message)
 	}
 
-	// Pass this conversation for evaluating automation rules.
-	if newConv {
-		m.automationEngine.ProcessConversation(cmodels.Conversation{
-			UUID:         cuuid,
+	// Evaluate automation rules for this conversation.
+	if in.Message.NewConversation {
+		m.automationEngine.EvaluateRules(cmodels.Conversation{
+			UUID:         in.Message.ConversationUUID,
 			FirstMessage: in.Message.Content,
 			Subject:      in.Message.Subject,
 		})
@@ -441,24 +494,25 @@ func (m *Manager) uploadAttachments(in *models.Message) error {
 	return nil
 }
 
-func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int, conversationMeta string) (int, bool, error) {
+func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int, conversationMeta string) (int, string, bool, error) {
 	var (
-		conversationID int
-		newConv        bool
-		err            error
+		conversationID   int
+		conversationUUID string
+		newConv          bool
+		err              error
 	)
 
 	// Search for existing conversation.
 	if conversationID == 0 && in.InReplyTo > "" {
 		conversationID, err = m.findConversationID([]string{in.InReplyTo})
 		if err != nil && err != ErrConversationNotFound {
-			return conversationID, newConv, err
+			return conversationID, conversationUUID, newConv, err
 		}
 	}
 	if conversationID == 0 && len(in.References) > 0 {
 		conversationID, err = m.findConversationID(in.References)
 		if err != nil && err != ErrConversationNotFound {
-			return conversationID, newConv, err
+			return conversationID, conversationUUID, newConv, err
 		}
 	}
 
@@ -467,29 +521,17 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		newConv = true
 		conversationID, err = m.conversationMgr.Create(contactID, inboxID, conversationMeta)
 		if err != nil || conversationID == 0 {
-			return conversationID, newConv, fmt.Errorf("inserting conversation: %w", err)
+			return conversationID, conversationUUID, newConv, fmt.Errorf("inserting conversation: %w", err)
 		}
 	}
-	return conversationID, newConv, nil
-}
 
-func (m *Manager) getActivityContent(activityType, value, userName string) string {
-	var content = ""
-	switch activityType {
-	case ActivityAssignedAgentChange:
-		content = fmt.Sprintf("Assigned to %s by %s", value, userName)
-	case ActivityAssignedTeamChange:
-		content = fmt.Sprintf("Assigned to %s team by %s", value, userName)
-	case ActivitySelfAssign:
-		content = fmt.Sprintf("%s self-assigned this conversation", userName)
-	case ActivityPriorityChange:
-		content = fmt.Sprintf("%s changed priority to %s", userName, value)
-	case ActivityStatusChange:
-		content = fmt.Sprintf("%s marked the conversation as %s", userName, value)
-	case ActivityTagChange:
-		content = fmt.Sprintf("%s added tags %s", userName, value)
+	// Fetch & return the UUID of the conversation for UI updates.
+	conversationUUID, err = m.conversationMgr.GetUUID(conversationID)
+	if err != nil {
+		m.lo.Error("Error fetching conversation UUID from id", err)
 	}
-	return content
+
+	return conversationID, conversationUUID, newConv, nil
 }
 
 // findConversationID finds the conversation ID from the message source ID.
@@ -536,4 +578,22 @@ func (m *Manager) getOutgoingProcessingMsgIDs() []int {
 		return true
 	})
 	return out
+}
+
+func (m *Manager) BroadcastNewMsg(msg models.Message) {
+	// Send trimmed content.
+	var content = ""
+	if msg.NewConversation {
+		content = m.TrimMsg(msg.Subject)
+	} else {
+		content = m.TrimMsg(msg.Content)
+	}
+	msg.Content = content
+	m.wsHub.BroadcastNewMsg(msg.ConversationUUID, map[string]interface{}{
+		"conversation_uuid": msg.ConversationUUID,
+		"uuid":              msg.UUID,
+		"last_message":      msg.Content,
+		"last_message_at":   time.Now().Format(time.DateTime),
+		"private":           msg.Private,
+	})
 }

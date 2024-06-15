@@ -23,7 +23,7 @@ export function initWS () {
                     convStore.updateMessageList(event.d)
                     break
                 case "msg_status_update":
-                    convStore.updateMessageStatus(event.d)
+                    convStore.updateMessageStatus(event.d.uuid, event.d.status)
                     break
                 default:
                     console.log(`Unknown event ${event.ev}`);

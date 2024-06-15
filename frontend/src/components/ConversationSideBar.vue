@@ -114,7 +114,7 @@
           <!-- Priority  -->
           <Select v-model="conversationStore.conversation.data.priority" @update:modelValue="handlePriorityChange">
             <SelectTrigger class="mb-3">
-              <SelectValue placeholder="Priority" class="font-medium" />
+              <SelectValue placeholder="Select priortiy..." class="font-medium" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>

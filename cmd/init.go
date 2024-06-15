@@ -166,12 +166,30 @@ func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
 	return m
 }
 
-func initMessages(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.IncomingMessage, wsHub *ws.Hub, contactMgr *contact.Manager, attachmentMgr *attachment.Manager,
-	conversationMgr *conversation.Manager, inboxMgr *inbox.Manager, automationEngine *automation.Engine) *message.Manager {
-	mgr, err := message.New(incomingMsgQ, wsHub, contactMgr, attachmentMgr, inboxMgr, conversationMgr, automationEngine, message.Opts{
-		DB: db,
-		Lo: lo,
-	})
+func initMessages(db *sqlx.DB,
+	lo *logf.Logger,
+	incomingMsgQ chan mmodels.IncomingMessage,
+	wsHub *ws.Hub,
+	userMgr *user.Manager,
+	teaMgr *team.Manager,
+	contactMgr *contact.Manager,
+	attachmentMgr *attachment.Manager,
+	conversationMgr *conversation.Manager,
+	inboxMgr *inbox.Manager,
+	automationEngine *automation.Engine) *message.Manager {
+	mgr, err := message.New(incomingMsgQ,
+		wsHub,
+		userMgr,
+		teaMgr,
+		contactMgr,
+		attachmentMgr,
+		inboxMgr,
+		conversationMgr,
+		automationEngine,
+		message.Opts{
+			DB: db,
+			Lo: lo,
+		})
 	if err != nil {
 		log.Fatalf("error initializing message manager: %v", err)
 	}
@@ -255,8 +273,8 @@ func initInboxManager(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.In
 	return mgr
 }
 
-func initAutomationEngine(convMgr *conversation.Manager, db *sqlx.DB, lo *logf.Logger) *automation.Engine {
-	engine, err := automation.New(convMgr, automation.Opts{
+func initAutomationEngine(db *sqlx.DB, lo *logf.Logger) *automation.Engine {
+	engine, err := automation.New(automation.Opts{
 		DB: db,
 		Lo: lo,
 	})
@@ -266,8 +284,8 @@ func initAutomationEngine(convMgr *conversation.Manager, db *sqlx.DB, lo *logf.L
 	return engine
 }
 
-func initAutoAssignmentEngine(teamMgr *team.Manager, userMgr *user.Manager, convMgr *conversation.Manager, lo *logf.Logger) *autoassigner.Engine {
-	engine, err := autoassigner.New(teamMgr, userMgr, convMgr, lo)
+func initAutoAssignmentEngine(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager, lo *logf.Logger) *autoassigner.Engine {
+	engine, err := autoassigner.New(teamMgr, convMgr, msgMgr, lo)
 	if err != nil {
 		log.Fatalf("error initializing auto assignment engine: %v", err)
 	}

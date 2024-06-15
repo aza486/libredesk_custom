@@ -92,27 +92,28 @@ func handleSendMessage(r *fastglue.Request) error {
 		status = message.StatusSent
 	}
 
-	_, _, err := app.msgMgr.RecordMessage(
-		mmodels.Message{
-			ConversationUUID: conversationUUID,
-			SenderID:         userID,
-			Type:             message.TypeOutgoing,
-			SenderType:       "user",
-			Status:           status,
-			Content:          string(msgContent),
-			ContentType:      message.ContentTypeHTML,
-			Private:          private,
-			Meta:             "{}",
-			Attachments:      attachments,
-		},
-	)
+	msg := mmodels.Message{
+		ConversationUUID: conversationUUID,
+		SenderID:         userID,
+		Type:             message.TypeOutgoing,
+		SenderType:       "user",
+		Status:           status,
+		Content:          string(msgContent),
+		ContentType:      message.ContentTypeHTML,
+		Private:          private,
+		Meta:             "{}",
+		Attachments:      attachments,
+	}
 
-	if err != nil {
+	if err := app.msgMgr.RecordMessage(&msg); err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
 
 	// Add this user as a participant to the conversation.
 	app.conversationMgr.AddParticipant(userID, conversationUUID)
+
+	// Send WS update.
+	app.msgMgr.BroadcastNewMsg(msg)
 
 	return r.SendEnvelope("Message sent")
 }

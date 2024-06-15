@@ -65,47 +65,50 @@ func main() {
 		rd = initz.Redis(ko)
 		db = initz.DB(ko)
 
+		wsHub              = ws.NewHub()
 		attachmentMgr      = initAttachmentsManager(db, &lo)
 		cntctMgr           = initContactManager(db, &lo)
-		conversationMgr    = initConversations(db, &lo)
 		inboxMgr           = initInboxManager(db, &lo, incomingMsgQ)
-		automationEngine   = initAutomationEngine(conversationMgr, db, &lo)
 		teamMgr            = initTeamMgr(db, &lo)
 		userMgr            = initUserDB(db, &lo)
-		autoAssignerEngine = initAutoAssignmentEngine(teamMgr, userMgr, conversationMgr, &lo)
-
-		// Init Websocket hub.
-		wsHub = ws.NewHub()
+		conversationMgr    = initConversations(db, &lo)
+		automationEngine   = initAutomationEngine(db, &lo)
+		msgMgr             = initMessages(db, &lo, incomingMsgQ, wsHub, userMgr, teamMgr, cntctMgr, attachmentMgr, conversationMgr, inboxMgr, automationEngine)
+		autoAssignerEngine = initAutoAssignmentEngine(teamMgr, conversationMgr, msgMgr, &lo)
 	)
 
 	// Init the app
 	var app = &App{
-		lo:              &lo,
-		cntctMgr:        cntctMgr,
-		inboxMgr:        inboxMgr,
-		attachmentMgr:   attachmentMgr,
-		conversationMgr: conversationMgr,
-		constants:       initConstants(),
-		msgMgr:          initMessages(db, &lo, incomingMsgQ, wsHub, cntctMgr, attachmentMgr, conversationMgr, inboxMgr, automationEngine),
-		sessMgr:         initSessionManager(rd),
-
+		lo:                  &lo,
+		cntctMgr:            cntctMgr,
+		inboxMgr:            inboxMgr,
+		userMgr:             userMgr,
+		teamMgr:             teamMgr,
+		attachmentMgr:       attachmentMgr,
+		conversationMgr:     conversationMgr,
+		constants:           initConstants(),
 		tagMgr:              initTags(db, &lo),
+		msgMgr:              msgMgr,
+		sessMgr:             initSessionManager(rd),
 		cannedRespMgr:       initCannedResponse(db, &lo),
 		conversationTagsMgr: initConversationTags(db, &lo),
 	}
 
+	automationEngine.SetMsgRecorder(app.msgMgr)
+	automationEngine.SetConvUpdater(conversationMgr)
+
 	// Start receivers for all active inboxes.
 	inboxMgr.Receive()
 
-	// Start incoming msg inserter and outgoing msg dispatchers.
+	// Start inserting incoming msgs and dispatch pending outgoing messages.
 	go app.msgMgr.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
 	go app.msgMgr.StartDispatcher(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
 	// Start automation rule engine.
 	go automationEngine.Serve()
 
-	// Start auto assigner enginer.
-	go autoAssignerEngine.Serve(ctx, 10*time.Second)
+	// Start conversation auto assigner engine.
+	go autoAssignerEngine.Serve(ctx, 1*time.Second)
 
 	// Init fastglue http server.
 	g := fastglue.NewGlue()

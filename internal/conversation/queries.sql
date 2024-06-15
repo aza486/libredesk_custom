@@ -18,8 +18,7 @@ SELECT
     COALESCE((
         SELECT content
         FROM messages m
-        WHERE m.conversation_id = c.id
-        and type != 'activity'
+        WHERE m.conversation_id = c.id 
         ORDER BY m.created_at DESC
         LIMIT 1
     ), '') AS last_message,
@@ -27,14 +26,13 @@ SELECT
         SELECT created_at
         FROM messages m
         WHERE m.conversation_id = c.id
-        and type != 'activity'
         ORDER BY m.created_at DESC
         LIMIT 1
     ) AS last_message_at,
     (
         SELECT COUNT(*)
         FROM messages m
-        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at AND m.type = 'incoming'
+        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
     ) AS unread_message_count
 FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id

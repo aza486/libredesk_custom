@@ -3,6 +3,7 @@ package conversation
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -19,18 +20,25 @@ var (
 	//go:embed queries.sql
 	efs embed.FS
 
-	StatusOpen = "Open"
+	StatusOpen       = "Open"
+	StatusResolved   = "Resolved"
+	StatusProcessing = "Processing"
+	StatusSpam       = "Spam"
+
+	PriorityLow    = "Low"
+	PriortiyMedium = "Medium"
+	PriorityHigh   = "High"
 
 	statuses = []string{
-		"Open",
-		"Resolved",
-		"Processing",
-		"Spam",
+		StatusOpen,
+		StatusResolved,
+		StatusProcessing,
+		StatusSpam,
 	}
 	priorities = []string{
-		"Low",
-		"Medium",
-		"High",
+		PriorityLow,
+		PriortiyMedium,
+		PriorityHigh,
 	}
 )
 
@@ -74,7 +82,6 @@ func New(opts Opts) (*Manager, error) {
 		lo:                  opts.Lo,
 		ReferenceNumPattern: opts.ReferenceNumPattern,
 	}
-
 	return c, nil
 }
 
@@ -131,9 +138,9 @@ func (c *Manager) AddParticipant(userID int, convUUID string) error {
 
 func (c *Manager) GetUnassigned() ([]models.Conversation, error) {
 	var conv []models.Conversation
-	if err := c.q.GetUnassigned.Get(&conv); err != nil {
+	if err := c.q.GetUnassigned.Select(&conv); err != nil {
 		if err != sql.ErrNoRows {
-			return conv, fmt.Errorf("conversation not found")
+			return conv, fmt.Errorf("fetching unassigned converastions: %w", err)
 		}
 	}
 	return conv, nil
@@ -194,17 +201,19 @@ func (c *Manager) GetAssignedConversations(userID int) ([]models.Conversation, e
 }
 
 func (c *Manager) UpdateAssignee(uuid string, assigneeUUID []byte, assigneeType string) error {
-	if assigneeType == "agent" {
+	switch assigneeType {
+	case "agent":
 		if _, err := c.q.UpdateAssignedUser.Exec(uuid, assigneeUUID); err != nil {
 			c.lo.Error("updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-	}
-	if assigneeType == "team" {
+	case "team":
 		if _, err := c.q.UpdateAssignedTeam.Exec(uuid, assigneeUUID); err != nil {
 			c.lo.Error("updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
+	default:
+		return errors.New("invalid assignee type")
 	}
 	return nil
 }

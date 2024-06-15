@@ -6,7 +6,6 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/attachment/models"
 	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
-
 	null "github.com/volatiletech/null/v9"
 )
 
@@ -42,6 +41,7 @@ type Message struct {
 	References       []string             `json:"-"`
 	InReplyTo        string               `json:"-"`
 	Headers          textproto.MIMEHeader `json:"-"`
+	NewConversation  bool                 `json:"-"`
 }
 
 // IncomingMessage links a message with the contact information and inbox id.

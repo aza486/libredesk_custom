@@ -56,7 +56,7 @@ func handleLogin(r *fastglue.Request) error {
 	}
 
 	// Return the user details.
-	user, err = app.userMgr.GetUser(user.UUID)
+	user, err = app.userMgr.GetUser(user.ID, "")
 	if err != nil {
 		app.lo.Error("fetching user", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,

@@ -82,19 +82,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Search, Mail } from 'lucide-vue-next';
 
-// Stores, states.
 const conversationStore = useConversationStore()
 const router = useRouter()
 
-// Functions, methods.
 onMounted(() => {
     conversationStore.fetchConversations()
 });
 
 </script>
-
-<style lang="scss" scoped>
-.image-thumb {
-    @apply w-6 h-6 object-cover rounded-sm;
-}
-</style>

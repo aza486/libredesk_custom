@@ -27,20 +27,7 @@ SELECT
     m.uuid,
     m.private,
     m.sender_type,
-    COALESCE(
-        CASE 
-            WHEN m.sender_type = 'user' THEN u.first_name
-            WHEN m.sender_type = 'contact' THEN c.first_name
-        END, 
-        ''
-    ) AS first_name,
-    COALESCE(
-        CASE 
-            WHEN m.sender_type = 'user' THEN u.last_name
-            WHEN m.sender_type = 'contact' THEN c.last_name
-        END, 
-        ''
-    ) AS last_name,
+    u.uuid as sender_uuid,
     COALESCE(
         json_agg(
             json_build_object(
@@ -56,15 +43,10 @@ FROM messages m
 LEFT JOIN attachments a 
     ON a.message_id = m.id 
     AND a.content_disposition = 'attachment'
-LEFT JOIN users u 
-    ON u.id = m.sender_id 
-    AND m.sender_type = 'user'
-LEFT JOIN contacts c 
-    ON c.id = m.sender_id 
-    AND m.sender_type = 'contact'
+LEFT JOIN users u on u.id = m.sender_id
 WHERE m.uuid = $1
 GROUP BY 
-    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type, u.first_name, u.last_name, c.first_name, c.last_name
+    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type, u.uuid
 ORDER BY m.created_at;
 
 -- name: get-to-address

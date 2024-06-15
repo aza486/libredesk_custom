@@ -55,7 +55,7 @@ func handleWS(r *fastglue.Request, hub *ws.Hub) error {
 		c.Serve(2 * time.Second)
 	})
 	if err != nil {
-		fmt.Println("upgrade error:", err)
+		app.lo.Error("error upgrading tcp connection", "error", err)
 	}
 	return nil
 }

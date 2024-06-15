@@ -38,8 +38,8 @@ type Opts struct {
 // Prepared queries.
 type queries struct {
 	GetUsers        *sqlx.Stmt `query:"get-users"`
+	GetUser         *sqlx.Stmt `query:"get-user"`
 	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
-	GetUserByUUID   *sqlx.Stmt `query:"get-user-by-uuid"`
 	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
 }
 
@@ -93,14 +93,19 @@ func (u *Manager) GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
-func (u *Manager) GetUser(uuid string) (models.User, error) {
+func (u *Manager) GetUser(id int, uuid string) (models.User, error) {
+	var uu interface{}
+	if uuid != "" {
+		uu = uuid
+	}
+
 	var user models.User
-	if err := u.q.GetUserByUUID.Get(&user, uuid); err != nil {
+	if err := u.q.GetUser.Get(&user, id, uu); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, fmt.Errorf("user not found")
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, fmt.Errorf("fetching user")
+		return user, fmt.Errorf("fetching user: %w", err)
 	}
 	return user, nil
 }

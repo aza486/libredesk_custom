@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
-	"github.com/abhinavxd/artemis/internal/conversation"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/jmoiron/sqlx"
@@ -23,12 +22,23 @@ type queries struct {
 }
 
 type Engine struct {
-	q                queries
-	lo               *logf.Logger
-	convMgr          *conversation.Manager
-	newConversationQ chan cmodels.Conversation
-	rules            []models.Rule
-	actions          []models.Action
+	q             queries
+	lo            *logf.Logger
+	convUpdater   ConversationUpdater
+	msgRecorder   MessageRecorder
+	conversationQ chan cmodels.Conversation
+	rules         []models.Rule
+	actions       []models.Action
+}
+
+type ConversationUpdater interface {
+	UpdateAssignee(uuid string, assigneeUUID []byte, assigneeType string) error
+	UpdateStatus(uuid string, status []byte) error
+}
+
+type MessageRecorder interface {
+	RecordAssigneeUserChange(updatedValue, convUUID, actorUUID string) error
+	RecordStatusChange(updatedValue, convUUID, actorUUID string) error
 }
 
 type Opts struct {
@@ -36,13 +46,12 @@ type Opts struct {
 	Lo *logf.Logger
 }
 
-func New(convMgr *conversation.Manager, opt Opts) (*Engine, error) {
+func New(opt Opts) (*Engine, error) {
 	var (
 		q queries
 		e = &Engine{
-			lo:               opt.Lo,
-			convMgr:          convMgr,
-			newConversationQ: make(chan cmodels.Conversation, 10000),
+			lo:            opt.Lo,
+			conversationQ: make(chan cmodels.Conversation, 10000),
 		}
 	)
 
@@ -50,7 +59,7 @@ func New(convMgr *conversation.Manager, opt Opts) (*Engine, error) {
 		return nil, err
 	}
 
-	// Fetch applicable rules & actions.
+	// Fetch rules and actions from the DB.
 	if err := q.GetNewConversationRules.Select(&e.rules); err != nil {
 		return nil, fmt.Errorf("fetching rules: %w", err)
 	}
@@ -62,12 +71,21 @@ func New(convMgr *conversation.Manager, opt Opts) (*Engine, error) {
 	return e, nil
 }
 
+
+func (e *Engine) SetMsgRecorder(msgRecorder MessageRecorder) {
+	e.msgRecorder = msgRecorder
+}
+
+func (e *Engine) SetConvUpdater(convUpdater ConversationUpdater) {
+	e.convUpdater = convUpdater
+}
+
 func (e *Engine) Serve() {
-	for conv := range e.newConversationQ {
+	for conv := range e.conversationQ {
 		e.processConversations(conv)
 	}
 }
 
-func (e *Engine) ProcessConversation(c cmodels.Conversation) {
-	e.newConversationQ <- c
+func (e *Engine) EvaluateRules(c cmodels.Conversation) {
+	e.conversationQ <- c
 }

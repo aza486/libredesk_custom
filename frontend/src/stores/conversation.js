@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from "vue"
 import { handleHTTPError } from '@/utils/http'
+import { useToast } from '@/components/ui/toast/use-toast'
 import api from '@/api';
 
 export const useConversationStore = defineStore('conversation', () => {
@@ -24,6 +25,7 @@ export const useConversationStore = defineStore('conversation', () => {
         loading: false,
         errorMessage: ""
     })
+    const { toast } = useToast()
 
     // Computed property to sort conversations by last_message_at
     const sortedConversations = computed(() => {
@@ -69,11 +71,13 @@ export const useConversationStore = defineStore('conversation', () => {
     async function fetchParticipants (uuid) {
         try {
             const resp = await api.getConversationParticipants(uuid);
-            resp.data.data.forEach((p) => {
-                conversation.value.participants[p.uuid] = p
-            })
+            const participants = resp.data.data.reduce((acc, p) => {
+                acc[p.uuid] = p;
+                return acc;
+            }, {});
+            updateParticipants(participants);
         } catch (error) {
-            // Pass
+            console.error("Error fetching participants:", error);
         }
     }
 
@@ -83,7 +87,12 @@ export const useConversationStore = defineStore('conversation', () => {
             const resp = await api.getMessages(uuid);
             messages.value.data = resp.data.data
         } catch (error) {
-            messages.value.errorMessage = handleHTTPError(error).message;
+            toast({
+                title: 'Uh oh! Could not fetch messages, Please try again.',
+                variant: 'destructive',
+                description: handleHTTPError(error).message,
+            });
+            messages.value.data = []
         } finally {
             messages.value.loading = false;
         }
@@ -128,9 +137,13 @@ export const useConversationStore = defineStore('conversation', () => {
     async function updateStatus (v) {
         try {
             await api.updateStatus(conversation.value.data.uuid, { "status": v });
-            fetchConversation(conversation.value.data.uuid)
+            conversation.value.data.status = v
         } catch (error) {
-            // Pass.
+            toast({
+                title: 'Uh oh! Could not update status, Please try again.',
+                variant: 'destructive',
+                description: handleHTTPError(error).message,
+            });
         }
     }
 
@@ -158,13 +171,22 @@ export const useConversationStore = defineStore('conversation', () => {
         }
     }
 
+    // Action to update participants
+    function updateParticipants (newParticipants) {
+        conversation.value.participants = {
+            ...conversation.value.participants,
+            ...newParticipants
+        };
+    }
+
+
     // Websocket updates.
     function updateConversationList (msg) {
         const updatedConversation = conversations.value.data.find(c => c.uuid === msg.conversation_uuid);
         if (updatedConversation) {
             updatedConversation.last_message = msg.last_message;
             updatedConversation.last_message_at = msg.last_message_at;
-            // If updated conversation is open do not increment the count.
+            // Increase conversation unread msg count only if it's not open.
             if (updatedConversation.uuid !== conversation.value.data.uuid) {
                 updatedConversation.unread_message_count += 1
             }
@@ -173,16 +195,18 @@ export const useConversationStore = defineStore('conversation', () => {
     function updateMessageList (msg) {
         // First check if this conversation is selected and then update messages list.
         if (conversation.value?.data?.uuid === msg.conversation_uuid) {
-            // Check if the message with the given uuid does not exist in the list
+            // Fetch entire msg if the give msg does not exist in the msg list.
             if (!messages.value.data.some(message => message.uuid === msg.uuid)) {
+                fetchParticipants(msg.conversation_uuid)
                 fetchMessage(msg.uuid)
+                updateAssigneeLastSeen(msg.conversation_uuid)
             }
         }
     }
-    function updateMessageStatus (msg) {
-        const message = messages.value.data.find(m => m.uuid === msg.uuid);
+    function updateMessageStatus (uuid, status) {
+        const message = messages.value.data.find(m => m.uuid === uuid);
         if (message) {
-            message.status = msg.status
+            message.status = status
         }
     }
 

@@ -49,9 +49,8 @@
         <Error class="sticky" :error-message="conversationStore.messages.errorMessage"></Error>
         <div class="flex flex-col h-screen scroll-y" v-if="conversationStore.messages.data">
             <!-- Messages -->
-            <div class="break-word text-wrap overflow-y-scroll h-full" ref="threadEl">
-                <MessageList :messages="conversationStore.sortedMessages"
-                    class="flex-1 bg-[#f8f9fa41]" />
+            <div class="break-word text-wrap overflow-y-scroll h-full">
+                <MessageList :messages="conversationStore.sortedMessages" class="flex-1 bg-[#f8f9fa41]" />
             </div>
             <ReplyBox />
         </div>
@@ -59,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { computed } from 'vue';
 import { useConversationStore } from '@/stores/conversation'
 
 import { Separator } from '@/components/ui/separator'
@@ -81,22 +80,6 @@ import ReplyBox from "./ReplyBox.vue"
 import { Icon } from '@iconify/vue'
 
 const conversationStore = useConversationStore()
-const threadEl = ref(null)
-
-watch(() => conversationStore.conversation, () => {
-    nextTick(() => {
-        scrollToBottom()
-    });
-}, { deep: true });
-
-const scrollToBottom = () => {
-    nextTick(() => {
-        if (threadEl.value) {
-            console.log("scrolling..", threadEl.value.scrollHeight)
-            threadEl.value.scrollTop = threadEl.value.scrollHeight;
-        }
-    });
-};
 
 const getBadgeVariant = computed(() => {
     return conversationStore.conversation.data?.status == "Spam" ? "destructive" : "success"

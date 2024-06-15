@@ -20,9 +20,9 @@ func handleGetUsers(r *fastglue.Request) error {
 func handleGetCurrentUser(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
-		userUUID = r.RequestCtx.UserValue("user_uuid").(string)
+		userID = r.RequestCtx.UserValue("user_id").(int)
 	)
-	u, err := app.userMgr.GetUser(userUUID)
+	u, err := app.userMgr.GetUser(userID, "")
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}

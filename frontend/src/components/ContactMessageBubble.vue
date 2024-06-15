@@ -12,7 +12,7 @@
                     {{ avatarFallback }}
                 </AvatarFallback>
             </Avatar>
-            <div class="flex flex-col justify-end message-bubble">
+            <div class="flex flex-col justify-end message-bubble !rounded-tl-none">
                 <Letter :html=message.content class="mb-1" :class="{ 'mb-3': message.attachments.length > 0 }" />
                 <MessageAttachmentPreview :attachments="message.attachments" />
             </div>
