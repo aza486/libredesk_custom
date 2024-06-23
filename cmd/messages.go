@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment/models"
 	"github.com/abhinavxd/artemis/internal/message"
@@ -65,39 +66,33 @@ func handleRetryMessage(r *fastglue.Request) error {
 
 func handleSendMessage(r *fastglue.Request) error {
 	var (
-		p                 = r.RequestCtx.PostArgs()
-		app               = r.Context.(*App)
-		msgContent        = p.Peek("message")
-		private           = p.GetBool("private")
-		attachmentsJSON   = p.Peek("attachments")
-		attachmentdsUUIDs = []string{}
-		userID            = r.RequestCtx.UserValue("user_id").(int)
-		conversationUUID  = r.RequestCtx.UserValue("conversation_uuid").(string)
+		app              = r.Context.(*App)
+		userID           = r.RequestCtx.UserValue("user_id").(int)
+		p                = r.RequestCtx.PostArgs()
+		msgContent       = p.Peek("message")
+		private          = p.GetBool("private")
+		conversationUUID = r.RequestCtx.UserValue("conversation_uuid").(string)
+		attachmentsUUIDs = []string{}
+		attachmentsJSON  = p.Peek("attachments")
+		attachments      = make(models.Attachments, 0, len(attachmentsUUIDs))
 	)
 
-	if err := json.Unmarshal(attachmentsJSON, &attachmentdsUUIDs); err != nil {
+	if err := json.Unmarshal(attachmentsJSON, &attachmentsUUIDs); err != nil {
 		app.lo.Error("error unmarshalling attachments uuids", "error", err)
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "error parsing attachments", nil, "")
 	}
-
-	var attachments = make(models.Attachments, 0, len(attachmentdsUUIDs))
-	for _, attUUID := range attachmentdsUUIDs {
+	for _, attUUID := range attachmentsUUIDs {
 		attachments = append(attachments, models.Attachment{
 			UUID: attUUID,
 		})
-	}
-
-	var status = message.StatusPending
-	if private {
-		status = message.StatusSent
 	}
 
 	msg := mmodels.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         userID,
 		Type:             message.TypeOutgoing,
-		SenderType:       "user",
-		Status:           status,
+		SenderType:       message.SenderTypeUser,
+		Status:           message.StatusPending,
 		Content:          string(msgContent),
 		ContentType:      message.ContentTypeHTML,
 		Private:          private,
@@ -109,11 +104,17 @@ func handleSendMessage(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
 
-	// Add this user as a participant to the conversation.
 	app.conversationMgr.AddParticipant(userID, conversationUUID)
 
+	// Update conversation meta with the last message details.
+	trimmedMessage := app.msgMgr.TrimMsg(msg.Content)
+	app.conversationMgr.UpdateMeta(0, conversationUUID, map[string]string{
+		"last_message":    trimmedMessage,
+		"last_message_at": msg.CreatedAt.Format(time.RFC3339),
+	})
+
 	// Send WS update.
-	app.msgMgr.BroadcastNewMsg(msg)
+	app.msgMgr.BroadcastNewMsg(msg, trimmedMessage)
 
 	return r.SendEnvelope("Message sent")
 }

@@ -44,7 +44,7 @@ import Image from '@tiptap/extension-image'
 import ImageResize from 'tiptap-extension-resize-image';
 import { Toggle } from '@/components/ui/toggle'
 import { Paperclip, Bold, Italic } from "lucide-vue-next"
-import AttachmentsPreview from "./AttachmentsPreview.vue"
+import AttachmentsPreview from "@/components/attachment/AttachmentsPreview.vue"
 import {
     Tabs,
     TabsList,
@@ -224,10 +224,6 @@ const triggerFileUpload = () => {
     attachmentInput.value.click()
 };
 
-const triggerImageUpload = () => {
-    imageInput.value.click()
-}
-
 const handleFileUpload = event => {
     for (const file of event.target.files) {
         api.uploadAttachment({
@@ -244,20 +240,6 @@ const handleFileUpload = event => {
 const handleOnFileDelete = uuid => {
     uploadedFiles.value = uploadedFiles.value.filter(item => item.uuid !== uuid);
 };
-
-const handleImageUpload = event => {
-    const file = event.target.files[0];
-    if (file) {
-        api.uploadAttachment({
-            files: file
-        }).then((resp) => {
-            editor.value.chain().focus().setImage({ src: resp?.data?.data?.url }).run()
-        }).catch((err) => {
-            console.error(err)
-        })
-    }
-};
-
 </script>
 
 

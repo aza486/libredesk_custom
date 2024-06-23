@@ -18,9 +18,11 @@ import (
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	"github.com/abhinavxd/artemis/internal/message"
 	mmodels "github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/rbac"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/user"
+	"github.com/abhinavxd/artemis/internal/user/filterstore"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
@@ -290,6 +292,22 @@ func initAutoAssignmentEngine(teamMgr *team.Manager, convMgr *conversation.Manag
 		log.Fatalf("error initializing auto assignment engine: %v", err)
 	}
 	return engine
+}
+
+func initRBACEngine(db *sqlx.DB) *rbac.Engine {
+	engine, err := rbac.New(db)
+	if err != nil {
+		log.Fatalf("error initializing rbac enginer: %v", err)
+	}
+	return engine
+}
+
+func initUserFilterMgr(db *sqlx.DB) *filterstore.Manager {
+	filterMgr, err := filterstore.New(db)
+	if err != nil {
+		log.Fatalf("error initializing user filter manager: %v", err)
+	}
+	return filterMgr
 }
 
 // initEmailInbox initializes the email inbox.

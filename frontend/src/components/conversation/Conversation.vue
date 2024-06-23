@@ -47,11 +47,9 @@
         </div>
         <!-- Body -->
         <Error class="sticky" :error-message="conversationStore.messages.errorMessage"></Error>
-        <div class="flex flex-col h-screen scroll-y" v-if="conversationStore.messages.data">
+        <div class="flex flex-col h-screen">
             <!-- Messages -->
-            <div class="break-word text-wrap overflow-y-scroll h-full">
-                <MessageList :messages="conversationStore.sortedMessages" class="flex-1 bg-[#f8f9fa41]" />
-            </div>
+            <MessageList :messages="conversationStore.sortedMessages" class="flex-1 bg-[#f8f9fa41]" />
             <ReplyBox />
         </div>
     </div>
@@ -75,7 +73,7 @@ import {
     TooltipContent,
     TooltipTrigger
 } from '@/components/ui/tooltip'
-import MessageList from './MessageList.vue'
+import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from "./ReplyBox.vue"
 import { Icon } from '@iconify/vue'
 

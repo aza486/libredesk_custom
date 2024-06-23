@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -93,8 +94,7 @@ type queries struct {
 	GetToAddress         *sqlx.Stmt `query:"get-to-address"`
 	GetInReplyTo         *sqlx.Stmt `query:"get-in-reply-to"`
 	GetPendingMessages   *sqlx.Stmt `query:"get-pending-messages"`
-	InsertMessageByUUID  *sqlx.Stmt `query:"insert-message-by-uuid"`
-	InsertMessageByID    *sqlx.Stmt `query:"insert-message-by-id"`
+	InsertMessage        *sqlx.Stmt `query:"insert-message"`
 	UpdateMessageContent *sqlx.Stmt `query:"update-message-content"`
 	UpdateMessageStatus  *sqlx.Stmt `query:"update-message-status"`
 	MessageExists        *sqlx.Stmt `query:"message-exists"`
@@ -160,24 +160,13 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 
 // RecordMessage inserts a message and attaches the attachments to the message.
 func (m *Manager) RecordMessage(msg *models.Message) error {
-	var (
-		query          *sqlx.Stmt
-		convIdentifier interface{}
-	)
-
-	// Set the query to be used.
-	if msg.ConversationUUID != "" {
-		query = m.q.InsertMessageByUUID
-		convIdentifier = msg.ConversationUUID
-	} else if msg.ConversationID > 0 {
-		query = m.q.InsertMessageByID
-		convIdentifier = msg.ConversationID
-	} else {
-		return errors.New("conversation id or uuid is required to insert a message")
+	if msg.Private {
+		msg.Status = StatusSent
 	}
 
-	if err := query.QueryRow(msg.Type, msg.Status, convIdentifier, msg.Content, msg.SenderID, msg.SenderType, msg.Private, msg.ContentType, msg.SourceID, msg.InboxID, msg.Meta).Scan(&msg.ID, &msg.UUID); err != nil {
-		m.lo.Error("inserting message in db", "error", err)
+	if err := m.q.InsertMessage.QueryRow(msg.Type, msg.Status, msg.ConversationID, msg.ConversationUUID, msg.Content, msg.SenderID, msg.SenderType,
+		msg.Private, msg.ContentType, msg.SourceID, msg.InboxID, msg.Meta).Scan(&msg.ID, &msg.UUID, &msg.CreatedAt); err != nil {
+		m.lo.Error("error inserting message in db", "error", err)
 		return fmt.Errorf("inserting message: %w", err)
 	}
 
@@ -252,10 +241,20 @@ func (m *Manager) DispatchWorker() {
 		}
 
 		err = inbox.Send(msg)
+
 		var newStatus = StatusSent
 		if err != nil {
 			newStatus = StatusFailed
 			m.lo.Error("error sending message", "error", err, "inbox_id", msg.InboxID)
+		}
+
+		if _, err := m.q.UpdateMessageStatus.Exec(newStatus, msg.UUID); err != nil {
+			m.lo.Error("error updating message status in DB", "error", err, "inbox_id", msg.InboxID)
+		}
+
+		switch newStatus {
+		case StatusSent:
+			m.conversationMgr.UpdateFirstReplyAt(msg.ConversationID, "", msg.CreatedAt)
 		}
 
 		// Broadcast the new message status.
@@ -264,10 +263,6 @@ func (m *Manager) DispatchWorker() {
 			"conversation_uuid": msg.ConversationUUID,
 			"status":            newStatus,
 		})
-
-		if _, err := m.q.UpdateMessageStatus.Exec(newStatus, msg.UUID); err != nil {
-			m.lo.Error("error updating message status in DB", "error", err, "inbox_id", msg.InboxID)
-		}
 
 		m.outgoingProcessingMsgs.Delete(msg.ID)
 	}
@@ -307,7 +302,7 @@ func (m *Manager) InsertWorker(ctx context.Context) {
 	for msg := range m.incomingMsgQ {
 		select {
 		case <-ctx.Done():
-			m.lo.Info("context cancelled while inserting messages into the DB.")
+			return
 		default:
 			if err := m.processIncomingMessage(msg); err != nil {
 				m.lo.Error("error processing incoming msg", "error", err)
@@ -374,7 +369,7 @@ func (m *Manager) RecordActivity(activityType, updatedValue, conversationUUID, a
 	}
 
 	m.RecordMessage(&msg)
-	m.BroadcastNewMsg(msg)
+	m.BroadcastNewMsg(msg, "")
 
 	return nil
 }
@@ -400,19 +395,26 @@ func (m *Manager) getActivityContent(activityType, newValue, actorName string) s
 
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var (
-		conversationMeta = "{}"
-		err              error
+		trimmedMsg = m.TrimMsg(in.Message.Content)
+		convMeta   = map[string]string{
+			"subject":         in.Message.Subject,
+			"last_message":    trimmedMsg,
+			"last_message_at": time.Now().Format(time.RFC3339),
+		}
 	)
 
-	if in.Message.Subject != "" {
-		conversationMeta = fmt.Sprintf(`{"subject": "%s"}`, in.Message.Subject)
+	convMetaJSON, err := json.Marshal(convMeta)
+	if err != nil {
+		m.lo.Error("error marshalling conversation meta", "error", err)
+		return err
 	}
 
-	in.Message.SenderID, err = m.contactMgr.Upsert(in.Contact)
+	senderID, err := m.contactMgr.Upsert(in.Contact)
 	if err != nil {
 		m.lo.Error("error upserting contact", "error", err)
 		return err
 	}
+	in.Message.SenderID = senderID
 
 	// This message already exists? Return.
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
@@ -423,8 +425,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return nil
 	}
 
-	in.Message.ConversationID, in.Message.ConversationUUID, in.Message.NewConversation, err = m.findOrCreateConversation(&in.Message, in.InboxID, in.Message.SenderID, conversationMeta)
-	if err != nil {
+	if err = m.findOrCreateConversation(&in.Message, in.InboxID, senderID, convMetaJSON); err != nil {
 		m.lo.Error("error creating conversation", "error", err)
 		return err
 	}
@@ -441,7 +442,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 
 	// Send WS update.
 	if in.Message.ConversationUUID > "" {
-		m.BroadcastNewMsg(in.Message)
+		m.BroadcastNewMsg(in.Message, "")
 	}
 
 	// Evaluate automation rules for this conversation.
@@ -494,7 +495,7 @@ func (m *Manager) uploadAttachments(in *models.Message) error {
 	return nil
 }
 
-func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int, conversationMeta string) (int, string, bool, error) {
+func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int, meta []byte) error {
 	var (
 		conversationID   int
 		conversationUUID string
@@ -506,22 +507,22 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 	if conversationID == 0 && in.InReplyTo > "" {
 		conversationID, err = m.findConversationID([]string{in.InReplyTo})
 		if err != nil && err != ErrConversationNotFound {
-			return conversationID, conversationUUID, newConv, err
+			return err
 		}
 	}
 	if conversationID == 0 && len(in.References) > 0 {
 		conversationID, err = m.findConversationID(in.References)
 		if err != nil && err != ErrConversationNotFound {
-			return conversationID, conversationUUID, newConv, err
+			return err
 		}
 	}
 
 	// Conversation not found, create one.
 	if conversationID == 0 {
 		newConv = true
-		conversationID, err = m.conversationMgr.Create(contactID, inboxID, conversationMeta)
+		conversationID, err = m.conversationMgr.Create(contactID, inboxID, meta)
 		if err != nil || conversationID == 0 {
-			return conversationID, conversationUUID, newConv, fmt.Errorf("inserting conversation: %w", err)
+			return fmt.Errorf("inserting conversation: %w", err)
 		}
 	}
 
@@ -531,7 +532,11 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		m.lo.Error("Error fetching conversation UUID from id", err)
 	}
 
-	return conversationID, conversationUUID, newConv, nil
+	in.ConversationID = conversationID
+	in.ConversationUUID = conversationUUID
+	in.NewConversation = newConv
+
+	return nil
 }
 
 // findConversationID finds the conversation ID from the message source ID.
@@ -580,19 +585,20 @@ func (m *Manager) getOutgoingProcessingMsgIDs() []int {
 	return out
 }
 
-func (m *Manager) BroadcastNewMsg(msg models.Message) {
-	// Send trimmed content.
-	var content = ""
-	if msg.NewConversation {
-		content = m.TrimMsg(msg.Subject)
-	} else {
-		content = m.TrimMsg(msg.Content)
+func (m *Manager) BroadcastNewMsg(msg models.Message, trimmedContent string) {
+	if trimmedContent == "" {
+		var content = ""
+		if msg.NewConversation {
+			content = m.TrimMsg(msg.Subject)
+		} else {
+			content = m.TrimMsg(msg.Content)
+		}
+		trimmedContent = content
 	}
-	msg.Content = content
 	m.wsHub.BroadcastNewMsg(msg.ConversationUUID, map[string]interface{}{
 		"conversation_uuid": msg.ConversationUUID,
 		"uuid":              msg.UUID,
-		"last_message":      msg.Content,
+		"last_message":      trimmedContent,
 		"last_message_at":   time.Now().Format(time.DateTime),
 		"private":           msg.Private,
 	})

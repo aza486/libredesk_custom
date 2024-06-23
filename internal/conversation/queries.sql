@@ -15,20 +15,9 @@ SELECT
     ct.first_name,
     ct.last_name,
     ct.avatar_url,
-    COALESCE((
-        SELECT content
-        FROM messages m
-        WHERE m.conversation_id = c.id 
-        ORDER BY m.created_at DESC
-        LIMIT 1
-    ), '') AS last_message,
-    (
-        SELECT created_at
-        FROM messages m
-        WHERE m.conversation_id = c.id
-        ORDER BY m.created_at DESC
-        LIMIT 1
-    ) AS last_message_at,
+    COALESCE(c.meta->>'subject', '') as subject,
+    COALESCE(c.meta->>'last_message', '') as last_message,
+    COALESCE((c.meta->>'last_message_at')::timestamp, '1970-01-01 00:00:00'::timestamp) as last_message_at,
     (
         SELECT COUNT(*)
         FROM messages m
@@ -37,8 +26,7 @@ SELECT
 FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id
     JOIN inboxes inb on c.inbox_id = inb.id
-ORDER BY last_message_at DESC;
-
+WHERE 1=1 %s
 
 -- name: get-assigned-conversations
 SELECT uuid from conversations where assigned_user_id = $1;
@@ -101,6 +89,7 @@ SET assigned_team_id = (
     FROM teams
     WHERE uuid = $2
 ),
+assigned_user_id = NULL,
 updated_at = now()
 WHERE uuid = $1;
 
@@ -121,6 +110,9 @@ UPDATE conversations set assignee_last_seen_at = now(),
 updated_at = now()
 where uuid = $1;
 
+-- name: update-meta
+UPDATE conversations set meta = meta || $3 where CASE WHEN $1 > 0 then id = $1 else uuid = $2 end;
+
 -- name: get-conversation-participants
 select users.uuid as uuid, first_name, last_name, avatar_url from conversation_participants 
 inner join users on users.id = conversation_participants.user_id
@@ -139,3 +131,18 @@ select uuids from conversations where assigned_user_id = $1;
 
 -- name: get-unassigned
 SELECT id, uuid, assigned_team_id from conversations where assigned_user_id is NULL and assigned_team_id is not null;
+
+-- name: get-assignee-stats
+SELECT 
+    COUNT(*) AS total_assigned,
+    COUNT(CASE WHEN status NOT IN ('Resolved', 'Closed') THEN 1 END) AS unresolved_count,
+    COUNT(CASE WHEN first_reply_at IS NULL THEN 1 END) AS awaiting_response_count,
+    COUNT(CASE WHEN created_at::date = now()::date THEN 1 END) AS created_today_count
+FROM 
+    conversations 
+WHERE 
+    assigned_user_id = $1;
+
+
+-- name: update-first-reply-at
+UPDATE conversations set first_reply_at = $3 where CASE WHEN $1 > 0 then id = $1 else uuid = $2 end;

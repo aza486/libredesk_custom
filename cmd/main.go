@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -17,9 +16,11 @@ import (
 	"github.com/abhinavxd/artemis/internal/initz"
 	"github.com/abhinavxd/artemis/internal/message"
 	"github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/rbac"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/user"
+	"github.com/abhinavxd/artemis/internal/user/filterstore"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/knadh/koanf/v2"
 	"github.com/valyala/fasthttp"
@@ -40,6 +41,8 @@ type App struct {
 	sessMgr             *simplesessions.Manager
 	tagMgr              *tag.Manager
 	msgMgr              *message.Manager
+	rbac                *rbac.Engine
+	userFilterMgr       *filterstore.Manager
 	inboxMgr            *inbox.Manager
 	attachmentMgr       *attachment.Manager
 	cannedRespMgr       *cannedresp.Manager
@@ -86,9 +89,11 @@ func main() {
 		teamMgr:             teamMgr,
 		attachmentMgr:       attachmentMgr,
 		conversationMgr:     conversationMgr,
-		constants:           initConstants(),
-		tagMgr:              initTags(db, &lo),
 		msgMgr:              msgMgr,
+		constants:           initConstants(),
+		rbac:                initRBACEngine(db),
+		tagMgr:              initTags(db, &lo),
+		userFilterMgr:       initUserFilterMgr(db),
 		sessMgr:             initSessionManager(rd),
 		cannedRespMgr:       initCannedResponse(db, &lo),
 		conversationTagsMgr: initConversationTags(db, &lo),
@@ -108,7 +113,7 @@ func main() {
 	go automationEngine.Serve()
 
 	// Start conversation auto assigner engine.
-	go autoAssignerEngine.Serve(ctx, 1*time.Second)
+	go autoAssignerEngine.Serve(ctx, ko.MustDuration("autoassigner.assign_interval"))
 
 	// Init fastglue http server.
 	g := fastglue.NewGlue()

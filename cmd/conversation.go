@@ -3,16 +3,70 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/zerodha/fastglue"
 )
 
-func handleGetConversations(r *fastglue.Request) error {
+func handleGetAllConversations(r *fastglue.Request) error {
 	var (
-		app    = r.Context.(*App)
-		c, err = app.conversationMgr.GetConversations()
+		app              = r.Context.(*App)
+		userID           = r.RequestCtx.UserValue("user_id").(int)
+		order            = string(r.RequestCtx.QueryArgs().Peek("order"))
+		orderBy          = string(r.RequestCtx.QueryArgs().Peek("order_by"))
+		predefinedFilter = string(r.RequestCtx.QueryArgs().Peek("predefinedfilter"))
+		page, _          = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
+		pageSize, _      = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
 
+	c, err := app.conversationMgr.GetConversations(userID, "all", order, orderBy, predefinedFilter, page, pageSize)
+	if err != nil {
+		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+	}
+
+	// Strip html from the last message and truncate.
+	for i := range c {
+		c[i].LastMessage = app.msgMgr.TrimMsg(c[i].LastMessage)
+	}
+
+	return r.SendEnvelope(c)
+}
+
+func handleGetAssignedConversations(r *fastglue.Request) error {
+	var (
+		app              = r.Context.(*App)
+		userID           = r.RequestCtx.UserValue("user_id").(int)
+		order            = string(r.RequestCtx.QueryArgs().Peek("order"))
+		orderBy          = string(r.RequestCtx.QueryArgs().Peek("order_by"))
+		predefinedFilter = string(r.RequestCtx.QueryArgs().Peek("predefinedfilter"))
+		page, _          = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
+		pageSize, _      = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
+	)
+	c, err := app.conversationMgr.GetConversations(userID, "assigned", order, orderBy, predefinedFilter, page, pageSize)
+	if err != nil {
+		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+	}
+
+	// Strip html from the last message and truncate.
+	for i := range c {
+		c[i].LastMessage = app.msgMgr.TrimMsg(c[i].LastMessage)
+	}
+
+	return r.SendEnvelope(c)
+}
+
+func handleGetUnassignedConversations(r *fastglue.Request) error {
+	var (
+		app              = r.Context.(*App)
+		userID           = r.RequestCtx.UserValue("user_id").(int)
+		order            = string(r.RequestCtx.QueryArgs().Peek("order"))
+		orderBy          = string(r.RequestCtx.QueryArgs().Peek("order_by"))
+		predefinedFilter = string(r.RequestCtx.QueryArgs().Peek("predefinedfilter"))
+		page, _          = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
+		pageSize, _      = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
+	)
+
+	c, err := app.conversationMgr.GetConversations(userID, "unassigned", order, orderBy, predefinedFilter, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -138,4 +192,17 @@ func handlAddConversationTags(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
 	return r.SendEnvelope("ok")
+}
+
+func handleAssigneeStats(r *fastglue.Request) error {
+	var (
+		app    = r.Context.(*App)
+		userID = r.RequestCtx.UserValue("user_id").(int)
+	)
+
+	stats, err := app.conversationMgr.GetAssigneeStats(userID)
+	if err != nil {
+		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error fetching conversation stats", nil, "")
+	}
+	return r.SendEnvelope(stats)
 }

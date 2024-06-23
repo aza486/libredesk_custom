@@ -1,5 +1,6 @@
 -- name: get-pending-messages
 SELECT
+    m.created_at,
     m.id,
     m.uuid,
     m.sender_id,
@@ -99,67 +100,42 @@ LEFT JOIN users u on u.id = m.sender_id
 WHERE m.conversation_id = (SELECT id FROM conversation_id)
 ORDER BY m.created_at;
 
-
--- name: insert-message-by-id
+-- name: insert-message
+WITH conversation_id AS (
+    SELECT id 
+    FROM conversations 
+    WHERE CASE 
+        WHEN $3 > 0 THEN id = $3 
+        ELSE uuid = $4 
+    END
+)
 INSERT INTO messages (
-        "type",
-        status,
-        conversation_id,
-        "content",
-        sender_id,
-        sender_type,
-        private,
-        content_type,
-        source_id,
-        inbox_id,
-        meta
-    )
-VALUES(
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11
-    )
-returning id,
-    uuid;
-
-
--- name: insert-message-by-uuid
-INSERT INTO messages (
-        "type",
-        status,
-        conversation_id,
-        "content",
-        sender_id,
-        sender_type,
-        private,
-        content_type,
-        source_id,
-        inbox_id,
-        meta
-    )
-VALUES(
-        $1,
-        $2,
-        (SELECT id from conversations where uuid = $3),
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11
-    )
-returning id,
-    uuid;
+    "type",
+    status,
+    conversation_id,
+    "content",
+    sender_id,
+    sender_type,
+    private,
+    content_type,
+    source_id,
+    inbox_id,
+    meta
+)
+VALUES (
+    $1,
+    $2,
+    (SELECT id FROM conversation_id),
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11,
+    $12
+)
+RETURNING id, uuid, created_at;
 
 -- name: message-exists
 SELECT conversation_id

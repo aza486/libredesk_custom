@@ -32,8 +32,13 @@ const getMessages = (uuid) => http.get(`/api/conversation/${uuid}/messages`)
 const sendMessage = (uuid, data) => http.post(`/api/conversation/${uuid}/message`, data)
 const getConversation = (uuid) => http.get(`/api/conversation/${uuid}`)
 const getConversationParticipants = (uuid) => http.get(`/api/conversation/${uuid}/participants`)
-const getConversations = () => http.get('/api/conversations')
 const getCannedResponses = () => http.get('/api/canned-responses')
+const getAssigneeStats = () => http.get('/api/conversations/assignee/stats')
+
+const getAssignedConversations = (page, preDefinedFilter) => http.get(`/api/conversations/assigned?page=${page}&predefinedfilter=${preDefinedFilter}`)
+const getUnassignedConversations = (page, preDefinedFilter) => http.get(`/api/conversations/unassigned?page=${page}&predefinedfilter=${preDefinedFilter}`)
+const getAllConversations = (page, preDefinedFilter) => http.get(`/api/conversations/all?page=${page}&predefinedfilter=${preDefinedFilter}`)
+
 const uploadAttachment = (data) => http.post('/api/attachment', data, {
     headers: {
         'Content-Type': 'multipart/form-data'
@@ -46,7 +51,10 @@ export default {
     getTeams,
     getUsers,
     getConversation,
-    getConversations,
+    getAssignedConversations,
+    getUnassignedConversations,
+    getAllConversations,
+    getAssigneeStats,
     getConversationParticipants,
     getMessage,
     getMessages,

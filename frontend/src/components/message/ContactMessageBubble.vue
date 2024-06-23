@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/tooltip'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Letter } from 'vue-letter'
-import MessageAttachmentPreview from "./MessageAttachmentPreview.vue"
+import MessageAttachmentPreview from "@/components/attachment/MessageAttachmentPreview.vue"
 
 
 defineProps({

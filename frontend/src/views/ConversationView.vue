@@ -1,12 +1,12 @@
 <template>
   <!-- Resizable panel last resize value is stored in the localstorage -->
   <ResizablePanelGroup direction="horizontal" auto-save-id="conversation.vue.resizable.panel">
-    <ResizablePanel :min-size="15" :default-size="23" :max-size="23">
+    <ResizablePanel :min-size="18" :default-size="23" :max-size="23">
       <ConversationList></ConversationList>
     </ResizablePanel>
     <ResizableHandle />
     <ResizablePanel>
-      <ConversationThread v-if="conversationStore.conversation.data"></ConversationThread>
+      <Conversation v-if="conversationStore.conversation.data"></Conversation>
       <ConversationPlaceholder v-else></ConversationPlaceholder>
     </ResizablePanel>
     <ResizableHandle />
@@ -23,10 +23,10 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
-import ConversationList from '@/components/ConversationList.vue'
-import ConversationThread from '@/components/ConversationThread.vue'
-import ConversationSideBar from '@/components/ConversationSideBar.vue'
-import ConversationPlaceholder from "@/components/ConversationPlaceholder.vue"
+import ConversationList from '@/components/conversationlist/ConversationList.vue'
+import Conversation from '@/components/conversation/Conversation.vue'
+import ConversationSideBar from '@/components/conversation/ConversationSideBar.vue'
+import ConversationPlaceholder from "@/components/conversation/ConversationPlaceholder.vue"
 import { useConversationStore } from '@/stores/conversation'
 
 const props = defineProps({
@@ -37,8 +37,6 @@ const conversationStore = useConversationStore();
 onMounted(() => {
   if (props.uuid) {
     fetchConversation(props.uuid)
-  } else {
-    conversationStore.$reset()
   }
 });
 
@@ -49,6 +47,7 @@ watch(() => props.uuid, (uuid) => {
 });
 
 const fetchConversation = (uuid) => {  
+  conversationStore.fetchParticipants(uuid)
   conversationStore.fetchConversation(uuid)
   conversationStore.fetchMessages(uuid)
   conversationStore.updateAssigneeLastSeen(uuid)

@@ -30,7 +30,7 @@
     "@unovis/vue": "^1.4.1",
     "@vue/reactivity": "^3.4.15",
     "@vue/runtime-core": "^3.4.15",
-    "@vueuse/core": "^10.9.0",
+    "@vueuse/core": "^10.11.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "codeflask": "^1.4.1",

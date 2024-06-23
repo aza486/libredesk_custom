@@ -4,7 +4,7 @@
     <div class="bg-background text-foreground">
       <div v-if="$route.path !== '/login'">
         <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-          <ResizablePanel id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="3"
+          <ResizablePanel id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="7"
             :max-size="20" :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
             @expand="toggleNav(false)" @collapse="toggleNav(true)">
             <NavBar :is-collapsed="isCollapsed" :links="navLinks" />
@@ -21,7 +21,6 @@
         <RouterView />
       </div>
     </div>
-
   </TooltipProvider>
 </template>
 
@@ -31,7 +30,6 @@ import { RouterView, useRouter } from 'vue-router'
 import { cn } from '@/lib/utils'
 import { useUserStore } from '@/stores/user'
 import { initWS } from "./websocket.js"
-import api from '@/api';
 
 import { Toaster } from '@/components/ui/toast'
 import NavBar from './components/NavBar.vue'
@@ -46,7 +44,6 @@ import {
 
 
 
-// State
 const isCollapsed = ref(false)
 const navLinks = [
   {
@@ -71,29 +68,18 @@ const navLinks = [
 const userStore = useUserStore()
 const router = useRouter()
 
-// Functions, methods
 function toggleNav (v) {
   isCollapsed.value = v
 }
 
 onMounted(() => {
-  getCurrentUser()
-  initWS()
-})
 
-const getCurrentUser = () => {
-  api.getCurrentUser().then((resp) => {
-    if (resp.data.data) {
-      userStore.$patch((state) => {
-        state.userAvatar = resp.data.data.avatar_url
-        state.userFirstName = resp.data.data.first_name
-        state.userLastName = resp.data.data.last_name
-      })
-    }
-  }).catch((error) => {
-    if (error.response.status === 401) {
+  userStore.getCurrentUser().catch((err) => {
+    if (err.response.status === 401) {
       router.push("/login")
     }
   })
-}
+
+  initWS()
+})
 </script>

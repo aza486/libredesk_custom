@@ -10,8 +10,8 @@
 </template>
 
 <script setup>
-import ImageAttachmentPreview from "./ImageAttachmentPreview.vue"
-import FileAttachmentPreview from "./FileAttachmentPreview.vue"
+import ImageAttachmentPreview from "@/components/attachment/ImageAttachmentPreview.vue"
+import FileAttachmentPreview from "@/components/attachment/FileAttachmentPreview.vue"
 
 defineProps({
     attachments: {

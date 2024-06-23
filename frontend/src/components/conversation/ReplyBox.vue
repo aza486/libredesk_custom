@@ -26,14 +26,13 @@ onMounted(() => {
     cannedResponsesStore.fetchAll()
 })
 
-// Functions, methods.
 const sendMessage = async (message) => {
-    await api.sendMessage(conversationStore.conversation.data.uuid, {
+    api.sendMessage(conversationStore.conversation.data.uuid, {
         private: message.private,
         message: message.html,
         attachments: JSON.stringify(message.attachments),
     })
-    api.updateAssigneeLastSeen(conversationStore.conversation.data.uuid)
+    await api.updateAssigneeLastSeen(conversationStore.conversation.data.uuid)
 }
 
 </script>

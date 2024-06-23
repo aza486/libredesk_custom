@@ -7,7 +7,7 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
@@ -44,6 +44,15 @@ func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 			r.RequestCtx.SetUserValue("user_email", email)
 			r.RequestCtx.SetUserValue("user_id", userID)
 			r.RequestCtx.SetUserValue("user_uuid", userUUID)
+
+			// Check permission.
+			for _, perm := range perms {
+				hasPerm, err := app.rbac.HasPermission(userID, perm)
+				if err != nil || !hasPerm {
+					return r.SendErrorEnvelope(http.StatusUnauthorized, "You don't have permissions to access this page.", nil, "PermissionException")
+				}
+			}
+
 			return handler(r)
 		}
 

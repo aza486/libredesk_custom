@@ -70,7 +70,7 @@ import {
 import { Spinner } from '@/components/ui/spinner'
 import { RotateCcw } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import MessageAttachmentPreview from "./MessageAttachmentPreview.vue"
+import MessageAttachmentPreview from "@/components/attachment/MessageAttachmentPreview.vue"
 
 
 const props = defineProps({
