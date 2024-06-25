@@ -1,9 +1,10 @@
 package inbox
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/abhinavxd/artemis/internal/dbutils"
 	"github.com/abhinavxd/artemis/internal/message/models"
@@ -15,15 +16,9 @@ var (
 	// Embedded filesystem
 	//go:embed queries.sql
 	efs embed.FS
+
+	ErrInboxNotFound = errors.New("inbox not found")
 )
-
-type InboxNotFound struct {
-	ID int
-}
-
-func (e *InboxNotFound) Error() string {
-	return fmt.Sprintf("inbox not found: %d", e.ID)
-}
 
 // Closer provides function for closing a channel.
 type Closer interface {
@@ -37,7 +32,7 @@ type Identifier interface {
 
 // MessageHandler defines methods for handling message operations.
 type MessageHandler interface {
-	Receive(chan models.IncomingMessage) error
+	Receive(context.Context) error
 	Send(models.Message) error
 }
 
@@ -50,6 +45,11 @@ type Inbox interface {
 	Channel() string
 }
 
+type MessageStore interface {
+	MessageExists(string) (bool, error)
+	ProcessMessage(models.IncomingMessage) error
+}
+
 // Opts contains the options for the initializing the inbox manager.
 type Opts struct {
 	QueueSize   int
@@ -58,10 +58,9 @@ type Opts struct {
 
 // Manager manages the inbox.
 type Manager struct {
-	queries      queries
-	inboxes      map[int]Inbox
-	incomingMsgQ chan models.IncomingMessage
-	lo           *logf.Logger
+	queries queries
+	inboxes map[int]Inbox
+	lo      *logf.Logger
 }
 
 // InboxRecord represents a inbox record in DB.
@@ -80,7 +79,7 @@ type queries struct {
 }
 
 // New returns a new inbox manager.
-func New(lo *logf.Logger, db *sqlx.DB, incomingMsgQ chan models.IncomingMessage) (*Manager, error) {
+func New(lo *logf.Logger, db *sqlx.DB) (*Manager, error) {
 	var q queries
 
 	// Scan the sql	file into the queries struct.
@@ -89,10 +88,9 @@ func New(lo *logf.Logger, db *sqlx.DB, incomingMsgQ chan models.IncomingMessage)
 	}
 
 	m := &Manager{
-		lo:           lo,
-		incomingMsgQ: incomingMsgQ,
-		inboxes:      make(map[int]Inbox),
-		queries:      q,
+		lo:      lo,
+		inboxes: make(map[int]Inbox),
+		queries: q,
 	}
 	return m, nil
 }
@@ -106,7 +104,7 @@ func (m *Manager) Register(i Inbox) {
 func (m *Manager) GetInbox(id int) (Inbox, error) {
 	i, ok := m.inboxes[id]
 	if !ok {
-		return nil, &InboxNotFound{ID: id}
+		return nil, ErrInboxNotFound
 	}
 	return i, nil
 }
@@ -122,8 +120,8 @@ func (m *Manager) GetActiveInboxes() ([]InboxRecord, error) {
 }
 
 // Receive starts receiver for each inbox.
-func (m *Manager) Receive() {
+func (m *Manager) Receive(ctx context.Context) {
 	for _, inb := range m.inboxes {
-		go inb.Receive(m.incomingMsgQ)
+		go inb.Receive(ctx)
 	}
 }

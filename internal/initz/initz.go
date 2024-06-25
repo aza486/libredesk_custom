@@ -67,7 +67,7 @@ func Redis(ko *koanf.Koanf) *redis.Client {
 }
 
 // Logger initialies a logf logger.
-func Logger(lvl string, env, src string) logf.Logger {
+func Logger(lvl string, env, src string) *logf.Logger {
 	lo := logf.New(logf.Opts{
 		Level:                getLogLevel(lvl),
 		EnableColor:          getColor(env),
@@ -75,7 +75,7 @@ func Logger(lvl string, env, src string) logf.Logger {
 		CallerSkipFrameCount: 3,
 		DefaultFields:        []any{"sc", src},
 	})
-	return lo
+	return &lo
 }
 
 func getColor(env string) bool {

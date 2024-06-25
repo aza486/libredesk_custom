@@ -157,9 +157,9 @@ func (c *Manager) UpdateMeta(convID int, convUUID string, meta map[string]string
 	return nil
 }
 
-func (c *Manager) UpdateFirstReplyAt(convID int, convUUID string, at time.Time) error {
-	if _, err := c.q.UpdateFirstReplyAt.Exec(convID, convUUID, at); err != nil {
-		c.lo.Error("error updating conversation first reply at", "error", "error")
+func (c *Manager) UpdateFirstReplyAt(convID int, at time.Time) error {
+	if _, err := c.q.UpdateFirstReplyAt.Exec(convID, at); err != nil {
+		c.lo.Error("error updating conversation first reply at", "error", err)
 		return err
 	}
 	return nil

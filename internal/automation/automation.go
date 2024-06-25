@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"context"
 	"embed"
 	"fmt"
 
@@ -71,7 +72,6 @@ func New(opt Opts) (*Engine, error) {
 	return e, nil
 }
 
-
 func (e *Engine) SetMsgRecorder(msgRecorder MessageRecorder) {
 	e.msgRecorder = msgRecorder
 }
@@ -80,9 +80,14 @@ func (e *Engine) SetConvUpdater(convUpdater ConversationUpdater) {
 	e.convUpdater = convUpdater
 }
 
-func (e *Engine) Serve() {
-	for conv := range e.conversationQ {
-		e.processConversations(conv)
+func (e *Engine) Serve(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case conv := <-e.conversationQ:
+			e.processConversations(conv)
+		}
 	}
 }
 

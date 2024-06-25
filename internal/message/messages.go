@@ -82,10 +82,10 @@ type Manager struct {
 }
 
 type Opts struct {
-	DB                     *sqlx.DB
-	Lo                     *logf.Logger
-	OutgoingMsgQueueSize   int
-	OutgoingMsgConcurrency int
+	DB                   *sqlx.DB
+	Lo                   *logf.Logger
+	IncomingMsgQueueSize int
+	OutgoingMsgQueueSize int
 }
 
 type queries struct {
@@ -100,7 +100,7 @@ type queries struct {
 	MessageExists        *sqlx.Stmt `query:"message-exists"`
 }
 
-func New(incomingMsgQ chan models.IncomingMessage,
+func New(
 	wsHub *ws.Hub,
 	userMgr *user.Manager,
 	teamMgr *team.Manager,
@@ -126,7 +126,7 @@ func New(incomingMsgQ chan models.IncomingMessage,
 		conversationMgr:        conversationMgr,
 		inboxMgr:               inboxMgr,
 		automationEngine:       automationEngine,
-		incomingMsgQ:           incomingMsgQ,
+		incomingMsgQ:           make(chan models.IncomingMessage, opts.IncomingMsgQueueSize),
 		outgoingMsgQ:           make(chan models.Message, opts.OutgoingMsgQueueSize),
 		outgoingProcessingMsgs: sync.Map{},
 	}, nil
@@ -194,7 +194,6 @@ func (m *Manager) StartDispatcher(ctx context.Context, concurrency int, readInte
 	for {
 		select {
 		case <-ctx.Done():
-			m.lo.Info("context cancelled while sending messages.. Stopping dispatcher.")
 			return
 		case <-dbScanner.C:
 			var (
@@ -254,7 +253,8 @@ func (m *Manager) DispatchWorker() {
 
 		switch newStatus {
 		case StatusSent:
-			m.conversationMgr.UpdateFirstReplyAt(msg.ConversationID, "", msg.CreatedAt)
+			m.lo.Debug("updating first reply at", "conv_id", msg.ConversationID, "at", msg.CreatedAt)
+			m.conversationMgr.UpdateFirstReplyAt(msg.ConversationID, msg.CreatedAt)
 		}
 
 		// Broadcast the new message status.
@@ -457,6 +457,29 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	return nil
 }
 
+// MessageExists checks if a message with the given messageID exists.
+func (m *Manager) MessageExists(messageID string) (bool, error) {
+	_, err := m.findConversationID([]string{messageID})
+	if err != nil {
+		if errors.Is(err, ErrConversationNotFound) {
+			return false, nil
+		}
+		m.lo.Error("error fetching message from db", "error", err)
+		return false, err
+	}
+	return true, nil
+}
+
+// ProcessMessage enqueues an incoming message for processing.
+func (m *Manager) ProcessMessage(message models.IncomingMessage) error {
+	select {
+	case m.incomingMsgQ <- message:
+		return nil
+	default:
+		return fmt.Errorf("failed to enqueue message: %v", message.Message.ID)
+	}
+}
+
 func (m *Manager) TrimMsg(msg string) string {
 	plain := strings.Trim(strings.TrimSpace(html2text.HTML2Text(msg)), " \t\n\r\v\f")
 	if len(plain) > maxLastMessageLen {
@@ -546,8 +569,8 @@ func (m *Manager) findConversationID(sourceIDs []string) (int, error) {
 		if err == sql.ErrNoRows {
 			return conversationID, ErrConversationNotFound
 		} else {
-			m.lo.Error("error checking for existing message", "error", err)
-			return conversationID, fmt.Errorf("checking for existing message: %w", err)
+			m.lo.Error("error fetching msg from DB", "error", err)
+			return conversationID, err
 		}
 	}
 	return conversationID, nil

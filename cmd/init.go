@@ -16,8 +16,8 @@ import (
 	convtag "github.com/abhinavxd/artemis/internal/conversation/tag"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
+	"github.com/abhinavxd/artemis/internal/initz"
 	"github.com/abhinavxd/artemis/internal/message"
-	mmodels "github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/abhinavxd/artemis/internal/rbac"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
@@ -170,7 +170,6 @@ func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
 
 func initMessages(db *sqlx.DB,
 	lo *logf.Logger,
-	incomingMsgQ chan mmodels.IncomingMessage,
 	wsHub *ws.Hub,
 	userMgr *user.Manager,
 	teaMgr *team.Manager,
@@ -179,7 +178,7 @@ func initMessages(db *sqlx.DB,
 	conversationMgr *conversation.Manager,
 	inboxMgr *inbox.Manager,
 	automationEngine *automation.Engine) *message.Manager {
-	mgr, err := message.New(incomingMsgQ,
+	mgr, err := message.New(
 		wsHub,
 		userMgr,
 		teaMgr,
@@ -189,8 +188,10 @@ func initMessages(db *sqlx.DB,
 		conversationMgr,
 		automationEngine,
 		message.Opts{
-			DB: db,
-			Lo: lo,
+			DB:                   db,
+			Lo:                   lo,
+			OutgoingMsgQueueSize: ko.MustInt("message.outgoing_queue_size"),
+			IncomingMsgQueueSize: ko.MustInt("message.incoming_queue_size"),
 		})
 	if err != nil {
 		log.Fatalf("error initializing message manager: %v", err)
@@ -247,30 +248,11 @@ func initAttachmentsManager(db *sqlx.DB, lo *logf.Logger) *attachment.Manager {
 	return mgr
 }
 
-// initInboxManager initializes the inbox manager and the `active` inboxes.
-func initInboxManager(db *sqlx.DB, lo *logf.Logger, incomingMsgQ chan mmodels.IncomingMessage) *inbox.Manager {
-	mgr, err := inbox.New(lo, db, incomingMsgQ)
+// initInboxManager initializes the inbox manager without registering inboxes.
+func initInboxManager(db *sqlx.DB, lo *logf.Logger) *inbox.Manager {
+	mgr, err := inbox.New(lo, db)
 	if err != nil {
 		log.Fatalf("error initializing inbox manager: %v", err)
-	}
-
-	inboxRecords, err := mgr.GetActiveInboxes()
-	if err != nil {
-		log.Fatalf("error fetching active inboxes %v", err)
-	}
-
-	for _, inboxR := range inboxRecords {
-		switch inboxR.Channel {
-		case "email":
-			log.Printf("initializing `Email` inbox: %s", inboxR.Name)
-			inbox, err := initEmailInbox(inboxR)
-			if err != nil {
-				log.Fatalf("error initializing email inbox %v", err)
-			}
-			mgr.Register(inbox)
-		default:
-			log.Printf("WARNING: Unknown inbox channel: %s", inboxR.Name)
-		}
 	}
 	return mgr
 }
@@ -311,7 +293,7 @@ func initUserFilterMgr(db *sqlx.DB) *filterstore.Manager {
 }
 
 // initEmailInbox initializes the email inbox.
-func initEmailInbox(inboxRecord inbox.InboxRecord) (inbox.Inbox, error) {
+func initEmailInbox(inboxRecord inbox.InboxRecord, store inbox.MessageStore) (inbox.Inbox, error) {
 	var config email.Config
 
 	// Load JSON data into Koanf.
@@ -334,9 +316,10 @@ func initEmailInbox(inboxRecord inbox.InboxRecord) (inbox.Inbox, error) {
 	// Set from addr.
 	config.From = inboxRecord.From
 
-	inbox, err := email.New(email.Opts{
+	inbox, err := email.New(store, email.Opts{
 		ID:     inboxRecord.ID,
 		Config: config,
+		Lo:     initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "email_inbox"),
 	})
 
 	if err != nil {
@@ -347,4 +330,26 @@ func initEmailInbox(inboxRecord inbox.InboxRecord) (inbox.Inbox, error) {
 	log.Printf("`%s` inbox: `%s` successfully initalized. %d smtp servers. %d imap clients.", inboxRecord.Channel, inboxRecord.Name, len(config.SMTP), len(config.IMAP))
 
 	return inbox, nil
+}
+
+// registerInboxes registers the active inboxes with the inbox manager.
+func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
+	inboxRecords, err := mgr.GetActiveInboxes()
+	if err != nil {
+		log.Fatalf("error fetching active inboxes %v", err)
+	}
+
+	for _, inboxR := range inboxRecords {
+		switch inboxR.Channel {
+		case "email":
+			log.Printf("initializing `Email` inbox: %s", inboxR.Name)
+			inbox, err := initEmailInbox(inboxR, store)
+			if err != nil {
+				log.Fatalf("error initializing email inbox %v", err)
+			}
+			mgr.Register(inbox)
+		default:
+			log.Printf("WARNING: Unknown inbox channel: %s", inboxR.Name)
+		}
+	}
 }

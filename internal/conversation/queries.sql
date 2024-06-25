@@ -41,6 +41,7 @@ SELECT
     c.status,
     c.uuid,
     c.reference_number,
+    c.first_reply_at,
     ct.uuid AS contact_uuid,
     ct.first_name as first_name,
     ct.last_name as last_name,
@@ -145,4 +146,6 @@ WHERE
 
 
 -- name: update-first-reply-at
-UPDATE conversations set first_reply_at = $3 where CASE WHEN $1 > 0 then id = $1 else uuid = $2 end;
+UPDATE conversations
+SET first_reply_at = $2
+WHERE first_reply_at IS NULL AND id = $1;

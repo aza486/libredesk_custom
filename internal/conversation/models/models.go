@@ -18,6 +18,7 @@ type Conversation struct {
 	ReferenceNumber    null.String `db:"reference_number" json:"reference_number,omitempty"`
 	Priority           null.String `db:"priority" json:"priority"`
 	Status             null.String `db:"status" json:"status"`
+	FirstReplyAt       *time.Time  `db:"first_reply_at" json:"first_reply_at"`
 	AssignedUserID     null.Int    `db:"assigned_user_id" json:"-"`
 	AssignedTeamID     null.Int    `db:"assigned_team_id" json:"-"`
 	AssigneeLastSeenAt *time.Time  `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`

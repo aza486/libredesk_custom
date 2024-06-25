@@ -1,4 +1,6 @@
 {
-    "_.code": "en",
-    "_.name": "English (en)"
+  "_.code": "en",
+  "_.name": "English (en)",
+  "conversaton.list.empty": "No Conversations Found.",
+  "conversaton.list.empty.filters": "Try adjusting your filters."
 }

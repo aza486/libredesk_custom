@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -15,7 +16,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/initz"
 	"github.com/abhinavxd/artemis/internal/message"
-	"github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/abhinavxd/artemis/internal/rbac"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
@@ -60,29 +60,25 @@ func main() {
 	var (
 		shutdownCh = make(chan struct{})
 		ctx, stop  = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
-		// Incoming messages from all inboxes are pushed to this queue.
-		incomingMsgQ = make(chan models.IncomingMessage, ko.MustInt("message.incoming_queue_size"))
-
-		lo = initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "artemis")
-		rd = initz.Redis(ko)
-		db = initz.DB(ko)
+		lo         = initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "artemis")
+		rd         = initz.Redis(ko)
+		db         = initz.DB(ko)
 
 		wsHub              = ws.NewHub()
-		attachmentMgr      = initAttachmentsManager(db, &lo)
-		cntctMgr           = initContactManager(db, &lo)
-		inboxMgr           = initInboxManager(db, &lo, incomingMsgQ)
-		teamMgr            = initTeamMgr(db, &lo)
-		userMgr            = initUserDB(db, &lo)
-		conversationMgr    = initConversations(db, &lo)
-		automationEngine   = initAutomationEngine(db, &lo)
-		msgMgr             = initMessages(db, &lo, incomingMsgQ, wsHub, userMgr, teamMgr, cntctMgr, attachmentMgr, conversationMgr, inboxMgr, automationEngine)
-		autoAssignerEngine = initAutoAssignmentEngine(teamMgr, conversationMgr, msgMgr, &lo)
+		attachmentMgr      = initAttachmentsManager(db, lo)
+		cntctMgr           = initContactManager(db, lo)
+		inboxMgr           = initInboxManager(db, lo)
+		teamMgr            = initTeamMgr(db, lo)
+		userMgr            = initUserDB(db, lo)
+		conversationMgr    = initConversations(db, lo)
+		automationEngine   = initAutomationEngine(db, lo)
+		msgMgr             = initMessages(db, lo, wsHub, userMgr, teamMgr, cntctMgr, attachmentMgr, conversationMgr, inboxMgr, automationEngine)
+		autoAssignerEngine = initAutoAssignmentEngine(teamMgr, conversationMgr, msgMgr, lo)
 	)
 
 	// Init the app
 	var app = &App{
-		lo:                  &lo,
+		lo:                  lo,
 		cntctMgr:            cntctMgr,
 		inboxMgr:            inboxMgr,
 		userMgr:             userMgr,
@@ -92,25 +88,28 @@ func main() {
 		msgMgr:              msgMgr,
 		constants:           initConstants(),
 		rbac:                initRBACEngine(db),
-		tagMgr:              initTags(db, &lo),
+		tagMgr:              initTags(db, lo),
 		userFilterMgr:       initUserFilterMgr(db),
 		sessMgr:             initSessionManager(rd),
-		cannedRespMgr:       initCannedResponse(db, &lo),
-		conversationTagsMgr: initConversationTags(db, &lo),
+		cannedRespMgr:       initCannedResponse(db, lo),
+		conversationTagsMgr: initConversationTags(db, lo),
 	}
 
-	automationEngine.SetMsgRecorder(app.msgMgr)
+	// Register all inboxes with the inbox manager.
+	registerInboxes(inboxMgr, msgMgr)
+
+	automationEngine.SetMsgRecorder(msgMgr)
 	automationEngine.SetConvUpdater(conversationMgr)
 
 	// Start receivers for all active inboxes.
-	inboxMgr.Receive()
+	inboxMgr.Receive(ctx)
 
 	// Start inserting incoming msgs and dispatch pending outgoing messages.
 	go app.msgMgr.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
 	go app.msgMgr.StartDispatcher(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
 	// Start automation rule engine.
-	go automationEngine.Serve()
+	go automationEngine.Serve(ctx)
 
 	// Start conversation auto assigner engine.
 	go autoAssignerEngine.Serve(ctx, ko.MustDuration("autoassigner.assign_interval"))
@@ -133,17 +132,25 @@ func main() {
 		ReadBufferSize:       ko.MustInt("app.server.max_body_size"),
 	}
 
-	// Goroutine for handling interrupt signals & gracefully shutting down the server.
+	// Handling graceful shutdown with a delay
 	go func() {
+		// Wait for the interruption signal
 		<-ctx.Done()
+
+		log.Printf("\x1b[%dm%s\x1b[0m", 31, "Shutting down the server please wait...")
+
+		// Additional grace period before triggering shutdown
+		time.Sleep(7 * time.Second)
+
+		// Signal to shutdown the server
 		shutdownCh <- struct{}{}
 		stop()
 	}()
 
-	// Start the HTTP server.
+	// Starting the server and waiting for the shutdown signal
 	log.Printf("🚀 server listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
 	if err := g.ListenServeAndWaitGracefully(ko.String("app.server.address"), ko.String("server.socket"), s, shutdownCh); err != nil {
 		log.Fatalf("error starting frontend server: %v", err)
 	}
-	log.Println("bye")
+	log.Println("Server shutdown completed")
 }

@@ -62,7 +62,7 @@ func NewSmtpPool(configs []SMTPConfig) ([]*smtppool.Pool, error) {
 	return pools, nil
 }
 
-// Send pushes a message to the server.
+// Send sends an email.
 func (e *Email) Send(m models.Message) error {
 	// If there are more than one SMTP servers, send to a random one from the list.
 	var (

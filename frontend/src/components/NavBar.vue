@@ -19,7 +19,7 @@ defineProps({
 const route = useRoute();
 
 const getButtonVariant = (title) => {
-    return route.name === title.toLowerCase() ? "secondary" : "ghost"
+    return route.name === title.toLowerCase() ? "" : "ghost"
 }
 
 </script>
@@ -64,7 +64,7 @@ const getButtonVariant = (title) => {
                     <Icon :icon="link.icon" class="mr-2 size-5" />
                     {{ link.title }}
                     <span v-if="link.label" :class="cn(
-                        'ml-auto',
+                        'ml-',
                         link.variant === getButtonVariant(link.title)
                         && 'text-background dark:text-white',
                     )">

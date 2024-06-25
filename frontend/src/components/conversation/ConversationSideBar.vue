@@ -220,11 +220,17 @@
           </div>
 
 
-          <!-- <div class="flex flex-col gap-1 mb-5">
-            <p class="font-medium">SLA</p>
-            <p v-if="conversationStore.conversation.data.sla_remaining">48 hours remaining</p>
-          </div> -->
-
+          <div class="flex flex-col gap-1 mb-5">
+            <p class="font-medium">
+              First reply at
+            </p>
+            <p v-if="conversationStore.conversation.data.first_reply_at">
+              {{ format(conversationStore.conversation.data.first_reply_at, "PPpp") }}
+            </p>
+            <p v-else>
+              -
+            </p>
+          </div>
         </AccordionContent>
       </AccordionItem>
     </Accordion>

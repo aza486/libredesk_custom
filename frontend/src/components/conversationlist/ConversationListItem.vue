@@ -19,7 +19,7 @@
                         {{ conversation.inbox_name }}
                     </p>
                     <p class="text-base font-normal">
-                        {{ conversationStore.getContactFullName (conversation.uuid)}}
+                        {{ conversationStore.getContactFullName(conversation.uuid) }}
                     </p>
                 </div>
                 <div>
@@ -30,8 +30,8 @@
             </div>
             <div class="pt-2 pr-3">
                 <div class="flex justify-between">
-                    <p class="text-gray-800 max-w-xs text-sm dark:text-white text-ellipsis">
-                        {{ conversation.last_message }}
+                    <p class="text-gray-800 max-w-xs text-sm dark:text-white text-ellipsis flex gap-1">
+                        <CheckCheck :size="14" /> {{ conversation.last_message }}
                     </p>
                     <div class="flex items-center justify-center bg-green-500 rounded-full w-[20px] h-[20px]"
                         v-if="conversation.unread_message_count > 0">
@@ -50,7 +50,7 @@ import { useRouter } from 'vue-router'
 import { useConversationStore } from '@/stores/conversation'
 import { formatTime } from '@/utils/datetime'
 
-import { Mail } from 'lucide-vue-next'
+import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const router = useRouter()
