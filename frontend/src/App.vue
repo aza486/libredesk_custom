@@ -29,10 +29,10 @@ import { ref, onMounted } from "vue"
 import { RouterView, useRouter } from 'vue-router'
 import { cn } from '@/lib/utils'
 import { useUserStore } from '@/stores/user'
-import { initWS } from "./websocket.js"
+import { initWS } from "@/websocket.js"
 
 import { Toaster } from '@/components/ui/toast'
-import NavBar from './components/NavBar.vue'
+import NavBar from '@/components/NavBar.vue'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -41,7 +41,6 @@ import {
 import {
   TooltipProvider,
 } from '@/components/ui/tooltip'
-
 
 
 const isCollapsed = ref(false)

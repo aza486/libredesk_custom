@@ -38,7 +38,7 @@ func handleAttachmentUpload(r *fastglue.Request) error {
 	file, err := form.File["files"][0].Open()
 	srcFileName := form.File["files"][0].Filename
 	srcContentType := form.File["files"][0].Header.Get("Content-Type")
-	srcFileSize := form.File["files"][0].Size
+	srcFileSize := strconv.FormatInt(form.File["files"][0].Size, 10)
 	srcDisposition := form.Value["disposition"][0]
 	if err != nil {
 		app.lo.Error("reading file into the memory", "error", err)
@@ -57,7 +57,7 @@ func handleAttachmentUpload(r *fastglue.Request) error {
 
 	// Reset the ptr.
 	file.Seek(0, 0)
-	url, mediaUUID, _, err := app.attachmentMgr.Upload("" /**message uuid**/, srcFileName, srcContentType, srcDisposition, strconv.FormatInt(srcFileSize, 10), file)
+	url, mediaUUID, _, err := app.attachmentMgr.Upload("" /**message uuid**/, srcFileName, srcContentType, srcDisposition, srcFileSize, file)
 	if err != nil {
 		app.lo.Error("error uploading file", "error", err)
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error uploading file", nil, "GeneralException")
@@ -68,7 +68,7 @@ func handleAttachmentUpload(r *fastglue.Request) error {
 		"uuid":         mediaUUID,
 		"content_type": srcContentType,
 		"name":         srcFileName,
-		"size":         strconv.FormatInt(srcFileSize, 10),
+		"size":         srcFileSize,
 	})
 }
 

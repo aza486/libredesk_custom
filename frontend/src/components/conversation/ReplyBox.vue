@@ -1,5 +1,6 @@
 <template>
-    <!-- <div v-if="cannedResponsesStore.responses.length === 0" class="w-full drop-shadow-sm overflow-hidden p-2 border-t">
+    <div>
+        <!-- <div v-if="cannedResponsesStore.responses.length === 0" class="w-full drop-shadow-sm overflow-hidden p-2 border-t">
         <ul class="space-y-2 max-h-96">
             <li v-for="(response, index) in filteredCannedResponses" :key="response.id"
                 @click="selectResponse(response.content)" class="cursor-pointer rounded p-1 hover:bg-secondary"
@@ -8,7 +9,9 @@
             </li>
         </ul>
     </div> -->
-    <TextEditor @send="sendMessage" :conversationuuid="conversationStore.conversation.data.uuid" class="mb-[40px]" />
+
+        <TextEditor @send="sendMessage" :conversationuuid="conversationStore.conversation.data.uuid" />
+    </div>
 </template>
 
 <script setup>

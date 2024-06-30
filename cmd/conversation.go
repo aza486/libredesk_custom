@@ -125,16 +125,16 @@ func handleUpdateAssignee(r *fastglue.Request) error {
 		userUUID     = r.RequestCtx.UserValue("user_uuid").(string)
 	)
 
-	if err := app.conversationMgr.UpdateAssignee(convUUID, assigneeUUID, assigneeType); err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
-	}
-
-	if assigneeType == "agent" {
-		app.msgMgr.RecordAssigneeUserChange(string(assigneeUUID), convUUID, userUUID)
-	}
-
-	if assigneeType == "team" {
-		app.msgMgr.RecordAssigneeTeamChange(string(assigneeUUID), convUUID, userUUID)
+	if assigneeType == "user" {
+		if err := app.conversationMgr.UpdateUserAssignee(convUUID, assigneeUUID); err != nil {
+			return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		}
+		app.msgMgr.RecordAssigneeUserChange(convUUID, string(assigneeUUID), userUUID)
+	} else if assigneeType == "team" {
+		if err := app.conversationMgr.UpdateTeamAssignee(convUUID, assigneeUUID); err != nil {
+			return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		}
+		app.msgMgr.RecordAssigneeTeamChange(convUUID, string(assigneeUUID), userUUID)
 	}
 
 	return r.SendEnvelope("ok")
@@ -188,7 +188,7 @@ func handlAddConversationTags(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "error adding tags", nil, "")
 	}
 
-	if err := app.conversationTagsMgr.AddTags(uuid, tagIDs); err != nil {
+	if err := app.conversationMgr.AddTags(uuid, tagIDs); err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
 	return r.SendEnvelope("ok")

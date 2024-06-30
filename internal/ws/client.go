@@ -3,11 +3,19 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/ws/models"
 	"github.com/fasthttp/websocket"
+)
+
+const (
+	// SubscribeConversations to last 1000 conversations.
+	// TODO: Move to config.
+	maxConversationsPagesToSub = 10
+	maxConversationsPageSize   = 100
 )
 
 type SafeBool struct {
@@ -58,8 +66,6 @@ Loop:
 			}
 		case o, ok := <-c.Send:
 			if !ok {
-				// Disconnected.
-				fmt.Println("Client disconnected, breaking serve lop.")
 				break Loop
 			}
 			c.Conn.WriteMessage(o.messageType, o.data)
@@ -84,8 +90,6 @@ func (c *Client) Listen() {
 			return
 		}
 	}
-
-	fmt.Println("loop broke closing")
 	c.Hub.RemoveClient(c)
 	c.close()
 }
@@ -99,66 +103,95 @@ func (c *Client) processIncomingMessage(b []byte) {
 	}
 
 	switch r.Action {
-	// Sub to conversation updates.
-	case models.ActionConvSub:
-		var subR = models.ConvSubUnsubReq{}
-		if err := json.Unmarshal(b, &subR); err != nil {
+	case models.ActionConversationsSub:
+		var req = models.ConversationsSubscribe{}
+		if err := json.Unmarshal(b, &req); err != nil {
 			return
 		}
-		c.SubConv(int(c.ID), subR.UUIDs...)
-	case models.ActionConvUnsub:
-		var subR = models.ConvSubUnsubReq{}
-		if err := json.Unmarshal(b, &subR); err != nil {
+
+		// First remove all user conversation subscriptions.
+		c.RemoveAllUserConversationSubscriptions(c.ID)
+
+		// Add the new subcriptions.
+		for page := range maxConversationsPagesToSub {
+			page++
+			conversationUUIDs, err := c.Hub.conversationStore.GetConversationUUIDs(c.ID, page, maxConversationsPageSize, req.Type, req.PreDefinedFilter)
+			if err != nil {
+				log.Println("error fetching convesation ids", err)
+				continue
+			}
+			c.SubscribeConversations(c.ID, conversationUUIDs)
+		}
+	case models.ActionConversationSub:
+		var req = models.ConversationSubscribe{}
+		if err := json.Unmarshal(b, &req); err != nil {
 			return
 		}
-		c.UnsubConv(int(c.ID), subR.UUIDs...)
-	case models.ActionAssignedConvSub:
-		// Fetch all assigned conversation & sub.
-	case models.ActionAssignedConvUnSub:
-		// Fetch all unassigned conversation and sub.
+		c.SubscribeConversations(c.ID, []string{req.UUID})
+	case models.ActionConversationUnSub:
+		var req = models.ConversationUnsubscribe{}
+		if err := json.Unmarshal(b, &req); err != nil {
+			return
+		}
+		c.UnsubscribeConversation(c.ID, req.UUID)
+	default:
+		fmt.Println("new incoming ws msg ", string(b))
 	}
 }
 
 func (c *Client) close() {
+	c.RemoveAllUserConversationSubscriptions(c.ID)
 	c.Closed.Set(true)
 	close(c.Send)
 }
 
-func (c *Client) SubConv(userID int, uuids ...string) {
-	c.Hub.SubMut.Lock()
-	defer c.Hub.SubMut.Unlock()
-
-	for _, uuid := range uuids {
-		// Initialize the slice if this is the first subscription for this UUID
-		if _, ok := c.Hub.Csubs[uuid]; !ok {
-			c.Hub.Csubs[uuid] = []int{}
+func (c *Client) SubscribeConversations(userID int, conversationUUIDs []string) {
+	for _, conversationUUID := range conversationUUIDs {
+		// Initialize the slice if it doesn't exist
+		if c.Hub.ConversationSubs[conversationUUID] == nil {
+			c.Hub.ConversationSubs[conversationUUID] = []int{}
 		}
-		// Append the user ID to the slice of subscribed user IDs
-		c.Hub.Csubs[uuid] = append(c.Hub.Csubs[uuid], userID)
+
+		// Check if userID already exists
+		exists := false
+		for _, id := range c.Hub.ConversationSubs[conversationUUID] {
+			if id == userID {
+				exists = true
+				break
+			}
+		}
+
+		// Add userID if it doesn't exist
+		if !exists {
+			c.Hub.ConversationSubs[conversationUUID] = append(c.Hub.ConversationSubs[conversationUUID], userID)
+		}
 	}
 }
 
-func (c *Client) UnsubConv(userID int, uuids ...string) {
-	c.Hub.SubMut.Lock()
-	defer c.Hub.SubMut.Unlock()
-
-	for _, uuid := range uuids {
-		currentSubs, ok := c.Hub.Csubs[uuid]
-		if !ok {
-			continue // No subscriptions for this UUID
-		}
-		j := 0
-		for _, sub := range currentSubs {
-			if sub != userID {
-				currentSubs[j] = sub
-				j++
+func (c *Client) UnsubscribeConversation(userID int, conversationUUID string) {
+	if userIDs, ok := c.Hub.ConversationSubs[conversationUUID]; ok {
+		for i, id := range userIDs {
+			if id == userID {
+				c.Hub.ConversationSubs[conversationUUID] = append(userIDs[:i], userIDs[i+1:]...)
+				break
 			}
 		}
-		currentSubs = currentSubs[:j] // Update the slice in-place
-		if len(currentSubs) == 0 {
-			delete(c.Hub.Csubs, uuid) // Remove key if no more subscriptions
-		} else {
-			c.Hub.Csubs[uuid] = currentSubs
+		if len(c.Hub.ConversationSubs[conversationUUID]) == 0 {
+			delete(c.Hub.ConversationSubs, conversationUUID)
+		}
+	}
+}
+
+func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
+	for conversationID, userIDs := range c.Hub.ConversationSubs {
+		for i, id := range userIDs {
+			if id == userID {
+				c.Hub.ConversationSubs[conversationID] = append(userIDs[:i], userIDs[i+1:]...)
+				break
+			}
+		}
+		if len(c.Hub.ConversationSubs[conversationID]) == 0 {
+			delete(c.Hub.ConversationSubs, conversationID)
 		}
 	}
 }

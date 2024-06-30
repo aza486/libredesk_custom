@@ -28,7 +28,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/canned-responses", auth(handleGetCannedResponses))
 	g.GET("/api/attachment/{conversation_uuid}", auth(handleGetAttachment))
 	g.GET("/api/users/me", auth(handleGetCurrentUser))
-	g.GET("/api/users/filters/{page}", auth(handleGetUserFilters))
 	g.GET("/api/users", auth(handleGetUsers))
 	g.GET("/api/teams", auth(handleGetTeams))
 	g.GET("/api/tags", auth(handleGetTags))

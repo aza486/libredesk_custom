@@ -18,6 +18,8 @@
 
 <script setup>
 import { onMounted, watch } from "vue"
+import { subscribeConversation } from "@/websocket.js"
+
 import {
   ResizableHandle,
   ResizablePanel,
@@ -35,21 +37,29 @@ const props = defineProps({
 const conversationStore = useConversationStore();
 
 onMounted(() => {
-  if (props.uuid) {
-    fetchConversation(props.uuid)
+  fetchConversation(props.uuid)
+});
+
+watch(() => props.uuid, (newUUID, oldUUID) => {
+  if (newUUID !== oldUUID) {
+    fetchConversation(newUUID)
   }
 });
 
-watch(() => props.uuid, (uuid) => {
-  if (uuid) {
-    fetchConversation(uuid)
-  }
-});
-
-const fetchConversation = (uuid) => {  
+const fetchConversation = (uuid) => {
+  if (!uuid) return
   conversationStore.fetchParticipants(uuid)
   conversationStore.fetchConversation(uuid)
+  subscribeCurrentConversation(uuid)
   conversationStore.fetchMessages(uuid)
   conversationStore.updateAssigneeLastSeen(uuid)
 }
+
+// subscribes user to the conversation.
+const subscribeCurrentConversation = async (uuid) => {
+  if (!conversationStore.conversationUUIDExists(uuid)) {
+    subscribeConversation(uuid)
+  }
+}
+
 </script>

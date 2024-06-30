@@ -122,7 +122,6 @@ func (e *Email) processEnvelope(c *imapclient.Client, env *imap.Envelope, seqNum
 
 	exists, err := e.msgStore.MessageExists(env.MessageID)
 	if exists || err != nil {
-		e.lo.Debug("email message already exists, skipping", "message_id", env.MessageID)
 		return nil
 	}
 

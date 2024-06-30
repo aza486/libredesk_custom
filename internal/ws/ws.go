@@ -4,27 +4,34 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/ws/models"
 	"github.com/fasthttp/websocket"
 )
 
-// Hub maintains the set of registered clients.
+// Hub maintains the set of registered clients and their subscriptions.
 type Hub struct {
 	clients      map[int][]*Client
 	clientsMutex sync.Mutex
 
-	// Map of conversation uuid to slice of subbed userids.
-	Csubs  map[string][]int
-	SubMut sync.Mutex
+	// Map of conversation uuid to a set of subscribed user IDs.
+	ConversationSubs map[string][]int
+
+	SubMut            sync.Mutex
+	conversationStore ConversationStore
+}
+
+type ConversationStore interface {
+	GetConversationUUIDs(userID, page, pageSize int, typ, predefinedFilter string) ([]string, error)
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients:      make(map[int][]*Client, 100000),
-		clientsMutex: sync.Mutex{},
-		Csubs:        map[string][]int{},
-		SubMut:       sync.Mutex{},
+		clients:          make(map[int][]*Client, 10000),
+		clientsMutex:     sync.Mutex{},
+		ConversationSubs: make(map[string][]int),
+		SubMut:           sync.Mutex{},
 	}
 }
 
@@ -37,6 +44,10 @@ type PushMessage struct {
 	Data     []byte `json:"data"`
 	Users    []int  `json:"users"`
 	MaxUsers int    `json:"max_users"`
+}
+
+func (h *Hub) SetConversationStore(store ConversationStore) {
+	h.conversationStore = store
 }
 
 func (h *Hub) AddClient(c *Client) {
@@ -59,7 +70,7 @@ func (h *Hub) RemoveClient(client *Client) {
 	}
 }
 
-// ClientAlreadyConnected checks if a user id is already connected or not.
+// ClientAlreadyConnected returns true if the client with this id is already connected else returns false.
 func (h *Hub) ClientAlreadyConnected(id int) bool {
 	h.clientsMutex.Lock()
 	defer h.clientsMutex.Unlock()
@@ -75,7 +86,6 @@ func (h *Hub) PushMessage(m PushMessage) {
 		h.clientsMutex.Lock()
 		for _, userID := range m.Users {
 			for _, c := range h.clients[userID] {
-				fmt.Printf("Pushing msg to %d", userID)
 				c.Conn.WriteMessage(websocket.TextMessage, m.Data)
 			}
 		}
@@ -97,52 +107,89 @@ func (h *Hub) PushMessage(m PushMessage) {
 	}
 }
 
-func (c *Hub) BroadcastNewMsg(convUUID string, msg map[string]interface{}) {
-	// clientIDs, ok := c.Csubs[convUUID]
-	// if !ok || len(clientIDs) == 0 {
-	// 	return
-	// }
-
-	clientIDs := []int{1, 2}
-
-	data := map[string]interface{}{
-		"ev": models.EventNewMsg,
-		"d":  msg,
-	}
-
-	// Marshal.
-	dataB, err := json.Marshal(data)
-	if err != nil {
+func (c *Hub) BroadcastNewConversationMessage(conversationUUID, trimmedMessage, messageUUID, lastMessageAt string, private bool) {
+	userIDs, ok := c.ConversationSubs[conversationUUID]
+	if !ok || len(userIDs) == 0 {
 		return
 	}
 
-	c.PushMessage(PushMessage{
-		Data:  dataB,
-		Users: clientIDs,
-	})
+	message := models.Message{
+		Type: models.MessageTypeNewMessage,
+		Data: map[string]interface{}{
+			"conversation_uuid": conversationUUID,
+			"last_message":      trimmedMessage,
+			"uuid":              messageUUID,
+			"last_message_at":   lastMessageAt,
+			"private":           private,
+		},
+	}
+
+	c.marshalAndPush(message, userIDs)
 }
 
-func (c *Hub) BroadcastMsgStatus(convUUID string, msg map[string]interface{}) {
-	// clientIDs, ok := c.Csubs[convUUID]
-	// if !ok || len(clientIDs) == 0 {
-	// 	return
-	// }
-
-	clientIDs := []int{1, 2}
-
-	data := map[string]interface{}{
-		"ev": models.EventMsgStatusUpdate,
-		"d":  msg,
+func (c *Hub) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop, value string) {
+	userIDs, ok := c.ConversationSubs[conversationUUID]
+	if !ok || len(userIDs) == 0 {
+		return
 	}
 
-	// Marshal.
-	dataB, err := json.Marshal(data)
+	message := models.Message{
+		Type: models.MessageTypeMessagePropUpdate,
+		Data: map[string]interface{}{
+			"uuid": messageUUID,
+			"prop": prop,
+			"val":  value,
+		},
+	}
+
+	c.marshalAndPush(message, userIDs)
+}
+
+func (c *Hub) BroadcastConversationAssignment(userID int, conversationUUID string, avatarUrl string, firstName, lastName, lastMessage, inboxName string, lastMessageAt time.Time, unreadMessageCount int) {
+	message := models.Message{
+		Type: models.MessageTypeNewConversation,
+		Data: map[string]interface{}{
+			"uuid":                 conversationUUID,
+			"avatar_url":           avatarUrl,
+			"first_name":           firstName,
+			"last_name":            lastName,
+			"last_message":         lastMessage,
+			"last_message_at":      time.Now().Format(time.RFC3339),
+			"inbox_name":           inboxName,
+			"unread_message_count": unreadMessageCount,
+		},
+	}
+	c.marshalAndPush(message, []int{userID})
+}
+
+func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID string, prop, val string) {
+	userIDs, ok := c.ConversationSubs[conversationUUID]
+	if !ok || len(userIDs) == 0 {
+		return
+	}
+
+	message := models.Message{
+		Type: models.MessageTypeConversationPropertyUpdate,
+		Data: map[string]interface{}{
+			"uuid": conversationUUID,
+			"prop": prop,
+			"val":  val,
+		},
+	}
+
+	c.marshalAndPush(message, userIDs)
+}
+
+func (c *Hub) marshalAndPush(message models.Message, userIDs []int) {
+	messageB, err := json.Marshal(message)
 	if err != nil {
 		return
 	}
 
+	fmt.Println("pushing msg", string(messageB), "type", message.Type, "to_user_ids", userIDs, "connected_userIds", len(c.clients))
+
 	c.PushMessage(PushMessage{
-		Data:  dataB,
-		Users: clientIDs,
+		Data:  messageB,
+		Users: userIDs,
 	})
 }

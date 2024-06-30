@@ -1,8 +1,8 @@
 <template>
-    <div class="h-screen" v-if="conversationStore.messages.data">
+    <div class="relative" v-if="conversationStore.messages.data">
         <!-- Header -->
-        <div class="h-12 px-4 box relative">
-            <div class="flex flex-row justify-between items-center pt-1">
+        <div class="h-10 px-4 box">
+            <div class="flex flex-row justify-between items-center">
                 <div class="flex h-5 items-center space-x-4 text-sm">
                     <Tooltip>
                         <TooltipTrigger>#{{ conversationStore.conversation.data.reference_number }}
@@ -45,12 +45,11 @@
                 </div>
             </div>
         </div>
-        <!-- Body -->
         <Error class="sticky" :error-message="conversationStore.messages.errorMessage"></Error>
         <div class="flex flex-col h-screen">
-            <!-- Messages -->
+            <!-- flex-1-->
             <MessageList :messages="conversationStore.sortedMessages" class="flex-1 bg-[#f8f9fa41]" />
-            <ReplyBox />
+            <ReplyBox class="h-max mb-10"/>
         </div>
     </div>
 </template>

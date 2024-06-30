@@ -1,4 +1,4 @@
-package stringutils
+package stringutil
 
 import (
 	"crypto/rand"
@@ -23,7 +23,7 @@ func RandomAlNumString(n int) (string, error) {
 	return string(bytes), nil
 }
 
-// RandomNumericString generates a random digit string of length n.
+// RandomNumericString generates a random digit numeric string of length n.
 func RandomNumericString(n int) (string, error) {
 	const (
 		dictionary = "0123456789"

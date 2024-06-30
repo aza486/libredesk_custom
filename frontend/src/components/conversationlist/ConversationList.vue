@@ -2,7 +2,7 @@
     <div class="h-screen">
         <div class="px-3 pb-2 border-b-2 rounded-b-lg shadow-md">
             <div class="flex justify-between mt-3">
-                <h3 class="scroll-m-20 text-2xl font-semibold tracking-tight flex gap-x-2">
+                <h3 class="scroll-m-20 text-2xl font-medium flex gap-x-2">
                     Conversations
                 </h3>
                 <div class="w-[8rem]">
@@ -12,7 +12,10 @@
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
-                                <SelectLabel>Status</SelectLabel>
+                                <!-- <SelectLabel>Status</SelectLabel> -->
+                                <SelectItem value="status_all">
+                                    All
+                                </SelectItem>
                                 <SelectItem value="status_open">
                                     Open
                                 </SelectItem>
@@ -98,8 +101,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed } from 'vue'
+import { onMounted, ref, watch, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
+import { subscribeConversations } from "@/websocket.js"
 import { CONVERSATION_LIST_TYPE, CONVERSATION_PRE_DEFINED_FILTERS } from '@/constants/conversation'
 
 import { Error } from '@/components/ui/error'
@@ -122,7 +126,6 @@ import {
     SelectContent,
     SelectGroup,
     SelectItem,
-    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
@@ -132,16 +135,37 @@ import ConversationListItem from '@/components/conversationlist/ConversationList
 
 
 const conversationStore = useConversationStore()
-const predefinedFilter = ref(CONVERSATION_PRE_DEFINED_FILTERS.STATUS_OPEN)
+const predefinedFilter = ref(CONVERSATION_PRE_DEFINED_FILTERS.ALL)
 const conversationType = ref(CONVERSATION_LIST_TYPE.ASSIGNED)
+let listRefreshInterval = null
 
 onMounted(() => {
     conversationStore.fetchConversations(conversationType.value, predefinedFilter.value)
+    subscribeConversations(conversationType.value, predefinedFilter.value)
+    // Refesh list every 1 minute to sync any missed changes.
+    listRefreshInterval = setInterval(() => {
+        conversationStore.fetchConversations(conversationType.value, predefinedFilter.value)
+    }, 60000)
+})
+
+onUnmounted(() => {
+    clearInterval(listRefreshInterval)
 })
 
 watch(conversationType, (newType) => {
     conversationStore.fetchConversations(newType, predefinedFilter.value)
+    subscribeConversations(newType, predefinedFilter.value)
 });
+
+const handleFilterChange = (filter) => {
+    predefinedFilter.value = filter
+    conversationStore.fetchConversations(conversationType.value, filter)
+    subscribeConversations(conversationType.value, predefinedFilter.value)
+}
+
+const loadNextPage = () => {
+    conversationStore.fetchNextConversations(conversationType.value, predefinedFilter.value)
+};
 
 const hasConversations = computed(() => {
     return conversationStore.sortedConversations.length !== 0 && !conversationStore.conversations.errorMessage && !conversationStore.conversations.loading
@@ -159,13 +183,5 @@ const conversationsLoading = computed(() => {
     return conversationStore.conversations.loading
 })
 
-const handleFilterChange = (filter) => {
-    predefinedFilter.value = filter
-    conversationStore.fetchConversations(conversationType.value, filter)
-}
-
-const loadNextPage = () => {
-    conversationStore.fetchNextConversations(conversationType.value, predefinedFilter.value)
-};
 
 </script>

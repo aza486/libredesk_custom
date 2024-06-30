@@ -40,8 +40,6 @@ import { Button } from '@/components/ui/button'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import Placeholder from "@tiptap/extension-placeholder"
 import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
-import ImageResize from 'tiptap-extension-resize-image';
 import { Toggle } from '@/components/ui/toggle'
 import { Paperclip, Bold, Italic } from "lucide-vue-next"
 import AttachmentsPreview from "@/components/attachment/AttachmentsPreview.vue"
@@ -78,7 +76,6 @@ const inputText = ref('')
 const isBold = ref(false)
 const isItalic = ref(false)
 const attachmentInput = ref(null)
-const imageInput = ref(null)
 const cannedResponseIndex = ref(0)
 const uploadedFiles = ref([])
 
@@ -94,13 +91,6 @@ const editor = ref(useEditor({
                 'Control-i': () => applyItalic(),
             }
         }),
-        Image.configure({
-            inline: false,
-            HTMLAttributes: {
-                class: 'tiptap-editor-image',
-            },
-        }),
-        ImageResize,
     ],
     autofocus: true,
     editorProps: {
@@ -174,6 +164,7 @@ onMounted(async () => {
             editor.value.commands.setTextSelection(editor.value.state.doc.content.size)
         })
     }
+    await nextTick()
 })
 
 // Cleanup.
@@ -259,4 +250,6 @@ const handleOnFileDelete = uuid => {
     overflow: scroll;
     padding: 10px 10px;
 }
+
+@import "vue-draggable-resizable/style.css";
 </style>

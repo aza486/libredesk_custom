@@ -8,21 +8,22 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/attachment/stores/s3"
+	uauth "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
-	convtag "github.com/abhinavxd/artemis/internal/conversation/tag"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	"github.com/abhinavxd/artemis/internal/initz"
 	"github.com/abhinavxd/artemis/internal/message"
-	"github.com/abhinavxd/artemis/internal/rbac"
+	notifier "github.com/abhinavxd/artemis/internal/notification"
+	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
-	"github.com/abhinavxd/artemis/internal/user/filterstore"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
@@ -112,8 +113,8 @@ func initUserDB(DB *sqlx.DB, lo *logf.Logger) *user.Manager {
 	return mgr
 }
 
-func initConversations(db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
-	c, err := conversation.New(conversation.Opts{
+func initConversations(hub *ws.Hub, db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
+	c, err := conversation.New(hub, conversation.Opts{
 		DB:                  db,
 		Lo:                  lo,
 		ReferenceNumPattern: ko.String("app.constants.conversation_reference_number_pattern"),
@@ -122,17 +123,6 @@ func initConversations(db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
 		log.Fatalf("error initializing conversation manager: %v", err)
 	}
 	return c
-}
-
-func initConversationTags(db *sqlx.DB, lo *logf.Logger) *convtag.Manager {
-	mgr, err := convtag.New(convtag.Opts{
-		DB: db,
-		Lo: lo,
-	})
-	if err != nil {
-		log.Fatalf("error initializing conversation tags: %v", err)
-	}
-	return mgr
 }
 
 func initTags(db *sqlx.DB, lo *logf.Logger) *tag.Manager {
@@ -168,6 +158,14 @@ func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
 	return m
 }
 
+func initTemplateMgr(db *sqlx.DB) *template.Manager {
+	m, err := template.New(db)
+	if err != nil {
+		log.Fatalf("error initializing template manager: %v", err)
+	}
+	return m
+}
+
 func initMessages(db *sqlx.DB,
 	lo *logf.Logger,
 	wsHub *ws.Hub,
@@ -177,7 +175,9 @@ func initMessages(db *sqlx.DB,
 	attachmentMgr *attachment.Manager,
 	conversationMgr *conversation.Manager,
 	inboxMgr *inbox.Manager,
-	automationEngine *automation.Engine) *message.Manager {
+	automationEngine *automation.Engine,
+	templateManager *template.Manager,
+) *message.Manager {
 	mgr, err := message.New(
 		wsHub,
 		userMgr,
@@ -187,6 +187,7 @@ func initMessages(db *sqlx.DB,
 		inboxMgr,
 		conversationMgr,
 		automationEngine,
+		templateManager,
 		message.Opts{
 			DB:                   db,
 			Lo:                   lo,
@@ -268,28 +269,36 @@ func initAutomationEngine(db *sqlx.DB, lo *logf.Logger) *automation.Engine {
 	return engine
 }
 
-func initAutoAssignmentEngine(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager, lo *logf.Logger) *autoassigner.Engine {
-	engine, err := autoassigner.New(teamMgr, convMgr, msgMgr, lo)
+func initAutoAssignmentEngine(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
+	notifier notifier.Notifier, hub *ws.Hub, lo *logf.Logger) *autoassigner.Engine {
+	engine, err := autoassigner.New(teamMgr, convMgr, msgMgr, notifier, hub, lo)
 	if err != nil {
 		log.Fatalf("error initializing auto assignment engine: %v", err)
 	}
 	return engine
 }
 
-func initRBACEngine(db *sqlx.DB) *rbac.Engine {
-	engine, err := rbac.New(db)
+func initRBACEngine(db *sqlx.DB) *uauth.Engine {
+	engine, err := uauth.New(db, &logf.Logger{})
 	if err != nil {
 		log.Fatalf("error initializing rbac enginer: %v", err)
 	}
 	return engine
 }
 
-func initUserFilterMgr(db *sqlx.DB) *filterstore.Manager {
-	filterMgr, err := filterstore.New(db)
-	if err != nil {
-		log.Fatalf("error initializing user filter manager: %v", err)
+func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) notifier.Notifier {
+	var smtpCfg email.SMTPConfig
+	if err := ko.UnmarshalWithConf("notification.provider.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
+		log.Fatalf("error unmarshalling email notification provider config: %v", err)
 	}
-	return filterMgr
+	notifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, templateRenderer, emailnotifier.Opts{
+		Lo:        initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "email-notifier"),
+		FromEmail: ko.String("notification.provider.email.email_address"),
+	})
+	if err != nil {
+		log.Fatalf("error initializing email notifier: %v", err)
+	}
+	return notifier
 }
 
 // initEmailInbox initializes the email inbox.
@@ -327,7 +336,7 @@ func initEmailInbox(inboxRecord inbox.InboxRecord, store inbox.MessageStore) (in
 		return nil, err
 	}
 
-	log.Printf("`%s` inbox: `%s` successfully initalized. %d smtp servers. %d imap clients.", inboxRecord.Channel, inboxRecord.Name, len(config.SMTP), len(config.IMAP))
+	log.Printf("`%s` inbox successfully initalized. %d smtp servers. %d imap clients.", inboxRecord.Name, len(config.SMTP), len(config.IMAP))
 
 	return inbox, nil
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment/models"
 	"github.com/abhinavxd/artemis/internal/message"
@@ -108,13 +107,10 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	// Update conversation meta with the last message details.
 	trimmedMessage := app.msgMgr.TrimMsg(msg.Content)
-	app.conversationMgr.UpdateMeta(0, conversationUUID, map[string]string{
-		"last_message":    trimmedMessage,
-		"last_message_at": msg.CreatedAt.Format(time.RFC3339),
-	})
+	app.conversationMgr.UpdateLastMessage(0, conversationUUID, trimmedMessage, msg.CreatedAt)
 
 	// Send WS update.
-	app.msgMgr.BroadcastNewMsg(msg, trimmedMessage)
+	app.msgMgr.BroadcastNewConversationMessage(msg, trimmedMessage)
 
 	return r.SendEnvelope("Message sent")
 }

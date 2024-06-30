@@ -8,8 +8,10 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/message"
+	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/abhinavxd/artemis/internal/systeminfo"
 	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/mr-karan/balance"
 	"github.com/zerodha/logf"
 )
@@ -17,71 +19,48 @@ import (
 const (
 	roundRobinDefaultWeight = 1
 	strategyRoundRobin      = "round_robin"
-	strategyLoadBalances    = "load_balanced"
 )
 
-// Engine handles the assignment of unassigned conversations to agents using a round-robin strategy.
+// Engine handles the assignment of unassigned conversations to agents of a tean using a round-robin strategy.
 type Engine struct {
 	teamRoundRobinBalancer map[int]*balance.Balance
-	mu                     sync.Mutex // Mutex to protect the balancer map
-	convMgr                *conversation.Manager
-	teamMgr                *team.Manager
-	msgMgr                 *message.Manager
-	lo                     *logf.Logger
-	strategy               string
+	userIDs                map[string]int
+	// Mutex to protect the balancer map
+	mu       sync.Mutex
+	convMgr  *conversation.Manager
+	teamMgr  *team.Manager
+	msgMgr   *message.Manager
+	lo       *logf.Logger
+	hub      *ws.Hub
+	notifier notifier.Notifier
+	strategy string
 }
 
 // New creates a new instance of the Engine.
-func New(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager, lo *logf.Logger) (*Engine, error) {
-	balance, err := populateBalancerPool(teamMgr)
+func New(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
+	notifier notifier.Notifier, hub *ws.Hub, lo *logf.Logger) (*Engine, error) {
+	var e = Engine{
+		notifier: notifier,
+		strategy: strategyRoundRobin,
+		convMgr:  convMgr,
+		teamMgr:  teamMgr,
+		msgMgr:   msgMgr,
+		lo:       lo,
+		hub:      hub,
+		mu:       sync.Mutex{},
+		userIDs:  map[string]int{},
+	}
+	balancer, err := e.populateBalancerPool()
 	if err != nil {
 		return nil, err
 	}
-	return &Engine{
-		teamRoundRobinBalancer: balance,
-		strategy:               strategyRoundRobin,
-		convMgr:                convMgr,
-		teamMgr:                teamMgr,
-		msgMgr:                 msgMgr,
-		lo:                     lo,
-		mu:                     sync.Mutex{},
-	}, nil
-}
-
-func populateBalancerPool(teamMgr *team.Manager) (map[int]*balance.Balance, error) {
-	var (
-		balancer   = make(map[int]*balance.Balance)
-		teams, err = teamMgr.GetAll()
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for _, team := range teams {
-		users, err := teamMgr.GetTeamMembers(team.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		// Now add the users to team balance map.
-		for _, user := range users {
-			if _, ok := balancer[team.ID]; !ok {
-				balancer[team.ID] = balance.NewBalance()
-			}
-			balancer[team.ID].Add(user.UUID, roundRobinDefaultWeight)
-		}
-	}
-	return balancer, nil
+	e.teamRoundRobinBalancer = balancer
+	return &e, nil
 }
 
 func (e *Engine) Serve(ctx context.Context, interval time.Duration) {
-	// Start updating the balancer pool periodically in a separate goroutine
-	go e.refreshBalancerPeriodically(ctx, 1*time.Minute)
-
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -94,71 +73,91 @@ func (e *Engine) Serve(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// assignConversations fetches unassigned conversations and assigns them.
-func (e *Engine) assignConversations() error {
-	unassignedConv, err := e.convMgr.GetUnassigned()
-	if err != nil {
-		return err
-	}
-
-	if len(unassignedConv) > 0 {
-		e.lo.Debug("found unassigned conversations", "count", len(unassignedConv))
-	}
-
-	for _, conv := range unassignedConv {
-		if e.strategy == strategyRoundRobin {
-			e.roundRobin(conv)
-		}
-	}
-	return nil
-}
-
-// roundRobin fetches an user from the team balancer pool and assigns the conversation to that user.
-func (e *Engine) roundRobin(conv models.Conversation) {
-	pool, ok := e.teamRoundRobinBalancer[conv.AssignedTeamID.Int]
-	if !ok {
-		e.lo.Warn("team not found in balancer", "id", conv.AssignedTeamID.Int)
-	}
-	userUUID := pool.Get()
-	e.lo.Debug("fetched user from rr pool for assignment", "user_uuid", userUUID)
-	if userUUID == "" {
-		e.lo.Warn("empty user returned from rr pool")
-		return
-	}
-	if err := e.convMgr.UpdateAssignee(conv.UUID, []byte(userUUID), "agent"); err != nil {
-		e.lo.Error("error updating conversation assignee", "error", err, "conv_uuid", conv.UUID, "user_uuid", userUUID)
-		return
-	}
-	if err := e.msgMgr.RecordAssigneeUserChange(userUUID, conv.UUID, systeminfo.SystemUserUUID); err != nil {
-		e.lo.Error("error recording conversation user change msg", "error", err, "conv_uuid", conv.UUID, "user_uuid", userUUID)
-	}
-}
-
-func (e *Engine) refreshBalancerPeriodically(ctx context.Context, updateInterval time.Duration) {
-	ticker := time.NewTicker(updateInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if err := e.refreshBalancer(); err != nil {
-				e.lo.Error("Error updating team balancer pool", "error", err)
-			}
-		}
-	}
-}
-
-func (e *Engine) refreshBalancer() error {
+func (e *Engine) RefreshBalancer() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	balancer, err := populateBalancerPool(e.teamMgr)
+	balancer, err := e.populateBalancerPool()
 	if err != nil {
 		e.lo.Error("Error updating team balancer pool", "error", err)
 		return err
 	}
 	e.teamRoundRobinBalancer = balancer
 	return nil
+}
+
+// populateBalancerPool populates the team balancer bool with the team members.
+func (e *Engine) populateBalancerPool() (map[int]*balance.Balance, error) {
+	var (
+		balancer   = make(map[int]*balance.Balance)
+		teams, err = e.teamMgr.GetAll()
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, team := range teams {
+		users, err := e.teamMgr.GetTeamMembers(team.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add the users to team balance map.
+		for _, user := range users {
+			if _, ok := balancer[team.ID]; !ok {
+				balancer[team.ID] = balance.NewBalance()
+			}
+			// FIXME: Balancer only supports strings.
+			balancer[team.ID].Add(user.UUID, roundRobinDefaultWeight)
+			e.userIDs[user.UUID] = user.ID
+		}
+	}
+	return balancer, nil
+}
+
+// assignConversations fetches unassigned conversations and assigns them.
+func (e *Engine) assignConversations() error {
+	unassignedConversations, err := e.convMgr.GetUnassigned()
+	if err != nil {
+		return err
+	}
+
+	if len(unassignedConversations) > 0 {
+		e.lo.Debug("found unassigned conversations", "count", len(unassignedConversations))
+	}
+
+	for _, conversation := range unassignedConversations {
+		if e.strategy == strategyRoundRobin {
+			userUUID := e.getUser(conversation)
+			if userUUID == "" {
+				e.lo.Warn("user uuid not found for round robin assignment", "team_id", conversation.AssignedTeamID.Int)
+				continue
+			}
+
+			// Update assignee and record the assigne change message.
+			if err := e.convMgr.UpdateUserAssignee(conversation.UUID, []byte(userUUID)); err != nil {
+				continue
+			}
+
+			// Fixme: maybe move to messages?
+			e.hub.BroadcastConversationAssignment(e.userIDs[userUUID], conversation.UUID, conversation.AvatarURL.String, conversation.FirstName, conversation.LastName, conversation.LastMessage, conversation.InboxName, conversation.LastMessageAt.Time, 1)
+
+			e.msgMgr.RecordAssigneeUserChange(conversation.UUID, userUUID, systeminfo.SystemUserUUID)
+
+			// Send notification to the assignee.
+			e.notifier.SendAssignedConversationNotification([]string{userUUID}, conversation.UUID)
+		}
+	}
+	return nil
+}
+
+// getUser returns user uuid from the team balancer pool.
+func (e *Engine) getUser(conversation models.Conversation) string {
+	pool, ok := e.teamRoundRobinBalancer[conversation.AssignedTeamID.Int]
+	if !ok {
+		e.lo.Warn("team not found in balancer", "id", conversation.AssignedTeamID.Int)
+		return ""
+	}
+	return pool.Get()
 }

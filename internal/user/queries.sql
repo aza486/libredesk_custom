@@ -1,6 +1,9 @@
 -- name: get-users
 SELECT first_name, last_name, uuid, disabled from users;
 
+-- name: get-email
+SELECT email from users where CASE WHEN $1 > 0 THEN id = $1 ELSE uuid = $2 END; 
+
 -- name: get-user-by-email
 select id, email, password, avatar_url, first_name, last_name, uuid from users where email = $1;
 

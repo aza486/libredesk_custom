@@ -28,16 +28,3 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(u)
 }
-
-func handleGetUserFilters(r *fastglue.Request) error {
-	var (
-		app    = r.Context.(*App)
-		userID = r.RequestCtx.UserValue("user_id").(int)
-		page   = r.RequestCtx.UserValue("page").(string)
-	)
-	filters, err := app.userFilterMgr.GetFilters(userID, page)
-	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
-	}
-	return r.SendEnvelope(filters)
-}

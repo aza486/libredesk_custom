@@ -41,7 +41,6 @@ type Message struct {
 	References       []string             `json:"-"`
 	InReplyTo        string               `json:"-"`
 	Headers          textproto.MIMEHeader `json:"-"`
-	NewConversation  bool                 `json:"-"`
 }
 
 // IncomingMessage links a message with the contact information and inbox id.

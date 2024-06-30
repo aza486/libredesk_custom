@@ -9,7 +9,7 @@
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="grid gap-4">
-                        <div class="grid grid-cols-1 gap-6">
+                        <!-- <div class="grid grid-cols-1 gap-6">
                             <Button variant="outline">
                                 <svg role="img" viewBox="0 0 24 24" class="mr-2 h-4 w-4">
                                     <path fill="currentColor"
@@ -27,14 +27,15 @@
                                     Or continue with
                                 </span>
                             </div>
-                        </div>
+                        </div> -->
                         <div class="grid gap-2">
                             <Label for="email">Email</Label>
-                            <Input id="email" type="email" placeholder="m@example.com" v-model.trim="loginForm.email" />
+                            <Input id="email" type="email" placeholder="Enter your email address"
+                                v-model.trim="loginForm.email" />
                         </div>
                         <div class="grid gap-2">
                             <Label for="password">Password</Label>
-                            <Input id="password" type="password" v-model="loginForm.password" />
+                            <Input id="password" type="password" placeholder="Password" v-model="loginForm.password" />
                         </div>
                     </CardContent>
                     <CardFooter class="flex flex-col gap-5">
@@ -43,7 +44,7 @@
                         </Button>
                         <Error :errorMessage="errorMessage" :border="true"></Error>
                         <div>
-                            <a href="#" class="text-xs">Forgot ID or Password?</a>
+                            <a href="#" class="text-xs">Forgot Email or Password?</a>
                         </div>
                     </CardFooter>
                 </Card>

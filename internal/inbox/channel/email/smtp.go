@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	headerReturnPath = "Return-Path"
-	headerMessageID  = "Message-ID"
-	headerReferences = "References"
-	headerInReplyTo  = "In-Reply-To"
+	headerReturnPath  = "Return-Path"
+	headerMessageID   = "Message-ID"
+	headerReferences  = "References"
+	headerInReplyTo   = "In-Reply-To"
+	dispositionInline = "inline"
 )
 
 // New returns an SMTP e-mail channels from the given SMTP server configcfg.

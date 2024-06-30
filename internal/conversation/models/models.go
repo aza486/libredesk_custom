@@ -18,7 +18,7 @@ type Conversation struct {
 	ReferenceNumber    null.String `db:"reference_number" json:"reference_number,omitempty"`
 	Priority           null.String `db:"priority" json:"priority"`
 	Status             null.String `db:"status" json:"status"`
-	FirstReplyAt       *time.Time  `db:"first_reply_at" json:"first_reply_at"`
+	FirstReplyAt       null.Time   `db:"first_reply_at" json:"first_reply_at"`
 	AssignedUserID     null.Int    `db:"assigned_user_id" json:"-"`
 	AssignedTeamID     null.Int    `db:"assigned_team_id" json:"-"`
 	AssigneeLastSeenAt *time.Time  `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
@@ -32,7 +32,7 @@ type Conversation struct {
 	ContactAvatarURL   *string          `db:"contact_avatar_url" json:"contact_avatar_url"`
 	AssignedTeamUUID   *string          `db:"assigned_team_uuid" json:"assigned_team_uuid"`
 	AssignedAgentUUID  *string          `db:"assigned_user_uuid" json:"assigned_user_uuid"`
-	LastMessageAt      *time.Time       `db:"last_message_at" json:"last_message_at"`
+	LastMessageAt      null.Time        `db:"last_message_at" json:"last_message_at"`
 	LastMessage        string           `db:"last_message" json:"last_message"`
 	FirstMessage       string           `json:"-"`
 }

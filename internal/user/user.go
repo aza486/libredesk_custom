@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/abhinavxd/artemis/internal/dbutils"
+	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -39,6 +39,7 @@ type Opts struct {
 type queries struct {
 	GetUsers        *sqlx.Stmt `query:"get-users"`
 	GetUser         *sqlx.Stmt `query:"get-user"`
+	GetEmail        *sqlx.Stmt `query:"get-email"`
 	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
 	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
 }
@@ -46,7 +47,7 @@ type queries struct {
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
-	if err := dbutils.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
 
@@ -108,6 +109,23 @@ func (u *Manager) GetUser(id int, uuid string) (models.User, error) {
 		return user, fmt.Errorf("fetching user: %w", err)
 	}
 	return user, nil
+}
+
+func (u *Manager) GetEmail(id int, uuid string) (string, error) {
+	var uu interface{}
+	if uuid != "" {
+		uu = uuid
+	}
+
+	var email string
+	if err := u.q.GetEmail.Get(&email, id, uu); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return email, fmt.Errorf("user not found")
+		}
+		u.lo.Error("error fetching user from db", "error", err)
+		return email, fmt.Errorf("fetching user: %w", err)
+	}
+	return email, nil
 }
 
 func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {

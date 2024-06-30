@@ -1,4 +1,5 @@
 export const CONVERSATION_PRE_DEFINED_FILTERS = {
+    ALL: "status_all",
     STATUS_OPEN: 'status_open',
     STATUS_PROCESSING: 'status_processing',
     STATUS_SPAM: 'status_spam',

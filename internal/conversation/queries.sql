@@ -2,7 +2,7 @@
 INSERT INTO conversations
 (reference_number, contact_id, status, inbox_id, meta)
 VALUES($1, $2, $3, $4, $5)
-returning id;
+returning id, uuid;
 
 
 -- name: get-conversations
@@ -26,6 +26,12 @@ SELECT
 FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id
     JOIN inboxes inb on c.inbox_id = inb.id
+WHERE 1=1 %s
+
+-- name: get-conversations-uuids
+SELECT
+    c.uuid
+FROM conversations c
 WHERE 1=1 %s
 
 -- name: get-assigned-conversations
@@ -131,7 +137,27 @@ VALUES($1, (select id from conversations where uuid = $2));
 select uuids from conversations where assigned_user_id = $1;
 
 -- name: get-unassigned
-SELECT id, uuid, assigned_team_id from conversations where assigned_user_id is NULL and assigned_team_id is not null;
+SELECT
+    c.updated_at,
+    c.uuid,
+    c.assignee_last_seen_at,
+    c.assigned_team_id,
+    inb.channel as inbox_channel,
+    inb.name as inbox_name,
+    ct.first_name,
+    ct.last_name,
+    ct.avatar_url,
+    COALESCE(c.meta->>'subject', '') as subject,
+    COALESCE(c.meta->>'last_message', '') as last_message,
+    COALESCE((c.meta->>'last_message_at')::timestamp, '1970-01-01 00:00:00'::timestamp) as last_message_at,
+    (
+        SELECT COUNT(*)
+        FROM messages m
+        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
+    ) AS unread_message_count
+FROM conversations c
+    JOIN contacts ct ON c.contact_id = ct.id
+    JOIN inboxes inb on c.inbox_id = inb.id where assigned_user_id is NULL and assigned_team_id is not null;
 
 -- name: get-assignee-stats
 SELECT 
@@ -149,3 +175,22 @@ WHERE
 UPDATE conversations
 SET first_reply_at = $2
 WHERE first_reply_at IS NULL AND id = $1;
+
+-- name: add-tag
+INSERT INTO conversation_tags (conversation_id, tag_id)
+VALUES(
+    (
+        SELECT id
+        from conversations
+        where uuid = $1
+    ),
+    $2
+) ON CONFLICT DO NOTHING
+
+-- name: delete-tags
+DELETE FROM conversation_tags
+WHERE conversation_id = (
+    SELECT id
+    from conversations
+    where uuid = $1
+) AND tag_id NOT IN (SELECT unnest($2::int[]));

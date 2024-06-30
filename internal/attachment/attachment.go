@@ -8,7 +8,7 @@ import (
 	"net/textproto"
 
 	"github.com/abhinavxd/artemis/internal/attachment/models"
-	"github.com/abhinavxd/artemis/internal/dbutils"
+	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -56,7 +56,7 @@ func New(opt Opts) (*Manager, error) {
 
 	// Scan SQL file
 
-	if err := dbutils.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
+	if err := dbutil.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
 		return nil, err
 	}
 	return &Manager{

@@ -34,23 +34,9 @@ func handleWS(r *fastglue.Request, hub *ws.Hub) error {
 			ID:   userID,
 			Hub:  hub,
 			Conn: conn,
-			Send: make(chan ws.Message, 100000),
+			Send: make(chan ws.Message, 10000),
 		}
-
-		// Sub this client to all assigned conversations.
-		convs, err := app.conversationMgr.GetAssignedConversations(userID)
-		if err != nil {
-			return
-		}
-		// Extract  uuids.
-		uuids := make([]string, len(convs))
-		for i, conv := range convs {
-			uuids[i] = conv.UUID
-		}
-		c.SubConv(userID, uuids...)
-
 		hub.AddClient(&c)
-
 		go c.Listen()
 		c.Serve(2 * time.Second)
 	})

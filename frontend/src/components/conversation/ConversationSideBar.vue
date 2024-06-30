@@ -315,7 +315,7 @@ onMounted(() => {
 })
 
 const handleAssignedAgentChange = (v) => {
-  conversationStore.updateAssignee("agent", {
+  conversationStore.updateAssignee("user", {
     "assignee_uuid": v.split(":")[0]
   })
 }

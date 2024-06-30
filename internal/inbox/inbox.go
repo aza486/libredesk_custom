@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/abhinavxd/artemis/internal/dbutils"
+	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -20,7 +20,7 @@ var (
 	ErrInboxNotFound = errors.New("inbox not found")
 )
 
-// Closer provides function for closing a channel.
+// Closer provides function for closing an inbox.
 type Closer interface {
 	Close() error
 }
@@ -83,7 +83,7 @@ func New(lo *logf.Logger, db *sqlx.DB) (*Manager, error) {
 	var q queries
 
 	// Scan the sql	file into the queries struct.
-	if err := dbutils.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
+	if err := dbutil.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
 		return nil, err
 	}
 

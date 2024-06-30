@@ -266,22 +266,39 @@ export const useConversationStore = defineStore('conversation', () => {
             }
         }
     }
-    function updateMessageList (msg) {
+
+    function updateConversationProp (update) {
+        if (conversation?.data?.uuid === update.uuid) {
+            conversation.data[update.prop] = update.val
+        }
+    }
+
+    function addNewConversation (conv) {
+        if (!conversationUUIDExists(conv.uuid)) {
+            conversations.data.push(conv)
+        }
+    }
+
+    function conversationUUIDExists (uuid) {
+        return conversations.data?.find(c => c.uuid === uuid) ? true : false
+    }
+
+    function updateMessageList (message) {
         // Check if this conversation is selected and then update messages list.
-        if (conversation?.data?.uuid === msg.conversation_uuid) {
-            // Fetch entire msg if the give msg does not exist in the msg list.
-            if (!messages.data.some(message => message.uuid === msg.uuid)) {
-                fetchParticipants(msg.conversation_uuid)
-                fetchMessage(msg.uuid)
-                updateAssigneeLastSeen(msg.conversation_uuid)
+        if (conversation?.data?.uuid === message.conversation_uuid) {
+            // Fetch entire message if the give msg does not exist in the msg list.
+            if (!messages.data.some(msg => msg.uuid === message.uuid)) {
+                fetchParticipants(message.conversation_uuid)
+                fetchMessage(message.uuid)
+                updateAssigneeLastSeen(message.conversation_uuid)
             }
         }
     }
 
-    function updateMessageStatus (uuid, status) {
-        const message = messages.data.find(m => m.uuid === uuid)
-        if (message) {
-            message.status = status
+    function updateMessageProp (message) {
+        const existingMessage = messages.data.find(m => m.uuid === message.uuid)
+        if (existingMessage) {
+            existingMessage[message.prop] = message.val
         }
     }
 
@@ -305,5 +322,5 @@ export const useConversationStore = defineStore('conversation', () => {
         messages.errorMessage = ""
     }
 
-    return { conversations, conversation, messages, sortedConversations, sortedMessages, getContactFullName, fetchParticipants, fetchNextConversations, updateMessageStatus, updateAssigneeLastSeen, updateMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationList, $reset };
+    return { conversations, conversation, messages, sortedConversations, sortedMessages, conversationUUIDExists, updateConversationProp, addNewConversation, getContactFullName, fetchParticipants, fetchNextConversations, updateMessageProp, updateAssigneeLastSeen, updateMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationList, $reset };
 })
