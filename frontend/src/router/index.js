@@ -26,10 +26,11 @@ const routes = [
     component: UserLoginView
   },
   {
-    path: '/account',
-    name: "account",
-    component: AccountView
-  },
+    path: '/account/:page?',
+    name: 'account',
+    component: AccountView,
+    props: true,
+  }
 ]
 
 const router = createRouter({

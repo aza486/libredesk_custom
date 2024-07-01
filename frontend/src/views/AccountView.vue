@@ -1,8 +1,9 @@
-<template>
-    <div class="tab-container-default">
-        <h1>Work in progress.</h1>
-    </div>
-</template>
-
 <script setup>
+import Account from '@/components/account/Account.vue'
 </script>
+
+<template>
+    <Account>
+        yo
+    </Account>
+</template>

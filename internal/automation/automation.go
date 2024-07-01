@@ -4,6 +4,8 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
@@ -18,12 +20,13 @@ var (
 )
 
 type Engine struct {
-	q                 queries
-	lo                *logf.Logger
-	conversationStore ConversationStore
-	messageStore      MessageStore
-	rules             []models.Rule
-	conversationQ     chan cmodels.Conversation
+	q                   queries
+	lo                  *logf.Logger
+	conversationStore   ConversationStore
+	messageStore        MessageStore
+	rules               []models.Rule
+	newConversationQ    chan string
+	updateConversationQ chan string
 }
 
 type Opts struct {
@@ -32,8 +35,12 @@ type Opts struct {
 }
 
 type ConversationStore interface {
+	Get(uuid string) (cmodels.Conversation, error)
+	GetRecentConversations(t time.Time) ([]cmodels.Conversation, error)
 	UpdateTeamAssignee(uuid string, assigneeUUID []byte) error
+	UpdateUserAssignee(uuid string, assigneeUUID []byte) error
 	UpdateStatus(uuid string, status []byte) error
+	UpdatePriority(uuid string, priority []byte) error
 }
 
 type MessageStore interface {
@@ -49,20 +56,21 @@ func New(opt Opts) (*Engine, error) {
 	var (
 		q queries
 		e = &Engine{
-			lo:            opt.Lo,
-			conversationQ: make(chan cmodels.Conversation, 10000),
+			lo:                  opt.Lo,
+			newConversationQ:    make(chan string, 5000),
+			updateConversationQ: make(chan string, 5000),
 		}
 	)
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
 		return nil, err
 	}
 	e.q = q
-	e.rules = e.getRules()
+	e.rules = e.queryRules()
 	return e, nil
 }
 
 func (e *Engine) ReloadRules() {
-	e.rules = e.getRules()
+	e.rules = e.queryRules()
 }
 
 func (e *Engine) SetMessageStore(messageStore MessageStore) {
@@ -74,34 +82,98 @@ func (e *Engine) SetConversationStore(conversationStore ConversationStore) {
 }
 
 func (e *Engine) Serve(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Create separate semaphores for each channel
+	maxWorkers := 10
+	newConversationSemaphore := make(chan struct{}, maxWorkers)
+	updateConversationSemaphore := make(chan struct{}, maxWorkers)
+	timeTriggerSemaphore := make(chan struct{}, maxWorkers)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case conversation := <-e.conversationQ:
-			e.processConversations(conversation)
+		case conversationUUID := <-e.newConversationQ:
+			newConversationSemaphore <- struct{}{}
+			go e.handleNewConversation(conversationUUID, newConversationSemaphore)
+		case conversationUUID := <-e.updateConversationQ:
+			updateConversationSemaphore <- struct{}{}
+			go e.handleUpdateConversation(conversationUUID, updateConversationSemaphore)
+		case <-ticker.C:
+			e.lo.Info("evaluating time triggers")
+			timeTriggerSemaphore <- struct{}{}
+			go e.handleTimeTrigger(timeTriggerSemaphore)
 		}
 	}
 }
 
-func (e *Engine) EvaluateRules(c cmodels.Conversation) {
-	select {
-	case e.conversationQ <- c:
-	default:
-		// Queue is full.
-		e.lo.Warn("EvaluateRules: conversationQ is full, unable to enqueue conversation")
+func (e *Engine) handleNewConversation(conversationUUID string, semaphore chan struct{}) {
+	defer func() { <-semaphore }()
+	conversation, err := e.conversationStore.Get(conversationUUID)
+	if err != nil {
+		e.lo.Error("error could not fetch conversations to evaluate new conversation rules", "conversation_uuid", conversationUUID)
+		return
+	}
+	rules := e.filterRulesByType(models.RuleTypeNewConversation)
+	e.evalConversationRules(rules, conversation)
+}
+
+func (e *Engine) handleUpdateConversation(conversationUUID string, semaphore chan struct{}) {
+	defer func() { <-semaphore }()
+	conversation, err := e.conversationStore.Get(conversationUUID)
+	if err != nil {
+		e.lo.Error("error could not fetch conversations to evaluate update conversation rules", "conversation_uuid", conversationUUID)
+		return
+	}
+	rules := e.filterRulesByType(models.RuleTypeConversationUpdate)
+	e.evalConversationRules(rules, conversation)
+}
+
+func (e *Engine) handleTimeTrigger(semaphore chan struct{}) {
+	defer func() { <-semaphore }()
+	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
+	conversations, err := e.conversationStore.GetRecentConversations(thirtyDaysAgo)
+	if err != nil {
+		e.lo.Error("error could not fetch conversations to evaluate time triggers")
+		return
+	}
+	rules := e.filterRulesByType(models.RuleTypeTimeTrigger)
+	for _, conversation := range conversations {
+		e.evalConversationRules(rules, conversation)
 	}
 }
 
-func (e *Engine) getRules() []models.Rule {
-	var rulesJSON []string
+func (e *Engine) EvaluateNewConversationRules(conversationUUID string) {
+	select {
+	case e.newConversationQ <- conversationUUID:
+	default:
+		// Queue is full.
+		e.lo.Warn("EvaluateNewConversationRules: newConversationQ is full, unable to enqueue conversation")
+	}
+}
+
+func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string) {
+	select {
+	case e.updateConversationQ <- conversationUUID:
+	default:
+		// Queue is full.
+		e.lo.Warn("EvaluateConversationUpdateRules: updateConversationQ is full, unable to enqueue conversation")
+	}
+}
+
+func (e *Engine) queryRules() []models.Rule {
+	var (
+		rulesJSON []string
+		rules     []models.Rule
+	)
 	err := e.q.GetRules.Select(&rulesJSON)
 	if err != nil {
 		e.lo.Error("error fetching automation rules", "error", err)
 		return nil
 	}
 
-	var rules []models.Rule
 	for _, ruleJSON := range rulesJSON {
 		var rulesBatch []models.Rule
 		if err := json.Unmarshal([]byte(ruleJSON), &rulesBatch); err != nil {
@@ -111,6 +183,16 @@ func (e *Engine) getRules() []models.Rule {
 		rules = append(rules, rulesBatch...)
 	}
 
-	e.lo.Debug("fetched rules", "num", len(rules), "rules", rules)
+	e.lo.Debug("fetched rules", "num", len(rules), "rules", fmt.Sprintf("%+v", rules))
 	return rules
+}
+
+func (e *Engine) filterRulesByType(ruleType string) []models.Rule {
+	var filteredRules []models.Rule
+	for _, rule := range e.rules {
+		if rule.Type == ruleType {
+			filteredRules = append(filteredRules, rule)
+		}
+	}
+	return filteredRules
 }

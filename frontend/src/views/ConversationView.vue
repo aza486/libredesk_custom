@@ -1,7 +1,7 @@
 <template>
   <!-- Resizable panel last resize value is stored in the localstorage -->
   <ResizablePanelGroup direction="horizontal" auto-save-id="conversation.vue.resizable.panel">
-    <ResizablePanel :min-size="18" :default-size="23" :max-size="23">
+    <ResizablePanel :min-size="20" :default-size="23" :max-size="23">
       <ConversationList></ConversationList>
     </ResizablePanel>
     <ResizableHandle />

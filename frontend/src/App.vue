@@ -61,7 +61,7 @@ const navLinks = [
     title: 'Account',
     component: 'account',
     label: '',
-    icon: 'lucide:circle-user-round',
+    icon: 'lucide:settings',
   },
 ]
 const userStore = useUserStore()

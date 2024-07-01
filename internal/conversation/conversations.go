@@ -76,6 +76,7 @@ type queries struct {
 	GetUUID                      *sqlx.Stmt `query:"get-uuid"`
 	GetInboxID                   *sqlx.Stmt `query:"get-inbox-id"`
 	GetConversation              *sqlx.Stmt `query:"get-conversation"`
+	GetRecentConversations       *sqlx.Stmt `query:"get-recent-conversations"`
 	GetUnassigned                *sqlx.Stmt `query:"get-unassigned"`
 	GetConversationParticipants  *sqlx.Stmt `query:"get-conversation-participants"`
 	GetConversations             string     `query:"get-conversations"`
@@ -124,15 +125,29 @@ func (c *Manager) Create(contactID int, inboxID int, meta []byte) (int, string, 
 }
 
 func (c *Manager) Get(uuid string) (models.Conversation, error) {
-	var conv models.Conversation
-	if err := c.q.GetConversation.Get(&conv, uuid); err != nil {
+	var conversation models.Conversation
+	if err := c.q.GetConversation.Get(&conversation, uuid); err != nil {
 		if err == sql.ErrNoRows {
-			return conv, fmt.Errorf("conversation not found")
+			c.lo.Error("conversation not found", "uuid", uuid)
+			return conversation, fmt.Errorf("conversation not found")
 		}
 		c.lo.Error("fetching conversation from DB", "error", err)
-		return conv, fmt.Errorf("error fetching conversation")
+		return conversation, fmt.Errorf("error fetching conversation")
 	}
-	return conv, nil
+	return conversation, nil
+}
+
+func (c *Manager) GetRecentConversations(time time.Time) ([]models.Conversation, error) {
+	var conversations []models.Conversation
+	if err := c.q.GetRecentConversations.Select(&conversations, time); err != nil {
+		if err == sql.ErrNoRows {
+			c.lo.Error("conversations not found", "created_after", time)
+			return conversations, fmt.Errorf("conversation not found")
+		}
+		c.lo.Error("fetching conversation from DB", "error", err)
+		return conversations, fmt.Errorf("error fetching conversation")
+	}
+	return conversations, nil
 }
 
 func (c *Manager) UpdateAssigneeLastSeen(uuid string) error {

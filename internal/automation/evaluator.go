@@ -2,6 +2,7 @@ package automation
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
@@ -9,10 +10,11 @@ import (
 	"github.com/abhinavxd/artemis/internal/systeminfo"
 )
 
-func (e *Engine) processConversations(conversation cmodels.Conversation) {
-	e.lo.Debug("num rules", "rules", len(e.rules))
-	for _, rule := range e.rules {
+func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
+	e.lo.Debug("num rules", "rules", len(rules))
+	for _, rule := range rules {
 		e.lo.Debug("eval rule", "groups", len(rule.Groups), "rule", rule)
+		// At max there can be only 2 groups.
 		if len(rule.Groups) > 2 {
 			continue
 		}
@@ -29,6 +31,8 @@ func (e *Engine) processConversations(conversation cmodels.Conversation) {
 			for _, action := range rule.Actions {
 				e.executeActions(conversation, action)
 			}
+		} else {
+			e.lo.Debug("rule evaluation failed, NOT executing actions")
 		}
 	}
 }
@@ -81,45 +85,57 @@ func (e *Engine) evaluateGroup(rules []models.RuleDetail, operator string, conve
 
 func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conversation) bool {
 	var (
-		conversationValue string
-		conditionMet      bool
+		valueToCompare string
+		conditionMet   bool
 	)
 
 	// Extract the value from the conversation based on the rule's field
 	switch rule.Field {
-	case "subject":
-		conversationValue = conversation.Subject
-	case "content":
-		conversationValue = conversation.FirstMessage
-	case "status":
-		conversationValue = conversation.Status.String
-	case "priority":
-		conversationValue = conversation.Priority.String
+	case models.ConversationFieldSubject:
+		valueToCompare = conversation.Subject
+	case models.ConversationFieldContent:
+		valueToCompare = conversation.FirstMessage
+	case models.ConversationFieldStatus:
+		valueToCompare = conversation.Status.String
+	case models.ConversationFieldPriority:
+		valueToCompare = conversation.Priority.String
+	case models.ConversationFieldAssignedTeamID:
+		if conversation.AssignedTeamID.Valid {
+			valueToCompare = strconv.Itoa(conversation.AssignedTeamID.Int)
+		}
+	case models.ConversationFieldAssignedUserID:
+		if conversation.AssignedUserID.Valid {
+			valueToCompare = strconv.Itoa(conversation.AssignedUserID.Int)
+		}
 	default:
 		e.lo.Error("rule field not recognized", "field", rule.Field)
 		return false
 	}
 
-	// Lower case the value.
-	conversationValue = strings.ToLower(conversationValue)
-
-	// Compare the conversation value with the rule's value based on the operator
-	switch rule.Operator {
-	case "equals":
-		conditionMet = conversationValue == rule.Value
-	case "not equal":
-		conditionMet = conversationValue != rule.Value
-	case "contains":
-		conditionMet = strings.Contains(conversationValue, rule.Value)
-	case "startsWith":
-		conditionMet = strings.HasPrefix(conversationValue, rule.Value)
-	case "endsWith":
-		conditionMet = strings.HasSuffix(conversationValue, rule.Value)
-	default:
-		e.lo.Error("logical operator not recognized for evaluating rules", "operator", rule.Operator)
-		return false
+	if !rule.CaseSensitiveMatch {
+		valueToCompare = strings.ToLower(valueToCompare)
+		rule.Value = strings.ToLower(rule.Value)
 	}
 
+	e.lo.Debug("comparing values", "conversation_value", valueToCompare, "rule_value", rule.Value)
+
+	switch rule.Operator {
+	case models.RuleEquals:
+		conditionMet = valueToCompare == rule.Value
+	case models.RuleNotEqual:
+		conditionMet = valueToCompare != rule.Value
+	case models.RuleContains:
+		conditionMet = strings.Contains(valueToCompare, rule.Value)
+	case models.RuleNotContains:
+		conditionMet = !strings.Contains(valueToCompare, rule.Value)
+	case models.RuleSet:
+		conditionMet = bool(len(valueToCompare) > 0)
+	case models.RuleNotSet:
+		conditionMet = !bool(len(valueToCompare) > 0)
+	default:
+		e.lo.Error("rule logical operator not recognized", "operator", rule.Operator)
+		return false
+	}
 	return conditionMet
 }
 
@@ -140,10 +156,18 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 			return err
 		}
 	case models.ActionAssignAgent:
-		if err := e.conversationStore.UpdateStatus(conversation.UUID, []byte(action.Action)); err != nil {
+		if err := e.conversationStore.UpdateUserAssignee(conversation.UUID, []byte(action.Action)); err != nil {
 			return err
 		}
 		if err := e.messageStore.RecordStatusChange(action.Action, conversation.UUID, systeminfo.SystemUserUUID); err != nil {
+			return err
+		}
+	case models.ActionSetPriority:
+		if err := e.conversationStore.UpdatePriority(conversation.UUID, []byte(action.Action)); err != nil {
+			return err
+		}
+	case models.ActionSetStatus:
+		if err := e.conversationStore.UpdateStatus(conversation.UUID, []byte(action.Action)); err != nil {
 			return err
 		}
 	default:

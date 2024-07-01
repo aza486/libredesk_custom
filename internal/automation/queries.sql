@@ -1,3 +1,4 @@
 -- name: get-rules
-select rules
+select 
+    rules
 from automation_rules;

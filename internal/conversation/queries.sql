@@ -69,6 +69,40 @@ LEFT JOIN users u ON u.id = c.assigned_user_id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
 WHERE c.uuid = $1;
 
+
+-- name: get-recent-conversations
+SELECT
+    c.created_at,
+    c.updated_at,
+    c.closed_at,
+    c.resolved_at,
+    c.priority,
+    c.status,
+    c.uuid,
+    c.reference_number,
+    c.first_reply_at,
+    ct.uuid AS contact_uuid,
+    ct.first_name as first_name,
+    ct.last_name as last_name,
+    ct.email as email,
+    ct.phone_number as phone_number,
+    ct.avatar_url as avatar_url,
+    u.uuid AS assigned_user_uuid,
+    at.uuid AS assigned_team_uuid,
+    (SELECT COALESCE(
+        (SELECT json_agg(t.name) 
+        FROM tags t 
+        INNER JOIN conversation_tags ct ON ct.tag_id = t.id 
+        WHERE ct.conversation_id = c.id), 
+        '[]'::json
+    )) AS tags
+FROM conversations c
+JOIN contacts ct ON c.contact_id = ct.id
+LEFT JOIN users u ON u.id = c.assigned_user_id
+LEFT JOIN teams at ON at.id = c.assigned_team_id
+WHERE c.created_at > $1 and c.uuid = 'e2f69c9f-17f5-4d09-9aae-12c2a79046a2';
+
+
 -- name: get-id
 SELECT id from conversations where uuid = $1;
 

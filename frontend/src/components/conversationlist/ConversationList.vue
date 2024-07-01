@@ -5,33 +5,6 @@
                 <h3 class="scroll-m-20 text-2xl font-medium flex gap-x-2">
                     Conversations
                 </h3>
-                <div class="w-[8rem]">
-                    <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a filter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <!-- <SelectLabel>Status</SelectLabel> -->
-                                <SelectItem value="status_all">
-                                    All
-                                </SelectItem>
-                                <SelectItem value="status_open">
-                                    Open
-                                </SelectItem>
-                                <SelectItem value="status_processing">
-                                    Processing
-                                </SelectItem>
-                                <SelectItem value="status_spam">
-                                    Spam
-                                </SelectItem>
-                                <SelectItem value="status_resolved">
-                                    Resolved
-                                </SelectItem>
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </div>
             </div>
 
             <!-- Search -->
@@ -58,16 +31,33 @@
                     </TabsList>
                 </Tabs>
                 <div class="space-x-2">
-                    <Popover>
-                        <PopoverTrigger>
-                            <button>
-                                <ListFilter :size="30" class="p-2 bg-slate-100 rounded-sm" :stroke-width="1.9" />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent class="flex flex-col gap-3 w-full">
-                            Work in progress.
-                        </PopoverContent>
-                    </Popover>
+                    <div class="w-[8rem]">
+                        <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a filter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <!-- <SelectLabel>Status</SelectLabel> -->
+                                    <SelectItem value="status_all">
+                                        All
+                                    </SelectItem>
+                                    <SelectItem value="status_open">
+                                        Open
+                                    </SelectItem>
+                                    <SelectItem value="status_processing">
+                                        Processing
+                                    </SelectItem>
+                                    <SelectItem value="status_spam">
+                                        Spam
+                                    </SelectItem>
+                                    <SelectItem value="status_resolved">
+                                        Resolved
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -88,13 +78,16 @@
                 </div>
             </div>
 
-
-            <div class="flex justify-center items-center mt-6 relative"
-                v-if="conversationStore.conversations.hasMore && !hasErrored && hasConversations">
-                <Button variant="link" @click="loadNextPage">
-                    <Spinner v-if="conversationStore.conversations.loading" />
-                    <p v-else>Load more...</p>
-                </Button>
+            <div class="flex justify-center items-center mt-5 relative">
+                <div v-if="conversationStore.conversations.hasMore && !hasErrored && hasConversations">
+                    <Button variant="link" @click="loadNextPage">
+                        <Spinner v-if="conversationStore.conversations.loading" />
+                        <p v-else>Load more...</p>
+                    </Button>
+                </div>
+                <div v-else-if="everythingLoaded">
+                    All conversations loaded 😎
+                </div>
             </div>
         </div>
     </div>
@@ -108,18 +101,11 @@ import { CONVERSATION_LIST_TYPE, CONVERSATION_PRE_DEFINED_FILTERS } from '@/cons
 
 import { Error } from '@/components/ui/error'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Input } from '@/components/ui/input'
-import { Search, ListFilter } from 'lucide-vue-next'
 import {
     Tabs,
     TabsList,
     TabsTrigger,
 } from '@/components/ui/tabs'
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import {
     Select,
@@ -178,6 +164,11 @@ const emptyConversations = computed(() => {
 const hasErrored = computed(() => {
     return conversationStore.conversations.errorMessage ? true : false
 })
+
+const everythingLoaded = computed(() => {
+    return !conversationStore.conversations.errorMessage && !emptyConversations.value
+})
+
 
 const conversationsLoading = computed(() => {
     return conversationStore.conversations.loading

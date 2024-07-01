@@ -16,7 +16,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
-	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/message/models"
@@ -457,13 +456,11 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		m.conversationMgr.UpdateLastMessage(in.Message.ConversationID, in.Message.ConversationUUID, content, in.Message.CreatedAt)
 	}
 
-	// Evaluate automation rules for this new conversation.
+	// Evaluate automation rules for this conversation.
 	if isNewConversation {
-		m.automationEngine.EvaluateRules(cmodels.Conversation{
-			UUID:         in.Message.ConversationUUID,
-			FirstMessage: in.Message.Content,
-			Subject:      in.Message.Subject,
-		})
+		m.automationEngine.EvaluateNewConversationRules(in.Message.ConversationUUID)
+	} else {
+		m.automationEngine.EvaluateConversationUpdateRules(in.Message.ConversationUUID)
 	}
 
 	return nil
