@@ -83,6 +83,7 @@ type queries struct {
 	GetConversationsUUIDs        string     `query:"get-conversations-uuids"`
 	GetAssignedConversations     *sqlx.Stmt `query:"get-assigned-conversations"`
 	GetAssigneeStats             *sqlx.Stmt `query:"get-assignee-stats"`
+	GetNewConversationsStats     *sqlx.Stmt `query:"get-new-conversations-stats"`
 	InsertConverstionParticipant *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation           *sqlx.Stmt `query:"insert-conversation"`
 	UpdateFirstReplyAt           *sqlx.Stmt `query:"update-first-reply-at"`
@@ -440,6 +441,18 @@ func (c *Manager) GetAssigneeStats(userID int) (models.ConversationCounts, error
 		return counts, err
 	}
 	return counts, nil
+}
+
+func (c *Manager) GetNewConversationsStats() ([]models.NewConversationsStats, error) {
+	var stats []models.NewConversationsStats
+	if err := c.q.GetNewConversationsStats.Select(&stats); err != nil {
+		if err == sql.ErrNoRows {
+			return stats, err
+		}
+		c.lo.Error("error fetching new conversation stats", "error", err)
+		return stats, err
+	}
+	return stats, nil
 }
 
 func (t *Manager) AddTags(convUUID string, tagIDs []int) error {

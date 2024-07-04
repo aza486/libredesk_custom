@@ -7,7 +7,8 @@ import AccountView from "@/views/AccountView.vue"
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    name: "login",
+    component: UserLoginView
   },
   {
     path: '/dashboard',
@@ -21,15 +22,17 @@ const routes = [
     props: true,
   },
   {
-    path: '/login',
-    name: "login",
-    component: UserLoginView
-  },
-  {
     path: '/account/:page?',
     name: 'account',
     component: AccountView,
     props: true,
+    beforeEnter: (to, from, next) => {
+      if (!to.params.page) {
+        next({ ...to, params: { ...to.params, page: 'profile' } });
+      } else {
+        next();
+      }
+    },
   }
 ]
 

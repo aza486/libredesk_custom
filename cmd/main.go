@@ -18,9 +18,11 @@ import (
 	"github.com/abhinavxd/artemis/internal/message"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/upload"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/knadh/koanf/v2"
+	"github.com/knadh/stuffbin"
 	"github.com/valyala/fasthttp"
 	"github.com/vividvilla/simplesessions"
 	"github.com/zerodha/fastglue"
@@ -40,6 +42,7 @@ const (
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
 	constants       consts
+	fs              stuffbin.FileSystem
 	lo              *logf.Logger
 	cntctMgr        *contact.Manager
 	userMgr         *user.Manager
@@ -49,12 +52,16 @@ type App struct {
 	msgMgr          *message.Manager
 	rbac            *uauth.Engine
 	inboxMgr        *inbox.Manager
+	uploadMgr       *upload.Manager
 	attachmentMgr   *attachment.Manager
 	cannedRespMgr   *cannedresp.Manager
 	conversationMgr *conversation.Manager
 }
 
 func main() {
+	// Load stuffbin fs.
+	fs := initFS()
+
 	// Load command line flags into Koanf.
 	initFlags()
 
@@ -107,6 +114,7 @@ func main() {
 	// Init the app
 	var app = &App{
 		lo:              lo,
+		fs:              fs,
 		cntctMgr:        cntctMgr,
 		inboxMgr:        inboxMgr,
 		userMgr:         userMgr,

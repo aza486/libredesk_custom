@@ -13,5 +13,5 @@ const dataDonut = [
 </script>
 
 <template>
-     <DonutChart index="name" :category="'total'" :data="dataDonut" :value-formatter="valueFormatter" />
+     <DonutChart index="name" :category="'total'" :data="dataDonut" :value-formatter="valueFormatter" type="pie" />
 </template>

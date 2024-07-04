@@ -206,3 +206,12 @@ func handleAssigneeStats(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(stats)
 }
+
+func handleNewConversationsStats(r *fastglue.Request) error {
+	var app = r.Context.(*App)
+	stats, err := app.conversationMgr.GetNewConversationsStats()
+	if err != nil {
+		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error fetching conversation stats", nil, "")
+	}
+	return r.SendEnvelope(stats)
+}

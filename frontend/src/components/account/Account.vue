@@ -16,13 +16,7 @@ const currentPage = computed(() => {
 </script>
 
 <template>
-    <div class="md:hidden">
-        <VPImage alt="Forms" width="1280" height="1214" class="block" :image="{
-            dark: '/examples/forms-dark.png',
-            light: '/examples/forms-light.png',
-        }" />
-    </div>
-    <div class="hidden space-y-6 md:block tab-container-default">
+    <div class="space-y-6 md:block page-content">
         <div class="space-y-0.5">
             <h2 class="text-2xl font-bold tracking-tight">
                 Profile settings

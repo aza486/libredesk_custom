@@ -2,7 +2,7 @@
   <Toaster />
   <TooltipProvider :delay-duration=200>
     <div class="bg-background text-foreground">
-      <div v-if="$route.path !== '/login'">
+      <div v-if="$route.path !== '/'">
         <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
           <ResizablePanel id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="7"
             :max-size="20" :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"

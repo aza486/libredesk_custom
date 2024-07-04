@@ -1,65 +1,51 @@
 <template>
     <div class="h-screen">
-        <div class="px-3 pb-2 border-b-2 rounded-b-lg shadow-md">
-            <div class="flex justify-between mt-3">
-                <h3 class="scroll-m-20 text-2xl font-medium flex gap-x-2">
-                    Conversations
-                </h3>
-            </div>
+        <div class="flex justify-between px-3 py-2 border-b-2 rounded-b-lg shadow-md">
 
-            <!-- Search -->
-            <!-- <div class="relative mx-auto my-3">
-                <Input id="search" type="text" placeholder="Search message or reference number"
-                    class="pl-10 bg-[#F0F2F5]" />
-                <span class="absolute start-1 inset-y-0 flex items-center justify-center px-2">
-                    <Search class="size-6 text-muted-foreground" />
-                </span>
-            </div> -->
 
-            <div class="flex justify-between mt-5">
-                <Tabs v-model:model-value="conversationType">
-                    <TabsList class="w-full flex justify-evenly">
-                        <TabsTrigger value="assigned" class="w-full">
-                            Assigned
-                        </TabsTrigger>
-                        <TabsTrigger value="unassigned" class="w-full">
-                            Unassigned
-                        </TabsTrigger>
-                        <TabsTrigger value="all" class="w-full">
-                            All
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
-                <div class="space-x-2">
-                    <div class="w-[8rem]">
-                        <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a filter" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <!-- <SelectLabel>Status</SelectLabel> -->
-                                    <SelectItem value="status_all">
-                                        All
-                                    </SelectItem>
-                                    <SelectItem value="status_open">
-                                        Open
-                                    </SelectItem>
-                                    <SelectItem value="status_processing">
-                                        Processing
-                                    </SelectItem>
-                                    <SelectItem value="status_spam">
-                                        Spam
-                                    </SelectItem>
-                                    <SelectItem value="status_resolved">
-                                        Resolved
-                                    </SelectItem>
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                    </div>
+            <Tabs v-model:model-value="conversationType">
+                <TabsList class="w-full flex justify-evenly">
+                    <TabsTrigger value="assigned" class="w-full">
+                        Assigned
+                    </TabsTrigger>
+                    <TabsTrigger value="unassigned" class="w-full">
+                        Unassigned
+                    </TabsTrigger>
+                    <TabsTrigger value="all" class="w-full">
+                        All
+                    </TabsTrigger>
+                </TabsList>
+            </Tabs>
+            <div class="space-x-2">
+                <div class="w-[8rem]">
+                    <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a filter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <!-- <SelectLabel>Status</SelectLabel> -->
+                                <SelectItem value="status_all">
+                                    All
+                                </SelectItem>
+                                <SelectItem value="status_open">
+                                    Open
+                                </SelectItem>
+                                <SelectItem value="status_processing">
+                                    Processing
+                                </SelectItem>
+                                <SelectItem value="status_spam">
+                                    Spam
+                                </SelectItem>
+                                <SelectItem value="status_resolved">
+                                    Resolved
+                                </SelectItem>
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
+
         </div>
 
         <Error :errorMessage="conversationStore.conversations.errorMessage"></Error>

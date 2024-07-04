@@ -50,3 +50,8 @@ type ConversationCounts struct {
 	AwaitingResponseCount int `db:"awaiting_response_count" json:"awaiting_response_count"`
 	CreatedTodayCount     int `db:"created_today_count" json:"created_today_count"`
 }
+
+type NewConversationsStats struct {
+	Date             time.Time `db:"date" json:"date"`
+	NewConversations int       `db:"new_conversations" json:"new_conversations"`
+}

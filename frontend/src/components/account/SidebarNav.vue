@@ -16,22 +16,6 @@ const sidebarNavItems = [
     title: 'Profile',
     href: '/account/profile',
   },
-  {
-    title: 'Account',
-    href: '/account/account',
-  },
-  {
-    title: 'Appearance',
-    href: '/account/appearance',
-  },
-  {
-    title: 'Notifications',
-    href: '/account/notifications',
-  },
-  {
-    title: 'Display',
-    href: '/account/display',
-  },
 ]
 </script>
 

@@ -31,6 +31,7 @@ import (
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
+	"github.com/knadh/stuffbin"
 	flag "github.com/spf13/pflag"
 	"github.com/vividvilla/simplesessions"
 	sessredisstore "github.com/vividvilla/simplesessions/stores/goredis"
@@ -71,6 +72,39 @@ func initConstants() consts {
 		AppBaseURL:                  ko.String("app.constants.base_url"),
 		AllowedFileUploadExtensions: ko.Strings("app.constants.allowed_file_upload_extensions"),
 	}
+}
+
+// initFS initializes the stuffbin FileSystem.
+func initFS() stuffbin.FileSystem {
+	var files = []string{
+		"frontend/dist:/dist",
+	}
+
+	// Get self executable path.
+	path, err := os.Executable()
+	if err != nil {
+		log.Fatalf("error initializing FS: %v", err)
+	}
+
+	fmt.Println("path -> ", path)
+
+	// Load embedded files in the executable.
+	fs, err := stuffbin.UnStuff(path)
+
+	if err != nil {
+		if err == stuffbin.ErrNoID {
+			// The embed failed or the binary's already unstuffed or running in local / dev mode, use the local filesystem.
+			log.Println("unstuff failed, using local FS")
+			fs, err = stuffbin.NewLocalFS("/", files...)
+			if err != nil {
+				log.Fatalf("error initializing local FS: %v", err)
+			}
+		} else {
+			log.Fatalf("error initializing FS: %v", err)
+		}
+	}
+	fmt.Println(fs.List())
+	return fs
 }
 
 // initSessionManager initializes and returns a simplesessions.Manager instance.

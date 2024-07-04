@@ -23,14 +23,17 @@ export const useUserStore = defineStore('user', () => {
         return userFirstName.value + " " + userLastName.value
     })
 
-    const getCurrentUser = () => {
-        return api.getCurrentUser().then((resp) => {
+    const getCurrentUser = async () => {
+        try {
+            const resp = await api.getCurrentUser();
             if (resp.data.data) {
-                userAvatar.value = resp.data.data.avatar_url
-                userFirstName.value = resp.data.data.first_name
-                userLastName.value = resp.data.data.last_name
+                userAvatar.value = resp.data.data.avatar_url;
+                userFirstName.value = resp.data.data.first_name;
+                userLastName.value = resp.data.data.last_name;
             }
-        })
+        } catch (error) {
+            console.error("Error fetching current user:", error);
+        }
     }
 
     return { userFirstName, userLastName, userAvatar, getFullName, setAvatar, setFirstName, setLastName, getCurrentUser }

@@ -33,17 +33,23 @@ const sendMessage = (uuid, data) => http.post(`/api/conversation/${uuid}/message
 const getConversation = (uuid) => http.get(`/api/conversation/${uuid}`)
 const getConversationParticipants = (uuid) => http.get(`/api/conversation/${uuid}/participants`)
 const getCannedResponses = () => http.get('/api/canned-responses')
-const getAssigneeStats = () => http.get('/api/conversations/assignee/stats')
-
 const getAssignedConversations = (page, preDefinedFilter) => http.get(`/api/conversations/assigned?page=${page}&predefinedfilter=${preDefinedFilter}`)
 const getUnassignedConversations = (page, preDefinedFilter) => http.get(`/api/conversations/unassigned?page=${page}&predefinedfilter=${preDefinedFilter}`)
 const getAllConversations = (page, preDefinedFilter) => http.get(`/api/conversations/all?page=${page}&predefinedfilter=${preDefinedFilter}`)
-
 const uploadAttachment = (data) => http.post('/api/attachment', data, {
     headers: {
         'Content-Type': 'multipart/form-data'
     }
 })
+const uploadFile = (data) => http.post('/api/attachment', data, {
+    headers: {
+        'Content-Type': 'multipart/form-data'
+    }
+})
+const getAssigneeStats = () => http.get('/api/conversations/assignee/stats')
+const getNewConversationsStats = () => http.get('/api/conversations/new/stats');
+
+
 
 export default {
     login,
@@ -58,12 +64,14 @@ export default {
     getConversationParticipants,
     getMessage,
     getMessages,
+    getNewConversationsStats,
     sendMessage,
     getCurrentUser,
     updateAssignee,
     updateStatus,
     updatePriority,
     upsertTags,
+    uploadFile,
     retryMessage,
     updateAssigneeLastSeen,
     getCannedResponses,

@@ -205,6 +205,17 @@ WHERE
     assigned_user_id = $1;
 
 
+-- name: get-new-conversations-stats
+SELECT 
+    DATE_TRUNC('day', created_at) AS date,
+    COUNT(*) AS new_conversations
+FROM 
+    conversations
+GROUP BY 
+    date
+ORDER BY 
+    date;
+
 -- name: update-first-reply-at
 UPDATE conversations
 SET first_reply_at = $2
