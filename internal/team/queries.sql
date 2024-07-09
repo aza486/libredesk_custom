@@ -2,7 +2,7 @@
 SELECT id, name, uuid from teams where disabled is not true;
 
 -- name: get-team
-SELECT name, uuid from teams where disabled is not true and uuid = $1;
+SELECT id, name, uuid from teams where disabled is not true and uuid = $1;
 
 -- name: get-team-members
 SELECT u.id, u.uuid, t.id as team_id

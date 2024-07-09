@@ -77,7 +77,6 @@ func New(store inbox.MessageStore, opts Opts) (*Email, error) {
 		smtpPools: pools,
 		msgStore:  store,
 	}
-
 	return e, nil
 }
 

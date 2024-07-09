@@ -57,7 +57,7 @@ func handleAttachmentUpload(r *fastglue.Request) error {
 
 	// Reset the ptr.
 	file.Seek(0, 0)
-	url, mediaUUID, _, err := app.attachmentMgr.Upload("" /**message uuid**/, srcFileName, srcContentType, srcDisposition, srcFileSize, file)
+	url, mediaUUID, _, err := app.attachmentManager.Upload("" /**message uuid**/, srcFileName, srcContentType, srcDisposition, srcFileSize, file)
 	if err != nil {
 		app.lo.Error("error uploading file", "error", err)
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error uploading file", nil, "GeneralException")
@@ -77,6 +77,6 @@ func handleGetAttachment(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("conversation_uuid").(string)
 	)
-	url := app.attachmentMgr.Store.GetURL(uuid)
+	url := app.attachmentManager.Store.GetURL(uuid)
 	return r.Redirect(url, http.StatusFound, nil, "")
 }

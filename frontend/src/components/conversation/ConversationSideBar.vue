@@ -2,7 +2,8 @@
   <div class="p-3">
     <div>
       <Avatar class="size-20">
-        <AvatarImage :src=conversationStore.conversation.data.avatar_url  v-if="conversationStore.conversation.data.avatar_url"/>
+        <AvatarImage :src=conversationStore.conversation.data.avatar_url
+          v-if="conversationStore.conversation.data.avatar_url" />
         <AvatarFallback>
           {{ conversationStore.conversation.data.first_name.toUpperCase().substring(0, 2) }}
         </AvatarFallback>
@@ -15,8 +16,7 @@
         <Mail class="size-3 mt-1"></Mail>
         {{ conversationStore.conversation.data.email }}
       </p>
-      <p class="text-sm text-muted-foreground flex gap-2 mt-1"
-        v-if="conversationStore.conversation.data.phone_number">
+      <p class="text-sm text-muted-foreground flex gap-2 mt-1" v-if="conversationStore.conversation.data.phone_number">
         <Phone class="size-3 mt-1"></Phone>
         {{ conversationStore.conversation.data.phone_number }}
       </p>
@@ -24,7 +24,9 @@
     <Accordion type="single" collapsible class="border-t mt-4" :default-value="actionAccordion.title">
       <AccordionItem :value="actionAccordion.title">
         <AccordionTrigger>
-          <p>{{ actionAccordion.title }}</p>
+          <h4 class="scroll-m-20 text-base font-semibold tracking-tight">
+            {{ actionAccordion.title }}
+          </h4>
         </AccordionTrigger>
         <AccordionContent>
 
@@ -184,7 +186,9 @@
     <Accordion type="single" collapsible :default-value="infoAccordion.title">
       <AccordionItem :value="infoAccordion.title">
         <AccordionTrigger>
-          <p>{{ infoAccordion.title }}</p>
+          <h4 class="scroll-m-20 text-base font-semibold tracking-tight">
+            {{ infoAccordion.title }}
+          </h4>
         </AccordionTrigger>
         <AccordionContent>
 
@@ -192,6 +196,19 @@
             <p class="font-medium">Initiated at</p>
             <p>
               {{ format(conversationStore.conversation.data.created_at, "PPpp") }}
+            </p>
+          </div>
+
+
+          <div class="flex flex-col gap-1 mb-5">
+            <p class="font-medium">
+              First reply at
+            </p>
+            <p v-if="conversationStore.conversation.data.first_reply_at">
+              {{ format(conversationStore.conversation.data.first_reply_at, "PPpp") }}
+            </p>
+            <p v-else>
+              -
             </p>
           </div>
 
@@ -213,19 +230,6 @@
             </p>
             <p v-if="conversationStore.conversation.data.closed_at">
               {{ format(conversationStore.conversation.data.closed_at, "PPpp") }}
-            </p>
-            <p v-else>
-              -
-            </p>
-          </div>
-
-
-          <div class="flex flex-col gap-1 mb-5">
-            <p class="font-medium">
-              First reply at
-            </p>
-            <p v-if="conversationStore.conversation.data.first_reply_at">
-              {{ format(conversationStore.conversation.data.first_reply_at, "PPpp") }}
             </p>
             <p v-else>
               -

@@ -3,14 +3,6 @@
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
-defineProps({
-  currentPage: {
-    type: String,
-    required: true
-  }
-})
-
-
 const sidebarNavItems = [
   {
     title: 'Profile',

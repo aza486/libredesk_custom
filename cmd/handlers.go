@@ -1,24 +1,22 @@
 package main
 
 import (
-	"fmt"
 	"mime"
 	"net/http"
 	"path/filepath"
 
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/ws"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/login", handleLogin)
 	g.GET("/api/logout", handleLogout)
-
 	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversations.all"))
 	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversations.assigned"))
 	g.GET("/api/conversations/unassigned", auth(handleGetUnassignedConversations, "conversations.unassigned"))
-	g.GET("/api/conversations/assignee/stats", auth(handleAssigneeStats))
-	g.GET("/api/conversations/new/stats", auth(handleNewConversationsStats))
 	g.GET("/api/conversation/{conversation_uuid}", auth(handleGetConversation))
 	g.PUT("/api/conversation/{conversation_uuid}/last-seen", auth(handleUpdateAssigneeLastSeen))
 	g.GET("/api/conversation/{conversation_uuid}/participants", auth(handleGetConversationParticipants))
@@ -36,12 +34,24 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/upload/view/{file_uuid}", auth(handleViewFile))
 	g.GET("/api/users/me", auth(handleGetCurrentUser))
 	g.GET("/api/users", auth(handleGetUsers))
+	g.POST("/api/users", auth(handleCreateUser))
 	g.GET("/api/teams", auth(handleGetTeams))
 	g.GET("/api/tags", auth(handleGetTags))
+	g.GET("/api/lang/{lang}", handleGetI18nLang)
 	g.GET("/api/ws", auth(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
 	}))
 
+	g.GET("/api/inboxes", handleGetInboxes)
+	g.POST("/api/inboxes", handleCreateInbox)
+
+	// Dashboard APIs
+	g.GET("/api/dashboard/me/counts", auth(handleUserDashboardCounts))
+	g.GET("/api/dashboard/me/charts", auth(handleUserDashboardCharts))
+	// g.GET("/api/dashboard/team/:teamName/counts", auth(handleTeamCounts))
+	// g.GET("/api/dashboard/team/:teamName/charts", auth(handleTeamCharts))
+	// g.GET("/api/dashboard/global/counts", auth(handleGlobalCounts))
+	// g.GET("/api/dashboard/global/charts", auth(handleGlobalCharts))
 
 	g.GET("/", sess(noAuthPage(serveIndexPage)))
 	g.GET("/dashboard", sess(authPage(serveIndexPage)))
@@ -70,19 +80,15 @@ func serveIndexPage(r *fastglue.Request) error {
 	return nil
 }
 
-// serveStaticFiles serves static files from the Stuffbin archive.
+// serveStaticFiles serves static files from the stuffbin fs.
 func serveStaticFiles(r *fastglue.Request) error {
-	fmt.Println("static here.")
-	app := r.Context.(*App)
+	var app = r.Context.(*App)
 
 	// Get the requested path
 	filePath := string(r.RequestCtx.Path())
 
-	fmt.Println("file path ", filePath)
-
 	// Serve the file from the Stuffbin archive
 	finalPath := filepath.Join("frontend/dist", filePath)
-	fmt.Println("final path ", finalPath)
 	file, err := app.fs.Get(finalPath)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusNotFound, "File not found", nil, "InputException")
@@ -97,4 +103,13 @@ func serveStaticFiles(r *fastglue.Request) error {
 	r.RequestCtx.Response.Header.Set("Content-Type", contentType)
 	r.RequestCtx.SetBody(file.ReadBytes())
 	return nil
+}
+
+func sendErrorEnvelope(r *fastglue.Request, err error) error {
+	e, ok := err.(envelope.Error)
+	if !ok {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
+			"Error interface conversion failed", nil, fastglue.ErrorType(envelope.GeneralError))
+	}
+	return r.SendErrorEnvelope(e.Code, e.Error(), e.Data, fastglue.ErrorType(e.ErrorType))
 }

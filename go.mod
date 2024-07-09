@@ -9,6 +9,7 @@ require (
 	github.com/jhillyerd/enmime v1.2.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/k3a/html2text v1.2.1
+	github.com/knadh/go-i18n v0.1.0
 	github.com/knadh/goyesql/v2 v2.2.0
 	github.com/knadh/koanf/parsers/json v0.1.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
@@ -17,6 +18,7 @@ require (
 	github.com/knadh/koanf/providers/rawbytes v0.1.0
 	github.com/knadh/koanf/v2 v2.1.1
 	github.com/knadh/smtppool v1.1.0
+	github.com/knadh/stuffbin v1.3.0
 	github.com/lib/pq v1.10.9
 	github.com/mr-karan/balance v0.0.0-20230131075323-e0d55eb3e4b9
 	github.com/rhnvrm/simples3 v0.8.3
@@ -45,7 +47,6 @@ require (
 	github.com/jaytaylor/html2text v0.0.0-20230321000545-74c2419ad056 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
-	github.com/knadh/stuffbin v1.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect

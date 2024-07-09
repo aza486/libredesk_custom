@@ -1,0 +1,11 @@
+[
+    {
+        "group": "conversations",
+        "permissions":
+        [
+            "conversations:get_all",
+            "conversations:assigned",
+            "conversations.unassigned"
+        ]
+    }
+]

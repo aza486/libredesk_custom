@@ -12,7 +12,7 @@ func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastReq
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
-			sess, err = app.sessMgr.Acquire(r, r, nil)
+			sess, err = app.sessManager.Acquire(r, r, nil)
 		)
 
 		if err != nil {
@@ -96,7 +96,7 @@ func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
-			sess, err = app.sessMgr.Acquire(r, r, nil)
+			sess, err = app.sessManager.Acquire(r, r, nil)
 		)
 
 		if err != nil {

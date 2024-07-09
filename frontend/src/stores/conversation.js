@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, reactive } from "vue"
+import { computed, reactive, onUnmounted } from "vue"
 import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
@@ -12,7 +12,8 @@ export const useConversationStore = defineStore('conversation', () => {
         loading: false,
         page: 1,
         hasMore: true,
-        errorMessage: ""
+        errorMessage: "",
+        forceReRender: 0
     })
 
     // Currently selected conversation.
@@ -33,7 +34,17 @@ export const useConversationStore = defineStore('conversation', () => {
     let seenMsgUUIDs = new Map()
     let previousConvListType = ""
     let previousPreDefinedFilter = ""
+    let reRenderInterval = setInterval(() => {
+        conversations.data = [...conversations.data]
+    }, 60000)
     const { toast } = useToast()
+
+
+    // Clear the interval when the store is destroyed
+    onUnmounted(() => {
+        console.log("clear interval")
+        clearInterval(reRenderInterval)
+    })
 
     // Computed property to sort conversations by last_message_at
     const sortedConversations = computed(() => {

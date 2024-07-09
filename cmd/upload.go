@@ -47,7 +47,7 @@ func handleFileUpload(r *fastglue.Request) error {
 
 	// Reset the ptr.
 	file.Seek(0, 0)
-	url, err := app.uploadMgr.Upload(srcFileName, srcContentType, file)
+	url, err := app.uploadManager.Upload(srcFileName, srcContentType, file)
 	if err != nil {
 		app.lo.Error("error uploading file", "error", err)
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error uploading file", nil, "GeneralException")
@@ -66,7 +66,7 @@ func handleViewFile(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("file_uuid").(string)
 	)
-	url := app.uploadMgr.Store.GetURL(uuid)
+	url := app.uploadManager.Store.GetURL(uuid)
 	r.RequestCtx.Response.Header.Set("Location", url)
 	return r.Redirect(url, http.StatusFound, nil, "")
 }

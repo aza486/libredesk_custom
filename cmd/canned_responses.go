@@ -10,7 +10,7 @@ func handleGetCannedResponses(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	c, err := app.cannedRespMgr.GetAll()
+	c, err := app.cannedRespManager.GetAll()
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error fetching canned responses", nil, "")
 	}

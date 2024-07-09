@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
+	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
 	"github.com/abhinavxd/artemis/internal/initz"
 	"github.com/abhinavxd/artemis/internal/message"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
@@ -27,6 +29,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
+	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/providers/rawbytes"
@@ -77,7 +80,8 @@ func initConstants() consts {
 // initFS initializes the stuffbin FileSystem.
 func initFS() stuffbin.FileSystem {
 	var files = []string{
-		"frontend/dist:/dist",
+		"frontend/dist",
+		"i18n",
 	}
 
 	// Get self executable path.
@@ -85,8 +89,6 @@ func initFS() stuffbin.FileSystem {
 	if err != nil {
 		log.Fatalf("error initializing FS: %v", err)
 	}
-
-	fmt.Println("path -> ", path)
 
 	// Load embedded files in the executable.
 	fs, err := stuffbin.UnStuff(path)
@@ -113,6 +115,7 @@ func initSessionManager(rd *redis.Client) *simplesessions.Manager {
 	s := simplesessions.New(simplesessions.Options{
 		CookieName:       ko.MustString("app.session.cookie_name"),
 		CookiePath:       ko.MustString("app.session.cookie_path"),
+		CookieDomain:     ko.String("app.session.cookie_domain"),
 		IsSecureCookie:   ko.Bool("app.session.cookie_secure"),
 		DisableAutoSet:   ko.Bool("app.session.cookie_disable_auto_set"),
 		IsHTTPOnlyCookie: true,
@@ -135,8 +138,8 @@ func initSessionManager(rd *redis.Client) *simplesessions.Manager {
 	return s
 }
 
-func initUserDB(DB *sqlx.DB, lo *logf.Logger) *user.Manager {
-	mgr, err := user.New(user.Opts{
+func initUserManager(i18n *i18n.I18n, DB *sqlx.DB, lo *logf.Logger) *user.Manager {
+	mgr, err := user.New(i18n, user.Opts{
 		DB:         DB,
 		Lo:         lo,
 		BcryptCost: ko.MustInt("app.user.password_bcypt_cost"),
@@ -147,8 +150,8 @@ func initUserDB(DB *sqlx.DB, lo *logf.Logger) *user.Manager {
 	return mgr
 }
 
-func initConversations(hub *ws.Hub, db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
-	c, err := conversation.New(hub, conversation.Opts{
+func initConversations(i18n *i18n.I18n, hub *ws.Hub, db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
+	c, err := conversation.New(hub, i18n, conversation.Opts{
 		DB:                  db,
 		Lo:                  lo,
 		ReferenceNumPattern: ko.String("app.constants.conversation_reference_number_pattern"),
@@ -192,7 +195,7 @@ func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
 	return m
 }
 
-func initTemplateMgr(db *sqlx.DB) *template.Manager {
+func initTemplateManager(db *sqlx.DB) *template.Manager {
 	m, err := template.New(db)
 	if err != nil {
 		log.Fatalf("error initializing template manager: %v", err)
@@ -234,7 +237,7 @@ func initMessages(db *sqlx.DB,
 	return mgr
 }
 
-func initTeamMgr(db *sqlx.DB, lo *logf.Logger) *team.Manager {
+func initTeamManager(db *sqlx.DB, lo *logf.Logger) *team.Manager {
 	mgr, err := team.New(team.Opts{
 		DB: db,
 		Lo: lo,
@@ -336,7 +339,7 @@ func initNotifier(userStore notifier.UserStore, templateRenderer notifier.Templa
 }
 
 // initEmailInbox initializes the email inbox.
-func initEmailInbox(inboxRecord inbox.InboxRecord, store inbox.MessageStore) (inbox.Inbox, error) {
+func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.Inbox, error) {
 	var config email.Config
 
 	// Load JSON data into Koanf.
@@ -355,9 +358,12 @@ func initEmailInbox(inboxRecord inbox.InboxRecord, store inbox.MessageStore) (in
 	if len(config.IMAP) == 0 {
 		log.Printf("WARNING: Zero IMAP clients configured for `%s` inbox: Name: `%s`", inboxRecord.Channel, inboxRecord.Name)
 	}
-
-	// Set from addr.
+	
 	config.From = inboxRecord.From
+
+	if len(config.From) == 0 {
+		log.Printf("WARNING: No `from` email address set for `%s` inbox: Name: `%s`", inboxRecord.Channel, inboxRecord.Name)
+	}
 
 	inbox, err := email.New(store, email.Opts{
 		ID:     inboxRecord.ID,
@@ -377,7 +383,7 @@ func initEmailInbox(inboxRecord inbox.InboxRecord, store inbox.MessageStore) (in
 
 // registerInboxes registers the active inboxes with the inbox manager.
 func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
-	inboxRecords, err := mgr.GetActiveInboxes()
+	inboxRecords, err := mgr.GetActive()
 	if err != nil {
 		log.Fatalf("error fetching active inboxes %v", err)
 	}
@@ -388,11 +394,23 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 			log.Printf("initializing `Email` inbox: %s", inboxR.Name)
 			inbox, err := initEmailInbox(inboxR, store)
 			if err != nil {
-				log.Fatalf("error initializing email inbox %v", err)
+				log.Fatalf("error initializing email inbox: %v", err)
 			}
 			mgr.Register(inbox)
 		default:
 			log.Printf("WARNING: Unknown inbox channel: %s", inboxR.Name)
 		}
 	}
+}
+
+func initI18n(fs stuffbin.FileSystem) *i18n.I18n {
+	file, err := fs.Get("i18n/" + cmp.Or(ko.String("app.lang"), defLang) + ".json")
+	if err != nil {
+		log.Fatalf("error reading i18n language file")
+	}
+	i18n, err := i18n.New(file.ReadBytes())
+	if err != nil {
+		log.Fatalf("error initializing i18n: %v", err)
+	}
+	return i18n
 }

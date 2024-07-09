@@ -12,9 +12,11 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
+	"github.com/knadh/go-i18n"
 	"github.com/lib/pq"
 	"github.com/zerodha/logf"
 )
@@ -61,6 +63,7 @@ type Manager struct {
 	lo                  *logf.Logger
 	db                  *sqlx.DB
 	hub                 *ws.Hub
+	i18n                *i18n.I18n
 	q                   queries
 	ReferenceNumPattern string
 }
@@ -97,7 +100,7 @@ type queries struct {
 	DeleteTags                   *sqlx.Stmt `query:"delete-tags"`
 }
 
-func New(hub *ws.Hub, opts Opts) (*Manager, error) {
+func New(hub *ws.Hub, i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	var q queries
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
@@ -105,6 +108,7 @@ func New(hub *ws.Hub, opts Opts) (*Manager, error) {
 	c := &Manager{
 		q:                   q,
 		hub:                 hub,
+		i18n:                i18n,
 		db:                  opts.DB,
 		lo:                  opts.Lo,
 		ReferenceNumPattern: opts.ReferenceNumPattern,
@@ -119,7 +123,7 @@ func (c *Manager) Create(contactID int, inboxID int, meta []byte) (int, string, 
 		refNum, _ = c.generateRefNum(c.ReferenceNumPattern)
 	)
 	if err := c.q.InsertConversation.QueryRow(refNum, contactID, StatusOpen, inboxID, meta).Scan(&id, &uuid); err != nil {
-		c.lo.Error("inserting new conversation into the DB", "error", err)
+		c.lo.Error("error inserting new conversation into the DB", "error", err)
 		return id, uuid, err
 	}
 	return id, uuid, nil
@@ -259,9 +263,8 @@ func (c *Manager) GetConversations(userID int, typ, order, orderBy, predefinedFi
 		conversations []models.Conversation
 		qArgs         []interface{}
 		cond          string
-		// TODO: Remove these hardcoded values.
-		validOrderBy = map[string]bool{"created_at": true, "priority": true, "status": true, "last_message_at": true}
-		validOrder   = []string{"ASC", "DESC"}
+		validOrderBy  = map[string]bool{"created_at": true, "priority": true, "status": true, "last_message_at": true}
+		validOrder    = []string{"ASC", "DESC"}
 	)
 
 	switch typ {
@@ -307,15 +310,15 @@ func (c *Manager) GetConversations(userID int, typ, order, orderBy, predefinedFi
 	tx, err := c.db.BeginTxx(context.Background(), nil)
 	defer tx.Rollback()
 	if err != nil {
-		c.lo.Error("Error preparing get conversations query", "error", err)
-		return conversations, err
+		c.lo.Error("error preparing get conversations query", "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
 	// Include LIMIT, OFFSET, and ORDER BY in the SQL query.
 	sqlQuery := fmt.Sprintf("%s %s LIMIT $%d OFFSET $%d", fmt.Sprintf(c.q.GetConversations, cond), orderByClause, len(qArgs)-1, len(qArgs))
 	if err := tx.Select(&conversations, sqlQuery, qArgs...); err != nil {
-		c.lo.Error("Error fetching conversations", "error", err)
-		return conversations, err
+		c.lo.Error("error fetching conversations", "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
 	return conversations, nil

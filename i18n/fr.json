@@ -1,0 +1,19 @@
+{
+    "_.code": "fr",
+    "_.name": "Français (fr)",
+    "globals.entities.user": "utilisateur",
+    "globals.entities.conversations": "conversations",
+    "user.invalidEmailPassword": "Email ou mot de passe invalide.",
+    "user.errorAcquiringSession": "Erreur lors de l'acquisition de la session",
+    "user.errorSettingSession": "Erreur lors de la définition de la session",
+    "conversations.emptyState": "Aucune conversation trouvée.",
+    "conversatons.adjustFilters": "Essayez de modifier vos filtres.",
+    "globals.messages.errorCreating": "Erreur lors de la création de {name}",
+    "globals.messages.errorDeleting": "Erreur lors de la suppression de {name}",
+    "globals.messages.errorFetching": "Erreur lors de la récupération de {name}",
+    "globals.messages.notFound": "Non trouvé",
+    "globals.messages.internalError": "Erreur interne du serveur",
+    "globals.messages.done": "Fait",
+    "globals.messages.emptyState": "Rien ici"
+  }
+  

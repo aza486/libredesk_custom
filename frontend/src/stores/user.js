@@ -7,6 +7,8 @@ export const useUserStore = defineStore('user', () => {
     const userFirstName = ref('')
     const userLastName = ref('')
 
+
+
     const setAvatar = (v) => {
         userAvatar.value = v
     }
@@ -23,7 +25,7 @@ export const useUserStore = defineStore('user', () => {
         return userFirstName.value + " " + userLastName.value
     })
 
-    const getCurrentUser = async () => {
+    async function getCurrentUser () {
         try {
             const resp = await api.getCurrentUser();
             if (resp.data.data) {

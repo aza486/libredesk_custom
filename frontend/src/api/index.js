@@ -17,6 +17,7 @@ http.interceptors.request.use((request) => {
 })
 
 const login = (data) => http.post(`/api/login`, data)
+const getInboxes = () => http.get("/api/inboxes")
 const getTeams = () => http.get("/api/teams")
 const getUsers = () => http.get("/api/users")
 const getCurrentUser = () => http.get("/api/users/me")
@@ -46,13 +47,21 @@ const uploadFile = (data) => http.post('/api/attachment', data, {
         'Content-Type': 'multipart/form-data'
     }
 })
-const getAssigneeStats = () => http.get('/api/conversations/assignee/stats')
-const getNewConversationsStats = () => http.get('/api/conversations/new/stats');
-
+const getUserDashboardCounts = () => http.get('/api/dashboard/me/counts')
+const getUserDashoardCharts = () => http.get('/api/dashboard/me/charts')
+const getLanguage = (lang) => http.get(`/api/lang/${lang}`)
+const createUser = (data) => http.post('/api/users', data)
+const createInbox = (data) => http.post('/api/inboxes', data, {
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
 
 
 export default {
     login,
+    getInboxes,
+    getLanguage,
     getTags,
     getTeams,
     getUsers,
@@ -60,20 +69,22 @@ export default {
     getAssignedConversations,
     getUnassignedConversations,
     getAllConversations,
-    getAssigneeStats,
+    getUserDashboardCounts,
     getConversationParticipants,
     getMessage,
     getMessages,
-    getNewConversationsStats,
-    sendMessage,
+    getUserDashoardCharts,
     getCurrentUser,
+    getCannedResponses,
     updateAssignee,
     updateStatus,
     updatePriority,
     upsertTags,
     uploadFile,
-    retryMessage,
     updateAssigneeLastSeen,
-    getCannedResponses,
     uploadAttachment,
+    sendMessage,
+    retryMessage,
+    createUser,
+    createInbox,
 }

@@ -5,13 +5,32 @@ import App from './App.vue'
 import router from './router'
 import './assets/styles/main.scss'
 import './utils/strings.js';
+import api from './api'
 
-const i18n = createI18n({})
+async function initApp () {
+    // TODO: fetch def lang from cfg.
+    const defaultLang = 'en';
+    const langMessages = await api.getLanguage(defaultLang);
 
-const app = createApp(App)
-const pinia = createPinia()
+    // Initialize i18n
+    const i18nConfig = {
+        legacy: false,
+        locale: defaultLang,
+        fallbackLocale: defaultLang,
+        messages: {
+            [defaultLang]: langMessages.data
+        }
+    }
+    const i18n = createI18n(i18nConfig);
+    const app = createApp(App);
+    const pinia = createPinia();
 
-app.use(router)
-app.use(pinia)
-app.use(i18n)
-app.mount('#app')
+    app.use(router);
+    app.use(pinia);
+    app.use(i18n);
+    app.mount('#app');
+}
+
+initApp().catch((error) => {
+    console.error("Error initializing app: ", error);
+});

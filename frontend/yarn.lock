@@ -1217,10 +1217,22 @@
     lodash.merge "^4.6.2"
     postcss-selector-parser "6.0.10"
 
+"@tanstack/table-core@8.19.2":
+  version "8.19.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/table-core/-/table-core-8.19.2.tgz#5fc8ede54f18867f74715ad93927f7df4d255209"
+  integrity sha512-KpRjhgehIhbfH78ARm/GJDXGnpdw4bCg3qas6yjWSi7czJhI/J6pWln7NHtmBkGE9ZbohiiNtLqwGzKmBfixig==
+
 "@tanstack/virtual-core@3.5.0":
   version "3.5.0"
   resolved "https://registry.yarnpkg.com/@tanstack/virtual-core/-/virtual-core-3.5.0.tgz#108208d0f1d75271300bc5560cf9a85a1fa01e89"
   integrity sha512-KnPRCkQTyqhanNC0K63GBG3wA8I+D1fQuVnAvcBF8f13akOKeQp1gSbu6f77zCxhEk727iV5oQnbHLYzHrECLg==
+
+"@tanstack/vue-table@^8.19.2":
+  version "8.19.2"
+  resolved "https://registry.yarnpkg.com/@tanstack/vue-table/-/vue-table-8.19.2.tgz#909f63a225788757f62a7b7fa4568da6349b9a0f"
+  integrity sha512-tzY/SfbltF3yvES6bQU8BQzcfl5qqSKB4xCGzbUM3qeRLlHNt6bpiHwFHfr0fhASMPQzwJadP+KW2zyaggRpmg==
+  dependencies:
+    "@tanstack/table-core" "8.19.2"
 
 "@tanstack/vue-virtual@^3.5.0":
   version "3.5.0"
@@ -1869,13 +1881,13 @@
   resolved "https://registry.yarnpkg.com/@unovis/vue/-/vue-1.4.1.tgz#8ad86d51dd024a02ec6f3e7d9181088a91a18276"
   integrity sha512-LtsG7MsoUuPxsVDxx9zUDmswgVlUlLCJaxkf3qOr1Aowol0No9fwO0srv0BNd3kJpSx5iI+FnWye2QUXZE2QGA==
 
-"@vee-validate/zod@^4.13.1":
-  version "4.13.1"
-  resolved "https://registry.yarnpkg.com/@vee-validate/zod/-/zod-4.13.1.tgz#fc056a62150f06d29dc19d6bbf9edf172760e011"
-  integrity sha512-8QLhY1vFNURT5rJF9GK34Rf9I/4Fx7CmF1rWeLEOYDshLzX0IxD6ByVEnIDl96Bu90A3wJSsZiXZNiv/yOyLbQ==
+"@vee-validate/zod@^4.13.2":
+  version "4.13.2"
+  resolved "https://registry.yarnpkg.com/@vee-validate/zod/-/zod-4.13.2.tgz#8798762aedd1b9e481ab4c5baa36aa6a2c6acf87"
+  integrity sha512-y1aqelutD6btX2ayZk3w8udClAykptphlGLwu0vlCqY2r9mrJqMn1EKqtcwXAvEom+ceTcHJOwGr2FUA7i+ZEg==
   dependencies:
     type-fest "^4.8.3"
-    vee-validate "4.13.1"
+    vee-validate "4.13.2"
     zod "^3.22.4"
 
 "@vitejs/plugin-vue@^5.0.3":
@@ -3561,7 +3573,7 @@ debug@^4.1.0:
   dependencies:
     ms "2.1.2"
 
-debuglog@*, debuglog@^1.0.1:
+debuglog@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/debuglog/-/debuglog-1.0.1.tgz#aa24ffb9ac3df9a2351837cfb2d279360cd78492"
   integrity sha512-syBZ+rnAK3EgMsH2aYEOLUW7mZSY9Gb+0wUMCFsZvcmiz+HigA0LOcq/HoQqVuGG+EKykunc7QG2bzrponfaSw==
@@ -4916,7 +4928,7 @@ import-lazy@^2.1.0:
   resolved "https://registry.yarnpkg.com/import-lazy/-/import-lazy-2.1.0.tgz#05698e3d45c88e8d7e9d92cb0584e77f096f3e43"
   integrity sha512-m7ZEHgtw69qOGw+jwxXkHlrlIPdTGkyh66zXZ1ajZbxkDBNjSY/LGbmjc7h0s2ELsUDTAhFr55TrPSSqJGPG0A==
 
-imurmurhash@*, imurmurhash@^0.1.4:
+imurmurhash@^0.1.4:
   version "0.1.4"
   resolved "https://registry.yarnpkg.com/imurmurhash/-/imurmurhash-0.1.4.tgz#9218b9b2b928a238b13dc4fb6b6d576f231453ea"
   integrity sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA==
@@ -5641,11 +5653,6 @@ lodash-es@^4.17.21:
   resolved "https://registry.yarnpkg.com/lodash-es/-/lodash-es-4.17.21.tgz#43e626c46e6591b7750beb2b50117390c609e3ee"
   integrity sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==
 
-lodash._baseindexof@*:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/lodash._baseindexof/-/lodash._baseindexof-3.1.0.tgz#fe52b53a1c6761e42618d654e4a25789ed61822c"
-  integrity sha512-bSYo8Pc/f0qAkr8fPJydpJjtrHiSynYfYBjtANIgXv5xEf1WlTC63dIDlgu0s9dmTvzRu1+JJTxcIAHe+sH0FQ==
-
 lodash._baseuniq@~4.6.0:
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/lodash._baseuniq/-/lodash._baseuniq-4.6.0.tgz#0ebb44e456814af7905c6212fa2c9b2d51b841e8"
@@ -5654,32 +5661,10 @@ lodash._baseuniq@~4.6.0:
     lodash._createset "~4.0.0"
     lodash._root "~3.0.0"
 
-lodash._bindcallback@*:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/lodash._bindcallback/-/lodash._bindcallback-3.0.1.tgz#e531c27644cf8b57a99e17ed95b35c748789392e"
-  integrity sha512-2wlI0JRAGX8WEf4Gm1p/mv/SZ+jLijpj0jyaE/AXeuQphzCgD8ZQW4oSpoN8JAopujOFGU3KMuq7qfHBWlGpjQ==
-
-lodash._cacheindexof@*:
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/lodash._cacheindexof/-/lodash._cacheindexof-3.0.2.tgz#3dc69ac82498d2ee5e3ce56091bafd2adc7bde92"
-  integrity sha512-S8dUjWr7SUT/X6TBIQ/OYoCHo1Stu1ZRy6uMUSKqzFnZp5G5RyQizSm6kvxD2Ewyy6AVfMg4AToeZzKfF99T5w==
-
-lodash._createcache@*:
-  version "3.1.2"
-  resolved "https://registry.yarnpkg.com/lodash._createcache/-/lodash._createcache-3.1.2.tgz#56d6a064017625e79ebca6b8018e17440bdcf093"
-  integrity sha512-ev5SP+iFpZOugyab/DEUQxUeZP5qyciVTlgQ1f4Vlw7VUcCD8fVnyIqVUEIaoFH9zjAqdgi69KiofzvVmda/ZQ==
-  dependencies:
-    lodash._getnative "^3.0.0"
-
 lodash._createset@~4.0.0:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/lodash._createset/-/lodash._createset-4.0.3.tgz#0f4659fbb09d75194fa9e2b88a6644d363c9fe26"
   integrity sha512-GTkC6YMprrJZCYU3zcqZj+jkXkrXzq3IPBcF/fIPpNEAB4hZEtXU8zp/RwKOvZl43NUmwDbyRk3+ZTbeRdEBXA==
-
-lodash._getnative@*, lodash._getnative@^3.0.0:
-  version "3.9.1"
-  resolved "https://registry.yarnpkg.com/lodash._getnative/-/lodash._getnative-3.9.1.tgz#570bc7dede46d61cdcde687d65d3eecbaa3aaff5"
-  integrity sha512-RrL9VxMEPyDMHOd9uFbvMe8X55X16/cGM5IgOKgRElQZutpX89iS6vwl64duTV1/16w5JY7tuFNXqoekmh1EmA==
 
 lodash._root@~3.0.0:
   version "3.0.1"
@@ -5710,11 +5695,6 @@ lodash.once@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/lodash.once/-/lodash.once-4.1.1.tgz#0dd3971213c7c56df880977d504c88fb471a97ac"
   integrity sha512-Sb487aTOCr9drQVL8pIxOzVhafOjZN9UU54hiN8PU3uAiSV7lx1yYNpbNmex2PK6dSJoNTSJUUswT651yww3Mg==
-
-lodash.restparam@*:
-  version "3.6.1"
-  resolved "https://registry.yarnpkg.com/lodash.restparam/-/lodash.restparam-3.6.1.tgz#936a4e309ef330a7645ed4145986c85ae5b20805"
-  integrity sha512-L4/arjjuq4noiUJpt3yS6KIKDtJwNe2fIYgMqyYYKoeIfV1iEqvPwhCx23o+R9dzouGihDAPN1dTIRWa7zk8tw==
 
 lodash.union@~4.6.0:
   version "4.6.0"
@@ -7745,7 +7725,7 @@ readable-stream@~1.1.10:
     isarray "0.0.1"
     string_decoder "~0.10.x"
 
-readdir-scoped-modules@*, readdir-scoped-modules@^1.0.0:
+readdir-scoped-modules@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/readdir-scoped-modules/-/readdir-scoped-modules-1.1.0.tgz#8d45407b4f870a0dcaebc0e28670d18e74514309"
   integrity sha512-asaikDeqAQg7JifRsZn1NJZXo9E+VwlyCfbkZhwyISinqk5zNS6266HS5kah6P0SaQKGF6SkNnZVHUzHFYxYDw==
@@ -9094,7 +9074,7 @@ uuid@~3.1.0:
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.1.0.tgz#3dd3d3e790abc24d7b0d3a034ffababe28ebbc04"
   integrity sha512-DIWtzUkw04M4k3bf1IcpS2tngXEL26YUD2M0tMDUpnUrz2hgzUBlD55a4FjdLGPvfHxS6uluGWvaVEqgBcVa+g==
 
-validate-npm-package-license@*, validate-npm-package-license@^3.0.1, validate-npm-package-license@^3.0.4:
+validate-npm-package-license@^3.0.1, validate-npm-package-license@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/validate-npm-package-license/-/validate-npm-package-license-3.0.4.tgz#fc91f6b9c7ba15c857f4cb2c5defeec39d4f410a"
   integrity sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==
@@ -9114,10 +9094,10 @@ validate-npm-package-name@^5.0.0:
   resolved "https://registry.yarnpkg.com/validate-npm-package-name/-/validate-npm-package-name-5.0.1.tgz#a316573e9b49f3ccd90dbb6eb52b3f06c6d604e8"
   integrity sha512-OljLrQ9SQdOUqTaQxqL5dEfZWrXExyyWsozYlAWFawPVNuD83igl7uJD2RTkNMbniIYgt8l81eCJGIdQF7avLQ==
 
-vee-validate@4.13.1, vee-validate@^4.13.1:
-  version "4.13.1"
-  resolved "https://registry.yarnpkg.com/vee-validate/-/vee-validate-4.13.1.tgz#fce6cadc0980436e09b605e2565aff4fc26ef524"
-  integrity sha512-JAlUWTBHg0z66n+v66mrtE9IC1xmVCggzpyc7UXCNkizVok8Zgt1VAVjobSxA/0N19Zn6v6hRfjoYciYH/Z11Q==
+vee-validate@4.13.2, vee-validate@^4.13.2:
+  version "4.13.2"
+  resolved "https://registry.yarnpkg.com/vee-validate/-/vee-validate-4.13.2.tgz#cf601c9ac029d58a15aecc1dbab28b15628f0a0e"
+  integrity sha512-HlpR/6MJ92TW9f135umMZKUqdd/tFQTxLNSf2ImbU4Y/MlLVAUpF1l64VdjTOhbClAqPjCb5p/SqHDxLpUHXrw==
   dependencies:
     "@vue/devtools-api" "^6.6.1"
     type-fest "^4.8.3"

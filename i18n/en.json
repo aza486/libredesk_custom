@@ -1,6 +1,22 @@
 {
   "_.code": "en",
   "_.name": "English (en)",
-  "conversaton.list.empty": "No Conversations Found.",
-  "conversaton.list.empty.filters": "Try adjusting your filters."
+  "globals.entities.user": "user",
+  "globals.entities.conversations": "conversations",
+  "navbar.dashboard": "Dashboard",
+  "navbar.conversations": "Conversations",
+  "navbar.account": "Account",
+  "navbar.admin": "Admin",
+  "user.invalidEmailPassword": "Invalid email or password.",
+  "user.errorAcquiringSession": "Error acquiring session",
+  "user.errorSettingSession": "Error setting session",
+  "conversations.emptyState": "No Conversations Found.",
+  "globals.messages.adjustFilters": "Try adjusting your filters.",
+  "globals.messages.errorCreating": "Error creating {name}",
+  "globals.messages.errorDeleting": "Error deleting {name}",
+  "globals.messages.errorFetching": "Error fetching {name}",
+  "globals.messages.notFound": "Not found",
+  "globals.messages.internalError": "Internal server error",
+  "globals.messages.done": "Done",
+  "globals.messages.emptyState": "Nothing here"
 }

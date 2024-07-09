@@ -1,9 +1,7 @@
 <template>
     <div class="h-screen">
-        <div class="flex justify-between px-3 py-2 border-b-2 rounded-b-lg shadow-md">
-
-
-            <Tabs v-model:model-value="conversationType">
+        <div class="flex justify-between px-2 py-2 border-b">
+            <Tabs v-model:model-value="conversationType" >
                 <TabsList class="w-full flex justify-evenly">
                     <TabsTrigger value="assigned" class="w-full">
                         Assigned

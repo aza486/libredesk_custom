@@ -26,9 +26,7 @@
                 <MessageAttachmentPreview :attachments="message.attachments" />
                 <Spinner v-if="message.status === 'pending'" />
                 <div class="flex items-center space-x-2 mt-2">
-                    <!-- <span class="text-slate-500 capitalize text-xs" v-if="message.status != 'pending'">{{
-                        message.status }}</span> -->
-                    <CheckCheck :size="14"  v-if="message.status != 'pending'"/>
+                    <CheckCheck :size="14"  v-if="message.status == 'sent'"/>
                     <RotateCcw size="10" @click="retryMessage(message)" class="cursor-pointer"
                         v-if="message.status === 'failed'"></RotateCcw>
                 </div>

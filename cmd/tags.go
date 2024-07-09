@@ -10,7 +10,7 @@ func handleGetTags(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	t, err := app.tagMgr.GetAll()
+	t, err := app.tagManager.GetAll()
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}

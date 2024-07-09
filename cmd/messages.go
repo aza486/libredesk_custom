@@ -15,7 +15,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("conversation_uuid").(string)
 	)
-	msgs, err := app.msgMgr.GetConvMessages(uuid)
+	msgs, err := app.messageManager.GetConvMessages(uuid)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -23,7 +23,7 @@ func handleGetMessages(r *fastglue.Request) error {
 	// Generate URLs for each of the attachments.
 	for i := range msgs {
 		for j := range msgs[i].Attachments {
-			msgs[i].Attachments[j].URL = app.attachmentMgr.Store.GetURL(msgs[i].Attachments[j].UUID)
+			msgs[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(msgs[i].Attachments[j].UUID)
 		}
 	}
 
@@ -35,7 +35,7 @@ func handleGetMessage(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		muuid = r.RequestCtx.UserValue("message_uuid").(string)
 	)
-	msgs, err := app.msgMgr.GetMessage(muuid)
+	msgs, err := app.messageManager.GetMessage(muuid)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -43,7 +43,7 @@ func handleGetMessage(r *fastglue.Request) error {
 	// Generate URLs for each of the attachments.
 	for i := range msgs {
 		for j := range msgs[i].Attachments {
-			msgs[i].Attachments[j].URL = app.attachmentMgr.Store.GetURL(msgs[i].Attachments[j].UUID)
+			msgs[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(msgs[i].Attachments[j].UUID)
 		}
 	}
 
@@ -52,11 +52,11 @@ func handleGetMessage(r *fastglue.Request) error {
 
 func handleRetryMessage(r *fastglue.Request) error {
 	var (
-		app   = r.Context.(*App)
-		muuid = r.RequestCtx.UserValue("message_uuid").(string)
+		app  = r.Context.(*App)
+		uuid = r.RequestCtx.UserValue("message_uuid").(string)
 	)
 	// Change status to pending so this message can be retried again.
-	err := app.msgMgr.UpdateMessageStatus(muuid, message.StatusPending)
+	err := app.messageManager.UpdateMessageStatus(uuid, message.StatusPending)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -99,18 +99,18 @@ func handleSendMessage(r *fastglue.Request) error {
 		Attachments:      attachments,
 	}
 
-	if err := app.msgMgr.RecordMessage(&msg); err != nil {
+	if err := app.messageManager.RecordMessage(&msg); err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
 	}
 
-	app.conversationMgr.AddParticipant(userID, conversationUUID)
+	app.conversationManager.AddParticipant(userID, conversationUUID)
 
 	// Update conversation meta with the last message details.
-	trimmedMessage := app.msgMgr.TrimMsg(msg.Content)
-	app.conversationMgr.UpdateLastMessage(0, conversationUUID, trimmedMessage, msg.CreatedAt)
+	trimmedMessage := app.messageManager.TrimMsg(msg.Content)
+	app.conversationManager.UpdateLastMessage(0, conversationUUID, trimmedMessage, msg.CreatedAt)
 
 	// Send WS update.
-	app.msgMgr.BroadcastNewConversationMessage(msg, trimmedMessage)
+	app.messageManager.BroadcastNewConversationMessage(msg, trimmedMessage)
 
 	return r.SendEnvelope("Message sent")
 }

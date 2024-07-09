@@ -229,10 +229,11 @@ func (m *Manager) StartDispatcher(ctx context.Context, concurrency int, readInte
 
 func (m *Manager) DispatchWorker() {
 	for message := range m.outgoingMessageQueue {
-		inbox, err := m.inboxMgr.GetInbox(message.InboxID)
+		inbox, err := m.inboxMgr.Get(message.InboxID)
 		if err != nil {
 			m.lo.Error("error fetching inbox", "error", err, "inbox_id", message.InboxID)
 			m.outgoingProcessingMessages.Delete(message.ID)
+			m.UpdateMessageStatus(message.UUID, StatusFailed)
 			continue
 		}
 
@@ -241,6 +242,7 @@ func (m *Manager) DispatchWorker() {
 		if err := m.attachAttachments(&message); err != nil {
 			m.lo.Error("error attaching attachments to message", "error", err)
 			m.outgoingProcessingMessages.Delete(message.ID)
+			m.UpdateMessageStatus(message.UUID, StatusFailed)
 			continue
 		}
 
@@ -258,9 +260,7 @@ func (m *Manager) DispatchWorker() {
 			m.lo.Error("error sending message", "error", err, "inbox_id", message.InboxID)
 		}
 
-		if _, err := m.q.UpdateMessageStatus.Exec(newStatus, message.UUID); err != nil {
-			m.lo.Error("error updating message status in DB", "error", err, "inbox_id", message.InboxID)
-		}
+		m.UpdateMessageStatus(message.UUID, newStatus)
 
 		switch newStatus {
 		case StatusSent:
@@ -274,6 +274,7 @@ func (m *Manager) DispatchWorker() {
 		m.outgoingProcessingMessages.Delete(message.ID)
 	}
 }
+
 
 func (m *Manager) GetToAddress(convID int, channel string) ([]string, error) {
 	var addr []string
@@ -348,11 +349,9 @@ func (m *Manager) RecordStatusChange(updatedValue, conversationUUID, actorUUID s
 }
 
 func (m *Manager) RecordActivity(activityType, newValue, conversationUUID, actorUUID string) error {
-	var (
-		actor, err = m.userMgr.GetUser(0, actorUUID)
-	)
+	var actor, err = m.userMgr.GetUser(0, actorUUID)
+
 	if err != nil {
-		m.lo.Error("Error fetching user for recording message activity", "error", err)
 		return err
 	}
 

@@ -21,11 +21,11 @@ const agentCountCardsLabels = {
 
 onMounted(() => {
     getCardStats()
-    getnewConversationsStatsStats()
+    getUserDashoardChartsStats()
 })
 
 const getCardStats = () => {
-    api.getAssigneeStats().then((resp) => {
+    api.getUserDashboardCounts().then((resp) => {
         counts.value = resp.data.data
     }).catch((err) => {
         toast({
@@ -36,8 +36,8 @@ const getCardStats = () => {
     })
 }
 
-const getnewConversationsStatsStats = () => {
-    api.getNewConversationsStats().then((resp) => {
+const getUserDashoardChartsStats = () => {
+    api.getUserDashoardCharts().then((resp) => {
         newConversationsStats.value = resp.data.data
     }).catch((err) => {
         toast({

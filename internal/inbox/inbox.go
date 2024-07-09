@@ -3,10 +3,11 @@ package inbox
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"errors"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
+	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
 	"github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -63,19 +64,11 @@ type Manager struct {
 	lo      *logf.Logger
 }
 
-// InboxRecord represents a inbox record in DB.
-type InboxRecord struct {
-	ID      int             `db:"id"`
-	Name    string          `db:"name"`
-	Channel string          `db:"channel"`
-	Enabled string          `db:"enabled"`
-	From    string          `db:"from"`
-	Config  json.RawMessage `db:"config"`
-}
-
 // Prepared queries.
 type queries struct {
-	ActiveInboxes *sqlx.Stmt `query:"get-active-inboxes"`
+	GetActive   *sqlx.Stmt `query:"get-active-inboxes"`
+	GetAll      *sqlx.Stmt `query:"get-all-inboxes"`
+	InsertInbox *sqlx.Stmt `query:"insert-inbox"`
 }
 
 // New returns a new inbox manager.
@@ -100,8 +93,8 @@ func (m *Manager) Register(i Inbox) {
 	m.inboxes[i.Identifier()] = i
 }
 
-// GetInbox returns the inbox with the given ID.
-func (m *Manager) GetInbox(id int) (Inbox, error) {
+// Get returns the inbox with the given ID.
+func (m *Manager) Get(id int) (Inbox, error) {
 	i, ok := m.inboxes[id]
 	if !ok {
 		return nil, ErrInboxNotFound
@@ -109,14 +102,33 @@ func (m *Manager) GetInbox(id int) (Inbox, error) {
 	return i, nil
 }
 
-// GetActiveInboxes returns all the active inboxes from the DB.
-func (m *Manager) GetActiveInboxes() ([]InboxRecord, error) {
-	var inboxes []InboxRecord
-	if err := m.queries.ActiveInboxes.Select(&inboxes); err != nil {
+// GetActive returns all active inboxes.
+func (m *Manager) GetActive() ([]imodels.Inbox, error) {
+	var inboxes []imodels.Inbox
+	if err := m.queries.GetActive.Select(&inboxes); err != nil {
 		m.lo.Error("fetching active inboxes", "error", err)
 		return nil, err
 	}
 	return inboxes, nil
+}
+
+// GetAll returns all inboxes.
+func (m *Manager) GetAll() ([]imodels.Inbox, error) {
+	var inboxes []imodels.Inbox
+	if err := m.queries.GetAll.Select(&inboxes); err != nil {
+		m.lo.Error("error fetching active inboxes", "error", err)
+		return nil, err
+	}
+	return inboxes, nil
+}
+
+// Create creates an inbox.
+func (m *Manager) Create(inbox imodels.Inbox) error {
+	if _, err := m.queries.InsertInbox.Exec(true, inbox.Channel, inbox.Config, inbox.Name, inbox.From, nil); err != nil {
+		m.lo.Error("error creating inbox", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating inbox", nil)
+	}
+	return nil
 }
 
 // Receive starts receiver for each inbox.

@@ -5,7 +5,7 @@ VERSION := $(shell git describe --tags)
 BUILDSTR := ${VERSION} (Commit: ${LAST_COMMIT_DATE} (${LAST_COMMIT}), Build: $(shell date +"%Y-%m-%d %H:%M:%S %z"))
 
 BIN_ARTEMIS := artemis.bin
-STATIC := frontend/dist
+STATIC := frontend/dist i18n
 GOPATH ?= $(HOME)/go
 STUFFBIN ?= $(GOPATH)/bin/stuffbin
 
@@ -19,6 +19,10 @@ $(BIN_ARTEMIS): $(STUFFBIN)
 	CGO_ENABLED=0 go build -a -ldflags="-X 'main.buildVersion=${BUILDSTR}' -X 'main.buildDate=${LAST_COMMIT_DATE}' -s -w" -o ${BIN_ARTEMIS} cmd/*.go
 	@echo "Build successful. Current build version: $(VERSION)"
 	$(STUFFBIN) -a stuff -in ${BIN_ARTEMIS} -out ${BIN_ARTEMIS} ${STATIC}
+
+stuff:
+	$(STUFFBIN) -a stuff -in ${BIN_ARTEMIS} -out ${BIN_ARTEMIS} ${STATIC}
+.PHONY: stuff
 
 test:
 	@go test -v ./...

@@ -42,19 +42,23 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
     >
       <DialogContent
         :class="
-          cn(
-            'relative z-50 grid w-full max-w-lg my-8 gap-4 border border-border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full',
-            props.class
-          )
-        "
+cn(
+  'relative z-50 grid w-full max-w-lg my-8 gap-4 border border-border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full',
+  props.class
+)"
         v-bind="forwarded"
-        @pointer-down-outside="(event) => {
-          const originalEvent = event.detail.originalEvent;
-          const target = originalEvent.target;
-          if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
-            event.preventDefault();
+        @pointer-down-outside="
+          (event) => {
+            const originalEvent = event.detail.originalEvent;
+            const target = originalEvent.target;
+            if (
+              originalEvent.offsetX > target.clientWidth ||
+              originalEvent.offsetY > target.clientHeight
+            ) {
+              event.preventDefault();
+            }
           }
-        }"
+        "
       >
         <slot />
 

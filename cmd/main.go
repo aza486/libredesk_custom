@@ -21,6 +21,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/upload"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
+	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
 	"github.com/valyala/fasthttp"
@@ -41,27 +42,25 @@ const (
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
-	constants       consts
-	fs              stuffbin.FileSystem
-	lo              *logf.Logger
-	cntctMgr        *contact.Manager
-	userMgr         *user.Manager
-	teamMgr         *team.Manager
-	sessMgr         *simplesessions.Manager
-	tagMgr          *tag.Manager
-	msgMgr          *message.Manager
-	rbac            *uauth.Engine
-	inboxMgr        *inbox.Manager
-	uploadMgr       *upload.Manager
-	attachmentMgr   *attachment.Manager
-	cannedRespMgr   *cannedresp.Manager
-	conversationMgr *conversation.Manager
+	constants           consts
+	fs                  stuffbin.FileSystem
+	i18n                *i18n.I18n
+	lo                  *logf.Logger
+	contactManager      *contact.Manager
+	userManager         *user.Manager
+	teamManager         *team.Manager
+	sessManager         *simplesessions.Manager
+	tagManager          *tag.Manager
+	messageManager      *message.Manager
+	rbac                *uauth.Engine
+	inboxManager        *inbox.Manager
+	uploadManager       *upload.Manager
+	attachmentManager   *attachment.Manager
+	cannedRespManager   *cannedresp.Manager
+	conversationManager *conversation.Manager
 }
 
 func main() {
-	// Load stuffbin fs.
-	fs := initFS()
-
 	// Load command line flags into Koanf.
 	initFlags()
 
@@ -69,37 +68,39 @@ func main() {
 	initz.Config(ko)
 
 	var (
-		shutdownCh         = make(chan struct{})
-		ctx, stop          = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-		lo                 = initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "artemis")
-		rd                 = initz.Redis(ko)
-		db                 = initz.DB(ko)
-		wsHub              = ws.NewHub()
-		templateMgr        = initTemplateMgr(db)
-		attachmentMgr      = initAttachmentsManager(db, lo)
-		cntctMgr           = initContactManager(db, lo)
-		inboxMgr           = initInboxManager(db, lo)
-		teamMgr            = initTeamMgr(db, lo)
-		userMgr            = initUserDB(db, lo)
-		notifier           = initNotifier(userMgr, templateMgr)
-		conversationMgr    = initConversations(wsHub, db, lo)
-		automationEngine   = initAutomationEngine(db, lo)
-		msgMgr             = initMessages(db, lo, wsHub, userMgr, teamMgr, cntctMgr, attachmentMgr, conversationMgr, inboxMgr, automationEngine, templateMgr)
-		autoAssignerEngine = initAutoAssignmentEngine(teamMgr, conversationMgr, msgMgr, notifier, wsHub, lo)
+		shutdownCh          = make(chan struct{})
+		ctx, stop           = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		fs                  = initFS()
+		i18n                = initI18n(fs)
+		lo                  = initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "artemis")
+		rd                  = initz.Redis(ko)
+		db                  = initz.DB(ko)
+		wsHub               = ws.NewHub()
+		templateManager     = initTemplateManager(db)
+		attachmentManager   = initAttachmentsManager(db, lo)
+		contactManager      = initContactManager(db, lo)
+		inboxManager        = initInboxManager(db, lo)
+		teamManager         = initTeamManager(db, lo)
+		userManager         = initUserManager(i18n, db, lo)
+		notifier            = initNotifier(userManager, templateManager)
+		conversationManager = initConversations(i18n, wsHub, db, lo)
+		automationEngine    = initAutomationEngine(db, lo)
+		messageManager      = initMessages(db, lo, wsHub, userManager, teamManager, contactManager, attachmentManager, conversationManager, inboxManager, automationEngine, templateManager)
+		autoAssignerEngine  = initAutoAssignmentEngine(teamManager, conversationManager, messageManager, notifier, wsHub, lo)
 	)
 
 	// Register all inboxes with the inbox manager.
-	registerInboxes(inboxMgr, msgMgr)
+	registerInboxes(inboxManager, messageManager)
 
 	// Set conversation store for the websocket hub.
-	wsHub.SetConversationStore(conversationMgr)
+	wsHub.SetConversationStore(conversationManager)
 
 	// Set stores for the automation engine.
-	automationEngine.SetMessageStore(msgMgr)
-	automationEngine.SetConversationStore(conversationMgr)
+	automationEngine.SetMessageStore(messageManager)
+	automationEngine.SetConversationStore(conversationManager)
 
 	// Start receivers for all active inboxes.
-	inboxMgr.Receive(ctx)
+	inboxManager.Receive(ctx)
 
 	// Start automation rule evaluation engine.
 	go automationEngine.Serve(ctx)
@@ -108,25 +109,26 @@ func main() {
 	go autoAssignerEngine.Serve(ctx, ko.MustDuration("autoassigner.assign_interval"))
 
 	// Start inserting incoming messages from all active inboxes and dispatch pending outgoing messages.
-	go msgMgr.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
-	go msgMgr.StartDispatcher(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+	go messageManager.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
+	go messageManager.StartDispatcher(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
 	// Init the app
 	var app = &App{
-		lo:              lo,
-		fs:              fs,
-		cntctMgr:        cntctMgr,
-		inboxMgr:        inboxMgr,
-		userMgr:         userMgr,
-		teamMgr:         teamMgr,
-		attachmentMgr:   attachmentMgr,
-		conversationMgr: conversationMgr,
-		msgMgr:          msgMgr,
-		constants:       initConstants(),
-		rbac:            initRBACEngine(db),
-		tagMgr:          initTags(db, lo),
-		sessMgr:         initSessionManager(rd),
-		cannedRespMgr:   initCannedResponse(db, lo),
+		lo:                  lo,
+		fs:                  fs,
+		i18n:                i18n,
+		contactManager:      contactManager,
+		inboxManager:        inboxManager,
+		userManager:         userManager,
+		teamManager:         teamManager,
+		attachmentManager:   attachmentManager,
+		conversationManager: conversationManager,
+		messageManager:      messageManager,
+		constants:           initConstants(),
+		rbac:                initRBACEngine(db),
+		tagManager:          initTags(db, lo),
+		sessManager:         initSessionManager(rd),
+		cannedRespManager:   initCannedResponse(db, lo),
 	}
 
 	// Init fastglue http server.

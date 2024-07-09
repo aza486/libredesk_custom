@@ -6,10 +6,14 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/artemis/internal/stringutil"
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
+	"github.com/knadh/go-i18n"
 	"github.com/zerodha/logf"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,6 +29,7 @@ var (
 
 type Manager struct {
 	lo         *logf.Logger
+	i18n       *i18n.I18n
 	q          queries
 	bcryptCost int
 }
@@ -37,6 +42,7 @@ type Opts struct {
 
 // Prepared queries.
 type queries struct {
+	CreateUser      *sqlx.Stmt `query:"create-user"`
 	GetUsers        *sqlx.Stmt `query:"get-users"`
 	GetUser         *sqlx.Stmt `query:"get-user"`
 	GetEmail        *sqlx.Stmt `query:"get-email"`
@@ -44,7 +50,7 @@ type queries struct {
 	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
 }
 
-func New(opts Opts) (*Manager, error) {
+func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	var q queries
 
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
@@ -54,6 +60,7 @@ func New(opts Opts) (*Manager, error) {
 	return &Manager{
 		q:          q,
 		lo:         opts.Lo,
+		i18n:       i18n,
 		bcryptCost: opts.BcryptCost,
 	}, nil
 }
@@ -62,20 +69,20 @@ func (u *Manager) Login(email string, password []byte) (models.User, error) {
 	var user models.User
 
 	if email == "" {
-		return user, fmt.Errorf("empty `email`")
+		return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 	}
 
 	// Check if user exists.
 	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
-			return user, fmt.Errorf("user not found")
+			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, fmt.Errorf("error logging in")
+		return user, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
 	}
 
 	if err := u.verifyPassword(password, user.Password); err != nil {
-		return user, fmt.Errorf("invalid email or password")
+		return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 	}
 
 	return user, nil
@@ -88,10 +95,22 @@ func (u *Manager) GetUsers() ([]models.User, error) {
 			return users, nil
 		}
 		u.lo.Error("error fetching users from db", "error", err)
-		return users, fmt.Errorf("error fetching users")
+		return users, fmt.Errorf("error fetching users: %w", err)
 	}
 
 	return users, nil
+}
+
+func (u *Manager) Create(user *models.User) error {
+	var (
+		password, _ = u.generatePassword()
+	)
+	user.Email = strings.ToLower(user.Email)
+	if _, err := u.q.CreateUser.Exec(user.Email, user.FirstName, user.LastName, password, user.TeamID, user.AvatarURL); err != nil {
+		u.lo.Error("error creating user", "error", err)
+		return err
+	}
+	return nil
 }
 
 func (u *Manager) GetUser(id int, uuid string) (models.User, error) {
@@ -141,17 +160,24 @@ func (u *Manager) setPassword(uid int, pwd string) error {
 	if len(pwd) > 72 {
 		return ErrPasswordTooLong
 	}
-	bytes, err := bcrypt.GenerateFromPassword([]byte(pwd), u.bcryptCost)
+	bytes, err := u.generatePassword()
 	if err != nil {
-		u.lo.Error("setting password", "error", err)
-		return fmt.Errorf("error setting password")
+		return err
 	}
-
 	// Update password in db.
 	if _, err := u.q.SetUserPassword.Exec(bytes, uid); err != nil {
 		u.lo.Error("setting password", "error", err)
 		return fmt.Errorf("error setting password")
 	}
-
 	return nil
+}
+
+func (u *Manager) generatePassword() ([]byte, error) {
+	var password, _ = stringutil.RandomAlNumString(16)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), u.bcryptCost)
+	if err != nil {
+		u.lo.Error("error generating bcrypt password", "error", err)
+		return nil, fmt.Errorf("error generating bcrypt password: %w", err)
+	}
+	return bytes, nil
 }

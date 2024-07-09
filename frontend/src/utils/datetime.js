@@ -7,7 +7,9 @@ export function formatTime(t) {
         const hoursDifference = differenceInHours(now, t);
         const daysDifference = differenceInDays(now, t);
 
-        if (minutesDifference < 60) {
+        if (minutesDifference === 0) {
+            return `Just now`;
+        } else if (minutesDifference < 60) {
             return `${minutesDifference} minutes ago`;
         } else if (hoursDifference < 24) {
             return `${hoursDifference} hours ago`;
