@@ -66,8 +66,11 @@ type Manager struct {
 
 // Prepared queries.
 type queries struct {
+	GetByID     *sqlx.Stmt `query:"get-by-id"`
 	GetActive   *sqlx.Stmt `query:"get-active-inboxes"`
 	GetAll      *sqlx.Stmt `query:"get-all-inboxes"`
+	Update      *sqlx.Stmt `query:"update"`
+	SoftDelete  *sqlx.Stmt `query:"soft-delete"`
 	InsertInbox *sqlx.Stmt `query:"insert-inbox"`
 }
 
@@ -102,6 +105,16 @@ func (m *Manager) Get(id int) (Inbox, error) {
 	return i, nil
 }
 
+// GetByID returns inbox by the given ID.
+func (m *Manager) GetByID(id int) (imodels.Inbox, error) {
+	var inbox imodels.Inbox
+	if err := m.queries.GetByID.Get(&inbox, id); err != nil {
+		m.lo.Error("fetching active inboxes", "error", err)
+		return inbox, err
+	}
+	return inbox, nil
+}
+
 // GetActive returns all active inboxes.
 func (m *Manager) GetActive() ([]imodels.Inbox, error) {
 	var inboxes []imodels.Inbox
@@ -127,6 +140,22 @@ func (m *Manager) Create(inbox imodels.Inbox) error {
 	if _, err := m.queries.InsertInbox.Exec(true, inbox.Channel, inbox.Config, inbox.Name, inbox.From, nil); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating inbox", nil)
+	}
+	return nil
+}
+
+func (m *Manager) Update(id int, inbox imodels.Inbox) error {
+	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
+		m.lo.Error("error updating inbox", "error", err)
+		return err
+	}
+	return nil
+}
+
+func (m *Manager) Delete(id int) error {
+	if _, err := m.queries.SoftDelete.Exec(id); err != nil {
+		m.lo.Error("error deleting inbox", "error", err)
+		return err
 	}
 	return nil
 }

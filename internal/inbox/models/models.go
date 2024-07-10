@@ -7,7 +7,7 @@ type Inbox struct {
 	ID      int             `db:"id" json:"id"`
 	Name    string          `db:"name" json:"name"`
 	Channel string          `db:"channel" json:"channel"`
-	Enabled string          `db:"enabled" json:"enabled"`
+	Enabled bool            `db:"enabled" json:"enabled"`
 	From    string          `db:"from" json:"from"`
 	Config  json.RawMessage `db:"config" json:"config"`
 }

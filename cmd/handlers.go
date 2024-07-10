@@ -43,7 +43,10 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	}))
 
 	g.GET("/api/inboxes", handleGetInboxes)
+	g.GET("/api/inboxes/{id}", handleGetInbox)
 	g.POST("/api/inboxes", handleCreateInbox)
+	g.PUT("/api/inboxes/{id}", handleUpdateInbox)
+	g.DELETE("/api/inboxes/{id}", handleDeleteInbox)
 
 	// Dashboard APIs
 	g.GET("/api/dashboard/me/counts", auth(handleUserDashboardCounts))

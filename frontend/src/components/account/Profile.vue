@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   FormControl,
   FormDescription,
+  Form,
   FormField,
   FormItem,
   FormLabel,
@@ -56,8 +57,7 @@ const onSubmit = handleSubmit((values) => {
 </script>
 
 <template>
-  <form class="w-2/3 space-y-6" @submit="onSubmit">
-    <AvatarUploader @change="onAvatarImageChange" @onAvatarDelete="onAvatarImageDelete" :avatarURL=userStore.userAvatar />
+  <Form class="w-2/3 space-y-6" @submit="onSubmit">
     <FormField v-slot="{ componentField }" name="bio">
       <FormItem v-auto-animate>
         <FormLabel>Bio</FormLabel>
@@ -70,5 +70,5 @@ const onSubmit = handleSubmit((values) => {
     <Button type="submit">
       Update
     </Button>
-  </form>
+  </Form>
 </template>
