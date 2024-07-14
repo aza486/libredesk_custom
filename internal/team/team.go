@@ -7,6 +7,8 @@ import (
 	"fmt"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/artemis/internal/team/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -16,12 +18,6 @@ var (
 	//go:embed queries.sql
 	efs embed.FS
 )
-
-type Team struct {
-	ID   int    `db:"id" json:"id"`
-	Name string `db:"name" json:"name"`
-	UUID string `db:"uuid" json:"uuid"`
-}
 
 type Manager struct {
 	lo *logf.Logger
@@ -36,6 +32,7 @@ type Opts struct {
 type queries struct {
 	GetTeams       *sqlx.Stmt `query:"get-teams"`
 	GetTeam        *sqlx.Stmt `query:"get-team"`
+	InsertTeam     *sqlx.Stmt `query:"insert-team"`
 	GetTeamMembers *sqlx.Stmt `query:"get-team-members"`
 }
 
@@ -52,8 +49,8 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
-func (u *Manager) GetAll() ([]Team, error) {
-	var teams []Team
+func (u *Manager) GetAll() ([]models.Team, error) {
+	var teams []models.Team
 	if err := u.q.GetTeams.Select(&teams); err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
 			return teams, nil
@@ -64,8 +61,8 @@ func (u *Manager) GetAll() ([]Team, error) {
 	return teams, nil
 }
 
-func (u *Manager) GetTeam(id int) (Team, error) {
-	var team Team
+func (u *Manager) GetTeam(id int) (models.Team, error) {
+	var team models.Team
 	if err := u.q.GetTeam.Get(&team, id); err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
 			u.lo.Error("team not found", "id", id, "error", err)
@@ -75,6 +72,14 @@ func (u *Manager) GetTeam(id int) (Team, error) {
 		return team, err
 	}
 	return team, nil
+}
+
+func (u *Manager) CreateTeam(t models.Team) error {
+	if _, err := u.q.InsertTeam.Exec(t.Name); err != nil {
+		u.lo.Error("error inserting team", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating team", nil)
+	}
+	return nil
 }
 
 func (u *Manager) GetTeamMembers(name string) ([]umodels.User, error) {

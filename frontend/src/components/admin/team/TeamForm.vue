@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { watch, onMounted, ref } from 'vue'
+import { watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -30,9 +30,6 @@ import {
   FormDescription
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import api from '@/api'
-
-const teams = ref([])
 
 const props = defineProps({
   initialValues: {
@@ -52,15 +49,6 @@ const props = defineProps({
     type: Boolean,
     required: false,
     default: () => false
-  }
-})
-
-onMounted(async () => {
-  try {
-    const resp = await api.getTeams()
-    teams.value = resp.data.data
-  } catch (err) {
-    console.log(err)
   }
 })
 

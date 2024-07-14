@@ -2,7 +2,7 @@
   <div v-if="showTable">
     <div class="flex justify-between mb-5">
       <div>
-        <h1>Inboxes</h1>
+        <h2>Inboxes</h2>
         <p class="text-muted-foreground text-sm">Create and manage inboxes.</p>
       </div>
       <div class="flex justify-end mb-4">

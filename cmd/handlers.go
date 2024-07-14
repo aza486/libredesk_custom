@@ -54,6 +54,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Team.
 	g.GET("/api/teams", auth(handleGetTeams))
 	g.GET("/api/teams/{id}", auth(handleGetTeam))
+	g.POST("/api/teams", auth(handleCreateTeam))
 
 	g.GET("/api/tags", auth(handleGetTags))
 

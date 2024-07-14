@@ -1,7 +1,7 @@
 <template>
     <div class="h-screen">
         <div class="flex justify-between px-2 py-2 border-b">
-            <Tabs v-model:model-value="conversationType" >
+            <Tabs v-model:model-value="conversationType">
                 <TabsList class="w-full flex justify-evenly">
                     <TabsTrigger value="assigned" class="w-full">
                         Assigned
@@ -14,34 +14,43 @@
                     </TabsTrigger>
                 </TabsList>
             </Tabs>
-            <div class="space-x-2">
-                <div class="w-[8rem]">
-                    <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a filter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <!-- <SelectLabel>Status</SelectLabel> -->
-                                <SelectItem value="status_all">
-                                    All
-                                </SelectItem>
-                                <SelectItem value="status_open">
-                                    Open
-                                </SelectItem>
-                                <SelectItem value="status_processing">
-                                    Processing
-                                </SelectItem>
-                                <SelectItem value="status_spam">
-                                    Spam
-                                </SelectItem>
-                                <SelectItem value="status_resolved">
-                                    Resolved
-                                </SelectItem>
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </div>
+            <div>
+                <Popover>
+                    <PopoverTrigger as-child>
+                        <Button variant="outline" size="sm">
+                            <ListFilter size="20"></ListFilter>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent class="w-52">
+                        <div>
+                            <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a filter" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <!-- <SelectLabel>Status</SelectLabel> -->
+                                        <SelectItem value="status_all">
+                                            All
+                                        </SelectItem>
+                                        <SelectItem value="status_open">
+                                            Open
+                                        </SelectItem>
+                                        <SelectItem value="status_processing">
+                                            Processing
+                                        </SelectItem>
+                                        <SelectItem value="status_spam">
+                                            Spam
+                                        </SelectItem>
+                                        <SelectItem value="status_resolved">
+                                            Resolved
+                                        </SelectItem>
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </PopoverContent>
+                </Popover>
             </div>
 
         </div>
@@ -70,7 +79,7 @@
                     </Button>
                 </div>
                 <div v-else-if="everythingLoaded">
-                    All conversations loaded 😎
+                    All conversations loaded!
                 </div>
             </div>
         </div>
@@ -84,6 +93,7 @@ import { subscribeConversations } from "@/websocket.js"
 import { CONVERSATION_LIST_TYPE, CONVERSATION_PRE_DEFINED_FILTERS } from '@/constants/conversation'
 
 import { Error } from '@/components/ui/error'
+import { ListFilter } from 'lucide-vue-next';
 import { Skeleton } from '@/components/ui/skeleton'
 import {
     Tabs,
@@ -102,6 +112,11 @@ import {
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 import EmptyList from '@/components/conversationlist/ConversationEmptyList.vue'
 import ConversationListItem from '@/components/conversationlist/ConversationListItem.vue'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
 
 
 const conversationStore = useConversationStore()

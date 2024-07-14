@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/artemis/internal/team/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -33,4 +35,22 @@ func handleGetTeam(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(team)
+}
+
+func handleCreateTeam(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req = models.Team{}
+	)
+
+	if _, err := fastglue.ScanArgs(r.RequestCtx.PostArgs(), &req, `json`); err != nil {
+		return envelope.NewError(envelope.InputError,
+			fmt.Sprintf("Invalid request (%s)", err.Error()), nil)
+	}
+
+	err := app.teamManager.CreateTeam(req)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
 }

@@ -8,6 +8,7 @@ import Inbox from '@/components/admin/Inbox.vue'
 import Team from '@/components/admin/team/Team.vue'
 import Teams from '@/components/admin/team/Teams.vue'
 import Users from '@/components/admin/team/Users.vue'
+import Workflow from '@/components/admin/workflow/Workflow.vue'
 
 const routes = [
   {
@@ -77,6 +78,10 @@ const routes = [
         component: () => import('@/components/admin/team/AddUsersForm.vue')
       },
       {
+        path: 'teams/new',
+        component: () => import('@/components/admin/team/AddTeamForm.vue')
+      },
+      {
         path: 'users/:id/edit',
         props: true,
         component: () => import('@/components/admin/team/EditUserForm.vue')
@@ -90,6 +95,17 @@ const routes = [
         props: true,
         component: () => import('@/components/admin/team/EditTeamForm.vue')
       }
+    ]
+  },
+  {
+    path: '/admin/workflow',
+    name: 'workflow',
+    component: AdminView,
+    children: [
+      {
+        path: '',
+        component: Workflow
+      },
     ]
   },
   // Fallback to dashboard.

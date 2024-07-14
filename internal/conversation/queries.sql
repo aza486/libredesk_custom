@@ -196,7 +196,7 @@ WHERE
 
 -- name: get-new-conversations-stats
 SELECT
-    DATE_TRUNC('day', created_at) AS date,
+    created_at::date AS date,
     COUNT(*) AS new_conversations
 FROM
     conversations

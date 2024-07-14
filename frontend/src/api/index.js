@@ -60,6 +60,7 @@ const getLanguage = (lang) => http.get(`/api/lang/${lang}`)
 const createUser = (data) => http.post('/api/users', data)
 const updateUser = (id, data) => http.put(`/api/users/${id}`, data)
 const updateTeam = (id, data) => http.put(`/api/teams/${id}`, data)
+const createTeam = (data) => http.put('/api/teams/', data)
 const createInbox = (data) =>
   http.post('/api/inboxes', data, {
     headers: {
@@ -110,5 +111,7 @@ export default {
   createUser,
   createInbox,
   updateInbox,
-  deleteInbox
+  deleteInbox,
+  createTeam,
+  updateTeam
 }

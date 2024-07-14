@@ -70,7 +70,7 @@ func handleCreateUser(r *fastglue.Request) error {
 	}
 
 	if req.Email == "" {
-		return r.SendErrorEnvelope(http.StatusBadRequest, "Empty email", nil, envelope.InputError)
+		return r.SendErrorEnvelope(http.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
 
 	err := app.userManager.Create(&req)

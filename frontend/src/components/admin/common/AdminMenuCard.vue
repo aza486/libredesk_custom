@@ -1,6 +1,6 @@
 <template>
   <div
-    class="max-w-sm rounded overflow-hidden box border p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer hover:bg-gray-100"
+    class="max-w-sm rounded overflow-hidden box border p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer hover:bg-muted"
     @click="handleClick"
   >
     <div class="flex items-center mb-4">

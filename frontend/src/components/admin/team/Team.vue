@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="mb-10">
-      <h1>Teams</h1>
+      <h2>Teams</h2>
       <p class="text-muted-foreground text-sm mt-2">Create agents, teams and set working hours.</p>
     </div>
     <div class="flex space-x-5">

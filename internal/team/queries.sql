@@ -10,3 +10,6 @@ FROM users u
 JOIN team_members tm ON tm.user_id = u.id
 JOIN teams t ON t.id = tm.team_id
 WHERE t.name = $1;
+
+-- name: insert-team
+INSERT INTO teams (name) values($1);

@@ -1,30 +1,24 @@
 <template>
   <div class="flex justify-between mb-5">
     <div>
-      <h2>Teams</h2>
-      <p class="text-muted-foreground text-sm">Create teams, manage agents.</p>
+      <h2>Workflows</h2>
+      <p class="text-muted-foreground text-sm">Create automations & time triggers.</p>
     </div>
     <div class="flex justify-end mb-4">
       <Button @click="navigateToAddInbox" size="sm"> New user </Button>
     </div>
   </div>
-  <div v-if="showTable">
-    <div class="w-full">
-      <DataTable :columns="columns" :data="data" />
-    </div>
-  </div>
-  <div v-else>
-    <router-view></router-view>
+  <div>
+    <WorkflowTabs />
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { columns } from '@/components/admin/team/UsersDataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import DataTable from '@/components/admin/DataTable.vue'
 import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
+import WorkflowTabs from '@/components/admin/workflow/WorkflowTabs.vue'
 import api from '@/api'
 import { useRouter } from 'vue-router'
 const { toast } = useToast()
