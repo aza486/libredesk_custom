@@ -8,7 +8,7 @@ const http = axios.create({
 
 // Request interceptor.
 http.interceptors.request.use((request) => {
-  // Set content type for POST/PUT requests.
+  // Set content type for POST/PUT requests if the content type is not set.
   if ((request.method === 'post' || request.method === 'put') && !request.headers['Content-Type']) {
     request.headers['Content-Type'] = 'application/x-www-form-urlencoded'
     request.data = qs.stringify(request.data)
@@ -17,29 +17,31 @@ http.interceptors.request.use((request) => {
 })
 
 const login = (data) => http.post(`/api/login`, data)
+const getUser = (id) => http.get(`/api/users/${id}`)
+const getTeam = (id) => http.get(`/api/teams/${id}`)
 const getTeams = () => http.get('/api/teams')
 const getUsers = () => http.get('/api/users')
 const getCurrentUser = () => http.get('/api/users/me')
 const getTags = () => http.get('/api/tags')
-const upsertTags = (uuid, data) => http.post(`/api/conversation/${uuid}/tags`, data)
+const upsertTags = (uuid, data) => http.post(`/api/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) =>
-  http.put(`/api/conversation/${uuid}/assignee/${assignee_type}`, data)
-const updateStatus = (uuid, data) => http.put(`/api/conversation/${uuid}/status`, data)
-const updatePriority = (uuid, data) => http.put(`/api/conversation/${uuid}/priority`, data)
-const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversation/${uuid}/last-seen`)
+  http.put(`/api/conversations/${uuid}/assignee/${assignee_type}`, data)
+const updateStatus = (uuid, data) => http.put(`/api/conversations/${uuid}/status`, data)
+const updatePriority = (uuid, data) => http.put(`/api/conversations/${uuid}/priority`, data)
+const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversations/${uuid}/last-seen`)
 const getMessage = (uuid) => http.get(`/api/message/${uuid}`)
 const retryMessage = (uuid) => http.get(`/api/message/${uuid}/retry`)
-const getMessages = (uuid) => http.get(`/api/conversation/${uuid}/messages`)
-const sendMessage = (uuid, data) => http.post(`/api/conversation/${uuid}/message`, data)
-const getConversation = (uuid) => http.get(`/api/conversation/${uuid}`)
-const getConversationParticipants = (uuid) => http.get(`/api/conversation/${uuid}/participants`)
+const getMessages = (uuid) => http.get(`/api/conversations/${uuid}/messages`)
+const sendMessage = (uuid, data) => http.post(`/api/conversations/${uuid}/messages`, data)
+const getConversation = (uuid) => http.get(`/api/conversations/${uuid}`)
+const getConversationParticipants = (uuid) => http.get(`/api/conversations/${uuid}/participants`)
 const getCannedResponses = () => http.get('/api/canned-responses')
-const getAssignedConversations = (page, preDefinedFilter) =>
-  http.get(`/api/conversations/assigned?page=${page}&predefinedfilter=${preDefinedFilter}`)
-const getUnassignedConversations = (page, preDefinedFilter) =>
-  http.get(`/api/conversations/unassigned?page=${page}&predefinedfilter=${preDefinedFilter}`)
-const getAllConversations = (page, preDefinedFilter) =>
-  http.get(`/api/conversations/all?page=${page}&predefinedfilter=${preDefinedFilter}`)
+const getAssignedConversations = (page, filter) =>
+  http.get(`/api/conversations/assigned?page=${page}&filter=${filter}`)
+const getTeamConversations = (page, filter) =>
+  http.get(`/api/conversations/team?page=${page}&filter=${filter}`)
+const getAllConversations = (page, filter) =>
+  http.get(`/api/conversations/all?page=${page}&filter=${filter}`)
 const uploadAttachment = (data) =>
   http.post('/api/attachment', data, {
     headers: {
@@ -56,6 +58,8 @@ const getUserDashboardCounts = () => http.get('/api/dashboard/me/counts')
 const getUserDashoardCharts = () => http.get('/api/dashboard/me/charts')
 const getLanguage = (lang) => http.get(`/api/lang/${lang}`)
 const createUser = (data) => http.post('/api/users', data)
+const updateUser = (id, data) => http.put(`/api/users/${id}`, data)
+const updateTeam = (id, data) => http.put(`/api/teams/${id}`, data)
 const createInbox = (data) =>
   http.post('/api/inboxes', data, {
     headers: {
@@ -75,14 +79,16 @@ const deleteInbox = (id) => http.delete(`/api/inboxes/${id}`)
 export default {
   login,
   getInbox,
+  getUser,
   getInboxes,
   getLanguage,
   getTags,
   getTeams,
+  getTeam,
   getUsers,
   getConversation,
   getAssignedConversations,
-  getUnassignedConversations,
+  getTeamConversations,
   getAllConversations,
   getUserDashboardCounts,
   getConversationParticipants,
@@ -98,6 +104,7 @@ export default {
   uploadFile,
   updateAssigneeLastSeen,
   uploadAttachment,
+  updateUser,
   sendMessage,
   retryMessage,
   createUser,

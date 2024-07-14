@@ -5,7 +5,6 @@ go 1.22.3
 require (
 	github.com/emersion/go-imap/v2 v2.0.0-beta.3
 	github.com/fasthttp/websocket v1.5.9
-	github.com/go-redis/redis/v8 v8.5.0
 	github.com/jhillyerd/enmime v1.2.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/k3a/html2text v1.2.1
@@ -21,13 +20,15 @@ require (
 	github.com/knadh/stuffbin v1.3.0
 	github.com/lib/pq v1.10.9
 	github.com/mr-karan/balance v0.0.0-20230131075323-e0d55eb3e4b9
+	github.com/redis/go-redis/v9 v9.5.4
 	github.com/rhnvrm/simples3 v0.8.3
 	github.com/spf13/pflag v1.0.5
 	github.com/valyala/fasthttp v1.54.0
-	github.com/vividvilla/simplesessions v0.2.0
 	github.com/volatiletech/null/v9 v9.0.0
 	github.com/zerodha/fastglue v1.8.0
 	github.com/zerodha/logf v0.5.5
+	github.com/zerodha/simplesessions/stores/redis/v3 v3.0.0
+	github.com/zerodha/simplesessions/v3 v3.0.0
 	golang.org/x/crypto v0.23.0
 )
 
@@ -43,7 +44,6 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
-	github.com/gomodule/redigo v2.0.0+incompatible // indirect
 	github.com/jaytaylor/html2text v0.0.0-20230321000545-74c2419ad056 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
@@ -60,7 +60,6 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	go.opentelemetry.io/otel v0.16.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect

@@ -14,30 +14,51 @@ import (
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/login", handleLogin)
 	g.GET("/api/logout", handleLogout)
+
+	// Conversation.
 	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversations.all"))
 	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversations.assigned"))
-	g.GET("/api/conversations/unassigned", auth(handleGetUnassignedConversations, "conversations.unassigned"))
-	g.GET("/api/conversation/{conversation_uuid}", auth(handleGetConversation))
-	g.PUT("/api/conversation/{conversation_uuid}/last-seen", auth(handleUpdateAssigneeLastSeen))
-	g.GET("/api/conversation/{conversation_uuid}/participants", auth(handleGetConversationParticipants))
-	g.PUT("/api/conversation/{conversation_uuid}/assignee/{assignee_type}", auth(handleUpdateAssignee))
-	g.PUT("/api/conversation/{conversation_uuid}/priority", auth(handleUpdatePriority))
-	g.PUT("/api/conversation/{conversation_uuid}/status", auth(handleUpdateStatus))
-	g.POST("/api/conversation/{conversation_uuid}/tags", auth(handlAddConversationTags))
-	g.GET("/api/conversation/{conversation_uuid}/messages", auth(handleGetMessages))
-	g.POST("/api/conversation/{conversation_uuid}/message", auth(handleSendMessage))
+	g.GET("/api/conversations/team", auth(handleGetTeamConversations, "conversations.team"))
+
+	g.GET("/api/conversations/{uuid}", auth(handleGetConversation))
+	g.GET("/api/conversations/{uuid}/participants", auth(handleGetConversationParticipants))
+	g.PUT("/api/conversations/{uuid}/last-seen", auth(handleUpdateAssigneeLastSeen))
+	g.PUT("/api/conversations/{uuid}/assignee/user", auth(handleUpdateUserAssignee))
+	g.PUT("/api/conversations/{uuid}/assignee/team", auth(handleUpdateTeamAssignee))
+	g.PUT("/api/conversations/{uuid}/priority", auth(handleUpdatePriority))
+	g.PUT("/api/conversations/{uuid}/status", auth(handleUpdateStatus))
+	g.POST("/api/conversations/{uuid}/tags", auth(handleAddConversationTags))
+
+	// Message.
+	g.GET("/api/conversations/{uuid}/messages", auth(handleGetMessages))
+	g.POST("/api/conversations/{uuid}/messages", auth(handleSendMessage))
+	g.GET("/api/message/{uuid}/retry", auth(handleRetryMessage))
+	g.GET("/api/message/{uuid}", auth(handleGetMessage))
+
+	// Attachment.
 	g.POST("/api/attachment", auth(handleAttachmentUpload))
-	g.GET("/api/message/{message_uuid}/retry", auth(handleRetryMessage))
-	g.GET("/api/message/{message_uuid}", auth(handleGetMessage))
+
+	// Canned response.
 	g.GET("/api/canned-responses", auth(handleGetCannedResponses))
-	g.POST("/api/upload", auth(handleFileUpload))
-	g.POST("/api/upload/view/{file_uuid}", auth(handleViewFile))
+
+	// File upload.
+	g.POST("/api/file/upload", auth(handleFileUpload))
+
+	// User.
 	g.GET("/api/users/me", auth(handleGetCurrentUser))
 	g.GET("/api/users", auth(handleGetUsers))
+	g.GET("/api/users/{id}", auth(handleGetUser))
+	g.PUT("/api/users/{id}", auth(handleUpdateUser))
 	g.POST("/api/users", auth(handleCreateUser))
+
+	// Team.
 	g.GET("/api/teams", auth(handleGetTeams))
+	g.GET("/api/teams/{id}", auth(handleGetTeam))
+
 	g.GET("/api/tags", auth(handleGetTags))
+
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
+
 	g.GET("/api/ws", auth(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
 	}))
@@ -48,7 +69,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/inboxes/{id}", handleUpdateInbox)
 	g.DELETE("/api/inboxes/{id}", handleDeleteInbox)
 
-	// Dashboard APIs
+	// Dashboard.
 	g.GET("/api/dashboard/me/counts", auth(handleUserDashboardCounts))
 	g.GET("/api/dashboard/me/charts", auth(handleUserDashboardCharts))
 	// g.GET("/api/dashboard/team/:teamName/counts", auth(handleTeamCounts))
@@ -56,6 +77,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// g.GET("/api/dashboard/global/counts", auth(handleGlobalCounts))
 	// g.GET("/api/dashboard/global/charts", auth(handleGlobalCharts))
 
+	// Frontend pages.
 	g.GET("/", sess(noAuthPage(serveIndexPage)))
 	g.GET("/dashboard", sess(authPage(serveIndexPage)))
 	g.GET("/conversations", sess(authPage(serveIndexPage)))
@@ -73,7 +95,7 @@ func serveIndexPage(r *fastglue.Request) error {
 	r.RequestCtx.Response.Header.Add("Pragma", "no-cache")
 	r.RequestCtx.Response.Header.Add("Expires", "-1")
 
-	// Serve the index.html file from the Stuffbin archive.
+	// Serve the index.html file from stuffbin fs.
 	file, err := app.fs.Get("/frontend/dist/index.html")
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusNotFound, "Page not found", nil, "InputException")
@@ -83,14 +105,14 @@ func serveIndexPage(r *fastglue.Request) error {
 	return nil
 }
 
-// serveStaticFiles serves static files from the stuffbin fs.
+// serveStaticFiles serves static files from stuffbin fs.
 func serveStaticFiles(r *fastglue.Request) error {
 	var app = r.Context.(*App)
 
 	// Get the requested path
 	filePath := string(r.RequestCtx.Path())
 
-	// Serve the file from the Stuffbin archive
+	// Serve the file from stuffbin fs.
 	finalPath := filepath.Join("frontend/dist", filePath)
 	file, err := app.fs.Get(finalPath)
 	if err != nil {

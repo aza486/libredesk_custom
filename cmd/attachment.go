@@ -72,11 +72,3 @@ func handleAttachmentUpload(r *fastglue.Request) error {
 	})
 }
 
-func handleGetAttachment(r *fastglue.Request) error {
-	var (
-		app  = r.Context.(*App)
-		uuid = r.RequestCtx.UserValue("conversation_uuid").(string)
-	)
-	url := app.attachmentManager.Store.GetURL(uuid)
-	return r.Redirect(url, http.StatusFound, nil, "")
-}

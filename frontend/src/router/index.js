@@ -5,7 +5,9 @@ import UserLoginView from '../views/UserLoginView.vue'
 import AccountView from '@/views/AccountView.vue'
 import AdminView from '@/views/AdminView.vue'
 import Inbox from '@/components/admin/Inbox.vue'
-import Team from '@/components/admin/Team.vue'
+import Team from '@/components/admin/team/Team.vue'
+import Teams from '@/components/admin/team/Teams.vue'
+import Users from '@/components/admin/team/Users.vue'
 
 const routes = [
   {
@@ -67,15 +69,36 @@ const routes = [
         component: Team
       },
       {
-        path: 'new',
-        component: () => import('@/components/admin/NewTeam.vue')
+        path: 'users',
+        component: Users
+      },
+      {
+        path: 'users/new',
+        component: () => import('@/components/admin/team/AddUsersForm.vue')
+      },
+      {
+        path: 'users/:id/edit',
+        props: true,
+        component: () => import('@/components/admin/team/EditUserForm.vue')
+      },
+      {
+        path: 'teams',
+        component: Teams
+      },
+      {
+        path: 'teams/:id/edit',
+        props: true,
+        component: () => import('@/components/admin/team/EditTeamForm.vue')
       }
     ]
   },
   // Fallback to dashboard.
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
+    redirect: (to) => {
+      console.log(`Redirecting to dashboard from: ${to.fullPath}`)
+      return '/dashboard'
+    }
   }
 ]
 

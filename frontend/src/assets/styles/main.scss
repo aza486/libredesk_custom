@@ -5,19 +5,11 @@
 // App default font-size.
 // Default: 16px, 15px looked very wide.
 :root {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .page-content {
   padding: 1.1rem 1.1rem;
-}
-
-.bg-success {
-  background-color: #28a745; /* example success color */
-}
-
-.text-success-foreground {
-  color: #fff; /* example text color for success */
 }
 
 // Theme.
@@ -151,6 +143,8 @@
   border
   rounded-xl;
 
+  background-color: #e6f7ff;
+
   box-shadow: 1px 1px 1px 0px rgba(0, 0, 0, 0.1);
 
   // Making email tables fit.
@@ -159,46 +153,26 @@
   }
 }
 
-// .tiptap-editor-image {
-//   width: 60%;
-// }
-
 .box {
-  box-shadow:
-    2px 2px 4px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-  -webkit-box-shadow:
-    2px 2px 4px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-  -moz-box-shadow:
-    2px 2px 4px rgba(0, 0, 0, 0.1),
-    0 1px 3px rgba(0, 0, 0, 0.1);
+  @apply shadow;
 }
 
 .overlay {
   background: rgba(0, 0, 0, 0.6);
 }
 
-// [class$='gmail_quote'] {
-//   display: none !important;
-// }
-
-// blockquote {
-//   display: none !important;
-// }
-
 h1 {
-  @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl;
+  @apply text-4xl font-extrabold;
 }
 
 h2 {
-  @apply scroll-m-20 pb-2 text-3xl font-semibold tracking-tight;
+  @apply text-3xl font-semibold;
 }
 
 h3 {
-  @apply scroll-m-20 text-2xl font-semibold tracking-tight;
+  @apply text-2xl font-semibold;
 }
 
 h4 {
-  @apply scroll-m-20 text-xl font-semibold tracking-tight;
+  @apply text-xl font-semibold;
 }

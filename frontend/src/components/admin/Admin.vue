@@ -11,10 +11,10 @@ import { Separator } from '@/components/ui/separator'
     </div>
     <Separator class="my-6" />
     <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-      <aside class="lg:w-1/6 md:w-1/7 box border h-full">
+      <aside class="lg:w-1/6 md:w-1/7 h-full">
         <SidebarNav />
       </aside>
-      <div class="flex-1 lg:max-w-3xl box border p-7 min-h-[700px]">
+      <div class="flex-1 lg:max-w-4xl p-7 min-h-[700px]">
         <div class="space-y-6">
           <slot />
         </div>

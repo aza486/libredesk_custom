@@ -27,6 +27,10 @@ var (
 	ErrPasswordTooLong = errors.New("password length exceeds 72 bytes")
 )
 
+const (
+	SystemUserUUID = "00000000-0000-0000-0000-000000000000"
+)
+
 type Manager struct {
 	lo         *logf.Logger
 	i18n       *i18n.I18n
@@ -47,6 +51,7 @@ type queries struct {
 	GetUser         *sqlx.Stmt `query:"get-user"`
 	GetEmail        *sqlx.Stmt `query:"get-email"`
 	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
+	UpdateUser      *sqlx.Stmt `query:"update-user"`
 	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
 }
 
@@ -68,17 +73,12 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 func (u *Manager) Login(email string, password []byte) (models.User, error) {
 	var user models.User
 
-	if email == "" {
-		return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
-	}
-
-	// Check if user exists.
 	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
 			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
+		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
 	}
 
 	if err := u.verifyPassword(password, user.Password); err != nil {
@@ -128,6 +128,18 @@ func (u *Manager) GetUser(id int, uuid string) (models.User, error) {
 		return user, fmt.Errorf("fetching user: %w", err)
 	}
 	return user, nil
+}
+
+func (u *Manager) GetSystemUser() (models.User, error) {
+	return u.GetUser(0, SystemUserUUID)
+}
+
+func (u *Manager) UpdateUser(id int, user models.User) error {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, user.TeamID); err != nil {
+		u.lo.Error("error updating user", "error", err)
+		return err
+	}
+	return nil
 }
 
 func (u *Manager) GetEmail(id int, uuid string) (string, error) {

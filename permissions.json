@@ -1,11 +1,10 @@
 [
-    {
-        "group": "conversations",
-        "permissions":
-        [
-            "conversations:get_all",
-            "conversations:assigned",
-            "conversations.unassigned"
-        ]
-    }
+  {
+    "group": "conversations",
+    "permissions": [
+      "conversations:all", // All conversations in the system.
+      "conversations:assigned", // Only assigned conversations.
+      "conversations.team" // Access to team conversations.
+    ]
+  }
 ]

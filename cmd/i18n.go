@@ -16,8 +16,10 @@ const (
 
 // handleGetI18nLang returns the JSON language pack for the given language code.
 func handleGetI18nLang(r *fastglue.Request) error {
-	app := r.Context.(*App)
-	lang := r.RequestCtx.UserValue("lang").(string)
+	var (
+		app  = r.Context.(*App)
+		lang = r.RequestCtx.UserValue("lang").(string)
+	)
 	i, err := loadI18nLang(lang, app.fs)
 	if err != nil {
 		return sendErrorEnvelope(r, err)

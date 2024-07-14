@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
@@ -25,13 +26,13 @@ var upgrader = websocket.FastHTTPUpgrader{
 
 func handleWS(r *fastglue.Request, hub *ws.Hub) error {
 	var (
-		userID = r.RequestCtx.UserValue("user_id").(int)
+		user = r.RequestCtx.UserValue("user").(umodels.User)
 		app    = r.Context.(*App)
 	)
 
 	err := upgrader.Upgrade(r.RequestCtx, func(conn *websocket.Conn) {
 		c := ws.Client{
-			ID:   userID,
+			ID:   user.ID,
 			Hub:  hub,
 			Conn: conn,
 			Send: make(chan ws.Message, 10000),

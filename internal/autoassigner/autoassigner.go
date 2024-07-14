@@ -11,6 +11,7 @@ import (
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/abhinavxd/artemis/internal/systeminfo"
 	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/mr-karan/balance"
 	"github.com/zerodha/logf"
@@ -18,37 +19,37 @@ import (
 
 const (
 	roundRobinDefaultWeight = 1
-	strategyRoundRobin      = "round_robin"
 )
 
-// Engine handles the assignment of unassigned conversations to agents of a tean using a round-robin strategy.
+// Engine handles the assignment of unassigned conversations to agents of a team using a round-robin strategy.
 type Engine struct {
 	teamRoundRobinBalancer map[int]*balance.Balance
-	userIDs                map[string]int
 	// Mutex to protect the balancer map
-	mu       sync.Mutex
-	convMgr  *conversation.Manager
-	teamMgr  *team.Manager
-	msgMgr   *message.Manager
-	lo       *logf.Logger
-	hub      *ws.Hub
-	notifier notifier.Notifier
-	strategy string
+	mu sync.Mutex
+
+	userIDMap map[string]int
+	convMgr   *conversation.Manager
+	teamMgr   *team.Manager
+	userMgr   *user.Manager
+	msgMgr    *message.Manager
+	lo        *logf.Logger
+	hub       *ws.Hub
+	notifier  notifier.Notifier
 }
 
 // New creates a new instance of the Engine.
-func New(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
+func New(teamMgr *team.Manager, userMgr *user.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
 	notifier notifier.Notifier, hub *ws.Hub, lo *logf.Logger) (*Engine, error) {
 	var e = Engine{
-		notifier: notifier,
-		strategy: strategyRoundRobin,
-		convMgr:  convMgr,
-		teamMgr:  teamMgr,
-		msgMgr:   msgMgr,
-		lo:       lo,
-		hub:      hub,
-		mu:       sync.Mutex{},
-		userIDs:  map[string]int{},
+		notifier:  notifier,
+		convMgr:   convMgr,
+		teamMgr:   teamMgr,
+		msgMgr:    msgMgr,
+		userMgr:   userMgr,
+		lo:        lo,
+		hub:       hub,
+		mu:        sync.Mutex{},
+		userIDMap: map[string]int{},
 	}
 	balancer, err := e.populateBalancerPool()
 	if err != nil {
@@ -103,51 +104,60 @@ func (e *Engine) populateBalancerPool() (map[int]*balance.Balance, error) {
 			return nil, err
 		}
 
-		// Add the users to team balance map.
+		// Add the users to team balancer pool.
 		for _, user := range users {
 			if _, ok := balancer[team.ID]; !ok {
 				balancer[team.ID] = balance.NewBalance()
 			}
-			// FIXME: Balancer only supports strings.
+			// FIXME: Balancer only supports strings, using a map to store DB ids.
 			balancer[team.ID].Add(user.UUID, roundRobinDefaultWeight)
-			e.userIDs[user.UUID] = user.ID
+			e.userIDMap[user.UUID] = user.ID
 		}
 	}
 	return balancer, nil
 }
 
-// assignConversations fetches unassigned conversations and assigns them.
+// assignConversations fetches unassigned conversations and assigns them to users.
 func (e *Engine) assignConversations() error {
-	unassignedConversations, err := e.convMgr.GetUnassigned()
+	unassigned, err := e.convMgr.GetUnassigned()
 	if err != nil {
 		return err
 	}
 
-	if len(unassignedConversations) > 0 {
-		e.lo.Debug("found unassigned conversations", "count", len(unassignedConversations))
+	if len(unassigned) > 0 {
+		e.lo.Debug("found unassigned conversations", "count", len(unassigned))
 	}
 
-	for _, conversation := range unassignedConversations {
-		if e.strategy == strategyRoundRobin {
-			userUUID := e.getUser(conversation)
-			if userUUID == "" {
-				e.lo.Warn("user uuid not found for round robin assignment", "team_id", conversation.AssignedTeamID.Int)
-				continue
-			}
+	// Get system user, all actions here are done on behalf of the system user.
+	systemUser, err := e.userMgr.GetUser(0, systeminfo.SystemUserUUID)
+	if err != nil {
+		return err
+	}
 
-			// Update assignee and record the assigne change message.
-			if err := e.convMgr.UpdateUserAssignee(conversation.UUID, []byte(userUUID)); err != nil {
-				continue
-			}
-
-			// Fixme: maybe move to messages?
-			e.hub.BroadcastConversationAssignment(e.userIDs[userUUID], conversation.UUID, conversation.AvatarURL.String, conversation.FirstName, conversation.LastName, conversation.LastMessage, conversation.InboxName, conversation.LastMessageAt.Time, 1)
-
-			e.msgMgr.RecordAssigneeUserChange(conversation.UUID, userUUID, systeminfo.SystemUserUUID)
-
-			// Send notification to the assignee.
-			e.notifier.SendAssignedConversationNotification([]string{userUUID}, conversation.UUID)
+	for _, conversation := range unassigned {
+		// Get user uuid from the pool.
+		userUUID := e.getUser(conversation)
+		if userUUID == "" {
+			e.lo.Warn("user uuid not found for round robin assignment", "team_id", conversation.AssignedTeamID.Int)
+			continue
 		}
+
+		// Get user ID from the map.
+		// FIXME: Balance only supports strings.
+		userID, ok := e.userIDMap[userUUID]
+		if !ok {
+			e.lo.Warn("user id not found for user uuid", "uuid", userUUID, "team_id", conversation.AssignedTeamID.Int)
+			continue
+		}
+
+		// Update assignee and record the assigne change message.
+		if err := e.convMgr.UpdateUserAssignee(conversation.UUID, userID, systemUser); err != nil {
+			continue
+		}
+
+		// Send notification to the assignee.
+		e.notifier.SendAssignedConversationNotification([]string{userUUID}, conversation.UUID)
+
 	}
 	return nil
 }

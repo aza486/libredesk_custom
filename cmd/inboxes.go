@@ -6,6 +6,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/envelope"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
@@ -51,12 +52,17 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		inbox = imodels.Inbox{}
-		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
+	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	if err != nil || id == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+			"Invalid SIP `id`.", nil, envelope.InputError)
+	}
+
 	if err := r.Decode(&inbox, "json"); err != nil {
 		return r.SendErrorEnvelope(http.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
-	err := app.inboxManager.Update(id, inbox)
+	err = app.inboxManager.Update(id, inbox)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
 	}

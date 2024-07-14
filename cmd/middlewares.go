@@ -3,16 +3,18 @@ package main
 import (
 	"net/http"
 
+	"github.com/abhinavxd/artemis/internal/envelope"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
-	"github.com/vividvilla/simplesessions"
 	"github.com/zerodha/fastglue"
+	"github.com/zerodha/simplesessions/v3"
 )
 
 func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
-			sess, err = app.sessManager.Acquire(r, r, nil)
+			sess, err = app.sessManager.Acquire(r.RequestCtx, r, r)
 		)
 
 		if err != nil {
@@ -20,47 +22,47 @@ func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastReq
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
 		}
 
-		// User email in session?
-		email, err := sess.String(sess.Get("user_email"))
-		if err != nil && (err != simplesessions.ErrInvalidSession && err != simplesessions.ErrFieldNotFound) {
-			app.lo.Error("error fetching session session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
+		// User details in session?
+		sessVals, err := sess.GetMulti("id", "email", "first_name", "last_name", "team_id")
+		if err != nil && (err != simplesessions.ErrInvalidSession) {
+			app.lo.Error("error fetching session", "error", err)
+			return sendErrorEnvelope(r,
+				envelope.NewError(envelope.GeneralError, "Error fetching session.", nil))
 		}
 
-		// User ID in session?
-		userID, err := sess.Int(sess.Get("user_id"))
-		if err != nil && (err != simplesessions.ErrInvalidSession && err != simplesessions.ErrFieldNotFound) {
-			app.lo.Error("error fetching session session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
-		}
+		var (
+			userID, _    = sess.Int(sessVals["id"], nil)
+			email, _     = sess.String(sessVals["email"], nil)
+			firstName, _ = sess.String(sessVals["first_name"], nil)
+			lastName, _  = sess.String(sessVals["last_name"], nil)
+			teamID, _    = sess.Int(sessVals["team_id"], nil)
+		)
 
-		userUUID, err := sess.String(sess.Get("user_uuid"))
-		if err != nil && (err != simplesessions.ErrInvalidSession && err != simplesessions.ErrFieldNotFound) {
-			app.lo.Error("error fetching session session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
-		}
-
-		if email != "" && userID > 0 {
-			// Set both in request context so they can be accessed in the handlers.
-			r.RequestCtx.SetUserValue("user_email", email)
-			r.RequestCtx.SetUserValue("user_id", userID)
-			r.RequestCtx.SetUserValue("user_uuid", userUUID)
+		if userID > 0 {
+			// Set user in the request context.
+			r.RequestCtx.SetUserValue("user", umodels.User{
+				ID:        userID,
+				Email:     email,
+				FirstName: firstName,
+				LastName:  lastName,
+				TeamID:    teamID,
+			})
 
 			// Check permission.
 			for _, perm := range perms {
-				hasPerm, err := app.rbac.HasPermission(userID, perm)
+				hasPerm, err := app.auth.HasPermission(userID, perm)
 				if err != nil || !hasPerm {
-					return r.SendErrorEnvelope(http.StatusUnauthorized, "You don't have permissions to access this page.", nil, "PermissionException")
+					return r.SendErrorEnvelope(http.StatusUnauthorized, "You don't have permission to access this page.", nil, envelope.PermissionError)
 				}
 			}
 
 			return handler(r)
 		}
 
-		if err := sess.Clear(); err != nil {
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
+		if err := sess.Destroy(); err != nil {
+			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, envelope.PermissionError)
 		}
-		return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
+		return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, envelope.PermissionError)
 	}
 }
 
@@ -85,18 +87,18 @@ func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 
 // getAuthUserFromSess retrives authUser from request context set by the sess() middleware.
 func getAuthUserFromSess(r *fastglue.Request) (int, bool) {
-	userID, ok := r.RequestCtx.UserValue("user_id").(int)
-	if userID == 0 || !ok {
-		return userID, false
+	user, ok := r.RequestCtx.UserValue("user").(umodels.User)
+	if user.ID == 0 || !ok {
+		return user.ID, false
 	}
-	return userID, true
+	return user.ID, true
 }
 
 func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
-			sess, err = app.sessManager.Acquire(r, r, nil)
+			sess, err = app.sessManager.Acquire(r.RequestCtx, r, r)
 		)
 
 		if err != nil {
@@ -104,31 +106,33 @@ func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
 		}
 
-		// User email in session?
-		email, err := sess.String(sess.Get("user_email"))
-		if err != nil && (err != simplesessions.ErrInvalidSession && err != simplesessions.ErrFieldNotFound) {
-			app.lo.Error("error fetching session session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
+		// User details in session?
+		sessVals, err := sess.GetMulti("id", "email", "first_name", "last_name", "team_id")
+		if err != nil && (err != simplesessions.ErrInvalidSession) {
+			app.lo.Error("error fetching session", "error", err)
+			return sendErrorEnvelope(r,
+				envelope.NewError(envelope.GeneralError, "Error fetching session.", nil))
 		}
 
-		// User ID in session?
-		userID, err := sess.Int(sess.Get("user_id"))
-		if err != nil && (err != simplesessions.ErrInvalidSession && err != simplesessions.ErrFieldNotFound) {
-			app.lo.Error("error fetching session session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
-		}
+		var (
+			userID, _    = sess.Int(sessVals["id"], nil)
+			email, _     = sess.String(sessVals["email"], nil)
+			firstName, _ = sess.String(sessVals["first_name"], nil)
+			lastName, _  = sess.String(sessVals["last_name"], nil)
+			teamID, _    = sess.Int(sessVals["team_id"], nil)
+		)
 
-		userUUID, err := sess.String(sess.Get("user_uuid"))
-		if err != nil && (err != simplesessions.ErrInvalidSession && err != simplesessions.ErrFieldNotFound) {
-			app.lo.Error("error fetching session session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, "PermissionException")
-		}
-
-		if email != "" && userID > 0 {
+		if userID > 0 {
 			// Set both in request context so they can be accessed in the handlers.
-			r.RequestCtx.SetUserValue("user_email", email)
-			r.RequestCtx.SetUserValue("user_id", userID)
-			r.RequestCtx.SetUserValue("user_uuid", userUUID)
+			// Set user in the request context.
+			r.RequestCtx.SetUserValue("user", umodels.User{
+				ID:        userID,
+				Email:     email,
+				FirstName: firstName,
+				LastName:  lastName,
+				TeamID:    teamID,
+			})
+
 		}
 
 		return handler(r)

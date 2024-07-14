@@ -60,13 +60,3 @@ func handleFileUpload(r *fastglue.Request) error {
 		"size":         srcFileSize,
 	})
 }
-
-func handleViewFile(r *fastglue.Request) error {
-	var (
-		app  = r.Context.(*App)
-		uuid = r.RequestCtx.UserValue("file_uuid").(string)
-	)
-	url := app.uploadManager.Store.GetURL(uuid)
-	r.RequestCtx.Response.Header.Set("Location", url)
-	return r.Redirect(url, http.StatusFound, nil, "")
-}

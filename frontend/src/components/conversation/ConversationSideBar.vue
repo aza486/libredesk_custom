@@ -8,7 +8,7 @@
           {{ conversationStore.conversation.data.first_name.toUpperCase().substring(0, 2) }}
         </AvatarFallback>
       </Avatar>
-      <h4 class="text-l ">
+      <h4 class="mt-3">
         {{ conversationStore.conversation.data.first_name + ' ' +
           conversationStore.conversation.data.last_name }}
       </h4>
@@ -21,6 +21,7 @@
         {{ conversationStore.conversation.data.phone_number }}
       </p>
     </div>
+
     <Accordion type="single" collapsible class="border-t mt-4" :default-value="actionAccordion.title">
       <AccordionItem :value="actionAccordion.title">
         <AccordionTrigger>
@@ -36,33 +37,37 @@
               <PopoverTrigger as-child>
                 <Button variant="outline" role="combobox" :aria-expanded="agentSelectDropdownOpen"
                   class="w-full justify-between">
-                  {{ conversationStore.conversation.data.assigned_user_uuid
-                    ? agents.find((agent) => agent.uuid ===
-                      conversationStore.conversation.data.assigned_user_uuid)?.first_name + ' ' + agents.find((agent) =>
-                        agent.uuid === conversationStore.conversation.data.assigned_user_uuid)?.last_name
-                    : "Select agent..." }}
-
+                  {{ conversationStore.conversation.data.assigned_user_id 
+                      ? (() => {
+                          console.log(' ->', conversationStore.conversation.data.assigned_user_id , 'agents ', agents)
+                          const agent = agents.find(agent => agent.id === conversationStore.conversation.data.assigned_user_id);
+                          console.log('Foud agent ', agent)
+                          return agent ? `${agent.first_name} ${agent.last_name}` : "Select agent...";
+                        })()
+                      : "Select agent..."
+                  }}
                   <CaretSortIcon class="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent class="p-0 PopoverContent">
-                <Command @update:modelValue="handleAssignedAgentChange">
+                <Command @update:modelValue="handleAssignedUserChange">
                   <CommandInput class="h-9" placeholder="Search agent..." />
                   <CommandEmpty>No agent found.</CommandEmpty>
                   <CommandList>
                     <CommandGroup>
-                      <CommandItem v-for="agent in agents" :key="agent.uuid"
-                        :value="agent.uuid + ':' + agent.first_name + agent.last_name" @select="(ev) => {
+                      <CommandItem v-for="agent in agents" :key="agent.id"
+                        :value="agent.id + ':' + agent.first_name + ' ' + agent.last_name" @select="(ev) => {
                           if (typeof ev.detail.value === 'string') {
-                            const uuid = ev.detail.value.split(':')[0]
-                            conversationStore.conversation.data.assigned_user_uuid = uuid;
+                            const id = ev.detail.value.split(':')[0]
+                            console.log('setting id ', id)
+                            conversationStore.conversation.data.assigned_user_id = Number(id)
                           }
                           agentSelectDropdownOpen = false
                         }">
                         {{ agent.first_name + ' ' + agent.last_name }}
                         <CheckIcon :class="cn(
                           'ml-auto h-4 w-4',
-                          conversationStore.conversation.data.assigned_user_uuid === agent.uuid ? 'opacity-100' : 'opacity-0',
+                          conversationStore.conversation.data.assigned_user_id === agent.id ? 'opacity-100' : 'opacity-0',
                         )" />
                       </CommandItem>
                     </CommandGroup>
@@ -79,9 +84,9 @@
               <PopoverTrigger as-child>
                 <Button variant="outline" role="combobox" :aria-expanded="teamSelectDropdownOpen"
                   class="w-full justify-between">
-                  {{ conversationStore.conversation.data.assigned_team_uuid
-                    ? teams.find((team) => team.uuid ===
-                      conversationStore.conversation.data.assigned_team_uuid)?.name
+                  {{ conversationStore.conversation.data.assigned_team_id
+                    ? teams.find((team) => team.id ===
+                      conversationStore.conversation.data.assigned_team_id)?.name
                     : "Select team..." }}
                   <CaretSortIcon class="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -92,17 +97,17 @@
                   <CommandEmpty>No team found.</CommandEmpty>
                   <CommandList>
                     <CommandGroup>
-                      <CommandItem v-for="team in teams" :key="team.uuid" :value="team.uuid + ':' + team.name" @select="(ev) => {
+                      <CommandItem v-for="team in teams" :key="team.id" :value="team.id + ':' + team.name" @select="(ev) => {
                         if (ev.detail.value) {
-                          const uuid = ev.detail.value.split(':')[0]
-                          conversationStore.conversation.data.assigned_team_uuid = uuid;
+                          const id = ev.detail.value.split(':')[0]
+                          conversationStore.conversation.data.assigned_team_id = Number(id)
                         }
                         teamSelectDropdownOpen = false
                       }">
                         {{ team.name }}
                         <CheckIcon :class="cn(
                           'ml-auto h-4 w-4',
-                          conversationStore.conversation.data.assigned_team_uuid === team.uuid ? 'opacity-100' : 'opacity-0',
+                          conversationStore.conversation.data.assigned_team_id === team.id ? 'opacity-100' : 'opacity-0',
                         )" />
                       </CommandItem>
                     </CommandGroup>
@@ -114,25 +119,44 @@
           <!-- Team assign end -->
 
           <!-- Priority  -->
-          <Select v-model="conversationStore.conversation.data.priority" @update:modelValue="handlePriorityChange">
-            <SelectTrigger class="mb-3">
-              <SelectValue placeholder="Select priortiy..." class="font-medium" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Priority</SelectLabel>
-                <SelectItem value="Low">
-                  Low
-                </SelectItem>
-                <SelectItem value="Medium">
-                  Medium
-                </SelectItem>
-                <SelectItem value="High">
-                  High
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+
+          <div class="mb-3">
+            <Popover v-model:open="prioritySelectDropdownOpen">
+              <PopoverTrigger as-child>
+                <Button variant="outline" role="combobox" :aria-expanded="prioritySelectDropdownOpen"
+                  class="w-full justify-between">
+                  {{ conversationStore.conversation.data.priority
+                    ? priorities.find((priority) => priority ===
+                      conversationStore.conversation.data.priority)
+                    : "Select priority..." }}
+                  <CaretSortIcon class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="p-0 PopoverContent">
+                <Command @update:modelValue="handlePriorityChange">
+                  <CommandInput class="h-9" placeholder="Search priority..." />
+                  <CommandEmpty>No priority found.</CommandEmpty>
+                  <CommandList>
+                    <CommandGroup>
+                      <CommandItem v-for="priority in priorities" :key="priority" :value="priority" @select="(ev) => {
+                        if (ev.detail.value) {
+                          const p = ev.detail.value
+                          conversationStore.conversation.data.priority = p;
+                        }
+                        prioritySelectDropdownOpen = false
+                      }">
+                        {{ priority }}
+                        <CheckIcon :class="cn(
+                          'ml-auto h-4 w-4',
+                          conversationStore.conversation.data.priority === priority ? 'opacity-100' : 'opacity-0',
+                        )" />
+                      </CommandItem>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
           <!-- Priority end -->
 
           <!-- Tags -->
@@ -248,15 +272,6 @@ import { format } from 'date-fns'
 import api from '@/api';
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { CaretSortIcon, CheckIcon } from '@radix-icons/vue'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -270,14 +285,17 @@ import { ComboboxAnchor, ComboboxInput, ComboboxPortal, ComboboxRoot } from 'rad
 import { CommandEmpty, CommandGroup, CommandInput, Command, CommandItem, CommandList } from '@/components/ui/command'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { Mail, Phone } from "lucide-vue-next"
+import { useToast } from '@/components/ui/toast/use-toast'
+import { handleHTTPError } from '@/utils/http'
 
-// Stores, states.
+const priorities = ["Low", "Medium", "High"]
+const { toast } = useToast()
 const conversationStore = useConversationStore();
-
 const agents = ref([])
 const teams = ref([])
 const agentSelectDropdownOpen = ref(false)
 const teamSelectDropdownOpen = ref(false)
+const prioritySelectDropdownOpen = ref(false)
 const tagsSelected = computed(() => conversationStore.conversation.data.tags);
 const tags = ref([])
 const tagIDMap = {}
@@ -292,18 +310,25 @@ const infoAccordion = {
   "title": "Information"
 }
 
-// Functions, methods.
 onMounted(() => {
   api.getUsers().then((resp) => {
     agents.value = resp.data.data;
   }).catch(error => {
-    console.log(error)
+    toast({
+      title: 'Could not fetch users',
+      variant: 'destructive',
+      description: handleHTTPError(error).message,
+    })
   })
 
   api.getTeams().then((resp) => {
     teams.value = resp.data.data;
   }).catch(error => {
-    console.log(error)
+    toast({
+      title: 'Could not fetch teams',
+      variant: 'destructive',
+      description: handleHTTPError(error).message,
+    })
   })
 
   api.getTags().then(async (resp) => {
@@ -315,17 +340,23 @@ onMounted(() => {
       })
       tagIDMap[item.name] = item.id
     })
+  }).catch(error => {
+    toast({
+      title: 'Could not fetch tags',
+      variant: 'destructive',
+      description: handleHTTPError(error).message,
+    })
   })
 })
 
-const handleAssignedAgentChange = (v) => {
+const handleAssignedUserChange = (v) => {
   conversationStore.updateAssignee("user", {
-    "assignee_uuid": v.split(":")[0]
+    "assignee_id": v.split(":")[0]
   })
 }
 const handleAssignedTeamChange = (v) => {
   conversationStore.updateAssignee("team", {
-    "assignee_uuid": v.split(":")[0]
+    "assignee_id": v.split(":")[0]
   })
 }
 
@@ -345,5 +376,3 @@ const handleUpsertTags = () => {
 }
 
 </script>
-
-<style></style>

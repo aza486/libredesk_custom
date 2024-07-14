@@ -10,6 +10,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -23,7 +24,7 @@ type Engine struct {
 	q                   queries
 	lo                  *logf.Logger
 	conversationStore   ConversationStore
-	messageStore        MessageStore
+	systemUser          umodels.User
 	rules               []models.Rule
 	newConversationQ    chan string
 	updateConversationQ chan string
@@ -37,22 +38,21 @@ type Opts struct {
 type ConversationStore interface {
 	Get(uuid string) (cmodels.Conversation, error)
 	GetRecentConversations(t time.Time) ([]cmodels.Conversation, error)
-	UpdateTeamAssignee(uuid string, assigneeUUID []byte) error
-	UpdateUserAssignee(uuid string, assigneeUUID []byte) error
-	UpdateStatus(uuid string, status []byte) error
-	UpdatePriority(uuid string, priority []byte) error
+	UpdateTeamAssignee(uuid string, teamID int, actor umodels.User) error
+	UpdateUserAssignee(uuid string, assigneeID int, actor umodels.User) error
+	UpdateStatus(uuid string, status []byte, actor umodels.User) error
+	UpdatePriority(uuid string, priority []byte, actor umodels.User) error
 }
 
-type MessageStore interface {
-	RecordAssigneeTeamChange(convUUID, value, actorUUID string) error
-	RecordStatusChange(updatedValue, convUUID, actorUUID string) error
+type UserStore interface {
+	GetSystemUser() (umodels.User, error)
 }
 
 type queries struct {
 	GetRules *sqlx.Stmt `query:"get-rules"`
 }
 
-func New(opt Opts) (*Engine, error) {
+func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 	var (
 		q queries
 		e = &Engine{
@@ -73,12 +73,8 @@ func (e *Engine) ReloadRules() {
 	e.rules = e.queryRules()
 }
 
-func (e *Engine) SetMessageStore(messageStore MessageStore) {
-	e.messageStore = messageStore
-}
-
-func (e *Engine) SetConversationStore(conversationStore ConversationStore) {
-	e.conversationStore = conversationStore
+func (e *Engine) SetConversationStore(store ConversationStore) {
+	e.conversationStore = store
 }
 
 func (e *Engine) Serve(ctx context.Context) {

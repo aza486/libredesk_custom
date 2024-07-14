@@ -64,14 +64,15 @@ func (u *Manager) GetAll() ([]Team, error) {
 	return teams, nil
 }
 
-func (u *Manager) GetTeam(uuid string) (Team, error) {
+func (u *Manager) GetTeam(id int) (Team, error) {
 	var team Team
-	if err := u.q.GetTeam.Get(&team, uuid); err != nil {
+	if err := u.q.GetTeam.Get(&team, id); err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
+			u.lo.Error("team not found", "id", id, "error", err)
 			return team, nil
 		}
-		u.lo.Error("error fetching team from db", "uuid", uuid, "error", err)
-		return team, fmt.Errorf("error fetching team")
+		u.lo.Error("error fetching team", "id", id, "error", err)
+		return team, err
 	}
 	return team, nil
 }

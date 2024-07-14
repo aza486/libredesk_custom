@@ -34,7 +34,7 @@ const sidebarNavItems = [
         >
           <div class="flex flex-col space-y-1">
             <h4>{{ item.title }}</h4>
-            <p>{{ item.description }}</p>
+            <p class="text-muted-foreground text-sm">{{ item.description }}</p>
           </div>
         </Button>
       </template>

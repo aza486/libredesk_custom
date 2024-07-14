@@ -162,7 +162,7 @@ func (c *Hub) BroadcastConversationAssignment(userID int, conversationUUID strin
 	c.marshalAndPush(message, []int{userID})
 }
 
-func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID string, prop, val string) {
+func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop string, val string) {
 	userIDs, ok := c.ConversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
@@ -186,7 +186,7 @@ func (c *Hub) marshalAndPush(message models.Message, userIDs []int) {
 		return
 	}
 
-	fmt.Println("pushing msg", string(messageB), "type", message.Type, "to_user_ids", userIDs, "connected_userIds", len(c.clients))
+	fmt.Println("pushing ws msg", string(messageB), "type", message.Type, "to_user_ids", userIDs, "connected_userIds", len(c.clients))
 
 	c.PushMessage(PushMessage{
 		Data:  messageB,

@@ -7,7 +7,6 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/systeminfo"
 )
 
 func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
@@ -149,25 +148,29 @@ func (e *Engine) executeActions(conversation cmodels.Conversation, action models
 func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conversation) error {
 	switch action.Type {
 	case models.ActionAssignTeam:
-		if err := e.conversationStore.UpdateTeamAssignee(conversation.UUID, []byte(action.Action)); err != nil {
+		teamID, err := strconv.Atoi(action.Action)
+		if err != nil {
+			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
 			return err
 		}
-		if err := e.messageStore.RecordAssigneeTeamChange(conversation.UUID, action.Action, systeminfo.SystemUserUUID); err != nil {
+		if err := e.conversationStore.UpdateTeamAssignee(conversation.UUID, teamID, e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionAssignAgent:
-		if err := e.conversationStore.UpdateUserAssignee(conversation.UUID, []byte(action.Action)); err != nil {
+		agentID, err := strconv.Atoi(action.Action)
+		if err != nil {
+			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
 			return err
 		}
-		if err := e.messageStore.RecordStatusChange(action.Action, conversation.UUID, systeminfo.SystemUserUUID); err != nil {
+		if err := e.conversationStore.UpdateUserAssignee(conversation.UUID, agentID, e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetPriority:
-		if err := e.conversationStore.UpdatePriority(conversation.UUID, []byte(action.Action)); err != nil {
+		if err := e.conversationStore.UpdatePriority(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetStatus:
-		if err := e.conversationStore.UpdateStatus(conversation.UUID, []byte(action.Action)); err != nil {
+		if err := e.conversationStore.UpdateStatus(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
 			return err
 		}
 	default:

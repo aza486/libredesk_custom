@@ -1,15 +1,13 @@
 <template>
   <div v-if="showTable">
-    <div class="mb-2">
-      <h2
-        class="scroll-m-20 pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0"
-      >
-        Inboxes
-      </h2>
-      <p>Create and manage inboxes.</p>
-    </div>
-    <div class="flex justify-end mb-4">
-      <Button @click="navigateToAddInbox" size="sm"> New inbox </Button>
+    <div class="flex justify-between mb-5">
+      <div>
+        <h1>Inboxes</h1>
+        <p class="text-muted-foreground text-sm">Create and manage inboxes.</p>
+      </div>
+      <div class="flex justify-end mb-4">
+        <Button @click="navigateToAddInbox" size="sm"> New inbox </Button>
+      </div>
     </div>
     <div class="w-full">
       <DataTable :columns="columns" :data="data" />

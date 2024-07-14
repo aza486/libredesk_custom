@@ -22,6 +22,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/k3a/html2text"
@@ -135,7 +136,7 @@ func New(
 	}, nil
 }
 
-func (m *Manager) GetConvMessages(uuid string) ([]models.Message, error) {
+func (m *Manager) GetConversationMessages(uuid string) ([]models.Message, error) {
 	var messages []models.Message
 	if err := m.q.GetMessages.Select(&messages, uuid); err != nil {
 		m.lo.Error("fetching messages from DB", "conversation_uuid", uuid, "error", err)
@@ -159,6 +160,10 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 		return err
 	}
 	return nil
+}
+
+func (m *Manager) RetryMessage(uuid string) error {
+	return m.UpdateMessageStatus(uuid, StatusPending)
 }
 
 // RecordMessage inserts a message and attaches the attachments to the message.
@@ -275,7 +280,6 @@ func (m *Manager) DispatchWorker() {
 	}
 }
 
-
 func (m *Manager) GetToAddress(convID int, channel string) ([]string, error) {
 	var addr []string
 	if err := m.q.GetToAddress.Select(&addr, convID, channel); err != nil {
@@ -319,49 +323,44 @@ func (m *Manager) InsertWorker(ctx context.Context) {
 	}
 }
 
-func (m *Manager) RecordAssigneeUserChange(conversationUUID, assigneeUUID, actorUUID string) error {
+func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error {
 	// Self assign.
-	if assigneeUUID == actorUUID {
-		return m.RecordActivity(ActivitySelfAssign, assigneeUUID, conversationUUID, actorUUID)
+	if assigneeID == actor.ID {
+		return m.RecordActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
 	}
-	assignee, err := m.userMgr.GetUser(0, assigneeUUID)
-	if err != nil {
-		m.lo.Error("Error fetching user to record assignee change", "conversation_uuid", conversationUUID, "actor_uuid", actorUUID, "error", err)
-		return err
-	}
-	return m.RecordActivity(ActivityAssignedUserChange, assignee.FullName() /*new_value*/, conversationUUID, actorUUID)
-}
 
-func (m *Manager) RecordAssigneeTeamChange(conversationUUID, value, actorUUID string) error {
-	team, err := m.teamMgr.GetTeam(value)
+	// Assignment to other user.
+	assignee, err := m.userMgr.GetUser(assigneeID, "")
 	if err != nil {
 		return err
 	}
-	return m.RecordActivity(ActivityAssignedTeamChange, team.Name /*new_value*/, conversationUUID, actorUUID)
+	return m.RecordActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
 }
 
-func (m *Manager) RecordPriorityChange(updatedValue, conversationUUID, actorUUID string) error {
-	return m.RecordActivity(ActivityPriorityChange, updatedValue, conversationUUID, actorUUID)
-}
-
-func (m *Manager) RecordStatusChange(updatedValue, conversationUUID, actorUUID string) error {
-	return m.RecordActivity(ActivityStatusChange, updatedValue, conversationUUID, actorUUID)
-}
-
-func (m *Manager) RecordActivity(activityType, newValue, conversationUUID, actorUUID string) error {
-	var actor, err = m.userMgr.GetUser(0, actorUUID)
-
+func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error {
+	team, err := m.teamMgr.GetTeam(teamID)
 	if err != nil {
 		return err
 	}
+	return m.RecordActivity(ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
+}
 
-	var content = m.getActivityContent(activityType, newValue, actor.FullName())
-	if content == "" {
-		m.lo.Error("Error invalid activity for recording activity", "activity", activityType)
-		return errors.New("invalid activity type for recording activity")
+func (m *Manager) RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error {
+	return m.RecordActivity(ActivityPriorityChange, conversationUUID, priority, actor)
+}
+
+func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umodels.User) error {
+	return m.RecordActivity(ActivityStatusChange, conversationUUID, status, actor)
+}
+
+func (m *Manager) RecordActivity(activityType, conversationUUID, newValue string, actor umodels.User) error {
+	content, err := m.getActivityContent(activityType, newValue, actor.FullName())
+	if err != nil {
+		m.lo.Error("error could not generate activity content", "error", err)
+		return err
 	}
 
-	msg := models.Message{
+	message := models.Message{
 		Type:             TypeActivity,
 		Status:           StatusSent,
 		Content:          content,
@@ -373,13 +372,19 @@ func (m *Manager) RecordActivity(activityType, newValue, conversationUUID, actor
 		Meta:             "{}",
 	}
 
-	m.RecordMessage(&msg)
-	m.BroadcastNewConversationMessage(msg, content)
-	m.conversationMgr.UpdateLastMessage(0, conversationUUID, content, msg.CreatedAt)
+	// Record message in DB.
+	m.RecordMessage(&message)
+
+	// Broadcast the new message.
+	m.BroadcastNewConversationMessage(message, content)
+
+	// Update the last message in conversation meta.
+	m.conversationMgr.UpdateLastMessage(0, conversationUUID, content, message.CreatedAt)
+
 	return nil
 }
 
-func (m *Manager) getActivityContent(activityType, newValue, actorName string) string {
+func (m *Manager) getActivityContent(activityType, newValue, actorName string) (string, error) {
 	var content = ""
 	switch activityType {
 	case ActivityAssignedUserChange:
@@ -394,8 +399,10 @@ func (m *Manager) getActivityContent(activityType, newValue, actorName string) s
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
 	case ActivityTagChange:
 		content = fmt.Sprintf("%s added tags %s", actorName, newValue)
+	default:
+		return "", fmt.Errorf("invalid activity type %s", activityType)
 	}
-	return content
+	return content, nil
 }
 
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {

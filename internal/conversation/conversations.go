@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/stringutil"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
@@ -47,7 +49,7 @@ var (
 		PriorityHigh,
 	}
 
-	preDefinedFilters = map[string]string{
+	filters = map[string]string{
 		"status_open":       " c.status = 'Open'",
 		"status_processing": " c.status = 'Processing'",
 		"status_spam":       " c.status = 'Spam'",
@@ -55,15 +57,34 @@ var (
 		"status_all":        " 1=1  ",
 	}
 
+	validOrderBy = []string{"created_at", "priority", "status", "last_message_at"}
+	validOrder   = []string{"ASC", "DESC"}
+
 	assigneeTypeTeam = "team"
 	assigneeTypeUser = "user"
+
+	allConversations      = "all"
+	assignedConversations = "assigned"
+	teamConversations     = "unassigned"
 )
+
+const (
+	maxConversationsPageSize = 50
+)
+
+type MessageStore interface {
+	RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error
+	RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error
+	RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error
+	RecordStatusChange(status, conversationUUID string, actor umodels.User) error
+}
 
 type Manager struct {
 	lo                  *logf.Logger
 	db                  *sqlx.DB
 	hub                 *ws.Hub
 	i18n                *i18n.I18n
+	messageStore        MessageStore
 	q                   queries
 	ReferenceNumPattern string
 }
@@ -116,6 +137,10 @@ func New(hub *ws.Hub, i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	return c, nil
 }
 
+func (c *Manager) SetMessageStore(store MessageStore) {
+	c.messageStore = store
+}
+
 func (c *Manager) Create(contactID int, inboxID int, meta []byte) (int, string, error) {
 	var (
 		id        int
@@ -134,10 +159,10 @@ func (c *Manager) Get(uuid string) (models.Conversation, error) {
 	if err := c.q.GetConversation.Get(&conversation, uuid); err != nil {
 		if err == sql.ErrNoRows {
 			c.lo.Error("conversation not found", "uuid", uuid)
-			return conversation, fmt.Errorf("conversation not found")
+			return conversation, err
 		}
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return conversation, fmt.Errorf("error fetching conversation")
+		c.lo.Error("error fetching conversation", "error", err)
+		return conversation, err
 	}
 	return conversation, nil
 }
@@ -147,27 +172,29 @@ func (c *Manager) GetRecentConversations(time time.Time) ([]models.Conversation,
 	if err := c.q.GetRecentConversations.Select(&conversations, time); err != nil {
 		if err == sql.ErrNoRows {
 			c.lo.Error("conversations not found", "created_after", time)
-			return conversations, fmt.Errorf("conversation not found")
+			return conversations, err
 		}
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return conversations, fmt.Errorf("error fetching conversation")
+		c.lo.Error("error fetching conversation", "error", err)
+		return conversations, err
 	}
 	return conversations, nil
 }
 
 func (c *Manager) UpdateAssigneeLastSeen(uuid string) error {
 	if _, err := c.q.UpdateAssigneeLastSeen.Exec(uuid); err != nil {
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return fmt.Errorf("error updating conversation last seen: %w", err)
+		c.lo.Error("error updating conversation", "error", err)
+		return err
 	}
+	// Broadcast the property update.
+	c.hub.BroadcastConversationPropertyUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.DateTime))
 	return nil
 }
 
 func (c *Manager) GetParticipants(uuid string) ([]models.ConversationParticipant, error) {
 	conv := make([]models.ConversationParticipant, 0)
 	if err := c.q.GetConversationParticipants.Select(&conv, uuid); err != nil {
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return conv, fmt.Errorf("error fetching conversation")
+		c.lo.Error("error fetching conversation", "error", err)
+		return conv, err
 	}
 	return conv, nil
 }
@@ -258,54 +285,33 @@ func (c *Manager) GetInboxID(uuid string) (int, error) {
 	return id, nil
 }
 
-func (c *Manager) GetConversations(userID int, typ, order, orderBy, predefinedFilter string, page, pageSize int) ([]models.Conversation, error) {
-	var (
-		conversations []models.Conversation
-		qArgs         []interface{}
-		cond          string
-		validOrderBy  = map[string]bool{"created_at": true, "priority": true, "status": true, "last_message_at": true}
-		validOrder    = []string{"ASC", "DESC"}
-	)
+func (c *Manager) GetAll(order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(0, allConversations, order, orderBy, filter, page, pageSize)
+}
 
-	switch typ {
-	case "assigned":
-		cond = "AND c.assigned_user_id = $1"
-		qArgs = append(qArgs, userID)
-	case "unassigned":
-		cond = "AND c.assigned_user_id IS NULL AND c.assigned_team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)"
-		qArgs = append(qArgs, userID)
-	case "all":
-	default:
-		return conversations, errors.New("invalid type")
+func (c *Manager) GetAssigned(userID int, order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(userID, assignedConversations, order, orderBy, filter, page, pageSize)
+}
+
+func (c *Manager) GetTeamConversations(userID int, order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(userID, teamConversations, order, orderBy, filter, page, pageSize)
+}
+
+func (c *Manager) GetConversations(userID int, typ, order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
+	var conversations = make([]models.Conversation, 0)
+
+	if orderBy == "" {
+		orderBy = "last_message_at"
 	}
-
-	if filterClause, ok := preDefinedFilters[predefinedFilter]; ok {
-		cond += " AND " + filterClause
+	if order == "" {
+		order = "DESC"
 	}
 
-	// Ensure orderBy is valid.
-	orderByClause := ""
-	if _, ok := validOrderBy[orderBy]; ok {
-		orderByClause = fmt.Sprintf(" ORDER BY %s", orderBy)
-	} else {
-		orderByClause = " ORDER BY last_message_at"
+	sqlStr, qArgs, err := c.generateConversationsQuery(userID, c.q.GetConversations, typ, order, orderBy, filter, page, pageSize)
+	if err != nil {
+		c.lo.Error("error generating conversations query", "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
-
-	if slices.Contains(validOrder, order) {
-		orderByClause += " " + order
-	} else {
-		orderByClause += " DESC "
-	}
-
-	// Calculate offset based on page number and page size.
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 || pageSize > 20 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-	qArgs = append(qArgs, pageSize, offset)
 
 	tx, err := c.db.BeginTxx(context.Background(), nil)
 	defer tx.Rollback()
@@ -314,62 +320,34 @@ func (c *Manager) GetConversations(userID int, typ, order, orderBy, predefinedFi
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
-	// Include LIMIT, OFFSET, and ORDER BY in the SQL query.
-	sqlQuery := fmt.Sprintf("%s %s LIMIT $%d OFFSET $%d", fmt.Sprintf(c.q.GetConversations, cond), orderByClause, len(qArgs)-1, len(qArgs))
-	if err := tx.Select(&conversations, sqlQuery, qArgs...); err != nil {
+	if err := tx.Select(&conversations, sqlStr, qArgs...); err != nil {
 		c.lo.Error("error fetching conversations", "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
-
 	return conversations, nil
 }
 
-func (c *Manager) GetConversationUUIDs(userID, page, pageSize int, typ, predefinedFilter string) ([]string, error) {
-	var (
-		conversationUUIDs []string
-		qArgs             []interface{}
-		cond              string
-	)
-	switch typ {
-	case "assigned":
-		cond = "AND c.assigned_user_id = $1"
-		qArgs = append(qArgs, userID)
-	case "unassigned":
-		cond = "AND c.assigned_user_id IS NULL AND c.assigned_team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)"
-		qArgs = append(qArgs, userID)
-	case "all":
-	default:
-		return conversationUUIDs, errors.New("invalid type")
-	}
+func (c *Manager) GetConversationUUIDs(userID, page, pageSize int, typ, filter string) ([]string, error) {
+	var ids = make([]string, 0)
 
-	if filterClause, ok := preDefinedFilters[predefinedFilter]; ok {
-		cond += " AND " + filterClause
+	sqlStr, qArgs, err := c.generateConversationsQuery(userID, c.q.GetConversationsUUIDs, typ, "", "", filter, page, pageSize)
+	if err != nil {
+		c.lo.Error("error generating conversations query", "error", err)
+		return ids, err
 	}
 
 	tx, err := c.db.BeginTxx(context.Background(), nil)
 	defer tx.Rollback()
 	if err != nil {
-		c.lo.Error("Error preparing get conversation ids query", "error", err)
-		return conversationUUIDs, err
+		c.lo.Error("error preparing get conversation ids query", "error", err)
+		return ids, err
 	}
 
-	// Calculate offset based on page number and page size.
-	if page <= 0 {
-		page = 1
+	if err := tx.Select(&ids, sqlStr, qArgs...); err != nil {
+		c.lo.Error("error fetching conversation uuids", "error", err)
+		return ids, err
 	}
-	if pageSize <= 0 || pageSize > 20 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-	qArgs = append(qArgs, pageSize, offset)
-
-	// Include LIMIT, OFFSET, and ORDER BY in the SQL query.
-	sqlQuery := fmt.Sprintf("%s LIMIT $%d OFFSET $%d", fmt.Sprintf(c.q.GetConversationsUUIDs, cond), len(qArgs)-1, len(qArgs))
-	if err := tx.Select(&conversationUUIDs, sqlQuery, qArgs...); err != nil {
-		c.lo.Error("Error fetching conversations", "error", err)
-		return conversationUUIDs, err
-	}
-	return conversationUUIDs, nil
+	return ids, nil
 }
 
 func (c *Manager) GetAssignedConversations(userID int) ([]models.Conversation, error) {
@@ -381,56 +359,77 @@ func (c *Manager) GetAssignedConversations(userID int) ([]models.Conversation, e
 	return conversations, nil
 }
 
-func (c *Manager) UpdateTeamAssignee(uuid string, assigneeUUID []byte) error {
-	return c.UpdateAssignee(uuid, assigneeUUID, assigneeTypeTeam)
+func (c *Manager) UpdateUserAssignee(uuid string, assigneeID int, actor umodels.User) error {
+	if err := c.UpdateAssignee(uuid, assigneeID, assigneeTypeUser); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
+	}
+	if err := c.messageStore.RecordAssigneeUserChange(uuid, assigneeID, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
+	}
+	return nil
 }
 
-func (c *Manager) UpdateUserAssignee(uuid string, assigneeUUID []byte) error {
-	return c.UpdateAssignee(uuid, assigneeUUID, assigneeTypeUser)
+func (c *Manager) UpdateTeamAssignee(uuid string, teamID int, actor umodels.User) error {
+	if err := c.UpdateAssignee(uuid, teamID, assigneeTypeTeam); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
+	}
+	if err := c.messageStore.RecordAssigneeTeamChange(uuid, teamID, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
+	}
+	return nil
 }
 
-func (c *Manager) UpdateAssignee(uuid string, assigneeUUID []byte, assigneeType string) error {
+func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType string) error {
 	switch assigneeType {
 	case assigneeTypeUser:
-		if _, err := c.q.UpdateAssignedUser.Exec(uuid, assigneeUUID); err != nil {
-			c.lo.Error("updating conversation assignee", "error", err)
+		if _, err := c.q.UpdateAssignedUser.Exec(uuid, assigneeID); err != nil {
+			c.lo.Error("error updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_uuid", string(assigneeUUID))
+		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_uuid", strconv.Itoa(assigneeID))
 	case assigneeTypeTeam:
-		if _, err := c.q.UpdateAssignedTeam.Exec(uuid, assigneeUUID); err != nil {
-			c.lo.Error("updating conversation assignee", "error", err)
+		if _, err := c.q.UpdateAssignedTeam.Exec(uuid, assigneeID); err != nil {
+			c.lo.Error("error updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_uuid", string(assigneeUUID))
+		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_uuid", strconv.Itoa(assigneeID))
 	default:
 		return errors.New("invalid assignee type")
 	}
 	return nil
 }
 
-func (c *Manager) UpdatePriority(uuid string, priority []byte) error {
+func (c *Manager) UpdatePriority(uuid string, priority []byte, actor umodels.User) error {
 	var priorityStr = string(priority)
-	if !slices.Contains(priorities, string(priorityStr)) {
-		return fmt.Errorf("invalid `priority` value %s", priorityStr)
+	if !slices.Contains(priorities, priorityStr) {
+		return envelope.NewError(envelope.GeneralError, "Invalid `priority` value", nil)
 	}
 	if _, err := c.q.UpdatePriority.Exec(uuid, priority); err != nil {
-		c.lo.Error("updating conversation priority", "error", err)
-		return fmt.Errorf("error updating priority")
+		c.lo.Error("error updating conversation priority", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating priority", nil)
 	}
-	c.hub.BroadcastConversationPropertyUpdate(uuid, "priority", priorityStr)
+
+	if err := c.messageStore.RecordPriorityChange(priorityStr, uuid, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error recording priority change", nil)
+	}
+
 	return nil
 }
 
-func (c *Manager) UpdateStatus(uuid string, status []byte) error {
-	if !slices.Contains(statuses, string(status)) {
-		return fmt.Errorf("invalid `status` value %s", status)
+func (c *Manager) UpdateStatus(uuid string, status []byte, actor umodels.User) error {
+	var statusStr = string(status)
+	if !slices.Contains(statuses, statusStr) {
+		return envelope.NewError(envelope.GeneralError, "Invalid `status` value", nil)
 	}
 	if _, err := c.q.UpdateStatus.Exec(uuid, status); err != nil {
-		c.lo.Error("updating conversation status", "error", err)
-		return fmt.Errorf("error updating status")
+		c.lo.Error("error updating conversation status", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)
 	}
-	c.hub.BroadcastConversationPropertyUpdate(uuid, "status", string(status))
+
+	if err := c.messageStore.RecordStatusChange(statusStr, uuid, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
+	}
+
 	return nil
 }
 
@@ -458,19 +457,69 @@ func (c *Manager) GetNewConversationsStats() ([]models.NewConversationsStats, er
 	return stats, nil
 }
 
-func (t *Manager) AddTags(convUUID string, tagIDs []int) error {
-	// Delete tags that have been removed.
-	if _, err := t.q.DeleteTags.Exec(convUUID, pq.Array(tagIDs)); err != nil {
+func (t *Manager) UpsertTags(uuid string, tagIDs []int) error {
+	// Delete tags that have been removed & add new tags.
+	if _, err := t.q.DeleteTags.Exec(uuid, pq.Array(tagIDs)); err != nil {
 		t.lo.Error("error deleting conversation tags", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error adding tags", nil)
 	}
 
-	// Add new tags.
 	for _, tagID := range tagIDs {
-		if _, err := t.q.AddTag.Exec(convUUID, tagID); err != nil {
+		if _, err := t.q.AddTag.Exec(uuid, tagID); err != nil {
 			t.lo.Error("error adding tags to conversation", "error", err)
+			return envelope.NewError(envelope.GeneralError, "Error adding tags", nil)
 		}
 	}
 	return nil
+}
+
+func (c *Manager) generateConversationsQuery(userID int, baseQuery, typ, order, orderBy, filter string, page, pageSize int) (string, []interface{}, error) {
+	var (
+		qArgs []interface{}
+		cond  string
+	)
+
+	// Set condition based on the type.
+	switch typ {
+	case assignedConversations:
+		cond = "AND c.assigned_user_id = $1"
+		qArgs = append(qArgs, userID)
+	case teamConversations:
+		cond = "AND c.assigned_user_id IS NULL AND c.assigned_team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)"
+		qArgs = append(qArgs, userID)
+	case allConversations:
+		// No conditions.
+	default:
+		return "", nil, errors.New("invalid type of conversation")
+	}
+
+	if filterClause, ok := filters[filter]; ok {
+		cond += " AND " + filterClause
+	}
+
+	// Ensure orderBy & order is valid.
+	var orderByClause = ""
+	if slices.Contains(validOrderBy, orderBy) {
+		orderByClause = fmt.Sprintf(" ORDER BY %s ", orderBy)
+	}
+	if orderByClause > "" && slices.Contains(validOrder, order) {
+		orderByClause += order
+	}
+
+	// Calculate offset based on page number and page size.
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > maxConversationsPageSize {
+		pageSize = maxConversationsPageSize
+	}
+	offset := (page - 1) * pageSize
+	qArgs = append(qArgs, pageSize, offset)
+
+	// Include LIMIT, OFFSET, and ORDER BY in the SQL query.
+	sqlQuery := fmt.Sprintf("%s %s LIMIT $%d OFFSET $%d", fmt.Sprintf(baseQuery, cond), orderByClause, len(qArgs)-1, len(qArgs))
+
+	return sqlQuery, qArgs, nil
 }
 
 func (c *Manager) generateRefNum(pattern string) (string, error) {

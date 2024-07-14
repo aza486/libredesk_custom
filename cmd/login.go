@@ -5,6 +5,7 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+// handleLogin logs in the user.
 func handleLogin(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
@@ -18,57 +19,40 @@ func handleLogin(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	sess, err := app.sessManager.Acquire(r, r, nil)
+	sess, err := app.sessManager.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		app.lo.Error("error acquiring session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
 
-	// Set email in the session.
-	if err := sess.Set("user_email", email); err != nil {
-		app.lo.Error("error setting session", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorSettingSession"), nil))
-	}
-
-	// Set user DB ID in the session.
-	if err := sess.Set("user_id", user.ID); err != nil {
-		app.lo.Error("error setting session", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorSettingSession"), nil))
-	}
-
-	// Set user UUID in the session.
-	if err := sess.Set("user_uuid", user.UUID); err != nil {
-		app.lo.Error("error setting session", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorSettingSession"), nil))
-	}
-
-	// Commit session.
-	if err := sess.Commit(); err != nil {
-		app.lo.Error("error comitting session", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorSettingSession"), nil))
-	}
-
-	// Fetch & return the user details.
-	user, err = app.userManager.GetUser(user.ID, "")
-	if err != nil {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorSettingSession"), nil))
+	// Set user details in the session.
+	if err := sess.SetMulti(map[string]interface{}{
+		"id":         user.ID,
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"team_id":    user.TeamID,
+	}); err != nil {
+		app.lo.Error("error setting values in session", "error", err)
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
 
 	return r.SendEnvelope(user)
 }
 
+// handleLogout logs out the user.
 func handleLogout(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	sess, err := app.sessManager.Acquire(r, r, nil)
+	sess, err := app.sessManager.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		app.lo.Error("error acquiring session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
-	if err := sess.Clear(); err != nil {
+	if err := sess.Destroy(); err != nil {
 		app.lo.Error("error clearing session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
-	return r.SendEnvelope("ok")
+	return r.SendEnvelope(true)
 }

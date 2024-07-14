@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/attachment/stores/s3"
@@ -18,7 +19,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
-	"github.com/abhinavxd/artemis/internal/initz"
 	"github.com/abhinavxd/artemis/internal/message"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
@@ -27,24 +27,40 @@ import (
 	"github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
-	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
+	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	flag "github.com/spf13/pflag"
-	"github.com/vividvilla/simplesessions"
-	sessredisstore "github.com/vividvilla/simplesessions/stores/goredis"
 	"github.com/zerodha/logf"
+	sessredisstore "github.com/zerodha/simplesessions/stores/redis/v3"
+	"github.com/zerodha/simplesessions/v3"
 )
 
 // consts holds the app constants.
 type consts struct {
 	AppBaseURL                  string
 	AllowedFileUploadExtensions []string
+}
+
+// Config loads config files into koanf.
+func initConfig(ko *koanf.Koanf) {
+	for _, f := range ko.Strings("config") {
+		log.Println("reading config file:", f)
+		if err := ko.Load(file.Provider(f), toml.Parser()); err != nil {
+			if os.IsNotExist(err) {
+				log.Fatal("error config file not found.")
+			}
+			log.Fatalf("error loading config from file: %v.", err)
+		}
+	}
 }
 
 func initFlags() {
@@ -111,37 +127,29 @@ func initFS() stuffbin.FileSystem {
 
 // initSessionManager initializes and returns a simplesessions.Manager instance.
 func initSessionManager(rd *redis.Client) *simplesessions.Manager {
-	ttl := ko.Duration("app.session.cookie_ttl")
-	s := simplesessions.New(simplesessions.Options{
-		CookieName:       ko.MustString("app.session.cookie_name"),
-		CookiePath:       ko.MustString("app.session.cookie_path"),
-		CookieDomain:     ko.String("app.session.cookie_domain"),
-		IsSecureCookie:   ko.Bool("app.session.cookie_secure"),
-		DisableAutoSet:   ko.Bool("app.session.cookie_disable_auto_set"),
-		IsHTTPOnlyCookie: true,
-		CookieLifetime:   ttl,
-	})
-
-	// Initialize a Redis pool for session storage.
-	st := sessredisstore.New(context.TODO(), rd)
-
-	// Prefix backend session keys with cookie name.
-	st.SetPrefix(ko.MustString("app.session.cookie_name") + ":")
-	// Set TTL in backend if its set.
-	if ttl > 0 {
-		st.SetTTL(ttl)
+	maxAge := ko.Duration("app.session.cookie_max_age")
+	if maxAge.Seconds() == 0 {
+		maxAge = time.Hour * 12
 	}
-
+	s := simplesessions.New(simplesessions.Options{
+		EnableAutoCreate: true,
+		SessionIDLength:  64,
+		Cookie: simplesessions.CookieOptions{
+			IsHTTPOnly: true,
+			IsSecure:   true,
+			MaxAge:     maxAge,
+		},
+	})
+	st := sessredisstore.New(context.TODO(), rd)
 	s.UseStore(st)
-	s.RegisterGetCookie(simpleSessGetCookieCB)
-	s.RegisterSetCookie(simpleSessSetCookieCB)
+	s.SetCookieHooks(simpleSessGetCookieCB, simpleSessSetCookieCB)
 	return s
 }
 
-func initUserManager(i18n *i18n.I18n, DB *sqlx.DB, lo *logf.Logger) *user.Manager {
+func initUserManager(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	mgr, err := user.New(i18n, user.Opts{
 		DB:         DB,
-		Lo:         lo,
+		Lo:         initLogger("user_manager"),
 		BcryptCost: ko.MustInt("app.user.password_bcypt_cost"),
 	})
 	if err != nil {
@@ -150,10 +158,10 @@ func initUserManager(i18n *i18n.I18n, DB *sqlx.DB, lo *logf.Logger) *user.Manage
 	return mgr
 }
 
-func initConversations(i18n *i18n.I18n, hub *ws.Hub, db *sqlx.DB, lo *logf.Logger) *conversation.Manager {
+func initConversations(i18n *i18n.I18n, hub *ws.Hub, db *sqlx.DB) *conversation.Manager {
 	c, err := conversation.New(hub, i18n, conversation.Opts{
 		DB:                  db,
-		Lo:                  lo,
+		Lo:                  initLogger("conversation_manager"),
 		ReferenceNumPattern: ko.String("app.constants.conversation_reference_number_pattern"),
 	})
 	if err != nil {
@@ -162,7 +170,8 @@ func initConversations(i18n *i18n.I18n, hub *ws.Hub, db *sqlx.DB, lo *logf.Logge
 	return c
 }
 
-func initTags(db *sqlx.DB, lo *logf.Logger) *tag.Manager {
+func initTags(db *sqlx.DB) *tag.Manager {
+	var lo = initLogger("tag_manager")
 	mgr, err := tag.New(tag.Opts{
 		DB: db,
 		Lo: lo,
@@ -173,7 +182,8 @@ func initTags(db *sqlx.DB, lo *logf.Logger) *tag.Manager {
 	return mgr
 }
 
-func initCannedResponse(db *sqlx.DB, lo *logf.Logger) *cannedresp.Manager {
+func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
+	var lo = initLogger("canned_response_manager")
 	c, err := cannedresp.New(cannedresp.Opts{
 		DB: db,
 		Lo: lo,
@@ -184,7 +194,8 @@ func initCannedResponse(db *sqlx.DB, lo *logf.Logger) *cannedresp.Manager {
 	return c
 }
 
-func initContactManager(db *sqlx.DB, lo *logf.Logger) *contact.Manager {
+func initContactManager(db *sqlx.DB) *contact.Manager {
+	var lo = initLogger("contact_manager")
 	m, err := contact.New(contact.Opts{
 		DB: db,
 		Lo: lo,
@@ -204,7 +215,6 @@ func initTemplateManager(db *sqlx.DB) *template.Manager {
 }
 
 func initMessages(db *sqlx.DB,
-	lo *logf.Logger,
 	wsHub *ws.Hub,
 	userMgr *user.Manager,
 	teaMgr *team.Manager,
@@ -215,6 +225,7 @@ func initMessages(db *sqlx.DB,
 	automationEngine *automation.Engine,
 	templateManager *template.Manager,
 ) *message.Manager {
+	var lo = initLogger("message_manager")
 	mgr, err := message.New(
 		wsHub,
 		userMgr,
@@ -237,7 +248,8 @@ func initMessages(db *sqlx.DB,
 	return mgr
 }
 
-func initTeamManager(db *sqlx.DB, lo *logf.Logger) *team.Manager {
+func initTeamManager(db *sqlx.DB) *team.Manager {
+	var lo = initLogger("team_manager")
 	mgr, err := team.New(team.Opts{
 		DB: db,
 		Lo: lo,
@@ -248,11 +260,12 @@ func initTeamManager(db *sqlx.DB, lo *logf.Logger) *team.Manager {
 	return mgr
 }
 
-func initAttachmentsManager(db *sqlx.DB, lo *logf.Logger) *attachment.Manager {
+func initAttachmentsManager(db *sqlx.DB) *attachment.Manager {
 	var (
 		mgr   *attachment.Manager
 		store attachment.Store
 		err   error
+		lo    = initLogger("attachments_manager")
 	)
 	switch s := ko.MustString("app.attachment_store"); s {
 	case "s3":
@@ -287,7 +300,8 @@ func initAttachmentsManager(db *sqlx.DB, lo *logf.Logger) *attachment.Manager {
 }
 
 // initInboxManager initializes the inbox manager without registering inboxes.
-func initInboxManager(db *sqlx.DB, lo *logf.Logger) *inbox.Manager {
+func initInboxManager(db *sqlx.DB) *inbox.Manager {
+	var lo = initLogger("inbox_manager")
 	mgr, err := inbox.New(lo, db)
 	if err != nil {
 		log.Fatalf("error initializing inbox manager: %v", err)
@@ -295,8 +309,15 @@ func initInboxManager(db *sqlx.DB, lo *logf.Logger) *inbox.Manager {
 	return mgr
 }
 
-func initAutomationEngine(db *sqlx.DB, lo *logf.Logger) *automation.Engine {
-	engine, err := automation.New(automation.Opts{
+func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.Engine {
+	var lo = initLogger("automation_engine")
+
+	systemUser, err := userManager.GetSystemUser()
+	if err != nil {
+		log.Fatalf("error fetching system user: %v", err)
+	}
+
+	engine, err := automation.New(systemUser, automation.Opts{
 		DB: db,
 		Lo: lo,
 	})
@@ -306,21 +327,22 @@ func initAutomationEngine(db *sqlx.DB, lo *logf.Logger) *automation.Engine {
 	return engine
 }
 
-func initAutoAssignmentEngine(teamMgr *team.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
-	notifier notifier.Notifier, hub *ws.Hub, lo *logf.Logger) *autoassigner.Engine {
-	engine, err := autoassigner.New(teamMgr, convMgr, msgMgr, notifier, hub, lo)
+func initAutoAssignmentEngine(teamMgr *team.Manager, userMgr *user.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
+	notifier notifier.Notifier, hub *ws.Hub) *autoassigner.Engine {
+	var lo = initLogger("auto_assignment_engine")
+	engine, err := autoassigner.New(teamMgr, userMgr, convMgr, msgMgr, notifier, hub, lo)
 	if err != nil {
 		log.Fatalf("error initializing auto assignment engine: %v", err)
 	}
 	return engine
 }
 
-func initRBACEngine(db *sqlx.DB) *uauth.Engine {
-	engine, err := uauth.New(db, &logf.Logger{})
+func initAuthManager(db *sqlx.DB) *uauth.Manager {
+	manager, err := uauth.New(db, &logf.Logger{})
 	if err != nil {
 		log.Fatalf("error initializing rbac enginer: %v", err)
 	}
-	return engine
+	return manager
 }
 
 func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) notifier.Notifier {
@@ -329,7 +351,7 @@ func initNotifier(userStore notifier.UserStore, templateRenderer notifier.Templa
 		log.Fatalf("error unmarshalling email notification provider config: %v", err)
 	}
 	notifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, templateRenderer, emailnotifier.Opts{
-		Lo:        initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "email-notifier"),
+		Lo:        initLogger("email-notifier"),
 		FromEmail: ko.String("notification.provider.email.email_address"),
 	})
 	if err != nil {
@@ -358,7 +380,7 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 	if len(config.IMAP) == 0 {
 		log.Printf("WARNING: Zero IMAP clients configured for `%s` inbox: Name: `%s`", inboxRecord.Channel, inboxRecord.Name)
 	}
-	
+
 	config.From = inboxRecord.From
 
 	if len(config.From) == 0 {
@@ -368,7 +390,7 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 	inbox, err := email.New(store, email.Opts{
 		ID:     inboxRecord.ID,
 		Config: config,
-		Lo:     initz.Logger(ko.MustString("app.log_level"), ko.MustString("app.env"), "email_inbox"),
+		Lo:     initLogger("email_inbox"),
 	})
 
 	if err != nil {
@@ -413,4 +435,80 @@ func initI18n(fs stuffbin.FileSystem) *i18n.I18n {
 		log.Fatalf("error initializing i18n: %v", err)
 	}
 	return i18n
+}
+
+func initRedis() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     ko.MustString("redis.address"),
+		Password: ko.String("redis.password"),
+		DB:       ko.Int("redis.db"),
+	})
+}
+
+func initDB() *sqlx.DB {
+	var c struct {
+		Host        string        `koanf:"host"`
+		Port        int           `koanf:"port"`
+		User        string        `koanf:"user"`
+		Password    string        `koanf:"password"`
+		DBName      string        `koanf:"database"`
+		SSLMode     string        `koanf:"ssl_mode"`
+		Params      string        `koanf:"params"` // Extra params.
+		MaxOpen     int           `koanf:"max_open"`
+		MaxIdle     int           `koanf:"max_idle"`
+		MaxLifetime time.Duration `koanf:"max_lifetime"`
+	}
+	if err := ko.Unmarshal("db", &c); err != nil {
+		log.Fatalf("loading db config: %v", err)
+	}
+
+	db, err := sqlx.Connect("postgres",
+		fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s %s", c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode, c.Params))
+	if err != nil {
+		log.Fatalf("error connecting to DB %v", err)
+	}
+
+	db.SetMaxOpenConns(c.MaxOpen)
+	db.SetMaxIdleConns(c.MaxIdle)
+	db.SetConnMaxLifetime(c.MaxLifetime)
+
+	return db
+}
+
+// initLogger initializes a logf logger.
+func initLogger(src string) *logf.Logger {
+	lvl, env := ko.MustString("app.log_level"), ko.MustString("app.env")
+	lo := logf.New(logf.Opts{
+		Level:                getLogLevel(lvl),
+		EnableColor:          getColor(env),
+		EnableCaller:         true,
+		CallerSkipFrameCount: 3,
+		DefaultFields:        []any{"sc", src},
+	})
+	return &lo
+}
+
+func getColor(env string) bool {
+	color := false
+	if env == "dev" {
+		color = true
+	}
+	return color
+}
+
+func getLogLevel(lvl string) logf.Level {
+	switch lvl {
+	case "info":
+		return logf.InfoLevel
+	case "debug":
+		return logf.DebugLevel
+	case "warn":
+		return logf.WarnLevel
+	case "error":
+		return logf.ErrorLevel
+	case "fatal":
+		return logf.FatalLevel
+	default:
+		return logf.InfoLevel
+	}
 }

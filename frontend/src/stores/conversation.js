@@ -161,7 +161,7 @@ export const useConversationStore = defineStore('conversation', () => {
                     response = await api.getAssignedConversations(conversations.page, preDefinedFilter);
                     break;
                 case CONVERSATION_LIST_TYPE.UNASSIGNED:
-                    response = await api.getUnassignedConversations(conversations.page, preDefinedFilter);
+                    response = await api.getTeamConversations(conversations.page, preDefinedFilter);
                     break;
                 case CONVERSATION_LIST_TYPE.ALL:
                     response = await api.getAllConversations(conversations.page, preDefinedFilter);
@@ -209,7 +209,6 @@ export const useConversationStore = defineStore('conversation', () => {
     async function updatePriority (v) {
         try {
             await api.updatePriority(conversation.data.uuid, { "priority": v });
-            fetchConversation(conversation.data.uuid)
         } catch (error) {
             // Pass.
         }
@@ -218,7 +217,6 @@ export const useConversationStore = defineStore('conversation', () => {
     async function updateStatus (v) {
         try {
             await api.updateStatus(conversation.data.uuid, { "status": v });
-            fetchConversation(conversation.data.uuid)
         } catch (error) {
             toast({
                 title: 'Uh oh! Could not update status, Please try again.',
@@ -231,7 +229,6 @@ export const useConversationStore = defineStore('conversation', () => {
     async function upsertTags (v) {
         try {
             await api.upsertTags(conversation.data.uuid, v);
-            fetchConversation(conversation.data.uuid)
         } catch (error) {
             toast({
                 title: 'Uh oh! Could not add tags, Please try again.',
@@ -244,7 +241,6 @@ export const useConversationStore = defineStore('conversation', () => {
     async function updateAssignee (type, v) {
         try {
             await api.updateAssignee(conversation.data.uuid, type, v)
-            fetchConversation(conversation.data.uuid)
         } catch (error) {
             // Pass.
         }
