@@ -10,6 +10,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	uauth "github.com/abhinavxd/artemis/internal/auth"
+	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
@@ -57,6 +58,7 @@ type App struct {
 	attachmentManager   *attachment.Manager
 	cannedRespManager   *cannedresp.Manager
 	conversationManager *conversation.Manager
+	automationEngine    *automation.Engine
 }
 
 func main() {
@@ -121,6 +123,7 @@ func main() {
 		attachmentManager:   attachmentManager,
 		conversationManager: conversationManager,
 		messageManager:      messageManager,
+		automationEngine:    automationEngine,
 		constants:           initConstants(),
 		auth:                initAuthManager(db),
 		tagManager:          initTags(db),

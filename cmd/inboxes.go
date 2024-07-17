@@ -56,7 +56,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"Invalid SIP `id`.", nil, envelope.InputError)
+			"Invalid user `id`.", nil, envelope.InputError)
 	}
 
 	if err := r.Decode(&inbox, "json"); err != nil {

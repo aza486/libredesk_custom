@@ -17,6 +17,20 @@ http.interceptors.request.use((request) => {
 })
 
 const login = (data) => http.post(`/api/login`, data)
+const getAutomationRules = () => http.get(`/api/automation/rules`)
+const getAutomationRule = (id) => http.get(`/api/automation/rules/${id}`)
+const updateAutomationRule = (id, data) => http.put
+  (`/api/automation/rules/${id}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const createAutomationRule = (data) => http.post
+  (`/api/automation/rules`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const getUser = (id) => http.get(`/api/users/${id}`)
 const getTeam = (id) => http.get(`/api/teams/${id}`)
 const getTeams = () => http.get('/api/teams')
@@ -79,15 +93,17 @@ const deleteInbox = (id) => http.delete(`/api/inboxes/${id}`)
 
 export default {
   login,
-  getInbox,
+  getTags,
+  getTeam,
   getUser,
+  getTeams,
+  getUsers,
+  getInbox,
   getInboxes,
   getLanguage,
-  getTags,
-  getTeams,
-  getTeam,
-  getUsers,
   getConversation,
+  getAutomationRule,
+  getAutomationRules,
   getAssignedConversations,
   getTeamConversations,
   getAllConversations,
@@ -103,11 +119,13 @@ export default {
   updatePriority,
   upsertTags,
   uploadFile,
+  updateAutomationRule,
   updateAssigneeLastSeen,
   uploadAttachment,
   updateUser,
   sendMessage,
   retryMessage,
+  createAutomationRule,
   createUser,
   createInbox,
   updateInbox,

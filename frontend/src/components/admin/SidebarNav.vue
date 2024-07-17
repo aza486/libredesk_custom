@@ -10,12 +10,12 @@ const sidebarNavItems = [
   },
   {
     title: 'Teams',
-    href: '/admin/team',
+    href: '/admin/teams',
     description: 'Create teams, manage agents'
   },
   {
-    title: 'Workflows',
-    href: '/admin/workflow',
+    title: 'Automations',
+    href: '/admin/automations',
     description: 'Create automations and time triggers.'
   }
 ]
@@ -31,8 +31,8 @@ const sidebarNavItems = [
         )
           " @click="navigate">
           <div class="flex flex-col space-y-1">
-            <h4>{{ item.title }}</h4>
-            <p class="text-muted-foreground text-sm">{{ item.description }}</p>
+            <span class="admin-subtitle">{{ item.title }}</span>
+            <p class="text-muted-foreground text-xs">{{ item.description }}</p>
           </div>
         </Button>
       </template>

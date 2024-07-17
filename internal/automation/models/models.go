@@ -1,8 +1,13 @@
 package models
 
+import (
+	"encoding/json"
+	"time"
+)
+
 const (
 	ActionAssignTeam  = "assign_team"
-	ActionAssignAgent = "assign_agent"
+	ActionAssignUser  = "assign_user"
 	ActionSetStatus   = "set_status"
 	ActionSetPriority = "set_priority"
 
@@ -10,11 +15,11 @@ const (
 	OperatorOR  = "OR"
 
 	RuleContains    = "contains"
-	RuleNotContains = "not contains"
+	RuleNotContains = "not_contains"
 	RuleEquals      = "equals"
-	RuleNotEqual    = "not equal"
+	RuleNotEqual    = "not_equals"
 	RuleSet         = "set"
-	RuleNotSet      = "not set"
+	RuleNotSet      = "not_set"
 
 	RuleTypeNewConversation    = "new_conversation"
 	RuleTypeConversationUpdate = "conversation_update"
@@ -27,6 +32,17 @@ const (
 	ConversationFieldAssignedUserID = "assigned_user_id"
 	ConversationFieldAssignedTeamID = "assigned_team_id"
 )
+
+// RuleRecord represents a rule record in the database
+type RuleRecord struct {
+	ID          int             `db:"id" json:"id"`
+	CreatedAt   time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`
+	Name        string          `db:"name" json:"name"`
+	Description string          `db:"description" json:"description"`
+	Type        string          `db:"type" json:"type"`
+	Rules       json.RawMessage `db:"rules" json:"rules"`
+}
 
 type Rule struct {
 	Type          string       `json:"type" db:"type"`
@@ -48,6 +64,6 @@ type RuleDetail struct {
 }
 
 type RuleAction struct {
-	Type   string `json:"action_type" db:"action_type"`
-	Action string `json:"action" db:"action"`
+	Type   string `json:"type" db:"type"`
+	Action string `json:"value" db:"value"`
 }

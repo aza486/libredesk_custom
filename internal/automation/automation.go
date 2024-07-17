@@ -2,6 +2,7 @@ package automation
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -49,7 +51,12 @@ type UserStore interface {
 }
 
 type queries struct {
-	GetRules *sqlx.Stmt `query:"get-rules"`
+	GetRules   *sqlx.Stmt `query:"get-rules"`
+	GetAll     *sqlx.Stmt `query:"get-all"`
+	GetRule    *sqlx.Stmt `query:"get-rule"`
+	InsertRule *sqlx.Stmt `query:"insert-rule"`
+	UpdateRule *sqlx.Stmt `query:"update-rule"`
+	DeleteRule *sqlx.Stmt `query:"delete-rule"`
 }
 
 func New(systemUser umodels.User, opt Opts) (*Engine, error) {
@@ -103,6 +110,51 @@ func (e *Engine) Serve(ctx context.Context) {
 			go e.handleTimeTrigger(timeTriggerSemaphore)
 		}
 	}
+}
+
+func (e *Engine) GetAllRules() ([]models.RuleRecord, error) {
+	var rules = make([]models.RuleRecord, 0)
+	if err := e.q.GetAll.Select(&rules); err != nil {
+		e.lo.Error("error fetching rules", "error", err)
+		return rules, envelope.NewError(envelope.GeneralError, "Error fetching automation rules.", nil)
+	}
+	return rules, nil
+}
+
+func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
+	var rule = models.RuleRecord{}
+	if err := e.q.GetRule.Get(&rule, id); err != nil {
+		if err == sql.ErrNoRows {
+			return rule, envelope.NewError(envelope.InputError, "Rule not found.", nil)
+		}
+		e.lo.Error("error fetching rule", "error", err)
+		return rule, envelope.NewError(envelope.GeneralError, "Error fetching automation rule.", nil)
+	}
+	return rule, nil
+}
+
+func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
+	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, rule.Rules); err != nil {
+		e.lo.Error("error updating rule", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating automation rule.", nil)
+	}
+	return nil
+}
+
+func (e *Engine) CreateRule(rule models.RuleRecord) error {
+	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, rule.Rules); err != nil {
+		e.lo.Error("error creating rule", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating automation rule.", nil)
+	}
+	return nil
+}
+
+func (e *Engine) DeleteRule(id int) error {
+	if _, err := e.q.DeleteRule.Exec(id); err != nil {
+		e.lo.Error("error deleting rule", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting automation rule.", nil)
+	}
+	return nil
 }
 
 func (e *Engine) handleNewConversation(conversationUUID string, semaphore chan struct{}) {

@@ -8,7 +8,7 @@ import Inbox from '@/components/admin/Inbox.vue'
 import Team from '@/components/admin/team/Team.vue'
 import Teams from '@/components/admin/team/Teams.vue'
 import Users from '@/components/admin/team/Users.vue'
-import Workflow from '@/components/admin/workflow/Workflow.vue'
+import Automation from '@/components/admin/automation/Automation.vue'
 
 const routes = [
   {
@@ -61,7 +61,7 @@ const routes = [
     ]
   },
   {
-    path: '/admin/team',
+    path: '/admin/teams',
     name: 'team',
     component: AdminView,
     children: [
@@ -98,13 +98,23 @@ const routes = [
     ]
   },
   {
-    path: '/admin/workflow',
-    name: 'workflow',
+    path: '/admin/automations',
+    name: 'automation',
     component: AdminView,
     children: [
       {
         path: '',
-        component: Workflow
+        component: Automation
+      },
+      {
+        path: ':id/edit',
+        props: true,
+        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
+      },
+      {
+        path: 'new',
+        props: true,
+        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
       },
     ]
   },

@@ -156,7 +156,7 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 		if err := e.conversationStore.UpdateTeamAssignee(conversation.UUID, teamID, e.systemUser); err != nil {
 			return err
 		}
-	case models.ActionAssignAgent:
+	case models.ActionAssignUser:
 		agentID, err := strconv.Atoi(action.Action)
 		if err != nil {
 			e.lo.Error("error converting string to int", "string", action.Action, "error", err)

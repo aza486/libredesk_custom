@@ -56,14 +56,25 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/teams/{id}", auth(handleGetTeam))
 	g.POST("/api/teams", auth(handleCreateTeam))
 
+	// Tags.
 	g.GET("/api/tags", auth(handleGetTags))
 
+	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
 
+	// Websocket.
 	g.GET("/api/ws", auth(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
 	}))
 
+	// Automation rules.
+	g.GET("/api/automation/rules", handleGetAutomationRules)
+	g.POST("/api/automation/rules", handleCreateAutomationRule)
+	g.GET("/api/automation/rules/{id}", handleGetAutomationRule)
+	g.PUT("/api/automation/rules/{id}", handleUpdateAutomationRule)
+	g.DELETE("/api/automation/rules/{id}", handleDeleteAutomationRule)
+
+	// Inboxes.
 	g.GET("/api/inboxes", handleGetInboxes)
 	g.GET("/api/inboxes/{id}", handleGetInbox)
 	g.POST("/api/inboxes", handleCreateInbox)

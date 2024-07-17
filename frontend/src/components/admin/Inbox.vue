@@ -2,7 +2,7 @@
   <div v-if="showTable">
     <div class="flex justify-between mb-5">
       <div>
-        <h2>Inboxes</h2>
+        <span class="admin-title">Inboxes</span>
         <p class="text-muted-foreground text-sm">Create and manage inboxes.</p>
       </div>
       <div class="flex justify-end mb-4">

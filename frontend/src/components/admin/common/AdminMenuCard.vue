@@ -5,7 +5,7 @@
   >
     <div class="flex items-center mb-4">
       <component :is="icon" size="24" class="mr-2" />
-      <h2 class="text-xl font-bold">{{ title }}</h2>
+      <span class="text-base">{{ title }}</span>
     </div>
     <p class="text-gray-600">{{ subtitle }}</p>
   </div>

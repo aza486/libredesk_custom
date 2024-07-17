@@ -1,3 +1,19 @@
+<template>
+    <div class="page-content">
+        <div v-if="userStore.getFullName">
+            <span class="scroll-m-20 text-xl font-medium">
+                <p>Hi, {{ userStore.getFullName }}</p>
+                <p class="text-sm text-muted-foreground">🌤️ {{ format(new Date(), "EEEE, MMMM d HH:mm a") }}</p>
+            </span>
+        </div>
+        <CountCards :counts="counts" :labels="agentCountCardsLabels" />
+        <!-- <AssignedByStatusDonut /> -->
+        <div class="flex my-10">
+            <ConversationsOverTime class="flex-1" :data=newConversationsStats />
+        </div>
+    </div>
+</template>
+
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useUserStore } from '@/stores/user'
@@ -64,19 +80,3 @@ function getGreeting () {
 }
 
 </script>
-
-<template>
-    <div class="page-content">
-        <div v-if="userStore.getFullName">
-            <h4 class="scroll-m-20 text-2xl font-semibold tracking-tight">
-                <p>{{ getGreeting() }}, {{ userStore.getFullName }}</p>
-                <p class="text-xl text-muted-foreground">🌤️ {{ format(new Date(), "EEEE, MMMM d HH:mm a") }}</p>
-            </h4>
-        </div>
-        <CountCards :counts="counts" :labels="agentCountCardsLabels" />
-        <!-- <AssignedByStatusDonut /> -->
-        <div class="flex my-10">
-            <ConversationsOverTime class="flex-1" :data=newConversationsStats />
-        </div>
-    </div>
-</template>
