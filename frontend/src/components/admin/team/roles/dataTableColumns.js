@@ -1,5 +1,5 @@
 import { h } from 'vue'
-import TeamDataTableDropdown from '@/components/admin/team/TeamDataTableDropdown.vue'
+import dropdown from './dataTableDropdown.vue'
 
 export const columns = [
   {
@@ -12,15 +12,24 @@ export const columns = [
     }
   },
   {
+    accessorKey: 'description',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Description')
+    },
+    cell: function ({ row }) {
+      return h('div', { class: 'text-center font-medium' }, row.getValue('description'))
+    }
+  },
+  {
     id: 'actions',
     enableHiding: false,
     cell: ({ row }) => {
-      const team = row.original
+      const role = row.original
       return h(
         'div',
         { class: 'relative' },
-        h(TeamDataTableDropdown, {
-          team
+        h(dropdown, {
+          role
         })
       )
     }

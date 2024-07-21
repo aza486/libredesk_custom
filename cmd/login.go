@@ -27,11 +27,12 @@ func handleLogin(r *fastglue.Request) error {
 
 	// Set user details in the session.
 	if err := sess.SetMulti(map[string]interface{}{
-		"id":         user.ID,
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-		"team_id":    user.TeamID,
+		"id":          user.ID,
+		"email":       user.Email,
+		"first_name":  user.FirstName,
+		"last_name":   user.LastName,
+		"team_id":     user.TeamID,
+		"permissions": user.Permissions,
 	}); err != nil {
 		app.lo.Error("error setting values in session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))

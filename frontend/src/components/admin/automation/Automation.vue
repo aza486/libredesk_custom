@@ -22,5 +22,4 @@ const router = useRouter()
 const newRule = () => {
   router.push({ path: `/admin/automations/new`})
 }
-
 </script>

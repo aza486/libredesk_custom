@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
@@ -27,6 +27,7 @@ type Engine struct {
 	lo                  *logf.Logger
 	conversationStore   ConversationStore
 	systemUser          umodels.User
+	rulesMu             *sync.RWMutex
 	rules               []models.Rule
 	newConversationQ    chan string
 	updateConversationQ chan string
@@ -57,6 +58,7 @@ type queries struct {
 	InsertRule *sqlx.Stmt `query:"insert-rule"`
 	UpdateRule *sqlx.Stmt `query:"update-rule"`
 	DeleteRule *sqlx.Stmt `query:"delete-rule"`
+	ToggleRule *sqlx.Stmt `query:"toggle-rule"`
 }
 
 func New(systemUser umodels.User, opt Opts) (*Engine, error) {
@@ -66,6 +68,7 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 			lo:                  opt.Lo,
 			newConversationQ:    make(chan string, 5000),
 			updateConversationQ: make(chan string, 5000),
+			rulesMu:             &sync.RWMutex{},
 		}
 	)
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
@@ -77,6 +80,9 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 }
 
 func (e *Engine) ReloadRules() {
+	e.lo.Debug("reloading automation engine rules")
+	e.rulesMu.Lock()
+	defer e.rulesMu.Unlock()
 	e.rules = e.queryRules()
 }
 
@@ -85,6 +91,7 @@ func (e *Engine) SetConversationStore(store ConversationStore) {
 }
 
 func (e *Engine) Serve(ctx context.Context) {
+	// TODO: Change to 1 hour.
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -112,9 +119,9 @@ func (e *Engine) Serve(ctx context.Context) {
 	}
 }
 
-func (e *Engine) GetAllRules() ([]models.RuleRecord, error) {
+func (e *Engine) GetAllRules(typ []byte) ([]models.RuleRecord, error) {
 	var rules = make([]models.RuleRecord, 0)
-	if err := e.q.GetAll.Select(&rules); err != nil {
+	if err := e.q.GetAll.Select(&rules, typ); err != nil {
 		e.lo.Error("error fetching rules", "error", err)
 		return rules, envelope.NewError(envelope.GeneralError, "Error fetching automation rules.", nil)
 	}
@@ -133,11 +140,23 @@ func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
 	return rule, nil
 }
 
+func (e *Engine) ToggleRule(id int) error {
+	if _, err := e.q.ToggleRule.Exec(id); err != nil {
+		e.lo.Error("error toggling rule", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error toggling automation rule.", nil)
+	}
+	// Reload rules.
+	e.ReloadRules()
+	return nil
+}
+
 func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
 	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, rule.Rules); err != nil {
 		e.lo.Error("error updating rule", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating automation rule.", nil)
 	}
+	// Reload rules.
+	e.ReloadRules()
 	return nil
 }
 
@@ -146,6 +165,8 @@ func (e *Engine) CreateRule(rule models.RuleRecord) error {
 		e.lo.Error("error creating rule", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating automation rule.", nil)
 	}
+	// Reload rules.
+	e.ReloadRules()
 	return nil
 }
 
@@ -154,6 +175,8 @@ func (e *Engine) DeleteRule(id int) error {
 		e.lo.Error("error deleting rule", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting automation rule.", nil)
 	}
+	// Reload rules.
+	e.ReloadRules()
 	return nil
 }
 
@@ -230,8 +253,6 @@ func (e *Engine) queryRules() []models.Rule {
 		}
 		rules = append(rules, rulesBatch...)
 	}
-
-	e.lo.Debug("fetched rules", "num", len(rules), "rules", fmt.Sprintf("%+v", rules))
 	return rules
 }
 

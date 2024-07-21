@@ -22,7 +22,8 @@ export const getUserFormSchema = () => {
 
     team_id: z.number().optional(),
 
-    send_welcome_email: z.boolean().optional()
+    send_welcome_email: z.boolean().optional(),
+
   }
   return z.object(obj)
 }

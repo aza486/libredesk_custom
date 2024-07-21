@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -49,10 +48,10 @@ func handleUpdateUser(r *fastglue.Request) error {
 			"Invalid user `id`.", nil, envelope.InputError)
 	}
 
-	if _, err := fastglue.ScanArgs(r.RequestCtx.PostArgs(), &user, `json`); err != nil {
-		return envelope.NewError(envelope.InputError,
-			fmt.Sprintf("Invalid request (%s)", err.Error()), nil)
+	if err := r.Decode(&user, "json"); err != nil {
+		return r.SendErrorEnvelope(http.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
+
 	err = app.userManager.UpdateUser(id, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -72,7 +71,6 @@ func handleCreateUser(r *fastglue.Request) error {
 	if req.Email == "" {
 		return r.SendErrorEnvelope(http.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
-
 	err := app.userManager.Create(&req)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, envelope.GeneralError)
@@ -82,7 +80,7 @@ func handleCreateUser(r *fastglue.Request) error {
 
 func handleGetCurrentUser(r *fastglue.Request) error {
 	var (
-		app    = r.Context.(*App)
+		app  = r.Context.(*App)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
 	u, err := app.userManager.GetUser(user.ID, "")

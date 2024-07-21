@@ -1,19 +1,16 @@
 <template>
-  <div class="flex justify-between mb-5">
-    <div>
-      <h1>Teams</h1>
-      <p class="text-muted-foreground text-sm">Create teams, manage agents.</p>
-    </div>
-    <div class="flex justify-end mb-4">
-      <Button size="sm" @click="navigateToAddTeam">New team </Button>
-    </div>
+  <div class="mb-5">
+    <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <div v-if="showTable">
+  <div class="flex justify-end mb-5">
+    <Button @click="navigateToAddTeam" size="sm"> New team </Button>
+  </div>
+  <div>
     <div class="w-full">
       <DataTable :columns="columns" :data="data" />
     </div>
   </div>
-  <div v-else>
+  <div>
     <router-view></router-view>
   </div>
 </template>
@@ -21,17 +18,21 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { handleHTTPError } from '@/utils/http'
-import { columns } from '@/components/admin/team/TeamsDataTableColumns.js'
+import { columns } from '@/components/admin/team/teams/TeamsDataTableColumns.js'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
+import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import DataTable from '@/components/admin/DataTable.vue'
 import api from '@/api'
 import { useRouter } from 'vue-router'
 
+const breadcrumbLinks = [
+  { path: '/admin/teams', label: 'Teams' },
+  { path: '/admin/teams/', label: 'Teams' },
+]
 
 const router = useRouter()
 const data = ref([])
-const showTable = ref(true)
 const { toast } = useToast()
 
 const getData = async () => {
@@ -49,7 +50,7 @@ const getData = async () => {
 
 
 const navigateToAddTeam = () => {
-  router.push('/admin/team/teams/new')
+  router.push('/admin/teams/teams/new')
 }
 
 onMounted(async () => {

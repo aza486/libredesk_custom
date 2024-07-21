@@ -45,7 +45,7 @@ func handleCreateInbox(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope("Inbox created successfully.")
+	return r.SendEnvelope(true)
 }
 
 func handleUpdateInbox(r *fastglue.Request) error {
@@ -56,7 +56,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"Invalid user `id`.", nil, envelope.InputError)
+			"Invalid inbox `id`.", nil, envelope.InputError)
 	}
 
 	if err := r.Decode(&inbox, "json"); err != nil {
@@ -69,15 +69,30 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	return r.SendEnvelope(inbox)
 }
 
+func handleToggleInbox(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	if err != nil || id == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+			"Invalid inbox `id`.", nil, envelope.InputError)
+	}
+
+	if err = app.inboxManager.Toggle(id); err != nil {
+		return err
+	}
+	return r.SendEnvelope(true)
+}
+
 func handleDeleteInbox(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-
 	err := app.inboxManager.Delete(id)
 	if err != nil {
 		return r.SendErrorEnvelope(http.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope("Inbox deleted successfully.")
+	return r.SendEnvelope(true)
 }

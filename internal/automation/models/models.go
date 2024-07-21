@@ -41,6 +41,7 @@ type RuleRecord struct {
 	Name        string          `db:"name" json:"name"`
 	Description string          `db:"description" json:"description"`
 	Type        string          `db:"type" json:"type"`
+	Disabled    bool            `db:"disabled" json:"disabled"`
 	Rules       json.RawMessage `db:"rules" json:"rules"`
 }
 

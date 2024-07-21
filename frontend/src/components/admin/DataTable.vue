@@ -1,5 +1,5 @@
 <template>
-  <div class="border rounded">
+  <div class="border">
     <Table>
       <TableHeader>
         <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">

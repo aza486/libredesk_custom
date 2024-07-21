@@ -1,5 +1,5 @@
 import { h } from 'vue'
-import UserDataTableDropDown from '@/components/admin/team/UserDataTableDropDown.vue'
+import UserDataTableDropDown from '@/components/admin/team/users/UserDataTableDropDown.vue'
 
 export const columns = [
   {

@@ -16,6 +16,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/message"
+	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/upload"
@@ -46,6 +47,7 @@ type App struct {
 	fs                  stuffbin.FileSystem
 	i18n                *i18n.I18n
 	lo                  *logf.Logger
+	roleManager         *role.Manager
 	contactManager      *contact.Manager
 	userManager         *user.Manager
 	teamManager         *team.Manager
@@ -125,6 +127,7 @@ func main() {
 		messageManager:      messageManager,
 		automationEngine:    automationEngine,
 		constants:           initConstants(),
+		roleManager:         initRoleManager(db),
 		auth:                initAuthManager(db),
 		tagManager:          initTags(db),
 		sessManager:         initSessionManager(rd),

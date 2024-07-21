@@ -6,17 +6,17 @@ const sidebarNavItems = [
   {
     title: 'Inboxes',
     href: '/admin/inboxes',
-    description: 'Create or manage your inboxes'
+    description: 'Create and manage your inboxes'
   },
   {
     title: 'Teams',
     href: '/admin/teams',
-    description: 'Create teams, manage agents'
+    description: 'Create teams, manage agents and roles'
   },
   {
     title: 'Automations',
     href: '/admin/automations',
-    description: 'Create automations and time triggers.'
+    description: 'Create automations and time triggers'
   }
 ]
 </script>

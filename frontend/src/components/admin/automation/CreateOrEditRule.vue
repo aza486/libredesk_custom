@@ -1,22 +1,6 @@
 <template>
     <div class="mb-5">
-        <Breadcrumb>
-            <BreadcrumbList>
-                <BreadcrumbItem>
-                    <router-link to="/admin/automations" class="breadcrumb-link">
-                        Automations
-                    </router-link>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator>
-                    <ChevronRight />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                    <router-link to="#" class="breadcrumb-link">
-                        {{ breadcrumbPageLabel }}
-                    </router-link>
-                </BreadcrumbItem>
-            </BreadcrumbList>
-        </Breadcrumb>
+        <CustomBreadcrumb :links="breadcrumbLinks" />
     </div>
     <span class="admin-title">{{ formTitle }}</span>
     <div class="space-y-5">
@@ -94,16 +78,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { ChevronRight } from 'lucide-vue-next';
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbSeparator,
+    CustomBreadcrumb,
 } from '@/components/ui/breadcrumb'
-
-const router = useRouter()
 
 const rule = ref({
     "id": 0,
@@ -130,32 +107,38 @@ const rule = ref({
         }
     ]
 })
-const firstRuleGroup = ref([])
-const secondRuleGroup = ref([])
-const groupOperator = ref("")
 
 const props = defineProps({
     id: {
         type: [String, Number],
-        required: true,
+        required: false,
     },
-    type: {
-        type: String,
-        required: true,
-    }
 })
 
-const breadcrumbPageLabel = computed(() => {
+const breadcrumbPageLabel = () => {
     if (props.id > 0)
         return "Edit rule"
     return "New rule"
-})
+}
 
 const formTitle = computed(() => {
     if (props.id > 0)
         return "Edit existing rule"
     return "Create new rule"
 })
+
+const breadcrumbLinks = [
+    { path: '/admin/automations', label: 'Automations' },
+    { path: '#', label: breadcrumbPageLabel() }
+]
+
+const router = useRouter()
+
+
+const firstRuleGroup = ref([])
+const secondRuleGroup = ref([])
+const groupOperator = ref("")
+
 
 const getFirstGroup = () => {
     if (rule.value.rules?.[0]?.groups?.[0]) {

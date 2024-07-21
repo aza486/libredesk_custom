@@ -22,7 +22,7 @@ const props = defineProps({
 })
 
 function editTeam(id) {
-  router.push({ path: `/admin/team/teams/${id}/edit` })
+  router.push({ path: `/admin/teams/teams/${id}/edit` })
 }
 </script>
 

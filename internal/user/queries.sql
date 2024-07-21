@@ -8,7 +8,10 @@ ORDER BY u.updated_at DESC;
 SELECT email from users where id = $1;
 
 -- name: get-user-by-email
-select id, email, password, avatar_url, first_name, last_name, team_id from users where email = $1;
+SELECT u.id, u.email, u.password, u.avatar_url, u.first_name, u.last_name, u.team_id, r.permissions
+FROM users u
+JOIN roles r ON r.name = ANY(u.roles)
+WHERE u.email = $1;
 
 -- name: get-user
 SELECT id, email, avatar_url, first_name, last_name, team_id 
@@ -24,10 +27,10 @@ update users set password = $1, updated_at = now() where id = $2;
 
 -- name: create-user
 INSERT INTO users
-(email, first_name, last_name, "password", team_id, avatar_url)
-VALUES($1, $2, $3, $4, $5, $6);
+(email, first_name, last_name, "password", team_id, avatar_url, roles)
+VALUES($1, $2, $3, $4, $5, $6, $7);
 
 -- name: update-user
 UPDATE users
-set first_name = $2, last_name = $3, email = $4, team_id = $5, updated_at = now()
+set first_name = $2, last_name = $3, email = $4, team_id = $5, roles = $6, updated_at = now()
 where id = $1

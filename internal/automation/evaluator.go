@@ -10,7 +10,7 @@ import (
 )
 
 func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
-	e.lo.Debug("num rules", "rules", len(rules))
+	e.lo.Debug("num rules", "count", len(rules), "rules", rules)
 	for _, rule := range rules {
 		e.lo.Debug("eval rule", "groups", len(rule.Groups), "rule", rule)
 		// At max there can be only 2 groups.

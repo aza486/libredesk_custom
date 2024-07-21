@@ -16,9 +16,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/logout", handleLogout)
 
 	// Conversation.
-	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversations.all"))
-	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversations.assigned"))
-	g.GET("/api/conversations/team", auth(handleGetTeamConversations, "conversations.team"))
+	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversations:all"))
+	g.GET("/api/conversations/team", auth(handleGetTeamConversations, "conversations:team"))
+	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversations:assigned"))	
 
 	g.GET("/api/conversations/{uuid}", auth(handleGetConversation))
 	g.GET("/api/conversations/{uuid}/participants", auth(handleGetConversationParticipants))
@@ -31,9 +31,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Message.
 	g.GET("/api/conversations/{uuid}/messages", auth(handleGetMessages))
-	g.POST("/api/conversations/{uuid}/messages", auth(handleSendMessage))
 	g.GET("/api/message/{uuid}/retry", auth(handleRetryMessage))
 	g.GET("/api/message/{uuid}", auth(handleGetMessage))
+	g.POST("/api/conversations/{uuid}/messages", auth(handleSendMessage))
 
 	// Attachment.
 	g.POST("/api/attachment", auth(handleAttachmentUpload))
@@ -54,6 +54,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Team.
 	g.GET("/api/teams", auth(handleGetTeams))
 	g.GET("/api/teams/{id}", auth(handleGetTeam))
+	g.PUT("/api/teams/{id}", auth(handleUpdateTeam))
 	g.POST("/api/teams", auth(handleCreateTeam))
 
 	// Tags.
@@ -69,8 +70,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Automation rules.
 	g.GET("/api/automation/rules", handleGetAutomationRules)
-	g.POST("/api/automation/rules", handleCreateAutomationRule)
 	g.GET("/api/automation/rules/{id}", handleGetAutomationRule)
+	g.POST("/api/automation/rules", handleCreateAutomationRule)
+	g.PUT("/api/automation/rules/{id}/toggle", handleToggleAutomationRule)
 	g.PUT("/api/automation/rules/{id}", handleUpdateAutomationRule)
 	g.DELETE("/api/automation/rules/{id}", handleDeleteAutomationRule)
 
@@ -78,8 +80,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/inboxes", handleGetInboxes)
 	g.GET("/api/inboxes/{id}", handleGetInbox)
 	g.POST("/api/inboxes", handleCreateInbox)
+	g.PUT("/api/inboxes/{id}/toggle", handleToggleInbox)
 	g.PUT("/api/inboxes/{id}", handleUpdateInbox)
 	g.DELETE("/api/inboxes/{id}", handleDeleteInbox)
+
+	// Roles.
+	g.GET("/api/roles", handleGetRoles)
+	g.GET("/api/roles/{id}", handleGetRole)
+	g.POST("/api/roles", handleCreateRole)
+	g.PUT("/api/roles/{id}", handleUpdateRole)
+	g.DELETE("/api/roles/{id}", handleDeleteRole)
 
 	// Dashboard.
 	g.GET("/api/dashboard/me/counts", auth(handleUserDashboardCounts))

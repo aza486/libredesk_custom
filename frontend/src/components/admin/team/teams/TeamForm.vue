@@ -1,16 +1,16 @@
 <template>
   <form @submit="onSubmit" class="w-2/3 space-y-6">
-    <FormField v-slot="{ componentField }" name="first_name">
+    <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Name" v-bind="componentField" />
         </FormControl>
-        <FormDescription> Select an unique name for the team. </FormDescription>
+        <FormDescription> Select an unique name </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
-    <Button type="submit"> Submit </Button>
+    <Button type="submit"> {{submitLabel}} </Button>
   </form>
 </template>
 
@@ -45,19 +45,15 @@ const props = defineProps({
     required: false,
     default: () => 'Submit'
   },
-  isNewForm: {
-    type: Boolean,
-    required: false,
-    default: () => false
-  }
 })
 
 const form = useForm({
   validationSchema: toTypedSchema(teamFormSchema),
-  initialValues: props.initialValues
 })
 
 const onSubmit = form.handleSubmit((values) => {
+  console.log(" form vaal ", values)
+  console.log(" init val ", props.initialValues)
   props.submitForm(values)
 })
 
@@ -65,6 +61,7 @@ const onSubmit = form.handleSubmit((values) => {
 watch(
   () => props.initialValues,
   (newValues) => {
+    console.log("Setting ->" , newValues)
     form.setValues(newValues)
   },
   { immediate: true }

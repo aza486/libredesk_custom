@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, toRefs } from 'vue'
+import { toRefs } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'

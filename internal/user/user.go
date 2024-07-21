@@ -14,6 +14,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
+	"github.com/lib/pq"
 	"github.com/zerodha/logf"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -106,7 +107,7 @@ func (u *Manager) Create(user *models.User) error {
 		password, _ = u.generatePassword()
 	)
 	user.Email = strings.ToLower(user.Email)
-	if _, err := u.q.CreateUser.Exec(user.Email, user.FirstName, user.LastName, password, user.TeamID, user.AvatarURL); err != nil {
+	if _, err := u.q.CreateUser.Exec(user.Email, user.FirstName, user.LastName, password, user.TeamID, user.AvatarURL, pq.Array(user.Roles)); err != nil {
 		u.lo.Error("error creating user", "error", err)
 		return err
 	}
@@ -135,7 +136,7 @@ func (u *Manager) GetSystemUser() (models.User, error) {
 }
 
 func (u *Manager) UpdateUser(id int, user models.User) error {
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, user.TeamID); err != nil {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, user.TeamID, pq.Array(user.Roles)); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return err
 	}

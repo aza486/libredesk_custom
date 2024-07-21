@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -36,7 +37,11 @@ func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastReq
 			firstName, _ = sess.String(sessVals["first_name"], nil)
 			lastName, _  = sess.String(sessVals["last_name"], nil)
 			teamID, _    = sess.Int(sessVals["team_id"], nil)
+			// TODO: FIX.
+			p, _         = sess.Bytes(sessVals["permissions"], nil)
 		)
+
+		fmt.Printf("%+v perms ", p)
 
 		if userID > 0 {
 			// Set user in the request context.

@@ -4,33 +4,29 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'vue-router'
-import api from '@/api'
-
-const router = useRouter()
 
 const props = defineProps({
   inbox: {
     type: Object,
-    required: true,
-    default: () => ({
-      id: ''
-    })
+    required: true
   }
 })
 
+const emit = defineEmits(['editInbox', 'deleteInbox', 'toggleInbox'])
+
 function editInbox(id) {
-  router.push({ path: `/admin/inboxes/${id}/edit` })
+  emit('editInbox', id)
 }
 
-async function deleteInbox(id) {
-  await api.deleteInbox(id)
-  router.push({ path: '/admin/inboxes' })
+function deleteInbox(id) {
+  emit('deleteInbox', id)
+}
+
+function toggleInbox(id) {
+  emit('toggleInbox', id)
 }
 </script>
 
@@ -45,6 +41,8 @@ async function deleteInbox(id) {
     <DropdownMenuContent>
       <DropdownMenuItem @click="editInbox(props.inbox.id)"> Edit </DropdownMenuItem>
       <DropdownMenuItem @click="deleteInbox(props.inbox.id)"> Delete </DropdownMenuItem>
+      <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-if="props.inbox.disabled"> Enable </DropdownMenuItem>
+      <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-else> Disable </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

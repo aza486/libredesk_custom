@@ -1,4 +1,7 @@
 <template>
+  <div class="mb-5">
+    <CustomBreadcrumb :links="breadcrumbLinks" />
+  </div>
   <div>
     <div class="mb-8 flex items-center justify-between">
       <div class="flex items-center space-x-4">
@@ -33,7 +36,7 @@
     </div>
 
     <div v-if="currentStep === 1" class="space-y-6">
-      <h4 class="text-2xl font-semibold text-foreground">Choose a channel</h4>
+      <h4 class="text-xl text-foreground">Choose a channel</h4>
       <div>
         <Button
           v-for="channel in channels"
@@ -52,7 +55,7 @@
       <Button @click="goBack" variant="link" size="xs">← Back</Button>
       <h4>Configure your email inbox</h4>
       <div v-if="selectedChannel === 'Email'">
-        <EmailInboxAutoform :initial-values="{}" :submitForm="submitForm" />
+        <EmailInboxForm :initial-values="{}" :submitForm="submitForm" />
       </div>
     </div>
     <div v-else>
@@ -67,11 +70,17 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { handleHTTPError } from '@/utils/http'
 import { Mail } from 'lucide-vue-next'
-import EmailInboxAutoform from '@/components/admin/EmailInboxAutoform.vue'
+import EmailInboxForm from '@/components/admin/inbox/EmailInboxForm.vue'
 import api from '@/api'
 import { useRouter } from 'vue-router'
-const router = useRouter()
+import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
 
+const breadcrumbLinks = [
+  { path: '/admin/inboxes', label: 'Inboxes' },
+  { path: '#', label: 'New Inbox' },
+]
+
+const router = useRouter()
 const { toast } = useToast()
 
 // Step management

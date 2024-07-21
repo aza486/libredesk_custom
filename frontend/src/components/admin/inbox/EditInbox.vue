@@ -1,14 +1,22 @@
 <template>
-  <EmailInboxAutoform :initial-values="inbox" :submitForm="submitForm" />
+  <div class="mb-5">
+    <CustomBreadcrumb :links="breadcrumbLinks" />
+  </div>
+  <EmailInboxForm :initial-values="inbox" :submitForm="submitForm" />
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
 import api from '@/api'
-import EmailInboxAutoform from '@/components/admin/EmailInboxAutoform.vue'
+import EmailInboxForm from '@/components/admin/inbox/EmailInboxForm.vue'
 import { useRouter } from 'vue-router'
-const router = useRouter()
+import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
 
+const breadcrumbLinks = [
+  { path: '/admin/inboxes', label: 'Inboxes' },
+  { path: '#', label: 'Edit Inbox' },
+]
+const router = useRouter()
 const inbox = ref({})
 
 const submitForm = (values) => {

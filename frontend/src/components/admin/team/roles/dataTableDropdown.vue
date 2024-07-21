@@ -12,7 +12,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const props = defineProps({
-  user: {
+  role: {
     type: Object,
     required: true,
     default: () => ({
@@ -21,8 +21,8 @@ const props = defineProps({
   }
 })
 
-function editUser(id) {
-  router.push({ path: `/admin/team/users/${id}/edit` })
+function editRole(id) {
+  router.push({ path: `/admin/teams/roles/${id}/edit` })
 }
 </script>
 
@@ -35,7 +35,7 @@ function editUser(id) {
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="editUser(props.user.id)"> Edit </DropdownMenuItem>
+      <DropdownMenuItem @click="editRole(props.role.id)"> Edit </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

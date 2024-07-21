@@ -33,6 +33,7 @@ type queries struct {
 	GetTeams       *sqlx.Stmt `query:"get-teams"`
 	GetTeam        *sqlx.Stmt `query:"get-team"`
 	InsertTeam     *sqlx.Stmt `query:"insert-team"`
+	UpdateTeam     *sqlx.Stmt `query:"update-team"`
 	GetTeamMembers *sqlx.Stmt `query:"get-team-members"`
 }
 
@@ -78,6 +79,14 @@ func (u *Manager) CreateTeam(t models.Team) error {
 	if _, err := u.q.InsertTeam.Exec(t.Name); err != nil {
 		u.lo.Error("error inserting team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating team", nil)
+	}
+	return nil
+}
+
+func (u *Manager) UpdateTeam(id int, t models.Team) error {
+	if _, err := u.q.UpdateTeam.Exec(id, t.Name); err != nil {
+		u.lo.Error("error updating team", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating team", nil)
 	}
 	return nil
 }

@@ -4,10 +4,10 @@ import ConversationsView from '../views/ConversationView.vue'
 import UserLoginView from '../views/UserLoginView.vue'
 import AccountView from '@/views/AccountView.vue'
 import AdminView from '@/views/AdminView.vue'
-import Inbox from '@/components/admin/Inbox.vue'
-import Team from '@/components/admin/team/Team.vue'
-import Teams from '@/components/admin/team/Teams.vue'
-import Users from '@/components/admin/team/Users.vue'
+import Inbox from '@/components/admin/inbox/Inbox.vue'
+import Team from '@/components/admin/team/TeamSection.vue'
+import Teams from '@/components/admin/team/teams/TeamsCard.vue'
+import Users from '@/components/admin/team/users/UsersCard.vue'
 import Automation from '@/components/admin/automation/Automation.vue'
 
 const routes = [
@@ -51,12 +51,12 @@ const routes = [
       },
       {
         path: 'new',
-        component: () => import('@/components/admin/NewInbox.vue')
+        component: () => import('@/components/admin/inbox/NewInbox.vue')
       },
       {
         path: ':id/edit',
         props: true,
-        component: () => import('@/components/admin/EditInbox.vue')
+        component: () => import('@/components/admin/inbox/EditInbox.vue')
       }
     ]
   },
@@ -75,16 +75,16 @@ const routes = [
       },
       {
         path: 'users/new',
-        component: () => import('@/components/admin/team/AddUsersForm.vue')
+        component: () => import('@/components/admin/team/users/AddUserForm.vue')
       },
       {
         path: 'teams/new',
-        component: () => import('@/components/admin/team/AddTeamForm.vue')
+        component: () => import('@/components/admin/team/teams/AddTeamForm.vue')
       },
       {
         path: 'users/:id/edit',
         props: true,
-        component: () => import('@/components/admin/team/EditUserForm.vue')
+        component: () => import('@/components/admin/team/users/EditUserForm.vue')
       },
       {
         path: 'teams',
@@ -93,8 +93,21 @@ const routes = [
       {
         path: 'teams/:id/edit',
         props: true,
-        component: () => import('@/components/admin/team/EditTeamForm.vue')
-      }
+        component: () => import('@/components/admin/team/teams/EditTeamForm.vue')
+      },
+      {
+        path: 'roles',
+        component: () => import('@/components/admin/team/roles/RolesCard.vue')
+      },
+      {
+        path: 'roles/new',
+        component: () => import('@/components/admin/team/roles/NewRole.vue')
+      },
+      {
+        path: 'roles/:id/edit',
+        props: true,
+        component: () => import('@/components/admin/team/roles/EditRole.vue')
+      },
     ]
   },
   {

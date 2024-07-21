@@ -2,20 +2,35 @@
     <div class="flex flex-col box border p-5 space-y-2">
         <div class="flex justify-between">
             <div>
-                <span class="admin-subtitle">
-                    {{ rule.name }}
+                <span class="admin-subtitle flex space-x-3 items-center">
+                    <div class="text-base">
+                        {{ rule.name }}
+                    </div>
+                    <div>
+                        <Badge v-if="!rule.disabled" class="text-[10px] py-0 px-1">Enabled</Badge>
+                        <Badge v-else class="text-[10px] py-0 px-1" variant="secondary">Disabled</Badge>
+                    </div>
                 </span>
             </div>
             <div>
                 <DropdownMenu>
                     <DropdownMenuTrigger as-child>
-                        <Button variant="ghost">
+                        <button>
                             <EllipsisVertical size=21></EllipsisVertical>
-                        </Button>
+                        </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <DropdownMenuItem @click="editRule(rule.id)">
+                        <DropdownMenuItem @click="navigateToEditRule(rule.id)">
                             <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem @click="$emit('delete-rule', rule.id)">
+                            <span>Delete</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-if="!rule.disabled">
+                            <span>Disable</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-else>
+                            <span>Enable</span>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -36,7 +51,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { EllipsisVertical } from 'lucide-vue-next';
 import { useRouter } from 'vue-router'
+import { Badge } from '@/components/ui/badge'
+
 const router = useRouter()
+defineEmits(['delete-rule', 'toggle-rule'])
 
 defineProps({
     rule: {
@@ -45,11 +63,7 @@ defineProps({
     },
 })
 
-const deleteRule = () => {
-
-}
-
-const editRule = (id) => {
+const navigateToEditRule = (id) => {
     router.push({ path: `/admin/automations/${id}/edit` })
 }
 </script>

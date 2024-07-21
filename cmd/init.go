@@ -22,6 +22,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/message"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
+	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
@@ -473,6 +474,18 @@ func initDB() *sqlx.DB {
 	db.SetConnMaxLifetime(c.MaxLifetime)
 
 	return db
+}
+
+func initRoleManager(db *sqlx.DB) *role.Manager {
+	var lo = initLogger("role_manager")
+	r, err := role.New(role.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing role manager: %v", err)
+	}
+	return r
 }
 
 // initLogger initializes a logf logger.

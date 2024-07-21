@@ -1,5 +1,5 @@
 -- name: get-teams
-SELECT id, name, uuid, disabled from teams;
+SELECT id, created_at, updated_at, name, uuid, disabled from teams;
 
 -- name: get-team
 SELECT id, name, uuid from teams where id = $1;
@@ -13,3 +13,6 @@ WHERE t.name = $1;
 
 -- name: insert-team
 INSERT INTO teams (name) values($1);
+
+-- name: update-team
+UPDATE teams set name = $2, updated_at = now() where id = $1;

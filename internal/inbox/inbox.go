@@ -70,6 +70,7 @@ type queries struct {
 	GetActive   *sqlx.Stmt `query:"get-active-inboxes"`
 	GetAll      *sqlx.Stmt `query:"get-all-inboxes"`
 	Update      *sqlx.Stmt `query:"update"`
+	Toggle      *sqlx.Stmt `query:"toggle"`
 	SoftDelete  *sqlx.Stmt `query:"soft-delete"`
 	InsertInbox *sqlx.Stmt `query:"insert-inbox"`
 }
@@ -127,17 +128,17 @@ func (m *Manager) GetActive() ([]imodels.Inbox, error) {
 
 // GetAll returns all inboxes.
 func (m *Manager) GetAll() ([]imodels.Inbox, error) {
-	var inboxes []imodels.Inbox
+	var inboxes = make([]imodels.Inbox, 0)
 	if err := m.queries.GetAll.Select(&inboxes); err != nil {
-		m.lo.Error("error fetching active inboxes", "error", err)
-		return nil, err
+		m.lo.Error("error fetching inboxes", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching inboxes", nil)
 	}
 	return inboxes, nil
 }
 
 // Create creates an inbox.
 func (m *Manager) Create(inbox imodels.Inbox) error {
-	if _, err := m.queries.InsertInbox.Exec(true, inbox.Channel, inbox.Config, inbox.Name, inbox.From, nil); err != nil {
+	if _, err := m.queries.InsertInbox.Exec(inbox.Channel, inbox.Config, inbox.Name, inbox.From, nil); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating inbox", nil)
 	}
@@ -147,7 +148,15 @@ func (m *Manager) Create(inbox imodels.Inbox) error {
 func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
-		return err
+		return envelope.NewError(envelope.GeneralError, "Error updating inbox", nil)
+	}
+	return nil
+}
+
+func (m *Manager) Toggle(id int) error {
+	if _, err := m.queries.Toggle.Exec(id); err != nil {
+		m.lo.Error("error toggling inbox", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error toggling inbox", nil)
 	}
 	return nil
 }

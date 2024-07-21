@@ -1,10 +1,10 @@
 -- name: get-rules
 select 
     rules
-from automation_rules;
+from automation_rules where disabled is not TRUE;
 
 -- name: get-all
-SELECT id, created_at, updated_at, name, description, type, rules from automation_rules;
+SELECT id, created_at, updated_at, name, description, type, rules, disabled from automation_rules where type = $1;
 
 -- name: get-rule
 SELECT id, created_at, updated_at, name, description, type, rules from automation_rules where id = $1;
@@ -26,3 +26,8 @@ INSERT into automation_rules (name, description, type, rules) VALUES ($1, $2, $3
 
 -- name: delete-rule
 delete from automation_rules where id = $1;
+
+-- name: toggle-rule
+UPDATE automation_rules 
+SET disabled = NOT disabled, updated_at = NOW() 
+WHERE id = $1;
