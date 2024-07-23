@@ -14,6 +14,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
+	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
@@ -74,6 +75,7 @@ const (
 
 type MessageStore interface {
 	RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error
+	RecordAssigneeUserChangeBySystem(conversationUUID string, assigneeID int) error
 	RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error
 	RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error
 	RecordStatusChange(status, conversationUUID string, actor umodels.User) error
@@ -84,6 +86,7 @@ type Manager struct {
 	db                  *sqlx.DB
 	hub                 *ws.Hub
 	i18n                *i18n.I18n
+	notifier            notifier.Notifier
 	messageStore        MessageStore
 	q                   queries
 	ReferenceNumPattern string
@@ -121,7 +124,7 @@ type queries struct {
 	DeleteTags                   *sqlx.Stmt `query:"delete-tags"`
 }
 
-func New(hub *ws.Hub, i18n *i18n.I18n, opts Opts) (*Manager, error) {
+func New(hub *ws.Hub, i18n *i18n.I18n, notfier notifier.Notifier, opts Opts) (*Manager, error) {
 	var q queries
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
@@ -130,6 +133,7 @@ func New(hub *ws.Hub, i18n *i18n.I18n, opts Opts) (*Manager, error) {
 		q:                   q,
 		hub:                 hub,
 		i18n:                i18n,
+		notifier:            notfier,
 		db:                  opts.DB,
 		lo:                  opts.Lo,
 		ReferenceNumPattern: opts.ReferenceNumPattern,
@@ -363,7 +367,25 @@ func (c *Manager) UpdateUserAssignee(uuid string, assigneeID int, actor umodels.
 	if err := c.UpdateAssignee(uuid, assigneeID, assigneeTypeUser); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
+
+	// Send notification to assignee.
+	c.notifier.SendAssignedConversationNotification([]int{assigneeID}, uuid)
+
 	if err := c.messageStore.RecordAssigneeUserChange(uuid, assigneeID, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
+	}
+	return nil
+}
+
+func (c *Manager) UpdateUserAssigneeBySystem(uuid string, assigneeID int) error {
+	if err := c.UpdateAssignee(uuid, assigneeID, assigneeTypeUser); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
+	}
+
+	// Send notification to assignee.
+	c.notifier.SendAssignedConversationNotification([]int{assigneeID}, uuid)
+
+	if err := c.messageStore.RecordAssigneeUserChangeBySystem(uuid, assigneeID); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
 	}
 	return nil
@@ -386,13 +408,13 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 			c.lo.Error("error updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_uuid", strconv.Itoa(assigneeID))
+		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", strconv.Itoa(assigneeID))
 	case assigneeTypeTeam:
 		if _, err := c.q.UpdateAssignedTeam.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_uuid", strconv.Itoa(assigneeID))
+		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", strconv.Itoa(assigneeID))
 	default:
 		return errors.New("invalid assignee type")
 	}

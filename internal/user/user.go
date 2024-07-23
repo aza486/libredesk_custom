@@ -51,6 +51,7 @@ type queries struct {
 	GetUsers        *sqlx.Stmt `query:"get-users"`
 	GetUser         *sqlx.Stmt `query:"get-user"`
 	GetEmail        *sqlx.Stmt `query:"get-email"`
+	GetPermissions  *sqlx.Stmt `query:"get-permissions"`
 	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
 	UpdateUser      *sqlx.Stmt `query:"update-user"`
 	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
@@ -158,6 +159,15 @@ func (u *Manager) GetEmail(id int, uuid string) (string, error) {
 		return email, fmt.Errorf("fetching user: %w", err)
 	}
 	return email, nil
+}
+
+func (u *Manager) GetPermissions(id int) ([]string, error) {
+	var permissions []string
+	if err := u.q.GetPermissions.Select(&permissions, id); err != nil {
+		u.lo.Error("error fetching user permissions", "error", err)
+		return permissions, envelope.NewError(envelope.GeneralError, "Error fetching user permissions", nil)
+	}
+	return permissions, nil
 }
 
 func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {

@@ -16,11 +16,12 @@ func handleGetMessages(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
+
 	msgs, err := app.messageManager.GetConversationMessages(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	// Generate URLs for all attachments.
+
 	for i := range msgs {
 		for j := range msgs[i].Attachments {
 			msgs[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(msgs[i].Attachments[j].UUID)
@@ -34,18 +35,17 @@ func handleGetMessage(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
+
 	msgs, err := app.messageManager.GetMessage(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Generate URLs for each of the attachments.
 	for i := range msgs {
 		for j := range msgs[i].Attachments {
 			msgs[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(msgs[i].Attachments[j].UUID)
 		}
 	}
-
 	return r.SendEnvelope(msgs)
 }
 
@@ -93,7 +93,6 @@ func handleSendMessage(r *fastglue.Request) error {
 		Content:          string(content),
 		ContentType:      message.ContentTypeHTML,
 		Private:          private,
-		Meta:             "{}",
 		Attachments:      attachments,
 	}
 
@@ -110,5 +109,5 @@ func handleSendMessage(r *fastglue.Request) error {
 	// Send WS update.
 	app.messageManager.BroadcastNewConversationMessage(msg, trimmedMessage)
 
-	return r.SendEnvelope("Message sent")
+	return r.SendEnvelope(true)
 }

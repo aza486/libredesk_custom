@@ -15,6 +15,7 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 		e.lo.Debug("eval rule", "groups", len(rule.Groups), "rule", rule)
 		// At max there can be only 2 groups.
 		if len(rule.Groups) > 2 {
+			e.lo.Warn("more than 2 groups found for rules")
 			continue
 		}
 		var results []bool

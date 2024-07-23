@@ -3,6 +3,7 @@ package main
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/attachment/stores/s3"
-	uauth "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -23,6 +23,7 @@ import (
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
 	"github.com/abhinavxd/artemis/internal/role"
+	"github.com/abhinavxd/artemis/internal/setting"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
@@ -30,8 +31,9 @@ import (
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
-	"github.com/knadh/koanf/parsers/json"
+	kjson "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/toml"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/providers/rawbytes"
@@ -122,8 +124,36 @@ func initFS() stuffbin.FileSystem {
 			log.Fatalf("error initializing FS: %v", err)
 		}
 	}
-	fmt.Println(fs.List())
 	return fs
+}
+
+// loadSettings loads settings from the DB into the given Koanf map.
+func loadSettings(m *setting.Manager) {
+	j, err := m.GetAllJSON()
+	if err != nil {
+		log.Fatalf("error parsing settings from DB: %v", err)
+	}
+
+	// Setting keys are dot separated, eg: app.favicon_url. Unflatten them into
+	// nested maps {app: {favicon_url}}.
+	var out map[string]interface{}
+
+	if err := json.Unmarshal(j, &out); err != nil {
+		log.Fatalf("error unmarshalling settings from DB: %v", err)
+	}
+	if err := ko.Load(confmap.Provider(out, "."), nil); err != nil {
+		log.Fatalf("error parsing settings from DB: %v", err)
+	}
+}
+
+func initSettingsManager(db *sqlx.DB) *setting.Manager {
+	s, err := setting.New(setting.Opts{
+		DB: db,
+	})
+	if err != nil {
+		log.Fatalf("error initializing setting manager: %v", err)
+	}
+	return s
 }
 
 // initSessionManager initializes and returns a simplesessions.Manager instance.
@@ -159,8 +189,8 @@ func initUserManager(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	return mgr
 }
 
-func initConversations(i18n *i18n.I18n, hub *ws.Hub, db *sqlx.DB) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, conversation.Opts{
+func initConversations(i18n *i18n.I18n, hub *ws.Hub, n notifier.Notifier, db *sqlx.DB) *conversation.Manager {
+	c, err := conversation.New(hub, i18n, n, conversation.Opts{
 		DB:                  db,
 		Lo:                  initLogger("conversation_manager"),
 		ReferenceNumPattern: ko.String("app.constants.conversation_reference_number_pattern"),
@@ -328,22 +358,12 @@ func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.En
 	return engine
 }
 
-func initAutoAssignmentEngine(teamMgr *team.Manager, userMgr *user.Manager, convMgr *conversation.Manager, msgMgr *message.Manager,
-	notifier notifier.Notifier, hub *ws.Hub) *autoassigner.Engine {
-	var lo = initLogger("auto_assignment_engine")
-	engine, err := autoassigner.New(teamMgr, userMgr, convMgr, msgMgr, notifier, hub, lo)
+func initAutoAssigner(teamManager *team.Manager, conversationManager *conversation.Manager) *autoassigner.Engine {
+	e, err := autoassigner.New(teamManager, conversationManager, initLogger("autoassigner"))
 	if err != nil {
-		log.Fatalf("error initializing auto assignment engine: %v", err)
+		log.Fatalf("error initializing auto assigner engine: %v", err)
 	}
-	return engine
-}
-
-func initAuthManager(db *sqlx.DB) *uauth.Manager {
-	manager, err := uauth.New(db, &logf.Logger{})
-	if err != nil {
-		log.Fatalf("error initializing rbac enginer: %v", err)
-	}
-	return manager
+	return e
 }
 
 func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) notifier.Notifier {
@@ -366,7 +386,7 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 	var config email.Config
 
 	// Load JSON data into Koanf.
-	if err := ko.Load(rawbytes.Provider([]byte(inboxRecord.Config)), json.Parser()); err != nil {
+	if err := ko.Load(rawbytes.Provider([]byte(inboxRecord.Config)), kjson.Parser()); err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
 

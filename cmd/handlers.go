@@ -15,18 +15,20 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/login", handleLogin)
 	g.GET("/api/logout", handleLogout)
 
+	g.GET("/api/settings", auth(handleGetSettings))
+
 	// Conversation.
-	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversations:all"))
-	g.GET("/api/conversations/team", auth(handleGetTeamConversations, "conversations:team"))
-	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversations:assigned"))	
+	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversation:all"))
+	g.GET("/api/conversations/team", auth(handleGetTeamConversations, "conversation:team"))
+	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversation:assigned"))
 
 	g.GET("/api/conversations/{uuid}", auth(handleGetConversation))
 	g.GET("/api/conversations/{uuid}/participants", auth(handleGetConversationParticipants))
 	g.PUT("/api/conversations/{uuid}/last-seen", auth(handleUpdateAssigneeLastSeen))
 	g.PUT("/api/conversations/{uuid}/assignee/user", auth(handleUpdateUserAssignee))
 	g.PUT("/api/conversations/{uuid}/assignee/team", auth(handleUpdateTeamAssignee))
-	g.PUT("/api/conversations/{uuid}/priority", auth(handleUpdatePriority))
-	g.PUT("/api/conversations/{uuid}/status", auth(handleUpdateStatus))
+	g.PUT("/api/conversations/{uuid}/priority", auth(handleUpdatePriority, "conversation:edit_priority"))
+	g.PUT("/api/conversations/{uuid}/status", auth(handleUpdateStatus, "conversation:edit_status"))
 	g.POST("/api/conversations/{uuid}/tags", auth(handleAddConversationTags))
 
 	// Message.
@@ -45,23 +47,23 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/file/upload", auth(handleFileUpload))
 
 	// User.
-	g.GET("/api/users/me", auth(handleGetCurrentUser))
-	g.GET("/api/users", auth(handleGetUsers))
-	g.GET("/api/users/{id}", auth(handleGetUser))
-	g.PUT("/api/users/{id}", auth(handleUpdateUser))
-	g.POST("/api/users", auth(handleCreateUser))
+	g.GET("/api/users/me", auth(handleGetCurrentUser, "users:manage"))
+	g.GET("/api/users", auth(handleGetUsers, "users:manage"))
+	g.GET("/api/users/{id}", auth(handleGetUser, "users:manage"))
+	g.PUT("/api/users/{id}", auth(handleUpdateUser, "users:manage"))
+	g.POST("/api/users", auth(handleCreateUser, "users:manage"))
 
 	// Team.
-	g.GET("/api/teams", auth(handleGetTeams))
-	g.GET("/api/teams/{id}", auth(handleGetTeam))
-	g.PUT("/api/teams/{id}", auth(handleUpdateTeam))
-	g.POST("/api/teams", auth(handleCreateTeam))
+	g.GET("/api/teams", auth(handleGetTeams, "teams:manage"))
+	g.GET("/api/teams/{id}", auth(handleGetTeam, "teams:manage"))
+	g.PUT("/api/teams/{id}", auth(handleUpdateTeam, "teams:manage"))
+	g.POST("/api/teams", auth(handleCreateTeam, "teams:manage"))
 
 	// Tags.
 	g.GET("/api/tags", auth(handleGetTags))
 
 	// i18n.
-	g.GET("/api/lang/{lang}", handleGetI18nLang)
+	g.GET("/api/lang/{lang}", auth(handleGetI18nLang))
 
 	// Websocket.
 	g.GET("/api/ws", auth(func(r *fastglue.Request) error {
@@ -69,27 +71,27 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	}))
 
 	// Automation rules.
-	g.GET("/api/automation/rules", handleGetAutomationRules)
-	g.GET("/api/automation/rules/{id}", handleGetAutomationRule)
-	g.POST("/api/automation/rules", handleCreateAutomationRule)
-	g.PUT("/api/automation/rules/{id}/toggle", handleToggleAutomationRule)
-	g.PUT("/api/automation/rules/{id}", handleUpdateAutomationRule)
-	g.DELETE("/api/automation/rules/{id}", handleDeleteAutomationRule)
+	g.GET("/api/automation/rules", auth(handleGetAutomationRules, "automations:manage"))
+	g.GET("/api/automation/rules/{id}", auth(handleGetAutomationRule, "automations:manage"))
+	g.POST("/api/automation/rules", auth(handleCreateAutomationRule, "automations:manage"))
+	g.PUT("/api/automation/rules/{id}/toggle", auth(handleToggleAutomationRule, "automations:manage"))
+	g.PUT("/api/automation/rules/{id}", auth(handleUpdateAutomationRule, "automations:manage"))
+	g.DELETE("/api/automation/rules/{id}", auth(handleDeleteAutomationRule, "automations:manage"))
 
 	// Inboxes.
-	g.GET("/api/inboxes", handleGetInboxes)
-	g.GET("/api/inboxes/{id}", handleGetInbox)
-	g.POST("/api/inboxes", handleCreateInbox)
-	g.PUT("/api/inboxes/{id}/toggle", handleToggleInbox)
-	g.PUT("/api/inboxes/{id}", handleUpdateInbox)
-	g.DELETE("/api/inboxes/{id}", handleDeleteInbox)
+	g.GET("/api/inboxes", auth(handleGetInboxes, "inboxes:manage"))
+	g.GET("/api/inboxes/{id}", auth(handleGetInbox, "inboxes:manage"))
+	g.POST("/api/inboxes", auth(handleCreateInbox, "inboxes:manage"))
+	g.PUT("/api/inboxes/{id}/toggle", auth(handleToggleInbox, "inboxes:manage"))
+	g.PUT("/api/inboxes/{id}", auth(handleUpdateInbox, "inboxes:manage"))
+	g.DELETE("/api/inboxes/{id}", auth(handleDeleteInbox, "inboxes:manage"))
 
 	// Roles.
-	g.GET("/api/roles", handleGetRoles)
-	g.GET("/api/roles/{id}", handleGetRole)
-	g.POST("/api/roles", handleCreateRole)
-	g.PUT("/api/roles/{id}", handleUpdateRole)
-	g.DELETE("/api/roles/{id}", handleDeleteRole)
+	g.GET("/api/roles", auth(handleGetRoles, "roles:manage"))
+	g.GET("/api/roles/{id}", auth(handleGetRole, "roles:manage"))
+	g.POST("/api/roles", auth(handleCreateRole, "roles:manage"))
+	g.PUT("/api/roles/{id}", auth(handleUpdateRole, "roles:manage"))
+	g.DELETE("/api/roles/{id}", auth(handleDeleteRole, "roles:manage"))
 
 	// Dashboard.
 	g.GET("/api/dashboard/me/counts", auth(handleUserDashboardCounts))

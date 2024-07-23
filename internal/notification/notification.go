@@ -2,8 +2,8 @@ package notifier
 
 // Notifier defines the interface for sending notifications.
 type Notifier interface {
-	SendMessage(userUUIDs []string, subject, content string) error
-	SendAssignedConversationNotification(userUUIDs []string, convUUID string) error
+	SendMessage(userID []int, subject, content string) error
+	SendAssignedConversationNotification(userID []int, convUUID string) error
 }
 
 // TemplateRenderer defines the interface for rendering templates.

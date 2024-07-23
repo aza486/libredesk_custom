@@ -1,5 +1,5 @@
 <template>
-  <div v-if="showTable">
+  <div>
     <div class="flex justify-between mb-5">
       <div>
         <span class="admin-title">Inboxes</span>
@@ -13,7 +13,7 @@
       <DataTable :columns="columns" :data="data" />
     </div>
   </div>
-  <div v-else>
+  <div>
     <router-view></router-view>
   </div>
 </template>
@@ -113,7 +113,7 @@ const columns = [
           inbox,
           onEditInbox: (id) => handleEditInbox(id),
           onDeleteInbox: (id) => handleDeleteInbox(id),
-          onToggleInbox: (id)  => handleToggleInbox(id),
+          onToggleInbox: (id) => handleToggleInbox(id),
         })
       )
     }

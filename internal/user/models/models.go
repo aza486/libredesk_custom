@@ -16,7 +16,7 @@ type User struct {
 	TeamID           int            `db:"team_id" json:"team_id"`
 	Password         string         `db:"password" json:"-"`
 	TeamName         null.String    `db:"team_name" json:"team_name"`
-	Roles            []string       `db:"roles" json:"roles"`
+	Roles            pq.StringArray `db:"roles" json:"roles"`
 	SendWelcomeEmail bool           `db:"-" json:"send_welcome_email"`
 	Permissions      pq.StringArray `db:"permissions" json:"permissions"`
 }

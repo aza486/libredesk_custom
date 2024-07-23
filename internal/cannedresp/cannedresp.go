@@ -2,9 +2,9 @@ package cannedresp
 
 import (
 	"embed"
-	"fmt"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -50,8 +50,8 @@ func New(opts Opts) (*Manager, error) {
 func (t *Manager) GetAll() ([]CannedResponse, error) {
 	var c []CannedResponse
 	if err := t.q.GetAll.Select(&c); err != nil {
-		t.lo.Error("fetching canned responses", "error", err)
-		return c, fmt.Errorf("error fetching canned responses")
+		t.lo.Error("error fetching canned responses", "error", err)
+		return c, envelope.NewError(envelope.GeneralError, "Error fetching canned responses", nil)
 	}
 	return c, nil
 }

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/zerodha/fastglue"
 )
 
@@ -12,7 +10,7 @@ func handleGetCannedResponses(r *fastglue.Request) error {
 	)
 	c, err := app.cannedRespManager.GetAll()
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, "Error fetching canned responses", nil, "")
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(c)
 }

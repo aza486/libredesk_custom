@@ -162,7 +162,7 @@ func (c *Hub) BroadcastConversationAssignment(userID int, conversationUUID strin
 	c.marshalAndPush(message, []int{userID})
 }
 
-func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop string, val string) {
+func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop string, value string) {
 	userIDs, ok := c.ConversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
@@ -173,7 +173,7 @@ func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop string,
 		Data: map[string]interface{}{
 			"uuid": conversationUUID,
 			"prop": prop,
-			"val":  val,
+			"val":  value,
 		},
 	}
 

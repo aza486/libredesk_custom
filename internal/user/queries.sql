@@ -14,7 +14,7 @@ JOIN roles r ON r.name = ANY(u.roles)
 WHERE u.email = $1;
 
 -- name: get-user
-SELECT id, email, avatar_url, first_name, last_name, team_id 
+SELECT id, email, avatar_url, first_name, last_name, team_id, roles
 FROM users 
 WHERE 
   CASE 
@@ -34,3 +34,9 @@ VALUES($1, $2, $3, $4, $5, $6, $7);
 UPDATE users
 set first_name = $2, last_name = $3, email = $4, team_id = $5, roles = $6, updated_at = now()
 where id = $1
+
+-- name: get-permissions
+SELECT unnest(r.permissions)
+FROM users u
+JOIN roles r ON r.name = ANY(u.roles)
+WHERE u.id = $1

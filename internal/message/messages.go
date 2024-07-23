@@ -17,8 +17,10 @@ import (
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/systeminfo"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
@@ -140,7 +142,7 @@ func (m *Manager) GetConversationMessages(uuid string) ([]models.Message, error)
 	var messages []models.Message
 	if err := m.q.GetMessages.Select(&messages, uuid); err != nil {
 		m.lo.Error("fetching messages from DB", "conversation_uuid", uuid, "error", err)
-		return nil, fmt.Errorf("error fetching messages")
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
 	}
 	return messages, nil
 }
@@ -149,7 +151,7 @@ func (m *Manager) GetMessage(uuid string) ([]models.Message, error) {
 	var messages []models.Message
 	if err := m.q.GetMessage.Select(&messages, uuid); err != nil {
 		m.lo.Error("fetching messages from DB", "conversation_uuid", uuid, "error", err)
-		return nil, fmt.Errorf("error fetching messages")
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching message", nil)
 	}
 	return messages, nil
 }
@@ -335,6 +337,18 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 		return err
 	}
 	return m.RecordActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
+}
+
+func (m *Manager) RecordAssigneeUserChangeBySystem(conversationUUID string, assigneeID int) error {
+	assignee, err := m.userMgr.GetUser(assigneeID, "")
+	if err != nil {
+		return err
+	}
+	system, err := m.userMgr.GetUser(0, systeminfo.SystemUserUUID)
+	if err != nil {
+		return err
+	}
+	return m.RecordActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), system)
 }
 
 func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error {

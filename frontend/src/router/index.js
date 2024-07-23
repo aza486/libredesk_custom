@@ -9,6 +9,7 @@ import Team from '@/components/admin/team/TeamSection.vue'
 import Teams from '@/components/admin/team/teams/TeamsCard.vue'
 import Users from '@/components/admin/team/users/UsersCard.vue'
 import Automation from '@/components/admin/automation/Automation.vue'
+import NotificationTab from '@/components/admin/notification/NotificationTab.vue'
 
 const routes = [
   {
@@ -118,6 +119,27 @@ const routes = [
       {
         path: '',
         component: Automation
+      },
+      {
+        path: ':id/edit',
+        props: true,
+        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
+      },
+      {
+        path: 'new',
+        props: true,
+        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
+      },
+    ]
+  },
+  {
+    path: '/admin/notifications',
+    name: 'notifications',
+    component: AdminView,
+    children: [
+      {
+        path: '',
+        component: NotificationTab
       },
       {
         path: ':id/edit',

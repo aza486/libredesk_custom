@@ -12,8 +12,8 @@ import (
 	"github.com/zerodha/logf"
 )
 
-// Notifier handles email notifications.
-type Notifier struct {
+// Email
+type Email struct {
 	lo               *logf.Logger
 	from             string
 	smtpPools        []*smtppool.Pool
@@ -27,12 +27,12 @@ type Opts struct {
 }
 
 // New creates a new instance of email Notifier.
-func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, TemplateRenderer notifier.TemplateRenderer, opts Opts) (*Notifier, error) {
+func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, TemplateRenderer notifier.TemplateRenderer, opts Opts) (*Email, error) {
 	pools, err := email.NewSmtpPool(smtpConfig)
 	if err != nil {
 		return nil, err
 	}
-	return &Notifier{
+	return &Email{
 		lo:               opts.Lo,
 		smtpPools:        pools,
 		from:             opts.FromEmail,
@@ -42,12 +42,12 @@ func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, TemplateRe
 }
 
 // SendMessage sends an email using the default template to multiple users.
-func (e *Notifier) SendMessage(userUUIDs []string, subject, content string) error {
+func (e *Email) SendMessage(userIDs []int, subject, content string) error {
 	var recipientEmails []string
-	for i := 0; i < len(userUUIDs); i++ {
-		userEmail, err := e.userStore.GetEmail(0, userUUIDs[i])
+	for i := 0; i < len(userIDs); i++ {
+		userEmail, err := e.userStore.GetEmail(userIDs[i], "")
 		if err != nil {
-			e.lo.Error("error fetching user email for user uuid", "error", err)
+			e.lo.Error("error fetching user email", "error", err)
 			return err
 		}
 		recipientEmails = append(recipientEmails, userEmail)
@@ -80,15 +80,15 @@ func (e *Notifier) SendMessage(userUUIDs []string, subject, content string) erro
 	return nil
 }
 
-func (e *Notifier) SendAssignedConversationNotification(userUUIDs []string, convUUID string) error {
+func (e *Email) SendAssignedConversationNotification(userIDs []int, convUUID string) error {
 	subject := "New conversation assigned to you"
 	link := fmt.Sprintf("http://localhost:5173/conversations/%s", convUUID)
 	content := fmt.Sprintf("A new conversation has been assigned to you. <br>Please review the details and take necessary action by following this link: %s", link)
-	return e.SendMessage(userUUIDs, subject, content)
+	return e.SendMessage(userIDs, subject, content)
 }
 
-// Send sends an email message using one of the SMTP pools.
-func (e *Notifier) Send(m models.Message) error {
+// Send sends an email message.
+func (e *Email) Send(m models.Message) error {
 	var (
 		ln  = len(e.smtpPools)
 		srv *smtppool.Pool

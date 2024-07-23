@@ -17,6 +17,11 @@ const sidebarNavItems = [
     title: 'Automations',
     href: '/admin/automations',
     description: 'Create automations and time triggers'
+  },
+  {
+    title: 'Notifications',
+    href: '/admin/notifications',
+    description: 'Manage notifications for your agents'
   }
 ]
 </script>

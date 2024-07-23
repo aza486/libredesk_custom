@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -11,7 +10,7 @@ import (
 	"github.com/zerodha/simplesessions/v3"
 )
 
-func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastRequestHandler {
+func auth(handler fastglue.FastRequestHandler, requiredPerms ...string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
@@ -37,14 +36,20 @@ func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastReq
 			firstName, _ = sess.String(sessVals["first_name"], nil)
 			lastName, _  = sess.String(sessVals["last_name"], nil)
 			teamID, _    = sess.Int(sessVals["team_id"], nil)
-			// TODO: FIX.
-			p, _         = sess.Bytes(sessVals["permissions"], nil)
 		)
 
-		fmt.Printf("%+v perms ", p)
-
 		if userID > 0 {
-			// Set user in the request context.
+			// Fetch user perms.
+			userPerms, err := app.userManager.GetPermissions(userID)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+
+			if !hasPerms(userPerms, requiredPerms) {
+				return r.SendErrorEnvelope(http.StatusUnauthorized, "You don't have permissions to access this page.", nil, envelope.PermissionError)
+			}
+
+			// User is loggedin, Set user in the request context.
 			r.RequestCtx.SetUserValue("user", umodels.User{
 				ID:        userID,
 				Email:     email,
@@ -52,14 +57,6 @@ func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastReq
 				LastName:  lastName,
 				TeamID:    teamID,
 			})
-
-			// Check permission.
-			for _, perm := range perms {
-				hasPerm, err := app.auth.HasPermission(userID, perm)
-				if err != nil || !hasPerm {
-					return r.SendErrorEnvelope(http.StatusUnauthorized, "You don't have permission to access this page.", nil, envelope.PermissionError)
-				}
-			}
 
 			return handler(r)
 		}
@@ -69,6 +66,25 @@ func auth(handler fastglue.FastRequestHandler, perms ...string) fastglue.FastReq
 		}
 		return r.SendErrorEnvelope(http.StatusUnauthorized, "invalid or expired session", nil, envelope.PermissionError)
 	}
+}
+
+// hasPerms checks if all requiredPerms exist in userPerms.
+func hasPerms(userPerms []string, requiredPerms []string) bool {
+	userPermMap := make(map[string]bool)
+
+	// make map for user's permissions for quick look up
+	for _, perm := range userPerms {
+		userPermMap[perm] = true
+	}
+
+	// iterate through required perms and if not found in userPermMap return false
+	for _, requiredPerm := range requiredPerms {
+		if _, ok := userPermMap[requiredPerm]; !ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 // authPage middleware makes sure user is logged in to access the page

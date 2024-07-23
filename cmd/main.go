@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
-	uauth "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
@@ -17,6 +16,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/message"
 	"github.com/abhinavxd/artemis/internal/role"
+	"github.com/abhinavxd/artemis/internal/setting"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/upload"
@@ -25,6 +25,7 @@ import (
 	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
+	"github.com/redis/go-redis/v9"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -45,8 +46,10 @@ const (
 type App struct {
 	constants           consts
 	fs                  stuffbin.FileSystem
+	rdb                 *redis.Client
 	i18n                *i18n.I18n
 	lo                  *logf.Logger
+	settingsManager     *setting.Manager
 	roleManager         *role.Manager
 	contactManager      *contact.Manager
 	userManager         *user.Manager
@@ -54,7 +57,6 @@ type App struct {
 	sessManager         *simplesessions.Manager
 	tagManager          *tag.Manager
 	messageManager      *message.Manager
-	auth                *uauth.Manager
 	inboxManager        *inbox.Manager
 	uploadManager       *upload.Manager
 	attachmentManager   *attachment.Manager
@@ -70,6 +72,11 @@ func main() {
 	// Load the config files into Koanf.
 	initConfig(ko)
 
+	// Load app settings into Koanf.
+	db := initDB()
+	settingManager := initSettingsManager(db)
+	loadSettings(settingManager)
+
 	var (
 		shutdownCh          = make(chan struct{})
 		ctx, stop           = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -77,8 +84,7 @@ func main() {
 		fs                  = initFS()
 		i18n                = initI18n(fs)
 		lo                  = initLogger("artemis")
-		rd                  = initRedis()
-		db                  = initDB()
+		rdb                 = initRedis()
 		templateManager     = initTemplateManager(db)
 		attachmentManager   = initAttachmentsManager(db)
 		contactManager      = initContactManager(db)
@@ -86,10 +92,10 @@ func main() {
 		teamManager         = initTeamManager(db)
 		userManager         = initUserManager(i18n, db)
 		notifier            = initNotifier(userManager, templateManager)
-		conversationManager = initConversations(i18n, wsHub, db)
+		conversationManager = initConversations(i18n, wsHub, notifier, db)
 		automationEngine    = initAutomationEngine(db, userManager)
 		messageManager      = initMessages(db, wsHub, userManager, teamManager, contactManager, attachmentManager, conversationManager, inboxManager, automationEngine, templateManager)
-		autoAssignerEngine  = initAutoAssignmentEngine(teamManager, userManager, conversationManager, messageManager, notifier, wsHub)
+		autoassigner        = initAutoAssigner(teamManager, conversationManager)
 	)
 
 	// Set message store for conversation manager.
@@ -106,8 +112,8 @@ func main() {
 	automationEngine.SetConversationStore(conversationManager)
 	go automationEngine.Serve(ctx)
 
-	// Start conversation auto assigner engine.
-	go autoAssignerEngine.Serve(ctx, ko.MustDuration("autoassigner.assign_interval"))
+	// Start conversation auto assigner.
+	go autoassigner.Serve(ctx, ko.MustDuration("autoassigner.assign_interval"))
 
 	// Start inserting incoming messages from all active inboxes and dispatch pending outgoing messages.
 	go messageManager.StartDBInserts(ctx, ko.MustInt("message.reader_concurrency"))
@@ -116,8 +122,10 @@ func main() {
 	// Init the app
 	var app = &App{
 		lo:                  lo,
+		rdb:                 rdb,
 		fs:                  fs,
 		i18n:                i18n,
+		settingsManager:     settingManager,
 		contactManager:      contactManager,
 		inboxManager:        inboxManager,
 		userManager:         userManager,
@@ -126,11 +134,10 @@ func main() {
 		conversationManager: conversationManager,
 		messageManager:      messageManager,
 		automationEngine:    automationEngine,
-		constants:           initConstants(),
 		roleManager:         initRoleManager(db),
-		auth:                initAuthManager(db),
+		constants:           initConstants(),
 		tagManager:          initTags(db),
-		sessManager:         initSessionManager(rd),
+		sessManager:         initSessionManager(rdb),
 		cannedRespManager:   initCannedResponse(db),
 	}
 
@@ -159,7 +166,7 @@ func main() {
 
 		log.Printf("%sShutting down the server. Please wait.\x1b[0m", colourRed)
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		// Signal to shutdown the server
 		shutdownCh <- struct{}{}

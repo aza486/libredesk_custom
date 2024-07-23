@@ -1,3 +1,5 @@
+// Package automation provides a framework for automatically evaluating and applying
+// rules to conversations based on events like new conversations, updates, and time triggers.
 package automation
 
 import (
@@ -23,12 +25,13 @@ var (
 )
 
 type Engine struct {
+	rules   []models.Rule
+	rulesMu *sync.RWMutex
+
 	q                   queries
 	lo                  *logf.Logger
 	conversationStore   ConversationStore
 	systemUser          umodels.User
-	rulesMu             *sync.RWMutex
-	rules               []models.Rule
 	newConversationQ    chan string
 	updateConversationQ chan string
 }
@@ -79,20 +82,19 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 	return e, nil
 }
 
-func (e *Engine) ReloadRules() {
-	e.lo.Debug("reloading automation engine rules")
-	e.rulesMu.Lock()
-	defer e.rulesMu.Unlock()
-	e.rules = e.queryRules()
-}
-
 func (e *Engine) SetConversationStore(store ConversationStore) {
 	e.conversationStore = store
 }
 
+func (e *Engine) ReloadRules() {
+	e.rulesMu.Lock()
+	defer e.rulesMu.Unlock()
+	e.lo.Debug("reloading automation engine rules")
+	e.rules = e.queryRules()
+}
+
 func (e *Engine) Serve(ctx context.Context) {
-	// TODO: Change to 1 hour.
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
 	// Create separate semaphores for each channel
@@ -184,7 +186,6 @@ func (e *Engine) handleNewConversation(conversationUUID string, semaphore chan s
 	defer func() { <-semaphore }()
 	conversation, err := e.conversationStore.Get(conversationUUID)
 	if err != nil {
-		e.lo.Error("error could not fetch conversations to evaluate new conversation rules", "conversation_uuid", conversationUUID)
 		return
 	}
 	rules := e.filterRulesByType(models.RuleTypeNewConversation)
@@ -207,7 +208,6 @@ func (e *Engine) handleTimeTrigger(semaphore chan struct{}) {
 	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
 	conversations, err := e.conversationStore.GetRecentConversations(thirtyDaysAgo)
 	if err != nil {
-		e.lo.Error("error could not fetch conversations to evaluate time triggers")
 		return
 	}
 	rules := e.filterRulesByType(models.RuleTypeTimeTrigger)
@@ -257,6 +257,9 @@ func (e *Engine) queryRules() []models.Rule {
 }
 
 func (e *Engine) filterRulesByType(ruleType string) []models.Rule {
+	e.rulesMu.RLock()
+	defer e.rulesMu.RUnlock()
+
 	var filteredRules []models.Rule
 	for _, rule := range e.rules {
 		if rule.Type == ruleType {
