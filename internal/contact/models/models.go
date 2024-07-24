@@ -12,7 +12,7 @@ type Contact struct {
 	FirstName   string      `db:"first_name" json:"first_name"`
 	LastName    string      `db:"last_name" json:"last_name"`
 	Email       string      `db:"email" json:"email"`
-	PhoneNumber *string     `db:"phone_number" json:"phone_number"`
+	PhoneNumber null.String `db:"phone_number" json:"phone_number"`
 	AvatarURL   null.String `db:"avatar_url" json:"avatar_url"`
 	InboxID     int         `db:"inbox_id" json:"inbox_id"`
 	Source      string      `db:"source" json:"source"`

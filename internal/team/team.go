@@ -1,3 +1,4 @@
+// Package team handles the management of teams and their members.
 package team
 
 import (
@@ -19,16 +20,19 @@ var (
 	efs embed.FS
 )
 
+// Manager handles team-related operations.
 type Manager struct {
 	lo *logf.Logger
 	q  queries
 }
 
+// Opts contains options for initializing the Manager.
 type Opts struct {
 	DB *sqlx.DB
 	Lo *logf.Logger
 }
 
+// queries contains prepared SQL queries.
 type queries struct {
 	GetTeams       *sqlx.Stmt `query:"get-teams"`
 	GetTeam        *sqlx.Stmt `query:"get-team"`
@@ -37,6 +41,7 @@ type queries struct {
 	GetTeamMembers *sqlx.Stmt `query:"get-team-members"`
 }
 
+// New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
@@ -50,6 +55,7 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
+// GetAll retrieves all teams.
 func (u *Manager) GetAll() ([]models.Team, error) {
 	var teams []models.Team
 	if err := u.q.GetTeams.Select(&teams); err != nil {
@@ -62,6 +68,7 @@ func (u *Manager) GetAll() ([]models.Team, error) {
 	return teams, nil
 }
 
+// GetTeam retrieves a team by ID.
 func (u *Manager) GetTeam(id int) (models.Team, error) {
 	var team models.Team
 	if err := u.q.GetTeam.Get(&team, id); err != nil {
@@ -75,6 +82,7 @@ func (u *Manager) GetTeam(id int) (models.Team, error) {
 	return team, nil
 }
 
+// CreateTeam creates a new team.
 func (u *Manager) CreateTeam(t models.Team) error {
 	if _, err := u.q.InsertTeam.Exec(t.Name); err != nil {
 		u.lo.Error("error inserting team", "error", err)
@@ -83,6 +91,7 @@ func (u *Manager) CreateTeam(t models.Team) error {
 	return nil
 }
 
+// UpdateTeam updates an existing team.
 func (u *Manager) UpdateTeam(id int, t models.Team) error {
 	if _, err := u.q.UpdateTeam.Exec(id, t.Name); err != nil {
 		u.lo.Error("error updating team", "error", err)
@@ -91,6 +100,7 @@ func (u *Manager) UpdateTeam(id int, t models.Team) error {
 	return nil
 }
 
+// GetTeamMembers retrieves members of a team by team name.
 func (u *Manager) GetTeamMembers(name string) ([]umodels.User, error) {
 	var users []umodels.User
 	if err := u.q.GetTeamMembers.Select(&users, name); err != nil {

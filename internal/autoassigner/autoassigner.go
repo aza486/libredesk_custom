@@ -12,6 +12,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/team"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/mr-karan/balance"
 	"github.com/zerodha/logf"
 )
@@ -27,6 +28,7 @@ type Engine struct {
 	// Mutex to protect the balancer map
 	mu sync.Mutex
 
+	systemUser          umodels.User
 	conversationManager *conversation.Manager
 	teamManager         *team.Manager
 	lo                  *logf.Logger
@@ -34,10 +36,11 @@ type Engine struct {
 
 // New initializes a new Engine instance, set up with the provided team manager,
 // conversation manager, and logger.
-func New(teamManager *team.Manager, conversationManager *conversation.Manager, lo *logf.Logger) (*Engine, error) {
+func New(teamManager *team.Manager, conversationManager *conversation.Manager, systemUser umodels.User, lo *logf.Logger) (*Engine, error) {
 	var e = Engine{
 		conversationManager: conversationManager,
 		teamManager:         teamManager,
+		systemUser:          systemUser,
 		lo:                  lo,
 		mu:                  sync.Mutex{},
 	}
@@ -121,6 +124,7 @@ func (e *Engine) assignConversations() error {
 	}
 
 	for _, conversation := range unassigned {
+		// Get user.
 		uid, err := e.getUserFromPool(conversation)
 		if err != nil {
 			e.lo.Error("error fetching user from balancer pool", "error", err)
@@ -133,8 +137,8 @@ func (e *Engine) assignConversations() error {
 			e.lo.Error("error converting user id from string to int", "error", err)
 		}
 
-		// Assign conversation to this user.
-		e.conversationManager.UpdateUserAssigneeBySystem(conversation.UUID, userID)
+		// Assign conversation.
+		e.conversationManager.UpdateUserAssignee(conversation.UUID, userID, e.systemUser)
 	}
 	return nil
 }

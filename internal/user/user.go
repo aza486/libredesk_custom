@@ -32,6 +32,7 @@ const (
 	SystemUserUUID = "00000000-0000-0000-0000-000000000000"
 )
 
+// Manager handles user-related operations.
 type Manager struct {
 	lo         *logf.Logger
 	i18n       *i18n.I18n
@@ -39,13 +40,14 @@ type Manager struct {
 	bcryptCost int
 }
 
+// Opts contains options for initializing the Manager.
 type Opts struct {
 	DB         *sqlx.DB
 	Lo         *logf.Logger
 	BcryptCost int
 }
 
-// Prepared queries.
+// queries contains prepared SQL queries.
 type queries struct {
 	CreateUser      *sqlx.Stmt `query:"create-user"`
 	GetUsers        *sqlx.Stmt `query:"get-users"`
@@ -57,6 +59,7 @@ type queries struct {
 	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
 }
 
+// New creates and returns a new instance of the Manager.
 func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	var q queries
 
@@ -72,6 +75,7 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	}, nil
 }
 
+// Login authenticates a user by email and password.
 func (u *Manager) Login(email string, password []byte) (models.User, error) {
 	var user models.User
 
@@ -90,6 +94,7 @@ func (u *Manager) Login(email string, password []byte) (models.User, error) {
 	return user, nil
 }
 
+// GetUsers retrieves all users.
 func (u *Manager) GetUsers() ([]models.User, error) {
 	var users []models.User
 	if err := u.q.GetUsers.Select(&users); err != nil {
@@ -103,10 +108,9 @@ func (u *Manager) GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
+// Create creates a new user.
 func (u *Manager) Create(user *models.User) error {
-	var (
-		password, _ = u.generatePassword()
-	)
+	password, _ := u.generatePassword()
 	user.Email = strings.ToLower(user.Email)
 	if _, err := u.q.CreateUser.Exec(user.Email, user.FirstName, user.LastName, password, user.TeamID, user.AvatarURL, pq.Array(user.Roles)); err != nil {
 		u.lo.Error("error creating user", "error", err)
@@ -115,7 +119,8 @@ func (u *Manager) Create(user *models.User) error {
 	return nil
 }
 
-func (u *Manager) GetUser(id int, uuid string) (models.User, error) {
+// Get retrieves a user by ID or UUID.
+func (u *Manager) Get(id int, uuid string) (models.User, error) {
 	var uu interface{}
 	if uuid != "" {
 		uu = uuid
@@ -132,10 +137,12 @@ func (u *Manager) GetUser(id int, uuid string) (models.User, error) {
 	return user, nil
 }
 
+// GetSystemUser retrieves the system user.
 func (u *Manager) GetSystemUser() (models.User, error) {
-	return u.GetUser(0, SystemUserUUID)
+	return u.Get(0, SystemUserUUID)
 }
 
+// UpdateUser updates an existing user.
 func (u *Manager) UpdateUser(id int, user models.User) error {
 	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, user.TeamID, pq.Array(user.Roles)); err != nil {
 		u.lo.Error("error updating user", "error", err)
@@ -144,6 +151,7 @@ func (u *Manager) UpdateUser(id int, user models.User) error {
 	return nil
 }
 
+// GetEmail retrieves the email of a user by ID or UUID.
 func (u *Manager) GetEmail(id int, uuid string) (string, error) {
 	var uu interface{}
 	if uuid != "" {
@@ -161,6 +169,7 @@ func (u *Manager) GetEmail(id int, uuid string) (string, error) {
 	return email, nil
 }
 
+// GetPermissions retrieves the permissions of a user by ID.
 func (u *Manager) GetPermissions(id int) ([]string, error) {
 	var permissions []string
 	if err := u.q.GetPermissions.Select(&permissions, id); err != nil {
@@ -170,24 +179,23 @@ func (u *Manager) GetPermissions(id int) ([]string, error) {
 	return permissions, nil
 }
 
+// verifyPassword compares the provided password with the stored password hash.
 func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {
-	err := bcrypt.CompareHashAndPassword([]byte(pwdHash), pwd)
-	if err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(pwdHash), pwd); err != nil {
 		return fmt.Errorf("invalid username or password")
 	}
 	return nil
 }
 
+// setPassword sets a new password for a user.
 func (u *Manager) setPassword(uid int, pwd string) error {
-	// Bcrypt does not operate over 72 bytes.
 	if len(pwd) > 72 {
 		return ErrPasswordTooLong
 	}
-	bytes, err := u.generatePassword()
+	bytes, err := bcrypt.GenerateFromPassword([]byte(pwd), u.bcryptCost)
 	if err != nil {
 		return err
 	}
-	// Update password in db.
 	if _, err := u.q.SetUserPassword.Exec(bytes, uid); err != nil {
 		u.lo.Error("setting password", "error", err)
 		return fmt.Errorf("error setting password")
@@ -195,8 +203,9 @@ func (u *Manager) setPassword(uid int, pwd string) error {
 	return nil
 }
 
+// generatePassword generates a random password and returns its bcrypt hash.
 func (u *Manager) generatePassword() ([]byte, error) {
-	var password, _ = stringutil.RandomAlNumString(16)
+	password, _ := stringutil.RandomAlNumString(16)
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), u.bcryptCost)
 	if err != nil {
 		u.lo.Error("error generating bcrypt password", "error", err)

@@ -17,17 +17,17 @@ func handleGetMessages(r *fastglue.Request) error {
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
 
-	msgs, err := app.messageManager.GetConversationMessages(uuid)
+	messages, err := app.messageManager.GetConversationMessages(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	for i := range msgs {
-		for j := range msgs[i].Attachments {
-			msgs[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(msgs[i].Attachments[j].UUID)
+	for i := range messages {
+		for j := range messages[i].Attachments {
+			messages[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(messages[i].Attachments[j].UUID)
 		}
 	}
-	return r.SendEnvelope(msgs)
+	return r.SendEnvelope(messages)
 }
 
 func handleGetMessage(r *fastglue.Request) error {
@@ -35,18 +35,16 @@ func handleGetMessage(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
-
-	msgs, err := app.messageManager.GetMessage(uuid)
+	messages, err := app.messageManager.GetMessage(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	for i := range msgs {
-		for j := range msgs[i].Attachments {
-			msgs[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(msgs[i].Attachments[j].UUID)
+	for i := range messages {
+		for j := range messages[i].Attachments {
+			messages[i].Attachments[j].URL = app.attachmentManager.Store.GetURL(messages[i].Attachments[j].UUID)
 		}
 	}
-	return r.SendEnvelope(msgs)
+	return r.SendEnvelope(messages)
 }
 
 func handleRetryMessage(r *fastglue.Request) error {

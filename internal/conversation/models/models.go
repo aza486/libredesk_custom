@@ -7,6 +7,49 @@ import (
 	"github.com/volatiletech/null/v9"
 )
 
+
+var (
+	StatusOpen       = "Open"
+	StatusResolved   = "Resolved"
+	StatusProcessing = "Processing"
+	StatusSpam       = "Spam"
+
+	PriorityLow    = "Low"
+	PriortiyMedium = "Medium"
+	PriorityHigh   = "High"
+
+	ValidStatuses = []string{
+		StatusOpen,
+		StatusResolved,
+		StatusProcessing,
+		StatusSpam,
+	}
+	ValidPriorities = []string{
+		PriorityLow,
+		PriortiyMedium,
+		PriorityHigh,
+	}
+
+	ValidFilters = map[string]string{
+		"status_open":       " c.status = 'Open'",
+		"status_processing": " c.status = 'Processing'",
+		"status_spam":       " c.status = 'Spam'",
+		"status_resolved":   " c.status = 'Resolved'",
+		"status_all":        " 1=1  ",
+	}
+
+	ValidOrderBy = []string{"created_at", "priority", "status", "last_message_at"}
+	ValidOrder   = []string{"ASC", "DESC"}
+
+	AssigneeTypeTeam = "team"
+	AssigneeTypeUser = "user"
+
+	AllConversations      = "all"
+	AssignedConversations = "assigned"
+	TeamConversations     = "unassigned"
+)
+
+
 type Conversation struct {
 	ID                 int         `db:"id" json:"id"`
 	CreatedAt          time.Time   `db:"created_at" json:"created_at"`

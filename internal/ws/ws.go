@@ -1,3 +1,4 @@
+// Package ws handles WebSocket connections and broadcasting messages to clients.
 package ws
 
 import (
@@ -12,57 +13,60 @@ import (
 
 // Hub maintains the set of registered clients and their subscriptions.
 type Hub struct {
-	clients      map[int][]*Client
-	clientsMutex sync.Mutex
-
-	// Map of conversation uuid to a set of subscribed user IDs.
-	ConversationSubs map[string][]int
-
-	SubMut            sync.Mutex
+	clients          map[int][]*Client
+	clientsMutex     sync.Mutex
+	conversationSubs map[string][]int
+	subMutex         sync.Mutex
 	conversationStore ConversationStore
 }
 
+// ConversationStore defines the interface for retrieving conversation UUIDs.
 type ConversationStore interface {
 	GetConversationUUIDs(userID, page, pageSize int, typ, predefinedFilter string) ([]string, error)
 }
 
+// NewHub creates a new Hub.
 func NewHub() *Hub {
 	return &Hub{
 		clients:          make(map[int][]*Client, 10000),
 		clientsMutex:     sync.Mutex{},
-		ConversationSubs: make(map[string][]int),
-		SubMut:           sync.Mutex{},
+		conversationSubs: make(map[string][]int),
+		subMutex:         sync.Mutex{},
 	}
 }
 
+// Message represents a WebSocket message.
 type Message struct {
 	messageType int
 	data        []byte
 }
 
+// PushMessage represents a message to be pushed to clients.
 type PushMessage struct {
 	Data     []byte `json:"data"`
 	Users    []int  `json:"users"`
 	MaxUsers int    `json:"max_users"`
 }
 
+// SetConversationStore sets the conversation store for the hub.
 func (h *Hub) SetConversationStore(store ConversationStore) {
 	h.conversationStore = store
 }
 
-func (h *Hub) AddClient(c *Client) {
+// AddClient adds a new client to the hub.
+func (h *Hub) AddClient(client *Client) {
 	h.clientsMutex.Lock()
 	defer h.clientsMutex.Unlock()
-	h.clients[c.ID] = append(h.clients[c.ID], c)
+	h.clients[client.ID] = append(h.clients[client.ID], client)
 }
 
+// RemoveClient removes a client from the hub.
 func (h *Hub) RemoveClient(client *Client) {
 	h.clientsMutex.Lock()
 	defer h.clientsMutex.Unlock()
 	if clients, ok := h.clients[client.ID]; ok {
 		for i, c := range clients {
 			if c == client {
-				// Remove the client from the slice
 				h.clients[client.ID] = append(clients[:i], clients[i+1:]...)
 				break
 			}
@@ -70,7 +74,7 @@ func (h *Hub) RemoveClient(client *Client) {
 	}
 }
 
-// ClientAlreadyConnected returns true if the client with this id is already connected else returns false.
+// ClientAlreadyConnected returns true if the client with this ID is already connected.
 func (h *Hub) ClientAlreadyConnected(id int) bool {
 	h.clientsMutex.Lock()
 	defer h.clientsMutex.Unlock()
@@ -78,26 +82,24 @@ func (h *Hub) ClientAlreadyConnected(id int) bool {
 	return ok
 }
 
-// PushMessage broadcasts a JSON data packet to all or some userIDs (with an optional max cap).
+// PushMessage broadcasts a JSON data packet to specified userIDs (with an optional max cap).
 // If userIDs is empty, the broadcast goes to all users.
-func (h *Hub) PushMessage(m PushMessage) {
-	if len(m.Users) != 0 {
-		// The message has to go to specific userIDs.
+func (h *Hub) PushMessage(msg PushMessage) {
+	if len(msg.Users) != 0 {
 		h.clientsMutex.Lock()
-		for _, userID := range m.Users {
-			for _, c := range h.clients[userID] {
-				c.Conn.WriteMessage(websocket.TextMessage, m.Data)
+		for _, userID := range msg.Users {
+			for _, client := range h.clients[userID] {
+				client.Conn.WriteMessage(websocket.TextMessage, msg.Data)
 			}
 		}
 		h.clientsMutex.Unlock()
 	} else {
-		// Message goes to all connected users.
 		n := 0
 		h.clientsMutex.Lock()
-		for _, cls := range h.clients {
-			for _, c := range cls {
-				c.Conn.WriteMessage(websocket.TextMessage, m.Data)
-				if m.MaxUsers > 0 && n >= m.MaxUsers {
+		for _, clients := range h.clients {
+			for _, client := range clients {
+				client.Conn.WriteMessage(websocket.TextMessage, msg.Data)
+				if msg.MaxUsers > 0 && n >= msg.MaxUsers {
 					break
 				}
 			}
@@ -107,8 +109,9 @@ func (h *Hub) PushMessage(m PushMessage) {
 	}
 }
 
-func (c *Hub) BroadcastNewConversationMessage(conversationUUID, trimmedMessage, messageUUID, lastMessageAt string, private bool) {
-	userIDs, ok := c.ConversationSubs[conversationUUID]
+// BroadcastNewConversationMessage broadcasts a new conversation message.
+func (h *Hub) BroadcastNewConversationMessage(conversationUUID, trimmedMessage, messageUUID, lastMessageAt string, private bool) {
+	userIDs, ok := h.conversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
 	}
@@ -124,11 +127,12 @@ func (c *Hub) BroadcastNewConversationMessage(conversationUUID, trimmedMessage, 
 		},
 	}
 
-	c.marshalAndPush(message, userIDs)
+	h.marshalAndPush(message, userIDs)
 }
 
-func (c *Hub) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop, value string) {
-	userIDs, ok := c.ConversationSubs[conversationUUID]
+// BroadcastMessagePropUpdate broadcasts an update to a message property.
+func (h *Hub) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop, value string) {
+	userIDs, ok := h.conversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
 	}
@@ -142,28 +146,30 @@ func (c *Hub) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop, va
 		},
 	}
 
-	c.marshalAndPush(message, userIDs)
+	h.marshalAndPush(message, userIDs)
 }
 
-func (c *Hub) BroadcastConversationAssignment(userID int, conversationUUID string, avatarUrl string, firstName, lastName, lastMessage, inboxName string, lastMessageAt time.Time, unreadMessageCount int) {
+// BroadcastConversationAssignment broadcasts the assignment of a conversation.
+func (h *Hub) BroadcastConversationAssignment(userID int, conversationUUID, avatarURL, firstName, lastName, lastMessage, inboxName string, lastMessageAt time.Time, unreadMessageCount int) {
 	message := models.Message{
 		Type: models.MessageTypeNewConversation,
 		Data: map[string]interface{}{
 			"uuid":                 conversationUUID,
-			"avatar_url":           avatarUrl,
+			"avatar_url":           avatarURL,
 			"first_name":           firstName,
 			"last_name":            lastName,
 			"last_message":         lastMessage,
-			"last_message_at":      time.Now().Format(time.RFC3339),
+			"last_message_at":      lastMessageAt.Format(time.RFC3339),
 			"inbox_name":           inboxName,
 			"unread_message_count": unreadMessageCount,
 		},
 	}
-	c.marshalAndPush(message, []int{userID})
+	h.marshalAndPush(message, []int{userID})
 }
 
-func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop string, value string) {
-	userIDs, ok := c.ConversationSubs[conversationUUID]
+// BroadcastConversationPropertyUpdate broadcasts an update to a conversation property.
+func (h *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop, value string) {
+	userIDs, ok := h.conversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
 	}
@@ -177,19 +183,20 @@ func (c *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop string,
 		},
 	}
 
-	c.marshalAndPush(message, userIDs)
+	h.marshalAndPush(message, userIDs)
 }
 
-func (c *Hub) marshalAndPush(message models.Message, userIDs []int) {
-	messageB, err := json.Marshal(message)
+// marshalAndPush marshals a message and pushes it to the specified user IDs.
+func (h *Hub) marshalAndPush(message models.Message, userIDs []int) {
+	messageBytes, err := json.Marshal(message)
 	if err != nil {
 		return
 	}
 
-	fmt.Println("pushing ws msg", string(messageB), "type", message.Type, "to_user_ids", userIDs, "connected_userIds", len(c.clients))
+	fmt.Println("pushing ws msg", string(messageBytes), "type", message.Type, "to_user_ids", userIDs, "connected_userIds", len(h.clients))
 
-	c.PushMessage(PushMessage{
-		Data:  messageB,
+	h.PushMessage(PushMessage{
+		Data:  messageBytes,
 		Users: userIDs,
 	})
 }

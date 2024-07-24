@@ -9,27 +9,31 @@ import (
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 )
 
+// evalConversationRules evaluates a list of rules against a given conversation.
+// If all the groups of a rule pass their evaluations based on the defined logical operations,
+// the corresponding actions are executed.
 func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
-	e.lo.Debug("num rules", "count", len(rules), "rules", rules)
 	for _, rule := range rules {
-		e.lo.Debug("eval rule", "groups", len(rule.Groups), "rule", rule)
 		// At max there can be only 2 groups.
 		if len(rule.Groups) > 2 {
 			e.lo.Warn("more than 2 groups found for rules")
 			continue
 		}
+
 		var results []bool
+
 		for _, group := range rule.Groups {
 			e.lo.Debug("evaluating group rule", "logical_op", group.LogicalOp)
 			result := e.evaluateGroup(group.Rules, group.LogicalOp, conversation)
 			e.lo.Debug("group evaluation status", "status", result)
 			results = append(results, result)
 		}
+
 		if evaluateFinalResult(results, rule.GroupOperator) {
-			e.lo.Debug("rule fully evalauted, executing actions")
+			e.lo.Debug("rule fully evaluated, executing actions")
 			// All group rule evaluations successful, execute the actions.
 			for _, action := range rule.Actions {
-				e.executeActions(conversation, action)
+				e.applyAction(action, conversation)
 			}
 		} else {
 			e.lo.Debug("rule evaluation failed, NOT executing actions")
@@ -37,7 +41,8 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 	}
 }
 
-// evaluateFinalResult
+// evaluateFinalResult computes the final result of multiple group evaluations
+// based on the specified logical operator (AND/OR).
 func evaluateFinalResult(results []bool, operator string) bool {
 	if operator == models.OperatorAnd {
 		for _, result := range results {
@@ -58,7 +63,8 @@ func evaluateFinalResult(results []bool, operator string) bool {
 	return false
 }
 
-// evaluateGroup
+// evaluateGroup evaluates a set of rules within a group against a given conversation
+// based on the specified logical operator (AND/OR).
 func (e *Engine) evaluateGroup(rules []models.RuleDetail, operator string, conversation cmodels.Conversation) bool {
 	switch operator {
 	case models.OperatorAnd:
@@ -83,6 +89,7 @@ func (e *Engine) evaluateGroup(rules []models.RuleDetail, operator string, conve
 	return false
 }
 
+// evaluateRule evaluates a single rule against a given conversation.
 func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conversation) bool {
 	var (
 		valueToCompare string
@@ -129,9 +136,9 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.RuleNotContains:
 		conditionMet = !strings.Contains(valueToCompare, rule.Value)
 	case models.RuleSet:
-		conditionMet = bool(len(valueToCompare) > 0)
+		conditionMet = len(valueToCompare) > 0
 	case models.RuleNotSet:
-		conditionMet = !bool(len(valueToCompare) > 0)
+		conditionMet = len(valueToCompare) == 0
 	default:
 		e.lo.Error("rule logical operator not recognized", "operator", rule.Operator)
 		return false
@@ -139,13 +146,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	return conditionMet
 }
 
-func (e *Engine) executeActions(conversation cmodels.Conversation, action models.RuleAction) {
-	err := e.applyAction(action, conversation)
-	if err != nil {
-		e.lo.Error("error executing rule action", "action", action.Action, "error", err)
-	}
-}
-
+// applyAction applies a specific action to the given conversation.
 func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conversation) error {
 	switch action.Type {
 	case models.ActionAssignTeam:

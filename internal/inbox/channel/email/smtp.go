@@ -2,7 +2,6 @@ package email
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/smtp"
@@ -20,7 +19,7 @@ const (
 	dispositionInline = "inline"
 )
 
-// New returns an SMTP e-mail channels from the given SMTP server configcfg.
+// NewSmtpPool returns a smtppool
 func NewSmtpPool(configs []SMTPConfig) ([]*smtppool.Pool, error) {
 	pools := make([]*smtppool.Pool, 0, len(configs))
 
@@ -34,12 +33,13 @@ func NewSmtpPool(configs []SMTPConfig) ([]*smtppool.Pool, error) {
 		case "login":
 			auth = &smtppool.LoginAuth{Username: cfg.Username, Password: cfg.Password}
 		case "", "none":
+			// No authentication
 		default:
 			return nil, fmt.Errorf("unknown SMTP auth type '%s'", cfg.AuthProtocol)
 		}
 		cfg.Opt.Auth = auth
 
-		// TLS config.
+		// TLS config
 		if cfg.TLSType != "none" {
 			cfg.TLSConfig = &tls.Config{}
 			if cfg.TLSSkipVerify {
@@ -48,11 +48,12 @@ func NewSmtpPool(configs []SMTPConfig) ([]*smtppool.Pool, error) {
 				cfg.TLSConfig.ServerName = cfg.Host
 			}
 
-			// SSL/TLS, not STARTTLcfg.
+			// SSL/TLS, not STARTTLS
 			if cfg.TLSType == "TLS" {
 				cfg.Opt.SSL = true
 			}
 		}
+
 		pool, err := smtppool.New(cfg.Opt)
 		if err != nil {
 			return nil, err
@@ -63,83 +64,73 @@ func NewSmtpPool(configs []SMTPConfig) ([]*smtppool.Pool, error) {
 	return pools, nil
 }
 
-// Send sends an email.
+// Send sends an email using one of the configured SMTP servers.
 func (e *Email) Send(m models.Message) error {
-	// If there are more than one SMTP servers, send to a random one from the list.
+	// Select a random SMTP server if there are multiple
 	var (
-		ln  = len(e.smtpPools)
-		srv *smtppool.Pool
+		serverCount = len(e.smtpPools)
+		server      *smtppool.Pool
 	)
-	if ln > 1 {
-		srv = e.smtpPools[rand.Intn(ln)]
+	if serverCount > 1 {
+		server = e.smtpPools[rand.Intn(serverCount)]
 	} else {
-		srv = e.smtpPools[0]
+		server = e.smtpPools[0]
 	}
 
-	// Are there attachments?
-	var files []smtppool.Attachment
+	// Prepare attachments if there are any
+	var attachments []smtppool.Attachment
 	if m.Attachments != nil {
-		files = make([]smtppool.Attachment, 0, len(m.Attachments))
-		for _, f := range m.Attachments {
-			a := smtppool.Attachment{
-				Filename: f.Filename,
-				Header:   f.Header,
-				Content:  make([]byte, len(f.Content)),
+		attachments = make([]smtppool.Attachment, 0, len(m.Attachments))
+		for _, file := range m.Attachments {
+			attachment := smtppool.Attachment{
+				Filename: file.Filename,
+				Header:   file.Header,
+				Content:  make([]byte, len(file.Content)),
 			}
-			copy(a.Content, f.Content)
-			files = append(files, a)
+			copy(attachment.Content, file.Content)
+			attachments = append(attachments, attachment)
 		}
 	}
 
-	em := smtppool.Email{
+	email := smtppool.Email{
 		From:        m.From,
 		To:          m.To,
 		Subject:     m.Subject,
-		Attachments: files,
+		Attachments: attachments,
 		Headers:     textproto.MIMEHeader{},
 	}
 
-	// Attach SMTP level headercfg.
-	for k, v := range e.headers {
-		em.Headers.Set(k, v)
+	// Attach SMTP level headers
+	for key, value := range e.headers {
+		email.Headers.Set(key, value)
 	}
 
-	// Attach e-mail level headercfg.
-	for k, v := range m.Headers {
-		em.Headers.Set(k, v[0])
+	// Attach email level headers
+	for key, value := range m.Headers {
+		email.Headers.Set(key, value[0])
 	}
 
-	// Others.
+	// Set In-Reply-To and References headers
 	if m.InReplyTo != "" {
-		em.Headers.Set(headerInReplyTo, "<"+m.InReplyTo+">")
+		email.Headers.Set(headerInReplyTo, "<"+m.InReplyTo+">")
 	}
-	references := ""
+
+	// Set references message ids
+	var references string
 	for _, ref := range m.References {
 		references += "<" + ref + "> "
 	}
-	em.Headers.Set(headerReferences, references)
+	email.Headers.Set(headerReferences, references)
 
-	fmt.Printf("%+v EMAIL HEADERS -> headers", em.Headers)
-
+	// Set email content
 	switch m.ContentType {
 	case "plain":
-		em.Text = []byte(m.Content)
+		email.Text = []byte(m.Content)
 	default:
-		em.HTML = []byte(m.Content)
+		email.HTML = []byte(m.Content)
 		if len(m.AltContent) > 0 {
-			em.Text = []byte(m.AltContent)
+			email.Text = []byte(m.AltContent)
 		}
 	}
-	jsonData, err := json.MarshalIndent(em, "", "  ")
-	if err != nil {
-		fmt.Println("Error marshalling to JSON:", err)
-	}
-
-	fmt.Println()
-	fmt.Println()
-	fmt.Println(string(jsonData))
-	fmt.Println()
-	fmt.Println()
-
-	return srv.Send(em)
+	return server.Send(email)
 }

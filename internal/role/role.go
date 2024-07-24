@@ -1,3 +1,4 @@
+// Package role handles role-related operations including creating, updating, fetching, and deleting roles.
 package role
 
 import (
@@ -16,16 +17,19 @@ var (
 	efs embed.FS
 )
 
+// Manager handles role-related operations.
 type Manager struct {
 	q  queries
 	lo *logf.Logger
 }
 
+// Opts contains options for initializing the Manager.
 type Opts struct {
 	DB *sqlx.DB
 	Lo *logf.Logger
 }
 
+// queries contains prepared SQL queries.
 type queries struct {
 	Get    *sqlx.Stmt `query:"get-role"`
 	GetAll *sqlx.Stmt `query:"get-all"`
@@ -34,6 +38,7 @@ type queries struct {
 	Update *sqlx.Stmt `query:"update-role"`
 }
 
+// New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
@@ -47,6 +52,7 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
+// GetAll retrieves all roles.
 func (t *Manager) GetAll() ([]models.Role, error) {
 	var roles = make([]models.Role, 0)
 	if err := t.q.GetAll.Select(&roles); err != nil {
@@ -56,6 +62,7 @@ func (t *Manager) GetAll() ([]models.Role, error) {
 	return roles, nil
 }
 
+// Get retrieves a role by ID.
 func (t *Manager) Get(id int) (models.Role, error) {
 	var role = models.Role{}
 	if err := t.q.Get.Get(&role, id); err != nil {
@@ -65,6 +72,7 @@ func (t *Manager) Get(id int) (models.Role, error) {
 	return role, nil
 }
 
+// Delete deletes a role by ID.
 func (t *Manager) Delete(id int) error {
 	if _, err := t.q.Delete.Exec(id); err != nil {
 		t.lo.Error("error deleting role", "error", err)
@@ -73,6 +81,7 @@ func (t *Manager) Delete(id int) error {
 	return nil
 }
 
+// Create creates a new role.
 func (u *Manager) Create(r models.Role) error {
 	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error inserting role", "error", err)
@@ -81,6 +90,7 @@ func (u *Manager) Create(r models.Role) error {
 	return nil
 }
 
+// Update updates an existing role.
 func (u *Manager) Update(id int, r models.Role) error {
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)

@@ -1,3 +1,4 @@
+// Package inbox provides functionality to manage inboxes in the system.
 package inbox
 
 import (
@@ -18,10 +19,11 @@ var (
 	//go:embed queries.sql
 	efs embed.FS
 
+	// ErrInboxNotFound is returned when an inbox is not found.
 	ErrInboxNotFound = errors.New("inbox not found")
 )
 
-// Closer provides function for closing an inbox.
+// Closer provides a function for closing an inbox.
 type Closer interface {
 	Close() error
 }
@@ -46,18 +48,19 @@ type Inbox interface {
 	Channel() string
 }
 
+// MessageStore defines methods for storing and processing messages.
 type MessageStore interface {
 	MessageExists(string) (bool, error)
-	ProcessMessage(models.IncomingMessage) error
+	ProcessIncomingMessage(models.IncomingMessage) error
 }
 
-// Opts contains the options for the initializing the inbox manager.
+// Opts contains the options for initializing the inbox manager.
 type Opts struct {
 	QueueSize   int
 	Concurrency int
 }
 
-// Manager manages the inbox.
+// Manager manages the inboxes.
 type Manager struct {
 	queries queries
 	inboxes map[int]Inbox
@@ -79,7 +82,7 @@ type queries struct {
 func New(lo *logf.Logger, db *sqlx.DB) (*Manager, error) {
 	var q queries
 
-	// Scan the sql	file into the queries struct.
+	// Scan the SQL file into the queries struct.
 	if err := dbutil.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
 		return nil, err
 	}
@@ -106,17 +109,17 @@ func (m *Manager) Get(id int) (Inbox, error) {
 	return i, nil
 }
 
-// GetByID returns inbox by the given ID.
+// GetByID returns an inbox from the DB by the given ID.
 func (m *Manager) GetByID(id int) (imodels.Inbox, error) {
 	var inbox imodels.Inbox
 	if err := m.queries.GetByID.Get(&inbox, id); err != nil {
-		m.lo.Error("fetching active inboxes", "error", err)
+		m.lo.Error("fetching inbox by ID", "error", err)
 		return inbox, err
 	}
 	return inbox, nil
 }
 
-// GetActive returns all active inboxes.
+// GetActive returns all active inboxes from the DB.
 func (m *Manager) GetActive() ([]imodels.Inbox, error) {
 	var inboxes []imodels.Inbox
 	if err := m.queries.GetActive.Select(&inboxes); err != nil {
@@ -126,7 +129,7 @@ func (m *Manager) GetActive() ([]imodels.Inbox, error) {
 	return inboxes, nil
 }
 
-// GetAll returns all inboxes.
+// GetAll returns all inboxes from the DB.
 func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 	var inboxes = make([]imodels.Inbox, 0)
 	if err := m.queries.GetAll.Select(&inboxes); err != nil {
@@ -136,7 +139,7 @@ func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 	return inboxes, nil
 }
 
-// Create creates an inbox.
+// Create creates an inbox in the DB.
 func (m *Manager) Create(inbox imodels.Inbox) error {
 	if _, err := m.queries.InsertInbox.Exec(inbox.Channel, inbox.Config, inbox.Name, inbox.From, nil); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
@@ -145,6 +148,7 @@ func (m *Manager) Create(inbox imodels.Inbox) error {
 	return nil
 }
 
+// Update updates an inbox in the DB.
 func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
@@ -153,6 +157,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 	return nil
 }
 
+// Toggle toggles the status of an inbox in the DB.
 func (m *Manager) Toggle(id int) error {
 	if _, err := m.queries.Toggle.Exec(id); err != nil {
 		m.lo.Error("error toggling inbox", "error", err)
@@ -161,6 +166,7 @@ func (m *Manager) Toggle(id int) error {
 	return nil
 }
 
+// Delete soft deletes an inbox in the DB.
 func (m *Manager) Delete(id int) error {
 	if _, err := m.queries.SoftDelete.Exec(id); err != nil {
 		m.lo.Error("error deleting inbox", "error", err)
@@ -169,7 +175,7 @@ func (m *Manager) Delete(id int) error {
 	return nil
 }
 
-// Receive starts receiver for each inbox.
+// Receive starts the receiver for each inbox.
 func (m *Manager) Receive(ctx context.Context) {
 	for _, inb := range m.inboxes {
 		go inb.Receive(ctx)

@@ -1,3 +1,4 @@
+// Package setting handles the management of application settings.
 package setting
 
 import (
@@ -15,18 +16,22 @@ var (
 	efs embed.FS
 )
 
+// Manager handles setting-related operations.
 type Manager struct {
 	q queries
 }
 
+// Opts contains options for initializing the Manager.
 type Opts struct {
 	DB *sqlx.DB
 }
 
+// queries contains prepared SQL queries.
 type queries struct {
 	GetAll *sqlx.Stmt `query:"get-all"`
 }
 
+// New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
@@ -39,6 +44,7 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
+// GetAll retrieves all settings as a models.Settings struct.
 func (m *Manager) GetAll() (models.Settings, error) {
 	var (
 		b   types.JSONText
@@ -56,10 +62,9 @@ func (m *Manager) GetAll() (models.Settings, error) {
 	return out, nil
 }
 
+// GetAllJSON retrieves all settings as JSON.
 func (m *Manager) GetAllJSON() (types.JSONText, error) {
-	var (
-		b types.JSONText
-	)
+	var b types.JSONText
 
 	if err := m.q.GetAll.Get(&b); err != nil {
 		return b, err

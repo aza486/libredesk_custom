@@ -95,7 +95,7 @@ func main() {
 		conversationManager = initConversations(i18n, wsHub, notifier, db)
 		automationEngine    = initAutomationEngine(db, userManager)
 		messageManager      = initMessages(db, wsHub, userManager, teamManager, contactManager, attachmentManager, conversationManager, inboxManager, automationEngine, templateManager)
-		autoassigner        = initAutoAssigner(teamManager, conversationManager)
+		autoassigner        = initAutoAssigner(teamManager, userManager, conversationManager)
 	)
 
 	// Set message store for conversation manager.

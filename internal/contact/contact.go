@@ -1,3 +1,4 @@
+// Package contact provides functionality to manage contacts in the system.
 package contact
 
 import (
@@ -14,20 +15,23 @@ var (
 	efs embed.FS
 )
 
+// Manager handles the operations related to contacts.
 type Manager struct {
 	q  queries
 	lo *logf.Logger
 }
 
+// Opts holds the options for creating a new Manager.
 type Opts struct {
 	DB *sqlx.DB
 	Lo *logf.Logger
 }
 
 type queries struct {
-	InsertContact *sqlx.Stmt `query:"insert-contact"`
+	UpsertContact *sqlx.Stmt `query:"upsert-contact"`
 }
 
+// New initializes a new Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
@@ -41,11 +45,12 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
+// Upsert inserts or updates a contact and returns the contact ID.
 func (m *Manager) Upsert(con models.Contact) (int, error) {
 	var contactID int
-	if err := m.q.InsertContact.QueryRow(con.Source, con.SourceID, con.InboxID,
+	if err := m.q.UpsertContact.QueryRow(con.Source, con.SourceID, con.InboxID,
 		con.FirstName, con.LastName, con.Email, con.PhoneNumber, con.AvatarURL).Scan(&contactID); err != nil {
-		m.lo.Error("inserting contact", "error", err)
+		m.lo.Error("error upserting contact", "error", err)
 		return contactID, err
 	}
 	return contactID, nil

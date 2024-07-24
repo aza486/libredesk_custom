@@ -68,7 +68,7 @@ func handleGetConversation(r *fastglue.Request) error {
 	)
 	c, err := app.conversationManager.Get(uuid)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(c)
 }
@@ -80,7 +80,7 @@ func handleUpdateAssigneeLastSeen(r *fastglue.Request) error {
 	)
 	err := app.conversationManager.UpdateAssigneeLastSeen(uuid)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
 }
@@ -92,7 +92,7 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 	)
 	p, err := app.conversationManager.GetParticipants(uuid)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(p)
 }
@@ -170,7 +170,6 @@ func handleAddConversationTags(r *fastglue.Request) error {
 		app.lo.Error("unmarshalling tag ids", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error adding tags", nil, "")
 	}
-
 	if err := app.conversationManager.UpsertTags(uuid, tagIDs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}

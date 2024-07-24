@@ -193,7 +193,6 @@ func initConversations(i18n *i18n.I18n, hub *ws.Hub, n notifier.Notifier, db *sq
 	c, err := conversation.New(hub, i18n, n, conversation.Opts{
 		DB:                  db,
 		Lo:                  initLogger("conversation_manager"),
-		ReferenceNumPattern: ko.String("app.constants.conversation_reference_number_pattern"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing conversation manager: %v", err)
@@ -280,7 +279,7 @@ func initMessages(db *sqlx.DB,
 }
 
 func initTeamManager(db *sqlx.DB) *team.Manager {
-	var lo = initLogger("team_manager")
+	var lo = initLogger("team-manager")
 	mgr, err := team.New(team.Opts{
 		DB: db,
 		Lo: lo,
@@ -358,10 +357,14 @@ func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.En
 	return engine
 }
 
-func initAutoAssigner(teamManager *team.Manager, conversationManager *conversation.Manager) *autoassigner.Engine {
-	e, err := autoassigner.New(teamManager, conversationManager, initLogger("autoassigner"))
+func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conversationManager *conversation.Manager) *autoassigner.Engine {
+	systemUser, err := userManager.GetSystemUser()
 	if err != nil {
-		log.Fatalf("error initializing auto assigner engine: %v", err)
+		log.Fatalf("error fetching system user: %v", err)
+	}
+	e, err := autoassigner.New(teamManager, conversationManager, systemUser, initLogger("autoassigner"))
+	if err != nil {
+		log.Fatalf("error initializing auto assigner: %v", err)
 	}
 	return e
 }

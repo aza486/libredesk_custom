@@ -1,11 +1,12 @@
+// Package tag handles the management of tags in the system.
 package tag
 
 import (
 	"embed"
 	"fmt"
-	"time"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/tag/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -15,28 +16,26 @@ var (
 	efs embed.FS
 )
 
-type Tag struct {
-	ID        int       `db:"id" json:"id"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	Name      string    `db:"name" json:"name"`
-}
-
+// Manager handles tag-related operations.
 type Manager struct {
 	q  queries
 	lo *logf.Logger
 }
 
+// Opts contains options for initializing the Manager.
 type Opts struct {
 	DB *sqlx.DB
 	Lo *logf.Logger
 }
 
+// queries contains prepared SQL queries.
 type queries struct {
 	GetAllTags *sqlx.Stmt `query:"get-all-tags"`
 	InsertTag  *sqlx.Stmt `query:"insert-tag"`
 	DeleteTag  *sqlx.Stmt `query:"delete-tag"`
 }
 
+// New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
 
@@ -50,15 +49,17 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
-func (t *Manager) GetAll() ([]Tag, error) {
-	var tt []Tag
-	if err := t.q.GetAllTags.Select(&tt); err != nil {
+// GetAll retrieves all tags.
+func (t *Manager) GetAll() ([]models.Tag, error) {
+	var tags []models.Tag
+	if err := t.q.GetAllTags.Select(&tags); err != nil {
 		t.lo.Error("fetching tags", "error", err)
-		return tt, fmt.Errorf("error fetching tags")
+		return tags, fmt.Errorf("error fetching tags")
 	}
-	return tt, nil
+	return tags, nil
 }
 
+// AddTag adds a new tag.
 func (t *Manager) AddTag(name string) error {
 	if _, err := t.q.InsertTag.Exec(name); err != nil {
 		t.lo.Error("inserting tag", "error", err)
@@ -67,6 +68,7 @@ func (t *Manager) AddTag(name string) error {
 	return nil
 }
 
+// DeleteTag deletes a tag by ID.
 func (t *Manager) DeleteTag(id int) error {
 	if _, err := t.q.DeleteTag.Exec(id); err != nil {
 		t.lo.Error("deleting tag", "error", err)

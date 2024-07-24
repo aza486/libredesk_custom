@@ -1,4 +1,4 @@
-// Package email is the email inbox with multiple SMTP servers and IMAP clients.
+// Package email provides functionality for an email inbox with multiple SMTP servers and IMAP clients.
 package email
 
 import (
@@ -13,14 +13,14 @@ const (
 	ChannelEmail = "email"
 )
 
-// Config holds the email inbox config with multiple smtp servers & imap clients.
+// Config holds the email inbox configuration with multiple SMTP servers and IMAP clients.
 type Config struct {
 	SMTP []SMTPConfig `json:"smtp"`
 	IMAP []IMAPConfig `json:"imap"`
-	From string
+	From string       `json:"from"`
 }
 
-// SMTP represents an SMTP server's credentials with the smtppool options.
+// SMTPConfig represents an SMTP server's credentials with the smtppool options.
 type SMTPConfig struct {
 	Username      string            `json:"username"`
 	Password      string            `json:"password"`
@@ -28,11 +28,10 @@ type SMTPConfig struct {
 	TLSType       string            `json:"tls_type"`
 	TLSSkipVerify bool              `json:"tls_skip_verify"`
 	EmailHeaders  map[string]string `json:"email_headers"`
-	// SMTP pool options.
-	smtppool.Opt `json:",squash"`
+	smtppool.Opt  `json:",squash"`  // SMTP pool options.
 }
 
-// IMAPConfig holds imap client credentials & config.
+// IMAPConfig holds IMAP client credentials and configuration.
 type IMAPConfig struct {
 	Host         string `json:"host"`
 	Port         int    `json:"port"`
@@ -42,15 +41,15 @@ type IMAPConfig struct {
 	ReadInterval string `json:"read_interval"`
 }
 
-// Email is the email inbox with multiple SMTP servers and IMAP clients.
+// Email represents the email inbox with multiple SMTP servers and IMAP clients.
 type Email struct {
-	id        int
-	smtpPools []*smtppool.Pool
-	imapCfg   []IMAPConfig
-	headers   map[string]string
-	lo        *logf.Logger
-	from      string
-	msgStore  inbox.MessageStore
+	id           int
+	smtpPools    []*smtppool.Pool
+	imapCfg      []IMAPConfig
+	headers      map[string]string
+	lo           *logf.Logger
+	from         string
+	messageStore inbox.MessageStore
 }
 
 // Opts holds the options required for the email inbox.
@@ -67,20 +66,19 @@ func New(store inbox.MessageStore, opts Opts) (*Email, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	e := &Email{
-		id:        opts.ID,
-		headers:   opts.Headers,
-		from:      opts.Config.From,
-		imapCfg:   opts.Config.IMAP,
-		lo:        opts.Lo,
-		smtpPools: pools,
-		msgStore:  store,
+		id:           opts.ID,
+		headers:      opts.Headers,
+		from:         opts.Config.From,
+		imapCfg:      opts.Config.IMAP,
+		lo:           opts.Lo,
+		smtpPools:    pools,
+		messageStore: store,
 	}
 	return e, nil
 }
 
-// Identifier returns the unique identifier of the inbox which is the database id.
+// Identifier returns the unique identifier of the inbox which is the database ID.
 func (e *Email) Identifier() int {
 	return e.id
 }
@@ -93,10 +91,10 @@ func (e *Email) Close() error {
 	return nil
 }
 
-// Receive starts receiver for each IMAP client.
+// Receive starts reading incoming messages for each IMAP client.
 func (e *Email) Receive(ctx context.Context) error {
 	for _, cfg := range e.imapCfg {
-		e.ReadIncomingMessages(ctx, cfg)
+		go e.ReadIncomingMessages(ctx, cfg)
 	}
 	return nil
 }
@@ -106,7 +104,7 @@ func (e *Email) FromAddress() string {
 	return e.from
 }
 
-// FromAddress returns the channel name for this inbox.
+// Channel returns the channel name for this inbox.
 func (e *Email) Channel() string {
 	return ChannelEmail
 }

@@ -1,3 +1,4 @@
+// Package envelope provides custom error types and utility functions for API error handling.
 package envelope
 
 import "net/http"
@@ -13,19 +14,18 @@ const (
 
 // Error is the error type used for all API errors.
 type Error struct {
-	Code      int
-	ErrorType string
-	Message   string
-	Data      interface{}
+	Code      int         // HTTP status code.
+	ErrorType string      // Type of the error.
+	Message   string      // Error message.
+	Data      interface{} // Additional data related to the error.
 }
 
-// Error returns the error message and satisfies Go error type.
+// Error returns the error message and satisfies the Go error interface.
 func (e Error) Error() string {
 	return e.Message
 }
 
-// NewError creates and returns a new instace of Error
-// with custom error metadata.
+// NewError creates and returns a new instance of Error with custom error metadata.
 func NewError(etype string, message string, data interface{}) error {
 	err := Error{
 		Message:   message,
@@ -51,7 +51,7 @@ func NewError(etype string, message string, data interface{}) error {
 	return err
 }
 
-// NewErrorWithCode creates and returns a new instace of Error, with custom error metadata and http status code.
+// NewErrorWithCode creates and returns a new instance of Error with custom error metadata and an HTTP status code.
 func NewErrorWithCode(etype string, code int, message string, data interface{}) error {
 	return Error{
 		Message:   message,
@@ -60,4 +60,3 @@ func NewErrorWithCode(etype string, code int, message string, data interface{}) 
 		Code:      code,
 	}
 }
-

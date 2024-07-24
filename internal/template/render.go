@@ -5,14 +5,14 @@ import (
 	"text/template"
 )
 
-// RenderDefault renders the system default template with the data.
+// RenderDefault renders the system default template with the provided data.
 func (m *Manager) RenderDefault(data interface{}) (string, string, error) {
 	templ, err := m.GetDefaultTemplate()
 	if err != nil {
 		return "", "", err
 	}
 
-	tmpl, err := template.New("").Parse(templ.Body)
+	tmpl, err := template.New("default").Parse(templ.Body)
 	if err != nil {
 		return "", "", err
 	}

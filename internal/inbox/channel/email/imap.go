@@ -22,14 +22,15 @@ const (
 	DefaultReadInterval = time.Duration(5 * time.Minute)
 )
 
+// ReadIncomingMessages reads and processes incoming messages from an IMAP server based on the provided configuration.
 func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error {
-	dur, err := time.ParseDuration(cfg.ReadInterval)
+	readInterval, err := time.ParseDuration(cfg.ReadInterval)
 	if err != nil {
-		e.lo.Warn("could not IMAP read interval, using the default read interval of 5 minutes.", "error", err)
-		dur = DefaultReadInterval
+		e.lo.Warn("could not parse IMAP read interval, using the default read interval of 5 minutes.", "error", err)
+		readInterval = DefaultReadInterval
 	}
 
-	readTicker := time.NewTicker(dur)
+	readTicker := time.NewTicker(readInterval)
 	defer readTicker.Stop()
 
 	for {
@@ -44,34 +45,36 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 	}
 }
 
+// processMailbox processes emails in the specified mailbox.
 func (e *Email) processMailbox(cfg IMAPConfig) error {
-	c, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
+	client, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
 	if err != nil {
 		return fmt.Errorf("error connecting to IMAP server: %w", err)
 	}
-	defer c.Logout()
+	defer client.Logout()
 
-	if err := c.Login(cfg.Username, cfg.Password).Wait(); err != nil {
+	if err := client.Login(cfg.Username, cfg.Password).Wait(); err != nil {
 		return fmt.Errorf("error logging in to the IMAP server: %w", err)
 	}
 
-	if _, err := c.Select(cfg.Mailbox, &imap.SelectOptions{ReadOnly: true}).Wait(); err != nil {
+	if _, err := client.Select(cfg.Mailbox, &imap.SelectOptions{ReadOnly: true}).Wait(); err != nil {
 		return fmt.Errorf("error selecting mailbox: %w", err)
 	}
 
-	since := time.Now().Add(time.Hour * 12 * -1)
-	before := time.Now().Add(time.Hour * 24)
+	since := time.Now().Add(-12 * time.Hour)
+	before := time.Now().Add(24 * time.Hour)
 
-	searchData, err := e.searchMessages(c, since, before)
+	searchData, err := e.searchMessages(client, since, before)
 	if err != nil {
 		return fmt.Errorf("error searching messages: %w", err)
 	}
 
-	return e.fetchAndProcessMessages(c, searchData, e.Identifier())
+	return e.fetchAndProcessMessages(client, searchData, e.Identifier())
 }
 
-func (e *Email) searchMessages(c *imapclient.Client, since, before time.Time) (*imap.SearchData, error) {
-	searchCMD := c.Search(&imap.SearchCriteria{
+// searchMessages searches for messages in the specified time range.
+func (e *Email) searchMessages(client *imapclient.Client, since, before time.Time) (*imap.SearchData, error) {
+	searchCMD := client.Search(&imap.SearchCriteria{
 		Since:  since,
 		Before: before,
 	},
@@ -85,7 +88,8 @@ func (e *Email) searchMessages(c *imapclient.Client, since, before time.Time) (*
 	return searchCMD.Wait()
 }
 
-func (e *Email) fetchAndProcessMessages(c *imapclient.Client, searchData *imap.SearchData, inboxID int) error {
+// fetchAndProcessMessages fetches and processes messages based on the search results.
+func (e *Email) fetchAndProcessMessages(client *imapclient.Client, searchData *imap.SearchData, inboxID int) error {
 	seqSet := imap.SeqSet{}
 	seqSet.AddRange(searchData.Min, searchData.Max)
 
@@ -94,7 +98,7 @@ func (e *Email) fetchAndProcessMessages(c *imapclient.Client, searchData *imap.S
 		Envelope: true,
 	}
 
-	fetchCmd := c.Fetch(seqSet, fetchOptions)
+	fetchCmd := client.Fetch(seqSet, fetchOptions)
 
 	for {
 		msg := fetchCmd.Next()
@@ -104,7 +108,7 @@ func (e *Email) fetchAndProcessMessages(c *imapclient.Client, searchData *imap.S
 
 		for fetchItem := msg.Next(); fetchItem != nil; fetchItem = msg.Next() {
 			if item, ok := fetchItem.(imapclient.FetchItemDataEnvelope); ok {
-				if err := e.processEnvelope(c, item.Envelope, msg.SeqNum, inboxID); err != nil {
+				if err := e.processEnvelope(client, item.Envelope, msg.SeqNum, inboxID); err != nil {
 					e.lo.Error("error processing envelope", "error", err)
 				}
 			}
@@ -114,13 +118,14 @@ func (e *Email) fetchAndProcessMessages(c *imapclient.Client, searchData *imap.S
 	return nil
 }
 
-func (e *Email) processEnvelope(c *imapclient.Client, env *imap.Envelope, seqNum uint32, inboxID int) error {
+// processEnvelope processes an email envelope.
+func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, seqNum uint32, inboxID int) error {
 	if len(env.From) == 0 {
 		e.lo.Debug("no sender found for email", "message_id", env.MessageID)
 		return nil
 	}
 
-	exists, err := e.msgStore.MessageExists(env.MessageID)
+	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if exists || err != nil {
 		return nil
 	}
@@ -130,8 +135,7 @@ func (e *Email) processEnvelope(c *imapclient.Client, env *imap.Envelope, seqNum
 			Channel:    e.Channel(),
 			SenderType: message.SenderTypeContact,
 			Type:       message.TypeIncoming,
-			Meta:       "{}",
-			InboxID:    int(inboxID),
+			InboxID:    inboxID,
 			Status:     message.StatusReceived,
 			Subject:    env.Subject,
 			SourceID:   null.StringFrom(env.MessageID),
@@ -140,9 +144,9 @@ func (e *Email) processEnvelope(c *imapclient.Client, env *imap.Envelope, seqNum
 			Source:   e.Channel(),
 			SourceID: env.From[0].Addr(),
 			Email:    env.From[0].Addr(),
-			InboxID:  int(inboxID),
+			InboxID:  inboxID,
 		},
-		InboxID: int(inboxID),
+		InboxID: inboxID,
 	}
 	incomingMsg.Contact.FirstName, incomingMsg.Contact.LastName = getContactName(env.From[0])
 
@@ -152,7 +156,7 @@ func (e *Email) processEnvelope(c *imapclient.Client, env *imap.Envelope, seqNum
 	seqSet := imap.SeqSet{}
 	seqSet.AddNum(seqNum)
 
-	fullFetchCmd := c.Fetch(seqSet, fetchOptions)
+	fullFetchCmd := client.Fetch(seqSet, fetchOptions)
 	fullMsg := fullFetchCmd.Next()
 	if fullMsg == nil {
 		return nil
@@ -160,29 +164,30 @@ func (e *Email) processEnvelope(c *imapclient.Client, env *imap.Envelope, seqNum
 
 	for fullFetchItem := fullMsg.Next(); fullFetchItem != nil; fullFetchItem = fullMsg.Next() {
 		if fullItem, ok := fullFetchItem.(imapclient.FetchItemDataBodySection); ok {
-			return e.processFullMessage(fullItem, &incomingMsg)
+			return e.processFullMessage(fullItem, incomingMsg)
 		}
 	}
 
 	return nil
 }
 
-func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, incomingMsg *models.IncomingMessage) error {
-	envel, err := enmime.ReadEnvelope(item.Literal)
+// processFullMessage processes the full email message.
+func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, incomingMsg models.IncomingMessage) error {
+	envelope, err := enmime.ReadEnvelope(item.Literal)
 	if err != nil {
 		return fmt.Errorf("error parsing email envelope: %w", err)
 	}
 
-	if len(envel.HTML) > 0 {
-		incomingMsg.Message.Content = envel.HTML
+	if len(envelope.HTML) > 0 {
+		incomingMsg.Message.Content = envelope.HTML
 		incomingMsg.Message.ContentType = message.ContentTypeHTML
-	} else if len(envel.Text) > 0 {
-		incomingMsg.Message.Content = envel.Text
+	} else if len(envelope.Text) > 0 {
+		incomingMsg.Message.Content = envelope.Text
 		incomingMsg.Message.ContentType = message.ContentTypeText
 	}
 
-	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envel.GetHeader("In-Reply-To"), "<", ""), ">", "")
-	references := strings.Fields(envel.GetHeader("References"))
+	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envelope.GetHeader("In-Reply-To"), "<", ""), ">", "")
+	references := strings.Fields(envelope.GetHeader("References"))
 	for i, ref := range references {
 		references[i] = strings.Trim(strings.TrimSpace(ref), " <>")
 	}
@@ -190,37 +195,37 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 	incomingMsg.Message.InReplyTo = inReplyTo
 	incomingMsg.Message.References = references
 
-	for _, j := range envel.Attachments {
+	for _, att := range envelope.Attachments {
 		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, amodels.Attachment{
-			Filename:           j.FileName,
-			Header:             j.Header,
-			Content:            j.Content,
-			ContentType:        j.ContentType,
-			ContentID:          j.ContentID,
+			Filename:           att.FileName,
+			Header:             att.Header,
+			Content:            att.Content,
+			ContentType:        att.ContentType,
+			ContentID:          att.ContentID,
 			ContentDisposition: attachment.DispositionAttachment,
-			Size:               strconv.Itoa(len(j.Content)),
+			Size:               strconv.Itoa(len(att.Content)),
 		})
 	}
 
-	for _, j := range envel.Inlines {
+	for _, att := range envelope.Inlines {
 		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, amodels.Attachment{
-			Filename:           j.FileName,
-			Header:             j.Header,
-			Content:            j.Content,
-			ContentType:        j.ContentType,
-			ContentID:          j.ContentID,
+			Filename:           att.FileName,
+			Header:             att.Header,
+			Content:            att.Content,
+			ContentType:        att.ContentType,
+			ContentID:          att.ContentID,
 			ContentDisposition: attachment.DispositionInline,
-			Size:               strconv.Itoa(len(j.Content)),
+			Size:               strconv.Itoa(len(att.Content)),
 		})
 	}
 
-	if err := e.msgStore.ProcessMessage(*incomingMsg); err != nil {
-		return fmt.Errorf("error processing message: %w", err)
+	if err := e.messageStore.ProcessIncomingMessage(incomingMsg); err != nil {
+		return err
 	}
-
 	return nil
 }
 
+// getContactName extracts the contact's first and last name from the IMAP address.
 func getContactName(imapAddr imap.Address) (string, string) {
 	from := strings.TrimSpace(imapAddr.Name)
 	names := strings.Fields(from)

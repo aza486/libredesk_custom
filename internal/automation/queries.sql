@@ -1,4 +1,4 @@
--- name: get-rules
+-- name: get-enabled-rules
 select 
     rules
 from automation_rules where disabled is not TRUE;

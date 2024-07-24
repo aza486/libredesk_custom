@@ -63,7 +63,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/tags", auth(handleGetTags))
 
 	// i18n.
-	g.GET("/api/lang/{lang}", auth(handleGetI18nLang))
+	g.GET("/api/lang/{lang}", handleGetI18nLang)
 
 	// Websocket.
 	g.GET("/api/ws", auth(func(r *fastglue.Request) error {
