@@ -228,7 +228,7 @@ WHERE conversation_id = (
 -- name: get-to-address
 SELECT cm.source_id from conversations c inner join contact_methods cm on cm.contact_id = c.contact_id where c.id = $1 and cm.source = $2;
 
--- name: get-in-reply-to
+-- name: get-latest-received-message-source-id
 SELECT source_id
 FROM messages
 WHERE conversation_id = $1 and status = 'received'

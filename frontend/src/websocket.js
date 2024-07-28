@@ -16,7 +16,6 @@ export function initWS() {
 
         // Connection opened event
         socket.addEventListener('open', function () {
-            console.log('WebSocket connection established')
             reconnectInterval = 1000 // Reset the reconnection interval
             if (reconnectTimeout) {
                 clearTimeout(reconnectTimeout) // Clear any existing reconnection timeout
@@ -26,7 +25,6 @@ export function initWS() {
 
         // Listen for messages from the server
         socket.addEventListener('message', function (e) {
-            console.log('Message from server:', e.data)
             if (e.data) {
                 let event = JSON.parse(e.data)
                 // TODO: move event type to consts.
@@ -57,7 +55,6 @@ export function initWS() {
 
         // Handle the connection close event
         socket.addEventListener('close', function (event) {
-            console.log('WebSocket connection closed:', event)
             if (!manualClose) {
                 reconnect()
             }

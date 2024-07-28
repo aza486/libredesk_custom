@@ -110,7 +110,7 @@ func (h *Hub) PushMessage(msg PushMessage) {
 }
 
 // BroadcastNewConversationMessage broadcasts a new conversation message.
-func (h *Hub) BroadcastNewConversationMessage(conversationUUID, trimmedMessage, messageUUID, lastMessageAt string, private bool) {
+func (h *Hub) BroadcastNewConversationMessage(conversationUUID, content, messageUUID, lastMessageAt string, private bool) {
 	userIDs, ok := h.conversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
@@ -120,7 +120,7 @@ func (h *Hub) BroadcastNewConversationMessage(conversationUUID, trimmedMessage, 
 		Type: models.MessageTypeNewMessage,
 		Data: map[string]interface{}{
 			"conversation_uuid": conversationUUID,
-			"last_message":      trimmedMessage,
+			"last_message":      content,
 			"uuid":              messageUUID,
 			"last_message_at":   lastMessageAt,
 			"private":           private,

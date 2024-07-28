@@ -41,7 +41,6 @@
                       ? (() => {
                           console.log(' ->', conversationStore.conversation.data.assigned_user_id , 'agents ', agents)
                           const agent = agents.find(agent => agent.id === conversationStore.conversation.data.assigned_user_id);
-                          console.log('Foud agent ', agent)
                           return agent ? `${agent.first_name} ${agent.last_name}` : "Select agent...";
                         })()
                       : "Select agent..."

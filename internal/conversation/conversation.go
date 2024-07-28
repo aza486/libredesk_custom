@@ -138,14 +138,14 @@ func New(
 
 type queries struct {
 	// Conversation queries.
-	GetInReplyTo                       *sqlx.Stmt `query:"get-in-reply-to"`
+	GetLatestReceivedMessageSourceID   *sqlx.Stmt `query:"get-latest-received-message-source-id"`
 	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
 	GetConversationID                  *sqlx.Stmt `query:"get-conversation-id"`
 	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
 	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
 	GetRecentConversations             *sqlx.Stmt `query:"get-recent-conversations"`
 	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
-	GetConversations                   string     `query:"get-conversations-conversations"`
+	GetConversations                   string     `query:"get-conversations"`
 	GetConversationsUUIDs              string     `query:"get-conversations-uuids"`
 	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
 	GetAssignedConversations           *sqlx.Stmt `query:"get-assigned-conversations"`
@@ -163,7 +163,7 @@ type queries struct {
 	AddConversationTag                 *sqlx.Stmt `query:"add-conversation-tag"`
 	DeleteConversationTags             *sqlx.Stmt `query:"delete-conversation-tags"`
 
-	// Message queries
+	// Message queries.
 	GetMessage           *sqlx.Stmt `query:"get-message"`
 	GetMessages          string     `query:"get-messages"`
 	GetPendingMessages   *sqlx.Stmt `query:"get-pending-messages"`
@@ -244,39 +244,6 @@ func (c *Manager) AddConversationParticipant(userID int, conversationUUID string
 		}
 		return err
 	}
-	return nil
-}
-
-// UpdateConversationMeta updates the metadata of a conversation.
-func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID string, meta map[string]string) error {
-	metaJSON, err := json.Marshal(meta)
-	if err != nil {
-		c.lo.Error("error marshalling meta", "meta", meta, "error", err)
-		return err
-	}
-	if _, err := c.q.UpdateConversationMeta.Exec(conversationID, conversationUUID, metaJSON); err != nil {
-		c.lo.Error("error updating conversation meta", "error", "error")
-		return err
-	}
-	return nil
-}
-
-// UpdateConversationLastMessage updates the last message details in the conversation meta.
-func (c *Manager) UpdateConversationLastMessage(conversationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
-	return c.UpdateConversationMeta(conversationID, conversationUUID, map[string]string{
-		"last_message":    lastMessage,
-		"last_message_at": lastMessageAt.Format(time.RFC3339),
-	})
-}
-
-// UpdateConversationFirstReplyAt updates the first reply timestamp for a conversation.
-func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conversationID int, at time.Time) error {
-	if _, err := c.q.UpdateConversationFirstReplyAt.Exec(conversationID, at); err != nil {
-		c.lo.Error("error updating conversation first reply at", "error", err)
-		return err
-	}
-	// Send ws update.
-	c.wsHub.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", time.Now().Format(time.RFC3339))
 	return nil
 }
 
@@ -385,6 +352,39 @@ func (c *Manager) GetConversationUUIDs(userID, page, pageSize int, typ, filter s
 		return ids, err
 	}
 	return ids, nil
+}
+
+// UpdateConversationMeta updates the metadata of a conversation.
+func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID string, meta map[string]string) error {
+	metaJSON, err := json.Marshal(meta)
+	if err != nil {
+		c.lo.Error("error marshalling meta", "meta", meta, "error", err)
+		return err
+	}
+	if _, err := c.q.UpdateConversationMeta.Exec(conversationID, conversationUUID, metaJSON); err != nil {
+		c.lo.Error("error updating conversation meta", "error", "error")
+		return err
+	}
+	return nil
+}
+
+// UpdateConversationLastMessage updates the last message details in the conversation meta.
+func (c *Manager) UpdateConversationLastMessage(conversationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
+	return c.UpdateConversationMeta(conversationID, conversationUUID, map[string]string{
+		"last_message":    lastMessage,
+		"last_message_at": lastMessageAt.Format(time.RFC3339),
+	})
+}
+
+// UpdateConversationFirstReplyAt updates the first reply timestamp for a conversation.
+func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conversationID int, at time.Time) error {
+	if _, err := c.q.UpdateConversationFirstReplyAt.Exec(conversationID, at); err != nil {
+		c.lo.Error("error updating conversation first reply at", "error", err)
+		return err
+	}
+	// Broadcast update to all subscribers.
+	c.wsHub.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
+	return nil
 }
 
 // UpdateConversationUserAssignee sets the assignee of a conversation to a specifc user.
@@ -529,7 +529,7 @@ func (c *Manager) generateConversationsListQuery(userID int, baseQuery, typ, ord
 	case models.AllConversations:
 		// No conditions.
 	default:
-		return "", nil, errors.New("invalid type of conversation")
+		return "", nil, fmt.Errorf("invalid conversation type %s", typ)
 	}
 
 	if filterClause, ok := models.ValidFilters[filter]; ok {
@@ -571,10 +571,10 @@ func (m *Manager) GetToAddress(conversationID int, channel string) ([]string, er
 	return addr, nil
 }
 
-// GetInReplyTo retrieves the `In-Reply-To` for given conversation.
-func (m *Manager) GetInReplyTo(conversationID int) (string, error) {
+// GetLatestReceivedMessageSourceID returns the last received message source ID.
+func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, error) {
 	var out string
-	if err := m.q.GetInReplyTo.Get(&out, conversationID); err != nil {
+	if err := m.q.GetLatestReceivedMessageSourceID.Get(&out, conversationID); err != nil {
 		m.lo.Error("error fetching `in reply to`", "error", err, "conversation_id", conversationID)
 		return out, err
 	}

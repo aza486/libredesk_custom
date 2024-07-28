@@ -21,7 +21,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/conversations/all", auth(handleGetAllConversations, "conversation:all"))
 	g.GET("/api/conversations/team", auth(handleGetTeamConversations, "conversation:team"))
 	g.GET("/api/conversations/assigned", auth(handleGetAssignedConversations, "conversation:assigned"))
-
 	g.GET("/api/conversations/{uuid}", auth(handleGetConversation))
 	g.GET("/api/conversations/{uuid}/participants", auth(handleGetConversationParticipants))
 	g.PUT("/api/conversations/{uuid}/last-seen", auth(handleUpdateAssigneeLastSeen))
@@ -30,8 +29,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/conversations/{uuid}/priority", auth(handleUpdatePriority, "conversation:edit_priority"))
 	g.PUT("/api/conversations/{uuid}/status", auth(handleUpdateStatus, "conversation:edit_status"))
 	g.POST("/api/conversations/{uuid}/tags", auth(handleAddConversationTags))
-
-	// Message.
 	g.GET("/api/conversations/{uuid}/messages", auth(handleGetMessages))
 	g.GET("/api/message/{uuid}/retry", auth(handleRetryMessage))
 	g.GET("/api/message/{uuid}", auth(handleGetMessage))

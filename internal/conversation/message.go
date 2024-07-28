@@ -149,7 +149,7 @@ func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 			// Get from, to addresses and inReplyTo.
 			message.From = inbox.FromAddress()
 			message.To, _ = m.GetToAddress(message.ConversationID, inbox.Channel())
-			message.InReplyTo, _ = m.GetInReplyTo(message.ConversationID)
+			message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
 
 			// Send.
 			err = inbox.Send(message)
@@ -182,6 +182,7 @@ func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSiz
 		messages = make([]models.Message, 0)
 		qArgs    []interface{}
 	)
+
 	qArgs = append(qArgs, conversationUUID)
 	query, qArgs, err := m.generateMessagesQuery(m.q.GetMessages, qArgs, page, pageSize)
 	if err != nil {
@@ -190,7 +191,7 @@ func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSiz
 	}
 
 	tx, err := m.db.BeginTxx(context.Background(), nil)
-	defer tx.Commit()
+	defer tx.Rollback()
 	if err != nil {
 		m.lo.Error("error preparing get messages query", "error", err)
 		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)

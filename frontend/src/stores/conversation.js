@@ -58,14 +58,13 @@ export const useConversationStore = defineStore('conversation', () => {
         );
     })
 
-    // Computed property to sort message by created_at
+    // Computed property to sort messages by created_at
     const sortedMessages = computed(() => {
         if (!messages.data) {
             return [];
         }
-        return [...messages.data];
+        return [...messages.data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     });
-
 
     const getContactFullName = (uuid) => {
         const conv = conversations.data.find(conv => conv.uuid === uuid);
@@ -84,7 +83,10 @@ export const useConversationStore = defineStore('conversation', () => {
         try {
             const resp = await api.getConversation(uuid);
             conversation.data = resp.data.data
+            // mark this conversation as read.
             markAsRead(uuid)
+            // reset messages state on new conversation fetch.
+            resetMessages()
         } catch (error) {
             conversation.errorMessage = handleHTTPError(error).message;
         } finally {
@@ -131,9 +133,6 @@ export const useConversationStore = defineStore('conversation', () => {
 
             // Add new messages to the messages data
             messages.data.unshift(...newMessages);
-
-            // Sort messages immediately after updating the state
-            messages.data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         } catch (error) {
             toast({
                 title: 'Could not fetch messages, Please try again.',
@@ -355,9 +354,16 @@ export const useConversationStore = defineStore('conversation', () => {
         conversation.errorMessage = ""
 
         // Reset messages state
+        resetMessages()
+    }
+
+    function resetMessages () {
         messages.data = []
         messages.loading = false
+        messages.page = 1
+        messages.hasMore = true
         messages.errorMessage = ""
+        seenMessageUUIDs = new Set()
     }
 
     return { conversations, conversation, messages, sortedConversations, sortedMessages, conversationUUIDExists, updateConversationProp, addNewConversation, getContactFullName, fetchParticipants, fetchNextMessages, fetchNextConversations, updateMessageProp, updateAssigneeLastSeen, updateMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationList, $reset };
