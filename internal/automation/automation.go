@@ -42,12 +42,12 @@ type Opts struct {
 }
 
 type ConversationStore interface {
-	Get(uuid string) (cmodels.Conversation, error)
+	GetConversation(uuid string) (cmodels.Conversation, error)
 	GetRecentConversations(t time.Time) ([]cmodels.Conversation, error)
-	UpdateTeamAssignee(uuid string, teamID int, actor umodels.User) error
-	UpdateUserAssignee(uuid string, assigneeID int, actor umodels.User) error
-	UpdateStatus(uuid string, status []byte, actor umodels.User) error
-	UpdatePriority(uuid string, priority []byte, actor umodels.User) error
+	UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error
+	UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error
+	UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error
+	UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error
 }
 
 type queries struct {
@@ -191,7 +191,7 @@ func (e *Engine) DeleteRule(id int) error {
 // handleNewConversation handles new conversation events.
 func (e *Engine) handleNewConversation(conversationUUID string, semaphore chan struct{}) {
 	defer func() { <-semaphore }()
-	conversation, err := e.conversationStore.Get(conversationUUID)
+	conversation, err := e.conversationStore.GetConversation(conversationUUID)
 	if err != nil {
 		return
 	}
@@ -202,7 +202,7 @@ func (e *Engine) handleNewConversation(conversationUUID string, semaphore chan s
 // handleUpdateConversation handles update conversation events.
 func (e *Engine) handleUpdateConversation(conversationUUID string, semaphore chan struct{}) {
 	defer func() { <-semaphore }()
-	conversation, err := e.conversationStore.Get(conversationUUID)
+	conversation, err := e.conversationStore.GetConversation(conversationUUID)
 	if err != nil {
 		e.lo.Error("error could not fetch conversations to evaluate update conversation rules", "conversation_uuid", conversationUUID)
 		return

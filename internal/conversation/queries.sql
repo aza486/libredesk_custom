@@ -102,46 +102,43 @@ LEFT JOIN teams at ON at.id = c.assigned_team_id
 WHERE c.created_at > $1 and c.uuid = 'e2f69c9f-17f5-4d09-9aae-12c2a79046a2';
 
 
--- name: get-id
+-- name: get-conversation-id
 SELECT id from conversations where uuid = $1;
 
--- name: get-uuid
+-- name: get-conversation-uuid
 SELECT uuid from conversations where id = $1;
 
--- name: get-inbox-id
-select inbox_id from conversations where uuid = $1;
-
--- name: update-assigned-user
+-- name: update-conversation-assigned-user
 UPDATE conversations
 SET assigned_user_id = $2,
 updated_at = now()
 WHERE uuid = $1;
 
--- name: update-assigned-team
+-- name: update-conversation-assigned-team
 UPDATE conversations
 SET assigned_team_id = $2,
 assigned_user_id = NULL,
 updated_at = now()
 WHERE uuid = $1;
 
--- name: update-status
+-- name: update-conversation-status
 UPDATE conversations
 SET status = $2::text,
     resolved_at = CASE WHEN $2::text = 'Resolved' THEN CURRENT_TIMESTAMP ELSE NULL END,
 updated_at = now()
 WHERE uuid = $1;
 
--- name: update-priority
+-- name: update-conversation-priority
 UPDATE conversations set priority = $2,
 updated_at = now()
 where uuid = $1;
 
--- name: update-assignee-last-seen
+-- name: update-conversation-assignee-last-seen
 UPDATE conversations set assignee_last_seen_at = now(),
 updated_at = now()
 where uuid = $1;
 
--- name: update-meta
+-- name: update-conversation-meta
 UPDATE conversations set meta = meta || $3 where CASE WHEN $1 > 0 then id = $1 else uuid = $2 end;
 
 -- name: get-conversation-participants
@@ -157,10 +154,8 @@ INSERT INTO conversation_participants
 (user_id, conversation_id)
 VALUES($1, (select id from conversations where uuid = $2));
 
--- name: get-assigned-uuids
-select uuids from conversations where assigned_user_id = $1;
 
--- name: get-unassigned
+-- name: get-unassigned-conversations
 SELECT
     c.updated_at,
     c.uuid,
@@ -205,12 +200,12 @@ GROUP BY
 ORDER BY
     date;
 
--- name: update-first-reply-at
+-- name: update-conversation-first-reply-at
 UPDATE conversations
 SET first_reply_at = $2
 WHERE first_reply_at IS NULL AND id = $1;
 
--- name: add-tag
+-- name: add-conversation-tag
 INSERT INTO conversation_tags (conversation_id, tag_id)
 VALUES(
     (
@@ -221,10 +216,163 @@ VALUES(
     $2
 ) ON CONFLICT DO NOTHING
 
--- name: delete-tags
+-- name: delete-conversation-tags
 DELETE FROM conversation_tags
 WHERE conversation_id = (
     SELECT id
     from conversations
     where uuid = $1
 ) AND tag_id NOT IN (SELECT unnest($2::int[]));
+
+
+-- name: get-to-address
+SELECT cm.source_id from conversations c inner join contact_methods cm on cm.contact_id = c.contact_id where c.id = $1 and cm.source = $2;
+
+-- name: get-in-reply-to
+SELECT source_id
+FROM messages
+WHERE conversation_id = $1 and status = 'received'
+ORDER BY id DESC
+LIMIT 1;
+
+-- name: get-pending-messages
+SELECT
+    m.created_at,
+    m.id,
+    m.uuid,
+    m.sender_id,
+    m.type,
+    m.status,
+    m.content,
+    m.conversation_id,
+    m.content_type,
+    m.source_id,
+    c.inbox_id,
+    c.uuid as conversation_uuid,
+    COALESCE(c.meta->>'subject', '') as subject
+FROM messages m
+INNER JOIN conversations c ON c.id = m.conversation_id
+WHERE m.status = 'pending'
+AND NOT(m.id = ANY($1::INT[]))
+
+-- name: get-message
+SELECT
+    m.created_at,
+    m.updated_at,
+    m.status,
+    m.type,
+    m.content,
+    m.uuid,
+    m.private,
+    m.sender_type,
+    u.uuid as sender_uuid,
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'name', a.filename,
+                'content_type', a.content_type,
+                'uuid', a.uuid,
+                'size', a.size
+            ) ORDER BY a.filename
+        ) FILTER (WHERE a.message_id IS NOT NULL), 
+        '[]'::json
+    ) AS attachments
+FROM messages m
+LEFT JOIN attachments a 
+    ON a.message_id = m.id 
+    AND a.content_disposition = 'attachment'
+LEFT JOIN users u on u.id = m.sender_id
+WHERE m.uuid = $1
+GROUP BY 
+    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type, u.uuid
+ORDER BY m.created_at;
+
+-- name: get-messages
+WITH conversation_id AS (
+    SELECT id
+    FROM conversations
+    WHERE uuid = $1
+    LIMIT 1
+),
+attachments AS (
+    SELECT 
+        model_id as message_id,
+        json_agg(
+            json_build_object(
+                'name', filename,
+                'content_type', content_type,
+                'uuid', uuid,
+                'size', size
+            ) ORDER BY filename
+        ) AS attachment_details
+    FROM media
+    WHERE model_type = 'messages'
+    GROUP BY message_id
+)
+SELECT
+    m.created_at,
+    m.updated_at,
+    m.status,
+    m.type,
+    m.content,
+    m.uuid,
+    m.private,
+    m.sender_id,
+    m.sender_type,
+    u.uuid as sender_uuid,
+    COALESCE(a.attachment_details, '[]'::json) AS attachments
+FROM messages m
+LEFT JOIN attachments a ON a.message_id = m.id
+LEFT JOIN users u on u.id = m.sender_id
+WHERE m.conversation_id = (SELECT id FROM conversation_id) ORDER BY m.created_at DESC
+%s;
+
+-- name: insert-message
+WITH conversation_id AS (
+    SELECT id 
+    FROM conversations 
+    WHERE CASE 
+        WHEN $3 > 0 THEN id = $3 
+        ELSE uuid = $4 
+    END
+)
+INSERT INTO messages (
+    "type",
+    status,
+    conversation_id,
+    "content",
+    sender_id,
+    sender_type,
+    private,
+    content_type,
+    source_id,
+    inbox_id,
+    meta
+)
+VALUES (
+    $1,
+    $2,
+    (SELECT id FROM conversation_id),
+    $5,
+    $6,
+    $7,
+    $8,
+    $9,
+    $10,
+    $11,
+    $12
+)
+RETURNING id, uuid, created_at;
+
+-- name: message-exists
+SELECT conversation_id
+FROM messages
+WHERE source_id = ANY($1::text []);
+
+-- name: update-message-content
+update messages
+set content = $1
+where id = $2;
+
+-- name: update-message-status
+update messages set status = $1 where uuid = $2;

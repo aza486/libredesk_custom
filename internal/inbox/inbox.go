@@ -6,10 +6,10 @@ import (
 	"embed"
 	"errors"
 
+	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
-	"github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -54,7 +54,7 @@ type Inbox interface {
 
 // MessageStore defines methods for storing and processing messages.
 type MessageStore interface {
-	Exists(string) (bool, error)
+	MessageExists(string) (bool, error)
 	EnqueueIncoming(models.IncomingMessage) error
 }
 

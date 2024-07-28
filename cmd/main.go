@@ -14,7 +14,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/media"
-	"github.com/abhinavxd/artemis/internal/message"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
 	"github.com/abhinavxd/artemis/internal/tag"
@@ -56,7 +55,6 @@ type App struct {
 	team         *team.Manager
 	sess         *simplesessions.Manager
 	tag          *tag.Manager
-	message      *message.Manager
 	inbox        *inbox.Manager
 	cannedResp   *cannedresp.Manager
 	conversation *conversation.Manager
@@ -70,8 +68,10 @@ func main() {
 	// Load the config files into Koanf.
 	initConfig(ko)
 
-	// Load app settings into Koanf.
+	// Init DB.
 	db := initDB()
+
+	// Load app settings into Koanf.
 	setting := initSettingsManager(db)
 	loadSettings(setting)
 
@@ -90,19 +90,17 @@ func main() {
 		team         = initTeam(db)
 		user         = initUser(i18n, db)
 		notifier     = initNotifier(user, template)
-		conversation = initConversations(i18n, wsHub, notifier, db)
 		automation   = initAutomationEngine(db, user)
-		message      = initMessages(db, wsHub, user, team, contact, media, conversation, inbox, automation, template)
+		conversation = initConversations(i18n, wsHub, notifier, db, contact, inbox, user, team, media, automation, template)
 		autoassigner = initAutoAssigner(team, user, conversation)
 	)
 
 	// Set required stores.
-	conversation.SetMessageStore(message)
 	wsHub.SetConversationStore(conversation)
 	automation.SetConversationStore(conversation)
 
 	// Register all active inboxes with inbox manager & start receiving messages.
-	registerInboxes(inbox, message)
+	registerInboxes(inbox, conversation)
 	inbox.Receive(ctx)
 
 	// Start evaluation automation rules.
@@ -111,8 +109,8 @@ func main() {
 	// Start conversation auto assigner.
 	go autoassigner.Run(ctx, ko.MustDuration("autoassigner.assign_interval"))
 
-	// Start processing incoming and outgoing messages.
-	go message.Run(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustInt("message.reader_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+	// Listen to incoming messages and dispatch pending outgoing messages.
+	go conversation.ListenAndDispatch(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustInt("message.reader_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
 	// Init the app
 	var app = &App{
@@ -127,7 +125,6 @@ func main() {
 		user:         user,
 		team:         team,
 		conversation: conversation,
-		message:      message,
 		automation:   automation,
 		role:         initRole(db),
 		constant:     initConstants(),

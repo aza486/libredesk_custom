@@ -1,57 +1,39 @@
-package message
+package conversation
 
 import (
 	"bytes"
 	"context"
 	"database/sql"
-	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
-	"github.com/abhinavxd/artemis/internal/automation"
-	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	mmodels "github.com/abhinavxd/artemis/internal/media/models"
-	"github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/abhinavxd/artemis/internal/stringutil"
-	tmodels "github.com/abhinavxd/artemis/internal/team/models"
-	"github.com/abhinavxd/artemis/internal/template"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
-	"github.com/abhinavxd/artemis/internal/ws"
-	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/zerodha/logf"
-)
-
-var (
-	//go:embed queries.sql
-	efs embed.FS
-
-	ErrConversationNotFound = errors.New("conversation not found")
 )
 
 const (
-	TypeIncoming = "incoming"
-	TypeOutgoing = "outgoing"
-	TypeActivity = "activity"
+	MessageIncoming = "incoming"
+	MessageOutgoing = "outgoing"
+	MessageActivity = "activity"
 
 	SenderTypeUser    = "user"
 	SenderTypeContact = "contact"
 
-	StatusPending   = "pending"
-	StatusSent      = "sent"
-	StatusDelivered = "delivered"
-	StatusRead      = "read"
-	StatusFailed    = "failed"
-	StatusReceived  = "received"
+	MessageStatusPending   = "pending"
+	MessageStatusSent      = "sent"
+	MessageStatusDelivered = "delivered"
+	MessageStatusRead      = "read"
+	MessageStatusFailed    = "failed"
+	MessageStatusReceived  = "received"
 
 	ActivityStatusChange       = "status_change"
 	ActivityPriorityChange     = "priority_change"
@@ -67,123 +49,16 @@ const (
 	maxMessagesPerPage = 30
 )
 
-// Manager handles message-related operations.
-type Manager struct {
-	q                          queries
-	db                         *sqlx.DB
-	lo                         *logf.Logger
-	contactStore               contactStore
-	inboxStore                 inboxStore
-	conversationStore          conversationStore
-	userStore                  userStore
-	teamStore                  teamStore
-	mediaStore                 mediaStore
-	automation                 *automation.Engine
-	wsHub                      *ws.Hub
-	template                   *template.Manager
-	incomingMessageQueue       chan models.IncomingMessage
-	outgoingMessageQueue       chan models.Message
-	outgoingProcessingMessages sync.Map
-}
-
-// Opts contains options for initializing the message Manager.
-type Opts struct {
-	DB                   *sqlx.DB
-	Lo                   *logf.Logger
-	IncomingMsgQueueSize int
-	OutgoingMsgQueueSize int
-}
-
-type teamStore interface {
-	GetTeam(int) (tmodels.Team, error)
-}
-
-type userStore interface {
-	Get(int, string) (umodels.User, error)
-}
-
-type contactStore interface {
-	Upsert(cmodels.Contact) (int, error)
-}
-
-type conversationStore interface {
-	UpdateFirstReplyAt(string, int, time.Time) error
-	UpdateLastMessage(int, string, string, time.Time) error
-	Create(int, int, []byte) (int, string, error)
-	GetUUID(int) (string, error)
-}
-
-type mediaStore interface {
-	GetBlob(name string) ([]byte, error)
-	AttachToModel(id int, model string, modelID int) error
-	GetModelMedia(id int, model string) ([]mmodels.Media, error)
-	UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
-}
-
-type inboxStore interface {
-	Get(int) (inbox.Inbox, error)
-}
-
-// queries contains prepared SQL queries.
-type queries struct {
-	GetMessage           *sqlx.Stmt `query:"get-message"`
-	GetMessages          string     `query:"get-messages"`
-	GetToAddress         *sqlx.Stmt `query:"get-to-address"`
-	GetInReplyTo         *sqlx.Stmt `query:"get-in-reply-to"`
-	GetPendingMessages   *sqlx.Stmt `query:"get-pending-messages"`
-	InsertMessage        *sqlx.Stmt `query:"insert-message"`
-	UpdateMessageContent *sqlx.Stmt `query:"update-message-content"`
-	UpdateMessageStatus  *sqlx.Stmt `query:"update-message-status"`
-	MessageExists        *sqlx.Stmt `query:"message-exists"`
-}
-
-// New creates and returns a new instance of the Manager.
-func New(
-	wsHub *ws.Hub,
-	userStore userStore,
-	teamStore teamStore,
-	contactStore contactStore,
-	mediaStore mediaStore,
-	inboxStore inboxStore,
-	conversationStore conversationStore,
-	automation *automation.Engine,
-	template *template.Manager,
-	opts Opts,
-) (*Manager, error) {
-	var q queries
-
-	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
-		return nil, err
-	}
-	return &Manager{
-		q:                          q,
-		db:                         opts.DB,
-		lo:                         opts.Lo,
-		wsHub:                      wsHub,
-		userStore:                  userStore,
-		teamStore:                  teamStore,
-		mediaStore:                 mediaStore,
-		contactStore:               contactStore,
-		inboxStore:                 inboxStore,
-		template:                   template,
-		conversationStore:          conversationStore,
-		automation:                 automation,
-		incomingMessageQueue:       make(chan models.IncomingMessage, opts.IncomingMsgQueueSize),
-		outgoingMessageQueue:       make(chan models.Message, opts.OutgoingMsgQueueSize),
-		outgoingProcessingMessages: sync.Map{},
-	}, nil
-}
-
-// Run starts worker pool to process incoming and outgoing messages.
-func (m *Manager) Run(ctx context.Context, dispatchConcurrency, readerConcurrency int, readInterval time.Duration) {
+// ListenAndDispatch starts worker pool to process incoming and outgoing messages.
+func (m *Manager) ListenAndDispatch(ctx context.Context, dispatchConcurrency, readerConcurrency int, readInterval time.Duration) {
 	// Spawn a worker goroutine pool to dispatch messages.
 	for range dispatchConcurrency {
-		go m.DispatchWorker(ctx)
+		go m.MessageDispatchWorker(ctx)
 	}
 
 	// Spawn a worker goroutine pool to process incoming messages.
 	for range readerConcurrency {
-		go m.IncomingWorker(ctx)
+		go m.IncomingMessageWorker(ctx)
 	}
 
 	// Scan pending messages from the DB on set interval.
@@ -224,12 +99,12 @@ func (m *Manager) Run(ctx context.Context, dispatchConcurrency, readerConcurrenc
 					})
 					if err != nil {
 						m.lo.Error("error rendering default template", "error", err)
-						m.UpdateStatus(message.UUID, StatusFailed)
+						m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 						continue
 					}
 				default:
 					m.lo.Warn("unknown message channel", "channel", inb.Channel())
-					m.UpdateStatus(message.UUID, StatusFailed)
+					m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 					continue
 				}
 
@@ -243,8 +118,8 @@ func (m *Manager) Run(ctx context.Context, dispatchConcurrency, readerConcurrenc
 	}
 }
 
-// DispatchWorker dispatches outgoing pending messages.
-func (m *Manager) DispatchWorker(ctx context.Context) {
+// MessageDispatchWorker dispatches outgoing pending messages.
+func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -259,15 +134,15 @@ func (m *Manager) DispatchWorker(ctx context.Context) {
 			if err != nil {
 				m.lo.Error("error fetching inbox", "error", err, "inbox_id", message.InboxID)
 				m.outgoingProcessingMessages.Delete(message.ID)
-				m.UpdateStatus(message.UUID, StatusFailed)
+				m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 				continue
 			}
 
 			// Attach attachments to the message.
-			if err := m.attachAttachments(&message); err != nil {
+			if err := m.attachAttachmentsToMessage(&message); err != nil {
 				m.lo.Error("error attaching attachments to message", "error", err, "id", message.ID)
 				m.outgoingProcessingMessages.Delete(message.ID)
-				m.UpdateStatus(message.UUID, StatusFailed)
+				m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 				continue
 			}
 
@@ -280,16 +155,16 @@ func (m *Manager) DispatchWorker(ctx context.Context) {
 			err = inbox.Send(message)
 
 			// Update status.
-			var newStatus = StatusFailed
+			var newStatus = MessageStatusFailed
 			if err != nil {
-				newStatus = StatusFailed
+				newStatus = MessageStatusFailed
 				m.lo.Error("error sending message", "error", err, "inbox_id", message.InboxID)
 			}
-			m.UpdateStatus(message.UUID, newStatus)
+			m.UpdateMessageStatus(message.UUID, newStatus)
 
 			// Update first reply at.
-			if newStatus == StatusSent {
-				m.conversationStore.UpdateFirstReplyAt(message.ConversationUUID, message.ConversationID, message.CreatedAt)
+			if newStatus == MessageStatusSent {
+				m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, message.CreatedAt)
 			}
 
 			// Broadcast update to all subscribers.
@@ -329,8 +204,8 @@ func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSiz
 	return messages, nil
 }
 
-// Get retrieves a message by UUID.
-func (m *Manager) Get(uuid string) (models.Message, error) {
+// GetMessage retrieves a message by UUID.
+func (m *Manager) GetMessage(uuid string) (models.Message, error) {
 	var message models.Message
 	if err := m.q.GetMessage.Get(&message, uuid); err != nil {
 		m.lo.Error("error fetching message", "uuid", uuid, "error", err)
@@ -339,8 +214,8 @@ func (m *Manager) Get(uuid string) (models.Message, error) {
 	return message, nil
 }
 
-// UpdateStatus updates the status of a message.
-func (m *Manager) UpdateStatus(uuid string, status string) error {
+// UpdateMessageStatus updates the status of a message.
+func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 	if _, err := m.q.UpdateMessageStatus.Exec(status, uuid); err != nil {
 		m.lo.Error("error updating message status in DB", "error", err, "uuid", uuid)
 		return err
@@ -348,25 +223,25 @@ func (m *Manager) UpdateStatus(uuid string, status string) error {
 	return nil
 }
 
-// MarkAsPending updates message status to `Pending` so a message can be sent again.
-func (m *Manager) MarkAsPending(uuid string) error {
-	if err := m.UpdateStatus(uuid, StatusPending); err != nil {
+// MarkMessageAsPending updates message status to `Pending`, so if it's a outgoing message it can be picked up again by a worker.
+func (m *Manager) MarkMessageAsPending(uuid string) error {
+	if err := m.UpdateMessageStatus(uuid, MessageStatusPending); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error retrying message", nil)
 	}
 	return nil
 }
 
-// Insert inserts a message and attaches the attachments to the message.
-func (m *Manager) Insert(message *models.Message) error {
+// InsertMessage inserts a message and attaches the attachments to the message.
+func (m *Manager) InsertMessage(message *models.Message) error {
 	if message.Private {
-		message.Status = StatusSent
+		message.Status = MessageStatusSent
 	}
 
 	if message.Meta == "" {
 		message.Meta = "{}"
 	}
 
-	// Insert.
+	// InsertMessage.
 	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.SenderID, message.SenderType,
 		message.Private, message.ContentType, message.SourceID, message.InboxID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
 		m.lo.Error("error inserting message in db", "error", err)
@@ -380,34 +255,14 @@ func (m *Manager) Insert(message *models.Message) error {
 	return nil
 }
 
-// GetToAddress retrieves the recipient addresses for a message.
-func (m *Manager) GetToAddress(convID int, channel string) ([]string, error) {
-	var addr []string
-	if err := m.q.GetToAddress.Select(&addr, convID, channel); err != nil {
-		m.lo.Error("error fetching `to` address for message", "error", err, "conversation_id", convID)
-		return addr, err
-	}
-	return addr, nil
-}
-
-// GetInReplyTo retrieves the In-Reply-To header value for a message.
-func (m *Manager) GetInReplyTo(convID int) (string, error) {
-	var out string
-	if err := m.q.GetInReplyTo.Get(&out, convID); err != nil {
-		m.lo.Error("error fetching in reply to", "error", err, "conversation_id", convID)
-		return out, err
-	}
-	return out, nil
-}
-
-// IncomingWorker processes incoming messages from the incoming message queue.
-func (m *Manager) IncomingWorker(ctx context.Context) {
+// IncomingMessageWorker processes incoming messages from the incoming message queue.
+func (m *Manager) IncomingMessageWorker(ctx context.Context) {
 	for msg := range m.incomingMessageQueue {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			if err := m.processIncoming(msg); err != nil {
+			if err := m.processIncomingMessage(msg); err != nil {
 				m.lo.Error("error processing incoming msg", "error", err)
 			}
 		}
@@ -418,7 +273,7 @@ func (m *Manager) IncomingWorker(ctx context.Context) {
 func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error {
 	// Self assign.
 	if assigneeID == actor.ID {
-		return m.InsertActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
+		return m.InsertConversationActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
 	}
 
 	// Assignment to another user.
@@ -426,7 +281,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	if err != nil {
 		return err
 	}
-	return m.InsertActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
+	return m.InsertConversationActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
 }
 
 // RecordAssigneeTeamChange records an activity for a team assignee change.
@@ -435,30 +290,30 @@ func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, 
 	if err != nil {
 		return err
 	}
-	return m.InsertActivity(ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
+	return m.InsertConversationActivity(ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
 }
 
 // RecordPriorityChange records an activity for a priority change.
 func (m *Manager) RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error {
-	return m.InsertActivity(ActivityPriorityChange, conversationUUID, priority, actor)
+	return m.InsertConversationActivity(ActivityPriorityChange, conversationUUID, priority, actor)
 }
 
 // RecordStatusChange records an activity for a status change.
 func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umodels.User) error {
-	return m.InsertActivity(ActivityStatusChange, conversationUUID, status, actor)
+	return m.InsertConversationActivity(ActivityStatusChange, conversationUUID, status, actor)
 }
 
-// InsertActivity inserts an activity message.
-func (m *Manager) InsertActivity(activityType, conversationUUID, newValue string, actor umodels.User) error {
-	content, err := m.getActivityContent(activityType, newValue, actor.FullName())
+// InsertConversationActivity inserts an activity message.
+func (m *Manager) InsertConversationActivity(activityType, conversationUUID, newValue string, actor umodels.User) error {
+	content, err := m.getMessageActivityContent(activityType, newValue, actor.FullName())
 	if err != nil {
 		m.lo.Error("error could not generate activity content", "error", err)
 		return err
 	}
 
 	message := models.Message{
-		Type:             TypeActivity,
-		Status:           StatusSent,
+		Type:             MessageActivity,
+		Status:           MessageStatusSent,
 		Content:          content,
 		ContentType:      ContentTypeText,
 		ConversationUUID: conversationUUID,
@@ -467,19 +322,19 @@ func (m *Manager) InsertActivity(activityType, conversationUUID, newValue string
 		SenderType:       SenderTypeUser,
 	}
 
-	// Insert message in DB.
-	m.Insert(&message)
+	// InsertMessage message in DB.
+	m.InsertMessage(&message)
 
 	// Broadcast the new message to all subscribers.
 	m.BroadcastNewConversationMessage(message, content)
 
 	// Update the last message in conversation meta.
-	m.conversationStore.UpdateLastMessage(0, conversationUUID, content, message.CreatedAt)
+	m.UpdateConversationLastMessage(0, conversationUUID, content, message.CreatedAt)
 	return nil
 }
 
-// getActivityContent generates activity content based on the activity type.
-func (m *Manager) getActivityContent(activityType, newValue, actorName string) (string, error) {
+// getMessageActivityContent generates activity content based on the activity type.
+func (m *Manager) getMessageActivityContent(activityType, newValue, actorName string) (string, error) {
 	var content = ""
 	switch activityType {
 	case ActivityAssignedUserChange:
@@ -500,8 +355,8 @@ func (m *Manager) getActivityContent(activityType, newValue, actorName string) (
 	return content, nil
 }
 
-// processIncoming processes an incoming message by upserting contact, conversation and message.
-func (m *Manager) processIncoming(in models.IncomingMessage) error {
+// processIncomingMessage processes an incoming message by upserting contact, conversation and message.
+func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var err error
 
 	// Create contact.
@@ -527,12 +382,12 @@ func (m *Manager) processIncoming(in models.IncomingMessage) error {
 	}
 
 	// Insert message.
-	if err = m.Insert(&in.Message); err != nil {
+	if err = m.InsertMessage(&in.Message); err != nil {
 		return fmt.Errorf("inserting conversation message: %w", err)
 	}
 
 	// Upload attachments.
-	if err := m.uploadAttachments(&in.Message); err != nil {
+	if err := m.uploadMessageAttachments(&in.Message); err != nil {
 		return fmt.Errorf("uploading message attachments: %w", err)
 	}
 
@@ -545,7 +400,7 @@ func (m *Manager) processIncoming(in models.IncomingMessage) error {
 			content = stringutil.Trim(in.Message.Content, maxLastMessageLen)
 		}
 		m.BroadcastNewConversationMessage(in.Message, content)
-		m.conversationStore.UpdateLastMessage(in.Message.ConversationID, in.Message.ConversationUUID, content, in.Message.CreatedAt)
+		m.UpdateConversationLastMessage(in.Message.ConversationID, in.Message.ConversationUUID, content, in.Message.CreatedAt)
 	}
 
 	// Evaluate automation rules for this conversation.
@@ -557,8 +412,8 @@ func (m *Manager) processIncoming(in models.IncomingMessage) error {
 	return nil
 }
 
-// Exists checks if a message with the given messageID exists.
-func (m *Manager) Exists(messageID string) (bool, error) {
+// MessageExists checks if a message with the given messageID exists.
+func (m *Manager) MessageExists(messageID string) (bool, error) {
 	_, err := m.findConversationID([]string{messageID})
 	if err != nil {
 		if errors.Is(err, ErrConversationNotFound) {
@@ -570,7 +425,7 @@ func (m *Manager) Exists(messageID string) (bool, error) {
 	return true, nil
 }
 
-// EnqueueIncoming enqueues an incoming message for inserting.
+// EnqueueIncoming enqueues an incoming message for inserting in db.
 func (m *Manager) EnqueueIncoming(message models.IncomingMessage) error {
 	select {
 	case m.incomingMessageQueue <- message:
@@ -581,7 +436,7 @@ func (m *Manager) EnqueueIncoming(message models.IncomingMessage) error {
 	}
 }
 
-// generateMessagesQuery generates the SQL query for fetching messages in a conversation
+// generateMessagesQuery generates the SQL query for fetching messages in a conversation.
 func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, page, pageSize int) (string, []interface{}, error) {
 	// Set default values for page and page size if they are invalid
 	if page <= 0 {
@@ -602,8 +457,8 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 	return sqlQuery, qArgs, nil
 }
 
-// uploadAttachments uploads attachments for a message.
-func (m *Manager) uploadAttachments(message *models.Message) error {
+// uploadMessageAttachments uploads attachments for a message.
+func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 	var (
 		hasInline bool
 	)
@@ -663,7 +518,7 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 	if conversationID == 0 {
 		new = true
 
-		// Prepare meta.
+		// Put subject & last message details in meta.
 		conversationMeta, err := json.Marshal(map[string]string{
 			"subject":         in.Subject,
 			"last_message":    stringutil.Trim(in.Content, maxLastMessageLen),
@@ -672,7 +527,7 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		if err != nil {
 			return false, err
 		}
-		conversationID, conversationUUID, err = m.conversationStore.Create(contactID, inboxID, conversationMeta)
+		conversationID, conversationUUID, err = m.CreateConversation(contactID, inboxID, conversationMeta)
 		if err != nil || conversationID == 0 {
 			return new, err
 		}
@@ -681,9 +536,9 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		return new, nil
 	}
 
-	// Set UUID if not available.
+	// Get UUID.
 	if conversationUUID == "" {
-		conversationUUID, err = m.conversationStore.GetUUID(conversationID)
+		conversationUUID, err = m.GetConversationUUID(conversationID)
 		if err != nil {
 			return new, err
 		}
@@ -694,12 +549,12 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 }
 
 // findConversationID finds the conversation ID from the message source ID.
-func (m *Manager) findConversationID(sourceIDs []string) (int, error) {
-	if len(sourceIDs) == 0 {
+func (m *Manager) findConversationID(messageSourceIDs []string) (int, error) {
+	if len(messageSourceIDs) == 0 {
 		return 0, ErrConversationNotFound
 	}
 	var conversationID int
-	if err := m.q.MessageExists.QueryRow(pq.Array(sourceIDs)).Scan(&conversationID); err != nil {
+	if err := m.q.MessageExists.QueryRow(pq.Array(messageSourceIDs)).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
 			return conversationID, ErrConversationNotFound
 		}
@@ -709,8 +564,8 @@ func (m *Manager) findConversationID(sourceIDs []string) (int, error) {
 	return conversationID, nil
 }
 
-// attachAttachments attaches attachment blobs to message.
-func (m *Manager) attachAttachments(message *models.Message) error {
+// attachAttachmentsToMessage attaches attachment blobs to message.
+func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 	var attachments attachment.Attachments
 
 	// Get all media for this message.

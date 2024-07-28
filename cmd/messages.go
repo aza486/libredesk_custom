@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/abhinavxd/artemis/internal/conversation"
+	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	medModels "github.com/abhinavxd/artemis/internal/media/models"
-	"github.com/abhinavxd/artemis/internal/message"
-	mmodels "github.com/abhinavxd/artemis/internal/message/models"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
@@ -21,7 +21,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
 
-	messages, err := app.message.GetConversationMessages(uuid, page, pageSize)
+	messages, err := app.conversation.GetConversationMessages(uuid, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -39,7 +39,7 @@ func handleGetMessage(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
-	messages, err := app.message.Get(uuid)
+	messages, err := app.conversation.GetMessage(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -56,7 +56,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("message_uuid").(string)
 	)
-	err := app.message.MarkAsPending(uuid)
+	err := app.conversation.MarkMessageAsPending(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -90,30 +90,26 @@ func handleSendMessage(r *fastglue.Request) error {
 		medias = append(medias, media)
 	}
 
-	msg := mmodels.Message{
+	msg := cmodels.Message{
 		ConversationUUID: uuid,
 		SenderID:         user.ID,
-		Type:             message.TypeOutgoing,
-		SenderType:       message.SenderTypeUser,
-		Status:           message.StatusPending,
+		Type:             conversation.MessageOutgoing,
+		SenderType:       conversation.SenderTypeUser,
+		Status:           conversation.MessageStatusPending,
 		Content:          string(content),
-		ContentType:      message.ContentTypeHTML,
+		ContentType:      conversation.ContentTypeHTML,
 		Private:          private,
 		Media:            medias,
 	}
 
-	if err := app.message.Insert(&msg); err != nil {
+	if err := app.conversation.InsertMessage(&msg); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	app.conversation.AddParticipant(user.ID, uuid)
+	app.conversation.AddConversationParticipant(user.ID, uuid)
 
 	// Update conversation meta with the last message details.
 	trimmedMessage := stringutil.Trim(msg.Content, 45)
-	app.conversation.UpdateLastMessage(0, uuid, trimmedMessage, msg.CreatedAt)
-
-	// Send WS update.
-	app.message.BroadcastNewConversationMessage(msg, trimmedMessage)
-
+	app.conversation.UpdateConversationLastMessage(0, uuid, trimmedMessage, msg.CreatedAt)
 	return r.SendEnvelope(true)
 }

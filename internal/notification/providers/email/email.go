@@ -6,8 +6,8 @@ import (
 	"net/textproto"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
+	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
-	"github.com/abhinavxd/artemis/internal/message/models"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/knadh/smtppool"
 	"github.com/zerodha/logf"

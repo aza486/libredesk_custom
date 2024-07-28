@@ -8,15 +8,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/abhinavxd/artemis/internal/automation"
+	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/artemis/internal/inbox"
+	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/abhinavxd/artemis/internal/stringutil"
+	tmodels "github.com/abhinavxd/artemis/internal/team/models"
+	"github.com/abhinavxd/artemis/internal/template"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
@@ -28,92 +36,149 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
+
+	ErrConversationNotFound = errors.New("conversation not found")
 )
 
 const (
 	maxConversationsPageSize = 50
 )
 
-// MessageStore interface defines methods to record changes in conversation assignees, priority, and status.
-type MessageStore interface {
-	RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error
-	RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error
-	RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error
-	RecordStatusChange(status, conversationUUID string, actor umodels.User) error
+// Manager handles the operations related to conversations
+type Manager struct {
+	q                          queries
+	notifier                   notifier.Notifier
+	contactStore               contactStore
+	inboxStore                 inboxStore
+	userStore                  userStore
+	teamStore                  teamStore
+	mediaStore                 mediaStore
+	lo                         *logf.Logger
+	db                         *sqlx.DB
+	i18n                       *i18n.I18n
+	automation                 *automation.Engine
+	wsHub                      *ws.Hub
+	template                   *template.Manager
+	incomingMessageQueue       chan models.IncomingMessage
+	outgoingMessageQueue       chan models.Message
+	outgoingProcessingMessages sync.Map
 }
 
-// Manager handles the operations related to conversations.
-type Manager struct {
-	lo                  *logf.Logger
-	db                  *sqlx.DB
-	hub                 *ws.Hub
-	i18n                *i18n.I18n
-	notifier            notifier.Notifier
-	messageStore        MessageStore
-	q                   queries
-	ReferenceNumPattern string
+type teamStore interface {
+	GetTeam(int) (tmodels.Team, error)
+}
+
+type userStore interface {
+	Get(int, string) (umodels.User, error)
+}
+
+type contactStore interface {
+	Upsert(cmodels.Contact) (int, error)
+}
+
+type mediaStore interface {
+	GetBlob(name string) ([]byte, error)
+	AttachToModel(id int, model string, modelID int) error
+	GetModelMedia(id int, model string) ([]mmodels.Media, error)
+	UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
+}
+
+type inboxStore interface {
+	Get(int) (inbox.Inbox, error)
 }
 
 // Opts holds the options for creating a new Manager.
 type Opts struct {
-	DB *sqlx.DB
-	Lo *logf.Logger
+	DB                       *sqlx.DB
+	Lo                       *logf.Logger
+	OutgoingMessageQueueSize int
+	IncomingMessageQueueSize int
 }
 
-type queries struct {
-	GetID                        *sqlx.Stmt `query:"get-id"`
-	GetUUID                      *sqlx.Stmt `query:"get-uuid"`
-	GetInboxID                   *sqlx.Stmt `query:"get-inbox-id"`
-	GetConversation              *sqlx.Stmt `query:"get-conversation"`
-	GetRecentConversations       *sqlx.Stmt `query:"get-recent-conversations"`
-	GetUnassigned                *sqlx.Stmt `query:"get-unassigned"`
-	GetConversations             string     `query:"get-conversations"`
-	GetConversationsUUIDs        string     `query:"get-conversations-uuids"`
-	GetConversationParticipants  *sqlx.Stmt `query:"get-conversation-participants"`
-	GetAssignedConversations     *sqlx.Stmt `query:"get-assigned-conversations"`
-	GetAssigneeStats             *sqlx.Stmt `query:"get-assignee-stats"`
-	GetNewConversationsStats     *sqlx.Stmt `query:"get-new-conversations-stats"`
-	InsertConverstionParticipant *sqlx.Stmt `query:"insert-conversation-participant"`
-	InsertConversation           *sqlx.Stmt `query:"insert-conversation"`
-	UpdateFirstReplyAt           *sqlx.Stmt `query:"update-first-reply-at"`
-	UpdateAssigneeLastSeen       *sqlx.Stmt `query:"update-assignee-last-seen"`
-	UpdateAssignedUser           *sqlx.Stmt `query:"update-assigned-user"`
-	UpdateAssignedTeam           *sqlx.Stmt `query:"update-assigned-team"`
-	UpdatePriority               *sqlx.Stmt `query:"update-priority"`
-	UpdateStatus                 *sqlx.Stmt `query:"update-status"`
-	UpdateMeta                   *sqlx.Stmt `query:"update-meta"`
-	AddTag                       *sqlx.Stmt `query:"add-tag"`
-	DeleteTags                   *sqlx.Stmt `query:"delete-tags"`
-}
+// New initializes a new conversation Manager.
+func New(
+	wsHub *ws.Hub,
+	i18n *i18n.I18n,
+	notifier notifier.Notifier,
+	contactStore contactStore,
+	inboxStore inboxStore,
+	userStore userStore,
+	teamStore teamStore,
+	mediaStore mediaStore,
+	automation *automation.Engine,
+	template *template.Manager,
+	opts Opts) (*Manager, error) {
 
-// New initializes a new Manager.
-func New(hub *ws.Hub, i18n *i18n.I18n, notifier notifier.Notifier, opts Opts) (*Manager, error) {
 	var q queries
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
+
 	c := &Manager{
-		q:        q,
-		hub:      hub,
-		i18n:     i18n,
-		notifier: notifier,
-		db:       opts.DB,
-		lo:       opts.Lo,
+		q:                          q,
+		wsHub:                      wsHub,
+		i18n:                       i18n,
+		notifier:                   notifier,
+		contactStore:               contactStore,
+		inboxStore:                 inboxStore,
+		userStore:                  userStore,
+		teamStore:                  teamStore,
+		mediaStore:                 mediaStore,
+		automation:                 automation,
+		template:                   template,
+		db:                         opts.DB,
+		lo:                         opts.Lo,
+		incomingMessageQueue:       make(chan models.IncomingMessage, opts.IncomingMessageQueueSize),
+		outgoingMessageQueue:       make(chan models.Message, opts.OutgoingMessageQueueSize),
+		outgoingProcessingMessages: sync.Map{},
 	}
+
 	return c, nil
 }
 
-// SetMessageStore sets the message store for the Manager.
-func (c *Manager) SetMessageStore(store MessageStore) {
-	c.messageStore = store
+type queries struct {
+	// Conversation queries.
+	GetInReplyTo                       *sqlx.Stmt `query:"get-in-reply-to"`
+	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
+	GetConversationID                  *sqlx.Stmt `query:"get-conversation-id"`
+	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
+	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
+	GetRecentConversations             *sqlx.Stmt `query:"get-recent-conversations"`
+	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
+	GetConversations                   string     `query:"get-conversations-conversations"`
+	GetConversationsUUIDs              string     `query:"get-conversations-uuids"`
+	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
+	GetAssignedConversations           *sqlx.Stmt `query:"get-assigned-conversations"`
+	GetConversationAssigneeStats       *sqlx.Stmt `query:"get-assignee-stats"`
+	GetNewConversationsStats           *sqlx.Stmt `query:"get-new-conversations-stats"`
+	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
+	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
+	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
+	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
+	UpdateConversationPriority         *sqlx.Stmt `query:"update-conversation-priority"`
+	UpdateConversationStatus           *sqlx.Stmt `query:"update-conversation-status"`
+	UpdateConversationMeta             *sqlx.Stmt `query:"update-conversation-meta"`
+	InsertConverstionParticipant       *sqlx.Stmt `query:"insert-conversation-participant"`
+	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
+	AddConversationTag                 *sqlx.Stmt `query:"add-conversation-tag"`
+	DeleteConversationTags             *sqlx.Stmt `query:"delete-conversation-tags"`
+
+	// Message queries
+	GetMessage           *sqlx.Stmt `query:"get-message"`
+	GetMessages          string     `query:"get-messages"`
+	GetPendingMessages   *sqlx.Stmt `query:"get-pending-messages"`
+	InsertMessage        *sqlx.Stmt `query:"insert-message"`
+	UpdateMessageContent *sqlx.Stmt `query:"update-message-content"`
+	UpdateMessageStatus  *sqlx.Stmt `query:"update-message-status"`
+	MessageExists        *sqlx.Stmt `query:"message-exists"`
 }
 
-// Create creates a new conversation and returns its ID and UUID.
-func (c *Manager) Create(contactID int, inboxID int, meta []byte) (int, string, error) {
+// CreateConversation creates a new conversation and returns its ID and UUID.
+func (c *Manager) CreateConversation(contactID int, inboxID int, meta []byte) (int, string, error) {
 	var (
 		id        int
 		uuid      string
-		refNum, _ = stringutil.RandomNumericString(16)
+		refNum, _ = stringutil.RandomNumericString(20)
 	)
 	if err := c.q.InsertConversation.QueryRow(refNum, contactID, models.StatusOpen, inboxID, meta).Scan(&id, &uuid); err != nil {
 		c.lo.Error("error inserting new conversation into the DB", "error", err)
@@ -122,8 +187,8 @@ func (c *Manager) Create(contactID int, inboxID int, meta []byte) (int, string, 
 	return id, uuid, nil
 }
 
-// Get retrieves a conversation by its UUID.
-func (c *Manager) Get(uuid string) (models.Conversation, error) {
+// GetConversation retrieves a conversation by its UUID.
+func (c *Manager) GetConversation(uuid string) (models.Conversation, error) {
 	var conversation models.Conversation
 	if err := c.q.GetConversation.Get(&conversation, uuid); err != nil {
 		if err == sql.ErrNoRows {
@@ -137,7 +202,7 @@ func (c *Manager) Get(uuid string) (models.Conversation, error) {
 
 // GetRecentConversations retrieves conversations created after the specified time.
 func (c *Manager) GetRecentConversations(time time.Time) ([]models.Conversation, error) {
-	var conversations []models.Conversation
+	var conversations = make([]models.Conversation, 0)
 	if err := c.q.GetRecentConversations.Select(&conversations, time); err != nil {
 		if err == sql.ErrNoRows {
 			c.lo.Error("conversations not found", "created_after", time)
@@ -149,19 +214,20 @@ func (c *Manager) GetRecentConversations(time time.Time) ([]models.Conversation,
 	return conversations, nil
 }
 
-// UpdateAssigneeLastSeen updates the last seen timestamp of an assignee.
-func (c *Manager) UpdateAssigneeLastSeen(uuid string) error {
-	if _, err := c.q.UpdateAssigneeLastSeen.Exec(uuid); err != nil {
+// UpdateConversationAssigneeLastSeen updates the last seen timestamp of assignee.
+func (c *Manager) UpdateConversationAssigneeLastSeen(uuid string) error {
+	if _, err := c.q.UpdateConversationAssigneeLastSeen.Exec(uuid); err != nil {
 		c.lo.Error("error updating conversation", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee last seen.", nil)
 	}
-	// Broadcast the property update.
-	c.hub.BroadcastConversationPropertyUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.RFC3339))
+
+	// Broadcast the property update to all subscribers.
+	c.wsHub.BroadcastConversationPropertyUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.RFC3339))
 	return nil
 }
 
-// GetParticipants retrieves the participants of a conversation.
-func (c *Manager) GetParticipants(uuid string) ([]models.ConversationParticipant, error) {
+// GetConversationParticipants retrieves the participants of a conversation.
+func (c *Manager) GetConversationParticipants(uuid string) ([]models.ConversationParticipant, error) {
 	conv := make([]models.ConversationParticipant, 0)
 	if err := c.q.GetConversationParticipants.Select(&conv, uuid); err != nil {
 		c.lo.Error("error fetching conversation", "error", err)
@@ -170,9 +236,9 @@ func (c *Manager) GetParticipants(uuid string) ([]models.ConversationParticipant
 	return conv, nil
 }
 
-// AddParticipant adds a participant to a conversation.
-func (c *Manager) AddParticipant(userID int, convUUID string) error {
-	if _, err := c.q.InsertConverstionParticipant.Exec(userID, convUUID); err != nil {
+// AddConversationParticipant adds a user as participant to a conversation.
+func (c *Manager) AddConversationParticipant(userID int, conversationUUID string) error {
+	if _, err := c.q.InsertConverstionParticipant.Exec(userID, conversationUUID); err != nil {
 		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
 			return nil
 		}
@@ -181,43 +247,43 @@ func (c *Manager) AddParticipant(userID int, convUUID string) error {
 	return nil
 }
 
-// UpdateMeta updates the metadata of a conversation.
-func (c *Manager) UpdateMeta(conversationID int, conversationUUID string, meta map[string]string) error {
+// UpdateConversationMeta updates the metadata of a conversation.
+func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID string, meta map[string]string) error {
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
-		c.lo.Error("error marshalling meta", "error", err)
+		c.lo.Error("error marshalling meta", "meta", meta, "error", err)
 		return err
 	}
-	if _, err := c.q.UpdateMeta.Exec(conversationID, conversationUUID, metaJSON); err != nil {
+	if _, err := c.q.UpdateConversationMeta.Exec(conversationID, conversationUUID, metaJSON); err != nil {
 		c.lo.Error("error updating conversation meta", "error", "error")
 		return err
 	}
 	return nil
 }
 
-// UpdateLastMessage updates the last message and its timestamp in a conversation.
-func (c *Manager) UpdateLastMessage(conversationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
-	return c.UpdateMeta(conversationID, conversationUUID, map[string]string{
+// UpdateConversationLastMessage updates the last message details in the conversation meta.
+func (c *Manager) UpdateConversationLastMessage(conversationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
+	return c.UpdateConversationMeta(conversationID, conversationUUID, map[string]string{
 		"last_message":    lastMessage,
 		"last_message_at": lastMessageAt.Format(time.RFC3339),
 	})
 }
 
-// UpdateFirstReplyAt updates the first reply timestamp in a conversation.
-func (c *Manager) UpdateFirstReplyAt(conversationUUID string, conversationID int, at time.Time) error {
-	if _, err := c.q.UpdateFirstReplyAt.Exec(conversationID, at); err != nil {
+// UpdateConversationFirstReplyAt updates the first reply timestamp for a conversation.
+func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conversationID int, at time.Time) error {
+	if _, err := c.q.UpdateConversationFirstReplyAt.Exec(conversationID, at); err != nil {
 		c.lo.Error("error updating conversation first reply at", "error", err)
 		return err
 	}
 	// Send ws update.
-	c.hub.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", time.Now().Format(time.RFC3339))
+	c.wsHub.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", time.Now().Format(time.RFC3339))
 	return nil
 }
 
-// GetUnassigned retrieves unassigned conversations.
-func (c *Manager) GetUnassigned() ([]models.Conversation, error) {
+// GetUnassignedConversations retrieves unassigned conversations.
+func (c *Manager) GetUnassignedConversations() ([]models.Conversation, error) {
 	var conv []models.Conversation
-	if err := c.q.GetUnassigned.Select(&conv); err != nil {
+	if err := c.q.GetUnassignedConversations.Select(&conv); err != nil {
 		if err != sql.ErrNoRows {
 			return conv, fmt.Errorf("fetching unassigned conversations: %w", err)
 		}
@@ -225,10 +291,10 @@ func (c *Manager) GetUnassigned() ([]models.Conversation, error) {
 	return conv, nil
 }
 
-// GetID retrieves the ID of a conversation by its UUID.
-func (c *Manager) GetID(uuid string) (int, error) {
+// GetConversationID retrieves the ID of a conversation by its UUID.
+func (c *Manager) GetConversationID(uuid string) (int, error) {
 	var id int
-	if err := c.q.GetID.QueryRow(uuid).Scan(&id); err != nil {
+	if err := c.q.GetConversationID.QueryRow(uuid).Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
 			return id, err
 		}
@@ -238,10 +304,10 @@ func (c *Manager) GetID(uuid string) (int, error) {
 	return id, nil
 }
 
-// GetUUID retrieves the UUID of a conversation by its ID.
-func (c *Manager) GetUUID(id int) (string, error) {
+// GetConversationUUID retrieves the UUID of a conversation by its ID.
+func (c *Manager) GetConversationUUID(id int) (string, error) {
 	var uuid string
-	if err := c.q.GetUUID.QueryRow(id).Scan(&uuid); err != nil {
+	if err := c.q.GetConversationUUID.QueryRow(id).Scan(&uuid); err != nil {
 		if err == sql.ErrNoRows {
 			return uuid, err
 		}
@@ -251,26 +317,13 @@ func (c *Manager) GetUUID(id int) (string, error) {
 	return uuid, nil
 }
 
-// GetInboxID retrieves the inbox ID of a conversation by its UUID.
-func (c *Manager) GetInboxID(uuid string) (int, error) {
-	var id int
-	if err := c.q.GetInboxID.QueryRow(uuid).Scan(&id); err != nil {
-		if err == sql.ErrNoRows {
-			return id, err
-		}
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return id, err
-	}
-	return id, nil
-}
-
-// GetAll retrieves all conversations with optional filtering, ordering, and pagination.
-func (c *Manager) GetAll(order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
+// GetAllConversations retrieves all conversations with optional filtering, ordering, and pagination.
+func (c *Manager) GetAllConversations(order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
 	return c.GetConversations(0, models.AllConversations, order, orderBy, filter, page, pageSize)
 }
 
-// GetAssigned retrieves conversations assigned to a specific user with optional filtering, ordering, and pagination.
-func (c *Manager) GetAssigned(userID int, order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
+// GetAssignedConversations retrieves conversations assigned to a specific user with optional filtering, ordering, and pagination.
+func (c *Manager) GetAssignedConversations(userID int, order, orderBy, filter string, page, pageSize int) ([]models.Conversation, error) {
 	return c.GetConversations(userID, models.AssignedConversations, order, orderBy, filter, page, pageSize)
 }
 
@@ -334,18 +387,8 @@ func (c *Manager) GetConversationUUIDs(userID, page, pageSize int, typ, filter s
 	return ids, nil
 }
 
-// GetAssignedConversations retrieves conversations assigned to a specific user.
-func (c *Manager) GetAssignedConversations(userID int) ([]models.Conversation, error) {
-	var conversations []models.Conversation
-	if err := c.q.GetAssignedConversations.Select(&conversations, userID); err != nil {
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return nil, fmt.Errorf("error fetching conversations")
-	}
-	return conversations, nil
-}
-
-// UpdateUserAssignee updates the assignee of a conversation to a specific user.
-func (c *Manager) UpdateUserAssignee(uuid string, assigneeID int, actor umodels.User) error {
+// UpdateConversationUserAssignee sets the assignee of a conversation to a specifc user.
+func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error {
 	if err := c.UpdateAssignee(uuid, assigneeID, models.AssigneeTypeUser); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
@@ -353,18 +396,18 @@ func (c *Manager) UpdateUserAssignee(uuid string, assigneeID int, actor umodels.
 	// Send notification to assignee.
 	go c.notifier.SendAssignedConversationNotification([]int{assigneeID}, uuid)
 
-	if err := c.messageStore.RecordAssigneeUserChange(uuid, assigneeID, actor); err != nil {
+	if err := c.RecordAssigneeUserChange(uuid, assigneeID, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
 	}
 	return nil
 }
 
-// UpdateTeamAssignee updates the assignee of a conversation to a specific team.
-func (c *Manager) UpdateTeamAssignee(uuid string, teamID int, actor umodels.User) error {
+// UpdateConversationTeamAssignee sets the assignee of a conversation to a specific team and sets the assigned user id to NULL.
+func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error {
 	if err := c.UpdateAssignee(uuid, teamID, models.AssigneeTypeTeam); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
-	if err := c.messageStore.RecordAssigneeTeamChange(uuid, teamID, actor); err != nil {
+	if err := c.RecordAssigneeTeamChange(uuid, teamID, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
 	}
 	return nil
@@ -374,59 +417,63 @@ func (c *Manager) UpdateTeamAssignee(uuid string, teamID int, actor umodels.User
 func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType string) error {
 	switch assigneeType {
 	case models.AssigneeTypeUser:
-		if _, err := c.q.UpdateAssignedUser.Exec(uuid, assigneeID); err != nil {
+		if _, err := c.q.UpdateConversationAssignedUser.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", strconv.Itoa(assigneeID))
+
+		// Broadcast update to all subscribers.
+		c.wsHub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", strconv.Itoa(assigneeID))
 	case models.AssigneeTypeTeam:
-		if _, err := c.q.UpdateAssignedTeam.Exec(uuid, assigneeID); err != nil {
+		if _, err := c.q.UpdateConversationAssignedTeam.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
 			return fmt.Errorf("error updating assignee")
 		}
-		c.hub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", strconv.Itoa(assigneeID))
+
+		// Broadcast update to all subscribers.
+		c.wsHub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", strconv.Itoa(assigneeID))
 	default:
 		return errors.New("invalid assignee type")
 	}
 	return nil
 }
 
-// UpdatePriority updates the priority of a conversation.
-func (c *Manager) UpdatePriority(uuid string, priority []byte, actor umodels.User) error {
+// UpdateConversationPriority updates the priority of a conversation.
+func (c *Manager) UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error {
 	var priorityStr = string(priority)
 	if !slices.Contains(models.ValidPriorities, priorityStr) {
 		return envelope.NewError(envelope.GeneralError, "Invalid `priority` value", nil)
 	}
-	if _, err := c.q.UpdatePriority.Exec(uuid, priority); err != nil {
+	if _, err := c.q.UpdateConversationPriority.Exec(uuid, priority); err != nil {
 		c.lo.Error("error updating conversation priority", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating priority", nil)
 	}
-	if err := c.messageStore.RecordPriorityChange(priorityStr, uuid, actor); err != nil {
+	if err := c.RecordPriorityChange(priorityStr, uuid, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording priority change", nil)
 	}
 	return nil
 }
 
-// UpdateStatus updates the status of a conversation.
-func (c *Manager) UpdateStatus(uuid string, status []byte, actor umodels.User) error {
+// UpdateConversationStatus updates the status of a conversation.
+func (c *Manager) UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error {
 	var statusStr = string(status)
 	if !slices.Contains(models.ValidStatuses, statusStr) {
 		return envelope.NewError(envelope.GeneralError, "Invalid `status` value", nil)
 	}
-	if _, err := c.q.UpdateStatus.Exec(uuid, status); err != nil {
+	if _, err := c.q.UpdateConversationStatus.Exec(uuid, status); err != nil {
 		c.lo.Error("error updating conversation status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)
 	}
-	if err := c.messageStore.RecordStatusChange(statusStr, uuid, actor); err != nil {
+	if err := c.RecordStatusChange(statusStr, uuid, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
 	}
 	return nil
 }
 
-// GetAssigneeStats retrieves the statistics of conversations assigned to a specific user.
-func (c *Manager) GetAssigneeStats(userID int) (models.ConversationCounts, error) {
+// GetConversationAssigneeStats retrieves the stats of conversations assigned to a specific user.
+func (c *Manager) GetConversationAssigneeStats(userID int) (models.ConversationCounts, error) {
 	var counts = models.ConversationCounts{}
-	if err := c.q.GetAssigneeStats.Get(&counts, userID); err != nil {
+	if err := c.q.GetConversationAssigneeStats.Get(&counts, userID); err != nil {
 		if err == sql.ErrNoRows {
 			return counts, err
 		}
@@ -438,7 +485,7 @@ func (c *Manager) GetAssigneeStats(userID int) (models.ConversationCounts, error
 
 // GetNewConversationsStats retrieves the statistics of new conversations.
 func (c *Manager) GetNewConversationsStats() ([]models.NewConversationsStats, error) {
-	var stats []models.NewConversationsStats
+	var stats = make([]models.NewConversationsStats, 0)
 	if err := c.q.GetNewConversationsStats.Select(&stats); err != nil {
 		if err == sql.ErrNoRows {
 			return stats, err
@@ -449,14 +496,14 @@ func (c *Manager) GetNewConversationsStats() ([]models.NewConversationsStats, er
 	return stats, nil
 }
 
-// UpsertTags updates the tags associated with a conversation.
-func (t *Manager) UpsertTags(uuid string, tagIDs []int) error {
-	if _, err := t.q.DeleteTags.Exec(uuid, pq.Array(tagIDs)); err != nil {
+// UpsertConversationTags updates the tags associated with a conversation.
+func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
+	if _, err := t.q.DeleteConversationTags.Exec(uuid, pq.Array(tagIDs)); err != nil {
 		t.lo.Error("error deleting conversation tags", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error adding tags", nil)
 	}
 	for _, tagID := range tagIDs {
-		if _, err := t.q.AddTag.Exec(uuid, tagID); err != nil {
+		if _, err := t.q.AddConversationTag.Exec(uuid, tagID); err != nil {
 			t.lo.Error("error adding tags to conversation", "error", err)
 			return envelope.NewError(envelope.GeneralError, "Error adding tags", nil)
 		}
@@ -512,4 +559,24 @@ func (c *Manager) generateConversationsListQuery(userID int, baseQuery, typ, ord
 	sqlQuery := fmt.Sprintf("%s %s LIMIT $%d OFFSET $%d", fmt.Sprintf(baseQuery, cond), orderByClause, len(qArgs)-1, len(qArgs))
 
 	return sqlQuery, qArgs, nil
+}
+
+// GetToAddress retrieves the recipient addresses for a conversation.
+func (m *Manager) GetToAddress(conversationID int, channel string) ([]string, error) {
+	var addr []string
+	if err := m.q.GetToAddress.Select(&addr, conversationID, channel); err != nil {
+		m.lo.Error("error fetching `to` address for message", "error", err, "conversation_id", conversationID)
+		return addr, err
+	}
+	return addr, nil
+}
+
+// GetInReplyTo retrieves the `In-Reply-To` for given conversation.
+func (m *Manager) GetInReplyTo(conversationID int) (string, error) {
+	var out string
+	if err := m.q.GetInReplyTo.Get(&out, conversationID); err != nil {
+		m.lo.Error("error fetching `in reply to`", "error", err, "conversation_id", conversationID)
+		return out, err
+	}
+	return out, nil
 }

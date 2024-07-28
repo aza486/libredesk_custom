@@ -21,7 +21,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/media"
 	"github.com/abhinavxd/artemis/internal/media/stores/localfs"
 	"github.com/abhinavxd/artemis/internal/media/stores/s3"
-	"github.com/abhinavxd/artemis/internal/message"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
 	"github.com/abhinavxd/artemis/internal/role"
@@ -193,10 +192,14 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	return mgr
 }
 
-func initConversations(i18n *i18n.I18n, hub *ws.Hub, n notifier.Notifier, db *sqlx.DB) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, n, conversation.Opts{
-		DB: db,
-		Lo: initLogger("conversation_manager"),
+func initConversations(i18n *i18n.I18n, hub *ws.Hub, n notifier.Notifier, db *sqlx.DB, contactStore *contact.Manager,
+	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager,
+	automation *automation.Engine, template *template.Manager) *conversation.Manager {
+	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automation, template, conversation.Opts{
+		DB:                       db,
+		Lo:                       initLogger("conversation_manager"),
+		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),
+		IncomingMessageQueueSize: ko.MustInt("message.incoming_queue_size"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing conversation manager: %v", err)
@@ -217,7 +220,7 @@ func initTags(db *sqlx.DB) *tag.Manager {
 }
 
 func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
-	var lo = initLogger("canned_response_manager")
+	var lo = initLogger("canned-response")
 	c, err := cannedresp.New(cannedresp.Opts{
 		DB: db,
 		Lo: lo,
@@ -229,7 +232,7 @@ func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
 }
 
 func initContact(db *sqlx.DB) *contact.Manager {
-	var lo = initLogger("contact_manager")
+	var lo = initLogger("contact-manager")
 	m, err := contact.New(contact.Opts{
 		DB: db,
 		Lo: lo,
@@ -246,40 +249,6 @@ func initTemplate(db *sqlx.DB) *template.Manager {
 		log.Fatalf("error initializing template manager: %v", err)
 	}
 	return m
-}
-
-func initMessages(db *sqlx.DB,
-	wsHub *ws.Hub,
-	user *user.Manager,
-	team *team.Manager,
-	contact *contact.Manager,
-	media *media.Manager,
-	conversation *conversation.Manager,
-	inbox *inbox.Manager,
-	automationEngine *automation.Engine,
-	template *template.Manager,
-) *message.Manager {
-	var lo = initLogger("message_manager")
-	mgr, err := message.New(
-		wsHub,
-		user,
-		team,
-		contact,
-		media,
-		inbox,
-		conversation,
-		automationEngine,
-		template,
-		message.Opts{
-			DB:                   db,
-			Lo:                   lo,
-			OutgoingMsgQueueSize: ko.MustInt("message.outgoing_queue_size"),
-			IncomingMsgQueueSize: ko.MustInt("message.incoming_queue_size"),
-		})
-	if err != nil {
-		log.Fatalf("error initializing message manager: %v", err)
-	}
-	return mgr
 }
 
 func initTeam(db *sqlx.DB) *team.Manager {

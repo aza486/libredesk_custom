@@ -8,8 +8,8 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/attachment"
 	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
-	"github.com/abhinavxd/artemis/internal/message"
-	"github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/conversation"
+	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/jhillyerd/enmime"
@@ -123,7 +123,7 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 		return nil
 	}
 
-	exists, err := e.messageStore.Exists(env.MessageID)
+	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if err != nil {
 		return err
 	}
@@ -143,10 +143,10 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 	incomingMsg := models.IncomingMessage{
 		Message: models.Message{
 			Channel:    e.Channel(),
-			SenderType: message.SenderTypeContact,
-			Type:       message.TypeIncoming,
+			SenderType: conversation.SenderTypeContact,
+			Type:       conversation.MessageIncoming,
 			InboxID:    inboxID,
-			Status:     message.StatusReceived,
+			Status:     conversation.MessageStatusReceived,
 			Subject:    env.Subject,
 			SourceID:   null.StringFrom(env.MessageID),
 		},
@@ -184,10 +184,10 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 
 	if len(envelope.HTML) > 0 {
 		incomingMsg.Message.Content = envelope.HTML
-		incomingMsg.Message.ContentType = message.ContentTypeHTML
+		incomingMsg.Message.ContentType = conversation.ContentTypeHTML
 	} else if len(envelope.Text) > 0 {
 		incomingMsg.Message.Content = envelope.Text
-		incomingMsg.Message.ContentType = message.ContentTypeText
+		incomingMsg.Message.ContentType = conversation.ContentTypeText
 	}
 
 	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envelope.GetHeader("In-Reply-To"), "<", ""), ">", "")

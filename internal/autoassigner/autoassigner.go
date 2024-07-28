@@ -114,7 +114,7 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 // assignConversations function fetches conversations that have been assigned to teams but not to any individual user,
 // and then proceeds to assign them to team members based on a round-robin strategy.
 func (e *Engine) assignConversations() error {
-	unassigned, err := e.conversationManager.GetUnassigned()
+	unassigned, err := e.conversationManager.GetUnassignedConversations()
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (e *Engine) assignConversations() error {
 		}
 
 		// Assign conversation.
-		e.conversationManager.UpdateUserAssignee(conversation.UUID, userID, e.systemUser)
+		e.conversationManager.UpdateConversationUserAssignee(conversation.UUID, userID, e.systemUser)
 	}
 	return nil
 }

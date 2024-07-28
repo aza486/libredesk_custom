@@ -19,7 +19,7 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
-	c, err := app.conversation.GetAll(order, orderBy, filter, page, pageSize)
+	c, err := app.conversation.GetAllConversations(order, orderBy, filter, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -36,7 +36,7 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
-	c, err := app.conversation.GetAssigned(user.ID, order, orderBy, filter, page, pageSize)
+	c, err := app.conversation.GetAssignedConversations(user.ID, order, orderBy, filter, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -65,7 +65,7 @@ func handleGetConversation(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
-	c, err := app.conversation.Get(uuid)
+	c, err := app.conversation.GetConversation(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -77,7 +77,7 @@ func handleUpdateAssigneeLastSeen(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
-	err := app.conversation.UpdateAssigneeLastSeen(uuid)
+	err := app.conversation.UpdateConversationAssigneeLastSeen(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -89,7 +89,7 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
-	p, err := app.conversation.GetParticipants(uuid)
+	p, err := app.conversation.GetConversationParticipants(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -106,7 +106,7 @@ func handleUpdateUserAssignee(r *fastglue.Request) error {
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid assignee `id`.", nil, envelope.InputError)
 	}
-	if err := app.conversation.UpdateUserAssignee(uuid, assigneeID, user); err != nil {
+	if err := app.conversation.UpdateConversationUserAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -122,7 +122,7 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid assignee `id`.", nil, envelope.InputError)
 	}
-	if err := app.conversation.UpdateTeamAssignee(uuid, assigneeID, user); err != nil {
+	if err := app.conversation.UpdateConversationTeamAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -136,7 +136,7 @@ func handleUpdatePriority(r *fastglue.Request) error {
 		uuid     = r.RequestCtx.UserValue("uuid").(string)
 		user     = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-	if err := app.conversation.UpdatePriority(uuid, priority, user); err != nil {
+	if err := app.conversation.UpdateConversationPriority(uuid, priority, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -150,7 +150,7 @@ func handleUpdateStatus(r *fastglue.Request) error {
 		uuid   = r.RequestCtx.UserValue("uuid").(string)
 		user   = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-	if err := app.conversation.UpdateStatus(uuid, status, user); err != nil {
+	if err := app.conversation.UpdateConversationStatus(uuid, status, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -169,7 +169,7 @@ func handleAddConversationTags(r *fastglue.Request) error {
 		app.lo.Error("unmarshalling tag ids", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error adding tags", nil, "")
 	}
-	if err := app.conversation.UpsertTags(uuid, tagIDs); err != nil {
+	if err := app.conversation.UpsertConversationTags(uuid, tagIDs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -181,7 +181,7 @@ func handleUserDashboardCounts(r *fastglue.Request) error {
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
 
-	stats, err := app.conversation.GetAssigneeStats(user.ID)
+	stats, err := app.conversation.GetConversationAssigneeStats(user.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

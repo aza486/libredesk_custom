@@ -155,7 +155,7 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
 			return err
 		}
-		if err := e.conversationStore.UpdateTeamAssignee(conversation.UUID, teamID, e.systemUser); err != nil {
+		if err := e.conversationStore.UpdateConversationTeamAssignee(conversation.UUID, teamID, e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionAssignUser:
@@ -164,15 +164,15 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
 			return err
 		}
-		if err := e.conversationStore.UpdateUserAssignee(conversation.UUID, agentID, e.systemUser); err != nil {
+		if err := e.conversationStore.UpdateConversationUserAssignee(conversation.UUID, agentID, e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetPriority:
-		if err := e.conversationStore.UpdatePriority(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
+		if err := e.conversationStore.UpdateConversationPriority(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetStatus:
-		if err := e.conversationStore.UpdateStatus(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
+		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
 			return err
 		}
 	default:
