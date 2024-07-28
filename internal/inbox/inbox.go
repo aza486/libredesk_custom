@@ -14,6 +14,10 @@ import (
 	"github.com/zerodha/logf"
 )
 
+const (
+	ChannelEmail = "email"
+)
+
 var (
 	// Embedded filesystem
 	//go:embed queries.sql
@@ -50,8 +54,8 @@ type Inbox interface {
 
 // MessageStore defines methods for storing and processing messages.
 type MessageStore interface {
-	MessageExists(string) (bool, error)
-	ProcessIncomingMessage(models.IncomingMessage) error
+	Exists(string) (bool, error)
+	EnqueueIncoming(models.IncomingMessage) error
 }
 
 // Opts contains the options for initializing the inbox manager.

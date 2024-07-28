@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -14,9 +13,9 @@ func handleGetUsers(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	agents, err := app.userManager.GetUsers()
+	agents, err := app.user.GetUsers()
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
 	return r.SendEnvelope(agents)
 }
@@ -30,7 +29,7 @@ func handleGetUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid user `id`.", nil, envelope.InputError)
 	}
-	user, err := app.userManager.GetUser(id, "")
+	user, err := app.user.Get(id, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -49,10 +48,10 @@ func handleUpdateUser(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&user, "json"); err != nil {
-		return r.SendErrorEnvelope(http.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
-	err = app.userManager.UpdateUser(id, user)
+	err = app.user.UpdateUser(id, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -65,15 +64,15 @@ func handleCreateUser(r *fastglue.Request) error {
 		req = umodels.User{}
 	)
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(http.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
 	if req.Email == "" {
-		return r.SendErrorEnvelope(http.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
-	err := app.userManager.Create(&req)
+	err := app.user.Create(&req)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, envelope.GeneralError)
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("User created successfully.")
 }
@@ -83,9 +82,9 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-	u, err := app.userManager.GetUser(user.ID, "")
+	u, err := app.user.Get(user.ID, "")
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, err.Error(), nil, "")
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(u)
 }

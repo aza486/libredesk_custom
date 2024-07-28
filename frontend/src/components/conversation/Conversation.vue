@@ -39,7 +39,7 @@
     <Error class="sticky" :error-message="conversationStore.messages.errorMessage"></Error>
     <div class="flex flex-col h-screen">
       <!-- flex-1-->
-      <MessageList :messages="conversationStore.sortedMessages" class="flex-1" />
+      <MessageList class="flex-1" />
       <ReplyBox class="h-max mb-12" />
     </div>
   </div>

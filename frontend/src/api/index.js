@@ -72,7 +72,9 @@ const updateAssigneeLastSeen = uuid =>
   http.put(`/api/conversations/${uuid}/last-seen`);
 const getMessage = uuid => http.get(`/api/message/${uuid}`);
 const retryMessage = uuid => http.get(`/api/message/${uuid}/retry`);
-const getMessages = uuid => http.get(`/api/conversations/${uuid}/messages`);
+const getMessages = (uuid, page) => http.get(`/api/conversations/${uuid}/messages`, {
+  params: { page: page },
+});
 const sendMessage = (uuid, data) =>
   http.post(`/api/conversations/${uuid}/messages`, data);
 const getConversation = uuid => http.get(`/api/conversations/${uuid}`);
@@ -85,14 +87,8 @@ const getTeamConversations = (page, filter) =>
   http.get(`/api/conversations/team?page=${page}&filter=${filter}`);
 const getAllConversations = (page, filter) =>
   http.get(`/api/conversations/all?page=${page}&filter=${filter}`);
-const uploadAttachment = data =>
-  http.post('/api/attachment', data, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-const uploadFile = data =>
-  http.post('/api/attachment', data, {
+const uploadMedia = data =>
+  http.post('/api/media', data, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -161,10 +157,9 @@ export default {
   updateStatus,
   updatePriority,
   upsertTags,
-  uploadFile,
+  uploadMedia,
   updateAutomationRule,
   updateAssigneeLastSeen,
-  uploadAttachment,
   updateUser,
   createAutomationRule,
   toggleAutomationRule,

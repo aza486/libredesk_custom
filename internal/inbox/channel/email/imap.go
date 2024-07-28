@@ -3,12 +3,10 @@ package email
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
-	amodels "github.com/abhinavxd/artemis/internal/attachment/models"
 	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
 	"github.com/abhinavxd/artemis/internal/message"
 	"github.com/abhinavxd/artemis/internal/message/models"
@@ -125,10 +123,22 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 		return nil
 	}
 
-	exists, err := e.messageStore.MessageExists(env.MessageID)
-	if exists || err != nil {
+	exists, err := e.messageStore.Exists(env.MessageID)
+	if err != nil {
+		return err
+	}
+
+	if exists {
 		return nil
 	}
+
+	var contact = cmodels.Contact{
+		Source:   e.Channel(),
+		SourceID: env.From[0].Addr(),
+		Email:    env.From[0].Addr(),
+		InboxID:  inboxID,
+	}
+	contact.FirstName, contact.LastName = getContactName(env.From[0])
 
 	incomingMsg := models.IncomingMessage{
 		Message: models.Message{
@@ -140,15 +150,9 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 			Subject:    env.Subject,
 			SourceID:   null.StringFrom(env.MessageID),
 		},
-		Contact: cmodels.Contact{
-			Source:   e.Channel(),
-			SourceID: env.From[0].Addr(),
-			Email:    env.From[0].Addr(),
-			InboxID:  inboxID,
-		},
+		Contact: contact,
 		InboxID: inboxID,
 	}
-	incomingMsg.Contact.FirstName, incomingMsg.Contact.LastName = getContactName(env.From[0])
 
 	fetchOptions := &imap.FetchOptions{
 		BodySection: []*imap.FetchItemBodySection{{}},
@@ -196,30 +200,26 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 	incomingMsg.Message.References = references
 
 	for _, att := range envelope.Attachments {
-		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, amodels.Attachment{
-			Filename:           att.FileName,
-			Header:             att.Header,
-			Content:            att.Content,
-			ContentType:        att.ContentType,
-			ContentID:          att.ContentID,
-			ContentDisposition: attachment.DispositionAttachment,
-			Size:               strconv.Itoa(len(att.Content)),
+		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, attachment.Attachment{
+			Name:        att.FileName,
+			Content:     att.Content,
+			ContentType: att.ContentType,
+			Size:        len(att.Content),
+			Disposition: attachment.DispositionAttachment,
+		})
+	}
+	for _, inline := range envelope.Inlines {
+		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, attachment.Attachment{
+			Name:        inline.FileName,
+			Content:     inline.Content,
+			ContentType: inline.ContentType,
+			ContentID:   inline.ContentID,
+			Size:        len(inline.Content),
+			Disposition: attachment.DispositionInline,
 		})
 	}
 
-	for _, att := range envelope.Inlines {
-		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, amodels.Attachment{
-			Filename:           att.FileName,
-			Header:             att.Header,
-			Content:            att.Content,
-			ContentType:        att.ContentType,
-			ContentID:          att.ContentID,
-			ContentDisposition: attachment.DispositionInline,
-			Size:               strconv.Itoa(len(att.Content)),
-		})
-	}
-
-	if err := e.messageStore.ProcessIncomingMessage(incomingMsg); err != nil {
+	if err := e.messageStore.EnqueueIncoming(incomingMsg); err != nil {
 		return err
 	}
 	return nil

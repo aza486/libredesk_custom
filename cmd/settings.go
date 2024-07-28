@@ -6,7 +6,7 @@ func handleGetSettings(r *fastglue.Request) error {
 	var (
 		app        = r.Context.(*App)
 	)
-	teams, err := app.settingsManager.GetAll()
+	teams, err := app.setting.GetAll()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

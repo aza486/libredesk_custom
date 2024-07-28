@@ -3,7 +3,42 @@ package stringutil
 
 import (
 	"crypto/rand"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/k3a/html2text"
 )
+
+var (
+	regexpNonAlNum = regexp.MustCompile(`[^a-zA-Z0-9\-_\.]+`)
+	regexpSpaces   = regexp.MustCompile(`[\s]+`)
+)
+
+// Trim removes HTML tags, trims whitespace, makes the text human-readable, and shortens the content to a specified maximum length, appending "..." if truncated.
+func Trim(content string, maxLen int) string {
+	plain := strings.TrimSpace(html2text.HTML2Text(content))
+	if len(plain) > maxLen {
+		plain = plain[:maxLen] + "..."
+	}
+	return plain
+}
+
+// SanitizeFilename sanitizes the provided filename.
+func SanitizeFilename(fName string) string {
+	// Trim whitespace.
+	name := strings.TrimSpace(fName)
+
+	// Replace whitespace and "/" with "-"
+	name = regexpSpaces.ReplaceAllString(name, "-")
+
+	// Remove or replace any non-alphanumeric characters
+	name = regexpNonAlNum.ReplaceAllString(name, "")
+
+	// Convert to lowercase
+	name = strings.ToLower(name)
+	return filepath.Base(name)
+}
 
 // RandomAlNumString generates a random alphanumeric string of length n.
 func RandomAlNumString(n int) (string, error) {

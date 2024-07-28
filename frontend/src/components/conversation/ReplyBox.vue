@@ -127,7 +127,7 @@ const hasText = computed(() => {
 
 const handleFileUpload = event => {
     for (const file of event.target.files) {
-        api.uploadAttachment({
+        api.uploadMedia({
             files: file,
             disposition: "attachment",
         }).then((resp) => {

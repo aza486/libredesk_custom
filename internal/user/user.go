@@ -114,7 +114,7 @@ func (u *Manager) Create(user *models.User) error {
 	user.Email = strings.ToLower(user.Email)
 	if _, err := u.q.CreateUser.Exec(user.Email, user.FirstName, user.LastName, password, user.TeamID, user.AvatarURL, pq.Array(user.Roles)); err != nil {
 		u.lo.Error("error creating user", "error", err)
-		return err
+		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
 	}
 	return nil
 }

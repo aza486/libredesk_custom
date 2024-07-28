@@ -14,7 +14,7 @@ func handleGetAutomationRules(r *fastglue.Request) error {
 		app = r.Context.(*App)
 		typ = r.RequestCtx.QueryArgs().Peek("type")
 	)
-	out, err := app.automationEngine.GetAllRules(typ)
+	out, err := app.automation.GetAllRules(typ)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -26,7 +26,7 @@ func handleGetAutomationRule(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	out, err := app.automationEngine.GetRule(id)
+	out, err := app.automation.GetRule(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -38,7 +38,7 @@ func handleToggleAutomationRule(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	if err := app.automationEngine.ToggleRule(id); err != nil {
+	if err := app.automation.ToggleRule(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -59,7 +59,7 @@ func handleUpdateAutomationRule(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
 	}
 
-	err = app.automationEngine.UpdateRule(id, rule)
+	err = app.automation.UpdateRule(id, rule)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -74,7 +74,7 @@ func handleCreateAutomationRule(r *fastglue.Request) error {
 	if err := r.Decode(&rule, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
 	}
-	err := app.automationEngine.CreateRule(rule)
+	err := app.automation.CreateRule(rule)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -92,7 +92,7 @@ func handleDeleteAutomationRule(r *fastglue.Request) error {
 			"Invalid rule `id`.", nil, envelope.InputError)
 	}
 
-	err = app.automationEngine.DeleteRule(id)
+	err = app.automation.DeleteRule(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

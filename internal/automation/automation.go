@@ -92,8 +92,8 @@ func (e *Engine) ReloadRules() {
 	e.rules = e.queryRules()
 }
 
-// Serve starts the Engine to evaluate rules based on events.
-func (e *Engine) Serve(ctx context.Context) {
+// Run starts the Engine to evaluate rules based on events.
+func (e *Engine) Run(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 

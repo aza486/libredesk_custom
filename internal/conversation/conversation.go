@@ -230,10 +230,10 @@ func (c *Manager) GetID(uuid string) (int, error) {
 	var id int
 	if err := c.q.GetID.QueryRow(uuid).Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
-			return id, fmt.Errorf("conversation not found: %w", err)
+			return id, err
 		}
 		c.lo.Error("fetching conversation from DB", "error", err)
-		return id, fmt.Errorf("error fetching conversation: %w", err)
+		return id, err
 	}
 	return id, nil
 }
@@ -243,10 +243,10 @@ func (c *Manager) GetUUID(id int) (string, error) {
 	var uuid string
 	if err := c.q.GetUUID.QueryRow(id).Scan(&uuid); err != nil {
 		if err == sql.ErrNoRows {
-			return uuid, fmt.Errorf("conversation not found: %w", err)
+			return uuid, err
 		}
 		c.lo.Error("fetching conversation from DB", "error", err)
-		return uuid, fmt.Errorf("error fetching conversation: %w", err)
+		return uuid, err
 	}
 	return uuid, nil
 }
@@ -256,10 +256,10 @@ func (c *Manager) GetInboxID(uuid string) (int, error) {
 	var id int
 	if err := c.q.GetInboxID.QueryRow(uuid).Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
-			return id, fmt.Errorf("conversation not found: %w", err)
+			return id, err
 		}
 		c.lo.Error("fetching conversation from DB", "error", err)
-		return id, fmt.Errorf("error fetching conversation: %w", err)
+		return id, err
 	}
 	return id, nil
 }

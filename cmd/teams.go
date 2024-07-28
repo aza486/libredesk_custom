@@ -12,9 +12,9 @@ import (
 
 func handleGetTeams(r *fastglue.Request) error {
 	var (
-		app        = r.Context.(*App)
+		app = r.Context.(*App)
 	)
-	teams, err := app.teamManager.GetAll()
+	teams, err := app.team.GetAll()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -30,7 +30,7 @@ func handleGetTeam(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid team `id`.", nil, envelope.InputError)
 	}
-	team, err := app.teamManager.GetTeam(id)
+	team, err := app.team.GetTeam(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -48,7 +48,7 @@ func handleCreateTeam(r *fastglue.Request) error {
 		return envelope.NewError(envelope.InputError,
 			fmt.Sprintf("Invalid request (%s)", err.Error()), nil)
 	}
-	err := app.teamManager.CreateTeam(req)
+	err := app.team.CreateTeam(req)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -71,7 +71,7 @@ func handleUpdateTeam(r *fastglue.Request) error {
 			fmt.Sprintf("Invalid request (%s)", err.Error()), nil)
 	}
 
-	err = app.teamManager.UpdateTeam(id, req)
+	err = app.team.UpdateTeam(id, req)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

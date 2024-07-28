@@ -37,14 +37,11 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/message/{uuid}", auth(handleGetMessage))
 	g.POST("/api/conversations/{uuid}/messages", auth(handleSendMessage))
 
-	// Attachment.
-	g.POST("/api/attachment", auth(handleAttachmentUpload))
+	// Media.
+	g.POST("/api/media", auth(handleMediaUpload))
 
 	// Canned response.
 	g.GET("/api/canned-responses", auth(handleGetCannedResponses))
-
-	// File upload.
-	g.POST("/api/file/upload", auth(handleFileUpload))
 
 	// User.
 	g.GET("/api/users/me", auth(handleGetCurrentUser, "users:manage"))

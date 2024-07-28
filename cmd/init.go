@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	"github.com/abhinavxd/artemis/internal/attachment/stores/s3"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -19,6 +18,9 @@ import (
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
+	"github.com/abhinavxd/artemis/internal/media"
+	"github.com/abhinavxd/artemis/internal/media/stores/localfs"
+	"github.com/abhinavxd/artemis/internal/media/stores/s3"
 	"github.com/abhinavxd/artemis/internal/message"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
@@ -47,10 +49,11 @@ import (
 	"github.com/zerodha/simplesessions/v3"
 )
 
-// consts holds the app constants.
-type consts struct {
+// constants holds the app constants.
+type constants struct {
 	AppBaseURL                  string
-	AllowedFileUploadExtensions []string
+	AllowedUploadFileExtensions []string
+	MaxFileUploadSizeMB         float64
 }
 
 // Config loads config files into koanf.
@@ -89,10 +92,11 @@ func initFlags() {
 	}
 }
 
-func initConstants() consts {
-	return consts{
+func initConstants() constants {
+	return constants{
 		AppBaseURL:                  ko.String("app.constants.base_url"),
-		AllowedFileUploadExtensions: ko.Strings("app.constants.allowed_file_upload_extensions"),
+		AllowedUploadFileExtensions: ko.Strings("app.constants.allowed_file_upload_extensions"),
+		MaxFileUploadSizeMB:         ko.Float64("app.constants.max_file_upload_size"),
 	}
 }
 
@@ -177,7 +181,7 @@ func initSessionManager(rd *redis.Client) *simplesessions.Manager {
 	return s
 }
 
-func initUserManager(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
+func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	mgr, err := user.New(i18n, user.Opts{
 		DB:         DB,
 		Lo:         initLogger("user_manager"),
@@ -191,8 +195,8 @@ func initUserManager(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 
 func initConversations(i18n *i18n.I18n, hub *ws.Hub, n notifier.Notifier, db *sqlx.DB) *conversation.Manager {
 	c, err := conversation.New(hub, i18n, n, conversation.Opts{
-		DB:                  db,
-		Lo:                  initLogger("conversation_manager"),
+		DB: db,
+		Lo: initLogger("conversation_manager"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing conversation manager: %v", err)
@@ -224,7 +228,7 @@ func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
 	return c
 }
 
-func initContactManager(db *sqlx.DB) *contact.Manager {
+func initContact(db *sqlx.DB) *contact.Manager {
 	var lo = initLogger("contact_manager")
 	m, err := contact.New(contact.Opts{
 		DB: db,
@@ -236,7 +240,7 @@ func initContactManager(db *sqlx.DB) *contact.Manager {
 	return m
 }
 
-func initTemplateManager(db *sqlx.DB) *template.Manager {
+func initTemplate(db *sqlx.DB) *template.Manager {
 	m, err := template.New(db)
 	if err != nil {
 		log.Fatalf("error initializing template manager: %v", err)
@@ -246,26 +250,26 @@ func initTemplateManager(db *sqlx.DB) *template.Manager {
 
 func initMessages(db *sqlx.DB,
 	wsHub *ws.Hub,
-	userMgr *user.Manager,
-	teaMgr *team.Manager,
-	contactMgr *contact.Manager,
-	attachmentMgr *attachment.Manager,
-	conversationMgr *conversation.Manager,
-	inboxMgr *inbox.Manager,
+	user *user.Manager,
+	team *team.Manager,
+	contact *contact.Manager,
+	media *media.Manager,
+	conversation *conversation.Manager,
+	inbox *inbox.Manager,
 	automationEngine *automation.Engine,
-	templateManager *template.Manager,
+	template *template.Manager,
 ) *message.Manager {
 	var lo = initLogger("message_manager")
 	mgr, err := message.New(
 		wsHub,
-		userMgr,
-		teaMgr,
-		contactMgr,
-		attachmentMgr,
-		inboxMgr,
-		conversationMgr,
+		user,
+		team,
+		contact,
+		media,
+		inbox,
+		conversation,
 		automationEngine,
-		templateManager,
+		template,
 		message.Opts{
 			DB:                   db,
 			Lo:                   lo,
@@ -278,7 +282,7 @@ func initMessages(db *sqlx.DB,
 	return mgr
 }
 
-func initTeamManager(db *sqlx.DB) *team.Manager {
+func initTeam(db *sqlx.DB) *team.Manager {
 	var lo = initLogger("team-manager")
 	mgr, err := team.New(team.Opts{
 		DB: db,
@@ -290,14 +294,13 @@ func initTeamManager(db *sqlx.DB) *team.Manager {
 	return mgr
 }
 
-func initAttachmentsManager(db *sqlx.DB) *attachment.Manager {
+func initMedia(db *sqlx.DB) *media.Manager {
 	var (
-		mgr   *attachment.Manager
-		store attachment.Store
+		store media.Store
 		err   error
-		lo    = initLogger("attachments_manager")
+		lo    = initLogger("media")
 	)
-	switch s := ko.MustString("app.attachment_store"); s {
+	switch s := ko.MustString("app.media_store"); s {
 	case "s3":
 		store, err = s3.New(s3.Opt{
 			URL:        ko.String("s3.url"),
@@ -311,26 +314,35 @@ func initAttachmentsManager(db *sqlx.DB) *attachment.Manager {
 			Expiry:     ko.Duration("s3.expiry"),
 		})
 		if err != nil {
-			log.Fatalf("error initializing s3 %v", err)
+			log.Fatalf("error initializing s3 media store: %v", err)
+		}
+	case "localfs":
+		store, err = localfs.New(localfs.Opts{
+			UploadPath: filepath.Clean(ko.String("localfs.upload_path")),
+			UploadURI:  filepath.Clean(ko.String("localfs.upload_uri")),
+			RootURL:    ko.String("app.root_url"),
+		})
+		if err != nil {
+			log.Fatalf("error initializing localfs media store: %v", err)
 		}
 	default:
 		log.Fatalf("media store: %s not available", s)
 	}
 
-	mgr, err = attachment.New(attachment.Opts{
+	media, err := media.New(media.Opts{
 		Store:      store,
 		Lo:         lo,
 		DB:         db,
-		AppBaseURL: ko.String("app.constants.base_url"),
+		AppBaseURL: ko.String("app.root_url"),
 	})
 	if err != nil {
-		log.Fatalf("initializing attachments manager %v", err)
+		log.Fatalf("error initializing media manager: %v", err)
 	}
-	return mgr
+	return media
 }
 
-// initInboxManager initializes the inbox manager without registering inboxes.
-func initInboxManager(db *sqlx.DB) *inbox.Manager {
+// initInbox initializes the inbox manager without registering inboxes.
+func initInbox(db *sqlx.DB) *inbox.Manager {
 	var lo = initLogger("inbox_manager")
 	mgr, err := inbox.New(lo, db)
 	if err != nil {
@@ -499,7 +511,7 @@ func initDB() *sqlx.DB {
 	return db
 }
 
-func initRoleManager(db *sqlx.DB) *role.Manager {
+func initRole(db *sqlx.DB) *role.Manager {
 	var lo = initLogger("role_manager")
 	r, err := role.New(role.Opts{
 		DB: db,

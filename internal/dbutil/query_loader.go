@@ -13,8 +13,6 @@ import (
 var (
 	// ErrUniqueViolation indicates a unique constraint violation.
 	ErrUniqueViolation = errors.New("unique constraint violation")
-	// ErrEmailExists indicates that an email already exists.
-	ErrEmailExists = errors.New("email already exists")
 )
 
 // ScanSQLFile scans a goyesql .sql file from the given fs and prepares the queries in the given struct.

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"time"
@@ -18,13 +19,14 @@ import (
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/inbox"
+	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 	"github.com/abhinavxd/artemis/internal/message/models"
+	"github.com/abhinavxd/artemis/internal/stringutil"
 	tmodels "github.com/abhinavxd/artemis/internal/team/models"
 	"github.com/abhinavxd/artemis/internal/template"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
-	"github.com/k3a/html2text"
 	"github.com/lib/pq"
 	"github.com/zerodha/logf"
 )
@@ -61,28 +63,30 @@ const (
 	ContentTypeText = "text"
 	ContentTypeHTML = "html"
 
-	maxLastMessageLen = 45
+	maxLastMessageLen  = 45
+	maxMessagesPerPage = 30
 )
 
 // Manager handles message-related operations.
 type Manager struct {
 	q                          queries
+	db                         *sqlx.DB
 	lo                         *logf.Logger
 	contactStore               contactStore
 	inboxStore                 inboxStore
 	conversationStore          conversationStore
 	userStore                  userStore
 	teamStore                  teamStore
-	attachmentManager          *attachment.Manager
-	automationEngine           *automation.Engine
+	mediaStore                 mediaStore
+	automation                 *automation.Engine
 	wsHub                      *ws.Hub
-	templateManager            *template.Manager
-	incomingMsgQ               chan models.IncomingMessage
+	template                   *template.Manager
+	incomingMessageQueue       chan models.IncomingMessage
 	outgoingMessageQueue       chan models.Message
 	outgoingProcessingMessages sync.Map
 }
 
-// Opts contains options for initializing the Manager.
+// Opts contains options for initializing the message Manager.
 type Opts struct {
 	DB                   *sqlx.DB
 	Lo                   *logf.Logger
@@ -109,6 +113,13 @@ type conversationStore interface {
 	GetUUID(int) (string, error)
 }
 
+type mediaStore interface {
+	GetBlob(name string) ([]byte, error)
+	AttachToModel(id int, model string, modelID int) error
+	GetModelMedia(id int, model string) ([]mmodels.Media, error)
+	UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
+}
+
 type inboxStore interface {
 	Get(int) (inbox.Inbox, error)
 }
@@ -116,7 +127,7 @@ type inboxStore interface {
 // queries contains prepared SQL queries.
 type queries struct {
 	GetMessage           *sqlx.Stmt `query:"get-message"`
-	GetMessages          *sqlx.Stmt `query:"get-messages"`
+	GetMessages          string     `query:"get-messages"`
 	GetToAddress         *sqlx.Stmt `query:"get-to-address"`
 	GetInReplyTo         *sqlx.Stmt `query:"get-in-reply-to"`
 	GetPendingMessages   *sqlx.Stmt `query:"get-pending-messages"`
@@ -132,11 +143,11 @@ func New(
 	userStore userStore,
 	teamStore teamStore,
 	contactStore contactStore,
-	attachmentManager *attachment.Manager,
+	mediaStore mediaStore,
 	inboxStore inboxStore,
 	conversationStore conversationStore,
-	automationEngine *automation.Engine,
-	templateManager *template.Manager,
+	automation *automation.Engine,
+	template *template.Manager,
 	opts Opts,
 ) (*Manager, error) {
 	var q queries
@@ -146,119 +157,87 @@ func New(
 	}
 	return &Manager{
 		q:                          q,
+		db:                         opts.DB,
 		lo:                         opts.Lo,
 		wsHub:                      wsHub,
 		userStore:                  userStore,
 		teamStore:                  teamStore,
+		mediaStore:                 mediaStore,
 		contactStore:               contactStore,
-		conversationStore:          conversationStore,
-		attachmentManager:          attachmentManager,
 		inboxStore:                 inboxStore,
-		automationEngine:           automationEngine,
-		templateManager:            templateManager,
-		incomingMsgQ:               make(chan models.IncomingMessage, opts.IncomingMsgQueueSize),
+		template:                   template,
+		conversationStore:          conversationStore,
+		automation:                 automation,
+		incomingMessageQueue:       make(chan models.IncomingMessage, opts.IncomingMsgQueueSize),
 		outgoingMessageQueue:       make(chan models.Message, opts.OutgoingMsgQueueSize),
 		outgoingProcessingMessages: sync.Map{},
 	}, nil
 }
 
-// GetConversationMessages retrieves messages for a specific conversation.
-func (m *Manager) GetConversationMessages(uuid string) ([]models.Message, error) {
-	var messages []models.Message
-	if err := m.q.GetMessages.Select(&messages, uuid); err != nil {
-		m.lo.Error("error fetching messages from DB", "conversation_uuid", uuid, "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
-	}
-	return messages, nil
-}
-
-// GetMessage retrieves a message by UUID.
-func (m *Manager) GetMessage(uuid string) ([]models.Message, error) {
-	var messages []models.Message
-	if err := m.q.GetMessage.Select(&messages, uuid); err != nil {
-		m.lo.Error("error fetching message from DB", "message_uuid", uuid, "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, "Error fetching message", nil)
-	}
-	return messages, nil
-}
-
-// UpdateMessageStatus updates the status of a message.
-func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
-	if _, err := m.q.UpdateMessageStatus.Exec(status, uuid); err != nil {
-		m.lo.Error("error updating message status in DB", "error", err, "uuid", uuid)
-		return err
-	}
-	return nil
-}
-
-// RetryMessage retries sending a message by updating its status to pending.
-func (m *Manager) RetryMessage(uuid string) error {
-	if err := m.UpdateMessageStatus(uuid, StatusPending); err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error retrying message", nil)
-	}
-	return nil
-}
-
-// RecordMessage inserts a message and attaches the attachments to the message.
-func (m *Manager) RecordMessage(msg *models.Message) error {
-	if msg.Private {
-		msg.Status = StatusSent
-	}
-
-	if err := m.q.InsertMessage.QueryRow(msg.Type, msg.Status, msg.ConversationID, msg.ConversationUUID, msg.Content, msg.SenderID, msg.SenderType,
-		msg.Private, msg.ContentType, msg.SourceID, msg.InboxID, msg.Meta).Scan(&msg.ID, &msg.UUID, &msg.CreatedAt); err != nil {
-		m.lo.Error("error inserting message in db", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
-	}
-
-	// Attach the attachments.
-	if err := m.attachmentManager.AttachMessage(msg.Attachments, msg.ID); err != nil {
-		m.lo.Error("error attaching attachments to the message", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
-	}
-
-	return nil
-}
-
-// StartDispatcher starts a worker pool to dispatch pending outbound messages.
-func (m *Manager) StartDispatcher(ctx context.Context, concurrency int, readInterval time.Duration) {
-	// Spawn goroutine worker pool.
-	for i := 0; i < concurrency; i++ {
+// Run starts worker pool to process incoming and outgoing messages.
+func (m *Manager) Run(ctx context.Context, dispatchConcurrency, readerConcurrency int, readInterval time.Duration) {
+	// Spawn a worker goroutine pool to dispatch messages.
+	for range dispatchConcurrency {
 		go m.DispatchWorker(ctx)
 	}
 
-	// Scan pending messages from the DB.
+	// Spawn a worker goroutine pool to process incoming messages.
+	for range readerConcurrency {
+		go m.IncomingWorker(ctx)
+	}
+
+	// Scan pending messages from the DB on set interval.
 	dbScanner := time.NewTicker(readInterval)
 	defer dbScanner.Stop()
 
 	for {
 		select {
+
 		case <-ctx.Done():
 			return
+
 		case <-dbScanner.C:
 			var (
-				pendingMsgs = []models.Message{}
-				msgIDs      = m.getOutgoingProcessingMsgIDs()
+				pendingMessages = []models.Message{}
+				messageIDs      = m.getOutgoingProcessingMessageIDs()
 			)
 
 			// Skip the currently processing msg ids.
-			if err := m.q.GetPendingMessages.Select(&pendingMsgs, pq.Array(msgIDs)); err != nil {
+			if err := m.q.GetPendingMessages.Select(&pendingMessages, pq.Array(messageIDs)); err != nil {
 				m.lo.Error("error fetching pending messages from db", "error", err)
 			}
 
 			// Prepare and push the message to the outgoing queue.
-			for _, msg := range pendingMsgs {
-				var err error
-				msg.Content, _, err = m.templateManager.RenderDefault(map[string]string{
-					"Content": msg.Content,
-				})
+			for _, message := range pendingMessages {
+				// Get inbox.
+				inb, err := m.inboxStore.Get(message.InboxID)
 				if err != nil {
-					m.lo.Error("error rendering message template", "error", err)
-					m.UpdateMessageStatus(msg.UUID, StatusFailed)
+					m.lo.Error("error fetching inbox", "error", err, "inbox_id", message.InboxID)
 					continue
 				}
-				m.outgoingProcessingMessages.Store(msg.ID, msg.ID)
-				m.outgoingMessageQueue <- msg
+
+				switch inb.Channel() {
+				case inbox.ChannelEmail:
+					// Email channel requires the content to be rendered.
+					message.Content, _, err = m.template.RenderDefault(map[string]string{
+						"Content": message.Content,
+					})
+					if err != nil {
+						m.lo.Error("error rendering default template", "error", err)
+						m.UpdateStatus(message.UUID, StatusFailed)
+						continue
+					}
+				default:
+					m.lo.Warn("unknown message channel", "channel", inb.Channel())
+					m.UpdateStatus(message.UUID, StatusFailed)
+					continue
+				}
+
+				// Put the message ID in the processing map.
+				m.outgoingProcessingMessages.Store(message.ID, message.ID)
+
+				// Push the message to the outgoing message queue.
+				m.outgoingMessageQueue <- message
 			}
 		}
 	}
@@ -278,13 +257,17 @@ func (m *Manager) DispatchWorker(ctx context.Context) {
 			// Get inbox.
 			inbox, err := m.inboxStore.Get(message.InboxID)
 			if err != nil {
-				m.handleDispatchErrors(message, "error fetching inbox", err)
+				m.lo.Error("error fetching inbox", "error", err, "inbox_id", message.InboxID)
+				m.outgoingProcessingMessages.Delete(message.ID)
+				m.UpdateStatus(message.UUID, StatusFailed)
 				continue
 			}
 
-			// Attach attachments.
+			// Attach attachments to the message.
 			if err := m.attachAttachments(&message); err != nil {
-				m.handleDispatchErrors(message, "error fetching inbox", err)
+				m.lo.Error("error attaching attachments to message", "error", err, "id", message.ID)
+				m.outgoingProcessingMessages.Delete(message.ID)
+				m.UpdateStatus(message.UUID, StatusFailed)
 				continue
 			}
 
@@ -296,22 +279,20 @@ func (m *Manager) DispatchWorker(ctx context.Context) {
 			// Send.
 			err = inbox.Send(message)
 
+			// Update status.
 			var newStatus = StatusFailed
 			if err != nil {
 				newStatus = StatusFailed
 				m.lo.Error("error sending message", "error", err, "inbox_id", message.InboxID)
 			}
-
-			// Update status.
-			m.UpdateMessageStatus(message.UUID, newStatus)
+			m.UpdateStatus(message.UUID, newStatus)
 
 			// Update first reply at.
-			switch newStatus {
-			case StatusSent:
+			if newStatus == StatusSent {
 				m.conversationStore.UpdateFirstReplyAt(message.ConversationUUID, message.ConversationID, message.CreatedAt)
 			}
 
-			// Broadcast update.
+			// Broadcast update to all subscribers.
 			m.wsHub.BroadcastMessagePropUpdate(message.ConversationUUID, message.UUID, "status" /*message field*/, newStatus)
 
 			// Delete from processing map.
@@ -320,19 +301,90 @@ func (m *Manager) DispatchWorker(ctx context.Context) {
 	}
 }
 
-// handleDispatchErrors logs an error, updates the message status to failed,
-// and removes the message from the outgoing processing map.
-func (m *Manager) handleDispatchErrors(message models.Message, logMessage string, err error) {
-	m.lo.Error(logMessage, "error", err, "inbox_id", message.InboxID)
-	m.outgoingProcessingMessages.Delete(message.ID)
-	m.UpdateMessageStatus(message.UUID, StatusFailed)
+// GetConversationMessages retrieves messages for a specific conversation.
+func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSize int) ([]models.Message, error) {
+	var (
+		messages = make([]models.Message, 0)
+		qArgs    []interface{}
+	)
+	qArgs = append(qArgs, conversationUUID)
+	query, qArgs, err := m.generateMessagesQuery(m.q.GetMessages, qArgs, page, pageSize)
+	if err != nil {
+		m.lo.Error("error generating messages query", "error", err)
+		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
+	}
+
+	tx, err := m.db.BeginTxx(context.Background(), nil)
+	defer tx.Commit()
+	if err != nil {
+		m.lo.Error("error preparing get messages query", "error", err)
+		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
+	}
+
+	if err := tx.Select(&messages, query, qArgs...); err != nil {
+		m.lo.Error("error fetching conversations", "error", err)
+		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
+	}
+
+	return messages, nil
+}
+
+// Get retrieves a message by UUID.
+func (m *Manager) Get(uuid string) (models.Message, error) {
+	var message models.Message
+	if err := m.q.GetMessage.Get(&message, uuid); err != nil {
+		m.lo.Error("error fetching message", "uuid", uuid, "error", err)
+		return message, envelope.NewError(envelope.GeneralError, "Error fetching message", nil)
+	}
+	return message, nil
+}
+
+// UpdateStatus updates the status of a message.
+func (m *Manager) UpdateStatus(uuid string, status string) error {
+	if _, err := m.q.UpdateMessageStatus.Exec(status, uuid); err != nil {
+		m.lo.Error("error updating message status in DB", "error", err, "uuid", uuid)
+		return err
+	}
+	return nil
+}
+
+// MarkAsPending updates message status to `Pending` so a message can be sent again.
+func (m *Manager) MarkAsPending(uuid string) error {
+	if err := m.UpdateStatus(uuid, StatusPending); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error retrying message", nil)
+	}
+	return nil
+}
+
+// Insert inserts a message and attaches the attachments to the message.
+func (m *Manager) Insert(message *models.Message) error {
+	if message.Private {
+		message.Status = StatusSent
+	}
+
+	if message.Meta == "" {
+		message.Meta = "{}"
+	}
+
+	// Insert.
+	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.SenderID, message.SenderType,
+		message.Private, message.ContentType, message.SourceID, message.InboxID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
+		m.lo.Error("error inserting message in db", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
+	}
+
+	// Attach message to the media.
+	for _, media := range message.Media {
+		m.mediaStore.AttachToModel(media.ID, mmodels.ModelMessages, message.ID)
+	}
+	return nil
 }
 
 // GetToAddress retrieves the recipient addresses for a message.
 func (m *Manager) GetToAddress(convID int, channel string) ([]string, error) {
 	var addr []string
 	if err := m.q.GetToAddress.Select(&addr, convID, channel); err != nil {
-		m.lo.Error("error fetching to address for msg", "error", err, "conversation_id", convID)
+		m.lo.Error("error fetching `to` address for message", "error", err, "conversation_id", convID)
 		return addr, err
 	}
 	return addr, nil
@@ -348,21 +400,14 @@ func (m *Manager) GetInReplyTo(convID int) (string, error) {
 	return out, nil
 }
 
-// StartDBInserts starts a worker pool to insert incoming messages into the database.
-func (m *Manager) StartDBInserts(ctx context.Context, concurrency int) {
-	for i := 0; i < concurrency; i++ {
-		go m.InsertWorker(ctx)
-	}
-}
-
-// InsertWorker processes incoming messages and inserts them into the database.
-func (m *Manager) InsertWorker(ctx context.Context) {
-	for msg := range m.incomingMsgQ {
+// IncomingWorker processes incoming messages from the incoming message queue.
+func (m *Manager) IncomingWorker(ctx context.Context) {
+	for msg := range m.incomingMessageQueue {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			if err := m.processIncomingMessage(msg); err != nil {
+			if err := m.processIncoming(msg); err != nil {
 				m.lo.Error("error processing incoming msg", "error", err)
 			}
 		}
@@ -373,7 +418,7 @@ func (m *Manager) InsertWorker(ctx context.Context) {
 func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error {
 	// Self assign.
 	if assigneeID == actor.ID {
-		return m.RecordActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
+		return m.InsertActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
 	}
 
 	// Assignment to another user.
@@ -381,7 +426,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	if err != nil {
 		return err
 	}
-	return m.RecordActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
+	return m.InsertActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
 }
 
 // RecordAssigneeTeamChange records an activity for a team assignee change.
@@ -390,21 +435,21 @@ func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, 
 	if err != nil {
 		return err
 	}
-	return m.RecordActivity(ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
+	return m.InsertActivity(ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
 }
 
 // RecordPriorityChange records an activity for a priority change.
 func (m *Manager) RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error {
-	return m.RecordActivity(ActivityPriorityChange, conversationUUID, priority, actor)
+	return m.InsertActivity(ActivityPriorityChange, conversationUUID, priority, actor)
 }
 
 // RecordStatusChange records an activity for a status change.
 func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umodels.User) error {
-	return m.RecordActivity(ActivityStatusChange, conversationUUID, status, actor)
+	return m.InsertActivity(ActivityStatusChange, conversationUUID, status, actor)
 }
 
-// RecordActivity records an activity message.
-func (m *Manager) RecordActivity(activityType, conversationUUID, newValue string, actor umodels.User) error {
+// InsertActivity inserts an activity message.
+func (m *Manager) InsertActivity(activityType, conversationUUID, newValue string, actor umodels.User) error {
 	content, err := m.getActivityContent(activityType, newValue, actor.FullName())
 	if err != nil {
 		m.lo.Error("error could not generate activity content", "error", err)
@@ -422,15 +467,14 @@ func (m *Manager) RecordActivity(activityType, conversationUUID, newValue string
 		SenderType:       SenderTypeUser,
 	}
 
-	// Record message in DB.
-	m.RecordMessage(&message)
+	// Insert message in DB.
+	m.Insert(&message)
 
-	// Broadcast the new message.
+	// Broadcast the new message to all subscribers.
 	m.BroadcastNewConversationMessage(message, content)
 
 	// Update the last message in conversation meta.
 	m.conversationStore.UpdateLastMessage(0, conversationUUID, content, message.CreatedAt)
-
 	return nil
 }
 
@@ -456,31 +500,18 @@ func (m *Manager) getActivityContent(activityType, newValue, actorName string) (
 	return content, nil
 }
 
-// processIncomingMessage processes an incoming message.
-func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
-	var (
-		trimmedMsg       = m.TrimMsg(in.Message.Content)
-		conversationMeta = map[string]string{
-			"subject":         in.Message.Subject,
-			"last_message":    trimmedMsg,
-			"last_message_at": time.Now().Format(time.RFC3339),
-		}
-	)
+// processIncoming processes an incoming message by upserting contact, conversation and message.
+func (m *Manager) processIncoming(in models.IncomingMessage) error {
+	var err error
 
-	meta, err := json.Marshal(conversationMeta)
-	if err != nil {
-		m.lo.Error("error marshalling conversation meta", "error", err)
-		return err
-	}
-
-	senderID, err := m.contactStore.Upsert(in.Contact)
+	// Create contact.
+	in.Message.SenderID, err = m.contactStore.Upsert(in.Contact)
 	if err != nil {
 		m.lo.Error("error upserting contact", "error", err)
 		return err
 	}
-	in.Message.SenderID = senderID
 
-	// Check if this message already exists.
+	// Conversation already exists?
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
 	if err != nil && err != ErrConversationNotFound {
 		return err
@@ -489,26 +520,29 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return nil
 	}
 
-	isNewConversation, err := m.findOrCreateConversation(&in.Message, in.InboxID, senderID, meta)
+	// Find or create new conversation.
+	isNewConversation, err := m.findOrCreateConversation(&in.Message, in.InboxID, in.Message.SenderID)
 	if err != nil {
 		return err
 	}
 
-	if err = m.RecordMessage(&in.Message); err != nil {
+	// Insert message.
+	if err = m.Insert(&in.Message); err != nil {
 		return fmt.Errorf("inserting conversation message: %w", err)
 	}
 
+	// Upload attachments.
 	if err := m.uploadAttachments(&in.Message); err != nil {
 		return fmt.Errorf("uploading message attachments: %w", err)
 	}
 
-	// Send WS update.
+	// Send WS update to all subscribers.
 	if in.Message.ConversationUUID != "" {
 		var content string
 		if isNewConversation {
-			content = m.TrimMsg(in.Message.Subject)
+			content = stringutil.Trim(in.Message.Subject, maxLastMessageLen)
 		} else {
-			content = m.TrimMsg(in.Message.Content)
+			content = stringutil.Trim(in.Message.Content, maxLastMessageLen)
 		}
 		m.BroadcastNewConversationMessage(in.Message, content)
 		m.conversationStore.UpdateLastMessage(in.Message.ConversationID, in.Message.ConversationUUID, content, in.Message.CreatedAt)
@@ -516,16 +550,15 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 
 	// Evaluate automation rules for this conversation.
 	if isNewConversation {
-		m.automationEngine.EvaluateNewConversationRules(in.Message.ConversationUUID)
+		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
 	} else {
-		m.automationEngine.EvaluateConversationUpdateRules(in.Message.ConversationUUID)
+		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID)
 	}
-
 	return nil
 }
 
-// MessageExists checks if a message with the given messageID exists.
-func (m *Manager) MessageExists(messageID string) (bool, error) {
+// Exists checks if a message with the given messageID exists.
+func (m *Manager) Exists(messageID string) (bool, error) {
 	_, err := m.findConversationID([]string{messageID})
 	if err != nil {
 		if errors.Is(err, ErrConversationNotFound) {
@@ -537,10 +570,10 @@ func (m *Manager) MessageExists(messageID string) (bool, error) {
 	return true, nil
 }
 
-// ProcessIncomingMessage enqueues an incoming message for processing.
-func (m *Manager) ProcessIncomingMessage(message models.IncomingMessage) error {
+// EnqueueIncoming enqueues an incoming message for inserting.
+func (m *Manager) EnqueueIncoming(message models.IncomingMessage) error {
 	select {
-	case m.incomingMsgQ <- message:
+	case m.incomingMessageQueue <- message:
 		return nil
 	default:
 		m.lo.Error("incoming message queue is full")
@@ -548,48 +581,67 @@ func (m *Manager) ProcessIncomingMessage(message models.IncomingMessage) error {
 	}
 }
 
-// TrimMsg trims and shortens a message content.
-func (m *Manager) TrimMsg(msg string) string {
-	plain := strings.Trim(strings.TrimSpace(html2text.HTML2Text(msg)), " \t\n\r\v\f")
-	if len(plain) > maxLastMessageLen {
-		plain = plain[:maxLastMessageLen]
-		plain = plain + "..."
+// generateMessagesQuery generates the SQL query for fetching messages in a conversation
+func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, page, pageSize int) (string, []interface{}, error) {
+	// Set default values for page and page size if they are invalid
+	if page <= 0 {
+		page = 1
 	}
-	return plain
+	if pageSize <= 0 || pageSize > maxMessagesPerPage {
+		pageSize = maxMessagesPerPage
+	}
+
+	// Calculate the offset
+	offset := (page - 1) * pageSize
+
+	// Append LIMIT and OFFSET to query arguments
+	qArgs = append(qArgs, pageSize, offset)
+
+	// Include LIMIT and OFFSET in the SQL query
+	sqlQuery := fmt.Sprintf(baseQuery, fmt.Sprintf("LIMIT $%d OFFSET $%d", len(qArgs)-1, len(qArgs)))
+	return sqlQuery, qArgs, nil
 }
 
 // uploadAttachments uploads attachments for a message.
-func (m *Manager) uploadAttachments(in *models.Message) error {
+func (m *Manager) uploadAttachments(message *models.Message) error {
 	var (
-		hasInline = false
-		msgID     = in.ID
-		msgUUID   = in.UUID
+		hasInline bool
 	)
-	for _, att := range in.Attachments {
-		reader := bytes.NewReader(att.Content)
-		url, _, _, err := m.attachmentManager.Upload(msgUUID, att.Filename, att.ContentType, att.ContentDisposition, att.Size, reader)
+
+	for _, attachment := range message.Attachments {
+		// Upload & insert the attachment.
+		reader := bytes.NewReader(attachment.Content)
+		media, err := m.mediaStore.UploadAndInsert(attachment.Name, attachment.ContentType, reader, attachment.Size, []byte("{}"))
 		if err != nil {
-			m.lo.Error("error uploading attachment", "message_uuid", msgUUID, "error", err)
-			return errors.New("error uploading attachments for incoming message")
+			m.lo.Error("error uploading message media", "error", err)
+			return err
 		}
-		if att.ContentDisposition == attachment.DispositionInline {
+
+		// Inline? Replace cids with actual URL.
+		if attachment.Disposition == mmodels.DispositionInline {
 			hasInline = true
-			in.Content = strings.ReplaceAll(in.Content, "cid:"+att.ContentID, url)
+			message.Content = strings.ReplaceAll(message.Content, "cid:"+attachment.ContentID, media.URL)
+		}
+
+		// Attach message to media.
+		if err := m.mediaStore.AttachToModel(media.ID, mmodels.ModelMessages, message.ID); err != nil {
+			m.lo.Error("error attaching message to media", "error", err)
+			return err
 		}
 	}
 
-	// Update the msg content if the `cid:content_id` URLs have been replaced.
+	// Update message content if the `cid:content_id` URLs have been replaced.
 	if hasInline {
-		if _, err := m.q.UpdateMessageContent.Exec(in.Content, msgID); err != nil {
-			m.lo.Error("error updating message content", "message_uuid", msgUUID)
-			return fmt.Errorf("updating msg content: %w", err)
+		if _, err := m.q.UpdateMessageContent.Exec(message.Content, message.ID); err != nil {
+			m.lo.Error("error updating message content", "error", err)
+			return err
 		}
 	}
 	return nil
 }
 
 // findOrCreateConversation finds or creates a conversation for the given message.
-func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int, meta []byte) (bool, error) {
+func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int) (bool, error) {
 	var (
 		new              bool
 		err              error
@@ -610,7 +662,17 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 	// Conversation not found, create one.
 	if conversationID == 0 {
 		new = true
-		conversationID, conversationUUID, err = m.conversationStore.Create(contactID, inboxID, meta)
+
+		// Prepare meta.
+		conversationMeta, err := json.Marshal(map[string]string{
+			"subject":         in.Subject,
+			"last_message":    stringutil.Trim(in.Content, maxLastMessageLen),
+			"last_message_at": time.Now().Format(time.RFC3339),
+		})
+		if err != nil {
+			return false, err
+		}
+		conversationID, conversationUUID, err = m.conversationStore.Create(contactID, inboxID, conversationMeta)
 		if err != nil || conversationID == 0 {
 			return new, err
 		}
@@ -647,29 +709,40 @@ func (m *Manager) findConversationID(sourceIDs []string) (int, error) {
 	return conversationID, nil
 }
 
-// attachAttachments attaches files to a message.
-func (m *Manager) attachAttachments(msg *models.Message) error {
-	attachments, err := m.attachmentManager.GetMessageAttachments(msg.ID)
+// attachAttachments attaches attachment blobs to message.
+func (m *Manager) attachAttachments(message *models.Message) error {
+	var attachments attachment.Attachments
+
+	// Get all media for this message.
+	medias, err := m.mediaStore.GetModelMedia(message.ID, mmodels.ModelMessages)
 	if err != nil {
 		m.lo.Error("error fetching message attachments", "error", err)
 		return err
 	}
 
-	// Fetch the blobs and attach the attachments to the message.
-	for i, att := range attachments {
-		attachments[i].Content, err = m.attachmentManager.Store.GetBlob(att.UUID)
+	// Fetch blobs.
+	for _, media := range medias {
+		blob, err := m.mediaStore.GetBlob(media.Filename)
 		if err != nil {
-			m.lo.Error("error fetching blob for attachment", "attachment_uuid", att.UUID, "message_id", msg.ID)
+			m.lo.Error("error fetching media blob", "error", err)
 			return err
 		}
-		attachments[i].Header = attachment.MakeHeaders(att.Filename, "", att.ContentType, att.ContentDisposition)
+		attachment := attachment.Attachment{
+			Name:    media.Filename,
+			Content: blob,
+			Header:  attachment.MakeHeader(media.ContentType, media.Filename, "base64"),
+		}
+		attachments = append(attachments, attachment)
 	}
-	msg.Attachments = attachments
+
+	// Attach attachments.
+	message.Attachments = attachments
+
 	return nil
 }
 
-// getOutgoingProcessingMsgIDs returns the IDs of outgoing messages currently being processed.
-func (m *Manager) getOutgoingProcessingMsgIDs() []int {
+// getOutgoingProcessingMessageIDs returns the IDs of outgoing messages currently being processed.
+func (m *Manager) getOutgoingProcessingMessageIDs() []int {
 	var out = make([]int, 0)
 	m.outgoingProcessingMessages.Range(func(key, _ any) bool {
 		if k, ok := key.(int); ok {
@@ -681,6 +754,6 @@ func (m *Manager) getOutgoingProcessingMsgIDs() []int {
 }
 
 // BroadcastNewConversationMessage broadcasts a new conversation message to subscribers.
-func (m *Manager) BroadcastNewConversationMessage(message models.Message, trimmedContent string) {
-	m.wsHub.BroadcastNewConversationMessage(message.ConversationUUID, trimmedContent, message.UUID, time.Now().Format(time.RFC3339), message.Private)
+func (m *Manager) BroadcastNewConversationMessage(message models.Message, content string) {
+	m.wsHub.BroadcastNewConversationMessage(message.ConversationUUID, content, message.UUID, time.Now().Format(time.RFC3339), message.Private)
 }

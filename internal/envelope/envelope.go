@@ -1,7 +1,11 @@
 // Package envelope provides custom error types and utility functions for API error handling.
 package envelope
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/valyala/fasthttp"
+)
 
 // API errors.
 const (
@@ -35,17 +39,17 @@ func NewError(etype string, message string, data interface{}) error {
 
 	switch etype {
 	case GeneralError:
-		err.Code = http.StatusInternalServerError
+		err.Code = fasthttp.StatusInternalServerError
 	case PermissionError:
 		err.Code = http.StatusForbidden
 	case InputError:
-		err.Code = http.StatusBadRequest
+		err.Code = fasthttp.StatusBadRequest
 	case DataError:
 		err.Code = http.StatusBadGateway
 	case NetworkError:
 		err.Code = http.StatusGatewayTimeout
 	default:
-		err.Code = http.StatusInternalServerError
+		err.Code = fasthttp.StatusInternalServerError
 		err.ErrorType = GeneralError
 	}
 	return err

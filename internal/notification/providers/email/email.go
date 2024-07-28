@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"net/textproto"
 
-	amodels "github.com/abhinavxd/artemis/internal/attachment/models"
+	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	"github.com/abhinavxd/artemis/internal/message/models"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
@@ -140,11 +140,11 @@ func (e *Email) prepareEmail(m models.Message) smtppool.Email {
 }
 
 // prepareAttachments prepares email attachments.
-func (e *Email) prepareAttachments(attachments []amodels.Attachment) []smtppool.Attachment {
+func (e *Email) prepareAttachments(attachments []attachment.Attachment) []smtppool.Attachment {
 	files := make([]smtppool.Attachment, 0, len(attachments))
 	for _, f := range attachments {
 		a := smtppool.Attachment{
-			Filename: f.Filename,
+			Filename: f.Name,
 			Header:   f.Header,
 			Content:  make([]byte, len(f.Content)),
 		}

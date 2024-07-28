@@ -14,12 +14,12 @@ func handleLogin(r *fastglue.Request) error {
 		password = p.Peek("password")
 	)
 
-	user, err := app.userManager.Login(email, password)
+	user, err := app.user.Login(email, password)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	sess, err := app.sessManager.Acquire(r.RequestCtx, r, r)
+	sess, err := app.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		app.lo.Error("error acquiring session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
@@ -45,7 +45,7 @@ func handleLogout(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	sess, err := app.sessManager.Acquire(r.RequestCtx, r, r)
+	sess, err := app.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		app.lo.Error("error acquiring session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))

@@ -52,9 +52,9 @@ func New(teamManager *team.Manager, conversationManager *conversation.Manager, s
 	return &e, nil
 }
 
-// Serve initiates the conversation assignment process and is to be invoked as a goroutine.
+// Run initiates the conversation assignment process and is to be invoked as a goroutine.
 // This function continuously assigns unassigned conversations to agents at regular intervals.
-func (e *Engine) Serve(ctx context.Context, interval time.Duration) {
+func (e *Engine) Run(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {

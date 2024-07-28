@@ -13,7 +13,6 @@ export const useConversationStore = defineStore('conversation', () => {
         page: 1,
         hasMore: true,
         errorMessage: "",
-        forceReRender: 0
     })
 
     // Currently selected conversation.
@@ -23,15 +22,19 @@ export const useConversationStore = defineStore('conversation', () => {
         loading: false,
         errorMessage: ""
     })
+
     // Messages for the selected conversation.
     const messages = reactive({
         data: [],
         loading: false,
+        page: 1,
+        hasMore: true,
         errorMessage: ""
     })
 
     // Map to track seen msg UUIDs for deduplication
-    let seenMsgUUIDs = new Map()
+    let seenConversationUUIDs = new Map()
+    let seenMessageUUIDs = new Set();
     let previousConvListType = ""
     let previousPreDefinedFilter = ""
     let reRenderInterval = setInterval(() => {
@@ -40,9 +43,8 @@ export const useConversationStore = defineStore('conversation', () => {
     const { toast } = useToast()
 
 
-    // Clear the interval when the store is destroyed
+    // Clear the reRenderInterval when the store is destroyed.
     onUnmounted(() => {
-        console.log("clear interval")
         clearInterval(reRenderInterval)
     })
 
@@ -61,10 +63,9 @@ export const useConversationStore = defineStore('conversation', () => {
         if (!messages.data) {
             return [];
         }
-        return [...messages.data].sort(
-            (a, b) => new Date(a.created_at) - new Date(b.created_at)
-        );
+        return [...messages.data];
     });
+
 
     const getContactFullName = (uuid) => {
         const conv = conversations.data.find(conv => conv.uuid === uuid);
@@ -107,26 +108,56 @@ export const useConversationStore = defineStore('conversation', () => {
     async function fetchMessages (uuid) {
         messages.loading = true;
         try {
-            const resp = await api.getMessages(uuid);
-            messages.data = resp.data.data
+            const response = await api.getMessages(uuid, messages.page);
+            const fetchedMessages = response.data?.data || [];
+
+            // Filter out messages that have already been seen
+            const newMessages = fetchedMessages.filter(message => {
+                if (!seenMessageUUIDs.has(message.uuid)) {
+                    seenMessageUUIDs.add(message.uuid);
+                    return true;
+                }
+                return false;
+            });
+
+            if (newMessages.length === 0 && messages.page === 1) {
+                messages.data = []
+                return
+            }
+
+            if (newMessages.length === 0 && messages.page > 1) {
+                messages.hasMore = false;
+            }
+
+            // Add new messages to the messages data
+            messages.data.unshift(...newMessages);
+
+            // Sort messages immediately after updating the state
+            messages.data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         } catch (error) {
             toast({
-                title: 'Uh oh! Could not fetch messages, Please try again.',
+                title: 'Could not fetch messages, Please try again.',
                 variant: 'destructive',
                 description: handleHTTPError(error).message,
             });
-            messages.data = []
+            messages.data = [];
+            messages.hasMore = false;
         } finally {
             messages.loading = false;
         }
     }
 
+
+    async function fetchNextMessages () {
+        messages.page++;
+        fetchMessages(conversation.data.uuid)
+    }
+
     async function fetchMessage (uuid) {
         try {
-            const resp = await api.getMessage(uuid);
-            // Update messages lis  only if the msg uuid does not exist.
-            if (resp.data.data && resp.data.data.length > 0) {
-                resp.data.data.forEach(respMsg => {
+            const response = await api.getMessage(uuid);
+            if (response?.data?.data) {
+                response.data.data.forEach(respMsg => {
                     if (!messages.data.some(e => e.uuid === respMsg.uuid)) {
                         messages.data.push(respMsg);
                     }
@@ -141,7 +172,7 @@ export const useConversationStore = defineStore('conversation', () => {
         conversations.data = null
         conversations.page = 1
         conversations.hasMore = true
-        seenMsgUUIDs.clear()
+        seenConversationUUIDs.clear()
     }
 
     async function fetchConversations (type, preDefinedFilter) {
@@ -174,8 +205,8 @@ export const useConversationStore = defineStore('conversation', () => {
             // Merge new conversations if any
             if (response?.data?.data) {
                 const newConversations = response.data.data.filter(conversation => {
-                    if (!seenMsgUUIDs.has(conversation.uuid)) {
-                        seenMsgUUIDs.set(conversation.uuid, true);
+                    if (!seenConversationUUIDs.has(conversation.uuid)) {
+                        seenConversationUUIDs.set(conversation.uuid, true);
                         return true;
                     }
                     return false;
@@ -329,5 +360,5 @@ export const useConversationStore = defineStore('conversation', () => {
         messages.errorMessage = ""
     }
 
-    return { conversations, conversation, messages, sortedConversations, sortedMessages, conversationUUIDExists, updateConversationProp, addNewConversation, getContactFullName, fetchParticipants, fetchNextConversations, updateMessageProp, updateAssigneeLastSeen, updateMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationList, $reset };
+    return { conversations, conversation, messages, sortedConversations, sortedMessages, conversationUUIDExists, updateConversationProp, addNewConversation, getContactFullName, fetchParticipants, fetchNextMessages, fetchNextConversations, updateMessageProp, updateAssigneeLastSeen, updateMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationList, $reset };
 })

@@ -83,7 +83,7 @@ func (e *Email) Send(m models.Message) error {
 		attachments = make([]smtppool.Attachment, 0, len(m.Attachments))
 		for _, file := range m.Attachments {
 			attachment := smtppool.Attachment{
-				Filename: file.Filename,
+				Filename: file.Name,
 				Header:   file.Header,
 				Content:  make([]byte, len(file.Content)),
 			}

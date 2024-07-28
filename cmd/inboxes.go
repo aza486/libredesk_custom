@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -12,10 +11,10 @@ import (
 
 func handleGetInboxes(r *fastglue.Request) error {
 	var app = r.Context.(*App)
-	inboxes, err := app.inboxManager.GetAll()
+	inboxes, err := app.inbox.GetAll()
 	// TODO: Clear out passwords.
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, "Could not fetch inboxes", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not fetch inboxes", nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(inboxes)
 }
@@ -25,10 +24,10 @@ func handleGetInbox(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	inbox, err := app.inboxManager.GetByID(id)
+	inbox, err := app.inbox.GetByID(id)
 	// TODO: Clear out passwords.
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, "Could not fetch inboxes", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not fetch inboxes", nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(inbox)
 }
@@ -39,9 +38,9 @@ func handleCreateInbox(r *fastglue.Request) error {
 		inbox = imodels.Inbox{}
 	)
 	if err := r.Decode(&inbox, "json"); err != nil {
-		return r.SendErrorEnvelope(http.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
-	err := app.inboxManager.Create(inbox)
+	err := app.inbox.Create(inbox)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -60,11 +59,11 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&inbox, "json"); err != nil {
-		return r.SendErrorEnvelope(http.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
-	err = app.inboxManager.Update(id, inbox)
+	err = app.inbox.Update(id, inbox)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(inbox)
 }
@@ -79,7 +78,7 @@ func handleToggleInbox(r *fastglue.Request) error {
 			"Invalid inbox `id`.", nil, envelope.InputError)
 	}
 
-	if err = app.inboxManager.Toggle(id); err != nil {
+	if err = app.inbox.Toggle(id); err != nil {
 		return err
 	}
 	return r.SendEnvelope(true)
@@ -90,9 +89,9 @@ func handleDeleteInbox(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	err := app.inboxManager.Delete(id)
+	err := app.inbox.Delete(id)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(true)
 }

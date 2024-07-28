@@ -14,7 +14,7 @@ func auth(handler fastglue.FastRequestHandler, requiredPerms ...string) fastglue
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
-			sess, err = app.sessManager.Acquire(r.RequestCtx, r, r)
+			sess, err = app.sess.Acquire(r.RequestCtx, r, r)
 		)
 
 		if err != nil {
@@ -40,7 +40,7 @@ func auth(handler fastglue.FastRequestHandler, requiredPerms ...string) fastglue
 
 		if userID > 0 {
 			// Fetch user perms.
-			userPerms, err := app.userManager.GetPermissions(userID)
+			userPerms, err := app.user.GetPermissions(userID)
 			if err != nil {
 				return sendErrorEnvelope(r, err)
 			}
@@ -119,7 +119,7 @@ func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app       = r.Context.(*App)
-			sess, err = app.sessManager.Acquire(r.RequestCtx, r, r)
+			sess, err = app.sess.Acquire(r.RequestCtx, r, r)
 		)
 
 		if err != nil {

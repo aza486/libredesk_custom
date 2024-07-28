@@ -69,7 +69,7 @@ WITH conversation_id AS (
 ),
 attachments AS (
     SELECT 
-        message_id,
+        model_id as message_id,
         json_agg(
             json_build_object(
                 'name', filename,
@@ -78,8 +78,8 @@ attachments AS (
                 'size', size
             ) ORDER BY filename
         ) AS attachment_details
-    FROM attachments
-    WHERE content_disposition = 'attachment'
+    FROM media
+    WHERE model_type = 'messages'
     GROUP BY message_id
 )
 SELECT
@@ -97,8 +97,8 @@ SELECT
 FROM messages m
 LEFT JOIN attachments a ON a.message_id = m.id
 LEFT JOIN users u on u.id = m.sender_id
-WHERE m.conversation_id = (SELECT id FROM conversation_id)
-ORDER BY m.created_at;
+WHERE m.conversation_id = (SELECT id FROM conversation_id) ORDER BY m.created_at DESC
+%s;
 
 -- name: insert-message
 WITH conversation_id AS (
