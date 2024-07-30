@@ -2,7 +2,6 @@ package main
 
 import (
 	"cmp"
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -44,8 +44,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	flag "github.com/spf13/pflag"
 	"github.com/zerodha/logf"
-	sessredisstore "github.com/zerodha/simplesessions/stores/redis/v3"
-	"github.com/zerodha/simplesessions/v3"
 )
 
 // constants holds the app constants.
@@ -156,27 +154,6 @@ func initSettingsManager(db *sqlx.DB) *setting.Manager {
 	if err != nil {
 		log.Fatalf("error initializing setting manager: %v", err)
 	}
-	return s
-}
-
-// initSessionManager initializes and returns a simplesessions.Manager instance.
-func initSessionManager(rd *redis.Client) *simplesessions.Manager {
-	maxAge := ko.Duration("app.session.cookie_max_age")
-	if maxAge.Seconds() == 0 {
-		maxAge = time.Hour * 12
-	}
-	s := simplesessions.New(simplesessions.Options{
-		EnableAutoCreate: true,
-		SessionIDLength:  64,
-		Cookie: simplesessions.CookieOptions{
-			IsHTTPOnly: true,
-			IsSecure:   true,
-			MaxAge:     maxAge,
-		},
-	})
-	st := sessredisstore.New(context.TODO(), rd)
-	s.UseStore(st)
-	s.SetCookieHooks(simpleSessGetCookieCB, simpleSessSetCookieCB)
 	return s
 }
 
@@ -428,6 +405,23 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 			log.Printf("WARNING: Unknown inbox channel: %s", inboxR.Name)
 		}
 	}
+}
+
+func initAuth(rd *redis.Client) *auth.Auth {
+	lo := initLogger("auth")
+	a, err := auth.New(auth.Config{
+		OIDC: auth.OIDCConfig{
+			Enabled:      true,
+			ProviderURL:  "https://accounts.google.com",
+			RedirectURL:  "http://localhost:5173/auth/oidc/finish",
+			ClientID:     "a",
+			ClientSecret: "a",
+		},
+	}, rd, lo)
+	if err != nil {
+		log.Fatalf("error initializing auth: %v", err)
+	}
+	return a
 }
 
 func initI18n(fs stuffbin.FileSystem) *i18n.I18n {

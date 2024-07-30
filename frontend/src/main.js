@@ -3,11 +3,14 @@ import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import App from './App.vue'
 import router from './router'
+import mitt from 'mitt';
 import './assets/styles/main.scss'
 import './utils/strings.js';
 import api from './api'
 
 async function initApp () {
+    const emitter = mitt();
+
     // TODO: fetch def lang from cfg.
     const defaultLang = 'en';
     const langMessages = await api.getLanguage(defaultLang);
@@ -24,6 +27,8 @@ async function initApp () {
     const i18n = createI18n(i18nConfig);
     const app = createApp(App);
     const pinia = createPinia();
+
+    app.config.globalProperties.emitter = emitter;
 
     app.use(router);
     app.use(pinia);

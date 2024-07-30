@@ -49,6 +49,7 @@ SELECT
     c.first_reply_at,
     c.assigned_user_id,
     c.assigned_team_id,
+    c.meta->>'subject' as subject,
     ct.id as contact_id,
     ct.uuid AS contact_uuid,
     ct.first_name as first_name,
@@ -228,6 +229,13 @@ WHERE conversation_id = (
 -- name: get-to-address
 SELECT cm.source_id from conversations c inner join contact_methods cm on cm.contact_id = c.contact_id where c.id = $1 and cm.source = $2;
 
+-- name: get-conversation-uuid-from-message-uuid
+SELECT c.uuid AS conversation_uuid
+FROM messages m
+JOIN conversations c ON m.conversation_id = c.id
+WHERE m.uuid = $1;
+
+-- MESSAGE queries.
 -- name: get-latest-received-message-source-id
 SELECT source_id
 FROM messages

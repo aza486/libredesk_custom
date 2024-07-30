@@ -25,7 +25,7 @@
     <Accordion type="single" collapsible class="border-t mt-4" :default-value="actionAccordion.title">
       <AccordionItem :value="actionAccordion.title">
         <AccordionTrigger>
-          <h4 class="scroll-m-20 text-base font-semibold tracking-tight">
+          <h4 class="scroll-m-20 text-base font-medium tracking-tight">
             {{ actionAccordion.title }}
           </h4>
         </AccordionTrigger>
@@ -37,13 +37,13 @@
               <PopoverTrigger as-child>
                 <Button variant="outline" role="combobox" :aria-expanded="agentSelectDropdownOpen"
                   class="w-full justify-between">
-                  {{ conversationStore.conversation.data.assigned_user_id 
-                      ? (() => {
-                          console.log(' ->', conversationStore.conversation.data.assigned_user_id , 'agents ', agents)
-                          const agent = agents.find(agent => agent.id === conversationStore.conversation.data.assigned_user_id);
-                          return agent ? `${agent.first_name} ${agent.last_name}` : "Select agent...";
-                        })()
-                      : "Select agent..."
+                  {{ conversationStore.conversation.data.assigned_user_id
+                    ? (() => {
+                      console.log(' ->', conversationStore.conversation.data.assigned_user_id, 'agents ', agents)
+                      const agent = agents.find(agent => agent.id === conversationStore.conversation.data.assigned_user_id);
+                      return agent ? `${agent.first_name} ${agent.last_name}` : "Select agent...";
+                    })()
+                    : "Select agent..."
                   }}
                   <CaretSortIcon class="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -209,7 +209,7 @@
     <Accordion type="single" collapsible :default-value="infoAccordion.title">
       <AccordionItem :value="infoAccordion.title">
         <AccordionTrigger>
-          <h4 class="scroll-m-20 text-base font-semibold tracking-tight">
+          <h4 class="scroll-m-20 text-base font-medium tracking-tight">
             {{ infoAccordion.title }}
           </h4>
         </AccordionTrigger>

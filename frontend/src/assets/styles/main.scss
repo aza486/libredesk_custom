@@ -5,7 +5,7 @@
 // App default font-size.
 // Default: 16px, 15px looked very wide.
 :root {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .page-content {
@@ -13,6 +13,7 @@
 }
 
 // Theme.
+
 
 @layer base {
   :root {
@@ -43,7 +44,7 @@
     --border:20 5.9% 90%;
     --input:20 5.9% 90%;
     --ring:20 14.3% 4.1%;
-    --radius: 0rem;
+    --radius: 0.5rem;
   }
    
   .dark {
@@ -75,7 +76,10 @@
     --input:12 6.5% 15.1%;
     --ring:24 5.7% 82.9%;
   }
+}
 
+
+@layer base {
   :root {
     --vis-tooltip-background-color: none !important;
     --vis-tooltip-border-color: none !important;
@@ -175,9 +179,9 @@ h4 {
 }
 
 .admin-title {
-  @apply text-xl font-medium
+  @apply text-xl font-medium;
 }
 
 .admin-subtitle {
-  @apply text-sm font-medium
+  @apply text-sm font-medium;
 }

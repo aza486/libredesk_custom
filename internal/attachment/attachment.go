@@ -13,14 +13,14 @@ const (
 
 // Attachment represents a file or blob attachment that can be sent or received on a message.
 type Attachment struct {
-	Name        string
-	Header      textproto.MIMEHeader
-	Size        int
-	Content     []byte
-	ContentID   string
-	ContentType string
-	Disposition string
-	URL         string
+	Name        string               `json:"name"`
+	Size        int                  `json:"size"`
+	Content     []byte               `json:"content"`
+	ContentID   string               `json:"content_id"`
+	ContentType string               `json:"content_type"`
+	Disposition string               `json:"disposition"`
+	URL         string               `json:"url"`
+	Header      textproto.MIMEHeader `json:"-"`
 }
 
 type Attachments []Attachment

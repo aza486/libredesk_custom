@@ -5,21 +5,21 @@ const (
 	ActionConversationsSub                = "conversations_sub"
 	ActionConversationSub                 = "conversation_sub"
 	ActionConversationUnSub               = "conversation_unsub"
-	MessageTypeNewMessage                 = "new_msg"
-	MessageTypeMessagePropUpdate          = "msg_prop_update"
-	MessageTypeNewConversation            = "new_conv"
-	MessageTypeConversationPropertyUpdate = "conv_prop_update"
+	MessageTypeMessagePropUpdate          = "message_prop_update"
+	MessageTypeConversationPropertyUpdate = "conversation_prop_update"
+	MessageTypeNewMessage                 = "new_message"
+	MessageTypeNewConversation            = "new_conversation"
 )
 
 // IncomingReq represents an incoming WebSocket request.
 type IncomingReq struct {
-	Action string `json:"a"`
+	Action string `json:"action"`
 }
 
 // ConversationsSubscribe represents a request to subscribe to conversations.
 type ConversationsSubscribe struct {
-	Type             string `json:"t"`
-	PreDefinedFilter string `json:"pf"`
+	Type   string `json:"type"`
+	Filter string `json:"filter"`
 }
 
 // ConversationSubscribe represents a request to subscribe to a single conversation.
@@ -34,11 +34,11 @@ type ConversationUnsubscribe struct {
 
 // ConvSubUnsubReq represents a request to subscribe or unsubscribe from multiple conversations.
 type ConvSubUnsubReq struct {
-	UUIDs []string `json:"v"`
+	UUIDs []string `json:"value"`
 }
 
 // Message represents a WebSocket message.
 type Message struct {
-	Type string      `json:"typ"`
-	Data interface{} `json:"d"`
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
 }

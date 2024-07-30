@@ -78,7 +78,7 @@ type contactStore interface {
 
 type mediaStore interface {
 	GetBlob(name string) ([]byte, error)
-	AttachToModel(id int, model string, modelID int) error
+	Attach(id int, model string, modelID int) error
 	GetModelMedia(id int, model string) ([]mmodels.Media, error)
 	UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
 }
@@ -164,13 +164,14 @@ type queries struct {
 	DeleteConversationTags             *sqlx.Stmt `query:"delete-conversation-tags"`
 
 	// Message queries.
-	GetMessage           *sqlx.Stmt `query:"get-message"`
-	GetMessages          string     `query:"get-messages"`
-	GetPendingMessages   *sqlx.Stmt `query:"get-pending-messages"`
-	InsertMessage        *sqlx.Stmt `query:"insert-message"`
-	UpdateMessageContent *sqlx.Stmt `query:"update-message-content"`
-	UpdateMessageStatus  *sqlx.Stmt `query:"update-message-status"`
-	MessageExists        *sqlx.Stmt `query:"message-exists"`
+	GetMessage                         *sqlx.Stmt `query:"get-message"`
+	GetMessages                        string     `query:"get-messages"`
+	GetPendingMessages                 *sqlx.Stmt `query:"get-pending-messages"`
+	GetConversationUUIDFromMessageUUID *sqlx.Stmt `query:"get-conversation-uuid-from-message-uuid"`
+	InsertMessage                      *sqlx.Stmt `query:"insert-message"`
+	UpdateMessageContent               *sqlx.Stmt `query:"update-message-content"`
+	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
+	MessageExists                      *sqlx.Stmt `query:"message-exists"`
 }
 
 // CreateConversation creates a new conversation and returns its ID and UUID.
@@ -358,7 +359,7 @@ func (c *Manager) GetConversationUUIDs(userID, page, pageSize int, typ, filter s
 func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID string, meta map[string]string) error {
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
-		c.lo.Error("error marshalling meta", "meta", meta, "error", err)
+		c.lo.Error("error marshalling conversation meta", "meta", meta, "error", err)
 		return err
 	}
 	if _, err := c.q.UpdateConversationMeta.Exec(conversationID, conversationUUID, metaJSON); err != nil {

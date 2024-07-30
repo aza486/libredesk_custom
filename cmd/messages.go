@@ -1,17 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/conversation"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	medModels "github.com/abhinavxd/artemis/internal/media/models"
-	"github.com/abhinavxd/artemis/internal/stringutil"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
+
+type messageReq struct {
+	Attachments []int  `json:"attachments"`
+	Message     string `json:"message"`
+	Private     bool   `json:"private"`
+}
 
 func handleGetMessages(r *fastglue.Request) error {
 	var (
@@ -54,7 +58,7 @@ func handleGetMessage(r *fastglue.Request) error {
 func handleRetryMessage(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
-		uuid = r.RequestCtx.UserValue("message_uuid").(string)
+		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
 	err := app.conversation.MarkMessageAsPending(uuid)
 	if err != nil {
@@ -65,23 +69,19 @@ func handleRetryMessage(r *fastglue.Request) error {
 
 func handleSendMessage(r *fastglue.Request) error {
 	var (
-		app        = r.Context.(*App)
-		user       = r.RequestCtx.UserValue("user").(umodels.User)
-		p          = r.RequestCtx.PostArgs()
-		content    = p.Peek("message")
-		private    = p.GetBool("private")
-		uuid       = r.RequestCtx.UserValue("uuid").(string)
-		mediaIDs   = []int{}
-		mediasJSON = p.Peek("medias")
+		app  = r.Context.(*App)
+		user = r.RequestCtx.UserValue("user").(umodels.User)
+		uuid = r.RequestCtx.UserValue("uuid").(string)
+		req  = messageReq{}
 	)
 
-	if err := json.Unmarshal(mediasJSON, &mediaIDs); err != nil {
+	if err := r.Decode(&req, "json"); err != nil {
 		app.lo.Error("error unmarshalling media ids", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error parsing attachments", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
 	}
 
 	var medias = []medModels.Media{}
-	for _, id := range mediaIDs {
+	for _, id := range req.Attachments {
 		media, err := app.media.Get(id)
 		if err != nil {
 			app.lo.Error("error fetching media", "error", err)
@@ -90,26 +90,20 @@ func handleSendMessage(r *fastglue.Request) error {
 		medias = append(medias, media)
 	}
 
-	msg := cmodels.Message{
+	message := cmodels.Message{
 		ConversationUUID: uuid,
 		SenderID:         user.ID,
 		Type:             conversation.MessageOutgoing,
 		SenderType:       conversation.SenderTypeUser,
 		Status:           conversation.MessageStatusPending,
-		Content:          string(content),
+		Content:          req.Message,
 		ContentType:      conversation.ContentTypeHTML,
-		Private:          private,
+		Private:          req.Private,
 		Media:            medias,
 	}
 
-	if err := app.conversation.InsertMessage(&msg); err != nil {
+	if err := app.conversation.InsertMessage(&message); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	app.conversation.AddConversationParticipant(user.ID, uuid)
-
-	// Update conversation meta with the last message details.
-	trimmedMessage := stringutil.Trim(msg.Content, 45)
-	app.conversation.UpdateConversationLastMessage(0, uuid, trimmedMessage, msg.CreatedAt)
 	return r.SendEnvelope(true)
 }

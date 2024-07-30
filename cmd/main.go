@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
@@ -27,7 +28,6 @@ import (
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
-	"github.com/zerodha/simplesessions/v3"
 )
 
 var (
@@ -43,6 +43,7 @@ const (
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
 	constant     constants
+	auth         *auth.Auth
 	fs           stuffbin.FileSystem
 	rdb          *redis.Client
 	i18n         *i18n.I18n
@@ -53,7 +54,6 @@ type App struct {
 	contact      *contact.Manager
 	user         *user.Manager
 	team         *team.Manager
-	sess         *simplesessions.Manager
 	tag          *tag.Manager
 	inbox        *inbox.Manager
 	cannedResp   *cannedresp.Manager
@@ -116,6 +116,7 @@ func main() {
 	var app = &App{
 		lo:           lo,
 		rdb:          rdb,
+		auth:         initAuth(rdb),
 		fs:           fs,
 		i18n:         i18n,
 		media:        media,
@@ -129,7 +130,6 @@ func main() {
 		role:         initRole(db),
 		constant:     initConstants(),
 		tag:          initTags(db),
-		sess:         initSessionManager(rdb),
 		cannedResp:   initCannedResponse(db),
 	}
 

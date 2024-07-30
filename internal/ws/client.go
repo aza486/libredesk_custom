@@ -57,9 +57,10 @@ type Client struct {
 }
 
 // Serve handles heartbeats and sending messages to the client.
-func (c *Client) Serve(heartBeatDuration time.Duration) {
-	var heartBeatTicker = time.NewTicker(heartBeatDuration)
+func (c *Client) Serve() {
+	var heartBeatTicker = time.NewTicker(2 * time.Second)
 	defer heartBeatTicker.Stop()
+
 Loop:
 	for {
 		select {
@@ -119,7 +120,7 @@ func (c *Client) processIncomingMessage(data []byte) {
 
 		// Add the new subscriptions.
 		for page := 1; page <= maxConversationsPagesToSub; page++ {
-			conversationUUIDs, err := c.Hub.conversationStore.GetConversationUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type, subReq.PreDefinedFilter)
+			conversationUUIDs, err := c.Hub.conversationStore.GetConversationUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type, subReq.Filter)
 			if err != nil {
 				log.Println("error fetching conversation ids", err)
 				continue

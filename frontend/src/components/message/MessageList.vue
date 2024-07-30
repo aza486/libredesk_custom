@@ -30,32 +30,40 @@ import AgentMessageBubble from "./AgentMessageBubble.vue";
 import { useConversationStore } from '@/stores/conversation'
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-vue-next';
+import { useEmitter } from '@/composables/useEmitter';
 
 const conversationStore = useConversationStore()
-const threadEl = ref(null);
+const threadEl = ref(null)
+const emitter = useEmitter()
 
 
 const scrollToBottom = () => {
     setTimeout(() => {
         console.log("Scrolling bottom")
-        const thread = threadEl.value;
+        const thread = threadEl.value
         if (thread) {
-            thread.scrollTop = thread.scrollHeight;
+            thread.scrollTop = thread.scrollHeight
         }
     }, 0)
 };
 
 
 onMounted(() => {
-    scrollToBottom();
+    scrollToBottom()
+    // On new outgoing message to the current conversation, scroll to the bottom.
+    emitter.on('new-outgoing-message', (data) => {
+        if (data.conversation_uuid === conversationStore.conversation.data.uuid) {
+            scrollToBottom()
+        }
+    });
 });
 
 // On conversation change scroll to the bottom
 watch(() => conversationStore.conversation.data, () => {
-    scrollToBottom();
+    scrollToBottom()
 });
 
 const isPrivateNote = (message) => {
-    return message.type === "outgoing" && message.private;
+    return message.type === "outgoing" && message.private
 };
 </script>

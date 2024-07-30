@@ -129,7 +129,6 @@ const handleFileUpload = event => {
     for (const file of event.target.files) {
         api.uploadMedia({
             files: file,
-            disposition: "attachment",
         }).then((resp) => {
             uploadedFiles.value.push(resp.data.data)
         }).catch((err) => {
@@ -143,11 +142,11 @@ const handleContentCleared = () => {
 }
 
 const handleSend = async () => {
-    const attachmentUUIDs = uploadedFiles.value.map((file) => file.uuid)
+    const attachmentIDs = uploadedFiles.value.map((file) => file.id)
     await api.sendMessage(conversationStore.conversation.data.uuid, {
         private: messageType.value === "private_note",
         message: editorHTML.value,
-        attachments: JSON.stringify(attachmentUUIDs),
+        attachments: attachmentIDs,
     })
     api.updateAssigneeLastSeen(conversationStore.conversation.data.uuid)
     clearContent.value = true

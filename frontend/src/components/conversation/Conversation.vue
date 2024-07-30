@@ -5,8 +5,8 @@
       <div class="flex items-center space-x-3 text-sm">
         <Tooltip>
           <TooltipTrigger>
-            <Badge :variant="getBadgeVariant" class="text-md"
-              >{{ conversationStore.conversation.data.status }}
+            <Badge :variant="getBadgeVariant">
+              {{ conversationStore.conversation.data.status }}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -65,7 +65,7 @@ import { Icon } from '@iconify/vue'
 const conversationStore = useConversationStore()
 
 const getBadgeVariant = computed(() => {
-  return conversationStore.conversation.data?.status == 'Spam' ? 'destructive' : 'secondary'
+  return conversationStore.conversation.data?.status == 'Spam' ? 'destructive' : 'primary'
 })
 
 const handleUpdateStatus = (status) => {

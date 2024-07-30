@@ -6,6 +6,7 @@
                 {{ getFullName }}
             </p>
         </div>
+        {{ mess }}
         <div class="flex flex-row gap-2 justify-end">
             <div class="
                 flex
@@ -16,7 +17,7 @@
                 relative
                 !rounded-tr-none
                 " :class="{
-                    'bg-[#FEF1E1]': message.private,
+                    '!bg-[#FEF1E1]': message.private,
                     'bg-white': !message.private,
                     'opacity-50 animate-pulse': message.status === 'pending',
                     'bg-red': message.status === 'failed'
@@ -25,10 +26,16 @@
                 <div v-html=message.content :class="{ 'mb-3': message.attachments.length > 0 }"></div>
                 <MessageAttachmentPreview :attachments="message.attachments" />
                 <Spinner v-if="message.status === 'pending'" />
+
+                <!-- Icons -->
                 <div class="flex items-center space-x-2 mt-2">
-                    <CheckCheck :size="14"  v-if="message.status == 'sent'"/>
+
+                    <Lock :size="10" v-if="isPrivateMessage" />
+                    
+                    <CheckCheck :size="14" v-if="showCheckCheck" />
+                    
                     <RotateCcw size="10" @click="retryMessage(message)" class="cursor-pointer"
-                        v-if="message.status === 'failed'"></RotateCcw>
+                        v-if="showRetry"></RotateCcw>
                 </div>
             </div>
             <Avatar class="cursor-pointer">
@@ -59,6 +66,7 @@
 import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
+import { Lock } from 'lucide-vue-next';
 import api from '@/api'
 
 import {
@@ -91,6 +99,18 @@ const getAvatar = computed(() => {
     return participant.value?.avatar_url
 });
 
+const isPrivateMessage = computed(() => {
+    return props.message.private
+})
+
+const showCheckCheck = computed(() => {
+    return props.message.status == 'sent' && !isPrivateMessage.value
+})
+
+const showRetry = computed(() => {
+    return props.message.status == 'failed'
+})
+
 const avatarFallback = computed(() => {
     const firstName = participant.value?.first_name ?? 'A'
     return firstName.toUpperCase().substring(0, 2);
@@ -98,7 +118,6 @@ const avatarFallback = computed(() => {
 
 const retryMessage = (msg) => {
     api.retryMessage(msg.uuid)
-    convStore.updateMessageStatus(msg.uuid, 'pending')
 }
 
 </script>

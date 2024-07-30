@@ -13,10 +13,10 @@ import (
 
 // Hub maintains the set of registered clients and their subscriptions.
 type Hub struct {
-	clients          map[int][]*Client
-	clientsMutex     sync.Mutex
-	conversationSubs map[string][]int
-	subMutex         sync.Mutex
+	clients           map[int][]*Client
+	clientsMutex      sync.Mutex
+	conversationSubs  map[string][]int
+	subMutex          sync.Mutex
 	conversationStore ConversationStore
 }
 
@@ -110,7 +110,7 @@ func (h *Hub) PushMessage(msg PushMessage) {
 }
 
 // BroadcastNewConversationMessage broadcasts a new conversation message.
-func (h *Hub) BroadcastNewConversationMessage(conversationUUID, content, messageUUID, lastMessageAt string, private bool) {
+func (h *Hub) BroadcastNewConversationMessage(conversationUUID, content, messageUUID, lastMessageAt, typ string, private bool) {
 	userIDs, ok := h.conversationSubs[conversationUUID]
 	if !ok || len(userIDs) == 0 {
 		return
@@ -120,10 +120,11 @@ func (h *Hub) BroadcastNewConversationMessage(conversationUUID, content, message
 		Type: models.MessageTypeNewMessage,
 		Data: map[string]interface{}{
 			"conversation_uuid": conversationUUID,
-			"last_message":      content,
+			"content":           content,
+			"created_at":        lastMessageAt,
 			"uuid":              messageUUID,
-			"last_message_at":   lastMessageAt,
 			"private":           private,
+			"type":              typ,
 		},
 	}
 
@@ -140,17 +141,17 @@ func (h *Hub) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop, va
 	message := models.Message{
 		Type: models.MessageTypeMessagePropUpdate,
 		Data: map[string]interface{}{
-			"uuid": messageUUID,
-			"prop": prop,
-			"val":  value,
+			"uuid":  messageUUID,
+			"prop":  prop,
+			"value": value,
 		},
 	}
 
 	h.marshalAndPush(message, userIDs)
 }
 
-// BroadcastConversationAssignment broadcasts the assignment of a conversation.
-func (h *Hub) BroadcastConversationAssignment(userID int, conversationUUID, avatarURL, firstName, lastName, lastMessage, inboxName string, lastMessageAt time.Time, unreadMessageCount int) {
+// BroadcastNewConversation broadcasts new conversation to user id.
+func (h *Hub) BroadcastNewConversation(userID int, conversationUUID, avatarURL, firstName, lastName, lastMessage, inboxName string, lastMessageAt time.Time, unreadMessageCount int) {
 	message := models.Message{
 		Type: models.MessageTypeNewConversation,
 		Data: map[string]interface{}{
@@ -177,9 +178,9 @@ func (h *Hub) BroadcastConversationPropertyUpdate(conversationUUID, prop, value 
 	message := models.Message{
 		Type: models.MessageTypeConversationPropertyUpdate,
 		Data: map[string]interface{}{
-			"uuid": conversationUUID,
-			"prop": prop,
-			"val":  value,
+			"uuid":  conversationUUID,
+			"prop":  prop,
+			"value": value,
 		},
 	}
 

@@ -12,7 +12,7 @@
                 overlay
                 text-wrap
             ">
-                <p class="font-bold text-xs">{{ getAttachmentName(attachment.filename) }}</p>
+                <p class="font-bold text-xs">{{ trimAttachmentName(attachment.name) }}</p>
                 <p class="text-xs">{{ formatBytes(attachment.size) }}</p>
             </div>
         </div>
@@ -28,7 +28,7 @@ defineProps({
     },
 })
 
-const getAttachmentName = (name) => {
+const trimAttachmentName = (name) => {
     return name.substring(0, 40)
 }
 </script>

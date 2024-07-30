@@ -4,6 +4,7 @@ import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
 import api from '@/api';
+import { useEmitter } from '@/composables/useEmitter';
 
 export const useConversationStore = defineStore('conversation', () => {
     // List of conversations
@@ -41,6 +42,7 @@ export const useConversationStore = defineStore('conversation', () => {
         conversations.data = [...conversations.data]
     }, 60000)
     const { toast } = useToast()
+    const emitter = useEmitter()
 
 
     // Clear the reRenderInterval when the store is destroyed.
@@ -156,11 +158,10 @@ export const useConversationStore = defineStore('conversation', () => {
         try {
             const response = await api.getMessage(uuid);
             if (response?.data?.data) {
-                response.data.data.forEach(respMsg => {
-                    if (!messages.data.some(e => e.uuid === respMsg.uuid)) {
-                        messages.data.push(respMsg);
-                    }
-                });
+                const message = response.data.data
+                if (!messages.data.some(m => m.uuid === message.uuid)) {
+                    messages.data.push(message);
+                }
             }
         } catch (error) {
             messages.errorMessage = handleHTTPError(error).message;
@@ -291,51 +292,67 @@ export const useConversationStore = defineStore('conversation', () => {
         };
     }
 
-    // Websocket updates.
-    function updateConversationList (msg) {
-        const updatedConversation = conversations.data.find(c => c.uuid === msg.conversation_uuid);
-        if (updatedConversation) {
-            updatedConversation.last_message = msg.last_message;
-            updatedConversation.last_message_at = msg.last_message_at;
-            // Increase conversation unread msg count only if it's not open.
-            if (updatedConversation.uuid !== conversation.data.uuid) {
-                updatedConversation.unread_message_count += 1
-            }
-        }
-    }
-
-    function updateConversationProp (update) {
-        if (conversation?.data?.uuid === update.uuid) {
-            conversation.data[update.prop] = update.val
-        }
-    }
-
-    function addNewConversation (conv) {
-        if (!conversationUUIDExists(conv.uuid)) {
-            conversations.data.push(conv)
-        }
-    }
-
     function conversationUUIDExists (uuid) {
         return conversations.data?.find(c => c.uuid === uuid) ? true : false
     }
 
-    function updateMessageList (message) {
-        // Check if this conversation is selected and then update messages list.
-        if (conversation?.data?.uuid === message.conversation_uuid) {
-            // Fetch entire message if the give msg does not exist in the msg list.
-            if (!messages.data.some(msg => msg.uuid === message.uuid)) {
-                fetchParticipants(message.conversation_uuid)
-                fetchMessage(message.uuid)
-                updateAssigneeLastSeen(message.conversation_uuid)
+
+    /**** Websocket updates ****/
+
+    // Update the last message for a conversation.
+    function updateConversationLastMessage (message) {
+        const conv = conversations.data.find(c => c.uuid === message.conversation_uuid);
+        if (conv) {
+            conv.last_message = message.content;
+            conv.last_message_at = message.created_at;
+            // Increment unread count only if conversation is not open.
+            if (conv.uuid !== conversation?.data?.uuid) {
+                conv.unread_message_count += 1;
             }
         }
     }
 
+    // Update message in a conversation.
+    function updateConversationMessageList (message) {
+        // Fetch entire message only if the convesation is open and the message is not present in the list.
+        if (conversation?.data?.uuid === message.conversation_uuid) {
+            if (!messages.data.some(msg => msg.uuid === message.uuid)) {
+                fetchParticipants(message.conversation_uuid)
+                fetchMessage(message.uuid)
+                updateAssigneeLastSeen(message.conversation_uuid)
+                if (message.type === "outgoing") {
+                    setTimeout(() => {
+                        emitter.emit('new-outgoing-message', { conversation_uuid: message.conversation_uuid })
+                    }, 50)
+                }
+            }
+        }
+    }
+
+    function addNewConversation (conversation) {
+        if (!conversationUUIDExists(conversation.uuid)) {
+            conversations.data.push(conversation)
+        }
+    }
+
     function updateMessageProp (message) {
+        // Update prop in list.
         const existingMessage = messages.data.find(m => m.uuid === message.uuid)
         if (existingMessage) {
-            existingMessage[message.prop] = message.val
+            existingMessage[message.prop] = message.value
+        }
+    }
+
+    function updateConversationProp (conversation) {
+        // Update prop if conversation is open.
+        if (conversation?.data?.uuid === conversation.uuid) {
+            conversation.data[conversation.prop] = conversation.value
+        }
+
+        // Update prop in list.
+        const existingConversation = conversations?.data?.find(c => c.uuid === conversation.uuid)
+        if (existingConversation) {
+            existingConversation[conversation.prop] = conversation.value
         }
     }
 
@@ -366,5 +383,5 @@ export const useConversationStore = defineStore('conversation', () => {
         seenMessageUUIDs = new Set()
     }
 
-    return { conversations, conversation, messages, sortedConversations, sortedMessages, conversationUUIDExists, updateConversationProp, addNewConversation, getContactFullName, fetchParticipants, fetchNextMessages, fetchNextConversations, updateMessageProp, updateAssigneeLastSeen, updateMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationList, $reset };
+    return { conversations, conversation, messages, sortedConversations, sortedMessages, conversationUUIDExists, updateConversationProp, addNewConversation, getContactFullName, fetchParticipants, fetchNextMessages, fetchNextConversations, updateMessageProp, updateAssigneeLastSeen, updateConversationMessageList, fetchConversation, fetchConversations, fetchMessages, upsertTags, updateAssignee, updatePriority, updateStatus, updateConversationLastMessage, $reset };
 })

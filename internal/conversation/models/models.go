@@ -129,6 +129,7 @@ type Message struct {
 	References       []string             `json:"-"`
 	InReplyTo        string               `json:"-"`
 	Headers          textproto.MIMEHeader `json:"-"`
+	TrimmedContent   string               `db:"-" json:"-"`
 	Media            []mmodels.Media      `db:"-" json:"-"`
 }
 

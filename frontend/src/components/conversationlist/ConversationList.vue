@@ -14,44 +14,44 @@
                     </TabsTrigger>
                 </TabsList>
             </Tabs>
-            <div>
-                <Popover>
-                    <PopoverTrigger as-child>
-                        <Button variant="outline" size="sm">
-                            <ListFilter size="20"></ListFilter>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent class="w-52">
-                        <div>
-                            <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a filter" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <!-- <SelectLabel>Status</SelectLabel> -->
-                                        <SelectItem value="status_all">
-                                            All
-                                        </SelectItem>
-                                        <SelectItem value="status_open">
-                                            Open
-                                        </SelectItem>
-                                        <SelectItem value="status_processing">
-                                            Processing
-                                        </SelectItem>
-                                        <SelectItem value="status_spam">
-                                            Spam
-                                        </SelectItem>
-                                        <SelectItem value="status_resolved">
-                                            Resolved
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div>
+
+            <Popover>
+                <PopoverTrigger as-child>
+                    <div class="flex items-center mr-2">
+                        <ListFilter size="20" class="mx-auto cursor-pointer"></ListFilter>
+                    </div>
+                </PopoverTrigger>
+                <PopoverContent class="w-52">
+                    <div>
+                        <Select @update:modelValue="handleFilterChange" v-model="predefinedFilter">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a filter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <!-- <SelectLabel>Status</SelectLabel> -->
+                                    <SelectItem value="status_all">
+                                        All
+                                    </SelectItem>
+                                    <SelectItem value="status_open">
+                                        Open
+                                    </SelectItem>
+                                    <SelectItem value="status_processing">
+                                        Processing
+                                    </SelectItem>
+                                    <SelectItem value="status_spam">
+                                        Spam
+                                    </SelectItem>
+                                    <SelectItem value="status_resolved">
+                                        Resolved
+                                    </SelectItem>
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </PopoverContent>
+            </Popover>
+
 
         </div>
 

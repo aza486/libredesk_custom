@@ -137,6 +137,19 @@ func (u *Manager) Get(id int, uuid string) (models.User, error) {
 	return user, nil
 }
 
+// GetByEmail retrieves a user by email
+func (u *Manager) GetByEmail(email string) (models.User, error) {
+	var user models.User
+	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user, fmt.Errorf("user not found")
+		}
+		u.lo.Error("error fetching user from db", "error", err)
+		return user, err
+	}
+	return user, nil
+}
+
 // GetSystemUser retrieves the system user.
 func (u *Manager) GetSystemUser() (models.User, error) {
 	return u.Get(0, SystemUserUUID)

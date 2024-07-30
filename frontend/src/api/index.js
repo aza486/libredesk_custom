@@ -76,7 +76,11 @@ const getMessages = (uuid, page) => http.get(`/api/conversations/${uuid}/message
   params: { page: page },
 });
 const sendMessage = (uuid, data) =>
-  http.post(`/api/conversations/${uuid}/messages`, data);
+  http.post(`/api/conversations/${uuid}/messages`, data, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 const getConversation = uuid => http.get(`/api/conversations/${uuid}`);
 const getConversationParticipants = uuid =>
   http.get(`/api/conversations/${uuid}/participants`);

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
@@ -39,7 +38,7 @@ func handleWS(r *fastglue.Request, hub *ws.Hub) error {
 		}
 		hub.AddClient(&c)
 		go c.Listen()
-		c.Serve(2 * time.Second)
+		c.Serve()
 	})
 	if err != nil {
 		app.lo.Error("error upgrading tcp connection", "error", err)

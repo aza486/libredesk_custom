@@ -71,7 +71,7 @@ type queries struct {
 	InsertMedia   *sqlx.Stmt `query:"insert-media"`
 	GetMedia      *sqlx.Stmt `query:"get-media"`
 	DeleteMedia   *sqlx.Stmt `query:"delete-media"`
-	AttachToModel *sqlx.Stmt `query:"attach-to-model"`
+	Attach *sqlx.Stmt `query:"attach-to-model"`
 	GetModelMedia *sqlx.Stmt `query:"get-model-media"`
 }
 
@@ -127,8 +127,8 @@ func (m *Manager) GetBlob(name string) ([]byte, error) {
 	return m.Store.GetBlob(name)
 }
 
-func (m *Manager) AttachToModel(id int, model string, modelID int) error {
-	if _, err := m.queries.AttachToModel.Exec(id, model, modelID); err != nil {
+func (m *Manager) Attach(id int, model string, modelID int) error {
+	if _, err := m.queries.Attach.Exec(id, model, modelID); err != nil {
 		m.lo.Error("error attaching media to model", "model", model, "model_id", modelID, "error", err)
 		return err
 	}

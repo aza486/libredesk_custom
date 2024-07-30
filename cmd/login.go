@@ -19,24 +19,10 @@ func handleLogin(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	sess, err := app.sess.Acquire(r.RequestCtx, r, r)
-	if err != nil {
-		app.lo.Error("error acquiring session", "error", err)
+	if err := app.auth.SaveSession(user, r); err != nil {
+		app.lo.Error("error saving session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
-
-	// Set user details in the session.
-	if err := sess.SetMulti(map[string]interface{}{
-		"id":         user.ID,
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-		"team_id":    user.TeamID,
-	}); err != nil {
-		app.lo.Error("error setting values in session", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
-	}
-
 	return r.SendEnvelope(user)
 }
 
@@ -45,13 +31,7 @@ func handleLogout(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	sess, err := app.sess.Acquire(r.RequestCtx, r, r)
-	if err != nil {
-		app.lo.Error("error acquiring session", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
-	}
-	if err := sess.Destroy(); err != nil {
-		app.lo.Error("error clearing session", "error", err)
+	if err := app.auth.DestroySession(r); err != nil {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
 	return r.SendEnvelope(true)

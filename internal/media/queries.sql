@@ -5,7 +5,7 @@ VALUES($1, $2, $3, $4, $5)
 RETURNING id;
 
 -- name: get-media
-SELECT store, filename, content_type, size from media where id = $1;
+SELECT * from media where id = $1;
 
 -- name: delete-media
 DELETE from media where id = $1;
