@@ -93,8 +93,8 @@ type ConversationCounts struct {
 }
 
 type NewConversationsStats struct {
-	Date             time.Time `db:"date" json:"date"`
-	NewConversations int       `db:"new_conversations" json:"new_conversations"`
+	Date             string `db:"date" json:"date"`
+	NewConversations int    `db:"new_conversations" json:"new_conversations"`
 }
 
 // Message represents a message in the database.

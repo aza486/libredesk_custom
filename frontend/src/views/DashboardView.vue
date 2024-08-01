@@ -1,82 +1,141 @@
 <template>
-    <div class="page-content">
-        <div v-if="userStore.getFullName">
-            <span class="scroll-m-20 text-xl font-medium">
-                <p>Hi, {{ userStore.getFullName }}</p>
-                <p class="text-sm text-muted-foreground">🌤️ {{ format(new Date(), "EEEE, MMMM d HH:mm a") }}</p>
-            </span>
+    <div class="page-content w-11/12">
+        <div class="flex flex-col space-y-5">
+            <div>
+                <span class="font-semibold text-xl" v-if="userStore.getFullName">
+                    <p>Hi, {{ userStore.getFullName }}</p>
+                    <p class="text-sm text-muted-foreground">🌤️ {{ format(new Date(), "EEEE, MMMM d, HH:mm a") }}</p>
+                </span>
+            </div>
+            <div>
+                <Select :model-value="filter" @update:model-value="onFilterChange">
+                    <SelectTrigger class="w-[130px]">
+                        <SelectValue placeholder="Select a filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectItem value="me">
+                                Mine
+                            </SelectItem>
+                            <SelectItem value="global">
+                                Global
+                            </SelectItem>
+                            <SelectItem value="3">
+                                Funds team
+                            </SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+            </div>
         </div>
-        <CountCards :counts="counts" :labels="agentCountCardsLabels" />
-        <!-- <AssignedByStatusDonut /> -->
-        <div class="flex my-10">
-            <ConversationsOverTime class="flex-1" :data=newConversationsStats />
+        <div class="mt-7">
+            <Card :counts="cardCounts" :labels="agentCountCardsLabels" />
+        </div>
+        <div class="flex my-7 justify-between items-center space-x-5">
+            <LineChart :data="chartData.new_conversations" class="dashboard-card p-5"></LineChart>
+            <BarChart :data="chartData.status_summary" class="dashboard-card p-5"></BarChart>
         </div>
     </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useUserStore } from '@/stores/user'
 import { format } from 'date-fns'
 import api from '@/api';
 import { useToast } from '@/components/ui/toast/use-toast'
 
-import CountCards from '@/components/dashboard/agent/CountCards.vue'
-import ConversationsOverTime from '@/components/dashboard/agent/ConversationsOverTime.vue';
+import Card from '@/components/dashboard/agent/DashboardCard.vue'
+import LineChart from '@/components/dashboard/agent/DashboardLineChart.vue';
+import BarChart from '@/components/dashboard/agent/DashboardBarChart.vue';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 
 const { toast } = useToast()
-const counts = ref({})
-const newConversationsStats = ref([])
+const cardCounts = ref({})
+const chartData = ref({})
+const filter = ref("me")
 const userStore = useUserStore()
 const agentCountCardsLabels = {
-    total_assigned: "Total Assigned",
+    total_count: "Total",
+    resolved_count: "Resolved",
     unresolved_count: "Unresolved",
     awaiting_response_count: "Awaiting Response",
-    created_today_count: "Created Today"
 };
 
 onMounted(() => {
     getCardStats()
-    getUserDashoardChartsStats()
+    getDashboardCharts()
 })
 
+watch(filter, () => {
+    getDashboardCharts()
+    getCardStats()
+})
+
+const onFilterChange = (v) => {
+    filter.value = v
+}
+
 const getCardStats = () => {
-    api.getUserDashboardCounts().then((resp) => {
-        counts.value = resp.data.data
-    }).catch((err) => {
-        toast({
-            title: 'Uh oh! Something went wrong.',
-            description: err.response.data.message,
-            variant: 'destructive',
-        })
-    })
-}
-
-const getUserDashoardChartsStats = () => {
-    api.getUserDashoardCharts().then((resp) => {
-        newConversationsStats.value = resp.data.data
-    }).catch((err) => {
-        toast({
-            title: 'Uh oh! Something went wrong.',
-            description: err.response.data.message,
-            variant: 'destructive',
-        })
-    })
-}
-
-function getGreeting () {
-    const now = new Date();
-    const hours = now.getHours();
-
-    if (hours >= 5 && hours < 12) {
-        return "Good morning";
-    } else if (hours >= 12 && hours < 17) {
-        return "Good afternoon";
-    } else if (hours >= 17 && hours < 21) {
-        return "Good evening";
-    } else {
-        return "Good night";
+    let apiCall;
+    switch (filter.value) {
+        case "global":
+            apiCall = api.getGlobalDashboardCounts;
+            break;
+        case "me":
+            apiCall = api.getUserDashboardCounts;
+            break;
+        case "team":
+            apiCall = api.getTeamDashboardCounts;
+            break;
+        default:
+            throw new Error("Invalid filter value");
     }
-}
+
+    apiCall().then((resp) => {
+        cardCounts.value = resp.data.data;
+    }).catch((err) => {
+        toast({
+            title: 'Something went wrong',
+            description: err.response.data.message,
+            variant: 'destructive',
+        });
+    });
+};
+
+const getDashboardCharts = () => {
+    let apiCall;
+    switch (filter.value) {
+        case "global":
+            apiCall = api.getGlobalDashboardCharts;
+            break;
+        case "me":
+            apiCall = api.getUserDashboardCharts;
+            break;
+        case "team":
+            apiCall = api.getTeamDashboardCharts;
+            break;
+        default:
+            throw new Error("Invalid filter value");
+    }
+
+    apiCall().then((resp) => {
+        chartData.value = resp.data.data;
+        console.log("chart data ->", chartData.value);
+    }).catch((err) => {
+        toast({
+            title: 'Something went wrong',
+            description: err.response.data.message,
+            variant: 'destructive',
+        });
+    });
+};
 
 </script>

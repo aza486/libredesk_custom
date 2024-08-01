@@ -1838,10 +1838,10 @@
   dependencies:
     lodash-es "^4.17.21"
 
-"@unovis/ts@^1.4.1":
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/@unovis/ts/-/ts-1.4.1.tgz#dbb0cbadfe0d369fe7eac61d58b7746d37f1e882"
-  integrity sha512-U0CoVWmLFTU/olNWNQT7Q9Ws0nTQRwd7jimITs7xxrKKj0M4ZHMHl4YaMTe6dY7UIhhxSSOh8K4LPEy6lCo1bg==
+"@unovis/ts@^1.4.3":
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/@unovis/ts/-/ts-1.4.3.tgz#3e176e72d0db0c1c48ed5217bd35d32a082e37ba"
+  integrity sha512-QYh1Qot1N9L6ZQg+uuhcsI3iuic9c6VVjlex3ipRqYDvrDDN6N+SG2555+9z+yAV6cbVsD1/EkMfK+o84PPjSw==
   dependencies:
     "@emotion/css" "^11.7.1"
     "@juggle/resize-observer" "^3.3.1"
@@ -1876,10 +1876,10 @@
     topojson-client "^3.1.0"
     tslib "^2.3.1"
 
-"@unovis/vue@^1.4.1":
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/@unovis/vue/-/vue-1.4.1.tgz#8ad86d51dd024a02ec6f3e7d9181088a91a18276"
-  integrity sha512-LtsG7MsoUuPxsVDxx9zUDmswgVlUlLCJaxkf3qOr1Aowol0No9fwO0srv0BNd3kJpSx5iI+FnWye2QUXZE2QGA==
+"@unovis/vue@^1.4.3":
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/@unovis/vue/-/vue-1.4.3.tgz#ddf2a8ef56cd6e7fce371a6ef0f220a72d26ff23"
+  integrity sha512-L45ncN+e1dynA2cvHyq2ss+hLNBBPC1bl+i9JNveLufl+k7qybbt2IrioKBGQEbVmzXuJ80r2f3cD64i6ca9jg==
 
 "@vee-validate/zod@^4.13.2":
   version "4.13.2"

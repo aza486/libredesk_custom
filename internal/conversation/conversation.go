@@ -138,19 +138,21 @@ func New(
 
 type queries struct {
 	// Conversation queries.
-	GetLatestReceivedMessageSourceID   *sqlx.Stmt `query:"get-latest-received-message-source-id"`
-	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
-	GetConversationID                  *sqlx.Stmt `query:"get-conversation-id"`
-	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
-	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
-	GetRecentConversations             *sqlx.Stmt `query:"get-recent-conversations"`
-	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
-	GetConversations                   string     `query:"get-conversations"`
-	GetConversationsUUIDs              string     `query:"get-conversations-uuids"`
-	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
-	GetAssignedConversations           *sqlx.Stmt `query:"get-assigned-conversations"`
-	GetConversationAssigneeStats       *sqlx.Stmt `query:"get-assignee-stats"`
-	GetNewConversationsStats           *sqlx.Stmt `query:"get-new-conversations-stats"`
+	GetLatestReceivedMessageSourceID *sqlx.Stmt `query:"get-latest-received-message-source-id"`
+	GetToAddress                     *sqlx.Stmt `query:"get-to-address"`
+	GetConversationID                *sqlx.Stmt `query:"get-conversation-id"`
+	GetConversationUUID              *sqlx.Stmt `query:"get-conversation-uuid"`
+	GetConversation                  *sqlx.Stmt `query:"get-conversation"`
+	GetRecentConversations           *sqlx.Stmt `query:"get-recent-conversations"`
+	GetUnassignedConversations       *sqlx.Stmt `query:"get-unassigned-conversations"`
+	GetConversations                 string     `query:"get-conversations"`
+	GetConversationsUUIDs            string     `query:"get-conversations-uuids"`
+	GetConversationParticipants      *sqlx.Stmt `query:"get-conversation-participants"`
+	GetAssignedConversations         *sqlx.Stmt `query:"get-assigned-conversations"`
+
+	GetDashboardCharts string `query:"get-dashboard-charts"`
+	GetDashboardCounts string `query:"get-dashboard-counts"`
+
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
@@ -471,28 +473,69 @@ func (c *Manager) UpdateConversationStatus(uuid string, status []byte, actor umo
 	return nil
 }
 
-// GetConversationAssigneeStats retrieves the stats of conversations assigned to a specific user.
-func (c *Manager) GetConversationAssigneeStats(userID int) (models.ConversationCounts, error) {
-	var counts = models.ConversationCounts{}
-	if err := c.q.GetConversationAssigneeStats.Get(&counts, userID); err != nil {
-		if err == sql.ErrNoRows {
-			return counts, err
-		}
-		c.lo.Error("error fetching assignee conversation stats", "user_id", userID, "error", err)
-		return counts, err
+// GetDashboardCounts returns dashboard counts
+func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error) {
+	var counts = json.RawMessage{}
+	tx, err := c.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		c.lo.Error("error starting db txn", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard counts", nil)
 	}
+	defer tx.Rollback()
+
+	var (
+		cond  string
+		qArgs []interface{}
+	)
+	if userID > 0 {
+		cond = " AND assigned_user_id = $1"
+		qArgs = append(qArgs, userID)
+	} else if teamID > 0 {
+		cond = " AND assigned_team_id = $1"
+		qArgs = append(qArgs, teamID)
+	}
+
+	query := fmt.Sprintf(c.q.GetDashboardCounts, cond)
+	if err := tx.Get(&counts, query, qArgs...); err != nil {
+		c.lo.Error("error fetching dashboard counts", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard counts", nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.lo.Error("error committing db txn", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard counts", nil)
+	}
+
 	return counts, nil
 }
 
-// GetNewConversationsStats retrieves the statistics of new conversations.
-func (c *Manager) GetNewConversationsStats() ([]models.NewConversationsStats, error) {
-	var stats = make([]models.NewConversationsStats, 0)
-	if err := c.q.GetNewConversationsStats.Select(&stats); err != nil {
-		if err == sql.ErrNoRows {
-			return stats, err
-		}
-		c.lo.Error("error fetching new conversation stats", "error", err)
-		return stats, err
+// GetDashboardChartData returns dashboard chart data
+func (c *Manager) GetDashboardChartData(userID, teamID int) (json.RawMessage, error) {
+	var stats = json.RawMessage{}
+	tx, err := c.db.BeginTxx(context.Background(), nil)
+	if err != nil {
+		c.lo.Error("error starting db txn", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard chart data", nil)
+	}
+	defer tx.Rollback()
+
+	var (
+		cond  string
+		qArgs []interface{}
+	)
+	if userID > 0 {
+		cond = " AND assigned_user_id = $1"
+		qArgs = append(qArgs, userID)
+	} else if teamID > 0 {
+		cond = " AND assigned_team_id = $1"
+		qArgs = append(qArgs, teamID)
+	}
+
+	// Apply the same condition across queries.
+	query := fmt.Sprintf(c.q.GetDashboardCharts, cond, cond)
+	if err := tx.Get(&stats, query, qArgs...); err != nil {
+		c.lo.Error("error fetching dashboard charts", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard charts", nil)
 	}
 	return stats, nil
 }

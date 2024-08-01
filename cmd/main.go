@@ -21,6 +21,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
+	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
@@ -34,18 +35,14 @@ var (
 	ko = koanf.New(".")
 )
 
-const (
-	// ANSI escape colour codes.
-	colourRed   = "\x1b[31m"
-	colourGreen = "\x1b[32m"
-)
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
 	constant     constants
+	db           *sqlx.DB
+	rdb          *redis.Client
 	auth         *auth.Auth
 	fs           stuffbin.FileSystem
-	rdb          *redis.Client
 	i18n         *i18n.I18n
 	lo           *logf.Logger
 	media        *media.Manager
@@ -112,6 +109,9 @@ func main() {
 	// Listen to incoming messages and dispatch pending outgoing messages.
 	go conversation.ListenAndDispatch(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustInt("message.reader_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
+	// CleanMedia deletes media not linked to any model at regular intervals.
+	go media.CleanMedia(ctx)
+
 	// Init the app
 	var app = &App{
 		lo:           lo,
@@ -156,7 +156,7 @@ func main() {
 		// Wait for the interruption signal
 		<-ctx.Done()
 
-		log.Printf("%sShutting down the server. Please wait.\x1b[0m", colourRed)
+		log.Printf("%sShutting down the server. Please wait.\x1b[0m", "\x1b[31m")
 
 		time.Sleep(1 * time.Second)
 
@@ -165,7 +165,7 @@ func main() {
 		stop()
 	}()
 
-	log.Printf("%s🚀 server listening on %s %s\x1b[0m", colourGreen, ko.String("app.server.address"), ko.String("app.server.socket"))
+	log.Printf("%s🚀 server listening on %s %s\x1b[0m", "\x1b[32m", ko.String("app.server.address"), ko.String("app.server.socket"))
 
 	if err := g.ListenServeAndWaitGracefully(ko.String("app.server.address"), ko.String("server.socket"), s, shutdownCh); err != nil {
 		log.Fatalf("error starting frontend server: %v", err)

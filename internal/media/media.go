@@ -3,9 +3,11 @@
 package media
 
 import (
+	"context"
 	"embed"
 	"io"
 	"regexp"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -68,11 +70,12 @@ func New(opt Opts) (*Manager, error) {
 
 // queries holds the prepared SQL statements for media operations.
 type queries struct {
-	InsertMedia   *sqlx.Stmt `query:"insert-media"`
-	GetMedia      *sqlx.Stmt `query:"get-media"`
-	DeleteMedia   *sqlx.Stmt `query:"delete-media"`
-	Attach *sqlx.Stmt `query:"attach-to-model"`
-	GetModelMedia *sqlx.Stmt `query:"get-model-media"`
+	InsertMedia      *sqlx.Stmt `query:"insert-media"`
+	GetMedia         *sqlx.Stmt `query:"get-media"`
+	DeleteMedia      *sqlx.Stmt `query:"delete-media"`
+	Attach           *sqlx.Stmt `query:"attach-to-model"`
+	GetModelMedia    *sqlx.Stmt `query:"get-model-media"`
+	GetUnlinkedMedia *sqlx.Stmt `query:"get-unlinked-media"`
 }
 
 func (m *Manager) UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (models.Media, error) {
@@ -149,4 +152,39 @@ func (m *Manager) GetModelMedia(modelID int, model string) ([]models.Media, erro
 func (m *Manager) Delete(uuid string) {
 	m.queries.DeleteMedia.Exec(uuid)
 	m.Store.Delete(uuid)
+}
+
+// CleanMedia periodically deletes media entries that are not linked to any model.
+// This function should be run as a goroutine to avoid blocking. It uses a ticker to
+// trigger the deletion process every 12 hours.
+func (m *Manager) CleanMedia(ctx context.Context) {
+	ticker := time.NewTicker(12 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			m.deleteUnlinkedMedia()
+		}
+	}
+}
+
+// deleteUnlinkedMedia fetches media entries that are not linked to any model
+// and are older than 3 days, then deletes them.
+func (m *Manager) deleteUnlinkedMedia() {
+	var unlinkedMedia []int
+	if err := m.queries.GetUnlinkedMedia.Select(&unlinkedMedia, time.Now().AddDate(0, 0, -3)); err != nil {
+		m.lo.Error("error fetching unlinked media", "error", err)
+		return
+	}
+
+	m.lo.Info("found unlinked media to delete", "count", len(unlinkedMedia))
+
+	for _, id := range unlinkedMedia {
+		_, err := m.queries.DeleteMedia.Exec(id)
+		if err != nil {
+			m.lo.Error("error deleting unlinked media", "ID", id, "error", err)
+		}
+	}
 }

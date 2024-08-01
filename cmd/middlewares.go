@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -10,16 +9,13 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-func aauth(handler fastglue.FastRequestHandler, requiredPerms ...string) fastglue.FastRequestHandler {
+func perm(handler fastglue.FastRequestHandler, requiredPerms ...string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var app = r.Context.(*App)
 		user, err := app.auth.ValidateSession(r)
 		if err != nil {
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
-
-		fmt.Println("req ", requiredPerms)
-
 		// User is loggedin, Set user in the request context.
 		r.RequestCtx.SetUserValue("user", user)
 		return handler(r)

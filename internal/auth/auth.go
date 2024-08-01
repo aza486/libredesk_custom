@@ -46,12 +46,6 @@ type Auth struct {
 	lo       *logf.Logger
 }
 
-// Callbacks takes two callback functions required by simplesessions.
-type Callbacks struct {
-	SetCookie func(cookie *http.Cookie, w interface{}) error
-	GetCookie func(name string, r interface{}) (*http.Cookie, error)
-}
-
 // New inits a OIDC configuration
 func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 	provider, err := oidc.NewProvider(context.Background(), cfg.OIDC.ProviderURL)
@@ -74,7 +68,7 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 		maxAge = time.Hour * 12
 	}
 	sess := simplesessions.New(simplesessions.Options{
-		EnableAutoCreate: true,
+		EnableAutoCreate: false,
 		SessionIDLength:  64,
 		Cookie: simplesessions.CookieOptions{
 			IsHTTPOnly: true,
@@ -128,7 +122,7 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, code string) (string, OIDC
 
 // SaveSession creates and sets a session (post successful login/auth).
 func (o *Auth) SaveSession(user models.User, r *fastglue.Request) error {
-	sess, err := o.sess.NewSession(r.RequestCtx, r.RequestCtx)
+	sess, err := o.sess.NewSession(r, r)
 	if err != nil {
 		o.lo.Error("error creating login session", "error", err)
 		return err
@@ -149,7 +143,7 @@ func (o *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 
 // ValidateSession validates session and returns the user.
 func (o *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
-	sess, err := o.sess.Acquire(r.RequestCtx, r.RequestCtx, r.RequestCtx)
+	sess, err := o.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		return models.User{}, err
 	}

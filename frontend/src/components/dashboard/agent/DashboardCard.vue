@@ -1,8 +1,8 @@
 <template>
-    <div class="flex mt-5 gap-x-7">
-        <Card class="w-1/6" v-for="(value, key) in counts" :key="key">
+    <div class="flex gap-x-5">
+        <Card class="w-1/6 dashboard-card" v-for="(value, key) in counts" :key="key">
             <CardHeader>
-                <CardTitle class="text-4xl">
+                <CardTitle class="text-2xl">
                     {{ value }}
                 </CardTitle>
                 <CardDescription>
@@ -12,6 +12,7 @@
         </Card>
     </div>
 </template>
+
 <script setup>
 import {
     Card,

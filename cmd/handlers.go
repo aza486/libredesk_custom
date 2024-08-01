@@ -14,88 +14,92 @@ import (
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/login", handleLogin)
 	g.GET("/api/logout", handleLogout)
-	g.GET("/auth/oidc/login", handleOIDCLogin)
-	g.GET("/auth/oidc/finish", handleOIDCCallback)
+	g.GET("/api/oidc/login", handleOIDCLogin)
+	g.GET("/api/oidc/finish", handleOIDCCallback)
 
-	g.GET("/api/settings", aauth(handleGetSettings))
+	// Health check.
+	g.GET("/api/health", handleHealthCheck)
+
+	// Settings.
+	g.GET("/api/settings", perm(handleGetSettings))
 
 	// Conversation.
-	g.GET("/api/conversations/all", aauth(handleGetAllConversations, "conversation:all"))
-	g.GET("/api/conversations/team", aauth(handleGetTeamConversations, "conversation:team"))
-	g.GET("/api/conversations/assigned", aauth(handleGetAssignedConversations, "conversation:assigned"))
-	g.GET("/api/conversations/{uuid}", aauth(handleGetConversation))
-	g.GET("/api/conversations/{uuid}/participants", aauth(handleGetConversationParticipants))
-	g.PUT("/api/conversations/{uuid}/last-seen", aauth(handleUpdateAssigneeLastSeen))
-	g.PUT("/api/conversations/{uuid}/assignee/user", aauth(handleUpdateUserAssignee))
-	g.PUT("/api/conversations/{uuid}/assignee/team", aauth(handleUpdateTeamAssignee))
-	g.PUT("/api/conversations/{uuid}/priority", aauth(handleUpdatePriority, "conversation:edit_priority"))
-	g.PUT("/api/conversations/{uuid}/status", aauth(handleUpdateStatus, "conversation:edit_status"))
-	g.POST("/api/conversations/{uuid}/tags", aauth(handleAddConversationTags))
-	g.GET("/api/conversations/{uuid}/messages", aauth(handleGetMessages))
-	g.POST("/api/conversations/{uuid}/messages", aauth(handleSendMessage))
-	g.GET("/api/message/{uuid}/retry", aauth(handleRetryMessage))
-	g.GET("/api/message/{uuid}", aauth(handleGetMessage))
+	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversation:all"))
+	g.GET("/api/conversations/team", perm(handleGetTeamConversations, "conversation:team"))
+	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversation:assigned"))
+	g.GET("/api/conversations/{uuid}", perm(handleGetConversation))
+	g.GET("/api/conversations/{uuid}/participants", perm(handleGetConversationParticipants))
+	g.PUT("/api/conversations/{uuid}/last-seen", perm(handleUpdateAssigneeLastSeen))
+	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateUserAssignee))
+	g.PUT("/api/conversations/{uuid}/assignee/team", perm(handleUpdateTeamAssignee))
+	g.PUT("/api/conversations/{uuid}/priority", perm(handleUpdatePriority, "conversation:edit_priority"))
+	g.PUT("/api/conversations/{uuid}/status", perm(handleUpdateStatus, "conversation:edit_status"))
+	g.POST("/api/conversations/{uuid}/tags", perm(handleAddConversationTags))
+	g.GET("/api/conversations/{uuid}/messages", perm(handleGetMessages))
+	g.POST("/api/conversations/{uuid}/messages", perm(handleSendMessage))
+	g.GET("/api/message/{uuid}/retry", perm(handleRetryMessage))
+	g.GET("/api/message/{uuid}", perm(handleGetMessage))
 
 	// Media.
-	g.POST("/api/media", aauth(handleMediaUpload))
+	g.POST("/api/media", perm(handleMediaUpload))
 
 	// Canned response.
-	g.GET("/api/canned-responses", aauth(handleGetCannedResponses))
+	g.GET("/api/canned-responses", perm(handleGetCannedResponses))
 
 	// User.
-	g.GET("/api/users/me", aauth(handleGetCurrentUser, "users:manage"))
-	g.GET("/api/users", aauth(handleGetUsers, "users:manage"))
-	g.GET("/api/users/{id}", aauth(handleGetUser, "users:manage"))
-	g.PUT("/api/users/{id}", aauth(handleUpdateUser, "users:manage"))
-	g.POST("/api/users", aauth(handleCreateUser, "users:manage"))
+	g.GET("/api/users/me", perm(handleGetCurrentUser, "users:manage"))
+	g.GET("/api/users", perm(handleGetUsers, "users:manage"))
+	g.GET("/api/users/{id}", perm(handleGetUser, "users:manage"))
+	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users:manage"))
+	g.POST("/api/users", perm(handleCreateUser, "users:manage"))
 
 	// Team.
-	g.GET("/api/teams", aauth(handleGetTeams, "teams:manage"))
-	g.GET("/api/teams/{id}", aauth(handleGetTeam, "teams:manage"))
-	g.PUT("/api/teams/{id}", aauth(handleUpdateTeam, "teams:manage"))
-	g.POST("/api/teams", aauth(handleCreateTeam, "teams:manage"))
+	g.GET("/api/teams", perm(handleGetTeams, "teams:manage"))
+	g.GET("/api/teams/{id}", perm(handleGetTeam, "teams:manage"))
+	g.PUT("/api/teams/{id}", perm(handleUpdateTeam, "teams:manage"))
+	g.POST("/api/teams", perm(handleCreateTeam, "teams:manage"))
 
 	// Tags.
-	g.GET("/api/tags", aauth(handleGetTags))
+	g.GET("/api/tags", perm(handleGetTags))
 
 	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
 
-	// Websocket.
-	g.GET("/api/ws", aauth(func(r *fastglue.Request) error {
-		return handleWS(r, hub)
-	}))
-
 	// Automation rules.
-	g.GET("/api/automation/rules", aauth(handleGetAutomationRules, "automations:manage"))
-	g.GET("/api/automation/rules/{id}", aauth(handleGetAutomationRule, "automations:manage"))
-	g.POST("/api/automation/rules", aauth(handleCreateAutomationRule, "automations:manage"))
-	g.PUT("/api/automation/rules/{id}/toggle", aauth(handleToggleAutomationRule, "automations:manage"))
-	g.PUT("/api/automation/rules/{id}", aauth(handleUpdateAutomationRule, "automations:manage"))
-	g.DELETE("/api/automation/rules/{id}", aauth(handleDeleteAutomationRule, "automations:manage"))
+	g.GET("/api/automation/rules", perm(handleGetAutomationRules, "automations:manage"))
+	g.GET("/api/automation/rules/{id}", perm(handleGetAutomationRule, "automations:manage"))
+	g.POST("/api/automation/rules", perm(handleCreateAutomationRule, "automations:manage"))
+	g.PUT("/api/automation/rules/{id}/toggle", perm(handleToggleAutomationRule, "automations:manage"))
+	g.PUT("/api/automation/rules/{id}", perm(handleUpdateAutomationRule, "automations:manage"))
+	g.DELETE("/api/automation/rules/{id}", perm(handleDeleteAutomationRule, "automations:manage"))
 
 	// Inboxes.
-	g.GET("/api/inboxes", aauth(handleGetInboxes, "inboxes:manage"))
-	g.GET("/api/inboxes/{id}", aauth(handleGetInbox, "inboxes:manage"))
-	g.POST("/api/inboxes", aauth(handleCreateInbox, "inboxes:manage"))
-	g.PUT("/api/inboxes/{id}/toggle", aauth(handleToggleInbox, "inboxes:manage"))
-	g.PUT("/api/inboxes/{id}", aauth(handleUpdateInbox, "inboxes:manage"))
-	g.DELETE("/api/inboxes/{id}", aauth(handleDeleteInbox, "inboxes:manage"))
+	g.GET("/api/inboxes", perm(handleGetInboxes, "inboxes:manage"))
+	g.GET("/api/inboxes/{id}", perm(handleGetInbox, "inboxes:manage"))
+	g.POST("/api/inboxes", perm(handleCreateInbox, "inboxes:manage"))
+	g.PUT("/api/inboxes/{id}/toggle", perm(handleToggleInbox, "inboxes:manage"))
+	g.PUT("/api/inboxes/{id}", perm(handleUpdateInbox, "inboxes:manage"))
+	g.DELETE("/api/inboxes/{id}", perm(handleDeleteInbox, "inboxes:manage"))
 
 	// Roles.
-	g.GET("/api/roles", aauth(handleGetRoles, "roles:manage"))
-	g.GET("/api/roles/{id}", aauth(handleGetRole, "roles:manage"))
-	g.POST("/api/roles", aauth(handleCreateRole, "roles:manage"))
-	g.PUT("/api/roles/{id}", aauth(handleUpdateRole, "roles:manage"))
-	g.DELETE("/api/roles/{id}", aauth(handleDeleteRole, "roles:manage"))
+	g.GET("/api/roles", perm(handleGetRoles, "roles:manage"))
+	g.GET("/api/roles/{id}", perm(handleGetRole, "roles:manage"))
+	g.POST("/api/roles", perm(handleCreateRole, "roles:manage"))
+	g.PUT("/api/roles/{id}", perm(handleUpdateRole, "roles:manage"))
+	g.DELETE("/api/roles/{id}", perm(handleDeleteRole, "roles:manage"))
 
 	// Dashboard.
-	g.GET("/api/dashboard/me/counts", aauth(handleUserDashboardCounts))
-	g.GET("/api/dashboard/me/charts", aauth(handleUserDashboardCharts))
-	// g.GET("/api/dashboard/team/:teamName/counts", aauth(handleTeamCounts))
-	// g.GET("/api/dashboard/team/:teamName/charts", aauth(handleTeamCharts))
-	// g.GET("/api/dashboard/global/counts", aauth(handleGlobalCounts))
-	// g.GET("/api/dashboard/global/charts", aauth(handleGlobalCharts))
+	g.GET("/api/dashboard/global/counts", perm(handleDashboardCounts))
+	g.GET("/api/dashboard/global/charts", perm(handleDashboardCharts))
+	g.GET("/api/dashboard/team/{team_id}/counts", perm(handleTeamDashboardCounts))
+	g.GET("/api/dashboard/team/{team_id}/charts", perm(handleTeamDashboardCharts))
+	g.GET("/api/dashboard/me/counts", perm(handleUserDashboardCounts))
+	g.GET("/api/dashboard/me/charts", perm(handleUserDashboardCharts))
+
+	// Websocket.
+	g.GET("/api/ws", perm(func(r *fastglue.Request) error {
+		return handleWS(r, hub)
+	}))
 
 	// Frontend pages.
 	g.GET("/", sess(noAuthPage(serveIndexPage)))
@@ -157,4 +161,21 @@ func sendErrorEnvelope(r *fastglue.Request, err error) error {
 			"Error interface conversion failed", nil, fastglue.ErrorType(envelope.GeneralError))
 	}
 	return r.SendErrorEnvelope(e.Code, e.Error(), e.Data, fastglue.ErrorType(e.ErrorType))
+}
+
+// handleHealthCheck handles the health check endpoint by pinging the PostgreSQL and Redis.
+func handleHealthCheck(r *fastglue.Request) error {
+	var app = r.Context.(*App)
+
+	// Ping DB.
+	if err := app.db.Ping(); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "DB ping failed.", nil, envelope.GeneralError)
+	}
+
+	// Ping Redis.
+	if err := app.rdb.Ping(r.RequestCtx).Err(); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Redis ping failed.", nil, envelope.GeneralError)
+	}
+
+	return r.SendEnvelope(true)
 }

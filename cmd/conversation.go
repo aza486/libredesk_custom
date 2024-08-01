@@ -181,7 +181,7 @@ func handleUserDashboardCounts(r *fastglue.Request) error {
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
 
-	stats, err := app.conversation.GetConversationAssigneeStats(user.ID)
+	stats, err := app.conversation.GetDashboardCounts(user.ID, 0)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -189,8 +189,62 @@ func handleUserDashboardCounts(r *fastglue.Request) error {
 }
 
 func handleUserDashboardCharts(r *fastglue.Request) error {
-	var app = r.Context.(*App)
-	stats, err := app.conversation.GetNewConversationsStats()
+	var (
+		app  = r.Context.(*App)
+		user = r.RequestCtx.UserValue("user").(umodels.User)
+	)
+
+	stats, err := app.conversation.GetDashboardChartData(user.ID, 0)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(stats)
+}
+
+func handleDashboardCounts(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+
+	stats, err := app.conversation.GetDashboardCounts(0, 0)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(stats)
+}
+
+func handleDashboardCharts(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+
+	stats, err := app.conversation.GetDashboardChartData(0, 0)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(stats)
+}
+
+func handleTeamDashboardCounts(r *fastglue.Request) error {
+	var (
+		app    = r.Context.(*App)
+		teamID = r.RequestCtx.UserValue("team_id").(int)
+	)
+
+	stats, err := app.conversation.GetDashboardCounts(0, teamID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(stats)
+}
+
+func handleTeamDashboardCharts(r *fastglue.Request) error {
+	var (
+		app    = r.Context.(*App)
+		teamID = r.RequestCtx.UserValue("team_id").(int)
+	)
+
+	stats, err := app.conversation.GetDashboardChartData(0, teamID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

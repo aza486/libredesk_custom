@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 
 	"github.com/valyala/fasthttp"
@@ -14,9 +13,12 @@ func handleOIDCLogin(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	state, _ := stringutil.RandomAlNumString(30)
+	state, err := stringutil.RandomAlNumString(30)
+	if err != nil {
+		app.lo.Error("error generating random string", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Something went wrong, Please try again.", nil, envelope.GeneralError)
+	}
 	authURL := app.auth.LoginURL(state)
-	fmt.Println("url ", authURL)
 	return r.Redirect(authURL, fasthttp.StatusFound, nil, "")
 }
 

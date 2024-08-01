@@ -18,7 +18,7 @@ var upgrader = websocket.FastHTTPUpgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(ctx *fasthttp.RequestCtx) bool {
-		return true // Allow all origins in development
+		return true
 	},
 	Error: ErrHandler,
 }
@@ -34,7 +34,7 @@ func handleWS(r *fastglue.Request, hub *ws.Hub) error {
 			ID:   user.ID,
 			Hub:  hub,
 			Conn: conn,
-			Send: make(chan ws.Message, 10000),
+			Send: make(chan ws.Message, 1000),
 		}
 		hub.AddClient(&c)
 		go c.Listen()

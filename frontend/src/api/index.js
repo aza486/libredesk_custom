@@ -97,8 +97,12 @@ const uploadMedia = data =>
       'Content-Type': 'multipart/form-data',
     },
   });
-const getUserDashboardCounts = () => http.get('/api/dashboard/me/counts');
-const getUserDashoardCharts = () => http.get('/api/dashboard/me/charts');
+const getGlobalDashboardCounts = () => http.get('/api/dashboard/global/counts');
+const getGlobalDashboardCharts = () => http.get('/api/dashboard/global/charts');
+const getTeamDashboardCounts = (teamID) => http.get(`/api/dashboard/${teamID}/counts`);
+const getTeamDashboardCharts = (teamID) => http.get(`/api/dashboard/${teamID}/charts`);
+const getUserDashboardCounts = () => http.get(`/api/dashboard/me/counts`);
+const getUserDashboardCharts = () => http.get(`/api/dashboard/me/charts`);
 const getLanguage = lang => http.get(`/api/lang/${lang}`);
 const createUser = data => http.post('/api/users', data, {
   headers: {
@@ -150,11 +154,15 @@ export default {
   getAssignedConversations,
   getTeamConversations,
   getAllConversations,
+  getTeamDashboardCounts,
+  getTeamDashboardCharts,
+  getGlobalDashboardCharts,
+  getGlobalDashboardCounts,
   getUserDashboardCounts,
+  getUserDashboardCharts,
   getConversationParticipants,
   getMessage,
   getMessages,
-  getUserDashoardCharts,
   getCurrentUser,
   getCannedResponses,
   updateAssignee,

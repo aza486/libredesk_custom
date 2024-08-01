@@ -179,27 +179,52 @@ FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id
     JOIN inboxes inb on c.inbox_id = inb.id where assigned_user_id is NULL and assigned_team_id is not null;
 
--- name: get-assignee-stats
-SELECT
-    COUNT(*) AS total_assigned,
-    COUNT(CASE WHEN status NOT IN ('Resolved', 'Closed') THEN 1 END) AS unresolved_count,
-    COUNT(CASE WHEN first_reply_at IS NULL THEN 1 END) AS awaiting_response_count,
-    COUNT(CASE WHEN created_at::date = now()::date THEN 1 END) AS created_today_count
-FROM
-    conversations
-WHERE
-    assigned_user_id = $1;
+-- name: get-dashboard-counts
+SELECT json_build_object(
+    'resolved_count', COUNT(CASE WHEN status IN ('Resolved') THEN 1 END),
+    'unresolved_count', COUNT(CASE WHEN status NOT IN ('Resolved', 'Closed') THEN 1 END),
+    'awaiting_response_count', COUNT(CASE WHEN first_reply_at IS NULL THEN 1 END),
+    'total_count', COUNT(*)
+)
+FROM conversations
+WHERE 1=1 %s;
 
--- name: get-new-conversations-stats
-SELECT
-    created_at::date AS date,
-    COUNT(*) AS new_conversations
-FROM
-    conversations
-GROUP BY
-    date
-ORDER BY
-    date;
+-- name: get-dashboard-charts
+WITH new_conversations AS (
+    SELECT json_agg(row_to_json(agg)) AS data
+    FROM (
+        SELECT
+            TO_CHAR(created_at::date, 'YYYY-MM-DD') AS date,
+            COUNT(*) AS new_conversations
+        FROM
+            conversations
+        WHERE 1=1 %s
+        GROUP BY
+            date
+        ORDER BY
+            date
+    ) agg
+),
+status_summary AS (
+    SELECT json_agg(row_to_json(agg)) AS data
+    FROM (
+        SELECT 
+            status,
+            COUNT(*) FILTER (WHERE priority = 'Low') AS "Low",
+            COUNT(*) FILTER (WHERE priority = 'Medium') AS "Medium",
+            COUNT(*) FILTER (WHERE priority = 'High') AS "High"
+        FROM 
+            conversations
+        WHERE 1=1 %s
+        GROUP BY 
+            status
+    ) agg
+)
+SELECT json_build_object(
+    'new_conversations', (SELECT data FROM new_conversations),
+    'status_summary', (SELECT data FROM status_summary)
+) AS result;
+
 
 -- name: update-conversation-first-reply-at
 UPDATE conversations
