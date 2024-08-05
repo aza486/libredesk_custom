@@ -224,29 +224,3 @@ func handleDashboardCharts(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(stats)
 }
-
-func handleTeamDashboardCounts(r *fastglue.Request) error {
-	var (
-		app    = r.Context.(*App)
-		teamID = r.RequestCtx.UserValue("team_id").(int)
-	)
-
-	stats, err := app.conversation.GetDashboardCounts(0, teamID)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(stats)
-}
-
-func handleTeamDashboardCharts(r *fastglue.Request) error {
-	var (
-		app    = r.Context.(*App)
-		teamID = r.RequestCtx.UserValue("team_id").(int)
-	)
-
-	stats, err := app.conversation.GetDashboardChartData(0, teamID)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(stats)
-}

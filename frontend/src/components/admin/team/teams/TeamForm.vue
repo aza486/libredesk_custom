@@ -6,7 +6,7 @@
         <FormControl>
           <Input type="text" placeholder="Name" v-bind="componentField" />
         </FormControl>
-        <FormDescription> Select an unique name </FormDescription>
+        <FormDescription>Select an unique name </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

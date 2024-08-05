@@ -3,6 +3,7 @@ package stringutil
 
 import (
 	"crypto/rand"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -22,6 +23,13 @@ func Trim(content string, maxLen int) string {
 		plain = plain[:maxLen] + "..."
 	}
 	return plain
+}
+
+// AppendSuffixToFilename adds a string suffix to the filename while keeping the file extension.
+func AppendSuffixToFilename(filename, suffix string) string {
+	ext := filepath.Ext(filename)
+	name := strings.TrimSuffix(filename, ext)
+	return fmt.Sprintf("%s_%s%s", name, suffix, ext)
 }
 
 // SanitizeFilename sanitizes the provided filename.

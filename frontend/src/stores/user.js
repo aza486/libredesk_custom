@@ -7,8 +7,6 @@ export const useUserStore = defineStore('user', () => {
     const userFirstName = ref('')
     const userLastName = ref('')
 
-
-
     const setAvatar = (v) => {
         userAvatar.value = v
     }
@@ -20,6 +18,12 @@ export const useUserStore = defineStore('user', () => {
     const setLastName = (v) => {
         userLastName.value = v
     }
+
+    const getInitials = computed(() => {
+        const firstInitial = userFirstName.value.charAt(0).toUpperCase();
+        const lastInitial = userLastName.value.charAt(0).toUpperCase();
+        return firstInitial + lastInitial;
+    });
 
     const getFullName = computed(() => {
         return userFirstName.value + " " + userLastName.value
@@ -38,5 +42,5 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    return { userFirstName, userLastName, userAvatar, getFullName, setAvatar, setFirstName, setLastName, getCurrentUser }
+    return { userFirstName, userLastName, userAvatar, getFullName, getInitials, setAvatar, setFirstName, setLastName, getCurrentUser }
 })

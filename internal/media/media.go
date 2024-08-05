@@ -130,6 +130,10 @@ func (m *Manager) GetBlob(name string) ([]byte, error) {
 	return m.Store.GetBlob(name)
 }
 
+func (m *Manager) GetURL(name string) string {
+	return m.Store.GetURL(name)
+}
+
 func (m *Manager) Attach(id int, model string, modelID int) error {
 	if _, err := m.queries.Attach.Exec(id, model, modelID); err != nil {
 		m.lo.Error("error attaching media to model", "model", model, "model_id", modelID, "error", err)
@@ -148,10 +152,31 @@ func (m *Manager) GetModelMedia(modelID int, model string) ([]models.Media, erro
 	return media, nil
 }
 
-// Delete deletes media from db and store.
-func (m *Manager) Delete(uuid string) {
-	m.queries.DeleteMedia.Exec(uuid)
-	m.Store.Delete(uuid)
+// Delete deletes media from store.
+func (m *Manager) Delete(name string) error {
+	if err := m.Store.Delete(name); err != nil {
+		m.lo.Error("error deleting media from store", "error", err)
+		return err
+	}
+	return nil
+}
+
+// DeleteMedia deletes media record from DB.
+func (m *Manager) DeleteMedia(name string) error {
+	if _, err := m.queries.DeleteMedia.Exec(name); err != nil {
+		m.lo.Error("error deleting media from db", "error", err)
+		return err
+	}
+	return nil
+}
+
+// DeleteMediaAndStore deletes media from both the database and the store.
+func (m *Manager) DeleteMediaAndStore(name string) error {
+	if err := m.DeleteMedia(name); err != nil {
+		return err
+	}
+	m.Delete(name)
+	return nil
 }
 
 // CleanMedia periodically deletes media entries that are not linked to any model.

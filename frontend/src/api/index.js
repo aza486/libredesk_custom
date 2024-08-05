@@ -58,6 +58,12 @@ const getUser = id => http.get(`/api/users/${id}`);
 const getTeam = id => http.get(`/api/teams/${id}`);
 const getTeams = () => http.get('/api/teams');
 const getUsers = () => http.get('/api/users');
+const updateCurrentUser = (data) => http.put('/api/users/me', data, {
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
+const deleteUserAvatar = () => http.delete('/api/users/me/avatar')
 const getCurrentUser = () => http.get('/api/users/me');
 const getTags = () => http.get('/api/tags');
 const upsertTags = (uuid, data) =>
@@ -99,8 +105,6 @@ const uploadMedia = data =>
   });
 const getGlobalDashboardCounts = () => http.get('/api/dashboard/global/counts');
 const getGlobalDashboardCharts = () => http.get('/api/dashboard/global/charts');
-const getTeamDashboardCounts = (teamID) => http.get(`/api/dashboard/${teamID}/counts`);
-const getTeamDashboardCharts = (teamID) => http.get(`/api/dashboard/${teamID}/charts`);
 const getUserDashboardCounts = () => http.get(`/api/dashboard/me/counts`);
 const getUserDashboardCharts = () => http.get(`/api/dashboard/me/charts`);
 const getLanguage = lang => http.get(`/api/lang/${lang}`);
@@ -154,8 +158,6 @@ export default {
   getAssignedConversations,
   getTeamConversations,
   getAllConversations,
-  getTeamDashboardCounts,
-  getTeamDashboardCharts,
   getGlobalDashboardCharts,
   getGlobalDashboardCounts,
   getUserDashboardCounts,
@@ -165,6 +167,7 @@ export default {
   getMessages,
   getCurrentUser,
   getCannedResponses,
+  updateCurrentUser,
   updateAssignee,
   updateStatus,
   updatePriority,
@@ -185,4 +188,5 @@ export default {
   toggleInbox,
   createTeam,
   updateTeam,
+  deleteUserAvatar,
 };

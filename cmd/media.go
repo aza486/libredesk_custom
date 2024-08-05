@@ -21,10 +21,6 @@ const (
 	thumbnailSize = 150
 )
 
-var (
-	imageExts = []string{"gif", "png", "jpg", "jpeg"}
-)
-
 func handleMediaUpload(r *fastglue.Request) error {
 	var (
 		app     = r.Context.(*App)
@@ -78,13 +74,13 @@ func handleMediaUpload(r *fastglue.Request) error {
 	thumbName := thumbPrefix + srcFileName
 	defer func() {
 		if cleanUp {
-			app.media.Delete(srcFileName)
-			app.media.Delete(thumbName)
+			app.media.DeleteMediaAndStore(srcFileName)
+			app.media.DeleteMediaAndStore(thumbName)
 		}
 	}()
 
 	// Generate and upload thumbnail if it's an image.
-	if slices.Contains(imageExts, srcExt) {
+	if slices.Contains(image.Exts, srcExt) {
 		file.Seek(0, 0)
 		thumbFile, err := image.CreateThumb(thumbnailSize, file)
 		if err != nil {

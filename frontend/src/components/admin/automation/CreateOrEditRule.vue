@@ -2,7 +2,7 @@
     <div class="mb-5">
         <CustomBreadcrumb :links="breadcrumbLinks" />
     </div>
-    <span class="admin-title">{{ formTitle }}</span>
+    <span class="title">{{ formTitle }}</span>
     <div class="space-y-5">
         <div class="space-y-5">
             <div class="grid w-full max-w-sm items-center gap-1.5">

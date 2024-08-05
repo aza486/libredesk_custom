@@ -14,7 +14,7 @@
                 overlay
                 text-wrap
                 ">
-                <p class="font-bold text-xs opacity-0 group-hover:opacity-100">{{ getAttachmentName(attachment.filename) }}</p>
+                <p class="font-bold text-xs opacity-0 group-hover:opacity-100">{{ getAttachmentName(attachment.name) }}</p>
                 <p class="text-xs opacity-0 group-hover:opacity-100">{{ formatBytes(attachment.size) }}</p>
             </div>
         </div>

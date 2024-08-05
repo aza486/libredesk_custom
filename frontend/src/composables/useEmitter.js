@@ -1,4 +1,3 @@
-// useEmitter.js
 import { getCurrentInstance } from 'vue';
 
 export function useEmitter () {

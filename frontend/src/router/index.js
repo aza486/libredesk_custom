@@ -4,12 +4,13 @@ import ConversationsView from '../views/ConversationView.vue'
 import UserLoginView from '../views/UserLoginView.vue'
 import AccountView from '@/views/AccountView.vue'
 import AdminView from '@/views/AdminView.vue'
-import Inbox from '@/components/admin/inbox/Inbox.vue'
-import Team from '@/components/admin/team/TeamSection.vue'
+import Inbox from '@/components/admin/inbox/InboxPage.vue'
+import Team from '@/components/admin/team/TeamPage.vue'
 import Teams from '@/components/admin/team/teams/TeamsCard.vue'
 import Users from '@/components/admin/team/users/UsersCard.vue'
-import Automation from '@/components/admin/automation/Automation.vue'
-import NotificationTab from '@/components/admin/notification/NotificationTab.vue'
+import Automation from '@/components/admin/automation/AutomationPage.vue'
+import Notifications from '@/components/admin/notification/NotificationPage.vue'
+import Uploads from '@/components/admin/uploads/UploadsPage.vue'
 
 const routes = [
   {
@@ -42,114 +43,97 @@ const routes = [
     }
   },
   {
-    path: '/admin/inboxes',
+    path: '/admin',
     name: 'admin',
     component: AdminView,
     children: [
       {
-        path: '',
+        path: 'inboxes',
         component: Inbox
       },
       {
-        path: 'new',
+        path: 'inboxes/new',
         component: () => import('@/components/admin/inbox/NewInbox.vue')
       },
       {
-        path: ':id/edit',
+        path: 'inboxes/:id/edit',
         props: true,
         component: () => import('@/components/admin/inbox/EditInbox.vue')
-      }
-    ]
-  },
-  {
-    path: '/admin/teams',
-    name: 'team',
-    component: AdminView,
-    children: [
+      },
       {
-        path: '',
+        path: 'teams',
         component: Team
       },
       {
-        path: 'users',
+        path: 'teams/users',
         component: Users
       },
       {
-        path: 'users/new',
+        path: 'teams/users/new',
         component: () => import('@/components/admin/team/users/AddUserForm.vue')
       },
       {
-        path: 'teams/new',
-        component: () => import('@/components/admin/team/teams/AddTeamForm.vue')
-      },
-      {
-        path: 'users/:id/edit',
+        path: 'teams/users/:id/edit',
         props: true,
         component: () => import('@/components/admin/team/users/EditUserForm.vue')
       },
       {
-        path: 'teams',
+        path: 'teams/teams',
         component: Teams
       },
       {
-        path: 'teams/:id/edit',
+        path: 'teams/teams/new',
+        component: () => import('@/components/admin/team/teams/AddTeamForm.vue')
+      },
+      {
+        path: 'teams/teams/:id/edit',
         props: true,
         component: () => import('@/components/admin/team/teams/EditTeamForm.vue')
       },
       {
-        path: 'roles',
+        path: 'teams/roles',
         component: () => import('@/components/admin/team/roles/RolesCard.vue')
       },
       {
-        path: 'roles/new',
+        path: 'teams/roles/new',
         component: () => import('@/components/admin/team/roles/NewRole.vue')
       },
       {
-        path: 'roles/:id/edit',
+        path: 'teams/roles/:id/edit',
         props: true,
         component: () => import('@/components/admin/team/roles/EditRole.vue')
       },
-    ]
-  },
-  {
-    path: '/admin/automations',
-    name: 'automation',
-    component: AdminView,
-    children: [
       {
-        path: '',
+        path: 'automations',
         component: Automation
       },
       {
-        path: ':id/edit',
+        path: 'automations/new',
         props: true,
         component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
       },
       {
-        path: 'new',
-        props: true,
-        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
-      },
-    ]
-  },
-  {
-    path: '/admin/notifications',
-    name: 'notifications',
-    component: AdminView,
-    children: [
-      {
-        path: '',
-        component: NotificationTab
-      },
-      {
-        path: ':id/edit',
+        path: 'automations/:id/edit',
         props: true,
         component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
       },
       {
-        path: 'new',
+        path: 'notifications',
+        component: Notifications
+      },
+      {
+        path: 'notifications/new',
         props: true,
         component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
+      },
+      {
+        path: 'notifications/:id/edit',
+        props: true,
+        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
+      },
+      {
+        path: 'uploads',
+        component: Uploads
       },
     ]
   },
@@ -157,7 +141,7 @@ const routes = [
   {
     path: '/:pathMatch(.*)*',
     redirect: (to) => {
-      console.log(`Redirecting to dashboard from: ${to.fullPath}`)
+      alert(`Redirecting to dashboard from: ${to.fullPath}`)
       return '/dashboard'
     }
   }

@@ -2,7 +2,7 @@
     <div class="flex flex-col box border p-5 space-y-2">
         <div class="flex justify-between">
             <div>
-                <span class="admin-subtitle flex space-x-3 items-center">
+                <span class="sub-title flex space-x-3 items-center">
                     <div class="text-base">
                         {{ rule.name }}
                     </div>

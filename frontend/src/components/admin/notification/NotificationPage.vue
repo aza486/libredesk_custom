@@ -1,9 +1,6 @@
 <template>
     <div class="flex justify-between mb-5">
-        <div>
-            <span class="admin-title">Notifications</span>
-            <p class="text-muted-foreground text-sm">Manage notifications.</p>
-        </div>
+        <PageHeader title="Notifications" description="Manage notifications for agents" />
     </div>
     <div>
         <List :notifications="notifications" />
@@ -12,6 +9,8 @@
 
 <script setup>
 import List from './NotificationList.vue'
+import PageHeader from '../common/PageHeader.vue';
+
 const notifications = [
     {
         name: "New conversation created"

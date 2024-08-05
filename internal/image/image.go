@@ -9,6 +9,10 @@ import (
 	"github.com/disintegration/imaging"
 )
 
+var (
+	Exts = []string{"gif", "png", "jpg", "jpeg"}
+)
+
 // GetDimensions returns the width and height of the image in the provided file.
 // It returns an error if the image cannot be decoded.
 func GetDimensions(r io.Reader) (int, int, error) {

@@ -1,10 +1,7 @@
 <template>
   <div>
     <div class="flex justify-between mb-5">
-      <div>
-        <span class="admin-title">Inboxes</span>
-        <p class="text-muted-foreground text-sm">Create and manage inboxes.</p>
-      </div>
+      <PageHeader title="Inboxes" description="Manage your inboxes"/>
       <div class="flex justify-end mb-4">
         <Button @click="navigateToAddInbox" size="sm"> New inbox </Button>
       </div>
@@ -27,6 +24,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
 import DataTable from '@/components/admin/DataTable.vue'
 import { useRouter } from 'vue-router'
+import PageHeader from '../common/PageHeader.vue'
 import api from '@/api'
 
 const { toast } = useToast()

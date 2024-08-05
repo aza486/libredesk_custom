@@ -161,7 +161,6 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	mgr, err := user.New(i18n, user.Opts{
 		DB:         DB,
 		Lo:         initLogger("user_manager"),
-		BcryptCost: ko.MustInt("app.user.password_bcypt_cost"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing user manager: %v", err)
@@ -264,8 +263,8 @@ func initMedia(db *sqlx.DB) *media.Manager {
 		}
 	case "localfs":
 		store, err = localfs.New(localfs.Opts{
-			UploadPath: filepath.Clean(ko.String("localfs.upload_path")),
-			UploadURI:  filepath.Clean(ko.String("localfs.upload_uri")),
+			UploadPath: filepath.Clean(ko.String("app.localfs.upload_path")),
+			UploadURI:  filepath.Clean(ko.String("app.localfs.upload_uri")),
 			RootURL:    ko.String("app.root_url"),
 		})
 		if err != nil {

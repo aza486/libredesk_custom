@@ -17,6 +17,7 @@
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
     "@heroicons/vue": "^2.1.1",
+    "@internationalized/date": "^3.5.5",
     "@radix-icons/vue": "^1.0.0",
     "@tailwindcss/typography": "^0.5.10",
     "@tanstack/vue-table": "^8.19.2",
@@ -41,6 +42,7 @@
     "date-fns": "^3.6.0",
     "install": "^0.13.0",
     "lucide-vue-next": "^0.378.0",
+    "mitt": "^3.0.1",
     "npm": "^10.4.0",
     "npx": "^10.2.2",
     "pinia": "^2.1.7",
@@ -56,6 +58,7 @@
     "vue-draggable-resizable": "^3.0.0",
     "vue-i18n": "9",
     "vue-letter": "^0.2.0",
+    "vue-picture-cropper": "^0.7.0",
     "vue-router": "^4.2.5",
     "zod": "^3.23.8"
   },

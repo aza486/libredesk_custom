@@ -1,6 +1,6 @@
 <template>
     <div>
-        <div class="flex flex-col box border p-5 mb-5" v-for="notification in notifications" :key="notification">
+        <div class="flex flex-col box border p-5 mb-5 rounded-lg" v-for="notification in notifications" :key="notification">
             <div class="flex items-center space-x-2">
                 <Switch id="airplane-mode" />
                 <Label for="airplane-mode">{{ notification.name }}</Label>

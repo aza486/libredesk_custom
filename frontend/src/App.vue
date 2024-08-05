@@ -46,25 +46,25 @@ const isCollapsed = ref(false);
 const navLinks = ref([
   {
     title: t('navbar.dashboard'),
-    component: 'dashboard',
+    to: '/dashboard',
     label: '',
     icon: 'lucide:layout-dashboard',
   },
   {
     title: t('navbar.conversations'),
-    component: 'conversations',
+    to: '/conversations',
     label: '',
     icon: 'lucide:message-circle-more',
   },
   {
     title: t('navbar.account'),
-    component: 'account',
+    to: '/account/profile',
     label: '',
     icon: 'lucide:circle-user-round',
   },
   {
     title: t('navbar.admin'),
-    component: 'admin',
+    to: '/admin/inboxes',
     label: '',
     icon: 'lucide:settings',
   },

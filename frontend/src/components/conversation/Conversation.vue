@@ -3,6 +3,9 @@
     <!-- Header -->
     <div class="px-4 border-b h-[47px] flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
+        <div class="font-bold">
+          {{ conversationStore.getContactFullName(conversationStore.conversation.data.uuid) }}
+        </div>
         <Tooltip>
           <TooltipTrigger>
             <Badge :variant="getBadgeVariant">

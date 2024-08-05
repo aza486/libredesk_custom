@@ -32,8 +32,18 @@ VALUES($1, $2, $3, $4, $5, $6, $7);
 
 -- name: update-user
 UPDATE users
-set first_name = $2, last_name = $3, email = $4, team_id = $5, roles = $6, updated_at = now()
-where id = $1
+SET first_name = COALESCE($2, first_name),
+    last_name = COALESCE($3, last_name),
+    email = COALESCE($4, email),
+    team_id = COALESCE($5, team_id),
+    roles = COALESCE($6, roles),
+    avatar_url = COALESCE($7, avatar_url),
+    updated_at = now()
+WHERE id = $1
+
+-- name: update-avatar
+UPDATE users
+SET avatar_url = $2 WHERE id = $1;
 
 -- name: get-permissions
 SELECT unnest(r.permissions)

@@ -47,11 +47,13 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/canned-responses", perm(handleGetCannedResponses))
 
 	// User.
-	g.GET("/api/users/me", perm(handleGetCurrentUser, "users:manage"))
+	g.GET("/api/users/me", perm(handleGetCurrentUser))
 	g.GET("/api/users", perm(handleGetUsers, "users:manage"))
 	g.GET("/api/users/{id}", perm(handleGetUser, "users:manage"))
-	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users:manage"))
 	g.POST("/api/users", perm(handleCreateUser, "users:manage"))
+	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users:manage"))
+	g.PUT("/api/users/me", perm(handleUpdateCurrentUser))
+	g.DELETE("/api/users/me/avatar", perm(handleDeleteAvatar))
 
 	// Team.
 	g.GET("/api/teams", perm(handleGetTeams, "teams:manage"))
@@ -91,8 +93,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Dashboard.
 	g.GET("/api/dashboard/global/counts", perm(handleDashboardCounts))
 	g.GET("/api/dashboard/global/charts", perm(handleDashboardCharts))
-	g.GET("/api/dashboard/team/{team_id}/counts", perm(handleTeamDashboardCounts))
-	g.GET("/api/dashboard/team/{team_id}/charts", perm(handleTeamDashboardCharts))
 	g.GET("/api/dashboard/me/counts", perm(handleUserDashboardCounts))
 	g.GET("/api/dashboard/me/charts", perm(handleUserDashboardCharts))
 

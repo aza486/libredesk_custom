@@ -1,16 +1,9 @@
 <script setup>
-import Admin from '@/components/admin/Admin.vue'
-
-defineProps({
-  page: {
-    type: String,
-    default: 'inboxes'
-  }
-})
+import Admin from '@/components/admin/AdminPage.vue'
 </script>
 
 <template>
-  <Admin class="h-screen overflow-auto">
+  <Admin class="page-content">
     <router-view></router-view>
   </Admin>
 </template>
