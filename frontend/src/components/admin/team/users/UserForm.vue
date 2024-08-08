@@ -62,7 +62,8 @@
               </TagsInputItem>
             </div>
 
-            <ComboboxRoot v-model="roles" v-model:open="open" v-model:searchTerm="searchTerm" class="w-full" v-bind="field">
+            <ComboboxRoot v-model="roles" v-model:open="open" v-model:searchTerm="searchTerm" class="w-full"
+              v-bind="field">
               <ComboboxAnchor as-child>
                 <ComboboxInput placeholder="Select role" as-child>
                   <TagsInputInput class="w-full px-3" :class="roles.length > 0 ? 'mt-2' : ''" @keydown.enter.prevent />
@@ -70,7 +71,8 @@
               </ComboboxAnchor>
 
               <ComboboxPortal>
-                <CommandList position="popper" class="w-[--radix-popper-anchor-width] rounded-md mt-2 border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2">
+                <CommandList position="popper"
+                  class="w-[--radix-popper-anchor-width] rounded-md mt-2 border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2">
                   <CommandEmpty />
                   <CommandGroup>
                     <CommandItem v-for="user in filteredUsers" :key="user.value" :value="user.label" @select.prevent="(ev) => {
@@ -137,7 +139,7 @@ import api from '@/api'
 
 const teams = ref([])
 
-const frameworks = [
+const users = [
   { value: 'Agent', label: 'Agent' },
   { value: 'Admin', label: 'Admin' },
 ]
@@ -146,7 +148,7 @@ const roles = ref([])
 const open = ref(false)
 const searchTerm = ref('')
 
-const filteredUsers = computed(() => frameworks.filter(i => !roles.value.includes(i.label)))
+const filteredUsers = computed(() => users.filter(i => !roles.value.includes(i.label)))
 
 const props = defineProps({
   initialValues: {

@@ -20,8 +20,23 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Health check.
 	g.GET("/api/health", handleHealthCheck)
 
+	// Uploaded files on localfs.
+	if ko.String("app.file_store") == "localfs" {
+		g.GET("/uploads/{all:*}", handleServeUploadedFiles)
+	}
+
 	// Settings.
-	g.GET("/api/settings", perm(handleGetSettings))
+	g.GET("/api/settings/general", handleGetGeneralSettings)
+	g.PUT("/api/settings/general", perm(handleUpdateGeneralSettings))
+	g.GET("/api/settings/upload", perm(handleGetUploadSettings))
+	g.PUT("/api/settings/upload", perm(handleUpdateUploadSettings))
+
+	// OIDC.
+	g.GET("/api/oidc", handleGetAllOIDC)
+	g.GET("/api/oidc/{id}", perm(handleGetOIDC))
+	g.POST("/api/oidc", perm(handleCreateOIDC))
+	g.PUT("/api/oidc/{id}", perm(handleUpdateOIDC))
+	g.DELETE("/api/oidc/{id}", perm(handleDeleteOIDC))
 
 	// Conversation.
 	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversation:all"))
@@ -96,6 +111,12 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/dashboard/me/counts", perm(handleUserDashboardCounts))
 	g.GET("/api/dashboard/me/charts", perm(handleUserDashboardCharts))
 
+	// Templates.
+	g.GET("/api/templates", perm(handleGetTemplates))
+	g.GET("/api/templates/{id}", perm(handleGetTemplate))
+	g.POST("/api/templates", perm(handleCreateTemplate))
+	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate))
+
 	// Websocket.
 	g.GET("/api/ws", perm(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
@@ -108,6 +129,13 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/conversations/{all:*}", sess(authPage(serveIndexPage)))
 	g.GET("/account/profile", sess(authPage(serveIndexPage)))
 	g.GET("/assets/{all:*}", serveStaticFiles)
+}
+
+// handleServeUploadedFiles serves uploaded files.
+func handleServeUploadedFiles(r *fastglue.Request) error {
+	filePath := string(r.RequestCtx.URI().Path())
+	fasthttp.ServeFile(r.RequestCtx, "./"+filePath)
+	return nil
 }
 
 // serveIndexPage serves app's default index page.

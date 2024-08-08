@@ -8,7 +8,7 @@ type Notifier interface {
 
 // TemplateRenderer defines the interface for rendering templates.
 type TemplateRenderer interface {
-	RenderDefault(data interface{}) (subject, content string, err error)
+	RenderDefault(data interface{}) (content string, err error)
 }
 
 // UserEmailFetcher defines the interface for fetching user email addresses.

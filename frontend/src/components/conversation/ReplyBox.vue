@@ -28,14 +28,15 @@
             <Editor @keydown="handleKeydown" @editorText="handleEditorText" :placeholder="editorPlaceholder"
                 :isBold="isBold" :clearContent="clearContent" :isItalic="isItalic" @updateBold="updateBold"
                 @updateItalic="updateItalic" @contentCleared="handleContentCleared" @contentSet="clearContentToSet"
-                :messageType="messageType" :contentToSet="contentToSet"
+                @editorReady="onEditorReady" :messageType="messageType" :contentToSet="contentToSet"
                 :cannedResponses="cannedResponsesStore.responses" />
 
             <!-- Attachments preview -->
             <AttachmentsPreview :attachments="uploadedFiles" :onDelete="handleOnFileDelete"></AttachmentsPreview>
 
             <!-- Bottom menu bar -->
-            <ReplyBoxBottomMenuBar :handleFileUpload="handleFileUpload" :isBold="isBold" :isItalic="isItalic"
+            <ReplyBoxBottomMenuBar :handleFileUpload="handleFileUpload"
+                :handleInlineImageUpload="handleInlineImageUpload" :isBold="isBold" :isItalic="isItalic"
                 @toggleBold="toggleBold" @toggleItalic="toggleItalic" :hasText="hasText" :handleSend="handleSend">
             </ReplyBoxBottomMenuBar>
         </div>
@@ -71,6 +72,7 @@ const uploadedFiles = ref([])
 const messageType = ref("reply")
 const selectedResponseIndex = ref(-1)
 const responsesList = ref(null)
+let editorInstance = null
 
 onMounted(() => {
     cannedResponsesStore.fetchAll()
@@ -125,12 +127,32 @@ const hasText = computed(() => {
     return editorText.value.length > 0 ? true : false
 });
 
+const onEditorReady = (editor) => {
+    editorInstance = editor
+};
+
 const handleFileUpload = event => {
     for (const file of event.target.files) {
         api.uploadMedia({
             files: file,
         }).then((resp) => {
             uploadedFiles.value.push(resp.data.data)
+        }).catch((err) => {
+            console.error(err)
+        })
+    }
+};
+
+const handleInlineImageUpload = event => {
+    for (const file of event.target.files) {
+        api.uploadMedia({
+            files: file,
+        }).then((resp) => {
+            editorInstance.commands.setImage({
+                src: resp.data.data.url,
+                alt: resp.data.data.filename,
+                title: resp.data.data.filename,
+            })
         }).catch((err) => {
             console.error(err)
         })

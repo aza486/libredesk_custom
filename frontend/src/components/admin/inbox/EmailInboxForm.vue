@@ -90,9 +90,8 @@ const form = useForm({
 watch(
   () => props.initialValues,
   (newValues) => {
-    console.log('new a ls ', newValues)
     form.setValues(newValues)
   },
-  { immediate: true }
+  { deep: true }
 )
 </script>

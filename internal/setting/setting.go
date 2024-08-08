@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/setting/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
+	"github.com/zerodha/logf"
 )
 
 var (
@@ -18,17 +20,21 @@ var (
 
 // Manager handles setting-related operations.
 type Manager struct {
-	q queries
+	q  queries
+	lo *logf.Logger
 }
 
 // Opts contains options for initializing the Manager.
 type Opts struct {
 	DB *sqlx.DB
+	Lo *logf.Logger
 }
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetAll *sqlx.Stmt `query:"get-all"`
+	GetAll      *sqlx.Stmt `query:"get-all"`
+	Update      *sqlx.Stmt `query:"update"`
+	GetByPrefix *sqlx.Stmt `query:"get-by-prefix"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -40,7 +46,8 @@ func New(opts Opts) (*Manager, error) {
 	}
 
 	return &Manager{
-		q: q,
+		q:  q,
+		lo: opts.Lo,
 	}, nil
 }
 
@@ -67,6 +74,34 @@ func (m *Manager) GetAllJSON() (types.JSONText, error) {
 	var b types.JSONText
 
 	if err := m.q.GetAll.Get(&b); err != nil {
+		return b, err
+	}
+
+	return b, nil
+}
+
+// Update updates settings.
+func (m *Manager) Update(s interface{}) error {
+	// Marshal settings.
+	b, err := json.Marshal(s)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error update settings", nil)
+	}
+
+	// Update the settings in the DB.
+	if _, err := m.q.Update.Exec(b); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error update settings", nil)
+	}
+
+	return nil
+}
+
+// GetByPrefix retrieves settings by prefix as JSON.
+func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
+	var b types.JSONText
+
+	if err := m.q.GetByPrefix.Get(&b, prefix+"%"); err != nil {
+		m.lo.Error("error fetching settings", "error", err)
 		return b, err
 	}
 

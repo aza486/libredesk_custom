@@ -27,7 +27,6 @@ const submitForm = (values) => {
 
 const updateTeam = async (payload) => {
   try {
-    console.log('form payload ', payload)
     await api.updateTeam(team.value.id, payload)
     router.push('/admin/teams/teams')
   } catch (error) {

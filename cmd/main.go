@@ -15,10 +15,12 @@ import (
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/media"
+	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
+	"github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
@@ -35,7 +37,6 @@ var (
 	ko = koanf.New(".")
 )
 
-
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
 	constant     constants
@@ -45,6 +46,7 @@ type App struct {
 	fs           stuffbin.FileSystem
 	i18n         *i18n.I18n
 	lo           *logf.Logger
+	oidc         *oidc.Manager
 	media        *media.Manager
 	setting      *setting.Manager
 	role         *role.Manager
@@ -53,6 +55,7 @@ type App struct {
 	team         *team.Manager
 	tag          *tag.Manager
 	inbox        *inbox.Manager
+	tmpl         *template.Manager
 	cannedResp   *cannedresp.Manager
 	conversation *conversation.Manager
 	automation   *automation.Engine
@@ -125,8 +128,10 @@ func main() {
 		inbox:        inbox,
 		user:         user,
 		team:         team,
+		tmpl:         template,
 		conversation: conversation,
 		automation:   automation,
+		oidc:         initOIDC(db),
 		role:         initRole(db),
 		constant:     initConstants(),
 		tag:          initTags(db),

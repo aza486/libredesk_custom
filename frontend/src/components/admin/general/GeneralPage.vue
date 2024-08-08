@@ -1,0 +1,32 @@
+<template>
+  <div>
+    <PageHeader title="General" description="General app settings" />
+  </div>
+  <GeneralSettingForm :submitForm="submitForm" :initial-values="initialValues" submitLabel="Save" />
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import GeneralSettingForm from './GeneralSettingForm.vue'
+import PageHeader from '../common/PageHeader.vue'
+import api from '@/api';
+
+const initialValues = ref({})
+
+onMounted(async () => {
+  const response = await api.getSettings('general');
+  const data = response.data.data;
+  initialValues.value.site_name = data['app.site_name'];
+  initialValues.value.lang = data['app.lang'];
+  initialValues.value.root_url = data['app.root_url'];
+  initialValues.value.favicon_url = data['app.favicon_url'];
+});
+
+const submitForm = (values) => {
+  // Prepend keys with `app.`
+  const updatedValues = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [`app.${key}`, value])
+  );
+  api.updateSettings('general', updatedValues);
+}
+</script>

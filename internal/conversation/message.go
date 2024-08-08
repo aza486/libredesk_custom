@@ -94,7 +94,7 @@ func (m *Manager) ListenAndDispatch(ctx context.Context, dispatchConcurrency, re
 				switch inb.Channel() {
 				case inbox.ChannelEmail:
 					// Email channel requires the content to be rendered.
-					message.Content, _, err = m.template.RenderDefault(map[string]string{
+					message.Content, err = m.template.RenderDefault(map[string]string{
 						"Content": message.Content,
 					})
 					if err != nil {

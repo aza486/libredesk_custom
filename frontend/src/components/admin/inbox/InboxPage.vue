@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex justify-between mb-5">
-      <PageHeader title="Inboxes" description="Manage your inboxes"/>
+      <PageHeader title="Inboxes" description="Manage your inboxes" />
       <div class="flex justify-end mb-4">
         <Button @click="navigateToAddInbox" size="sm"> New inbox </Button>
       </div>
@@ -52,16 +52,7 @@ const getInboxes = async () => {
 
 const navigateToAddInbox = () => {
   showTable.value = false
-  router.push('/admin/inboxes/new').catch((err) => {
-    if (err.name !== 'NavigationDuplicated') {
-      toast({
-        title: 'Navigation error',
-        variant: 'destructive',
-        description: 'Failed to navigate to the new inbox page.'
-      })
-      showTable.value = true
-    }
-  })
+  router.push('/admin/inboxes/new')
 }
 
 // Columns for the data table

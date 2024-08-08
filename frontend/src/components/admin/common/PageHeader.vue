@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="flex flex-col space-y-1">
     <span class="sub-title">{{ title }}</span>
     <p class="text-xs-muted">{{ description }}</p>
   </div>

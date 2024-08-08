@@ -6,7 +6,6 @@ import (
 	"context"
 	"embed"
 	"io"
-	"regexp"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
@@ -19,11 +18,6 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
-
-	// This matches filenames, sans extensions, of the format
-	// filename_(number). The number is incremented in case
-	// new file uploads conflict with existing filenames.
-	FnameRegexp = regexp.MustCompile(`(.+?)_([0-9]+)$`)
 )
 
 // Store defines the interface for media storage operations.

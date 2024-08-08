@@ -9,9 +9,10 @@ import { ref, watch, watchEffect, onUnmounted } from "vue"
 
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import Placeholder from "@tiptap/extension-placeholder"
+import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit'
 
-const emit = defineEmits(['send', 'input', 'editorText', 'updateBold', 'updateItalic', 'contentCleared', 'contentSet'])
+const emit = defineEmits(['send', 'input', 'editorText', 'updateBold', 'updateItalic', 'contentCleared', 'contentSet', 'editorReady'])
 
 const props = defineProps({
     placeholder: String,
@@ -22,10 +23,12 @@ const props = defineProps({
     contentToSet: String
 })
 
+
 const editor = ref(useEditor({
     content: '',
     extensions: [
         StarterKit,
+        Image,
         Placeholder.configure({
             placeholder: () => {
                 return props.placeholder
@@ -47,6 +50,11 @@ const editor = ref(useEditor({
 
 watchEffect(() => {
     if (editor.value) {
+        // Emit the editor instance when it's ready
+        if (editor.value) {
+            emit('editorReady', editor.value)
+        }
+
         emit("editorText", {
             text: editor.value.getText(),
             html: editor.value.getHTML(),

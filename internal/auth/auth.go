@@ -63,17 +63,13 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 
 	verifier := provider.Verifier(&oidc.Config{ClientID: cfg.OIDC.ClientID})
 
-	maxAge := time.Hour * 24
-	if maxAge.Seconds() == 0 {
-		maxAge = time.Hour * 12
-	}
 	sess := simplesessions.New(simplesessions.Options{
 		EnableAutoCreate: false,
 		SessionIDLength:  64,
 		Cookie: simplesessions.CookieOptions{
 			IsHTTPOnly: true,
 			IsSecure:   true,
-			MaxAge:     maxAge,
+			MaxAge:     time.Hour * 12,
 		},
 	})
 	st := sessredisstore.New(context.TODO(), rd)

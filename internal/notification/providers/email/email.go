@@ -50,15 +50,11 @@ func (e *Email) SendMessage(userIDs []int, subject, content string) error {
 		return err
 	}
 
-	templateBody, templateSubject, err := e.templateRenderer.RenderDefault(map[string]string{
+	templateBody, err := e.templateRenderer.RenderDefault(map[string]string{
 		"Content": content,
 	})
 	if err != nil {
 		return err
-	}
-
-	if subject == "" {
-		subject = templateSubject
 	}
 
 	m := models.Message{

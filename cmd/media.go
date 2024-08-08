@@ -65,7 +65,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 			envelope.GeneralError,
 		)
 	}
-
+	fmt.Println(app.constant.AllowedUploadFileExtensions)
 	if !slices.Contains(app.constant.AllowedUploadFileExtensions, "*") && !slices.Contains(app.constant.AllowedUploadFileExtensions, srcExt) {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Unsupported file type", nil, envelope.InputError)
 	}

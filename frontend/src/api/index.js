@@ -19,6 +19,37 @@ http.interceptors.request.use(request => {
   return request;
 });
 
+const getTemplate = (id) => http.get(`/api/templates/${id}`)
+const getTemplates = () => http.get('/api/templates')
+const createTemplate = (data) => http.post('/api/templates', data, {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+const updateTemplate = (id, data) => http.put(`/api/templates/${id}`, data, {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+const createOIDC = (data) => http.post("/api/oidc", data, {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+const getAllOIDC = () => http.get("/api/oidc")
+const getOIDC = (id) => http.get(`/api/oidc/${id}`)
+const updateOIDC = (id, data) => http.put(`/api/oidc/${id}`, data, {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+const deleteOIDC = (id) => http.delete(`/api/oidc/${id}`)
+const updateSettings = (key, data) => http.put(`/api/settings/${key}`, data, {
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+const getSettings = (key) => http.get(`/api/settings/${key}`)
 const login = data => http.post(`/api/login`, data);
 const getAutomationRules = type =>
   http.get(`/api/automation/rules`, {
@@ -188,5 +219,16 @@ export default {
   toggleInbox,
   createTeam,
   updateTeam,
+  getSettings,
+  updateSettings,
+  createOIDC,
+  getAllOIDC,
+  getOIDC,
+  updateOIDC,
+  deleteOIDC,
+  getTemplate,
+  getTemplates,
+  createTemplate,
+  updateTemplate,
   deleteUserAvatar,
 };

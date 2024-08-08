@@ -23,6 +23,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/media/stores/s3"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
+	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
 	"github.com/abhinavxd/artemis/internal/tag"
@@ -49,6 +50,7 @@ import (
 // constants holds the app constants.
 type constants struct {
 	AppBaseURL                  string
+	Filestore                   string
 	AllowedUploadFileExtensions []string
 	MaxFileUploadSizeMB         float64
 }
@@ -91,9 +93,10 @@ func initFlags() {
 
 func initConstants() constants {
 	return constants{
-		AppBaseURL:                  ko.String("app.constants.base_url"),
-		AllowedUploadFileExtensions: ko.Strings("app.constants.allowed_file_upload_extensions"),
-		MaxFileUploadSizeMB:         ko.Float64("app.constants.max_file_upload_size"),
+		AppBaseURL:                  ko.String("app.root_url"),
+		Filestore:                   ko.MustString("app.file_store"),
+		AllowedUploadFileExtensions: ko.Strings("app.allowed_file_upload_extensions"),
+		MaxFileUploadSizeMB:         ko.Float64("app.max_file_upload_size"),
 	}
 }
 
@@ -150,6 +153,7 @@ func loadSettings(m *setting.Manager) {
 func initSettingsManager(db *sqlx.DB) *setting.Manager {
 	s, err := setting.New(setting.Opts{
 		DB: db,
+		Lo: initLogger("settings"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing setting manager: %v", err)
@@ -159,8 +163,8 @@ func initSettingsManager(db *sqlx.DB) *setting.Manager {
 
 func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	mgr, err := user.New(i18n, user.Opts{
-		DB:         DB,
-		Lo:         initLogger("user_manager"),
+		DB: DB,
+		Lo: initLogger("user_manager"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing user manager: %v", err)
@@ -220,7 +224,8 @@ func initContact(db *sqlx.DB) *contact.Manager {
 }
 
 func initTemplate(db *sqlx.DB) *template.Manager {
-	m, err := template.New(db)
+	lo := initLogger("template")
+	m, err := template.New(lo, db)
 	if err != nil {
 		log.Fatalf("error initializing template manager: %v", err)
 	}
@@ -245,7 +250,7 @@ func initMedia(db *sqlx.DB) *media.Manager {
 		err   error
 		lo    = initLogger("media")
 	)
-	switch s := ko.MustString("app.media_store"); s {
+	switch s := ko.MustString("app.file_store"); s {
 	case "s3":
 		store, err = s3.New(s3.Opt{
 			URL:        ko.String("s3.url"),
@@ -421,6 +426,19 @@ func initAuth(rd *redis.Client) *auth.Auth {
 		log.Fatalf("error initializing auth: %v", err)
 	}
 	return a
+}
+
+func initOIDC(db *sqlx.DB) *oidc.Manager {
+	lo := initLogger("oidc")
+	o, err := oidc.New(oidc.Opts{
+		DB: db,
+		Lo: lo,
+	})
+
+	if err != nil {
+		log.Fatalf("error initializing oidc: %v", err)
+	}
+	return o
 }
 
 func initI18n(fs stuffbin.FileSystem) *i18n.I18n {

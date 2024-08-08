@@ -11,17 +11,18 @@ import api from './api'
 async function initApp () {
     const emitter = mitt();
 
-    // TODO: fetch def lang from cfg.
-    const defaultLang = 'en';
-    const langMessages = await api.getLanguage(defaultLang);
+    let lang = 'en';
+    const settings = await api.getSettings('general');
+    lang = settings.data.data['app.lang'];
+    const langMessages = await api.getLanguage(lang);
 
     // Initialize i18n
     const i18nConfig = {
         legacy: false,
-        locale: defaultLang,
-        fallbackLocale: defaultLang,
+        locale: lang,
+        fallbackLocale: 'en',
         messages: {
-            [defaultLang]: langMessages.data
+            [lang]: langMessages.data
         }
     }
     const i18n = createI18n(i18nConfig);
@@ -29,7 +30,6 @@ async function initApp () {
     const pinia = createPinia();
 
     app.config.globalProperties.emitter = emitter;
-
     app.use(router);
     app.use(pinia);
     app.use(i18n);

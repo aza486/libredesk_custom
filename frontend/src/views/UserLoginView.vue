@@ -9,13 +9,11 @@
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="grid gap-4">
-                        <div class="grid grid-cols-1 gap-6">
+                        <div class="grid grid-cols-1 gap-6" v-for="oidcProvider in oidcProviders"
+                            :key="oidcProvider.id">
                             <Button variant="outline" @click.prevent="redirectToOIDCLogin">
-                                <svg role="img" viewBox="0 0 24 24" class="mr-2 h-4 w-4">
-                                    <path fill="currentColor"
-                                        d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" />
-                                </svg>
-                                Google
+                                <img :src="oidcProvider.logo_url" width="15" class="mr-2"/>
+                                {{ oidcProvider.name }}
                             </Button>
                         </div>
                         <div class="relative">
@@ -54,12 +52,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { handleHTTPError } from '@/utils/http'
 import { useUserStore } from '@/stores/user'
 import api from '@/api';
-
 
 import { useTemporaryClass } from '@/composables/useTemporaryClass';
 import { Button } from '@/components/ui/button'
@@ -81,7 +78,9 @@ const loginForm = ref({
     email: "",
     password: ""
 })
+
 const userStore = useUserStore()
+const oidcProviders = ref([])
 
 const redirectToOIDCLogin = () => {
     window.location.href = "/auth/oidc/login"
@@ -110,4 +109,9 @@ const loginAction = () => {
         loading.value = false
     })
 }
+
+onMounted(async () => {
+    const resp = await api.getAllOIDC()
+    oidcProviders.value = resp.data.data
+})
 </script>

@@ -2,11 +2,14 @@
 package template
 
 import (
+	"database/sql"
 	"embed"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/template/models"
 	"github.com/jmoiron/sqlx"
+	"github.com/zerodha/logf"
 )
 
 var (
@@ -16,49 +19,77 @@ var (
 
 // Manager handles template-related operations.
 type Manager struct {
-	q queries
+	q  queries
+	lo *logf.Logger
 }
 
 // queries contains prepared SQL queries.
 type queries struct {
-	InsertTemplate     *sqlx.Stmt `query:"insert-template"`
+	InsertTemplate     *sqlx.Stmt `query:"insert"`
+	UpdateTemplate     *sqlx.Stmt `query:"update"`
+	GetDefaultTemplate *sqlx.Stmt `query:"get-default"`
+	GetAllTemplates    *sqlx.Stmt `query:"get-all"`
 	GetTemplate        *sqlx.Stmt `query:"get-template"`
-	GetDefaultTemplate *sqlx.Stmt `query:"get-default-template"`
 }
 
 // New creates and returns a new instance of the Manager.
-func New(db *sqlx.DB) (*Manager, error) {
+func New(lo *logf.Logger, db *sqlx.DB) (*Manager, error) {
 	var q queries
 
 	if err := dbutil.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
 		return nil, err
 	}
 
-	return &Manager{q}, nil
+	return &Manager{q, lo}, nil
 }
 
-// InsertTemplate inserts a new template with the given name, subject, and body.
-func (m *Manager) InsertTemplate(name, subject, body string) error {
-	if _, err := m.q.InsertTemplate.Exec(name, subject, body); err != nil {
-		return err
+// Update updates a new template with the given name, and body.
+func (m *Manager) Update(id int, t models.Template) error {
+	if _, err := m.q.UpdateTemplate.Exec(id, t.Name, t.Body, t.IsDefault); err != nil {
+		m.lo.Error("error updating template", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating template", nil)
 	}
 	return nil
 }
 
-// GetTemplate retrieves a template by its name.
-func (m *Manager) GetTemplate(name string) (models.Template, error) {
+// Create creates a template.
+func (m *Manager) Create(t models.Template) error {
+	if _, err := m.q.InsertTemplate.Exec(t.Name, t.Body, t.IsDefault); err != nil {
+		m.lo.Error("error inserting template", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating template", nil)
+	}
+	return nil
+}
+
+// GetDefault retrieves the default template.
+func (m *Manager) GetDefault() (models.Template, error) {
 	var template models.Template
-	if err := m.q.GetTemplate.Get(&template, name); err != nil {
-		return template, err
+	if err := m.q.GetDefaultTemplate.Get(&template); err != nil {
+		if err == sql.ErrNoRows {
+			return template, nil
+		}
+		m.lo.Error("error fetching default template", "error", err)
+		return template, envelope.NewError(envelope.GeneralError, "Error fetching template", nil)
 	}
 	return template, nil
 }
 
-// GetDefaultTemplate retrieves the default template.
-func (m *Manager) GetDefaultTemplate() (models.Template, error) {
-	var template models.Template
-	if err := m.q.GetDefaultTemplate.Get(&template); err != nil {
-		return template, err
+// GetAll returns all templates.
+func (m *Manager) GetAll() ([]models.Template, error) {
+	var templates = make([]models.Template, 0)
+	if err := m.q.GetAllTemplates.Select(&templates); err != nil {
+		m.lo.Error("error fetching templates", "error", err)
+		return templates, envelope.NewError(envelope.GeneralError, "Error fetching templates", nil)
 	}
-	return template, nil
+	return templates, nil
+}
+
+// Get returns a template by id.
+func (m *Manager) Get(id int) (models.Template, error) {
+	var templates = models.Template{}
+	if err := m.q.GetTemplate.Get(&templates, id); err != nil {
+		m.lo.Error("error fetching template", "error", err)
+		return templates, envelope.NewError(envelope.GeneralError, "Error fetching template", nil)
+	}
+	return templates, nil
 }

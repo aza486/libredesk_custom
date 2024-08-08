@@ -48,7 +48,7 @@ var (
 
 	AllConversations      = "all"
 	AssignedConversations = "assigned"
-	TeamConversations     = "unassigned"
+	TeamConversations     = "team"
 )
 
 type Conversation struct {

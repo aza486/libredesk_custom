@@ -24,13 +24,8 @@ const sidebarNavItems = [
     description: 'Manage automations and time triggers'
   },
   {
-    title: 'Notifications',
-    href: '/admin/notifications',
-    description: 'Manage notifications for your agents'
-  },
-  {
-    title: 'Email templates',
-    href: '/admin/email-templates',
+    title: 'Templates',
+    href: '/admin/templates',
     description: 'Manage email templates'
   },
   {
@@ -39,15 +34,15 @@ const sidebarNavItems = [
     description: 'Manage file upload settings'
   },
   {
-    title: 'Social Login',
+    title: 'OIDC',
     href: '/admin/oidc',
-    description: 'Configure social login'
+    description: 'Manage OpenID Connect configurations'
   },
 ]
 </script>
 
 <template>
-  <div class="space-y-4 md:block">
+  <div class="space-y-4 md:block overflow-y-scroll">
     <PageHeader title="Admin settings" subTitle="Manage your helpdesk settings." />
     <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-10 lg:space-y-5">
       <aside class="lg:w-1/6 md:w-1/7 h-[calc(100vh-10rem)] border-r pr-3">

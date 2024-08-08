@@ -9,8 +9,10 @@ import Team from '@/components/admin/team/TeamPage.vue'
 import Teams from '@/components/admin/team/teams/TeamsCard.vue'
 import Users from '@/components/admin/team/users/UsersCard.vue'
 import Automation from '@/components/admin/automation/AutomationPage.vue'
-import Notifications from '@/components/admin/notification/NotificationPage.vue'
 import Uploads from '@/components/admin/uploads/UploadsPage.vue'
+import General from '@/components/admin/general/GeneralPage.vue'
+import Templates from '@/components/admin/templates/TemplatesPage.vue'
+import OIDC from '@/components/admin/oidc/OIDCPage.vue'
 
 const routes = [
   {
@@ -92,7 +94,7 @@ const routes = [
       },
       {
         path: 'teams/roles',
-        component: () => import('@/components/admin/team/roles/RolesCard.vue')
+        component: () => import('@/components/admin/team/roles/RolesPage.vue')
       },
       {
         path: 'teams/roles/new',
@@ -118,22 +120,38 @@ const routes = [
         component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
       },
       {
-        path: 'notifications',
-        component: Notifications
-      },
-      {
-        path: 'notifications/new',
-        props: true,
-        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
-      },
-      {
-        path: 'notifications/:id/edit',
-        props: true,
-        component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
-      },
-      {
         path: 'uploads',
         component: Uploads
+      },
+      {
+        path: 'general',
+        component: General
+      },
+      {
+        path: 'templates',
+        component: Templates
+      },
+      {
+        path: 'templates/:id/edit',
+        props: true,
+        component: () => import('@/components/admin/templates/AddEditTemplate.vue')
+      },
+      {
+        path: 'templates/new',
+        component: () => import('@/components/admin/templates/AddEditTemplate.vue')
+      },
+      {
+        path: 'oidc',
+        component: OIDC
+      },
+      {
+        path: 'oidc/:id/edit',
+        props: true,
+        component: () => import('@/components/admin/oidc/AddEditOIDC.vue')
+      },
+      {
+        path: 'oidc/new',
+        component: () => import('@/components/admin/oidc/AddEditOIDC.vue')
       },
     ]
   },

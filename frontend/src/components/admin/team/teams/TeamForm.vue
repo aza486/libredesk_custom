@@ -1,16 +1,18 @@
 <template>
+  {{props.initialValues}}
   <form @submit="onSubmit" class="w-2/3 space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>
         <FormControl>
+          {{componentField}}
           <Input type="text" placeholder="Name" v-bind="componentField" />
         </FormControl>
         <FormDescription>Select an unique name </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
-    <Button type="submit"> {{submitLabel}} </Button>
+    <Button type="submit" size="sm"> {{ submitLabel }} </Button>
   </form>
 </template>
 
@@ -52,8 +54,6 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
-  console.log(" form vaal ", values)
-  console.log(" init val ", props.initialValues)
   props.submitForm(values)
 })
 
@@ -61,7 +61,6 @@ const onSubmit = form.handleSubmit((values) => {
 watch(
   () => props.initialValues,
   (newValues) => {
-    console.log("Setting ->" , newValues)
     form.setValues(newValues)
   },
   { immediate: true }

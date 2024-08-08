@@ -10,9 +10,6 @@ function handleHTTPError (error) {
         "data": null,
         "status_code": null
     }
-
-    console.log('err ', error.message)
-
     // Response received from the server.
     if (error.response && error.response.data) {
         // Message available in response, override.
@@ -27,7 +24,6 @@ function handleHTTPError (error) {
     } else {
         resp.message = "Error setting up the request"
     }
-    console.log('resp', resp.message)
     return resp
 }
 
