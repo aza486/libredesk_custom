@@ -23,5 +23,20 @@ export const formSchema = z.object({
         })
         .url({
             message: 'Favicon URL must be a valid URL.'
+        }),
+    max_file_upload_size: z
+        .number({
+            required_error: 'Max upload file size is required.'
         })
+        .min(1, {
+            message: 'Max upload file size must be at least 1 MB.'
+        })
+        .max(1024, {
+            message: 'Max upload file size cannot exceed 128 MB.'
+        }),
+    allowed_file_upload_extensions: z
+        .array(z.string())
+        .nullable()
+        .default([])
+        .optional(),
 })

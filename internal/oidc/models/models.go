@@ -1,16 +1,21 @@
 package models
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // OIDC represents an OpenID Connect configuration.
 type OIDC struct {
-	ID              int    `db:"id" json:"id"`
-	Name            string `db:"-" json:"name"`
-	ProviderLogoURL string `db:"-" json:"logo_url"`
-	ProviderURL     string `db:"provider_url" json:"provider_url"`
-	ClientID        string `db:"client_id" json:"client_id"`
-	ClientSecret    string `db:"client_secret" json:"client_secret"`
-	RedirectURI     string `db:"redirect_uri" json:"redirect_uri"`
+	ID              int       `db:"id" json:"id"`
+	CreatedAt       time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time `db:"updated_at" json:"updated_at"`
+	Name            string    `db:"-" json:"name"`
+	ProviderLogoURL string    `db:"-" json:"logo_url"`
+	ProviderURL     string    `db:"provider_url" json:"provider_url"`
+	ClientID        string    `db:"client_id" json:"client_id"`
+	ClientSecret    string    `db:"client_secret" json:"client_secret"`
+	RedirectURI     string    `db:"redirect_uri" json:"redirect_uri"`
 }
 
 // ProviderInfo holds the name and logo of a provider.

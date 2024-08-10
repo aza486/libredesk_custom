@@ -87,8 +87,6 @@ SELECT
     ct.email as email,
     ct.phone_number as phone_number,
     ct.avatar_url as avatar_url,
-    u.uuid AS assigned_user_uuid,
-    at.uuid AS assigned_team_uuid,
     (SELECT COALESCE(
         (SELECT json_agg(t.name)
         FROM tags t

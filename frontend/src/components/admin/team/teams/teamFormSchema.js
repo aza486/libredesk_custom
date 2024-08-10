@@ -7,5 +7,6 @@ export const teamFormSchema = z.object({
     })
     .min(2, {
       message: 'Team name must be at least 2 characters.'
-    })
+    }),
+  auto_assign_conversations: z.boolean().optional()
 })

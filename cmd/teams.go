@@ -66,10 +66,11 @@ func handleUpdateTeam(r *fastglue.Request) error {
 			"Invalid team `id`.", nil, envelope.InputError)
 	}
 
-	if _, err := fastglue.ScanArgs(r.RequestCtx.PostArgs(), &req, `json`); err != nil {
-		return envelope.NewError(envelope.InputError,
-			fmt.Sprintf("Invalid request (%s)", err.Error()), nil)
+	if err := r.Decode(&req, "json"); err != nil {
+		return envelope.NewError(envelope.InputError, "Bad request", nil)
 	}
+
+	fmt.Println("team ", req.AutoAssignConversations)
 
 	err = app.team.UpdateTeam(id, req)
 	if err != nil {

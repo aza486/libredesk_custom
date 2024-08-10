@@ -9,10 +9,8 @@
 import { onMounted, ref } from 'vue'
 import api from '@/api'
 import TeamForm from '@/components/admin/team/teams/TeamForm.vue'
-import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 
-const router = useRouter()
 const team = ref({})
 
 const breadcrumbLinks = [
@@ -28,7 +26,6 @@ const submitForm = (values) => {
 const updateTeam = async (payload) => {
   try {
     await api.updateTeam(team.value.id, payload)
-    router.push('/admin/teams/teams')
   } catch (error) {
     console.log(error)
   }

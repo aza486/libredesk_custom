@@ -14,7 +14,7 @@ SELECT * from inboxes where id = $1 and soft_delete is false;
 
 -- name: update
 UPDATE inboxes
-set channel = $2, config = $3, "name" = $4, "from" = $5
+set channel = $2, config = $3, "name" = $4, "from" = $5, updated_at = now()
 where id = $1 and soft_delete is false;
 
 -- name: soft-delete

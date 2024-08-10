@@ -6,19 +6,18 @@ import (
 )
 
 // RenderDefault renders the system default template with the provided data.
-func (m *Manager) RenderDefault(data interface{}) (string, error) {
+func (m *Manager) RenderDefault(data map[string]string) (string, error) {
 	templ, err := m.GetDefault()
 	if err != nil {
-		return "", err
-	}
-
-	tmpl, err := template.New("default").Parse(templ.Body)
-	if err != nil {
+		// Template not found, return the content as is.
+		if err == ErrTemplateNotFound {
+			return data["Content"], nil
+		}
 		return "", err
 	}
 
 	var rendered bytes.Buffer
-	if err := tmpl.Execute(&rendered, data); err != nil {
+	if err := template.Must(template.New("default").Parse(templ.Body)).Execute(&rendered, data); err != nil {
 		return "", err
 	}
 

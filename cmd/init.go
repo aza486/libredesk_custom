@@ -94,7 +94,7 @@ func initFlags() {
 func initConstants() constants {
 	return constants{
 		AppBaseURL:                  ko.String("app.root_url"),
-		Filestore:                   ko.MustString("app.file_store"),
+		Filestore:                   ko.MustString("upload.provider"),
 		AllowedUploadFileExtensions: ko.Strings("app.allowed_file_upload_extensions"),
 		MaxFileUploadSizeMB:         ko.Float64("app.max_file_upload_size"),
 	}
@@ -250,7 +250,7 @@ func initMedia(db *sqlx.DB) *media.Manager {
 		err   error
 		lo    = initLogger("media")
 	)
-	switch s := ko.MustString("app.file_store"); s {
+	switch s := ko.MustString("upload.provider"); s {
 	case "s3":
 		store, err = s3.New(s3.Opt{
 			URL:        ko.String("s3.url"),
@@ -268,8 +268,8 @@ func initMedia(db *sqlx.DB) *media.Manager {
 		}
 	case "localfs":
 		store, err = localfs.New(localfs.Opts{
+			UploadURI:  "/uploads",
 			UploadPath: filepath.Clean(ko.String("app.localfs.upload_path")),
-			UploadURI:  filepath.Clean(ko.String("app.localfs.upload_uri")),
 			RootURL:    ko.String("app.root_url"),
 		})
 		if err != nil {

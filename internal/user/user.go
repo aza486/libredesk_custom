@@ -109,9 +109,14 @@ func (u *Manager) GetUsers() ([]models.User, error) {
 
 // Create creates a new user.
 func (u *Manager) Create(user *models.User) error {
-	password, _ := u.generatePassword()
+	password, err := u.generatePassword()
+	if err != nil {
+		u.lo.Error("error generating password", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
+	}
+
 	user.Email = strings.ToLower(user.Email)
-	if _, err := u.q.CreateUser.Exec(user.Email, user.FirstName, user.LastName, password, user.TeamID, user.AvatarURL, pq.Array(user.Roles)); err != nil {
+	if err := u.q.CreateUser.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
 		u.lo.Error("error creating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
 	}
@@ -165,7 +170,7 @@ func (u *Manager) UpdateAvatar(id int, avatar string) error {
 
 // UpdateUser updates a user.
 func (u *Manager) UpdateUser(id int, user models.User) error {
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, user.TeamID, pq.Array(user.Roles), user.AvatarURL); err != nil {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating user", nil)
 	}

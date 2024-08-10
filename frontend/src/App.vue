@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import { cn } from '@/lib/utils';
 import { useI18n } from 'vue-i18n';
@@ -43,7 +43,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 const { t } = useI18n();
 const isCollapsed = ref(false);
-const navLinks = ref([
+const allNavLinks = ref([
   {
     title: t('navbar.dashboard'),
     to: '/dashboard',
@@ -64,9 +64,10 @@ const navLinks = ref([
   },
   {
     title: t('navbar.admin'),
-    to: '/admin/inboxes',
+    to: '/admin/general',
     label: '',
     icon: 'lucide:settings',
+    permission: 'admin:get',
   },
 ]);
 const userStore = useUserStore();
@@ -84,4 +85,10 @@ onMounted(() => {
   });
   initWS();
 });
+
+const navLinks = computed(() =>
+  allNavLinks.value.filter((link) =>
+    link.permission ? userStore.hasPermission(link.permission) : true
+  )
+);
 </script>

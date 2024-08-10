@@ -16,17 +16,17 @@
                 <FormControl>
                     <Textarea placeholder="HTML here.." v-bind="componentField" class="h-52" />
                 </FormControl>
+                <FormDescription>{{ templateBodyDescription() }}</FormDescription>
                 <FormMessage />
             </FormItem>
         </FormField>
 
-        <FormField name="is_default" v-slot="{ componentField }">
+        <FormField name="is_default" v-slot="{ value, handleChange }">
             <FormItem>
                 <FormControl>
                     <div class="flex items-center space-x-2">
-                        <Checkbox id="is_default" :checked="componentField.value"
-                            @update:checked="componentField.handleChange" />
-                        <Label for="is_default">Is default</Label>
+                        <Checkbox :checked="value" @update:checked="handleChange"/>
+                        <Label>Is default</Label>
                     </div>
                 </FormControl>
                 <FormDescription>There can be only one default template.</FormDescription>
@@ -43,7 +43,7 @@ import { watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { oidcLoginFormSchema } from './formSchema.js'
+import { formSchema } from './formSchema.js'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import {
     FormControl,
@@ -74,8 +74,10 @@ const props = defineProps({
     },
 })
 
+const templateBodyDescription = () => 'Make sure the template has {{ .Content }}'
+
 const form = useForm({
-    validationSchema: toTypedSchema(oidcLoginFormSchema),
+    validationSchema: toTypedSchema(formSchema),
 })
 
 const onSubmit = form.handleSubmit((values) => {

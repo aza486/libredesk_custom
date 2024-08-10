@@ -47,7 +47,7 @@
     "npx": "^10.2.2",
     "pinia": "^2.1.7",
     "qs": "^6.12.1",
-    "radix-vue": "^1.8.0",
+    "radix-vue": "latest",
     "shadcn-vue": "latest",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",

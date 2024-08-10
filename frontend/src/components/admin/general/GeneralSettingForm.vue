@@ -37,9 +37,9 @@
             <FormItem v-auto-animate>
                 <FormLabel>Root URL</FormLabel>
                 <FormControl>
-                    <Input type="url" placeholder="Root URL" v-bind="field" />
+                    <Input type="text" placeholder="Root URL" v-bind="field" />
                 </FormControl>
-                <FormDescription>Enter the root URL</FormDescription>
+                <FormDescription>Root URL of the app.</FormDescription>
                 <FormMessage />
             </FormItem>
         </FormField>
@@ -48,9 +48,37 @@
             <FormItem v-auto-animate>
                 <FormLabel>Favicon URL</FormLabel>
                 <FormControl>
-                    <Input type="url" placeholder="Favicon URL" v-bind="field" />
+                    <Input type="text" placeholder="Favicon URL" v-bind="field" />
                 </FormControl>
-                <FormDescription>Enter the favicon URL</FormDescription>
+                <FormDescription>Favicon URL for the app.</FormDescription>
+                <FormMessage />
+            </FormItem>
+        </FormField>
+
+        <FormField v-slot="{ field }" name="max_file_upload_size" :value="props.initialValues.max_file_upload_size">
+            <FormItem v-auto-animate>
+                <FormLabel>Max allowed file upload size</FormLabel>
+                <FormControl>
+                    <Input type="number" placeholder="10" v-bind="field" />
+                </FormControl>
+                <FormDescription>In megabytes.</FormDescription>
+                <FormMessage />
+            </FormItem>
+        </FormField>
+
+        <FormField name="allowed_file_upload_extensions" v-slot="{ componentField }">
+            <FormItem>
+                <FormLabel>Allowed file extensions</FormLabel>
+                <FormControl>
+                    <TagsInput v-model="componentField.modelValue">
+                        <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">
+                            <TagsInputItemText />
+                            <TagsInputItemDelete />
+                        </TagsInputItem>
+                        <TagsInputInput placeholder="jpg" />
+                    </TagsInput>
+                </FormControl>
+                <FormDescription>Use `*` to allow any file.</FormDescription>
                 <FormMessage />
             </FormItem>
         </FormField>
@@ -82,6 +110,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { Input } from '@/components/ui/input'
 
 const props = defineProps({

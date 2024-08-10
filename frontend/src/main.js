@@ -12,9 +12,27 @@ async function initApp () {
     const emitter = mitt();
 
     let lang = 'en';
-    const settings = await api.getSettings('general');
-    lang = settings.data.data['app.lang'];
+    const settings = (await api.getSettings('general')).data.data;
+
+    // Set the language
+    lang = settings['app.lang'];
     const langMessages = await api.getLanguage(lang);
+
+    // Set the favicon based on settings
+    const faviconUrl = settings['app.favicon_url'] || '/default-favicon.ico';
+    const link = document.querySelector("link[rel~='icon']");
+    if (link) {
+        link.href = faviconUrl;
+    } else {
+        const newLink = document.createElement('link');
+        newLink.rel = 'icon';
+        newLink.href = faviconUrl;
+        document.head.appendChild(newLink);
+    }
+
+    // Set the page title based on settings
+    const pageTitle = settings['app.site_name'] || 'Support';
+    document.title = pageTitle;
 
     // Initialize i18n
     const i18nConfig = {
@@ -24,7 +42,7 @@ async function initApp () {
         messages: {
             [lang]: langMessages.data
         }
-    }
+    };
     const i18n = createI18n(i18nConfig);
     const app = createApp(App);
     const pinia = createPinia();

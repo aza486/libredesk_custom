@@ -29,80 +29,32 @@
       </FormItem>
     </FormField>
 
-    <FormField name="team_id" v-slot="{ field }">
+    <FormField name="teams" v-slot="{ field }">
       <FormItem>
-        <FormLabel>Team</FormLabel>
+        <FormLabel>Select teams</FormLabel>
         <FormControl>
-          <Select v-bind="field" :modelValue="props.initialValues.team_id">
-            <SelectTrigger>
-              <SelectValue placeholder="Select a team" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem v-for="team in teams" :key="team.id" :value="team.id">
-                  {{ team.name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <SelectTag :initialValue="field.value" v-model="selectedTeamNames" :items="teamNames"
+            placeHolder="Select teams"></SelectTag>
         </FormControl>
-        <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField name="roles" v-slot="{ field }">
       <FormItem>
-        <FormLabel>Select role</FormLabel>
+        <FormLabel>Select roles</FormLabel>
         <FormControl>
-          <TagsInput v-model="roles" class="px-0 gap-0 shadow-sm">
-            <div class="flex gap-2 flex-wrap items-center px-3">
-              <TagsInputItem v-for="item in roles" :key="item" :value="item">
-                <TagsInputItemText />
-                <TagsInputItemDelete />
-              </TagsInputItem>
-            </div>
-
-            <ComboboxRoot v-model="roles" v-model:open="open" v-model:searchTerm="searchTerm" class="w-full"
-              v-bind="field">
-              <ComboboxAnchor as-child>
-                <ComboboxInput placeholder="Select role" as-child>
-                  <TagsInputInput class="w-full px-3" :class="roles.length > 0 ? 'mt-2' : ''" @keydown.enter.prevent />
-                </ComboboxInput>
-              </ComboboxAnchor>
-
-              <ComboboxPortal>
-                <CommandList position="popper"
-                  class="w-[--radix-popper-anchor-width] rounded-md mt-2 border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2">
-                  <CommandEmpty />
-                  <CommandGroup>
-                    <CommandItem v-for="user in filteredUsers" :key="user.value" :value="user.label" @select.prevent="(ev) => {
-                      if (typeof ev.detail.value === 'string') {
-                        searchTerm = ''
-                        roles.push(ev.detail.value)
-                      }
-
-                      if (filteredUsers.length === 0) {
-                        open = false
-                      }
-                    }">
-                      {{ user.label }}
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </ComboboxPortal>
-            </ComboboxRoot>
-          </TagsInput>
+          <SelectTag :initialValue="field.value" v-model="selectedRoleNames" :items="roleNames"
+            placeHolder="Select roles"></SelectTag>
         </FormControl>
-        <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField name="send_welcome_email" v-slot="{ field }" v-if="isNewForm">
+    <FormField name="send_welcome_email" v-slot="{ value, handleChange }" v-if="isNewForm">
       <FormItem>
         <FormControl>
           <div class="flex items-center space-x-2">
-            <Checkbox id="send_welcome_email" :checked="field.value" @update:checked="field.handleChange" />
-            <Label for="send_welcome_email">Send welcome email</Label>
+            <Checkbox :checked="value" @update:checked="handleChange" />
+            <Label>Send welcome email?</Label>
           </div>
         </FormControl>
         <FormMessage />
@@ -118,37 +70,22 @@ import { watch, onMounted, ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { getUserFormSchema } from './userFormSchema.js'
+import { userFormSchema } from './userFormSchema.js'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+  SelectTag
 } from '@/components/ui/select'
-import { ComboboxAnchor, ComboboxInput, ComboboxPortal, ComboboxRoot } from 'radix-vue'
-import { CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command'
-import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { Input } from '@/components/ui/input'
 import api from '@/api'
 
+
+const selectedRoleNames = ref([])
+const selectedTeamNames = ref([])
 const teams = ref([])
-
-const users = [
-  { value: 'Agent', label: 'Agent' },
-  { value: 'Admin', label: 'Admin' },
-]
-
 const roles = ref([])
-const open = ref(false)
-const searchTerm = ref('')
-
-const filteredUsers = computed(() => users.filter(i => !roles.value.includes(i.label)))
 
 const props = defineProps({
   initialValues: {
@@ -171,26 +108,32 @@ const props = defineProps({
   }
 })
 
+
 onMounted(async () => {
   try {
-    const resp = await api.getTeams()
-    teams.value = resp.data.data
-  } catch (err) {
-    console.log(err)
-  }
+    const [teamsResp, rolesResp] = await Promise.all([
+      api.getTeams(),
+      api.getRoles()
+    ]);
 
-  if (props.initialValues && props.initialValues.roles) {
-    roles.value = props.initialValues.roles
+    teams.value = teamsResp.data.data;
+    roles.value = rolesResp.data.data;
+
+  } catch (err) {
+    console.log(err);
   }
-})
+});
+
+const teamNames = computed(() => teams.value.map(team => team.name));
+const roleNames = computed(() => roles.value.map(role => role.name));
 
 const form = useForm({
-  validationSchema: toTypedSchema(getUserFormSchema(teams.value, props.isNewForm)),
+  validationSchema: toTypedSchema(userFormSchema),
   initialValues: props.initialValues
 })
 
 const onSubmit = form.handleSubmit((values) => {
-  values.roles = roles.value
+  console.log('submitting ', values)
   props.submitForm(values)
 })
 
@@ -199,9 +142,14 @@ watch(
   () => props.initialValues,
   (newValues) => {
     form.setValues(newValues)
-    if (newValues && newValues.roles) {
-      roles.value = newValues.roles
+    if (newValues) {
+      if (newValues.roles)
+        selectedRoleNames.value = newValues.roles
+
+      if (newValues.teams)
+        selectedTeamNames.value = newValues.teams
     }
+
   },
   { immediate: true }
 )

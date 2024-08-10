@@ -53,7 +53,7 @@
       }
     }
   }" @submit="submitForm">
-    <Button type="submit"> {{ props.submitLabel }} </Button>
+    <Button type="submit" size="sm"> {{ props.submitLabel }} </Button>
   </AutoForm>
 </template>
 
@@ -90,8 +90,9 @@ const form = useForm({
 watch(
   () => props.initialValues,
   (newValues) => {
-    form.setValues(newValues)
+    if (newValues)
+      form.setValues(newValues)
   },
-  { deep: true }
+  { deep: true, immediate: true }
 )
 </script>

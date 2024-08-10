@@ -1,17 +1,29 @@
 <template>
-  {{props.initialValues}}
   <form @submit="onSubmit" class="w-2/3 space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>
         <FormControl>
-          {{componentField}}
           <Input type="text" placeholder="Name" v-bind="componentField" />
         </FormControl>
-        <FormDescription>Select an unique name </FormDescription>
+        <FormDescription>Select an unique name.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
+
+    <FormField name="auto_assign_conversations" v-slot="{ value, handleChange }">
+      <FormItem>
+        <FormControl>
+          <div class="flex items-center space-x-2">
+            <Checkbox :checked="value" @update:checked="handleChange" />
+            <Label>Auto assign conversations</Label>
+          </div>
+        </FormControl>
+        <FormDescription>Auto assign new conversations to agents in this team.</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
     <Button type="submit" size="sm"> {{ submitLabel }} </Button>
   </form>
 </template>
@@ -22,6 +34,8 @@ import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { teamFormSchema } from './teamFormSchema.js'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import {
   FormControl,

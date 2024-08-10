@@ -16,11 +16,15 @@ const initialValues = ref({})
 onMounted(async () => {
   const response = await api.getSettings('general');
   const data = response.data.data;
-  initialValues.value.site_name = data['app.site_name'];
-  initialValues.value.lang = data['app.lang'];
-  initialValues.value.root_url = data['app.root_url'];
-  initialValues.value.favicon_url = data['app.favicon_url'];
+
+  initialValues.value = Object.keys(data).reduce((acc, key) => {
+    // Remove 'app.' prefix
+    const newKey = key.replace(/^app\./, '');
+    acc[newKey] = data[key];
+    return acc;
+  }, {});
 });
+
 
 const submitForm = (values) => {
   // Prepend keys with `app.`

@@ -1,5 +1,5 @@
 -- name: get-all-oidc
-SELECT id, provider_url FROM oidc;
+SELECT id, disabled, provider_url, updated_at FROM oidc;
 
 -- name: get-oidc
 SELECT * FROM oidc WHERE id = $1;

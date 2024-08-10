@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col space-y-1">
-    <span class="sub-title">{{ title }}</span>
+    <span class="text-2xl">{{ title }}</span>
     <p class="text-xs-muted">{{ description }}</p>
   </div>
 </template>

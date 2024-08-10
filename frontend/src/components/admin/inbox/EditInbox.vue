@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <EmailInboxForm :initial-values="inbox" :submitForm="submitForm" />
+  <EmailInboxForm :initialValues="inbox" :submitForm="submitForm" />
 </template>
 
 <script setup>

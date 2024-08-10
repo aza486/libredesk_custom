@@ -1,10 +1,10 @@
 <template>
   <div
-    class="max-w-sm overflow-hidden box rounded-lg px-6 py-4 transition-shadow duration-170 cursor-pointer hover:bg-muted"
+    class="max-w-sm overflow-hidden box rounded-lg px-8 py-5 transition-shadow duration-170 cursor-pointer hover:bg-muted"
     @click="handleClick">
     <div class="flex items-center mb-4">
       <component :is="icon" size="17" class="mr-2" />
-      <span>{{ title }}</span>
+      <p class="text-xl">{{ title }}</p>
     </div>
     <p class="text-xs-muted">{{ subTitle }}</p>
   </div>
@@ -23,12 +23,12 @@ const props = defineProps({
     required: true
   },
   icon: {
-    type: String,
+    type: Function,
     required: true
   },
   onClick: {
     type: Function,
-    required: false
+    default: null
   }
 })
 

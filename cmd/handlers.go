@@ -21,34 +21,34 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/health", handleHealthCheck)
 
 	// Uploaded files on localfs.
-	if ko.String("app.file_store") == "localfs" {
-		g.GET("/uploads/{all:*}", handleServeUploadedFiles)
+	if ko.String("upload.provider") == "localfs" {
+		g.GET("/uploads/{all:*}", perm(handleServeUploadedFiles))
 	}
 
 	// Settings.
 	g.GET("/api/settings/general", handleGetGeneralSettings)
-	g.PUT("/api/settings/general", perm(handleUpdateGeneralSettings))
-	g.GET("/api/settings/upload", perm(handleGetUploadSettings))
-	g.PUT("/api/settings/upload", perm(handleUpdateUploadSettings))
+	g.PUT("/api/settings/general", perm(handleUpdateGeneralSettings, "settings:manage_general"))
+	g.GET("/api/settings/upload", perm(handleGetUploadSettings, "settings:manage_file"))
+	g.PUT("/api/settings/upload", perm(handleUpdateUploadSettings, "settings:manage_file"))
 
 	// OIDC.
 	g.GET("/api/oidc", handleGetAllOIDC)
-	g.GET("/api/oidc/{id}", perm(handleGetOIDC))
-	g.POST("/api/oidc", perm(handleCreateOIDC))
-	g.PUT("/api/oidc/{id}", perm(handleUpdateOIDC))
-	g.DELETE("/api/oidc/{id}", perm(handleDeleteOIDC))
+	g.GET("/api/oidc/{id}", perm(handleGetOIDC, "login:manage"))
+	g.POST("/api/oidc", perm(handleCreateOIDC, "login:manage"))
+	g.PUT("/api/oidc/{id}", perm(handleUpdateOIDC, "login:manage"))
+	g.DELETE("/api/oidc/{id}", perm(handleDeleteOIDC, "login:manage"))
 
 	// Conversation.
-	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversation:all"))
-	g.GET("/api/conversations/team", perm(handleGetTeamConversations, "conversation:team"))
-	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversation:assigned"))
+	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversations:all"))
+	g.GET("/api/conversations/team", perm(handleGetTeamConversations, "conversations:team"))
+	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversations:assigned"))
+	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateUserAssignee, "conversations:edit_user"))
+	g.PUT("/api/conversations/{uuid}/assignee/team", perm(handleUpdateTeamAssignee, "conversations:edit_team"))
+	g.PUT("/api/conversations/{uuid}/priority", perm(handleUpdatePriority, "conversations:edit_priority"))
+	g.PUT("/api/conversations/{uuid}/status", perm(handleUpdateStatus, "conversations:edit_status"))
 	g.GET("/api/conversations/{uuid}", perm(handleGetConversation))
 	g.GET("/api/conversations/{uuid}/participants", perm(handleGetConversationParticipants))
 	g.PUT("/api/conversations/{uuid}/last-seen", perm(handleUpdateAssigneeLastSeen))
-	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateUserAssignee))
-	g.PUT("/api/conversations/{uuid}/assignee/team", perm(handleUpdateTeamAssignee))
-	g.PUT("/api/conversations/{uuid}/priority", perm(handleUpdatePriority, "conversation:edit_priority"))
-	g.PUT("/api/conversations/{uuid}/status", perm(handleUpdateStatus, "conversation:edit_status"))
 	g.POST("/api/conversations/{uuid}/tags", perm(handleAddConversationTags))
 	g.GET("/api/conversations/{uuid}/messages", perm(handleGetMessages))
 	g.POST("/api/conversations/{uuid}/messages", perm(handleSendMessage))
@@ -60,15 +60,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Canned response.
 	g.GET("/api/canned-responses", perm(handleGetCannedResponses))
+	// TODO: add create, update endponints.
 
 	// User.
 	g.GET("/api/users/me", perm(handleGetCurrentUser))
+	g.PUT("/api/users/me", perm(handleUpdateCurrentUser))
+	g.DELETE("/api/users/me/avatar", perm(handleDeleteAvatar))
 	g.GET("/api/users", perm(handleGetUsers, "users:manage"))
 	g.GET("/api/users/{id}", perm(handleGetUser, "users:manage"))
 	g.POST("/api/users", perm(handleCreateUser, "users:manage"))
 	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users:manage"))
-	g.PUT("/api/users/me", perm(handleUpdateCurrentUser))
-	g.DELETE("/api/users/me/avatar", perm(handleDeleteAvatar))
 
 	// Team.
 	g.GET("/api/teams", perm(handleGetTeams, "teams:manage"))
@@ -78,6 +79,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Tags.
 	g.GET("/api/tags", perm(handleGetTags))
+	// TODO: add tag create, update endpoints.
+
+	// TODO: Add conversation create status, priority of conversation.
 
 	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
@@ -106,16 +110,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/roles/{id}", perm(handleDeleteRole, "roles:manage"))
 
 	// Dashboard.
-	g.GET("/api/dashboard/global/counts", perm(handleDashboardCounts))
-	g.GET("/api/dashboard/global/charts", perm(handleDashboardCharts))
+	g.GET("/api/dashboard/global/counts", perm(handleDashboardCounts, "dashboard:view_global"))
+	g.GET("/api/dashboard/global/charts", perm(handleDashboardCharts, "dashboard:view_global"))
 	g.GET("/api/dashboard/me/counts", perm(handleUserDashboardCounts))
 	g.GET("/api/dashboard/me/charts", perm(handleUserDashboardCharts))
 
 	// Templates.
-	g.GET("/api/templates", perm(handleGetTemplates))
-	g.GET("/api/templates/{id}", perm(handleGetTemplate))
-	g.POST("/api/templates", perm(handleCreateTemplate))
-	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate))
+	g.GET("/api/templates", perm(handleGetTemplates, "templates:manage"))
+	g.GET("/api/templates/{id}", perm(handleGetTemplate, "templates:manage"))
+	g.POST("/api/templates", perm(handleCreateTemplate, "templates:manage"))
+	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate, "templates:manage"))
 
 	// Websocket.
 	g.GET("/api/ws", perm(func(r *fastglue.Request) error {

@@ -95,6 +95,10 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 	}
 
 	for _, team := range teams {
+		if !team.AutoAssignConversations {
+			continue
+		}
+
 		users, err := e.teamManager.GetTeamMembers(team.Name)
 		if err != nil {
 			return nil, err

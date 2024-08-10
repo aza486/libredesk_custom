@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/abhinavxd/artemis/internal/setting/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -26,7 +24,7 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	)
 
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Bad request", nil, "")
 	}
 
 	if err := app.setting.Update(req); err != nil {
@@ -42,7 +40,7 @@ func handleGetUploadSettings(r *fastglue.Request) error {
 	)
 
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Bad request", nil, "")
 	}
 
 	out, err := app.setting.GetByPrefix("upload")
@@ -59,10 +57,8 @@ func handleUpdateUploadSettings(r *fastglue.Request) error {
 	)
 
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Bad request", nil, "")
 	}
-
-	fmt.Println("values -> ", req)
 
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)

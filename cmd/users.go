@@ -48,28 +48,6 @@ func handleGetUser(r *fastglue.Request) error {
 	return r.SendEnvelope(user)
 }
 
-func handleUpdateUser(r *fastglue.Request) error {
-	var (
-		app  = r.Context.(*App)
-		user = umodels.User{}
-	)
-	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-	if err != nil || id == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"Invalid user `id`.", nil, envelope.InputError)
-	}
-
-	if err := r.Decode(&user, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
-	}
-
-	err = app.user.UpdateUser(id, user)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(true)
-}
-
 func handleUpdateCurrentUser(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
@@ -152,21 +130,57 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 func handleCreateUser(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
-		req = umodels.User{}
+		app  = r.Context.(*App)
+		user = umodels.User{}
 	)
-	if err := r.Decode(&req, "json"); err != nil {
+	if err := r.Decode(&user, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
-	if req.Email == "" {
+	if user.Email == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
-	err := app.user.Create(&req)
+
+	err := app.user.Create(&user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope("User created successfully.")
+
+	// Upsert user teams.
+	if err := app.team.UpsertUserTeams(user.ID, user.Teams); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(true)
+}
+
+func handleUpdateUser(r *fastglue.Request) error {
+	var (
+		app  = r.Context.(*App)
+		user = umodels.User{}
+	)
+	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	if err != nil || id == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+			"Invalid user `id`.", nil, envelope.InputError)
+	}
+
+	if err := r.Decode(&user, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
+	}
+
+	// Update user.
+	err = app.user.UpdateUser(id, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Upsert user teams.
+	if err := app.team.UpsertUserTeams(id, user.Teams); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(true)
 }
 
 func handleGetCurrentUser(r *fastglue.Request) error {

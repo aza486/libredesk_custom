@@ -12,6 +12,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/team/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/zerodha/logf"
 )
 
@@ -34,11 +35,12 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetTeams       *sqlx.Stmt `query:"get-teams"`
-	GetTeam        *sqlx.Stmt `query:"get-team"`
-	InsertTeam     *sqlx.Stmt `query:"insert-team"`
-	UpdateTeam     *sqlx.Stmt `query:"update-team"`
-	GetTeamMembers *sqlx.Stmt `query:"get-team-members"`
+	GetTeams        *sqlx.Stmt `query:"get-teams"`
+	GetTeam         *sqlx.Stmt `query:"get-team"`
+	InsertTeam      *sqlx.Stmt `query:"insert-team"`
+	UpdateTeam      *sqlx.Stmt `query:"update-team"`
+	GetTeamMembers  *sqlx.Stmt `query:"get-team-members"`
+	UpsertUserTeams *sqlx.Stmt `query:"upsert-user-teams"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -93,7 +95,7 @@ func (u *Manager) CreateTeam(t models.Team) error {
 
 // UpdateTeam updates an existing team.
 func (u *Manager) UpdateTeam(id int, t models.Team) error {
-	if _, err := u.q.UpdateTeam.Exec(id, t.Name); err != nil {
+	if _, err := u.q.UpdateTeam.Exec(id, t.Name, t.AutoAssignConversations); err != nil {
 		u.lo.Error("error updating team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating team", nil)
 	}
@@ -111,4 +113,13 @@ func (u *Manager) GetTeamMembers(name string) ([]umodels.User, error) {
 		return users, fmt.Errorf("fetching team members: %w", err)
 	}
 	return users, nil
+}
+
+// UpsertUserTeams updates/inserts exists user teams
+func (u *Manager) UpsertUserTeams(id int, teamNames []string) error {
+	if _, err := u.q.UpsertUserTeams.Exec(id, pq.Array(teamNames)); err != nil {
+		u.lo.Error("error updating user teams", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating user team", nil)
+	}
+	return nil
 }

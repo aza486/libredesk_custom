@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import DataTable from '@/components/admin/DataTable.vue'
 import { useRouter } from 'vue-router'
 import PageHeader from '../common/PageHeader.vue'
+import { format } from 'date-fns'
 import api from '@/api'
 
 const { toast } = useToast()
@@ -80,7 +81,6 @@ const columns = [
     header: () => h('div', { class: 'text-center' }, 'Enabled'),
     cell: ({ row }) => {
       const disabled = row.getValue('disabled')
-
       return h('div', { class: 'text-center' }, [
         h('input', {
           type: 'checkbox',
@@ -88,6 +88,15 @@ const columns = [
           disabled: true
         })
       ])
+    }
+  },
+  {
+    accessorKey: 'updated_at',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Modified at')
+    },
+    cell: function ({ row }) {
+      return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))
     }
   },
   {

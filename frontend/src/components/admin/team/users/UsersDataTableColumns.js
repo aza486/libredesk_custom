@@ -1,5 +1,6 @@
 import { h } from 'vue'
 import UserDataTableDropDown from '@/components/admin/team/users/UserDataTableDropDown.vue'
+import { format } from 'date-fns'
 
 export const columns = [
   {
@@ -8,8 +9,7 @@ export const columns = [
       return h('div', { class: 'text-center' }, 'First name')
     },
     cell: function ({ row }) {
-      const firstName = row.getValue('first_name')
-      return h('div', { class: 'text-center font-medium' }, firstName)
+      return h('div', { class: 'text-center font-medium' }, row.getValue('first_name'))
     }
   },
   {
@@ -18,8 +18,7 @@ export const columns = [
       return h('div', { class: 'text-center' }, 'Last name')
     },
     cell: function ({ row }) {
-      const lastName = row.getValue('last_name')
-      return h('div', { class: 'text-center font-medium' }, lastName)
+      return h('div', { class: 'text-center font-medium' }, row.getValue('last_name'))
     }
   },
   {
@@ -28,18 +27,16 @@ export const columns = [
       return h('div', { class: 'text-center' }, 'Email')
     },
     cell: function ({ row }) {
-      const email = row.getValue('email')
-      return h('div', { class: 'text-center font-medium' }, email)
+      return h('div', { class: 'text-center font-medium' }, row.getValue('email'))
     }
   },
   {
-    accessorKey: 'team_name',
+    accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Team name')
+      return h('div', { class: 'text-center' }, 'Modified at')
     },
     cell: function ({ row }) {
-      const tName = row.getValue('team_name')
-      return h('div', { class: 'text-center font-medium' }, tName)
+      return h('div', { class: 'text-center font-medium' }, format(row.getValue('updated_at'), 'PPpp'))
     }
   },
   {

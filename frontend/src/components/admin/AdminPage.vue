@@ -1,44 +1,59 @@
 <script setup>
+import { computed } from 'vue'
 import PageHeader from '@/components/common/PageHeader.vue';
-import SidebarNav from '@/components/common/SidebarNav.vue'
+import SidebarNav from '@/components/common/SidebarNav.vue';
+import { useUserStore } from '@/stores/user';
 
-const sidebarNavItems = [
+const userStore = useUserStore();
+
+const allNavItems = [
   {
     title: 'General',
     href: '/admin/general',
-    description: 'Configure general app settings'
+    description: 'Configure general app settings',
+    permission: 'settings:manage_general'
   },
   {
     title: 'Inboxes',
     href: '/admin/inboxes',
-    description: 'Manage your inboxes'
+    description: 'Manage your inboxes',
+    permission: 'inboxes:manage'
   },
   {
     title: 'Teams',
     href: '/admin/teams',
-    description: 'Manage teams, manage agents and roles'
+    description: 'Manage teams, manage agents and roles',
+    permission: 'teams:manage'
   },
   {
     title: 'Automations',
     href: '/admin/automations',
-    description: 'Manage automations and time triggers'
+    description: 'Manage automations and time triggers',
+    permission: 'automations:manage'
   },
   {
     title: 'Templates',
     href: '/admin/templates',
-    description: 'Manage email templates'
+    description: 'Manage email templates',
+    permission: 'templates:manage'
   },
   {
     title: 'File uploads',
     href: '/admin/uploads',
-    description: 'Manage file upload settings'
+    description: 'Manage file upload settings',
+    permission: 'settings:manage_file'
   },
   {
     title: 'OIDC',
     href: '/admin/oidc',
-    description: 'Manage OpenID Connect configurations'
+    description: 'Manage OpenID Connect configurations',
+    permission: 'login:manage'
   },
-]
+];
+
+const sidebarNavItems = computed(() =>
+  allNavItems.filter(item => userStore.hasPermission(item.permission))
+);
 </script>
 
 <template>
@@ -48,7 +63,7 @@ const sidebarNavItems = [
       <aside class="lg:w-1/6 md:w-1/7 h-[calc(100vh-10rem)] border-r pr-3">
         <SidebarNav :navItems="sidebarNavItems" />
       </aside>
-      <div class="flex-1 lg:max-w-4xl admin-main-content min-h-[700px]">
+      <div class="flex-1 lg:max-w-5xl admin-main-content min-h-[700px]">
         <div class="space-y-6">
           <slot></slot>
         </div>

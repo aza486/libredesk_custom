@@ -4,6 +4,7 @@ package template
 import (
 	"database/sql"
 	"embed"
+	"errors"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -15,6 +16,8 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
+
+	ErrTemplateNotFound = errors.New("template not found")
 )
 
 // Manager handles template-related operations.
@@ -66,7 +69,7 @@ func (m *Manager) GetDefault() (models.Template, error) {
 	var template models.Template
 	if err := m.q.GetDefaultTemplate.Get(&template); err != nil {
 		if err == sql.ErrNoRows {
-			return template, nil
+			return template, ErrTemplateNotFound
 		}
 		m.lo.Error("error fetching default template", "error", err)
 		return template, envelope.NewError(envelope.GeneralError, "Error fetching template", nil)

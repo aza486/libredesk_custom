@@ -1,0 +1,29 @@
+{
+  "Conversation": {
+    "conversation:reply": "Reply to conversations",
+    "conversation:edit_all_properties": "Edit all conversation properties",
+    "conversation:edit_status": "Edit conversation status",
+    "conversation:edit_priority": "Edit conversation priority",
+    "conversation:edit_team": "Edit conversation team",
+    "conversation:edit_user": "Edit conversation user",
+    "conversation:view_all": "View all conversations",
+    "conversation:view_team": "View team conversations",
+    "conversation:view_assigned": "View assigned conversations"
+  },
+  "Admin": {
+    "admin:access": "Access the admin panel",
+    "settings:manage_general": "Manage general settings",
+    "settings:manage_file": "Manage file upload settings",
+    "login:manage": "Manage login settings",
+    "inboxes:manage": "Manage inboxes",
+    "users:manage": "Manage users",
+    "teams:manage": "Manage teams",
+    "roles:manage": "Manage roles",
+    "automations:manage": "Manage automations",
+    "templates:manage": "Manage templates"
+  },
+  "Dashboard": {
+    "dashboard:view_global": "Access global dashboard",
+    "dashboard:view_team_self": "Access team dashboards the user is part of"
+  }
+}

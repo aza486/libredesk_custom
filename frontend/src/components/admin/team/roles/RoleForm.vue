@@ -19,36 +19,20 @@
             </FormItem>
         </FormField>
 
-        <p class="text-xl">Set permissions for this role</p>
+        <p class="text-base">Set permissions for this role</p>
 
-        <div v-for="entity in permissions" :key="entity.name" class="space-y-4">
-            <p class="text-lg">{{ entity.name }}</p>
-            <div class="space-y-2">
-                <FormField v-for="permission in entity.permissions" :key="permission.name" v-slot="{ value }"
-                    type="checkbox" :name="permission.name">
-                    <FormItem class="flex flex-col gap-y-5 space-y-0 border p-4 box">
-                        <div class="flex space-x-5">
+        <div v-for="entity in permissions" :key="entity.name" class="border box p-4 rounded-lg shadow-sm">
+            <p class="text-lg mb-5">{{ entity.name }}</p>
+            <div class="space-y-4">
+                <FormField v-for="permission in entity.permissions" :key="permission.name" type="checkbox"
+                    :name="permission.name">
+                    <FormItem class="flex flex-col gap-y-5 space-y-0 rounded-lg">
+                        <div class="flex space-x-3">
                             <FormControl>
                                 <Checkbox :checked="selectedPermissions.includes(permission.name)"
                                     @update:checked="(newValue) => handleChange(newValue, permission.name)" />
                                 <FormLabel>{{ permission.label }}</FormLabel>
                             </FormControl>
-                        </div>
-                        <div class="space-y-1 leading-none" v-if="permission.subOptions">
-                            <div class="ml-6 space-y-1">
-                                <FormField v-for="subOption in permission.subOptions" :key="subOption.name"
-                                    v-slot="{ value: subValue }" type="checkbox" :name="subOption.name">
-                                    <FormItem class="flex flex-row items-start gap-x-3 space-y-0 p-4">
-                                        <FormControl>
-                                            <Checkbox :checked="selectedPermissions.includes(subOption.name)"
-                                                @update:checked="(newValue) => handleChange(newValue, subOption.name)" />
-                                        </FormControl>
-                                        <div class="space-y-1 leading-none">
-                                            <FormLabel>{{ subOption.label }}</FormLabel>
-                                        </div>
-                                    </FormItem>
-                                </FormField>
-                            </div>
                         </div>
                     </FormItem>
                 </FormField>
@@ -90,47 +74,40 @@ const permissions = ref([
     {
         name: 'Conversation',
         permissions: [
-            {
-                name: 'conversation:reply',
-                label: 'Reply to a conversation',
-            },
-            {
-                name: 'conversation:edit_all_properties',
-                label: 'Edit conversation properties',
-                subOptions: [
-                    { name: 'conversation:edit_status', label: 'Edit status' },
-                    { name: 'conversation:edit_priority', label: 'Edit priority' },
-                    { name: 'conversation:edit_team', label: 'Edit team' },
-                    { name: 'conversation:edit_agent', label: 'Edit agent' },
-                ],
-            },
-            {
-                name: 'conversation:all',
-                label: 'View all conversations',
-                subOptions: [
-                    { name: 'conversation:team', label: 'View team conversations' },
-                    { name: 'conversation:assigned', label: 'View assigned conversations' },
-                ],
-            },
-        ],
+            { name: 'conversation:reply', label: 'Reply to conversations' },
+            { name: 'conversation:edit_all_properties', label: 'Edit all conversation properties' },
+            { name: 'conversation:edit_status', label: 'Edit conversation status' },
+            { name: 'conversation:edit_priority', label: 'Edit conversation priority' },
+            { name: 'conversation:edit_team', label: 'Edit conversation team' },
+            { name: 'conversation:edit_user', label: 'Edit conversation user' },
+            { name: 'conversation:view_all', label: 'View all conversations' },
+            { name: 'conversation:view_team', label: 'View team conversations' },
+            { name: 'conversation:view_assigned', label: 'View assigned conversations' }
+        ]
     },
     {
         name: 'Admin',
         permissions: [
-            {
-                name: 'admin:get',
-                label: 'Access to the admin panel',
-                subOptions: [
-                    { name: 'inboxes:manage', label: 'Manage inboxes' },
-                    { name: 'users:manage', label: 'Manage users' },
-                    { name: 'teams:manage', label: 'Manage teams' },
-                    { name: 'roles:manage', label: 'Manage roles' },
-                    { name: 'automations:manage', label: 'Manage automations' },
-                ],
-            },
+            { name: 'admin:access', label: 'Access the admin panel' },
+            { name: 'settings:manage_general', label: 'Manage general settings' },
+            { name: 'settings:manage_file', label: 'Manage file upload settings' },
+            { name: 'login:manage', label: 'Manage login settings' },
+            { name: 'inboxes:manage', label: 'Manage inboxes' },
+            { name: 'users:manage', label: 'Manage users' },
+            { name: 'teams:manage', label: 'Manage teams' },
+            { name: 'roles:manage', label: 'Manage roles' },
+            { name: 'automations:manage', label: 'Manage automations' },
+            { name: 'templates:manage', label: 'Manage templates' }
+        ]
+    },
+    {
+        name: 'Dashboard',
+        permissions: [
+            { name: 'dashboard:view_global', label: 'Access global dashboard' },
+            { name: 'dashboard:view_team_self', label: 'Access dashboard of teams the user is part of' }
         ]
     }
-])
+]);
 
 const selectedPermissions = ref([])
 
@@ -165,6 +142,6 @@ watch(
             selectedPermissions.value = newValues.permissions || []
         }
     },
-    { immediate: true }
+    { deep: true }
 )
 </script>

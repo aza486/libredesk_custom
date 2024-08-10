@@ -1,46 +1,76 @@
-import { ref, computed } from "vue"
-import { defineStore } from 'pinia'
+import { ref, computed } from 'vue';
+import { defineStore } from 'pinia';
 import api from '@/api';
 
 export const useUserStore = defineStore('user', () => {
-    const userAvatar = ref('')
-    const userFirstName = ref('')
-    const userLastName = ref('')
+    const userAvatar = ref('');
+    const userFirstName = ref('');
+    const userLastName = ref('');
+    const userPermissions = ref([]);
 
-    const setAvatar = (v) => {
-        userAvatar.value = v
-    }
+    // Setters
+    const setAvatar = (avatar) => {
+        userAvatar.value = avatar;
+    };
 
-    const setFirstName = (v) => {
-        userFirstName.value = v
-    }
+    const setFirstName = (firstName) => {
+        userFirstName.value = firstName;
+    };
 
-    const setLastName = (v) => {
-        userLastName.value = v
-    }
+    const setLastName = (lastName) => {
+        userLastName.value = lastName;
+    };
 
+    // Computed properties
     const getInitials = computed(() => {
         const firstInitial = userFirstName.value.charAt(0).toUpperCase();
         const lastInitial = userLastName.value.charAt(0).toUpperCase();
-        return firstInitial + lastInitial;
+        return `${firstInitial}${lastInitial}`;
     });
 
     const getFullName = computed(() => {
-        return userFirstName.value + " " + userLastName.value
-    })
+        return `${userFirstName.value} ${userLastName.value}`;
+    });
 
-    async function getCurrentUser () {
+    // Fetch current user data
+    const getCurrentUser = async () => {
         try {
-            const resp = await api.getCurrentUser();
-            if (resp.data.data) {
-                userAvatar.value = resp.data.data.avatar_url;
-                userFirstName.value = resp.data.data.first_name;
-                userLastName.value = resp.data.data.last_name;
+            const response = await api.getCurrentUser();
+            const userData = response?.data?.data;
+
+            if (userData) {
+                const { avatar_url, first_name, last_name, permissions } = userData;
+                setAvatar(avatar_url);
+                setFirstName(first_name);
+                setLastName(last_name);
+                userPermissions.value = permissions || [];
             }
         } catch (error) {
-            console.error("Error fetching current user:", error);
+            console.error('Error fetching current user:', error);
         }
-    }
+    };
 
-    return { userFirstName, userLastName, userAvatar, getFullName, getInitials, setAvatar, setFirstName, setLastName, getCurrentUser }
-})
+    // Check if user has a specific permission
+    const hasPermission = (permission) => {
+        return userPermissions.value.includes(permission);
+    };
+
+    return {
+        // State
+        userFirstName,
+        userLastName,
+        userAvatar,
+        userPermissions,
+
+        // Computed
+        getFullName,
+        getInitials,
+
+        // Actions
+        setAvatar,
+        setFirstName,
+        setLastName,
+        getCurrentUser,
+        hasPermission,
+    };
+});

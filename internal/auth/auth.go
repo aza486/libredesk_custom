@@ -129,7 +129,6 @@ func (o *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 		"email":      user.Email,
 		"first_name": user.FirstName,
 		"last_name":  user.LastName,
-		"team_id":    user.TeamID,
 	}); err != nil {
 		o.lo.Error("error setting login session", "error", err)
 		return err

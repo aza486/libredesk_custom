@@ -14,7 +14,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Users, UserRoundCog } from 'lucide-vue-next'
+import { Users, UserRoundCog, User } from 'lucide-vue-next'
 import AdminMenuCard from '@/components/admin/common/MenuCard.vue'
 import PageHeader from '../common/PageHeader.vue';
 
@@ -37,7 +37,7 @@ const cards = [
     title: 'Users',
     subTitle: 'Create and manage users.',
     onClick: navigateToUsers,
-    icon: UserRoundCog
+    icon: User
   },
   {
     title: 'Teams',
@@ -49,7 +49,7 @@ const cards = [
     title: 'Roles',
     subTitle: 'Create and manage roles.',
     onClick: navigateToRoles,
-    icon: Users
+    icon: UserRoundCog
   },
 ]
 </script>
