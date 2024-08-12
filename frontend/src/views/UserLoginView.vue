@@ -9,10 +9,10 @@
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="grid gap-4">
-                        <div class="grid grid-cols-1 gap-6" v-for="oidcProvider in oidcProviders"
-                            :key="oidcProvider.id">
-                            <Button variant="outline" @click.prevent="redirectToOIDCLogin">
-                                <img :src="oidcProvider.logo_url" width="15" class="mr-2"/>
+                        <div v-for="oidcProvider in enabledOIDCProviders" :key="oidcProvider.id"
+                            class="grid grid-cols-1 gap-6">
+                            <Button variant="outline" @click.prevent="redirectToOIDC(oidcProvider)">
+                                <img :src="oidcProvider.logo_url" width="15" class="mr-2" />
                                 {{ oidcProvider.name }}
                             </Button>
                         </div>
@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { handleHTTPError } from '@/utils/http'
 import { useUserStore } from '@/stores/user'
@@ -82,9 +82,9 @@ const loginForm = ref({
 const userStore = useUserStore()
 const oidcProviders = ref([])
 
-const redirectToOIDCLogin = () => {
-    window.location.href = "/auth/oidc/login"
-}
+const redirectToOIDC = (provider) => {
+    window.location.href = `/api/oidc/${provider.id}/login`
+};
 
 const loginAction = () => {
     errorMessage.value = ""
@@ -114,4 +114,9 @@ onMounted(async () => {
     const resp = await api.getAllOIDC()
     oidcProviders.value = resp.data.data
 })
+
+const enabledOIDCProviders = computed(() => {
+    return oidcProviders.value.filter(provider => !provider.disabled);
+});
+
 </script>

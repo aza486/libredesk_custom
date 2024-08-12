@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -9,32 +10,38 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-// handleGetAllOIDC returns all oidc records
+const (
+	redirectURI = "/api/oidc/finish?id=%d"
+)
+
+// handleGetAllOIDC returns all OIDC records
 func handleGetAllOIDC(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
-	o, err := app.oidc.GetAll()
+	app := r.Context.(*App)
+
+	out, err := app.oidc.GetAll()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(o)
+	return r.SendEnvelope(out)
 }
 
 // handleGetOIDC returns an OIDC record by id.
 func handleGetOIDC(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
+	app := r.Context.(*App)
+
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-	if err != nil || id == 0 {
+	if err != nil || id <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"Invalid oidc `id`", nil, envelope.InputError)
+			"Invalid OIDC `id`", nil, envelope.InputError)
 	}
+
 	o, err := app.oidc.Get(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	o.RedirectURI = fmt.Sprintf("%s%s", app.constant.AppBaseURL, fmt.Sprintf(redirectURI, o.ID))
+
 	return r.SendEnvelope(o)
 }
 

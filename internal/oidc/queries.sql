@@ -1,19 +1,17 @@
 -- name: get-all-oidc
-SELECT id, disabled, provider_url, updated_at FROM oidc;
+SELECT id, name, disabled, provider_url, provider, client_id, client_secret, updated_at FROM oidc order by updated_at desc;
 
 -- name: get-oidc
 SELECT * FROM oidc WHERE id = $1;
 
 -- name: insert-oidc
-INSERT INTO oidc (provider_url, client_id, client_secret, redirect_uri) 
-VALUES ($1, $2, $3, $4)
-RETURNING *;
+INSERT INTO oidc (name, provider, provider_url, client_id, client_secret) 
+VALUES ($1, $2, $3, $4, $5);
 
 -- name: update-oidc
 UPDATE oidc 
-SET provider_url = $2, client_id = $3, client_secret = $4, redirect_uri = $5, updated_at = now()
-WHERE id = $1
-RETURNING *;
+SET name = $2, provider = $3, provider_url = $4, client_id = $5, client_secret = $6, disabled = $7, updated_at = now()
+WHERE id = $1;
 
 -- name: delete-oidc
 DELETE FROM oidc WHERE id = $1;

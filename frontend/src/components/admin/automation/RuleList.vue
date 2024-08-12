@@ -1,14 +1,14 @@
 <template>
-    <div class="flex flex-col box border p-5 space-y-2">
-        <div class="flex justify-between">
+    <div class="flex flex-col box px-5 py-6 rounded-lg justify-center">
+        <div class="flex justify-between space-y-3">
             <div>
-                <span class="sub-title flex space-x-3 items-center">
+                <span class="sub-title space-x-3 flex justify-center items-center">
                     <div class="text-base">
                         {{ rule.name }}
                     </div>
-                    <div>
-                        <Badge v-if="!rule.disabled" class="text-[10px] py-0 px-1">Enabled</Badge>
-                        <Badge v-else class="text-[10px] py-0 px-1" variant="secondary">Disabled</Badge>
+                    <div class="mb-1">
+                        <Badge v-if="!rule.disabled">Enabled</Badge>
+                        <Badge v-else variant="secondary">Disabled</Badge>
                     </div>
                 </span>
             </div>
@@ -36,7 +36,7 @@
                 </DropdownMenu>
             </div>
         </div>
-        <p class="text-muted-foreground text-sm">
+        <p class="text-sm-muted">
             {{ rule.description }}
         </p>
     </div>

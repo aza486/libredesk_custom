@@ -55,7 +55,6 @@
 
         </div>
 
-        <Error :errorMessage="conversationStore.conversations.errorMessage"></Error>
         <EmptyList v-if="emptyConversations"></EmptyList>
 
         <div class="h-screen overflow-y-scroll pb-[180px] flex flex-col">

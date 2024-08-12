@@ -7,7 +7,7 @@
           <ResizablePanel id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="7"
             :max-size="20" :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
             @expand="toggleNav(false)" @collapse="toggleNav(true)">
-            <NavBar :is-collapsed="isCollapsed" :links="navLinks" />
+            <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks" />
           </ResizablePanel>
           <ResizableHandle id="resize-handle-1" />
           <ResizablePanel id="resize-panel-2">
@@ -70,6 +70,16 @@ const allNavLinks = ref([
     permission: 'admin:get',
   },
 ]);
+
+const bottomLinks = ref(
+  [
+    {
+      to: '/logout',
+      icon: 'lucide:log-out',
+      title: 'Logout'
+    }
+  ]
+)
 const userStore = useUserStore();
 const router = useRouter();
 

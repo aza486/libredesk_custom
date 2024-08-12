@@ -54,7 +54,7 @@
     "textarea": "^0.3.0",
     "tiptap-extension-resize-image": "^1.1.5",
     "vee-validate": "^4.13.2",
-    "vue": "^3.4.15",
+    "vue": "^3.4.37",
     "vue-draggable-resizable": "^3.0.0",
     "vue-i18n": "9",
     "vue-letter": "^0.2.0",

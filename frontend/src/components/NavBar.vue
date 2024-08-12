@@ -8,7 +8,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 
 defineProps({
   isCollapsed: Boolean,
-  links: Array
+  links: Array,
+  bottomLinks: Array
 })
 
 const route = useRoute()
@@ -25,7 +26,7 @@ const getButtonVariant = (to) => {
 </script>
 
 <template>
-  <div :data-collapsed="isCollapsed" class="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2">
+  <div :data-collapsed="isCollapsed" class="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 h-full">
     <nav class="grid gap-1 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2">
       <template v-for="(link, index) of links">
         <!-- Collapsed -->
@@ -74,5 +75,30 @@ const getButtonVariant = (to) => {
         </router-link>
       </template>
     </nav>
+
+    <!-- Bottom Links -->
+    <div class="mt-auto px-2">
+      <template v-for="(bottomLink, index) in bottomLinks" :key="`bottom-${index}`">
+        <TooltipProvider :delay-duration="10">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <router-link :to="bottomLink.to" :class="cn(
+                buttonVariants({ variant: getButtonVariant(bottomLink.to), size: isCollapsed ? 'icon' : 'sm' }),
+                bottomLink.variant === getButtonVariant(bottomLink.to) &&
+                'dark:bg-muted dark:text-white dark:hover:bg-muted dark:hover:text-white',
+                'justify-start'
+              )">
+                <Icon :icon="bottomLink.icon" class="mr-2 size-5" v-if="!isCollapsed" />
+                <span v-if="!isCollapsed">{{ bottomLink.title }}</span>
+                <Icon :icon="bottomLink.icon" class="size-5 mx-auto" v-else />
+              </router-link>
+            </TooltipTrigger>
+            <TooltipContent side="right" class="flex items-center gap-4">
+              {{ bottomLink.title }}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </template>
+    </div>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="flex flex-col space-y-5">
-            <div>
+            <div class="space-y-1">
                 <span class="sub-title">Public avatar</span>
                 <p class="text-muted-foreground text-xs">Change your avatar here.</p>
             </div>

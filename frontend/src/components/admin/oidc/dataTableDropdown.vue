@@ -9,8 +9,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import api from '@/api'
+import { useEmitter } from '@/composables/useEmitter'
 
 const router = useRouter()
+const emit = useEmitter()
 
 const props = defineProps({
     role: {
@@ -28,6 +30,7 @@ function edit (id) {
 
 async function deleteOIDC (id) {
     await api.deleteOIDC(id)
+    emit.emit('refresh-inbox-list')
 }
 </script>
 

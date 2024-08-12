@@ -269,7 +269,7 @@ func initMedia(db *sqlx.DB) *media.Manager {
 	case "localfs":
 		store, err = localfs.New(localfs.Opts{
 			UploadURI:  "/uploads",
-			UploadPath: filepath.Clean(ko.String("app.localfs.upload_path")),
+			UploadPath: filepath.Clean(ko.String("upload.localfs.upload_path")),
 			RootURL:    ko.String("app.root_url"),
 		})
 		if err != nil {
@@ -411,16 +411,31 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 	}
 }
 
-func initAuth(rd *redis.Client) *auth.Auth {
-	lo := initLogger("auth")
+func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
+	var lo = initLogger("auth")
+
+	oidc, err := o.GetAll()
+	if err != nil {
+		log.Fatalf("error initializing auth: %v", err)
+	}
+
+	var providers = make([]auth.Provider, 0, len(oidc))
+	for _, o := range oidc {
+		if o.Disabled {
+			continue
+		}
+		providers = append(providers, auth.Provider{
+			ID:           o.ID,
+			Provider:     o.Provider,
+			ProviderURL:  o.ProviderURL,
+			RedirectURL:  o.RedirectURI,
+			ClientID:     o.ClientID,
+			ClientSecret: o.ClientSecret,
+		})
+	}
+
 	a, err := auth.New(auth.Config{
-		OIDC: auth.OIDCConfig{
-			Enabled:      true,
-			ProviderURL:  "https://accounts.google.com",
-			RedirectURL:  "http://localhost:5173/auth/oidc/finish",
-			ClientID:     "a",
-			ClientSecret: "a",
-		},
+		Providers: providers,
 	}, rd, lo)
 	if err != nil {
 		log.Fatalf("error initializing auth: %v", err)

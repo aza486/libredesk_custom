@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="onSubmit" class="w-2/3 space-y-6">
+  <form @submit.prevent="onSubmit" class="space-y-6">
     <FormField v-slot="{ field }" name="first_name">
       <FormItem v-auto-animate>
         <FormLabel>First name</FormLabel>
@@ -29,23 +29,23 @@
       </FormItem>
     </FormField>
 
-    <FormField name="teams" v-slot="{ field }">
+    <FormField name="teams" v-slot="{ componentField }">
       <FormItem>
         <FormLabel>Select teams</FormLabel>
         <FormControl>
-          <SelectTag :initialValue="field.value" v-model="selectedTeamNames" :items="teamNames"
-            placeHolder="Select teams"></SelectTag>
+          <SelectTag v-model="componentField.modelValue" :items="teamNames" placeHolder="Select teams"></SelectTag>
         </FormControl>
+        <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField name="roles" v-slot="{ field }">
+    <FormField name="roles" v-slot="{ componentField }">
       <FormItem>
         <FormLabel>Select roles</FormLabel>
         <FormControl>
-          <SelectTag :initialValue="field.value" v-model="selectedRoleNames" :items="roleNames"
-            placeHolder="Select roles"></SelectTag>
+          <SelectTag v-model="componentField.modelValue" :items="roleNames" placeHolder="Select roles"></SelectTag>
         </FormControl>
+        <FormMessage />
       </FormItem>
     </FormField>
 
@@ -81,9 +81,6 @@ import {
 import { Input } from '@/components/ui/input'
 import api from '@/api'
 
-
-const selectedRoleNames = ref([])
-const selectedTeamNames = ref([])
 const teams = ref([])
 const roles = ref([])
 
@@ -133,7 +130,6 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
-  console.log('submitting ', values)
   props.submitForm(values)
 })
 
@@ -142,15 +138,7 @@ watch(
   () => props.initialValues,
   (newValues) => {
     form.setValues(newValues)
-    if (newValues) {
-      if (newValues.roles)
-        selectedRoleNames.value = newValues.roles
-
-      if (newValues.teams)
-        selectedTeamNames.value = newValues.teams
-    }
-
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 )
 </script>

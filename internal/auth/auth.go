@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/redis/go-redis/v9"
@@ -26,42 +27,51 @@ type OIDCclaim struct {
 	Picture       string `json:"picture"`
 }
 
-type OIDCConfig struct {
-	Enabled      bool   `json:"enabled"`
-	ProviderURL  string `json:"provider_url"`
-	RedirectURL  string `json:"redirect_url"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+type Provider struct {
+	ID           int
+	Provider     string
+	ProviderURL  string
+	RedirectURL  string
+	ClientID     string
+	ClientSecret string
 }
 
 type Config struct {
-	OIDC OIDCConfig
+	Providers []Provider
 }
 
 type Auth struct {
-	cfg      Config
-	oauthCfg oauth2.Config
-	verifier *oidc.IDTokenVerifier
-	sess     *simplesessions.Manager
-	lo       *logf.Logger
+	cfg       Config
+	oauthCfgs map[int]oauth2.Config
+	verifiers map[int]*oidc.IDTokenVerifier
+	sess      *simplesessions.Manager
+	logger    *logf.Logger
 }
 
-// New inits a OIDC configuration
+// New initializes an OIDC configuration for multiple providers.
 func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
-	provider, err := oidc.NewProvider(context.Background(), cfg.OIDC.ProviderURL)
-	if err != nil {
-		return nil, err
-	}
+	oauthCfgs := make(map[int]oauth2.Config)
+	verifiers := make(map[int]*oidc.IDTokenVerifier)
 
-	oauthCfg := oauth2.Config{
-		ClientID:     cfg.OIDC.ClientID,
-		ClientSecret: cfg.OIDC.ClientSecret,
-		Endpoint:     provider.Endpoint(),
-		RedirectURL:  cfg.OIDC.RedirectURL,
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
-	}
+	for _, provider := range cfg.Providers {
+		oidcProv, err := oidc.NewProvider(context.Background(), provider.ProviderURL)
+		if err != nil {
+			return nil, fmt.Errorf("initializing `%s` oidc login: %v", provider.Provider, err)
+		}
 
-	verifier := provider.Verifier(&oidc.Config{ClientID: cfg.OIDC.ClientID})
+		oauthCfg := oauth2.Config{
+			ClientID:     provider.ClientID,
+			ClientSecret: provider.ClientSecret,
+			Endpoint:     oidcProv.Endpoint(),
+			RedirectURL:  provider.RedirectURL,
+			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		}
+
+		verifier := oidcProv.Verifier(&oidc.Config{ClientID: provider.ClientID})
+
+		oauthCfgs[provider.ID] = oauthCfg
+		verifiers[provider.ID] = verifier
+	}
 
 	sess := simplesessions.New(simplesessions.Options{
 		EnableAutoCreate: false,
@@ -72,27 +82,42 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 			MaxAge:     time.Hour * 12,
 		},
 	})
+
 	st := sessredisstore.New(context.TODO(), rd)
 	sess.UseStore(st)
 	sess.SetCookieHooks(simpleSessGetCookieCB, simpleSessSetCookieCB)
 
 	return &Auth{
-		cfg:      cfg,
-		oauthCfg: oauthCfg,
-		verifier: verifier,
-		lo:       logger,
-		sess:     sess,
+		cfg:       cfg,
+		oauthCfgs: oauthCfgs,
+		verifiers: verifiers,
+		sess:      sess,
+		logger:    logger,
 	}, nil
 }
 
-// LoginURL
-func (a *Auth) LoginURL(state string) string {
-	return a.oauthCfg.AuthCodeURL(state)
+// LoginURL generates a login URL for a specific provider using its ID.
+func (a *Auth) LoginURL(providerID int, state string) (string, error) {
+	oauthCfg, ok := a.oauthCfgs[providerID]
+	if !ok {
+		return "", envelope.NewError(envelope.InputError, "Provider not found", nil)
+	}
+	return oauthCfg.AuthCodeURL(state), nil
 }
 
 // ExchangeOIDCToken takes an OIDC authorization code, validates it, and returns an OIDC token for subsequent auth.
-func (a *Auth) ExchangeOIDCToken(ctx context.Context, code string) (string, OIDCclaim, error) {
-	tk, err := a.oauthCfg.Exchange(ctx, code)
+func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code string) (string, OIDCclaim, error) {
+	oauthCfg, ok := a.oauthCfgs[providerID]
+	if !ok {
+		return "", OIDCclaim{}, fmt.Errorf("invalid provider ID: %d", providerID)
+	}
+
+	verifier, ok := a.verifiers[providerID]
+	if !ok {
+		return "", OIDCclaim{}, fmt.Errorf("invalid provider ID: %d", providerID)
+	}
+
+	tk, err := oauthCfg.Exchange(ctx, code)
 	if err != nil {
 		return "", OIDCclaim{}, fmt.Errorf("error exchanging token: %v", err)
 	}
@@ -104,7 +129,7 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, code string) (string, OIDC
 	}
 
 	// Parse and verify ID Token payload.
-	idTk, err := a.verifier.Verify(ctx, rawIDTk)
+	idTk, err := verifier.Verify(ctx, rawIDTk)
 	if err != nil {
 		return "", OIDCclaim{}, fmt.Errorf("error verifying ID token: %v", err)
 	}
@@ -117,10 +142,10 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, code string) (string, OIDC
 }
 
 // SaveSession creates and sets a session (post successful login/auth).
-func (o *Auth) SaveSession(user models.User, r *fastglue.Request) error {
-	sess, err := o.sess.NewSession(r, r)
+func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
+	sess, err := a.sess.NewSession(r, r)
 	if err != nil {
-		o.lo.Error("error creating login session", "error", err)
+		a.logger.Error("error creating login session", "error", err)
 		return err
 	}
 
@@ -130,15 +155,15 @@ func (o *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 		"first_name": user.FirstName,
 		"last_name":  user.LastName,
 	}); err != nil {
-		o.lo.Error("error setting login session", "error", err)
+		a.logger.Error("error setting login session", "error", err)
 		return err
 	}
 	return nil
 }
 
 // ValidateSession validates session and returns the user.
-func (o *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
-	sess, err := o.sess.Acquire(r.RequestCtx, r, r)
+func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
+	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -158,7 +183,7 @@ func (o *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 
 	// Logged in?
 	if userID <= 0 {
-		o.lo.Error("error fetching session", "error", err)
+		a.logger.Error("error fetching session", "error", err)
 		return models.User{}, err
 	}
 
@@ -171,14 +196,14 @@ func (o *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 }
 
 // DestroySession destroys session
-func (o *Auth) DestroySession(r *fastglue.Request) error {
-	sess, err := o.sess.Acquire(r.RequestCtx, r, r)
+func (a *Auth) DestroySession(r *fastglue.Request) error {
+	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
-		o.lo.Error("error acquiring session", "error", err)
+		a.logger.Error("error acquiring session", "error", err)
 		return err
 	}
 	if err := sess.Destroy(); err != nil {
-		o.lo.Error("error clearing session", "error", err)
+		a.logger.Error("error clearing session", "error", err)
 		return err
 	}
 	return nil

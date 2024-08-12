@@ -38,7 +38,6 @@
                 </FormField>
             </div>
         </div>
-
         <Button type="submit" size="sm">{{ submitLabel }}</Button>
     </form>
 </template>
@@ -118,7 +117,6 @@ const form = useForm({
 
 const onSubmit = form.handleSubmit((values) => {
     values.permissions = selectedPermissions.value
-    console.log("submitting ", values)
     props.submitForm(values)
 })
 

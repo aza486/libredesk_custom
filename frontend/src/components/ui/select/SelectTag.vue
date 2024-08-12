@@ -8,7 +8,7 @@
                 </TagsInputItem>
             </div>
 
-            <ComboboxRoot v-model="filteredItems" v-model:open="isOpen" @onUpdate:searchTerm="searchTerm" class="w-full">
+            <ComboboxRoot v-model:open="isOpen" class="w-full">
                 <ComboboxAnchor as-child>
                     <ComboboxInput :placeholder="placeHolder" as-child>
                         <TagsInputInput class="w-full px-3" :class="selectedItems.length > 0 ? 'mt-2' : ''"
@@ -57,7 +57,7 @@ const props = defineProps({
     }
 });
 
-const selectedItems = defineModel();
+const selectedItems = defineModel({ default: [] });
 const isOpen = ref(false);
 const searchTerm = ref('');
 const dropdownRef = ref(null);

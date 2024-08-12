@@ -83,6 +83,8 @@ func main() {
 		i18n         = initI18n(fs)
 		lo           = initLogger("artemis")
 		rdb          = initRedis()
+		oidc         = initOIDC(db)
+		auth         = initAuth(oidc, rdb)
 		template     = initTemplate(db)
 		media        = initMedia(db)
 		contact      = initContact(db)
@@ -119,7 +121,7 @@ func main() {
 	var app = &App{
 		lo:           lo,
 		rdb:          rdb,
-		auth:         initAuth(rdb),
+		auth:         auth,
 		fs:           fs,
 		i18n:         i18n,
 		media:        media,
@@ -131,7 +133,7 @@ func main() {
 		tmpl:         template,
 		conversation: conversation,
 		automation:   automation,
-		oidc:         initOIDC(db),
+		oidc:         oidc,
 		role:         initRole(db),
 		constant:     initConstants(),
 		tag:          initTags(db),

@@ -15,7 +15,7 @@ import api from '@/api'
 const { toast } = useToast()
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
-  { path: '/admin/teams/users', label: 'Users'},
+  { path: '/admin/teams/users', label: 'Users' },
   { path: '#', label: 'Add user' }
 ]
 

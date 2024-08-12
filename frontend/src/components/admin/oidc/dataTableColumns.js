@@ -3,14 +3,36 @@ import dropdown from './dataTableDropdown.vue'
 import { format } from 'date-fns'
 
 export const columns = [
-
     {
         accessorKey: 'name',
+        header: function () {
+            return h('div', { class: 'text-center' }, 'Name')
+        },
+        cell: function ({ row }) {
+            return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
+        }
+    },
+    {
+        accessorKey: 'provider',
         header: function () {
             return h('div', { class: 'text-center' }, 'Provider')
         },
         cell: function ({ row }) {
-            return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
+            return h('div', { class: 'text-center font-medium' }, row.getValue('provider'))
+        }
+    },
+    {
+        accessorKey: 'disabled',
+        header: () => h('div', { class: 'text-center' }, 'Enabled'),
+        cell: ({ row }) => {
+            const disabled = row.getValue('disabled')
+            return h('div', { class: 'text-center' }, [
+                h('input', {
+                    type: 'checkbox',
+                    checked: !disabled,
+                    disabled: true
+                })
+            ])
         }
     },
     {

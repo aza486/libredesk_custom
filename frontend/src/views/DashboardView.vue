@@ -1,5 +1,5 @@
 <template>
-    <div class="page-content w-11/12">
+    <div class="page-content w-10/12">
         <div class="flex flex-col space-y-6">
             <div>
                 <span class="font-medium text-2xl space-y-1" v-if="userStore.getFullName">
@@ -79,7 +79,7 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 import { useUserStore } from '@/stores/user'
-import { format, subWeeks, subMonths, subYears, formatISO } from 'date-fns'
+import { format } from 'date-fns'
 import api from '@/api';
 import { useToast } from '@/components/ui/toast/use-toast'
 
@@ -94,13 +94,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { useLocalStorage } from '@vueuse/core'
 
 
 const { toast } = useToast()
 const userStore = useUserStore()
 const cardCounts = ref({})
 const chartData = ref({})
-const filter = ref("me")
+const filter = useLocalStorage('dashboard_filter', 'me');
 const barChartFilter = ref("last_week")
 const lineChartFilter = ref("last_week")
 const agentCountCardsLabels = {
@@ -110,12 +111,6 @@ const agentCountCardsLabels = {
     awaiting_response_count: "Awaiting Response",
 };
 
-const chartFilters = {
-    last_week: getLastWeekRange(),
-    last_month: getLastMonthRange(),
-    last_year: getLastYearRange(),
-};
-``
 onMounted(() => {
     getCardStats()
     getDashboardCharts()
@@ -132,39 +127,11 @@ const onDashboardFilterChange = (v) => {
 }
 
 const onLineChartFilterChange = (v) => {
-    console.log("chart filter  -> ", chartFilters)
     lineChartFilter.value = v
 }
 
 const onBarChartFilterChange = (v) => {
     barChartFilter.value = v
-}
-
-function getLastWeekRange () {
-    const today = new Date();
-    const lastWeekStart = subWeeks(today, 1);
-    return {
-        start: formatISO(lastWeekStart, { representation: 'date' }),
-        end: formatISO(today, { representation: 'date' }),
-    };
-}
-
-function getLastMonthRange () {
-    const today = new Date();
-    const lastMonthStart = subMonths(today, 1);
-    return {
-        start: formatISO(lastMonthStart, { representation: 'date' }),
-        end: formatISO(today, { representation: 'date' }),
-    };
-}
-
-function getLastYearRange () {
-    const today = new Date();
-    const lastYearStart = subYears(today, 1);
-    return {
-        start: formatISO(lastYearStart, { representation: 'date' }),
-        end: formatISO(today, { representation: 'date' }),
-    };
 }
 
 const getCardStats = () => {

@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <UserForm :initial-values="user" :submitForm="submitForm" />
+  <UserForm :initialValues="user" :submitForm="submitForm" />
 </template>
 
 <script setup>

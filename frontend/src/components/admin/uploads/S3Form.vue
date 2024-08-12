@@ -114,8 +114,7 @@
             <FormItem v-auto-animate>
                 <FormLabel>S3 backend URL</FormLabel>
                 <FormControl>
-                    <Input type="url" placeholder="https://ap-south-1.s3.amazonaws.com" v-bind="componentField"
-                        defaultValue="https://ap-south-1.s3.amazonaws.com" />
+                    <Input type="url" placeholder="https://ap-south-1.s3.amazonaws.com" v-bind="componentField"/>
                 </FormControl>
                 <FormDescription>Only change if using a custom S3 compatible backend like Minio.</FormDescription>
                 <FormMessage />

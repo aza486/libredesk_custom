@@ -14,7 +14,7 @@ import (
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/login", handleLogin)
 	g.GET("/api/logout", handleLogout)
-	g.GET("/api/oidc/login", handleOIDCLogin)
+	g.GET("/api/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/oidc/finish", handleOIDCCallback)
 
 	// Health check.

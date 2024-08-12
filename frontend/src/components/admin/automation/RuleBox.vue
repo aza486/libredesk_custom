@@ -12,7 +12,7 @@
                 </div>
             </RadioGroup>
         </div>
-        <div class="box border p-5 space-y-5">
+        <div class="box border p-5 space-y-5 rounded-lg">
             <div class="space-y-5">
                 <div v-for="(rule, index) in ruleGroup.rules" :key="rule" class="space-y-5">
                     <div v-if="index > 0">

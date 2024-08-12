@@ -35,6 +35,7 @@ type queries struct {
 	UpdateOIDC *sqlx.Stmt `query:"update-oidc"`
 	DeleteOIDC *sqlx.Stmt `query:"delete-oidc"`
 }
+
 // New creates and returns a new instance of the oidc Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
@@ -56,7 +57,7 @@ func (o *Manager) Get(id int) (models.OIDC, error) {
 		o.lo.Error("error fetching oidc", "error", err)
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
-	oidc.SetProviderInfo()
+	oidc.SetProviderLogo()
 	return oidc, nil
 }
 
@@ -68,23 +69,23 @@ func (o *Manager) GetAll() ([]models.OIDC, error) {
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
 	for i := range oidc {
-		oidc[i].SetProviderInfo()
+		oidc[i].SetProviderLogo()
 	}
 	return oidc, nil
 }
 
 // Create adds a new oidc.
 func (o *Manager) Create(oidc models.OIDC) error {
-	if _, err := o.q.InsertOIDC.Exec(oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.RedirectURI); err != nil {
+	if _, err := o.q.InsertOIDC.Exec(oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret); err != nil {
 		o.lo.Error("error inserting oidc", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
+		return envelope.NewError(envelope.GeneralError, "Error creating OIDC", nil)
 	}
 	return nil
 }
 
 // Create updates a oidc by id.
 func (o *Manager) Update(id int, oidc models.OIDC) error {
-	if _, err := o.q.UpdateOIDC.Exec(id, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.RedirectURI); err != nil {
+	if _, err := o.q.UpdateOIDC.Exec(id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Disabled); err != nil {
 		o.lo.Error("error updating oidc", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating OIDC", nil)
 	}

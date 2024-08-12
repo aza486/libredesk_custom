@@ -1,6 +1,14 @@
 import * as z from 'zod'
 
 export const oidcLoginFormSchema = z.object({
+    disabled: z
+        .boolean().optional(),
+    name: z
+        .string({
+            required_error: 'Name is required.'
+        }),
+    provider: z
+        .string().optional(),
     provider_url: z
         .string({
             required_error: 'Provider URL is required.'
@@ -16,11 +24,5 @@ export const oidcLoginFormSchema = z.object({
         .string({
             required_error: 'Client Secret is required.'
         }),
-    redirect_uri: z
-        .string({
-            required_error: 'Redirect URI is required.'
-        })
-        .url({
-            message: 'Redirect URI must be a valid URL.'
-        })
+    redirect_uri: z.string().readonly().optional(),
 })

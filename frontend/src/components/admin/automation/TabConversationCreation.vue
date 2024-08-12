@@ -1,7 +1,7 @@
 <template>
     <div class="space-y-5">
         <div>
-            <p class="text-muted-foreground text-sm">Rules that run when a new conversation is created</p>
+            <p class="text-sm-muted">Rules that run when a new conversation is created</p>
         </div>
         <div v-if="showRuleList" class="space-y-5">
             <RuleList v-for="rule in rules" :key="rule.name" :rule="rule" @delete-rule="deleteRule"  @toggle-rule="toggleRule"/>

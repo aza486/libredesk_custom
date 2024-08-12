@@ -39,7 +39,6 @@ const emitter = useEmitter()
 
 const scrollToBottom = () => {
     setTimeout(() => {
-        console.log("Scrolling bottom")
         const thread = threadEl.value
         if (thread) {
             thread.scrollTop = thread.scrollHeight
