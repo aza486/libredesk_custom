@@ -79,7 +79,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Tags.
 	g.GET("/api/tags", perm(handleGetTags))
-	// TODO: add tag create, update endpoints.
+	g.POST("/api/tags", perm(handleCreateTag, "tags:manage"))
+	g.DELETE("/api/tags/{id}", perm(handleDeleteTag, "tags:manage"))
+	g.PUT("/api/tags/{id}", perm(handleUpdateTag, "tags:manage"))
 
 	// TODO: Add conversation create status, priority of conversation.
 

@@ -153,6 +153,22 @@ const routes = [
         path: 'oidc/new',
         component: () => import('@/components/admin/oidc/AddEditOIDC.vue')
       },
+      {
+        path: 'conversations',
+        component: () => import('@/components/admin/conversation/ConversationPage.vue')
+      },
+      {
+        path: 'conversations/tags',
+        component: () => import('@/components/admin/conversation/tags/TagsPage.vue')
+      },
+      {
+        path: 'conversations/priority',
+        component: () => import('@/components/admin/conversation/priority/PriorityPage.vue')
+      },
+      {
+        path: 'conversations/status',
+        component: () => import('@/components/admin/conversation/status/StatusPage.vue')
+      },
     ]
   },
   // Fallback to dashboard.

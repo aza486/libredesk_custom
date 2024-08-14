@@ -14,6 +14,12 @@ const allNavItems = [
     permission: 'settings:manage_general'
   },
   {
+    title: 'Conversations',
+    href: '/admin/conversations',
+    description: 'Manage conversation tags, statuses and priorities.',
+    permission: null,
+  },
+  {
     title: 'Inboxes',
     href: '/admin/inboxes',
     description: 'Manage your inboxes',
@@ -51,7 +57,7 @@ const allNavItems = [
   },
 ];
 
-const sidebarNavItems = computed(() =>
+const sidebarNavItems = computed(() => 
   allNavItems.filter(item => userStore.hasPermission(item.permission))
 );
 </script>

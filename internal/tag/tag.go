@@ -1,11 +1,11 @@
-// Package tag handles the management of tags in the system.
+// Package tag handles the management of tags.
 package tag
 
 import (
 	"embed"
-	"fmt"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/tag/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -33,6 +33,7 @@ type queries struct {
 	GetAllTags *sqlx.Stmt `query:"get-all-tags"`
 	InsertTag  *sqlx.Stmt `query:"insert-tag"`
 	DeleteTag  *sqlx.Stmt `query:"delete-tag"`
+	UpdateTag  *sqlx.Stmt `query:"update-tag"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -53,26 +54,35 @@ func New(opts Opts) (*Manager, error) {
 func (t *Manager) GetAll() ([]models.Tag, error) {
 	var tags []models.Tag
 	if err := t.q.GetAllTags.Select(&tags); err != nil {
-		t.lo.Error("fetching tags", "error", err)
-		return tags, fmt.Errorf("error fetching tags")
+		t.lo.Error("error fetching tags", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching tags", nil)
 	}
 	return tags, nil
 }
 
-// AddTag adds a new tag.
-func (t *Manager) AddTag(name string) error {
+// Create creates a new tag.
+func (t *Manager) Create(name string) error {
 	if _, err := t.q.InsertTag.Exec(name); err != nil {
-		t.lo.Error("inserting tag", "error", err)
-		return fmt.Errorf("error inserting tag")
+		t.lo.Error("error inserting tag", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating tag", nil)
 	}
 	return nil
 }
 
-// DeleteTag deletes a tag by ID.
-func (t *Manager) DeleteTag(id int) error {
+// Delete deletes a tag by ID.
+func (t *Manager) Delete(id int) error {
 	if _, err := t.q.DeleteTag.Exec(id); err != nil {
-		t.lo.Error("deleting tag", "error", err)
-		return fmt.Errorf("error deleting tag")
+		t.lo.Error("error deleting tag", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting tag", nil)
+	}
+	return nil
+}
+
+// Update updates a tag by id.
+func (t *Manager) Update(id int, name string) error {
+	if _, err := t.q.UpdateTag.Exec(id, name); err != nil {
+		t.lo.Error("error updating tag", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating tag", nil)
 	}
 	return nil
 }

@@ -9,3 +9,6 @@ INSERT into tags (name) values ($1);
 
 -- name: delete-tag
 DELETE from tags where id = $1;
+
+-- name: update-tag
+UPDATE tags set name = $2 where id = $1;
