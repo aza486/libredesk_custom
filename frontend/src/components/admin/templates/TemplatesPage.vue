@@ -18,7 +18,7 @@ import { ref, onMounted } from 'vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import { columns } from '@/components/admin/templates/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import PageHeader from '../common/PageHeader.vue'
+import PageHeader from '@/components/admin/common/PageHeader.vue'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 

@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
@@ -434,13 +433,13 @@ func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 		})
 	}
 
-	a, err := auth.New(auth.Config{
+	auth, err := auth.New(auth.Config{
 		Providers: providers,
 	}, rd, lo)
 	if err != nil {
 		log.Fatalf("error initializing auth: %v", err)
 	}
-	return a
+	return auth
 }
 
 func initOIDC(db *sqlx.DB) *oidc.Manager {
@@ -477,31 +476,25 @@ func initRedis() *redis.Client {
 }
 
 func initDB() *sqlx.DB {
-	var c struct {
-		Host        string        `koanf:"host"`
-		Port        int           `koanf:"port"`
-		User        string        `koanf:"user"`
-		Password    string        `koanf:"password"`
-		DBName      string        `koanf:"database"`
-		SSLMode     string        `koanf:"ssl_mode"`
-		Params      string        `koanf:"params"` // Extra params.
-		MaxOpen     int           `koanf:"max_open"`
-		MaxIdle     int           `koanf:"max_idle"`
-		MaxLifetime time.Duration `koanf:"max_lifetime"`
-	}
-	if err := ko.Unmarshal("db", &c); err != nil {
-		log.Fatalf("loading db config: %v", err)
-	}
+	dsn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s %s",
+		ko.MustString("db.host"),
+		ko.MustInt("db.port"),
+		ko.MustString("db.user"),
+		ko.MustString("db.password"),
+		ko.MustString("db.database"),
+		ko.String("db.ssl_mode"),
+		ko.String("db.params"),
+	)
 
-	db, err := sqlx.Connect("postgres",
-		fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s %s", c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode, c.Params))
+	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
-		log.Fatalf("error connecting to DB %v", err)
+		log.Fatalf("error connecting to DB: %v", err)
 	}
 
-	db.SetMaxOpenConns(c.MaxOpen)
-	db.SetMaxIdleConns(c.MaxIdle)
-	db.SetConnMaxLifetime(c.MaxLifetime)
+	db.SetMaxOpenConns(ko.MustInt("db.max_open"))
+	db.SetMaxIdleConns(ko.MustInt("db.max_idle"))
+	db.SetConnMaxLifetime(ko.MustDuration("db.max_lifetime"))
 
 	return db
 }

@@ -30,7 +30,9 @@ function edit (id) {
 
 async function deleteOIDC (id) {
     await api.deleteOIDC(id)
-    emit.emit('refresh-inbox-list')
+    emit.emit('refresh-list', {
+        name: 'inbox'
+    })
 }
 </script>
 

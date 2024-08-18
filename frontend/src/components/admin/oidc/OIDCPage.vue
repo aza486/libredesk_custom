@@ -27,7 +27,10 @@ const emit = useEmitter()
 
 onMounted(() => {
   fetchAll()
-  emit.on('refresh-inbox-list', fetchAll)
+  emit.on('refresh-list', (data) => {
+    if (data?.name === "inbox")
+      fetchAll
+  })
 })
 
 const fetchAll = async () => {

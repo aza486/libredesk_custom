@@ -25,12 +25,12 @@ export const columns = [
         id: 'actions',
         enableHiding: false,
         cell: ({ row }) => {
-            const template = row.original
+            const tag = row.original
             return h(
                 'div',
                 { class: 'relative' },
                 h(dropdown, {
-                    template
+                    tag
                 })
             )
         }

@@ -19,6 +19,9 @@ http.interceptors.request.use(request => {
   return request;
 });
 
+const createTag = (data) => http.post('/api/tags', data)
+const updateTag = (id, data) => http.put(`/api/tags/${id}`, data)
+const deleteTag = (id) => http.delete(`/api/tags/${id}`)
 const getTemplate = (id) => http.get(`/api/templates/${id}`)
 const getTemplates = () => http.get('/api/templates')
 const createTemplate = (data) => http.post('/api/templates', data, {
@@ -231,4 +234,7 @@ export default {
   createTemplate,
   updateTemplate,
   deleteUserAvatar,
+  createTag,
+  updateTag,
+  deleteTag,
 };
