@@ -1,19 +1,19 @@
 <script setup>
-import { computed } from "vue";
+import { computed } from 'vue'
 import {
   DialogClose,
   DialogContent,
   DialogOverlay,
   DialogPortal,
-  useForwardPropsEmits,
-} from "radix-vue";
-import { Cross2Icon } from "@radix-icons/vue";
-import { sheetVariants } from ".";
-import { cn } from "@/lib/utils";
+  useForwardPropsEmits
+} from 'radix-vue'
+import { Cross2Icon } from '@radix-icons/vue'
+import { sheetVariants } from '.'
+import { cn } from '@/lib/utils'
 
 defineOptions({
-  inheritAttrs: false,
-});
+  inheritAttrs: false
+})
 
 const props = defineProps({
   class: { type: null, required: false },
@@ -22,25 +22,25 @@ const props = defineProps({
   trapFocus: { type: Boolean, required: false },
   disableOutsidePointerEvents: { type: Boolean, required: false },
   asChild: { type: Boolean, required: false },
-  as: { type: null, required: false },
-});
+  as: { type: null, required: false }
+})
 
 const emits = defineEmits([
-  "escapeKeyDown",
-  "pointerDownOutside",
-  "focusOutside",
-  "interactOutside",
-  "openAutoFocus",
-  "closeAutoFocus",
-]);
+  'escapeKeyDown',
+  'pointerDownOutside',
+  'focusOutside',
+  'interactOutside',
+  'openAutoFocus',
+  'closeAutoFocus'
+])
 
 const delegatedProps = computed(() => {
-  const { class: _, side, ...delegated } = props;
+  const { class: _, side, ...delegated } = props
 
-  return delegated;
-});
+  return delegated
+})
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits);
+const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>

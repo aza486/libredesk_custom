@@ -60,11 +60,11 @@ const props = defineProps({
     type: String,
     required: false,
     default: () => 'Submit'
-  },
+  }
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(teamFormSchema),
+  validationSchema: toTypedSchema(teamFormSchema)
 })
 
 const onSubmit = form.handleSubmit((values) => {

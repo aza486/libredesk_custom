@@ -1,27 +1,25 @@
 <script setup>
-import { computed } from "vue";
-import AutoFormLabel from "./AutoFormLabel.vue";
-import { beautifyObjectName } from "./utils";
+import { computed } from 'vue'
+import AutoFormLabel from './AutoFormLabel.vue'
+import { beautifyObjectName } from './utils'
 import {
   FormControl,
   FormDescription,
   FormField,
   FormItem,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+  FormMessage
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 const props = defineProps({
   fieldName: { type: String, required: true },
   label: { type: String, required: false },
   required: { type: Boolean, required: false },
   config: { type: Object, required: false },
-  disabled: { type: Boolean, required: false },
-});
-const inputComponent = computed(() =>
-  props.config?.component === "textarea" ? Textarea : Input,
-);
+  disabled: { type: Boolean, required: false }
+})
+const inputComponent = computed(() => (props.config?.component === 'textarea' ? Textarea : Input))
 </script>
 
 <template>

@@ -10,7 +10,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import DataTable from '@/components/admin/DataTable.vue'
@@ -28,8 +27,7 @@ const emit = useEmitter()
 onMounted(() => {
   fetchAll()
   emit.on('refresh-list', (data) => {
-    if (data?.name === "inbox")
-      fetchAll
+    if (data?.name === 'inbox') fetchAll
   })
 })
 
@@ -39,6 +37,6 @@ const fetchAll = async () => {
 }
 
 const navigateToAddOIDC = () => {
-  router.push("/admin/oidc/new")
+  router.push('/admin/oidc/new')
 }
 </script>

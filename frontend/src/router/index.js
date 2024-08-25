@@ -168,7 +168,7 @@ const routes = [
       {
         path: 'conversations/status',
         component: () => import('@/components/admin/conversation/status/StatusPage.vue')
-      },
+      }
     ]
   },
   // Fallback to dashboard.

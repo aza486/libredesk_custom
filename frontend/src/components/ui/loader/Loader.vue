@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { LoaderCircle } from 'lucide-vue-next'
 
-
 defineProps({
   loading: {
     type: Boolean,
@@ -11,7 +10,7 @@ defineProps({
     type: String,
     default: 'Loading'
   }
-});
+})
 </script>
 
 <template>

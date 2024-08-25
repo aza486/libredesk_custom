@@ -177,6 +177,7 @@ func (m *Manager) DeleteMediaAndStore(name string) error {
 // This function should be run as a goroutine to avoid blocking. It uses a ticker to
 // trigger the deletion process every 12 hours.
 func (m *Manager) CleanMedia(ctx context.Context) {
+	m.deleteUnlinkedMedia()
 	ticker := time.NewTicker(12 * time.Hour)
 	defer ticker.Stop()
 	for {
@@ -203,7 +204,7 @@ func (m *Manager) deleteUnlinkedMedia() {
 	for _, id := range unlinkedMedia {
 		_, err := m.queries.DeleteMedia.Exec(id)
 		if err != nil {
-			m.lo.Error("error deleting unlinked media", "ID", id, "error", err)
+			m.lo.Error("error deleting unlinked media", "id", id, "error", err)
 		}
 	}
 }

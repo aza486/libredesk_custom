@@ -1,8 +1,8 @@
 <template>
-    <div class="mb-5">
-        <CustomBreadcrumb :links="breadcrumbLinks" />
-    </div>
-    <TeamForm :initial-values="{}" :submitForm="submitForm" />
+  <div class="mb-5">
+    <CustomBreadcrumb :links="breadcrumbLinks" />
+  </div>
+  <TeamForm :initial-values="{}" :submitForm="submitForm" />
 </template>
 
 <script setup>
@@ -14,24 +14,24 @@ import api from '@/api'
 
 const { toast } = useToast()
 const breadcrumbLinks = [
-    { path: '/admin/teams', label: 'Teams' },
-    { path: '/admin/teams/teams', label: 'Teams' },
-    { path: '/admin/teams/teams/new', label: 'New team' },
+  { path: '/admin/teams', label: 'Teams' },
+  { path: '/admin/teams/teams', label: 'Teams' },
+  { path: '/admin/teams/teams/new', label: 'New team' }
 ]
 
 const submitForm = (values) => {
-    createTeam(values)
+  createTeam(values)
 }
 
 const createTeam = async (values) => {
-    try {
-        await api.createTeam(values)
-    } catch (error) {
-        toast({
-            title: 'Could not create team.',
-            variant: 'destructive',
-            description: handleHTTPError(error).message
-        })
-    }
+  try {
+    await api.createTeam(values)
+  } catch (error) {
+    toast({
+      title: 'Could not create team.',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
 }
 </script>

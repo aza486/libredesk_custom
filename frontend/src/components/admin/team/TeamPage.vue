@@ -4,8 +4,14 @@
       <PageHeader title="Teams" description="Manage teams, users and roles" />
     </div>
     <div class="flex space-x-5">
-      <AdminMenuCard v-for="card in cards" :key="card.title" :onClick="card.onClick" :title="card.title"
-        :subTitle="card.subTitle" :icon="card.icon">
+      <AdminMenuCard
+        v-for="card in cards"
+        :key="card.title"
+        :onClick="card.onClick"
+        :title="card.title"
+        :subTitle="card.subTitle"
+        :icon="card.icon"
+      >
       </AdminMenuCard>
     </div>
   </div>
@@ -16,7 +22,7 @@
 import { useRouter } from 'vue-router'
 import { Users, UserRoundCog, User } from 'lucide-vue-next'
 import AdminMenuCard from '@/components/admin/common/MenuCard.vue'
-import PageHeader from '../common/PageHeader.vue';
+import PageHeader from '../common/PageHeader.vue'
 
 const router = useRouter()
 
@@ -50,6 +56,6 @@ const cards = [
     subTitle: 'Create and manage roles.',
     onClick: navigateToRoles,
     icon: UserRoundCog
-  },
+  }
 ]
 </script>

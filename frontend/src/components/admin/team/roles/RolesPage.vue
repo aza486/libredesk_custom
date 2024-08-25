@@ -1,14 +1,14 @@
 <template>
-    <div class="mb-5">
-        <CustomBreadcrumb :links="breadcrumbLinks" />
-    </div>
-    <div class="flex justify-end mb-5">
-        <Button @click="navigateToAddRole" size="sm"> New role </Button>
-    </div>
-    <div class="w-full">
-        <DataTable :columns="columns" :data="roles" />
-    </div>
-    <router-view></router-view>
+  <div class="mb-5">
+    <CustomBreadcrumb :links="breadcrumbLinks" />
+  </div>
+  <div class="flex justify-end mb-5">
+    <Button @click="navigateToAddRole" size="sm"> New role </Button>
+  </div>
+  <div class="w-full">
+    <DataTable :columns="columns" :data="roles" />
+  </div>
+  <router-view></router-view>
 </template>
 
 <script setup>
@@ -26,28 +26,28 @@ const { toast } = useToast()
 const router = useRouter()
 const roles = ref([])
 const breadcrumbLinks = [
-    { path: '/admin/teams', label: 'Teams' },
-    { path: '#', label: 'Roles' }
+  { path: '/admin/teams', label: 'Teams' },
+  { path: '#', label: 'Roles' }
 ]
 
 const getRoles = async () => {
-    try {
-        const resp = await api.getRoles()
-        roles.value = resp.data.data
-    } catch (error) {
-        toast({
-            title: 'Could not fetch roles.',
-            variant: 'destructive',
-            description: handleHTTPError(error).message
-        })
-    }
+  try {
+    const resp = await api.getRoles()
+    roles.value = resp.data.data
+  } catch (error) {
+    toast({
+      title: 'Could not fetch roles.',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
 }
 
 onMounted(async () => {
-    getRoles()
+  getRoles()
 })
 
 const navigateToAddRole = () => {
-    router.push('/admin/teams/roles/new')
+  router.push('/admin/teams/roles/new')
 }
 </script>

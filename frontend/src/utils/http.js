@@ -3,30 +3,28 @@
  * @param {any} error - Axios error
  * @returns Readable error object
  */
-function handleHTTPError (error) {
-    let resp = {
-        "status": "error",
-        "message": "Unknown error",
-        "data": null,
-        "status_code": null
+function handleHTTPError(error) {
+  let resp = {
+    status: 'error',
+    message: 'Unknown error',
+    data: null,
+    status_code: null
+  }
+  // Response received from the server.
+  if (error.response && error.response.data) {
+    // Message available in response, override.
+    if (error.response.data.message) {
+      resp.message = error.response.data.message
     }
-    // Response received from the server.
-    if (error.response && error.response.data) {
-        // Message available in response, override.
-        if (error.response.data.message) {
-            resp.message = error.response.data.message
-        }
-        resp.status_code = error.response.status
-    } else if (error.request) {
-        resp.message = "No response from server. Check if you are still connected to internet."
-    } else if (error.message) {
-        resp.message = error.message
-    } else {
-        resp.message = "Error setting up the request"
-    }
-    return resp
+    resp.status_code = error.response.status
+  } else if (error.request) {
+    resp.message = 'No response from server. Check if you are still connected to internet.'
+  } else if (error.message) {
+    resp.message = error.message
+  } else {
+    resp.message = 'Error setting up the request'
+  }
+  return resp
 }
 
-export {
-    handleHTTPError
-}
+export { handleHTTPError }

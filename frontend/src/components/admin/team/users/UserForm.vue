@@ -33,7 +33,11 @@
       <FormItem>
         <FormLabel>Select teams</FormLabel>
         <FormControl>
-          <SelectTag v-model="componentField.modelValue" :items="teamNames" placeHolder="Select teams"></SelectTag>
+          <SelectTag
+            v-model="componentField.modelValue"
+            :items="teamNames"
+            placeHolder="Select teams"
+          ></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -43,7 +47,11 @@
       <FormItem>
         <FormLabel>Select roles</FormLabel>
         <FormControl>
-          <SelectTag v-model="componentField.modelValue" :items="roleNames" placeHolder="Select roles"></SelectTag>
+          <SelectTag
+            v-model="componentField.modelValue"
+            :items="roleNames"
+            placeHolder="Select roles"
+          ></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -75,9 +83,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import {
-  SelectTag
-} from '@/components/ui/select'
+import { SelectTag } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import api from '@/api'
 
@@ -105,24 +111,19 @@ const props = defineProps({
   }
 })
 
-
 onMounted(async () => {
   try {
-    const [teamsResp, rolesResp] = await Promise.all([
-      api.getTeams(),
-      api.getRoles()
-    ]);
+    const [teamsResp, rolesResp] = await Promise.all([api.getTeams(), api.getRoles()])
 
-    teams.value = teamsResp.data.data;
-    roles.value = rolesResp.data.data;
-
+    teams.value = teamsResp.data.data
+    roles.value = rolesResp.data.data
   } catch (err) {
-    console.log(err);
+    console.log(err)
   }
-});
+})
 
-const teamNames = computed(() => teams.value.map(team => team.name));
-const roleNames = computed(() => roles.value.map(role => role.name));
+const teamNames = computed(() => teams.value.map((team) => team.name))
+const roleNames = computed(() => roles.value.map((role) => role.name))
 
 const form = useForm({
   validationSchema: toTypedSchema(userFormSchema),

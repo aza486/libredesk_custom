@@ -1,66 +1,60 @@
 <script setup>
-import * as z from "zod";
-import { computed, provide } from "vue";
-import { PlusIcon, TrashIcon } from "lucide-vue-next";
-import { FieldArray, FieldContextKey, useField } from "vee-validate";
-import { beautifyObjectName, getBaseType } from "./utils";
-import AutoFormField from "./AutoFormField.vue";
-import AutoFormLabel from "./AutoFormLabel.vue";
+import * as z from 'zod'
+import { computed, provide } from 'vue'
+import { PlusIcon, TrashIcon } from 'lucide-vue-next'
+import { FieldArray, FieldContextKey, useField } from 'vee-validate'
+import { beautifyObjectName, getBaseType } from './utils'
+import AutoFormField from './AutoFormField.vue'
+import AutoFormLabel from './AutoFormLabel.vue'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { FormItem, FormMessage } from "@/components/ui/form";
+  AccordionTrigger
+} from '@/components/ui/accordion'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { FormItem, FormMessage } from '@/components/ui/form'
 
 const props = defineProps({
   fieldName: { type: String, required: true },
   required: { type: Boolean, required: false },
   config: { type: null, required: false },
   schema: { type: null, required: false },
-  disabled: { type: Boolean, required: false },
-});
+  disabled: { type: Boolean, required: false }
+})
 
 function isZodArray(item) {
-  return item instanceof z.ZodArray;
+  return item instanceof z.ZodArray
 }
 
 function isZodDefault(item) {
-  return item instanceof z.ZodDefault;
+  return item instanceof z.ZodDefault
 }
 
 const itemShape = computed(() => {
-  if (!props.schema) return;
+  if (!props.schema) return
 
   const schema = isZodArray(props.schema)
     ? props.schema._def.type
     : isZodDefault(props.schema)
       ? props.schema._def.innerType._def.type
-      : null;
+      : null
 
   return {
     type: getBaseType(schema),
-    schema,
-  };
-});
+    schema
+  }
+})
 
-const fieldContext = useField(props.fieldName);
-provide(FieldContextKey, fieldContext);
+const fieldContext = useField(props.fieldName)
+provide(FieldContextKey, fieldContext)
 </script>
 
 <template>
   <FieldArray v-slot="{ fields, remove, push }" as="section" :name="fieldName">
     <slot v-bind="props">
-      <Accordion
-        type="multiple"
-        class="w-full"
-        collapsible
-        :disabled="disabled"
-        as-child
-      >
+      <Accordion type="multiple" class="w-full" collapsible :disabled="disabled" as-child>
         <FormItem>
           <AccordionItem :value="fieldName" class="border-none">
             <AccordionTrigger>
@@ -80,12 +74,7 @@ provide(FieldContextKey, fieldContext);
                   />
 
                   <div class="!my-4 flex justify-end">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="secondary"
-                      @click="remove(index)"
-                    >
+                    <Button type="button" size="icon" variant="secondary" @click="remove(index)">
                       <TrashIcon :size="16" />
                     </Button>
                   </div>

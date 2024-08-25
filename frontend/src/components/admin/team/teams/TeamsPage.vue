@@ -28,7 +28,7 @@ import { useRouter } from 'vue-router'
 
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
-  { path: '/admin/teams/', label: 'Teams' },
+  { path: '/admin/teams/', label: 'Teams' }
 ]
 
 const router = useRouter()
@@ -47,7 +47,6 @@ const getData = async () => {
     })
   }
 }
-
 
 const navigateToAddTeam = () => {
   router.push('/admin/teams/teams/new')

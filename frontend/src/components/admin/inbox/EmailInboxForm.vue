@@ -1,58 +1,64 @@
 <template>
-  <AutoForm class="w-11/12 space-y-6" :schema="emailChannelFormSchema" :form="form" :field-config="{
-    name: {
-      description: 'Name for your inbox.'
-    },
-    from: {
-      label: 'Email address',
-      description: 'From email address. e.g. My Support <mysupport@example.com>'
-    },
-    imap: {
-      label: 'IMAP',
-      password: {
-        inputProps: {
-          type: 'password',
-          placeholder: '••••••••'
+  <AutoForm
+    class="w-11/12 space-y-6"
+    :schema="emailChannelFormSchema"
+    :form="form"
+    :field-config="{
+      name: {
+        description: 'Name for your inbox.'
+      },
+      from: {
+        label: 'Email address',
+        description: 'From email address. e.g. My Support <mysupport@example.com>'
+      },
+      imap: {
+        label: 'IMAP',
+        password: {
+          inputProps: {
+            type: 'password',
+            placeholder: '••••••••'
+          }
+        },
+        read_interval: {
+          label: 'Emails scan interval'
         }
       },
-      read_interval: {
-        label: 'Emails scan interval'
-      }
-    },
-    smtp: {
-      label: 'SMTP',
-      max_conns: {
-        label: 'Max connections',
-        description: 'Maximum number of concurrent connections to the server.'
-      },
-      max_msg_retries: {
-        label: 'Retries',
-        description: 'Number of times to retry when a message fails.'
-      },
-      idle_timeout: {
-        label: 'Idle timeout',
-        description: `IdleTimeout is the maximum time to wait for new activity on a connection
+      smtp: {
+        label: 'SMTP',
+        max_conns: {
+          label: 'Max connections',
+          description: 'Maximum number of concurrent connections to the server.'
+        },
+        max_msg_retries: {
+          label: 'Retries',
+          description: 'Number of times to retry when a message fails.'
+        },
+        idle_timeout: {
+          label: 'Idle timeout',
+          description: `IdleTimeout is the maximum time to wait for new activity on a connection
         before closing it and removing it from the pool.`
-      },
-      wait_timeout: {
-        label: 'Wait timeout',
-        description: `PoolWaitTimeout is the maximum time to wait to obtain a connection from
+        },
+        wait_timeout: {
+          label: 'Wait timeout',
+          description: `PoolWaitTimeout is the maximum time to wait to obtain a connection from
       a pool before timing out. This may happen when all open connections are
       busy sending e-mails and they're not returning to the pool fast enough.
       This is also the timeout used when creating new SMTP connections.
       `
-      },
-      auth_protocol: {
-        label: 'Auth protocol'
-      },
-      password: {
-        inputProps: {
-          type: 'password',
-          placeholder: '••••••••'
+        },
+        auth_protocol: {
+          label: 'Auth protocol'
+        },
+        password: {
+          inputProps: {
+            type: 'password',
+            placeholder: '••••••••'
+          }
         }
       }
-    }
-  }" @submit="submitForm">
+    }"
+    @submit="submitForm"
+  >
     <Button type="submit" size="sm"> {{ props.submitLabel }} </Button>
   </AutoForm>
 </template>
@@ -90,8 +96,7 @@ const form = useForm({
 watch(
   () => props.initialValues,
   (newValues) => {
-    if (newValues)
-      form.setValues(newValues)
+    if (newValues) form.setValues(newValues)
   },
   { deep: true, immediate: true }
 )

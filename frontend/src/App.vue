@@ -4,9 +4,17 @@
     <div class="bg-background text-foreground">
       <div v-if="$route.path !== '/'">
         <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-          <ResizablePanel id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="7"
-            :max-size="20" :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
-            @expand="toggleNav(false)" @collapse="toggleNav(true)">
+          <ResizablePanel
+            id="resize-panel-1"
+            collapsible
+            :default-size="10"
+            :collapsed-size="1"
+            :min-size="7"
+            :max-size="20"
+            :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
+            @expand="toggleNav(false)"
+            @collapse="toggleNav(true)"
+          >
             <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks" />
           </ResizablePanel>
           <ResizableHandle id="resize-handle-1" />
@@ -25,80 +33,74 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { RouterView, useRouter } from 'vue-router';
-import { cn } from '@/lib/utils';
-import { useI18n } from 'vue-i18n';
-import { useUserStore } from '@/stores/user';
-import { initWS } from '@/websocket.js';
+import { ref, onMounted, computed } from 'vue'
+import { RouterView, useRouter } from 'vue-router'
+import { cn } from '@/lib/utils'
+import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user'
+import { initWS } from '@/websocket.js'
 
-import { Toaster } from '@/components/ui/toast';
-import NavBar from '@/components/NavBar.vue';
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/toast'
+import NavBar from '@/components/NavBar.vue'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
-const { t } = useI18n();
-const isCollapsed = ref(false);
+const { t } = useI18n()
+const isCollapsed = ref(false)
 const allNavLinks = ref([
   {
     title: t('navbar.dashboard'),
     to: '/dashboard',
     label: '',
-    icon: 'lucide:layout-dashboard',
+    icon: 'lucide:layout-dashboard'
   },
   {
     title: t('navbar.conversations'),
     to: '/conversations',
     label: '',
-    icon: 'lucide:message-circle-more',
+    icon: 'lucide:message-circle-more'
   },
   {
     title: t('navbar.account'),
     to: '/account/profile',
     label: '',
-    icon: 'lucide:circle-user-round',
+    icon: 'lucide:circle-user-round'
   },
   {
     title: t('navbar.admin'),
     to: '/admin/general',
     label: '',
     icon: 'lucide:settings',
-    permission: 'admin:get',
-  },
-]);
+    permission: 'admin:get'
+  }
+])
 
-const bottomLinks = ref(
-  [
-    {
-      to: '/logout',
-      icon: 'lucide:log-out',
-      title: 'Logout'
-    }
-  ]
-)
-const userStore = useUserStore();
-const router = useRouter();
+const bottomLinks = ref([
+  {
+    to: '/logout',
+    icon: 'lucide:log-out',
+    title: 'Logout'
+  }
+])
+const userStore = useUserStore()
+const router = useRouter()
 
-function toggleNav (v) {
-  isCollapsed.value = v;
+function toggleNav(v) {
+  isCollapsed.value = v
 }
 
 onMounted(() => {
   userStore.getCurrentUser().catch((err) => {
     if (err.response && err.response.status === 401) {
-      router.push('/login');
+      router.push('/login')
     }
-  });
-  initWS();
-});
+  })
+  initWS()
+})
 
 const navLinks = computed(() =>
   allNavLinks.value.filter((link) =>
     link.permission ? userStore.hasPermission(link.permission) : true
   )
-);
+)
 </script>

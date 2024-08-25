@@ -36,7 +36,11 @@ export const columns = [
       return h('div', { class: 'text-center' }, 'Modified at')
     },
     cell: function ({ row }) {
-      return h('div', { class: 'text-center font-medium' }, format(row.getValue('updated_at'), 'PPpp'))
+      return h(
+        'div',
+        { class: 'text-center font-medium' },
+        format(row.getValue('updated_at'), 'PPpp')
+      )
     }
   },
   {

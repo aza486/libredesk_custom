@@ -55,6 +55,12 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/message/{uuid}/retry", perm(handleRetryMessage))
 	g.GET("/api/message/{uuid}", perm(handleGetMessage))
 
+	// Conversation statuses.
+	g.GET("/api/conversation/statuses", perm(handleGetAllStatuses))
+
+	// Conversation priorities.
+	g.GET("/api/conversation/priorities", perm(handleGetAllPriorities))
+
 	// Media.
 	g.POST("/api/media", perm(handleMediaUpload))
 

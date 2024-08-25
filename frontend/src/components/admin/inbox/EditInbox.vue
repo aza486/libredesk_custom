@@ -14,7 +14,7 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
 
 const breadcrumbLinks = [
   { path: '/admin/inboxes', label: 'Inboxes' },
-  { path: '#', label: 'Edit Inbox' },
+  { path: '#', label: 'Edit Inbox' }
 ]
 const router = useRouter()
 const inbox = ref({})

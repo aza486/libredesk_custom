@@ -41,7 +41,9 @@ function toggleInbox(id) {
     <DropdownMenuContent>
       <DropdownMenuItem @click="editInbox(props.inbox.id)"> Edit </DropdownMenuItem>
       <DropdownMenuItem @click="deleteInbox(props.inbox.id)"> Delete </DropdownMenuItem>
-      <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-if="props.inbox.disabled"> Enable </DropdownMenuItem>
+      <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-if="props.inbox.disabled">
+        Enable
+      </DropdownMenuItem>
       <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-else> Disable </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

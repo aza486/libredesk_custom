@@ -224,3 +224,26 @@ func handleDashboardCharts(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(stats)
 }
+
+func handleGetAllStatuses(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+
+	out, err := app.conversation.GetAllStatuses()
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(out)
+}
+
+func handleGetAllPriorities(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+	out, err := app.conversation.GetAllPriorities()
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(out)
+}

@@ -26,7 +26,8 @@ export const emailChannelFormSchema = z.object({
         .string()
         .describe('Email scan interval')
         .refine(isGoDuration, {
-          message: 'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).',
+          message:
+            'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).'
         })
         .default('30s')
     })
@@ -85,7 +86,8 @@ export const emailChannelFormSchema = z.object({
               'Time to wait for new activity on a connection before closing it and removing it from the pool (s for seconds, m for minutes, h for hours).'
             )
             .refine(isGoDuration, {
-              message: 'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).',
+              message:
+                'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).'
             })
             .default('5s'),
           wait_timeout: z
@@ -94,7 +96,8 @@ export const emailChannelFormSchema = z.object({
               'Time to wait for new activity on a connection before closing it and removing it from the pool (s for seconds, m for minutes, h for hours).'
             )
             .refine(isGoDuration, {
-              message: 'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).',
+              message:
+                'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).'
             })
             .default('5s'),
           auth_protocol: z.enum(['login', 'cram', 'plain', 'none']).default('none').optional()
@@ -104,7 +107,7 @@ export const emailChannelFormSchema = z.object({
     .describe('SMTP servers')
     .default([
       {
-        host: "smtp.yourmailserver.com",
+        host: 'smtp.yourmailserver.com',
         port: 25,
         username: '',
         password: '',
@@ -115,4 +118,4 @@ export const emailChannelFormSchema = z.object({
         auth_protocol: 'plain'
       }
     ])
-});
+})

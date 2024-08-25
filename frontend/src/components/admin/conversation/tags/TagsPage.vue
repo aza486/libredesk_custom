@@ -10,9 +10,7 @@
           <DialogContent class="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Add a Tag</DialogTitle>
-              <DialogDescription>
-                Set tag name. Click save when you're done.
-              </DialogDescription>
+              <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
             </DialogHeader>
             <form @submit.prevent="onSubmit">
               <FormField v-slot="{ field }" name="name">
@@ -51,7 +49,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
+  FormMessage
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import {
@@ -61,7 +59,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -76,13 +74,12 @@ const dialogOpen = ref(false)
 onMounted(() => {
   getTags()
   emit.on('refresh-list', (data) => {
-    if (data?.name === "tags")
-      getTags()
+    if (data?.name === 'tags') getTags()
   })
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema),
+  validationSchema: toTypedSchema(formSchema)
 })
 
 const getTags = async () => {
@@ -99,5 +96,4 @@ const onSubmit = form.handleSubmit(async (values) => {
     console.error('Failed to create tag:', error)
   }
 })
-
 </script>

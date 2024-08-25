@@ -1,6 +1,8 @@
 <template>
-  <div class="box flex-1 rounded-lg px-8 py-4 transition-shadow duration-170 cursor-pointer hover:bg-muted"
-    @click="handleClick">
+  <div
+    class="box flex-1 rounded-lg px-8 py-4 transition-shadow duration-170 cursor-pointer hover:bg-muted"
+    @click="handleClick"
+  >
     <div class="flex items-center mb-4">
       <component :is="icon" size="16" class="mr-2" />
       <p class="text-lg">{{ title }}</p>

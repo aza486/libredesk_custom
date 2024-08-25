@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from 'vue'
-import PageHeader from '@/components/common/PageHeader.vue';
-import SidebarNav from '@/components/common/SidebarNav.vue';
-import { useUserStore } from '@/stores/user';
+import PageHeader from '@/components/common/PageHeader.vue'
+import SidebarNav from '@/components/common/SidebarNav.vue'
+import { useUserStore } from '@/stores/user'
 
-const userStore = useUserStore();
+const userStore = useUserStore()
 
 const allNavItems = [
   {
@@ -17,7 +17,7 @@ const allNavItems = [
     title: 'Conversations',
     href: '/admin/conversations',
     description: 'Manage conversation tags, statuses and priorities.',
-    permission: null,
+    permission: null
   },
   {
     title: 'Inboxes',
@@ -54,12 +54,12 @@ const allNavItems = [
     href: '/admin/oidc',
     description: 'Manage OpenID Connect configurations',
     permission: 'login:manage'
-  },
-];
+  }
+]
 
-const sidebarNavItems = computed(() => 
-  allNavItems.filter(item => userStore.hasPermission(item.permission))
-);
+const sidebarNavItems = computed(() =>
+  allNavItems.filter((item) => userStore.hasPermission(item.permission))
+)
 </script>
 
 <template>

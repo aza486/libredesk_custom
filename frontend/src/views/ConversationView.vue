@@ -10,41 +10,45 @@
       <ConversationPlaceholder v-else></ConversationPlaceholder>
     </ResizablePanel>
     <ResizableHandle />
-    <ResizablePanel :min-size="10" :default-size="16" :max-size="30" v-if="conversationStore.conversation.data">
+    <ResizablePanel
+      :min-size="10"
+      :default-size="16"
+      :max-size="30"
+      v-if="conversationStore.conversation.data"
+    >
       <ConversationSideBar></ConversationSideBar>
     </ResizablePanel>
   </ResizablePanelGroup>
 </template>
 
 <script setup>
-import { onMounted, watch } from "vue"
-import { subscribeConversation } from "@/websocket.js"
+import { onMounted, watch } from 'vue'
+import { subscribeConversation } from '@/websocket.js'
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '@/components/ui/resizable'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import ConversationList from '@/components/conversationlist/ConversationList.vue'
-import Conversation from '@/components/conversation/Conversation.vue'
+import Conversation from '@/components/conversation/ConversationPage.vue'
 import ConversationSideBar from '@/components/conversation/ConversationSideBar.vue'
-import ConversationPlaceholder from "@/components/conversation/ConversationPlaceholder.vue"
+import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'
 import { useConversationStore } from '@/stores/conversation'
 
 const props = defineProps({
   uuid: String
 })
-const conversationStore = useConversationStore();
+const conversationStore = useConversationStore()
 
 onMounted(() => {
   fetchConversation(props.uuid)
-});
+})
 
-watch(() => props.uuid, (newUUID, oldUUID) => {
-  if (newUUID !== oldUUID) {
-    fetchConversation(newUUID)
+watch(
+  () => props.uuid,
+  (newUUID, oldUUID) => {
+    if (newUUID !== oldUUID) {
+      fetchConversation(newUUID)
+    }
   }
-});
+)
 
 const fetchConversation = (uuid) => {
   if (!uuid) return
@@ -61,5 +65,4 @@ const subscribeCurrentConversation = async (uuid) => {
     subscribeConversation(uuid)
   }
 }
-
 </script>

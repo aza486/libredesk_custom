@@ -5,15 +5,27 @@
   <div class="space-y-10">
     <div class="mt-10">
       <Stepper class="flex w-full items-start gap-2" v-model="currentStep">
-        <StepperItem v-for="step in steps" :key="step.step" v-slot="{ state }"
-          class="relative flex w-full flex-col items-center justify-center" :step="step.step">
-          <StepperSeparator v-if="step.step !== steps[steps.length - 1].step"
-            class="absolute left-[calc(50%+20px)] right-[calc(-50%+10px)] top-5 block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary" />
+        <StepperItem
+          v-for="step in steps"
+          :key="step.step"
+          v-slot="{ state }"
+          class="relative flex w-full flex-col items-center justify-center"
+          :step="step.step"
+        >
+          <StepperSeparator
+            v-if="step.step !== steps[steps.length - 1].step"
+            class="absolute left-[calc(50%+20px)] right-[calc(-50%+10px)] top-5 block h-0.5 shrink-0 rounded-full bg-muted group-data-[state=completed]:bg-primary"
+          />
 
           <div>
-            <Button :variant="state === 'completed' || state === 'active' ? 'default' : 'outline'" size="icon"
+            <Button
+              :variant="state === 'completed' || state === 'active' ? 'default' : 'outline'"
+              size="icon"
               class="z-10 rounded-full shrink-0"
-              :class="[state === 'active' && 'ring-2 ring-ring ring-offset-2 ring-offset-background']">
+              :class="[
+                state === 'active' && 'ring-2 ring-ring ring-offset-2 ring-offset-background'
+              ]"
+            >
               <Check v-if="state === 'completed'" class="size-5" />
               <span v-if="state === 'active'">{{ currentStep }}</span>
               <span v-if="state === 'inactive'">{{ step.step }}</span>
@@ -21,12 +33,16 @@
           </div>
 
           <div class="mt-5 flex flex-col items-center text-center">
-            <StepperTitle :class="[state === 'active' && 'text-primary']"
-              class="text-sm font-semibold transition lg:text-base">
+            <StepperTitle
+              :class="[state === 'active' && 'text-primary']"
+              class="text-sm font-semibold transition lg:text-base"
+            >
               {{ step.title }}
             </StepperTitle>
-            <StepperDescription :class="[state === 'active' && 'text-primary']"
-              class="sr-only text-xs text-muted-foreground transition md:not-sr-only lg:text-sm">
+            <StepperDescription
+              :class="[state === 'active' && 'text-primary']"
+              class="sr-only text-xs text-muted-foreground transition md:not-sr-only lg:text-sm"
+            >
               {{ step.description }}
             </StepperDescription>
           </div>
@@ -36,8 +52,14 @@
 
     <div>
       <div v-if="currentStep === 1" class="space-y-6">
-        <MenuCard v-for="channel in channels" :key="channel.title" :onClick="channel.onClick" :title="channel.title"
-          :subTitle="channel.subTitle" :icon="channel.icon">
+        <MenuCard
+          v-for="channel in channels"
+          :key="channel.title"
+          :onClick="channel.onClick"
+          :title="channel.title"
+          :subTitle="channel.subTitle"
+          :icon="channel.icon"
+        >
         </MenuCard>
       </div>
 
@@ -62,9 +84,15 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import { handleHTTPError } from '@/utils/http'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
-import { Check, Mail } from 'lucide-vue-next';
+import { Check, Mail } from 'lucide-vue-next'
 import MenuCard from '@/components/admin/common/MenuCard.vue'
-import { Stepper, StepperDescription, StepperItem, StepperSeparator, StepperTitle } from '@/components/ui/stepper'
+import {
+  Stepper,
+  StepperDescription,
+  StepperItem,
+  StepperSeparator,
+  StepperTitle
+} from '@/components/ui/stepper'
 import EmailInboxForm from '@/components/admin/inbox/EmailInboxForm.vue'
 import api from '@/api'
 
@@ -75,13 +103,13 @@ const steps = [
   {
     step: 1,
     title: 'Channel',
-    description: 'Choose a channel',
+    description: 'Choose a channel'
   },
   {
     step: 2,
     title: 'Configure',
-    description: 'Configure channel',
-  },
+    description: 'Configure channel'
+  }
 ]
 
 const selectChannel = (channel) => {
@@ -99,12 +127,12 @@ const channels = [
     subTitle: 'Create email inbox',
     onClick: selectEmailChannel,
     icon: Mail
-  },
+  }
 ]
 
 const breadcrumbLinks = [
   { path: '/admin/inboxes', label: 'Inboxes' },
-  { path: '#', label: 'New Inbox' },
+  { path: '#', label: 'New Inbox' }
 ]
 
 const router = useRouter()
@@ -133,7 +161,7 @@ const submitForm = (values) => {
   createInbox(payload)
 }
 
-async function createInbox (payload) {
+async function createInbox(payload) {
   try {
     await api.createInbox(payload)
     router.push('/admin/inboxes')

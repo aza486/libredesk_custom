@@ -11,26 +11,7 @@ import (
 )
 
 var (
-	StatusOpen       = "Open"
-	StatusResolved   = "Resolved"
-	StatusProcessing = "Processing"
-	StatusSpam       = "Spam"
-
-	PriorityLow    = "Low"
-	PriortiyMedium = "Medium"
-	PriorityHigh   = "High"
-
-	ValidStatuses = []string{
-		StatusOpen,
-		StatusResolved,
-		StatusProcessing,
-		StatusSpam,
-	}
-	ValidPriorities = []string{
-		PriorityLow,
-		PriortiyMedium,
-		PriorityHigh,
-	}
+	StatusOpen       = "Open"	
 
 	ValidFilters = map[string]string{
 		"status_open":       " c.status = 'Open'",
@@ -138,4 +119,16 @@ type IncomingMessage struct {
 	Message Message
 	Contact cmodels.Contact
 	InboxID int
+}
+
+type Status struct {
+	ID        int       `db:"id" json:"id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	Name      string    `db:"name" json:"name"`
+}
+
+type Priority struct {
+	ID        int       `db:"id" json:"id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	Name      string    `db:"name" json:"name"`
 }

@@ -1,6 +1,3 @@
-<template>
-    Status
-</template>
+<template>Status</template>
 
-<script setup>
-</script>
+<script setup></script>

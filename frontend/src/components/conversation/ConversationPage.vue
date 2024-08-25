@@ -23,17 +23,12 @@
             <Icon icon="lucide:ellipsis-vertical" class="mt-2 size-6"></Icon>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem @click="handleUpdateStatus('Open')">
-              <span>Open</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem @click="handleUpdateStatus('Processing')">
-              <span>Processing</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem @click="handleUpdateStatus('Spam')">
-              <span>Mark as spam</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem @click="handleUpdateStatus('Resolved')">
-              <span>Resolve</span>
+            <DropdownMenuItem
+              v-for="status in statuses"
+              :key="status.name"
+              @click="handleUpdateStatus(status.name)"
+            >
+              {{ status.name }}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -49,9 +44,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-
 import { Error } from '@/components/ui/error'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -63,9 +57,20 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
+import api from '@/api'
 import { Icon } from '@iconify/vue'
 
 const conversationStore = useConversationStore()
+const statuses = ref([])
+
+onMounted(() => {
+  getAllStatuses()
+})
+
+const getAllStatuses = async () => {
+  const resp = await api.getAllStatuses()
+  statuses.value = resp.data.data
+}
 
 const getBadgeVariant = computed(() => {
   return conversationStore.conversation.data?.status == 'Spam' ? 'destructive' : 'primary'

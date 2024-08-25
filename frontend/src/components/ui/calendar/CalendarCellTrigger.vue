@@ -1,24 +1,24 @@
 <script setup>
-import { computed } from "vue";
-import { CalendarCellTrigger, useForwardProps } from "radix-vue";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { computed } from 'vue'
+import { CalendarCellTrigger, useForwardProps } from 'radix-vue'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const props = defineProps({
   day: { type: null, required: true },
   month: { type: null, required: true },
   asChild: { type: Boolean, required: false },
   as: { type: null, required: false },
-  class: { type: null, required: false },
-});
+  class: { type: null, required: false }
+})
 
 const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props;
+  const { class: _, ...delegated } = props
 
-  return delegated;
-});
+  return delegated
+})
 
-const forwardedProps = useForwardProps(delegatedProps);
+const forwardedProps = useForwardProps(delegatedProps)
 </script>
 
 <template>
@@ -36,7 +36,7 @@ const forwardedProps = useForwardProps(delegatedProps);
         'data-[unavailable]:text-destructive-foreground data-[unavailable]:line-through',
         // Outside months
         'data-[outside-view]:text-muted-foreground data-[outside-view]:opacity-50 [&[data-outside-view][data-selected]]:bg-accent/50 [&[data-outside-view][data-selected]]:text-muted-foreground [&[data-outside-view][data-selected]]:opacity-30',
-        props.class,
+        props.class
       )
     "
     v-bind="forwardedProps"

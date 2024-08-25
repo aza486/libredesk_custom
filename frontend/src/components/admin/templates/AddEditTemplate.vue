@@ -1,8 +1,8 @@
 <template>
-    <div class="mb-5">
-        <CustomBreadcrumb :links="breadcrumbLinks" />
-    </div>
-    <TemplateForm :initial-values="template" :submitForm="submitForm" />
+  <div class="mb-5">
+    <CustomBreadcrumb :links="breadcrumbLinks" />
+  </div>
+  <TemplateForm :initial-values="template" :submitForm="submitForm" />
 </template>
 
 <script setup>
@@ -16,38 +16,38 @@ const template = ref({})
 const router = useRouter()
 
 const props = defineProps({
-    id: {
-        type: String,
-        required: true
-    }
+  id: {
+    type: String,
+    required: true
+  }
 })
 
 const submitForm = async (values) => {
-    if (props.id) {
-        await api.updateTemplate(props.id, values)
-    } else {
-        await api.createTemplate(values)
-        router.push("/admin/templates")
-    }
+  if (props.id) {
+    await api.updateTemplate(props.id, values)
+  } else {
+    await api.createTemplate(values)
+    router.push('/admin/templates')
+  }
 }
 
 const breadCrumLabel = () => {
-    return props.id ? "Edit" : 'New';
+  return props.id ? 'Edit' : 'New'
 }
 
 const breadcrumbLinks = [
-    { path: '/admin/templates', label: 'Templates' },
-    { path: '#', label: breadCrumLabel() }
+  { path: '/admin/templates', label: 'Templates' },
+  { path: '#', label: breadCrumLabel() }
 ]
 
 onMounted(async () => {
-    if (props.id) {
-        try {
-            const resp = await api.getTemplate(props.id)
-            template.value = resp.data.data
-        } catch (error) {
-            console.log(error)
-        }
+  if (props.id) {
+    try {
+      const resp = await api.getTemplate(props.id)
+      template.value = resp.data.data
+    } catch (error) {
+      console.log(error)
     }
+  }
 })
 </script>

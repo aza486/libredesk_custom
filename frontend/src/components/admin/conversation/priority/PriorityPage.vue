@@ -1,6 +1,3 @@
-<template>
-    Priority
-</template>
+<template>Priority</template>
 
-<script setup>
-</script>
+<script setup></script>

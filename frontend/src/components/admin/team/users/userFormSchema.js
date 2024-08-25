@@ -1,4 +1,4 @@
-import * as z from 'zod';
+import * as z from 'zod'
 
 export const userFormSchema = z.object({
   first_name: z
@@ -23,5 +23,5 @@ export const userFormSchema = z.object({
 
   roles: z.array(z.string()).optional(),
 
-  send_welcome_email: z.boolean().optional(),
-});
+  send_welcome_email: z.boolean().optional()
+})

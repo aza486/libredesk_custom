@@ -1,8 +1,11 @@
 -- name: insert-conversation
 INSERT INTO conversations
-(reference_number, contact_id, status, inbox_id, meta)
-VALUES($1, $2, $3, $4, $5)
-returning id, uuid;
+(reference_number, contact_id, status_id, inbox_id, meta)
+VALUES($1, $2, 
+    (SELECT id FROM status WHERE name = $3),  
+    $4,
+    $5)
+RETURNING id, uuid;
 
 -- name: get-conversations
 SELECT
@@ -21,16 +24,22 @@ SELECT
         SELECT COUNT(*)
         FROM messages m
         WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
-    ) AS unread_message_count
+    ) AS unread_message_count,
+    s.name as status,
+    p.name as priority
 FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id
-    JOIN inboxes inb on c.inbox_id = inb.id
+    JOIN inboxes inb ON c.inbox_id = inb.id
+    LEFT JOIN status s ON c.status_id = s.id
+    LEFT JOIN priority p ON c.priority_id = p.id
 WHERE 1=1 %s
 
 -- name: get-conversations-uuids
 SELECT
     c.uuid
 FROM conversations c
+LEFT JOIN status s ON c.status_id = s.id
+LEFT JOIN priority p ON c.priority_id = p.id
 WHERE 1=1 %s
 
 -- name: get-assigned-conversations
@@ -42,8 +51,8 @@ SELECT
     c.updated_at,
     c.closed_at,
     c.resolved_at,
-    c.priority,
-    c.status,
+    p.name as priority,
+    s.name as status,
     c.uuid,
     c.reference_number,
     c.first_reply_at,
@@ -68,6 +77,8 @@ FROM conversations c
 JOIN contacts ct ON c.contact_id = ct.id
 LEFT JOIN users u ON u.id = c.assigned_user_id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
+LEFT JOIN status s ON c.status_id = s.id
+LEFT JOIN priority p ON c.priority_id = p.id
 WHERE c.uuid = $1;
 
 -- name: get-recent-conversations
@@ -76,8 +87,8 @@ SELECT
     c.updated_at,
     c.closed_at,
     c.resolved_at,
-    c.priority,
-    c.status,
+    p.name as priority,
+    s.name as status,
     c.uuid,
     c.reference_number,
     c.first_reply_at,
@@ -98,8 +109,9 @@ FROM conversations c
 JOIN contacts ct ON c.contact_id = ct.id
 LEFT JOIN users u ON u.id = c.assigned_user_id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
-WHERE c.created_at > $1 and c.uuid = 'e2f69c9f-17f5-4d09-9aae-12c2a79046a2';
-
+LEFT JOIN status s ON c.status_id = s.id
+LEFT JOIN priority p ON c.priority_id = p.id
+WHERE c.created_at > $1 AND c.uuid = 'e2f69c9f-17f5-4d09-9aae-12c2a79046a2';
 
 -- name: get-conversation-id
 SELECT id from conversations where uuid = $1;
@@ -122,37 +134,41 @@ WHERE uuid = $1;
 
 -- name: update-conversation-status
 UPDATE conversations
-SET status = $2::text,
-    resolved_at = CASE WHEN $2::text = 'Resolved' THEN CURRENT_TIMESTAMP ELSE NULL END,
-updated_at = now()
+SET status_id = (SELECT id FROM status WHERE name = $2),
+    resolved_at = CASE WHEN $2 = 'Resolved' THEN CURRENT_TIMESTAMP ELSE NULL END,
+    updated_at = now()
 WHERE uuid = $1;
 
 -- name: update-conversation-priority
-UPDATE conversations set priority = $2,
-updated_at = now()
-where uuid = $1;
+UPDATE conversations 
+SET priority_id = (SELECT id FROM priority WHERE name = $2),
+    updated_at = now()
+WHERE uuid = $1;
 
 -- name: update-conversation-assignee-last-seen
-UPDATE conversations set assignee_last_seen_at = now(),
-updated_at = now()
-where uuid = $1;
+UPDATE conversations 
+SET assignee_last_seen_at = now(),
+    updated_at = now()
+WHERE uuid = $1;
 
 -- name: update-conversation-meta
-UPDATE conversations set meta = meta || $3 where CASE WHEN $1 > 0 then id = $1 else uuid = $2 end;
+UPDATE conversations 
+SET meta = meta || $3 
+WHERE CASE WHEN $1 > 0 THEN id = $1 ELSE uuid = $2 END;
 
 -- name: get-conversation-participants
-select users.uuid as uuid, first_name, last_name, avatar_url from conversation_participants
-inner join users on users.id = conversation_participants.user_id
-where conversation_id =
+SELECT users.uuid as uuid, first_name, last_name, avatar_url 
+FROM conversation_participants
+INNER JOIN users ON users.id = conversation_participants.user_id
+WHERE conversation_id =
 (
-    select id from conversations where uuid = $1
+    SELECT id FROM conversations WHERE uuid = $1
 );
 
 -- name: insert-conversation-participant
 INSERT INTO conversation_participants
 (user_id, conversation_id)
-VALUES($1, (select id from conversations where uuid = $2));
-
+VALUES($1, (SELECT id FROM conversations WHERE uuid = $2));
 
 -- name: get-unassigned-conversations
 SELECT
@@ -172,20 +188,26 @@ SELECT
         SELECT COUNT(*)
         FROM messages m
         WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
-    ) AS unread_message_count
+    ) AS unread_message_count,
+    s.name as status,
+    p.name as priority
 FROM conversations c
     JOIN contacts ct ON c.contact_id = ct.id
-    JOIN inboxes inb on c.inbox_id = inb.id where assigned_user_id is NULL and assigned_team_id is not null;
+    JOIN inboxes inb ON c.inbox_id = inb.id 
+    LEFT JOIN status s ON c.status_id = s.id
+    LEFT JOIN priority p ON c.priority_id = p.id
+WHERE assigned_user_id IS NULL AND assigned_team_id IS NOT NULL;
 
 -- name: get-dashboard-counts
 SELECT json_build_object(
-    'resolved_count', COUNT(CASE WHEN status IN ('Resolved') THEN 1 END),
-    'unresolved_count', COUNT(CASE WHEN status NOT IN ('Resolved', 'Closed') THEN 1 END),
+    'resolved_count', COUNT(CASE WHEN s.name = 'Resolved' THEN 1 END),
+    'unresolved_count', COUNT(CASE WHEN s.name NOT IN ('Resolved', 'Closed') THEN 1 END),
     'awaiting_response_count', COUNT(CASE WHEN first_reply_at IS NULL THEN 1 END),
     'total_count', COUNT(*)
 )
-FROM conversations
-WHERE 1=1 %s;
+FROM conversations c
+LEFT JOIN status s ON c.status_id = s.id
+WHERE 1=1 %s
 
 -- name: get-dashboard-charts
 WITH new_conversations AS (
@@ -207,15 +229,17 @@ status_summary AS (
     SELECT json_agg(row_to_json(agg)) AS data
     FROM (
         SELECT 
-            status,
-            COUNT(*) FILTER (WHERE priority = 'Low') AS "Low",
-            COUNT(*) FILTER (WHERE priority = 'Medium') AS "Medium",
-            COUNT(*) FILTER (WHERE priority = 'High') AS "High"
+            s.name as status,
+            COUNT(*) FILTER (WHERE p.name = 'Low') AS "Low",
+            COUNT(*) FILTER (WHERE p.name = 'Medium') AS "Medium",
+            COUNT(*) FILTER (WHERE p.name = 'High') AS "High"
         FROM 
-            conversations
+            conversations c
+        LEFT join status s on s.id = c.status_id
+        LEFT join priority p on p.id = c.priority_id
         WHERE 1=1 %s
         GROUP BY 
-            status
+            s.name
     ) agg
 )
 SELECT json_build_object(
@@ -234,23 +258,25 @@ INSERT INTO conversation_tags (conversation_id, tag_id)
 VALUES(
     (
         SELECT id
-        from conversations
-        where uuid = $1
+        FROM conversations
+        WHERE uuid = $1
     ),
     $2
-) ON CONFLICT DO NOTHING
+) ON CONFLICT DO NOTHING;
 
 -- name: delete-conversation-tags
 DELETE FROM conversation_tags
 WHERE conversation_id = (
     SELECT id
-    from conversations
-    where uuid = $1
+    FROM conversations
+    WHERE uuid = $1
 ) AND tag_id NOT IN (SELECT unnest($2::int[]));
 
-
 -- name: get-to-address
-SELECT cm.source_id from conversations c inner join contact_methods cm on cm.contact_id = c.contact_id where c.id = $1 and cm.source = $2;
+SELECT cm.source_id 
+FROM conversations c 
+INNER JOIN contact_methods cm ON cm.contact_id = c.contact_id 
+WHERE c.id = $1 AND cm.source = $2;
 
 -- name: get-conversation-uuid-from-message-uuid
 SELECT c.uuid AS conversation_uuid
@@ -356,7 +382,7 @@ FROM messages m
 LEFT JOIN attachments a ON a.message_id = m.id
 LEFT JOIN users u on u.id = m.sender_id
 WHERE m.conversation_id = (SELECT id FROM conversation_id) ORDER BY m.created_at DESC
-%s;
+%s
 
 -- name: insert-message
 WITH conversation_id AS (
@@ -407,3 +433,11 @@ where id = $2;
 
 -- name: update-message-status
 update messages set status = $1 where uuid = $2;
+
+-- Status queries.
+-- name: get-all-statuses
+SELECT * from status;
+
+-- Priority queries.
+-- name: get-all-priorities
+SELECT * from priority;

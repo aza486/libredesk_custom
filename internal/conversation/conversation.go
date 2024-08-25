@@ -174,6 +174,12 @@ type queries struct {
 	UpdateMessageContent               *sqlx.Stmt `query:"update-message-content"`
 	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
 	MessageExists                      *sqlx.Stmt `query:"message-exists"`
+
+	// Status
+	GetAllStatuses *sqlx.Stmt `query:"get-all-statuses"`
+
+	// Priority
+	GetAllPriorities *sqlx.Stmt `query:"get-all-priorities"`
 }
 
 // CreateConversation creates a new conversation and returns its ID and UUID.
@@ -444,9 +450,6 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 // UpdateConversationPriority updates the priority of a conversation.
 func (c *Manager) UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error {
 	var priorityStr = string(priority)
-	if !slices.Contains(models.ValidPriorities, priorityStr) {
-		return envelope.NewError(envelope.GeneralError, "Invalid `priority` value", nil)
-	}
 	if _, err := c.q.UpdateConversationPriority.Exec(uuid, priority); err != nil {
 		c.lo.Error("error updating conversation priority", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating priority", nil)
@@ -460,9 +463,6 @@ func (c *Manager) UpdateConversationPriority(uuid string, priority []byte, actor
 // UpdateConversationStatus updates the status of a conversation.
 func (c *Manager) UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error {
 	var statusStr = string(status)
-	if !slices.Contains(models.ValidStatuses, statusStr) {
-		return envelope.NewError(envelope.GeneralError, "Invalid `status` value", nil)
-	}
 	if _, err := c.q.UpdateConversationStatus.Exec(uuid, status); err != nil {
 		c.lo.Error("error updating conversation status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)

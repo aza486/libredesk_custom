@@ -31,4 +31,4 @@ WHERE (
         model_type IS NULL
         OR model_id IS NULL
     )
-    AND created_at > $1;
+    AND created_at < $1;

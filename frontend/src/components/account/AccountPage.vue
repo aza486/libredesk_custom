@@ -1,5 +1,5 @@
 <script setup>
-import PageHeader from '@/components/common/PageHeader.vue';
+import PageHeader from '@/components/common/PageHeader.vue'
 import SidebarNav from '@/components/common/SidebarNav.vue'
 
 const sidebarNavItems = [
@@ -7,7 +7,7 @@ const sidebarNavItems = [
     title: 'Profile',
     href: '/account/profile',
     description: 'Update your profile'
-  },
+  }
 ]
 </script>
 

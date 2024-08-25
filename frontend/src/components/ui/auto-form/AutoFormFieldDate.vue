@@ -1,36 +1,32 @@
 <script setup>
-import { DateFormatter, getLocalTimeZone } from "@internationalized/date";
-import { CalendarIcon } from "@radix-icons/vue";
-import { beautifyObjectName } from "./utils";
-import AutoFormLabel from "./AutoFormLabel.vue";
+import { DateFormatter, getLocalTimeZone } from '@internationalized/date'
+import { CalendarIcon } from '@radix-icons/vue'
+import { beautifyObjectName } from './utils'
+import AutoFormLabel from './AutoFormLabel.vue'
 import {
   FormControl,
   FormDescription,
   FormField,
   FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+  FormMessage
+} from '@/components/ui/form'
 
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { Calendar } from '@/components/ui/calendar'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 
 defineProps({
   fieldName: { type: String, required: true },
   label: { type: String, required: false },
   required: { type: Boolean, required: false },
   config: { type: Object, required: false },
-  disabled: { type: Boolean, required: false },
-});
+  disabled: { type: Boolean, required: false }
+})
 
-const df = new DateFormatter("en-US", {
-  dateStyle: "long",
-});
+const df = new DateFormatter('en-US', {
+  dateStyle: 'long'
+})
 </script>
 
 <template>
@@ -49,20 +45,15 @@ const df = new DateFormatter("en-US", {
                   :class="
                     cn(
                       'w-full justify-start text-left font-normal',
-                      !slotProps.componentField.modelValue &&
-                        'text-muted-foreground',
+                      !slotProps.componentField.modelValue && 'text-muted-foreground'
                     )
                   "
                 >
                   <CalendarIcon class="mr-2 h-4 w-4" />
                   {{
                     slotProps.componentField.modelValue
-                      ? df.format(
-                          slotProps.componentField.modelValue.toDate(
-                            getLocalTimeZone(),
-                          ),
-                        )
-                      : "Pick a date"
+                      ? df.format(slotProps.componentField.modelValue.toDate(getLocalTimeZone()))
+                      : 'Pick a date'
                   }}
                 </Button>
               </PopoverTrigger>

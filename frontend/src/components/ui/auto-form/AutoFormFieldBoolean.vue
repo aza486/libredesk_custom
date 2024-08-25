@@ -1,28 +1,26 @@
 <script setup>
-import { computed } from "vue";
-import { beautifyObjectName } from "./utils";
-import AutoFormLabel from "./AutoFormLabel.vue";
+import { computed } from 'vue'
+import { beautifyObjectName } from './utils'
+import AutoFormLabel from './AutoFormLabel.vue'
 import {
   FormControl,
   FormDescription,
   FormField,
   FormItem,
-  FormMessage,
-} from "@/components/ui/form";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
+  FormMessage
+} from '@/components/ui/form'
+import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const props = defineProps({
   fieldName: { type: String, required: true },
   label: { type: String, required: false },
   required: { type: Boolean, required: false },
   config: { type: Object, required: false },
-  disabled: { type: Boolean, required: false },
-});
+  disabled: { type: Boolean, required: false }
+})
 
-const booleanComponent = computed(() =>
-  props.config?.component === "switch" ? Switch : Checkbox,
-);
+const booleanComponent = computed(() => (props.config?.component === 'switch' ? Switch : Checkbox))
 </script>
 
 <template>

@@ -111,7 +111,7 @@ const columns = [
           inbox,
           onEditInbox: (id) => handleEditInbox(id),
           onDeleteInbox: (id) => handleDeleteInbox(id),
-          onToggleInbox: (id) => handleToggleInbox(id),
+          onToggleInbox: (id) => handleToggleInbox(id)
         })
       )
     }

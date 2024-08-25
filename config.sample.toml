@@ -1,0 +1,72 @@
+[app]
+log_level = "debug"
+env = "dev"
+
+[app.server]
+name = "artemis"
+address = "0.0.0.0:9009"
+socket = ""
+read_timeout = "5s"
+write_timeout = "5s"
+max_body_size = 10000000
+keepalive_timeout = "10s"
+
+[s3]
+access_key = 'test'
+secret_key = 'test'
+region = 'ap-south-1'
+bucket = 'test'
+bucket_type = "private"
+expiry = "15m"
+
+
+[db]
+host = "127.0.0.1"
+port = 5432
+user = "postgres"
+password = "postgres"
+database = "artemis"
+ssl_mode = "disable"
+max_open = 10
+max_idle = 10
+max_lifetime = "10s"
+
+[redis]
+address = "127.0.0.1:6379"
+password = ""
+db = 0
+
+[message]
+dispatch_concurrency = 10
+dispatch_read_interval = "50ms"
+reader_concurrency = 1
+incoming_queue_size = 10000
+outgoing_queue_size = 10000
+
+
+[notification]
+[notification.provider]
+[notification.provider.email]
+username = "test@gmail.com"
+host = "smtp.gmail.com"
+name = "Gmail"
+port = 587
+password = "test"
+max_conns = 2
+idle_timeout = "15s"
+wait_timeout = "5s"
+auth_protocol = "plain"
+email_address = "test@gmail.com"
+max_msg_retries = 2
+
+[autoassigner]
+assign_interval = "15s"
+
+
+[frontend.static_server]
+enabled = true
+root_path = "dist/static/"
+index_path = "dist/index.html"
+
+# `{filepath:*}` is a catch-all wildcard for httprouter(the router mux)
+uri = "/static/{filepath:*}"

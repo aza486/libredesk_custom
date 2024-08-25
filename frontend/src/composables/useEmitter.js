@@ -1,6 +1,6 @@
-import { getCurrentInstance } from 'vue';
+import { getCurrentInstance } from 'vue'
 
-export function useEmitter () {
-    const instance = getCurrentInstance();
-    return instance.appContext.config.globalProperties.emitter;
+export function useEmitter() {
+  const instance = getCurrentInstance()
+  return instance.appContext.config.globalProperties.emitter
 }

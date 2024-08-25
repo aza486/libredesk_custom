@@ -1,8 +1,8 @@
 <script setup>
-import { computed } from "vue";
-import { SplitterResizeHandle, useForwardPropsEmits } from "radix-vue";
-import { DragHandleDots2Icon } from "@radix-icons/vue";
-import { cn } from "@/lib/utils";
+import { computed } from 'vue'
+import { SplitterResizeHandle, useForwardPropsEmits } from 'radix-vue'
+import { DragHandleDots2Icon } from '@radix-icons/vue'
+import { cn } from '@/lib/utils'
 
 const props = defineProps({
   id: { type: String, required: false },
@@ -12,16 +12,16 @@ const props = defineProps({
   asChild: { type: Boolean, required: false },
   as: { type: null, required: false },
   class: { type: null, required: false },
-  withHandle: { type: Boolean, required: false },
-});
-const emits = defineEmits(["dragging"]);
+  withHandle: { type: Boolean, required: false }
+})
+const emits = defineEmits(['dragging'])
 
 const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props;
-  return delegated;
-});
+  const { class: _, ...delegated } = props
+  return delegated
+})
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits);
+const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
@@ -35,9 +35,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
     "
   >
     <template v-if="props.withHandle">
-      <div
-        class="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border"
-      >
+      <div class="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
         <DragHandleDots2Icon class="h-2.5 w-2.5" />
       </div>
     </template>

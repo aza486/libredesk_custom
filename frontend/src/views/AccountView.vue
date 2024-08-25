@@ -4,7 +4,7 @@ import ProfileEdit from '@/components/account/ProfileEdit.vue'
 </script>
 
 <template>
-    <Account>
-        <ProfileEdit/>
-    </Account>
+  <Account>
+    <ProfileEdit />
+  </Account>
 </template>
