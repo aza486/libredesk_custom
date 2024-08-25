@@ -72,7 +72,7 @@ func initFlags() {
 	// Registering `--help` handler.
 	f.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		flag.PrintDefaults()
+		f.PrintDefaults()
 	}
 
 	// Register the commandline flags and parse them.
