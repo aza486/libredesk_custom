@@ -16,7 +16,7 @@ const allNavItems = [
   {
     title: 'Conversations',
     href: '/admin/conversations',
-    description: 'Manage conversation tags, statuses and priorities.',
+    description: 'Manage tags, canned responses and statuses.',
     permission: null
   },
   {

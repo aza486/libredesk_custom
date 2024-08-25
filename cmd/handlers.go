@@ -38,17 +38,17 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/oidc/{id}", perm(handleUpdateOIDC, "login:manage"))
 	g.DELETE("/api/oidc/{id}", perm(handleDeleteOIDC, "login:manage"))
 
-	// Conversation.
+	// Conversation & message.
 	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversations:all"))
 	g.GET("/api/conversations/team", perm(handleGetTeamConversations, "conversations:team"))
 	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversations:assigned"))
-	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateUserAssignee, "conversations:edit_user"))
+	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateConversationUserAssignee, "conversations:edit_user"))
 	g.PUT("/api/conversations/{uuid}/assignee/team", perm(handleUpdateTeamAssignee, "conversations:edit_team"))
-	g.PUT("/api/conversations/{uuid}/priority", perm(handleUpdatePriority, "conversations:edit_priority"))
-	g.PUT("/api/conversations/{uuid}/status", perm(handleUpdateStatus, "conversations:edit_status"))
+	g.PUT("/api/conversations/{uuid}/priority", perm(handleUpdateConversationPriority, "conversations:edit_priority"))
+	g.PUT("/api/conversations/{uuid}/status", perm(handleUpdateConversationStatus, "conversations:edit_status"))
 	g.GET("/api/conversations/{uuid}", perm(handleGetConversation))
 	g.GET("/api/conversations/{uuid}/participants", perm(handleGetConversationParticipants))
-	g.PUT("/api/conversations/{uuid}/last-seen", perm(handleUpdateAssigneeLastSeen))
+	g.PUT("/api/conversations/{uuid}/last-seen", perm(handleUpdateConversationAssigneeLastSeen))
 	g.POST("/api/conversations/{uuid}/tags", perm(handleAddConversationTags))
 	g.GET("/api/conversations/{uuid}/messages", perm(handleGetMessages))
 	g.POST("/api/conversations/{uuid}/messages", perm(handleSendMessage))
@@ -56,17 +56,28 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/message/{uuid}", perm(handleGetMessage))
 
 	// Conversation statuses.
-	g.GET("/api/conversation/statuses", perm(handleGetAllStatuses))
+	g.GET("/api/statuses", perm(handleGetStatuses))
+	g.POST("/api/statuses", perm(handleCreateStatus, "statuses:manage"))
+	g.DELETE("/api/statuses/{id}", perm(handleDeleteStatus, "statuses:manage"))
+	g.PUT("/api/statuses/{id}", perm(handleUpdateStatus, "statuses:manage"))
 
 	// Conversation priorities.
-	g.GET("/api/conversation/priorities", perm(handleGetAllPriorities))
+	g.GET("/api/priorities", perm(handleGetPriorities))
+
+	// Conversation tags.
+	g.GET("/api/tags", perm(handleGetTags))
+	g.POST("/api/tags", perm(handleCreateTag, "tags:manage"))
+	g.DELETE("/api/tags/{id}", perm(handleDeleteTag, "tags:manage"))
+	g.PUT("/api/tags/{id}", perm(handleUpdateTag, "tags:manage"))
 
 	// Media.
 	g.POST("/api/media", perm(handleMediaUpload))
 
 	// Canned response.
 	g.GET("/api/canned-responses", perm(handleGetCannedResponses))
-	// TODO: add create, update endponints.
+	g.POST("/api/canned-responses", perm(handleCreateCannedResponse, "canned_responses:manage"))
+	g.PUT("/api/canned-responses/{id}", perm(handleUpdateCannedResponse, "canned_responses:manage"))
+	g.DELETE("/api/canned-responses/{id}", perm(handleDeleteCannedResponse, "canned_responses:manage"))
 
 	// User.
 	g.GET("/api/users/me", perm(handleGetCurrentUser))
@@ -82,14 +93,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/teams/{id}", perm(handleGetTeam, "teams:manage"))
 	g.PUT("/api/teams/{id}", perm(handleUpdateTeam, "teams:manage"))
 	g.POST("/api/teams", perm(handleCreateTeam, "teams:manage"))
-
-	// Tags.
-	g.GET("/api/tags", perm(handleGetTags))
-	g.POST("/api/tags", perm(handleCreateTag, "tags:manage"))
-	g.DELETE("/api/tags/{id}", perm(handleDeleteTag, "tags:manage"))
-	g.PUT("/api/tags/{id}", perm(handleUpdateTag, "tags:manage"))
-
-	// TODO: Add conversation create status, priority of conversation.
 
 	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
@@ -203,19 +206,7 @@ func sendErrorEnvelope(r *fastglue.Request, err error) error {
 	return r.SendErrorEnvelope(e.Code, e.Error(), e.Data, fastglue.ErrorType(e.ErrorType))
 }
 
-// handleHealthCheck handles the health check endpoint by pinging the PostgreSQL and Redis.
+// handleHealthCheck handles the health check.
 func handleHealthCheck(r *fastglue.Request) error {
-	var app = r.Context.(*App)
-
-	// Ping DB.
-	if err := app.db.Ping(); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "DB ping failed.", nil, envelope.GeneralError)
-	}
-
-	// Ping Redis.
-	if err := app.rdb.Ping(r.RequestCtx).Err(); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Redis ping failed.", nil, envelope.GeneralError)
-	}
-
 	return r.SendEnvelope(true)
 }

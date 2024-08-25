@@ -1,23 +1,33 @@
 <template>
   <div>
     <div class="flex justify-between mb-5">
-      <PageHeader title="Tags" description="Manage conversation tags" />
+      <PageHeader title="Canned responses" description="Manage canned responses" />
       <div class="flex justify-end mb-4">
         <Dialog v-model:open="dialogOpen">
           <DialogTrigger as-child>
-            <Button size="sm">New Tag</Button>
+            <Button size="sm">New canned response</Button>
           </DialogTrigger>
           <DialogContent class="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add a Tag</DialogTitle>
-              <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
+              <DialogTitle>Add a canned response</DialogTitle>
+              <DialogDescription> Set canned response name. Click save when you're done. </DialogDescription>
             </DialogHeader>
             <form @submit.prevent="onSubmit">
-              <FormField v-slot="{ field }" name="name">
+              <FormField v-slot="{ field }" name="title">
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input type="text" placeholder="billing, tech" v-bind="field" />
+                    <Input type="text" placeholder="" v-bind="field" />
+                  </FormControl>
+                  <FormDescription></FormDescription>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+              <FormField v-slot="{ componentField }" name="content">
+                <FormItem>
+                  <FormLabel>Content</FormLabel>
+                  <FormControl>
+                    <Textarea v-bind="componentField" />
                   </FormControl>
                   <FormDescription></FormDescription>
                   <FormMessage />
@@ -32,17 +42,18 @@
       </div>
     </div>
     <div class="w-full">
-      <DataTable :columns="columns" :data="tags" />
+      <DataTable :columns="columns" :data="cannedResponses" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import DataTable from '@/components/admin/DataTable.vue'
-import { columns } from '@/components/admin/conversation/tags/dataTableColumns.js'
+import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
+import { Textarea } from '@/components/ui/textarea'
 import {
   FormControl,
   FormDescription,
@@ -67,33 +78,39 @@ import { formSchema } from './formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import api from '@/api'
 
-const tags = ref([])
+const cannedResponses = ref([])
 const emit = useEmitter()
 const dialogOpen = ref(false)
 
 onMounted(() => {
-  getTags()
-  emit.on('refresh-list', (data) => {
-    if (data?.name === 'tags') getTags()
-  })
+  getCannedResponses()
+  emit.on('refresh-list', refreshList)
 })
+
+onUnmounted(() => {
+  emit.off('refresh-list', refreshList)
+})
+
+const refreshList = (data) => {
+  if (data?.name === 'canned_responses') getCannedResponses()
+}
 
 const form = useForm({
   validationSchema: toTypedSchema(formSchema)
 })
 
-const getTags = async () => {
-  const resp = await api.getTags()
-  tags.value = resp.data.data
+const getCannedResponses = async () => {
+  const resp = await api.getCannedResponses()
+  cannedResponses.value = resp.data.data
 }
 
 const onSubmit = form.handleSubmit(async (values) => {
   try {
-    await api.createTag(values)
+    await api.createCannedResponse(values)
     dialogOpen.value = false
-    getTags()
+    getCannedResponses()
   } catch (error) {
-    console.error('Failed to create tag:', error)
+    console.error('Failed to create canned response:', error)
   }
 })
 </script>

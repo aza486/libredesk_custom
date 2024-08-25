@@ -242,7 +242,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   async function updatePriority(v) {
     try {
-      await api.updatePriority(conversation.data.uuid, { priority: v })
+      await api.updateConversationPriority(conversation.data.uuid, { priority: v })
     } catch (error) {
       // Pass.
     }
@@ -250,7 +250,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   async function updateStatus(v) {
     try {
-      await api.updateStatus(conversation.data.uuid, { status: v })
+      await api.updateConversationStatus(conversation.data.uuid, { status: v })
     } catch (error) {
       toast({
         title: 'Uh oh! Could not update status, Please try again.',

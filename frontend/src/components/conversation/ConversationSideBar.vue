@@ -459,7 +459,7 @@ onMounted(() => {
 })
 
 const getPrioritites = async () => {
-  const resp = await api.getAllPriorities()
+  const resp = await api.getPriorities()
   priorities.value = resp.data.data.map((priority) => priority.name)
 }
 

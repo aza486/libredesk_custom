@@ -16,7 +16,7 @@ var (
 	efs embed.FS
 )
 
-// Manager handles tag-related operations.
+// Manager manages tags.
 type Manager struct {
 	q  queries
 	lo *logf.Logger

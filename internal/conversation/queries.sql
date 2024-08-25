@@ -433,11 +433,3 @@ where id = $2;
 
 -- name: update-message-status
 update messages set status = $1 where uuid = $2;
-
--- Status queries.
--- name: get-all-statuses
-SELECT * from status;
-
--- Priority queries.
--- name: get-all-priorities
-SELECT * from priority;

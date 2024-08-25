@@ -30,6 +30,9 @@ type Opts struct {
 
 type queries struct {
 	GetAll *sqlx.Stmt `query:"get-all"`
+	Create *sqlx.Stmt `query:"create"`
+	Update *sqlx.Stmt `query:"update"`
+	Delete *sqlx.Stmt `query:"delete"`
 }
 
 // New initializes a new Manager.
@@ -54,4 +57,41 @@ func (t *Manager) GetAll() ([]models.CannedResponse, error) {
 		return c, envelope.NewError(envelope.GeneralError, "Error fetching canned responses", nil)
 	}
 	return c, nil
+}
+
+// Create adds a new canned response.
+func (t *Manager) Create(title, content string) error {
+	if _, err := t.q.Create.Exec(title, content); err != nil {
+		t.lo.Error("error creating canned response", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error creating canned response", nil)
+	}
+	return nil
+}
+
+// Update modifies an existing canned response.
+func (t *Manager) Update(id int, title, content string) error {
+	result, err := t.q.Update.Exec(id, title, content)
+	if err != nil {
+		t.lo.Error("error updating canned response", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating canned response", nil)
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return envelope.NewError(envelope.NotFoundError, "Canned response not found", nil)
+	}
+	return nil
+}
+
+// Delete removes a canned response by ID.
+func (t *Manager) Delete(id int) error {
+	result, err := t.q.Delete.Exec(id)
+	if err != nil {
+		t.lo.Error("error deleting canned response", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting canned response", nil)
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return envelope.NewError(envelope.NotFoundError, "Canned response not found", nil)
+	}
+	return nil
 }

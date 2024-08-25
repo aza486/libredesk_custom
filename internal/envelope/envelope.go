@@ -9,11 +9,14 @@ import (
 
 // API errors.
 const (
-	GeneralError    = "GeneralException"
-	PermissionError = "PermissionException"
-	InputError      = "InputException"
-	DataError       = "DataException"
-	NetworkError    = "NetworkException"
+	GeneralError      = "GeneralException"
+	PermissionError   = "PermissionException"
+	InputError        = "InputException"
+	DataError         = "DataException"
+	NetworkError      = "NetworkException"
+	NotFoundError     = "NotFoundException"
+	ConflictError     = "ConflictException"
+	UnauthorizedError = "UnauthorizedException"
 )
 
 // Error is the error type used for all API errors.
@@ -48,6 +51,12 @@ func NewError(etype string, message string, data interface{}) error {
 		err.Code = http.StatusBadGateway
 	case NetworkError:
 		err.Code = http.StatusGatewayTimeout
+	case NotFoundError:
+		err.Code = fasthttp.StatusNotFound
+	case ConflictError:
+		err.Code = fasthttp.StatusConflict
+	case UnauthorizedError:
+		err.Code = fasthttp.StatusUnauthorized
 	default:
 		err.Code = fasthttp.StatusInternalServerError
 		err.ErrorType = GeneralError

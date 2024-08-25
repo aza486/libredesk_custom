@@ -4,14 +4,8 @@
       <PageHeader title="Conversation" description="Manage conversation settings" />
     </div>
     <div class="flex space-x-5">
-      <AdminMenuCard
-        v-for="card in cards"
-        :key="card.title"
-        :onClick="card.onClick"
-        :title="card.title"
-        :subTitle="card.subTitle"
-        :icon="card.icon"
-      >
+      <AdminMenuCard v-for="card in cards" :key="card.title" :onClick="card.onClick" :title="card.title"
+        :subTitle="card.subTitle" :icon="card.icon">
       </AdminMenuCard>
     </div>
   </div>
@@ -20,7 +14,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { Tag, TrendingUp, Activity } from 'lucide-vue-next'
+import { Tag, TrendingUp, MessageCircleReply } from 'lucide-vue-next'
 import AdminMenuCard from '@/components/admin/common/MenuCard.vue'
 import PageHeader from '../common/PageHeader.vue'
 
@@ -31,11 +25,11 @@ const navigateToTags = () => {
 }
 
 const navigateToStatus = () => {
-  router.push('/admin/conversations/status')
+  router.push('/admin/conversations/statuses')
 }
 
-const navigateToPriority = () => {
-  router.push('/admin/conversations/priority')
+const navigateToCannedResponse = () => {
+  router.push('/admin/conversations/canned-responses')
 }
 
 const cards = [
@@ -46,10 +40,10 @@ const cards = [
     icon: Tag
   },
   {
-    title: 'Priority',
-    subTitle: 'Manage conversation priorities.',
-    onClick: navigateToPriority,
-    icon: Activity
+    title: 'Canned response',
+    subTitle: 'Manage canned responses.',
+    onClick: navigateToCannedResponse,
+    icon: MessageCircleReply
   },
   {
     title: 'Status',

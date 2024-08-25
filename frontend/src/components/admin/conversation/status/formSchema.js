@@ -3,9 +3,9 @@ import * as z from 'zod'
 export const formSchema = z.object({
   name: z
     .string({
-      required_error: 'Tag name is required.'
+      required_error: 'Status name is required.'
     })
     .min(1, {
-      message: 'Tag name must be at least 1 character.'
+      message: 'Status must be at least 1 character.'
     })
 })

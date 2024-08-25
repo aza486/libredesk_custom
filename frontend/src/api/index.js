@@ -16,8 +16,11 @@ http.interceptors.request.use((request) => {
   return request
 })
 
-const getAllStatuses = () => http.get('/api/conversation/statuses')
-const getAllPriorities = () => http.get('/api/conversation/priorities')
+const getPriorities = () => http.get('/api/priorities')
+const getStatuses = () => http.get('/api/statuses')
+const createStatus = (data) => http.post('/api/statuses', data)
+const updateStatus = (id, data) => http.put(`/api/statuses/${id}`, data)
+const deleteStatus = (id) => http.delete(`/api/statuses/${id}`)
 const createTag = (data) => http.post('/api/tags', data)
 const updateTag = (id, data) => http.put(`/api/tags/${id}`, data)
 const deleteTag = (id) => http.delete(`/api/tags/${id}`)
@@ -108,8 +111,8 @@ const getTags = () => http.get('/api/tags')
 const upsertTags = (uuid, data) => http.post(`/api/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) =>
   http.put(`/api/conversations/${uuid}/assignee/${assignee_type}`, data)
-const updateStatus = (uuid, data) => http.put(`/api/conversations/${uuid}/status`, data)
-const updatePriority = (uuid, data) => http.put(`/api/conversations/${uuid}/priority`, data)
+const updateConversationStatus = (uuid, data) => http.put(`/api/conversations/${uuid}/status`, data)
+const updateConversationPriority = (uuid, data) => http.put(`/api/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversations/${uuid}/last-seen`)
 const getMessage = (uuid) => http.get(`/api/message/${uuid}`)
 const retryMessage = (uuid) => http.get(`/api/message/${uuid}/retry`)
@@ -126,6 +129,9 @@ const sendMessage = (uuid, data) =>
 const getConversation = (uuid) => http.get(`/api/conversations/${uuid}`)
 const getConversationParticipants = (uuid) => http.get(`/api/conversations/${uuid}/participants`)
 const getCannedResponses = () => http.get('/api/canned-responses')
+const createCannedResponse = (data) => http.post('/api/canned-responses', data)
+const updateCannedResponse = (id, data) => http.put(`/api/canned-responses/${id}`, data)
+const deleteCannedResponse = (id) => http.delete(`/api/canned-responses/${id}`)
 const getAssignedConversations = (page, filter) =>
   http.get(`/api/conversations/assigned?page=${page}&filter=${filter}`)
 const getTeamConversations = (page, filter) =>
@@ -204,10 +210,13 @@ export default {
   getMessages,
   getCurrentUser,
   getCannedResponses,
+  createCannedResponse,
+  updateCannedResponse,
+  deleteCannedResponse,
   updateCurrentUser,
   updateAssignee,
-  updateStatus,
-  updatePriority,
+  updateConversationStatus,
+  updateConversationPriority,
   upsertTags,
   uploadMedia,
   updateAutomationRule,
@@ -240,6 +249,9 @@ export default {
   createTag,
   updateTag,
   deleteTag,
-  getAllStatuses,
-  getAllPriorities
+  getStatuses,
+  getPriorities,
+  createStatus,
+  updateStatus,
+  deleteStatus,
 }

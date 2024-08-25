@@ -72,7 +72,7 @@ func handleGetConversation(r *fastglue.Request) error {
 	return r.SendEnvelope(c)
 }
 
-func handleUpdateAssigneeLastSeen(r *fastglue.Request) error {
+func handleUpdateConversationAssigneeLastSeen(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
@@ -96,7 +96,7 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 	return r.SendEnvelope(p)
 }
 
-func handleUpdateUserAssignee(r *fastglue.Request) error {
+func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		uuid = r.RequestCtx.UserValue("uuid").(string)
@@ -128,7 +128,7 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-func handleUpdatePriority(r *fastglue.Request) error {
+func handleUpdateConversationPriority(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
 		p        = r.RequestCtx.PostArgs()
@@ -142,7 +142,7 @@ func handleUpdatePriority(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-func handleUpdateStatus(r *fastglue.Request) error {
+func handleUpdateConversationStatus(r *fastglue.Request) error {
 	var (
 		app    = r.Context.(*App)
 		p      = r.RequestCtx.PostArgs()
@@ -223,27 +223,4 @@ func handleDashboardCharts(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(stats)
-}
-
-func handleGetAllStatuses(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
-
-	out, err := app.conversation.GetAllStatuses()
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(out)
-}
-
-func handleGetAllPriorities(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
-	out, err := app.conversation.GetAllPriorities()
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(out)
 }

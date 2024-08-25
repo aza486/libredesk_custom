@@ -64,11 +64,11 @@ const conversationStore = useConversationStore()
 const statuses = ref([])
 
 onMounted(() => {
-  getAllStatuses()
+  getStatuses()
 })
 
-const getAllStatuses = async () => {
-  const resp = await api.getAllStatuses()
+const getStatuses = async () => {
+  const resp = await api.getStatuses()
   statuses.value = resp.data.data
 }
 

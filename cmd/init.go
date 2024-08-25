@@ -25,6 +25,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
+	"github.com/abhinavxd/artemis/internal/status"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
@@ -509,6 +510,17 @@ func initRole(db *sqlx.DB) *role.Manager {
 		log.Fatalf("error initializing role manager: %v", err)
 	}
 	return r
+}
+
+func initStatus(db *sqlx.DB) *status.Manager {
+	manager, err := status.New(status.Opts{
+		DB: db,
+		Lo: initLogger("status-manager"),
+	})
+	if err != nil {
+		log.Fatalf("error initializing status manager: %v", err)
+	}
+	return manager
 }
 
 // initLogger initializes a logf logger.

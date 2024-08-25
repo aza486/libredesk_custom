@@ -162,12 +162,12 @@ const routes = [
         component: () => import('@/components/admin/conversation/tags/TagsPage.vue')
       },
       {
-        path: 'conversations/priority',
-        component: () => import('@/components/admin/conversation/priority/PriorityPage.vue')
+        path: 'conversations/statuses',
+        component: () => import('@/components/admin/conversation/status/StatusPage.vue')
       },
       {
-        path: 'conversations/status',
-        component: () => import('@/components/admin/conversation/status/StatusPage.vue')
+        path: 'conversations/canned-responses',
+        component: () => import('@/components/admin/conversation/canned_responses/CannedResponsesPage.vue')
       }
     ]
   },

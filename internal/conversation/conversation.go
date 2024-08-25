@@ -174,12 +174,6 @@ type queries struct {
 	UpdateMessageContent               *sqlx.Stmt `query:"update-message-content"`
 	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
 	MessageExists                      *sqlx.Stmt `query:"message-exists"`
-
-	// Status
-	GetAllStatuses *sqlx.Stmt `query:"get-all-statuses"`
-
-	// Priority
-	GetAllPriorities *sqlx.Stmt `query:"get-all-priorities"`
 }
 
 // CreateConversation creates a new conversation and returns its ID and UUID.

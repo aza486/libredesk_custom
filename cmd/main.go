@@ -18,6 +18,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
+	"github.com/abhinavxd/artemis/internal/status"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
@@ -53,6 +54,7 @@ type App struct {
 	contact      *contact.Manager
 	user         *user.Manager
 	team         *team.Manager
+	status       *status.Manager
 	tag          *tag.Manager
 	inbox        *inbox.Manager
 	tmpl         *template.Manager
@@ -120,7 +122,6 @@ func main() {
 	// Init the app
 	var app = &App{
 		lo:           lo,
-		rdb:          rdb,
 		auth:         auth,
 		fs:           fs,
 		i18n:         i18n,
@@ -134,8 +135,9 @@ func main() {
 		conversation: conversation,
 		automation:   automation,
 		oidc:         oidc,
-		role:         initRole(db),
 		constant:     initConstants(),
+		status:       initStatus(db),
+		role:         initRole(db),
 		tag:          initTags(db),
 		cannedResp:   initCannedResponse(db),
 	}

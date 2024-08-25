@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 // App default font-size.
-// Default: 16px, 15px looked very wide.
+// Default: 16px, 15px looks wide.
 :root {
   font-size: 14px;
 }
@@ -160,14 +160,6 @@ body {
 
 .overlay {
   background: rgba(0, 0, 0, 0.6);
-}
-
-.title {
-  @apply text-xl font-semibold;
-}
-
-.sub-title {
-  @apply text-xl font-medium;
 }
 
 .text-sm-muted {
