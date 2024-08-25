@@ -1,6 +1,6 @@
 <template>
   <div
-    class="box flex-1 rounded-lg px-8 py-4 transition-shadow duration-170 cursor-pointer hover:bg-muted"
+    class="box flex-1 rounded-lg px-8 py-4 transition-shadow duration-170 cursor-pointer hover:bg-muted max-w-80"
     @click="handleClick"
   >
     <div class="flex items-center mb-4">

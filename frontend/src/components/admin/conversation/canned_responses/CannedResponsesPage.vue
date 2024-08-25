@@ -7,7 +7,7 @@
           <DialogTrigger as-child>
             <Button size="sm">New canned response</Button>
           </DialogTrigger>
-          <DialogContent class="sm:max-w-[425px]">
+          <DialogContent class="sm:max-w-[625px]">
             <DialogHeader>
               <DialogTitle>Add a canned response</DialogTitle>
               <DialogDescription> Set canned response name. Click save when you're done. </DialogDescription>
@@ -27,7 +27,7 @@
                 <FormItem>
                   <FormLabel>Content</FormLabel>
                   <FormControl>
-                    <Textarea v-bind="componentField" />
+                    <Textarea v-bind="componentField"  class="h-52"></Textarea>
                   </FormControl>
                   <FormDescription></FormDescription>
                   <FormMessage />

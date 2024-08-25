@@ -14,7 +14,7 @@
         <DropdownMenuItem @click="deleteCannedResponse"> Delete </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-[625px]">
       <DialogHeader>
         <DialogTitle>Edit canned response</DialogTitle>
         <DialogDescription>Click save when you're done. </DialogDescription>
@@ -34,7 +34,7 @@
           <FormItem>
             <FormLabel>Content</FormLabel>
             <FormControl>
-              <Textarea v-bind="componentField" />
+              <Textarea v-bind="componentField"  class="h-52"></Textarea>
             </FormControl>
             <FormDescription></FormDescription>
             <FormMessage />

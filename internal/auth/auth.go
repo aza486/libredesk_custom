@@ -56,7 +56,8 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 	for _, provider := range cfg.Providers {
 		oidcProv, err := oidc.NewProvider(context.Background(), provider.ProviderURL)
 		if err != nil {
-			return nil, fmt.Errorf("initializing `%s` oidc login: %v", provider.Provider, err)
+			logger.Error("error initializing oidc provider", "error", err, "provider", provider.Provider)
+			continue
 		}
 
 		oauthCfg := oauth2.Config{
