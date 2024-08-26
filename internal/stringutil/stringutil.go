@@ -16,8 +16,8 @@ var (
 	regexpSpaces   = regexp.MustCompile(`[\s]+`)
 )
 
-// Trim removes HTML tags, trims whitespace, makes the text human-readable, and shortens the content to a specified maximum length, appending "..." if truncated.
-func Trim(content string, maxLen int) string {
+// SanitizeAndTruncate removes HTML tags, trims whitespace, makes the text human-readable, and shortens the content to a specified maximum length, appending "..." if truncated.
+func SanitizeAndTruncate(content string, maxLen int) string {
 	plain := strings.TrimSpace(html2text.HTML2Text(content))
 	if len(plain) > maxLen {
 		plain = plain[:maxLen] + "..."

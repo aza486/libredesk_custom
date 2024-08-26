@@ -5,7 +5,6 @@
         {{ getFullName }}
       </p>
     </div>
-    {{ mess }}
     <div class="flex flex-row gap-2 justify-end">
       <div
         class="flex flex-col message-bubble justify-end items-end relative !rounded-tr-none"

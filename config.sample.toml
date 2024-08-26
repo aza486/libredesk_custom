@@ -59,9 +59,6 @@ auth_protocol = "plain"
 email_address = "test@gmail.com"
 max_msg_retries = 2
 
-[autoassigner]
-assign_interval = "15s"
-
 
 [frontend.static_server]
 enabled = true

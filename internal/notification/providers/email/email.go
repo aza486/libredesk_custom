@@ -1,19 +1,18 @@
+// Package email sends out emails.
 package email
 
 import (
-	"fmt"
 	"math/rand"
 	"net/textproto"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
-	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/knadh/smtppool"
 	"github.com/zerodha/logf"
 )
 
-// Email implements the Notifier interface for sending emails.
+// Email implements the MessageSender interface for sending emails.
 type Email struct {
 	lo               *logf.Logger
 	from             string
@@ -22,13 +21,13 @@ type Email struct {
 	templateRenderer notifier.TemplateRenderer
 }
 
-// Opts contains options for creating a new Email notifier.
+// Opts contains options for creating a new Email sender.
 type Opts struct {
 	Lo        *logf.Logger
 	FromEmail string
 }
 
-// New creates a new instance of the Email notifier.
+// New initializes a new Email sender.
 func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer, opts Opts) (*Email, error) {
 	pools, err := email.NewSmtpPool(smtpConfig)
 	if err != nil {
@@ -43,46 +42,38 @@ func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, templateRe
 	}, nil
 }
 
-// SendMessage sends an email using the default template to multiple users.
-func (e *Email) SendMessage(userIDs []int, subject, content string) error {
-	recipientEmails, err := e.getUserEmails(userIDs)
+// Send sends a notification message via email.
+func (e *Email) Send(msg notifier.NotificationMessage) error {
+	recipientEmails, err := e.getUserEmails(msg.UserIDs)
 	if err != nil {
 		return err
 	}
 
 	templateBody, err := e.templateRenderer.RenderDefault(map[string]string{
-		"Content": content,
+		"Content": msg.Content,
 	})
 	if err != nil {
 		return err
 	}
 
-	m := models.Message{
-		Subject: subject,
-		Content: templateBody,
-		From:    e.from,
-		To:      recipientEmails,
-	}
+	emailMessage := e.prepareEmail(msg.Subject, templateBody, recipientEmails, msg)
 
-	return e.send(m)
+	return e.send(emailMessage)
 }
 
-// SendAssignedConversationNotification sends a email notification for an assigned conversation to the passed user.
-func (e *Email) SendAssignedConversationNotification(userIDs []int, convUUID string) error {
-	subject := "New conversation assigned to you"
-	link := fmt.Sprintf("http://localhost:5173/conversations/%s", convUUID)
-	content := fmt.Sprintf("A new conversation has been assigned to you. <br>Please review the details and take necessary action by following this link: %s", link)
-	return e.SendMessage(userIDs, subject, content)
+// Name returns the name of the provider.
+func (e *Email) Name() string {
+	return notifier.ProviderEmail
 }
 
-// getUserEmails fetches the email addresses of the specified user IDs.
+// getUserEmails fetches email addresses for specified user IDs.
 func (e *Email) getUserEmails(userIDs []int) ([]string, error) {
 	var recipientEmails []string
 	for _, userID := range userIDs {
-		userEmail, err := e.userStore.GetEmail(userID, "")
+		userEmail, err := e.userStore.GetEmail(userID)
 		if err != nil {
 			e.lo.Error("error fetching user email", "error", err)
-			return nil, err
+			continue
 		}
 		recipientEmails = append(recipientEmails, userEmail)
 	}
@@ -90,9 +81,8 @@ func (e *Email) getUserEmails(userIDs []int) ([]string, error) {
 }
 
 // send sends an email message.
-func (e *Email) send(m models.Message) error {
+func (e *Email) send(em smtppool.Email) error {
 	srv := e.selectSmtpPool()
-	em := e.prepareEmail(m)
 	return srv.Send(em)
 }
 
@@ -105,47 +95,48 @@ func (e *Email) selectSmtpPool() *smtppool.Pool {
 }
 
 // prepareEmail prepares the email message with attachments and headers.
-func (e *Email) prepareEmail(m models.Message) smtppool.Email {
+func (e *Email) prepareEmail(subject, content string, recipients []string, msg notifier.NotificationMessage) smtppool.Email {
 	var files []smtppool.Attachment
-	if m.Attachments != nil {
-		files = e.prepareAttachments(m.Attachments)
+	if len(msg.Attachments) > 0 {
+		files = e.prepareAttachments(msg.Attachments)
 	}
 
 	em := smtppool.Email{
-		From:        m.From,
-		To:          m.To,
-		Subject:     m.Subject,
+		From:        e.from,
+		To:          recipients,
+		Subject:     subject,
 		Attachments: files,
 		Headers:     textproto.MIMEHeader{},
 	}
 
-	for k, v := range m.Headers {
-		em.Headers.Set(k, v[0])
-	}
-
-	switch m.ContentType {
+	// Set content based on provided type
+	switch msg.ContentType {
 	case "plain":
-		em.Text = []byte(m.Content)
+		em.Text = []byte(content)
 	default:
-		em.HTML = []byte(m.Content)
-		if len(m.AltContent) > 0 {
-			em.Text = []byte(m.AltContent)
+		em.HTML = []byte(content)
+		if len(msg.AltContent) > 0 {
+			em.Text = []byte(msg.AltContent)
 		}
 	}
+
+	// Set any additional headers
+	for headerKey, headerValue := range msg.Headers {
+		em.Headers[headerKey] = headerValue
+	}
+
 	return em
 }
 
 // prepareAttachments prepares email attachments.
 func (e *Email) prepareAttachments(attachments []attachment.Attachment) []smtppool.Attachment {
-	files := make([]smtppool.Attachment, 0, len(attachments))
-	for _, f := range attachments {
-		a := smtppool.Attachment{
+	files := make([]smtppool.Attachment, len(attachments))
+	for i, f := range attachments {
+		files[i] = smtppool.Attachment{
 			Filename: f.Name,
 			Header:   f.Header,
-			Content:  make([]byte, len(f.Content)),
+			Content:  append([]byte(nil), f.Content...),
 		}
-		copy(a.Content, f.Content)
-		files = append(files, a)
 	}
 	return files
 }

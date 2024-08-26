@@ -4,7 +4,7 @@
     <div class="px-4 border-b h-[47px] flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
         <div class="font-bold">
-          {{ conversationStore.getContactFullName(conversationStore.conversation.data.uuid) }}
+          {{ getContactFullName }}
         </div>
         <Tooltip>
           <TooltipTrigger>
@@ -23,11 +23,7 @@
             <Icon icon="lucide:ellipsis-vertical" class="mt-2 size-6"></Icon>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem
-              v-for="status in statuses"
-              :key="status.name"
-              @click="handleUpdateStatus(status.name)"
-            >
+            <DropdownMenuItem v-for="status in statuses" :key="status.name" @click="handleUpdateStatus(status.name)">
               {{ status.name }}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -79,4 +75,8 @@ const getBadgeVariant = computed(() => {
 const handleUpdateStatus = (status) => {
   conversationStore.updateStatus(status)
 }
+
+const getContactFullName = computed(() => {
+  return conversationStore.getContactFullName(conversationStore.conversation.data?.uuid)
+})
 </script>

@@ -49,8 +49,8 @@ const (
 	maxMessagesPerPage = 30
 )
 
-// ListenAndDispatch starts worker pool to process incoming and send pending outgoing messages.
-func (m *Manager) ListenAndDispatch(ctx context.Context, dispatchConcurrency, readerConcurrency int, readInterval time.Duration) {
+// ListenAndDispatchMessages starts worker pool to process incoming and send pending outgoing messages.
+func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurrency, readerConcurrency int, readInterval time.Duration) {
 	// Spawn a worker goroutine pool to dispatch messages.
 	for range dispatchConcurrency {
 		go m.MessageDispatchWorker(ctx)
@@ -260,7 +260,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	m.AddConversationParticipant(message.SenderID, message.ConversationUUID)
 
 	// Update conversation meta with the last message details.
-	message.TrimmedContent = stringutil.Trim(message.Content, 45)
+	message.TrimmedContent = stringutil.SanitizeAndTruncate(message.Content, 45)
 	m.UpdateConversationLastMessage(0, message.ConversationUUID, message.TrimmedContent, message.CreatedAt)
 
 	// Broadcast new message to all conversation subscribers.
@@ -526,7 +526,7 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		// Put subject & last message details in meta.
 		conversationMeta, err := json.Marshal(map[string]string{
 			"subject":         in.Subject,
-			"last_message":    stringutil.Trim(in.Content, maxLastMessageLen),
+			"last_message":    stringutil.SanitizeAndTruncate(in.Content, maxLastMessageLen),
 			"last_message_at": time.Now().Format(time.RFC3339),
 		})
 		if err != nil {

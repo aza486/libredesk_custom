@@ -47,12 +47,12 @@ const (
 // Manager handles the operations related to conversations
 type Manager struct {
 	q                          queries
-	notifier                   notifier.Notifier
 	contactStore               contactStore
 	inboxStore                 inboxStore
 	userStore                  userStore
 	teamStore                  teamStore
 	mediaStore                 mediaStore
+	notifier                   *notifier.Service
 	lo                         *logf.Logger
 	db                         *sqlx.DB
 	i18n                       *i18n.I18n
@@ -99,7 +99,7 @@ type Opts struct {
 func New(
 	wsHub *ws.Hub,
 	i18n *i18n.I18n,
-	notifier notifier.Notifier,
+	notifier *notifier.Service,
 	contactStore contactStore,
 	inboxStore inboxStore,
 	userStore userStore,
@@ -396,8 +396,8 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
 
-	// Send notification to assignee.
-	go c.notifier.SendAssignedConversationNotification([]int{assigneeID}, uuid)
+	// Send email to assignee.
+	c.SendAssignedConversationEmail([]int{assigneeID}, uuid)
 
 	if err := c.RecordAssigneeUserChange(uuid, assigneeID, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
@@ -617,4 +617,23 @@ func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, 
 		return out, err
 	}
 	return out, nil
+}
+
+// SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
+func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversationUUID string) error {
+	// TODO: Remove hardcoded URL.
+	link := fmt.Sprintf("http://localhost:5173/conversations/%s", conversationUUID)
+	// TODO: Allow content to be editable.
+	content := fmt.Sprintf("A new conversation has been assigned to you. <br>Please review the details and take necessary action by following this link: %s", link)
+	notificationMessage := notifier.NotificationMessage{
+		UserIDs:  userIDs,
+		Subject:  "A new conversation has been assigned to you",
+		Content:  content,
+		Provider: notifier.ProviderEmail,
+	}
+	if err := m.notifier.Send(notificationMessage); err != nil {
+		m.lo.Error("error sending notification message", "error", err)
+		return err
+	}
+	return nil
 }

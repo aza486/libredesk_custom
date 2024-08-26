@@ -177,19 +177,14 @@ func (u *Manager) UpdateUser(id int, user models.User) error {
 	return nil
 }
 
-// GetEmail retrieves the email of a user by ID or UUID.
-func (u *Manager) GetEmail(id int, uuid string) (string, error) {
-	var uu interface{}
-	if uuid != "" {
-		uu = uuid
-	}
-
+// GetEmail retrieves the email of a user by ID.
+func (u *Manager) GetEmail(id int) (string, error) {
 	var email string
-	if err := u.q.GetEmail.Get(&email, id, uu); err != nil {
+	if err := u.q.GetEmail.Get(&email, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return email, fmt.Errorf("user not found")
+			return email, fmt.Errorf("user not found: %v", err)
 		}
-		u.lo.Error("error fetching user from db", "error", err)
+		u.lo.Error("error fetching user email from db", "error", err)
 		return email, fmt.Errorf("fetching user: %w", err)
 	}
 	return email, nil

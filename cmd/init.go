@@ -172,7 +172,7 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	return mgr
 }
 
-func initConversations(i18n *i18n.I18n, hub *ws.Hub, n notifier.Notifier, db *sqlx.DB, contactStore *contact.Manager,
+func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sqlx.DB, contactStore *contact.Manager,
 	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager,
 	automation *automation.Engine, template *template.Manager) *conversation.Manager {
 	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automation, template, conversation.Opts{
@@ -331,19 +331,26 @@ func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conv
 	return e
 }
 
-func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) notifier.Notifier {
-	var smtpCfg email.SMTPConfig
+// initNotifier initializes the notifier service with available providers.
+func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) *notifier.Service {
+	smtpCfg := email.SMTPConfig{}
 	if err := ko.UnmarshalWithConf("notification.provider.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		log.Fatalf("error unmarshalling email notification provider config: %v", err)
 	}
-	notifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, templateRenderer, emailnotifier.Opts{
+
+	emailNotifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, templateRenderer, emailnotifier.Opts{
 		Lo:        initLogger("email-notifier"),
 		FromEmail: ko.String("notification.provider.email.email_address"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing email notifier: %v", err)
 	}
-	return notifier
+
+	notifierProviders := map[string]notifier.Notifier{
+		emailNotifier.Name(): emailNotifier,
+	}
+
+	return notifier.NewService(notifierProviders, ko.MustInt("notification.concurrency"), ko.MustInt("notification.queue_size"), initLogger("notifier-service"))
 }
 
 // initEmailInbox initializes the email inbox.

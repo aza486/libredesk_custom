@@ -24,11 +24,9 @@ import (
 	"github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
-	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
-	"github.com/redis/go-redis/v9"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
@@ -41,8 +39,6 @@ var (
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
 	constant     constants
-	db           *sqlx.DB
-	rdb          *redis.Client
 	auth         *auth.Auth
 	fs           stuffbin.FileSystem
 	i18n         *i18n.I18n
@@ -107,17 +103,20 @@ func main() {
 	registerInboxes(inbox, conversation)
 	inbox.Receive(ctx)
 
-	// Start evaluation automation rules.
+	// Start evaluating automation rules.
 	go automation.Run(ctx)
 
 	// Start conversation auto assigner.
-	go autoassigner.Run(ctx, ko.MustDuration("autoassigner.assign_interval"))
+	go autoassigner.Run(ctx)
 
 	// Listen to incoming messages and dispatch pending outgoing messages.
-	go conversation.ListenAndDispatch(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustInt("message.reader_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+	go conversation.ListenAndDispatchMessages(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustInt("message.reader_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
-	// CleanMedia deletes media not linked to any model at regular intervals.
+	// Delete media not linked to any model at regular intervals.
 	go media.CleanMedia(ctx)
+
+	// Start notification service.
+	go notifier.Run(ctx)
 
 	// Init the app
 	var app = &App{
@@ -164,6 +163,11 @@ func main() {
 	go func() {
 		// Wait for the interruption signal
 		<-ctx.Done()
+
+		// Stop notification service.
+		notifier.Stop()
+
+		// TODO: Stop other managers/services here.
 
 		log.Printf("%sShutting down the server. Please wait.\x1b[0m", "\x1b[31m")
 
