@@ -50,14 +50,14 @@ const (
 )
 
 // ListenAndDispatchMessages starts worker pool to process incoming and send pending outgoing messages.
-func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurrency, readerConcurrency int, readInterval time.Duration) {
+func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurrency int, readInterval time.Duration) {
 	// Spawn a worker goroutine pool to dispatch messages.
 	for range dispatchConcurrency {
 		go m.MessageDispatchWorker(ctx)
 	}
 
 	// Spawn a worker goroutine pool to process incoming messages.
-	for range readerConcurrency {
+	for range 1 {
 		go m.IncomingMessageWorker(ctx)
 	}
 
@@ -215,13 +215,13 @@ func (m *Manager) GetMessage(uuid string) (models.Message, error) {
 // UpdateMessageStatus updates the status of a message.
 func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 	if _, err := m.q.UpdateMessageStatus.Exec(status, uuid); err != nil {
-		m.lo.Error("error updating message status in DB", "error", err, "uuid", uuid)
+		m.lo.Error("error updating message status", "error", err, "uuid", uuid)
 		return err
 	}
 
 	// Broadcast messge status update to all conversation subscribers.
 	conversationUUID, _ := m.getConversationUUIDFromMessageUUID(uuid)
-	m.wsHub.BroadcastMessagePropUpdate(conversationUUID, uuid, "status" /*message field*/, status)
+	m.BroadcastMessagePropUpdate(conversationUUID, uuid, "status" /*property*/, status)
 	return nil
 }
 
@@ -264,7 +264,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	m.UpdateConversationLastMessage(0, message.ConversationUUID, message.TrimmedContent, message.CreatedAt)
 
 	// Broadcast new message to all conversation subscribers.
-	m.BroadcastNewConversationMessage(message)
+	m.BroadcastNewConversationMessage(message.ConversationUUID, message.TrimmedContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
 }
 
@@ -376,7 +376,7 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var err error
 
-	// Create contact.
+	// Find or create contact.
 	in.Message.SenderID, err = m.contactStore.Upsert(in.Contact)
 	if err != nil {
 		m.lo.Error("error upserting contact", "error", err)
@@ -439,6 +439,19 @@ func (m *Manager) EnqueueIncoming(message models.IncomingMessage) error {
 		m.lo.Error("incoming message queue is full")
 		return errors.New("incoming message queue is full")
 	}
+}
+
+// GetConversationByMessageID returns conversation by message id.
+func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error) {
+	var conversation = models.Conversation{}
+	if err := m.q.GetConversationByMessageID.Get(&conversation, id); err != nil {
+		if err == sql.ErrNoRows {
+			return conversation, ErrConversationNotFound
+		}
+		m.lo.Error("error fetching message from DB", "error", err)
+		return conversation, envelope.NewError(envelope.GeneralError, "Error fetching message", nil)
+	}
+	return conversation, nil
 }
 
 // generateMessagesQuery generates the SQL query for fetching messages in a conversation.
@@ -559,7 +572,7 @@ func (m *Manager) findConversationID(messageSourceIDs []string) (int, error) {
 		return 0, ErrConversationNotFound
 	}
 	var conversationID int
-	if err := m.q.MessageExists.QueryRow(pq.Array(messageSourceIDs)).Scan(&conversationID); err != nil {
+	if err := m.q.MessageExistsBySourceID.QueryRow(pq.Array(messageSourceIDs)).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
 			return conversationID, ErrConversationNotFound
 		}
@@ -611,9 +624,4 @@ func (m *Manager) getOutgoingProcessingMessageIDs() []int {
 		return true
 	})
 	return out
-}
-
-// BroadcastNewConversationMessage broadcasts a new conversation message to subscribers.
-func (m *Manager) BroadcastNewConversationMessage(message *models.Message) {
-	m.wsHub.BroadcastNewConversationMessage(message.ConversationUUID, message.TrimmedContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 }

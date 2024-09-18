@@ -154,9 +154,9 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchMessages(conversation.data.uuid)
   }
 
-  async function fetchMessage (uuid) {
+  async function fetchMessage (cuuid, uuid) {
     try {
-      const response = await api.getMessage(uuid)
+      const response = await api.getMessage(cuuid, uuid)
       if (response?.data?.data) {
         const message = response.data.data
         if (!messages.data.some((m) => m.uuid === message.uuid)) {
@@ -322,7 +322,7 @@ export const useConversationStore = defineStore('conversation', () => {
     if (conversation?.data?.uuid === message.conversation_uuid) {
       if (!messages.data.some((msg) => msg.uuid === message.uuid)) {
         fetchParticipants(message.conversation_uuid)
-        fetchMessage(message.uuid)
+        fetchMessage(message.conversation_uuid, message.uuid)
         updateAssigneeLastSeen(message.conversation_uuid)
         if (message.type === 'outgoing') {
           setTimeout(() => {

@@ -13,48 +13,36 @@ JOIN roles r ON r.name = ANY(u.roles)
 WHERE u.email = $1;
 
 -- name: get-user
-WITH user_data AS (
-  SELECT 
-    u.id, 
-    u.email, 
-    u.avatar_url, 
-    u.first_name, 
-    u.last_name, 
-    u.roles
-  FROM 
+SELECT
+    u.id,
+    u.email,
+    u.avatar_url,
+    u.first_name,
+    u.last_name,
+    u.roles,
+    COALESCE(
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name))
+         FROM team_members tm
+         JOIN teams t ON tm.team_id = t.id
+         WHERE tm.user_id = u.id),
+        '[]'
+    ) AS teams,
+    COALESCE(
+        ARRAY(
+            SELECT DISTINCT unnest(r.permissions)
+            FROM roles r
+            WHERE r.name = ANY(u.roles)
+        ),
+        ARRAY[]::text[]
+    ) AS permissions
+FROM
     users u
-  WHERE 
-    CASE 
-      WHEN $1 > 0 THEN u.id = $1 
-      ELSE u.uuid = $2 
-    END
-)
-SELECT 
-  u.id, 
-  u.email, 
-  u.avatar_url, 
-  u.first_name, 
-  u.last_name, 
-  u.roles,
-  COALESCE(
-    ARRAY(
-      SELECT DISTINCT t.name
-      FROM teams t
-      JOIN team_members tm ON t.id = tm.team_id
-      WHERE tm.user_id = u.id
-    ), 
-    '{}'
-  ) AS teams,
-  COALESCE(
-    ARRAY(
-      SELECT DISTINCT unnest(r.permissions)
-      FROM roles r
-      WHERE r.name = ANY(u.roles)
-    ), 
-    ARRAY[]::text[]
-  ) AS permissions
-FROM 
-  user_data u;
+WHERE
+    CASE
+        WHEN $1 > 0 THEN u.id = $1
+        ELSE u.uuid = $2
+    END;
+
 
 -- name: set-user-password
 update users set password = $1, updated_at = now() where id = $2;

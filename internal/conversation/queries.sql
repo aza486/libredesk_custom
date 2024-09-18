@@ -421,10 +421,18 @@ VALUES (
 )
 RETURNING id, uuid, created_at;
 
--- name: message-exists
+-- name: message-exists-by-source-id
 SELECT conversation_id
 FROM messages
 WHERE source_id = ANY($1::text []);
+
+-- name: get-conversation-by-message-id
+SELECT
+    c.id,
+    c.uuid
+FROM messages m
+JOIN conversations c ON m.conversation_id = c.id
+WHERE m.id = $1;
 
 -- name: update-message-content
 update messages

@@ -8,7 +8,7 @@ import './assets/styles/main.scss'
 import './utils/strings.js'
 import api from './api'
 
-async function initApp() {
+async function initApp () {
   const emitter = mitt()
 
   let lang = 'en'

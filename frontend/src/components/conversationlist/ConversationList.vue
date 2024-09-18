@@ -68,10 +68,9 @@
 <script setup>
 import { onMounted, ref, watch, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-import { subscribeConversations } from '@/websocket.js'
+import { subscribeConversationsList } from '@/websocket.js'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_PRE_DEFINED_FILTERS } from '@/constants/conversation'
 
-import { Error } from '@/components/ui/error'
 import { ListFilter } from 'lucide-vue-next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -96,7 +95,7 @@ let listRefreshInterval = null
 
 onMounted(() => {
   conversationStore.fetchConversations(conversationType.value, predefinedFilter.value)
-  subscribeConversations(conversationType.value, predefinedFilter.value)
+  subscribeConversationsList(conversationType.value, predefinedFilter.value)
   // Refesh list every 1 minute to sync any missed changes.
   listRefreshInterval = setInterval(() => {
     conversationStore.fetchConversations(conversationType.value, predefinedFilter.value)
@@ -109,13 +108,13 @@ onUnmounted(() => {
 
 watch(conversationType, (newType) => {
   conversationStore.fetchConversations(newType, predefinedFilter.value)
-  subscribeConversations(newType, predefinedFilter.value)
+  subscribeConversationsList(newType, predefinedFilter.value)
 })
 
 const handleFilterChange = (filter) => {
   predefinedFilter.value = filter
   conversationStore.fetchConversations(conversationType.value, filter)
-  subscribeConversations(conversationType.value, predefinedFilter.value)
+  subscribeConversationsList(conversationType.value, predefinedFilter.value)
 }
 
 const loadNextPage = () => {

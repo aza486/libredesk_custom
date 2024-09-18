@@ -48,15 +48,15 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	CreateUser      *sqlx.Stmt `query:"create-user"`
-	GetUsers        *sqlx.Stmt `query:"get-users"`
-	GetUser         *sqlx.Stmt `query:"get-user"`
-	GetEmail        *sqlx.Stmt `query:"get-email"`
-	GetPermissions  *sqlx.Stmt `query:"get-permissions"`
-	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
-	UpdateUser      *sqlx.Stmt `query:"update-user"`
-	UpdateAvatar    *sqlx.Stmt `query:"update-avatar"`
-	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
+	CreateUser         *sqlx.Stmt `query:"create-user"`
+	GetUsers           *sqlx.Stmt `query:"get-users"`
+	GetUser            *sqlx.Stmt `query:"get-user"`
+	GetEmail           *sqlx.Stmt `query:"get-email"`
+	GetPermissions     *sqlx.Stmt `query:"get-permissions"`
+	GetUserByEmail     *sqlx.Stmt `query:"get-user-by-email"`
+	UpdateUser         *sqlx.Stmt `query:"update-user"`
+	UpdateAvatar       *sqlx.Stmt `query:"update-avatar"`
+	SetUserPassword    *sqlx.Stmt `query:"set-user-password"`
 }
 
 // New creates and returns a new instance of the Manager.

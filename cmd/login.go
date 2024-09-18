@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
@@ -26,7 +27,7 @@ func handleLogin(r *fastglue.Request) error {
 	return r.SendEnvelope(user)
 }
 
-// handleLogout logs out the user.
+// handleLogout logs out the user and redirects to the dashboard.
 func handleLogout(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -34,5 +35,11 @@ func handleLogout(r *fastglue.Request) error {
 	if err := app.auth.DestroySession(r); err != nil {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
-	return r.SendEnvelope(true)
+
+	// Add no-cache headers.
+	r.RequestCtx.Response.Header.Add("Cache-Control",
+		"no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
+	r.RequestCtx.Response.Header.Add("Pragma", "no-cache")
+	r.RequestCtx.Response.Header.Add("Expires", "-1")
+	return r.RedirectURI("dashboard", fasthttp.StatusFound, nil, "")
 }

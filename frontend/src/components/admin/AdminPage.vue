@@ -38,19 +38,19 @@ const allNavItems = [
     permission: 'automations:manage'
   },
   {
+    title: 'Notification',
+    href: '/admin/notification',
+    description: 'Manage email notification settings',
+    permission: ''
+  },
+  {
     title: 'Templates',
     href: '/admin/templates',
     description: 'Manage email templates',
     permission: 'templates:manage'
   },
   {
-    title: 'File uploads',
-    href: '/admin/uploads',
-    description: 'Manage file upload settings',
-    permission: 'settings:manage_file'
-  },
-  {
-    title: 'OIDC',
+    title: 'OpenID',
     href: '/admin/oidc',
     description: 'Manage OpenID Connect configurations',
     permission: 'login:manage'

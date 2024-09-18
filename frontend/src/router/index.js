@@ -9,7 +9,6 @@ import Team from '@/components/admin/team/TeamPage.vue'
 import Teams from '@/components/admin/team/teams/TeamsPage.vue'
 import Users from '@/components/admin/team/users/UsersCard.vue'
 import Automation from '@/components/admin/automation/AutomationPage.vue'
-import Uploads from '@/components/admin/uploads/UploadsPage.vue'
 import General from '@/components/admin/general/GeneralPage.vue'
 import Templates from '@/components/admin/templates/TemplatesPage.vue'
 import OIDC from '@/components/admin/oidc/OIDCPage.vue'
@@ -61,6 +60,10 @@ const routes = [
         path: 'inboxes/:id/edit',
         props: true,
         component: () => import('@/components/admin/inbox/EditInbox.vue')
+      },
+      {
+        path: 'notification',
+        component: () => import('@/components/admin/notification/NotificationSettingPage.vue')
       },
       {
         path: 'teams',
@@ -118,10 +121,6 @@ const routes = [
         path: 'automations/:id/edit',
         props: true,
         component: () => import('@/components/admin/automation/CreateOrEditRule.vue')
-      },
-      {
-        path: 'uploads',
-        component: Uploads
       },
       {
         path: 'general',

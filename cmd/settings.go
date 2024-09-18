@@ -24,7 +24,7 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	)
 
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Bad request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, "")
 	}
 
 	if err := app.setting.Update(req); err != nil {
@@ -33,32 +33,32 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-func handleGetUploadSettings(r *fastglue.Request) error {
+func handleGetEmailNotificationSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
-		req = models.UploadProvider{}
+		req = models.EmailNotification{}
 	)
 
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Bad request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, "")
 	}
-
-	out, err := app.setting.GetByPrefix("upload")
+	out, err := app.setting.GetByPrefix("notification.email")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(out)
 }
 
-func handleUpdateUploadSettings(r *fastglue.Request) error {
+func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
-		req = models.UploadProvider{}
+		req = models.EmailNotification{}
 	)
 
 	if err := r.Decode(&req, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Bad request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, "")
 	}
+
 
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)

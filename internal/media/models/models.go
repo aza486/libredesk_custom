@@ -19,8 +19,8 @@ type Media struct {
 	UUID        string      `db:"uuid" json:"uuid"`
 	Filename    string      `db:"filename" json:"filename"`
 	ContentType string      `db:"content_type" json:"content_type"`
-	Model       null.String `db:"model" json:"-"`
-	ModelID     null.String `db:"model_id" json:"-"`
+	Model       null.String `db:"model_type" json:"-"`
+	ModelID     null.Int    `db:"model_id" json:"-"`
 	Size        int         `db:"size" json:"size"`
 	Store       string      `db:"store" json:"store"`
 	URL         string      `json:"url"`

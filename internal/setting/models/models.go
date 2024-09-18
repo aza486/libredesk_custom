@@ -1,18 +1,5 @@
 package models
 
-type UploadProvider struct {
-	UploadProvider             string `json:"upload.provider"`
-	UploadFilesystemUploadPath string `json:"upload.localfs.upload_path"`
-	UploadS3URL                string `json:"upload.s3.url"`
-	UploadS3AwsAccessKeyID     string `json:"upload.s3.access_key"`
-	UploadS3AwsSecretAccessKey string `json:"upload.s3.access_secret"`
-	UploadS3AwsDefaultRegion   string `json:"upload.s3.region"`
-	UploadS3Bucket             string `json:"upload.s3.bucket"`
-	UploadS3BucketPath         string `json:"upload.s3.bucket_path"`
-	UploadS3BucketType         string `json:"upload.s3.bucket_type"`
-	UploadS3Expiry             string `json:"upload.s3.upload_expiry"`
-}
-
 type General struct {
 	SiteName                    string   `json:"app.site_name"`
 	Lang                        string   `json:"app.lang"`
@@ -22,7 +9,21 @@ type General struct {
 	AllowedFileUploadExtensions []string `json:"app.allowed_file_upload_extensions"`
 }
 
+type EmailNotification struct {
+	Username      string `json:"notification.email.username" db:"notification.email.username"`
+	Host          string `json:"notification.email.host" db:"notification.email.host"`
+	Port          int    `json:"notification.email.port" db:"notification.email.port"`
+	Password      string `json:"notification.email.password" db:"notification.email.password"`
+	MaxConns      int    `json:"notification.email.max_conns" db:"notification.email.max_conns"`
+	IdleTimeout   string `json:"notification.email.idle_timeout" db:"notification.email.idle_timeout"`
+	WaitTimeout   string `json:"notification.email.wait_timeout" db:"notification.email.wait_timeout"`
+	AuthProtocol  string `json:"notification.email.auth_protocol" db:"notification.email.auth_protocol"`
+	EmailAddress  string `json:"notification.email.email_address" db:"notification.email.email_address"`
+	MaxMsgRetries int    `json:"notification.email.max_msg_retries" db:"notification.email.max_msg_retries"`
+	Enabled       bool   `json:"notification.email.enabled" db:"notification.email.enabled"`
+}
+
 type Settings struct {
-	UploadProvider
+	EmailNotification
 	General
 }

@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type Team struct {
 	ID                      int       `db:"id" json:"id"`
@@ -8,4 +13,44 @@ type Team struct {
 	UpdatedAt               time.Time `db:"updated_at" json:"updated_at"`
 	Name                    string    `db:"name" json:"name"`
 	AutoAssignConversations bool      `db:"auto_assign_conversations" json:"auto_assign_conversations"`
+}
+
+type Teams []Team
+
+// Scan implements the sql.Scanner interface for Teams
+func (t *Teams) Scan(src interface{}) error {
+	if src == nil {
+		*t = nil
+		return nil
+	}
+
+	switch v := src.(type) {
+	case []byte:
+		return json.Unmarshal(v, t)
+	default:
+		return fmt.Errorf("unsupported type for Teams: %T", src)
+	}
+}
+
+// Value implements the driver.Valuer interface for Teams
+func (t Teams) Value() (driver.Value, error) {
+	return json.Marshal(t)
+}
+
+// Names returns the names of the teams in Teams slice.
+func (t Teams) Names() []string {
+	names := make([]string, len(t))
+	for i, team := range t {
+		names[i] = team.Name
+	}
+	return names
+}
+
+// IDs returns a slice of all team IDs in the Teams slice.
+func (t Teams) IDs() []int {
+    ids := make([]int, len(t))
+    for i, team := range t {
+        ids[i] = team.ID
+    }
+    return ids
 }

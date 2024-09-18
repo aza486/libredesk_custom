@@ -9,40 +9,39 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-func perm(handler fastglue.FastRequestHandler, requiredPerms ...string) fastglue.FastRequestHandler {
+func perm(handler fastglue.FastRequestHandler, obj, act string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var app = r.Context.(*App)
+
 		user, err := app.auth.ValidateSession(r)
 		if err != nil {
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
-		// User is loggedin, Set user in the request context.
+
+		// Fetch user and permissions.
+		user, err = app.user.Get(user.ID, "")
+		if err != nil {
+			return r.SendErrorEnvelope(http.StatusInternalServerError, "Something went wrong", nil, envelope.GeneralError)
+		}
+
+		// Set user in the request context.
 		r.RequestCtx.SetUserValue("user", user)
+
+		// Enforce the permissions with the user, object, and action.
+		ok, err := app.authz.Enforce(user, obj, act)
+		if err != nil {
+			return r.SendErrorEnvelope(http.StatusInternalServerError, "Something went wrong", nil, envelope.GeneralError)
+		}
+		if !ok {
+			return r.SendErrorEnvelope(http.StatusForbidden, "Permission denied", nil, envelope.PermissionError)
+		}
+
+		// Call the handler.
 		return handler(r)
 	}
 }
 
-// hasPerms checks if all requiredPerms exist in userPerms.
-func hasPerms(userPerms []string, requiredPerms []string) bool {
-	userPermMap := make(map[string]bool)
-
-	// make map for user's permissions for quick look up
-	for _, perm := range userPerms {
-		userPermMap[perm] = true
-	}
-
-	// iterate through required perms and if not found in userPermMap return false
-	for _, requiredPerm := range requiredPerms {
-		if _, ok := userPermMap[requiredPerm]; !ok {
-			return false
-		}
-	}
-
-	return true
-}
-
-// authPage middleware makes sure user is logged in to access the page
-// else redirects to login page.
+// authPage middleware makes sure user is logged in to access the page else redirects to login page.
 func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		// Check if user is logged in. If logged in return next handler.
@@ -74,7 +73,7 @@ func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		var app = r.Context.(*App)
 		user, err := app.auth.ValidateSession(r)
 		if err != nil {
-			return handler(r)
+			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
 		// User is loggedin, Set user in the request context.
 		r.RequestCtx.SetUserValue("user", user)

@@ -85,12 +85,12 @@ func (m *Manager) Update(s interface{}) error {
 	// Marshal settings.
 	b, err := json.Marshal(s)
 	if err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error update settings", nil)
+		return envelope.NewError(envelope.GeneralError, "Error updating settings", nil)
 	}
 
 	// Update the settings in the DB.
 	if _, err := m.q.Update.Exec(b); err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error update settings", nil)
+		return envelope.NewError(envelope.GeneralError, "Error updating settings", nil)
 	}
 
 	return nil
@@ -99,11 +99,9 @@ func (m *Manager) Update(s interface{}) error {
 // GetByPrefix retrieves settings by prefix as JSON.
 func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 	var b types.JSONText
-
 	if err := m.q.GetByPrefix.Get(&b, prefix+"%"); err != nil {
-		m.lo.Error("error fetching settings", "error", err)
+		m.lo.Error("error fetching settings", "prefix", prefix, "error", err)
 		return b, err
 	}
-
 	return b, nil
 }

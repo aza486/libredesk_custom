@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	tmodels "github.com/abhinavxd/artemis/internal/team/models"
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
@@ -21,7 +22,7 @@ type User struct {
 	SendWelcomeEmail bool           `db:"-" json:"send_welcome_email"`
 	Roles            pq.StringArray `db:"roles" json:"roles"`
 	Permissions      pq.StringArray `db:"permissions" json:"permissions"`
-	Teams            pq.StringArray `db:"teams" json:"teams"`
+	Teams            tmodels.Teams  `db:"teams" json:"teams"`
 }
 
 func (u *User) FullName() string {

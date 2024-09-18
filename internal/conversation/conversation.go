@@ -35,8 +35,7 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs embed.FS
-
+	efs                     embed.FS
 	ErrConversationNotFound = errors.New("conversation not found")
 )
 
@@ -173,7 +172,8 @@ type queries struct {
 	InsertMessage                      *sqlx.Stmt `query:"insert-message"`
 	UpdateMessageContent               *sqlx.Stmt `query:"update-message-content"`
 	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
-	MessageExists                      *sqlx.Stmt `query:"message-exists"`
+	MessageExistsBySourceID            *sqlx.Stmt `query:"message-exists-by-source-id"`
+	GetConversationByMessageID         *sqlx.Stmt `query:"get-conversation-by-message-id"`
 }
 
 // CreateConversation creates a new conversation and returns its ID and UUID.
@@ -225,7 +225,7 @@ func (c *Manager) UpdateConversationAssigneeLastSeen(uuid string) error {
 	}
 
 	// Broadcast the property update to all subscribers.
-	c.wsHub.BroadcastConversationPropertyUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.RFC3339))
+	c.BroadcastConversationPropertyUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.RFC3339))
 	return nil
 }
 
@@ -255,7 +255,8 @@ func (c *Manager) GetUnassignedConversations() ([]models.Conversation, error) {
 	var conv []models.Conversation
 	if err := c.q.GetUnassignedConversations.Select(&conv); err != nil {
 		if err != sql.ErrNoRows {
-			return conv, fmt.Errorf("fetching unassigned conversations: %w", err)
+			c.lo.Error("error fetching conversations", "error", err)
+			return conv, err
 		}
 	}
 	return conv, nil
@@ -386,7 +387,7 @@ func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conver
 		return err
 	}
 	// Broadcast update to all subscribers.
-	c.wsHub.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
+	c.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
 	return nil
 }
 
@@ -426,7 +427,7 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 		}
 
 		// Broadcast update to all subscribers.
-		c.wsHub.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", strconv.Itoa(assigneeID))
+		c.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", strconv.Itoa(assigneeID))
 	case models.AssigneeTypeTeam:
 		if _, err := c.q.UpdateConversationAssignedTeam.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
@@ -434,7 +435,7 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 		}
 
 		// Broadcast update to all subscribers.
-		c.wsHub.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", strconv.Itoa(assigneeID))
+		c.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", strconv.Itoa(assigneeID))
 	default:
 		return errors.New("invalid assignee type")
 	}

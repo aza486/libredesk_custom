@@ -21,9 +21,16 @@ func handleGetMessages(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
 		uuid        = r.RequestCtx.UserValue("uuid").(string)
+		user        = r.RequestCtx.UserValue("user").(umodels.User)
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
+
+	// Check permission
+	_, err := enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	messages, err := app.conversation.GetConversationMessages(uuid, page, pageSize)
 	if err != nil {
@@ -40,9 +47,18 @@ func handleGetMessages(r *fastglue.Request) error {
 
 func handleGetMessage(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		uuid = r.RequestCtx.UserValue("uuid").(string)
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		cuuid = r.RequestCtx.UserValue("cuuid").(string)
+		user  = r.RequestCtx.UserValue("user").(umodels.User)
 	)
+
+	// Check permission
+	_, err := enforceConversationAccess(app, cuuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	messages, err := app.conversation.GetMessage(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -57,10 +73,19 @@ func handleGetMessage(r *fastglue.Request) error {
 
 func handleRetryMessage(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		uuid = r.RequestCtx.UserValue("uuid").(string)
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		cuuid = r.RequestCtx.UserValue("cuuid").(string)
+		user  = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-	err := app.conversation.MarkMessageAsPending(uuid)
+
+	// Check permission
+	_, err := enforceConversationAccess(app, cuuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	err = app.conversation.MarkMessageAsPending(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -69,11 +94,17 @@ func handleRetryMessage(r *fastglue.Request) error {
 
 func handleSendMessage(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
-		uuid = r.RequestCtx.UserValue("uuid").(string)
-		req  = messageReq{}
+		app   = r.Context.(*App)
+		user  = r.RequestCtx.UserValue("user").(umodels.User)
+		cuuid = r.RequestCtx.UserValue("cuuid").(string)
+		req   = messageReq{}
 	)
+
+	// Check permission
+	_, err := enforceConversationAccess(app, cuuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	if err := r.Decode(&req, "json"); err != nil {
 		app.lo.Error("error unmarshalling media ids", "error", err)
@@ -91,7 +122,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	message := cmodels.Message{
-		ConversationUUID: uuid,
+		ConversationUUID: cuuid,
 		SenderID:         user.ID,
 		Type:             conversation.MessageOutgoing,
 		SenderType:       conversation.SenderTypeUser,

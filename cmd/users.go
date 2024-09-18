@@ -147,7 +147,7 @@ func handleCreateUser(r *fastglue.Request) error {
 	}
 
 	// Upsert user teams.
-	if err := app.team.UpsertUserTeams(user.ID, user.Teams); err != nil {
+	if err := app.team.UpsertUserTeams(user.ID, user.Teams.Names()); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -176,7 +176,7 @@ func handleUpdateUser(r *fastglue.Request) error {
 	}
 
 	// Upsert user teams.
-	if err := app.team.UpsertUserTeams(id, user.Teams); err != nil {
+	if err := app.team.UpsertUserTeams(id, user.Teams.Names()); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

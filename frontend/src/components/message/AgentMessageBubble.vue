@@ -106,6 +106,6 @@ const avatarFallback = computed(() => {
 })
 
 const retryMessage = (msg) => {
-  api.retryMessage(msg.uuid)
+  api.retryMessage(convStore.conversation.data.uuid, msg.uuid)
 }
 </script>

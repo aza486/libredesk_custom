@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/auth"
+	"github.com/abhinavxd/artemis/internal/authz"
+
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
@@ -39,8 +41,9 @@ var (
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
 	constant     constants
-	auth         *auth.Auth
 	fs           stuffbin.FileSystem
+	auth         *auth.Auth
+	authz        *authz.Enforcer
 	i18n         *i18n.I18n
 	lo           *logf.Logger
 	oidc         *oidc.Manager
@@ -110,7 +113,7 @@ func main() {
 	go autoassigner.Run(ctx)
 
 	// Listen to incoming messages and dispatch pending outgoing messages.
-	go conversation.ListenAndDispatchMessages(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustInt("message.reader_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+	go conversation.ListenAndDispatchMessages(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
 	// Delete media not linked to any model at regular intervals.
 	go media.CleanMedia(ctx)
@@ -134,6 +137,7 @@ func main() {
 		conversation: conversation,
 		automation:   automation,
 		oidc:         oidc,
+		authz:        initAuthz(),
 		constant:     initConstants(),
 		status:       initStatus(db),
 		role:         initRole(db),

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/abhinavxd/artemis/internal/auth"
+	"github.com/abhinavxd/artemis/internal/authz"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -246,22 +247,23 @@ func initTeam(db *sqlx.DB) *team.Manager {
 
 func initMedia(db *sqlx.DB) *media.Manager {
 	var (
-		store media.Store
-		err   error
-		lo    = initLogger("media")
+		store      media.Store
+		err        error
+		appRootURL = ko.String("app.root_url")
+		lo         = initLogger("media")
 	)
 	switch s := ko.MustString("upload.provider"); s {
 	case "s3":
 		store, err = s3.New(s3.Opt{
-			URL:        ko.String("s3.url"),
-			PublicURL:  ko.String("s3.public_url"),
-			AccessKey:  ko.String("s3.access_key"),
-			SecretKey:  ko.String("s3.secret_key"),
-			Region:     ko.String("s3.region"),
-			Bucket:     ko.String("s3.bucket"),
-			BucketPath: ko.String("s3.bucket_path"),
-			BucketType: ko.String("s3.bucket_type"),
-			Expiry:     ko.Duration("s3.expiry"),
+			URL:        ko.String("upload.s3.url"),
+			PublicURL:  ko.String("upload.s3.public_url"),
+			AccessKey:  ko.String("upload.s3.access_key"),
+			SecretKey:  ko.String("upload.s3.secret_key"),
+			Region:     ko.String("upload.s3.region"),
+			Bucket:     ko.String("upload.s3.bucket"),
+			BucketPath: ko.String("upload.s3.bucket_path"),
+			BucketType: ko.String("upload.s3.bucket_type"),
+			Expiry:     ko.Duration("upload.s3.expiry"),
 		})
 		if err != nil {
 			log.Fatalf("error initializing s3 media store: %v", err)
@@ -270,30 +272,30 @@ func initMedia(db *sqlx.DB) *media.Manager {
 		store, err = localfs.New(localfs.Opts{
 			UploadURI:  "/uploads",
 			UploadPath: filepath.Clean(ko.String("upload.localfs.upload_path")),
-			RootURL:    ko.String("app.root_url"),
+			RootURL:    appRootURL,
 		})
 		if err != nil {
 			log.Fatalf("error initializing localfs media store: %v", err)
 		}
 	default:
-		log.Fatalf("media store: %s not available", s)
+		log.Fatalf("unknown media store: %s", s)
 	}
 
 	media, err := media.New(media.Opts{
 		Store:      store,
 		Lo:         lo,
 		DB:         db,
-		AppBaseURL: ko.String("app.root_url"),
+		AppBaseURL: appRootURL,
 	})
 	if err != nil {
-		log.Fatalf("error initializing media manager: %v", err)
+		log.Fatalf("error initializing media: %v", err)
 	}
 	return media
 }
 
 // initInbox initializes the inbox manager without registering inboxes.
 func initInbox(db *sqlx.DB) *inbox.Manager {
-	var lo = initLogger("inbox_manager")
+	var lo = initLogger("inbox-manager")
 	mgr, err := inbox.New(lo, db)
 	if err != nil {
 		log.Fatalf("error initializing inbox manager: %v", err)
@@ -302,7 +304,7 @@ func initInbox(db *sqlx.DB) *inbox.Manager {
 }
 
 func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.Engine {
-	var lo = initLogger("automation_engine")
+	var lo = initLogger("automation-engine")
 
 	systemUser, err := userManager.GetSystemUser()
 	if err != nil {
@@ -334,13 +336,13 @@ func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conv
 // initNotifier initializes the notifier service with available providers.
 func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) *notifier.Service {
 	smtpCfg := email.SMTPConfig{}
-	if err := ko.UnmarshalWithConf("notification.provider.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
+	if err := ko.UnmarshalWithConf("notification.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		log.Fatalf("error unmarshalling email notification provider config: %v", err)
 	}
 
 	emailNotifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, templateRenderer, emailnotifier.Opts{
 		Lo:        initLogger("email-notifier"),
-		FromEmail: ko.String("notification.provider.email.email_address"),
+		FromEmail: ko.String("notification.email.email_address"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing email notifier: %v", err)
@@ -418,6 +420,14 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 	}
 }
 
+func initAuthz() *authz.Enforcer {
+	enforcer, err := authz.NewEnforcer() 
+	if err != nil {
+		log.Fatalf("error initializing authz: %v", err)
+	}
+	return enforcer
+}
+ 
 func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 	var lo = initLogger("auth")
 

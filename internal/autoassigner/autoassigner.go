@@ -1,5 +1,4 @@
-// Package autoassigner automatically assigning unassigned conversations to team agents in a round-robin fashion.
-// Continuously assigns conversations at regular intervals.
+// Package autoassigner continuously assigns conversations at regular intervals to users.
 package autoassigner
 
 import (

@@ -8,6 +8,11 @@ SELECT *
 from media
 where id = $1;
 
+-- name: get-media-by-filename
+SELECT *
+from media
+where filename = $1;
+
 -- name: delete-media
 DELETE from media
 where id = $1;

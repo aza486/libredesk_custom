@@ -4,7 +4,9 @@ package media
 
 import (
 	"context"
+	"database/sql"
 	"embed"
+	"errors"
 	"io"
 	"time"
 
@@ -64,12 +66,13 @@ func New(opt Opts) (*Manager, error) {
 
 // queries holds the prepared SQL statements for media operations.
 type queries struct {
-	InsertMedia      *sqlx.Stmt `query:"insert-media"`
-	GetMedia         *sqlx.Stmt `query:"get-media"`
-	DeleteMedia      *sqlx.Stmt `query:"delete-media"`
-	Attach           *sqlx.Stmt `query:"attach-to-model"`
-	GetModelMedia    *sqlx.Stmt `query:"get-model-media"`
-	GetUnlinkedMedia *sqlx.Stmt `query:"get-unlinked-media"`
+	InsertMedia        *sqlx.Stmt `query:"insert-media"`
+	GetMedia           *sqlx.Stmt `query:"get-media"`
+	GetMediaByFilename *sqlx.Stmt `query:"get-media-by-filename"`
+	DeleteMedia        *sqlx.Stmt `query:"delete-media"`
+	Attach             *sqlx.Stmt `query:"attach-to-model"`
+	GetModelMedia      *sqlx.Stmt `query:"get-model-media"`
+	GetUnlinkedMedia   *sqlx.Stmt `query:"get-unlinked-media"`
 }
 
 func (m *Manager) UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (models.Media, error) {
@@ -113,6 +116,20 @@ func (m *Manager) Insert(fileName, contentType string, fileSize int, meta []byte
 func (m *Manager) Get(id int) (models.Media, error) {
 	var media models.Media
 	if err := m.queries.GetMedia.Get(&media, id); err != nil {
+		m.lo.Error("error fetching media", "error", err)
+		return media, envelope.NewError(envelope.GeneralError, "Error fetching media", nil)
+	}
+	media.URL = m.Store.GetURL(media.Filename)
+	return media, nil
+}
+
+// GetByFilename retrieves the media record by it's filename.
+func (m *Manager) GetByFilename(fileName string) (models.Media, error) {
+	var media models.Media
+	if err := m.queries.GetMediaByFilename.Get(&media, fileName); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return media, envelope.NewError(envelope.GeneralError, "File not found", nil)	
+		}
 		m.lo.Error("error fetching media", "error", err)
 		return media, envelope.NewError(envelope.GeneralError, "Error fetching media", nil)
 	}
@@ -177,7 +194,7 @@ func (m *Manager) DeleteMediaAndStore(name string) error {
 // This function should be run as a goroutine to avoid blocking. It uses a ticker to
 // trigger the deletion process every 12 hours.
 func (m *Manager) CleanMedia(ctx context.Context) {
-	m.deleteUnlinkedMedia()
+	m.deleteUnlinkedMedia(3)
 	ticker := time.NewTicker(12 * time.Hour)
 	defer ticker.Stop()
 	for {
@@ -185,16 +202,16 @@ func (m *Manager) CleanMedia(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			m.deleteUnlinkedMedia()
+			m.deleteUnlinkedMedia(3)
 		}
 	}
 }
 
 // deleteUnlinkedMedia fetches media entries that are not linked to any model
 // and are older than 3 days, then deletes them.
-func (m *Manager) deleteUnlinkedMedia() {
+func (m *Manager) deleteUnlinkedMedia(days int) {
 	var unlinkedMedia []int
-	if err := m.queries.GetUnlinkedMedia.Select(&unlinkedMedia, time.Now().AddDate(0, 0, -3)); err != nil {
+	if err := m.queries.GetUnlinkedMedia.Select(&unlinkedMedia, time.Now().AddDate(0, 0, -1 * days)); err != nil {
 		m.lo.Error("error fetching unlinked media", "error", err)
 		return
 	}

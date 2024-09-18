@@ -13,11 +13,7 @@
       <FormItem>
         <FormLabel>Description</FormLabel>
         <FormControl>
-          <Input
-            type="text"
-            placeholder="This role is for all support agents"
-            v-bind="componentField"
-          />
+          <Input type="text" placeholder="This role is for all support agents" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -25,26 +21,16 @@
 
     <p class="text-base">Set permissions for this role</p>
 
-    <div
-      v-for="entity in permissions"
-      :key="entity.name"
-      class="border box p-4 rounded-lg shadow-sm"
-    >
+    <div v-for="entity in permissions" :key="entity.name" class="border box p-4 rounded-lg shadow-sm">
       <p class="text-lg mb-5">{{ entity.name }}</p>
       <div class="space-y-4">
-        <FormField
-          v-for="permission in entity.permissions"
-          :key="permission.name"
-          type="checkbox"
-          :name="permission.name"
-        >
+        <FormField v-for="permission in entity.permissions" :key="permission.name" type="checkbox"
+          :name="permission.name">
           <FormItem class="flex flex-col gap-y-5 space-y-0 rounded-lg">
             <div class="flex space-x-3">
               <FormControl>
-                <Checkbox
-                  :checked="selectedPermissions.includes(permission.name)"
-                  @update:checked="(newValue) => handleChange(newValue, permission.name)"
-                />
+                <Checkbox :checked="selectedPermissions.includes(permission.name)"
+                  @update:checked="(newValue) => handleChange(newValue, permission.name)" />
                 <FormLabel>{{ permission.label }}</FormLabel>
               </FormControl>
             </div>
@@ -87,37 +73,62 @@ const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
-      { name: 'conversation:reply', label: 'Reply to conversations' },
-      { name: 'conversation:edit_all_properties', label: 'Edit all conversation properties' },
-      { name: 'conversation:edit_status', label: 'Edit conversation status' },
-      { name: 'conversation:edit_priority', label: 'Edit conversation priority' },
-      { name: 'conversation:edit_team', label: 'Edit conversation team' },
-      { name: 'conversation:edit_user', label: 'Edit conversation user' },
-      { name: 'conversation:view_all', label: 'View all conversations' },
-      { name: 'conversation:view_team', label: 'View team conversations' },
-      { name: 'conversation:view_assigned', label: 'View assigned conversations' }
+      { name: 'conversations:read', label: 'View conversation' },
+      { name: 'conversations:read_all', label: 'View all conversations' },
+      { name: 'conversations:read_team', label: 'View team conversations' },
+      { name: 'conversations:read_assigned', label: 'View assigned conversations' },
+      { name: 'conversations:update_user_assignee', label: 'Edit assigned user' },
+      { name: 'conversations:update_team_assignee', label: 'Edit assigned team' },
+      { name: 'conversations:update_priority', label: 'Edit priority' },
+      { name: 'conversations:update_status', label: 'Edit status' },
+      { name: 'conversations:update_tags', label: 'Edit tags' },
+      { name: 'messages:read', label: 'View conversation messages' },
+      { name: 'messages:write', label: 'Reply to conversation' }
     ]
   },
   {
     name: 'Admin',
     permissions: [
-      { name: 'admin:access', label: 'Access the admin panel' },
-      { name: 'settings:manage_general', label: 'Manage general settings' },
-      { name: 'settings:manage_file', label: 'Manage file upload settings' },
-      { name: 'login:manage', label: 'Manage login settings' },
-      { name: 'inboxes:manage', label: 'Manage inboxes' },
-      { name: 'users:manage', label: 'Manage users' },
-      { name: 'teams:manage', label: 'Manage teams' },
-      { name: 'roles:manage', label: 'Manage roles' },
-      { name: 'automations:manage', label: 'Manage automations' },
-      { name: 'templates:manage', label: 'Manage templates' }
-    ]
-  },
-  {
-    name: 'Dashboard',
-    permissions: [
-      { name: 'dashboard:view_global', label: 'Access global dashboard' },
-      { name: 'dashboard:view_team_self', label: 'Access dashboard of teams the user is part of' }
+      { name: 'settings_general:write', label: 'Update general settings' },
+      { name: 'settings_notifications:write', label: 'Update notification settings' },
+      { name: 'settings_notifications:read', label: 'View notification settings' },
+
+      { name: 'oidc:read', label: 'View OpenID connect configurations' },
+      { name: 'oidc:write', label: 'Update OpenID connect providers' },
+      { name: 'oidc:delete', label: 'Delete OpenID connect providers' },
+
+      { name: 'status:read', label: 'View statuses available for conversations' },
+      { name: 'status:write', label: 'Update statuses available for conversations' },
+      { name: 'status:delete', label: 'Delete statuses available for conversations' },
+
+      { name: 'tags:write', label: 'Create and update tags' },
+      { name: 'tags:delete', label: 'Delete tags' },
+
+      { name: 'canned_responses:write', label: 'Create and update canned responses' },
+      { name: 'canned_responses:delete', label: 'Delete canned responses' },
+
+      { name: 'dashboard_global:read', label: 'Access global dashboard' },
+
+      { name: 'users:read', label: 'View users' },
+      { name: 'users:write', label: 'Create and update users' },
+
+      { name: 'teams:read', label: 'View teams' },
+      { name: 'teams:write', label: 'Create and update teams' },
+
+      { name: 'automations:read', label: 'View automation rules' },
+      { name: 'automations:write', label: 'Create and update automation rules' },
+      { name: 'automations:delete', label: 'Delete automation rules' },
+
+      { name: 'inboxes:read', label: 'View inboxes' },
+      { name: 'inboxes:write', label: 'Create and update inboxes' },
+      { name: 'inboxes:delete', label: 'Delete inboxes' },
+
+      { name: 'roles:read', label: 'View roles' },
+      { name: 'roles:write', label: 'Create and update roles' },
+      { name: 'roles:delete', label: 'Delete roles' },
+
+      { name: 'templates:read', label: 'View templates' },
+      { name: 'templates:write', label: 'Create and update templates' }
     ]
   }
 ])

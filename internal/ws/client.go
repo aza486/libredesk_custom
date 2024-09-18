@@ -12,10 +12,8 @@ import (
 )
 
 const (
-	// SubscribeConversations to the last 1000 conversations.
-	// TODO: Move to config.
 	maxConversationsPagesToSub = 10
-	maxConversationsPageSize   = 100
+	maxConversationsPageSize   = 50
 )
 
 // SafeBool is a thread-safe boolean.
@@ -27,8 +25,8 @@ type SafeBool struct {
 // Set sets the value of the SafeBool.
 func (b *SafeBool) Set(value bool) {
 	b.mu.Lock()
-	b.flag = value
-	b.mu.Unlock()
+	defer b.mu.Unlock()
+	b.flag = value	
 }
 
 // Get returns the value of the SafeBool.
@@ -52,8 +50,8 @@ type Client struct {
 	// To prevent pushes to the channel.
 	Closed SafeBool
 
-	// Buffered channel of outbound messages.
-	Send chan Message
+	// Buffered channel of outbound ws messages.
+	Send chan models.WSMessage
 }
 
 // Serve handles heartbeats and sending messages to the client.
@@ -73,7 +71,7 @@ Loop:
 			if !ok {
 				break Loop
 			}
-			c.Conn.WriteMessage(msg.messageType, msg.data)
+			c.Conn.WriteMessage(msg.MessageType, msg.Data)
 		}
 	}
 	c.Conn.Close()
@@ -90,7 +88,6 @@ func (c *Client) Listen() {
 		if msgType == websocket.TextMessage {
 			c.processIncomingMessage(msg)
 		} else {
-			fmt.Printf("closing channel due to invalid message type. %d \n", msgType)
 			c.Hub.RemoveClient(c)
 			c.close()
 			return
@@ -103,15 +100,16 @@ func (c *Client) Listen() {
 // processIncomingMessage processes incoming messages from the client.
 func (c *Client) processIncomingMessage(data []byte) {
 	var req models.IncomingReq
-
 	if err := json.Unmarshal(data, &req); err != nil {
+		c.SendError("error unmarshalling request")
 		return
 	}
 
 	switch req.Action {
-	case models.ActionConversationsSub:
-		var subReq models.ConversationsSubscribe
+	case models.ActionConversationsListSub:
+		var subReq models.ConversationsListSubscribe
 		if err := json.Unmarshal(data, &subReq); err != nil {
+			c.SendError("error unmarshalling request")
 			return
 		}
 
@@ -127,20 +125,8 @@ func (c *Client) processIncomingMessage(data []byte) {
 			}
 			c.SubscribeConversations(c.ID, conversationUUIDs)
 		}
-	case models.ActionConversationSub:
-		var subReq models.ConversationSubscribe
-		if err := json.Unmarshal(data, &subReq); err != nil {
-			return
-		}
-		c.SubscribeConversations(c.ID, []string{subReq.UUID})
-	case models.ActionConversationUnSub:
-		var unsubReq models.ConversationUnsubscribe
-		if err := json.Unmarshal(data, &unsubReq); err != nil {
-			return
-		}
-		c.UnsubscribeConversation(c.ID, unsubReq.UUID)
 	default:
-		fmt.Println("new incoming websocket message ", string(data))
+		c.SendError("unknown action")
 	}
 }
 
@@ -175,21 +161,6 @@ func (c *Client) SubscribeConversations(userID int, conversationUUIDs []string) 
 	}
 }
 
-// UnsubscribeConversation unsubscribes the client from the specified conversation.
-func (c *Client) UnsubscribeConversation(userID int, conversationUUID string) {
-	if userIDs, ok := c.Hub.conversationSubs[conversationUUID]; ok {
-		for i, id := range userIDs {
-			if id == userID {
-				c.Hub.conversationSubs[conversationUUID] = append(userIDs[:i], userIDs[i+1:]...)
-				break
-			}
-		}
-		if len(c.Hub.conversationSubs[conversationUUID]) == 0 {
-			delete(c.Hub.conversationSubs, conversationUUID)
-		}
-	}
-}
-
 // RemoveAllUserConversationSubscriptions removes all conversation subscriptions for the user.
 func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
 	for conversationUUID, userIDs := range c.Hub.conversationSubs {
@@ -202,5 +173,35 @@ func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
 		if len(c.Hub.conversationSubs[conversationUUID]) == 0 {
 			delete(c.Hub.conversationSubs, conversationUUID)
 		}
+	}
+}
+
+// SendError sends an error message to client.
+func (c *Client) SendError(msg string) {
+	out := models.Message{
+		Type: models.MessageTypeError,
+		Data: msg,
+	}
+	b, _ := json.Marshal(out)
+
+	// Try to send the error message over the Send channel
+	select {
+	case c.Send <- models.WSMessage{Data: b, MessageType: websocket.TextMessage}:
+	default:
+		log.Println("Client send channel is full. Could not send error message.")
+		c.Hub.RemoveClient(c)
+		c.close()
+	}
+}
+
+// SendMessage sends a message to client.
+func (c *Client) SendMessage(b []byte, typ byte) {
+	if c.Closed.Get() {
+		log.Println("Attempted to send message to closed client")
+		return
+	}
+	select {
+	case c.Send <- models.WSMessage{Data: b, MessageType: websocket.TextMessage}:
+	default:
 	}
 }

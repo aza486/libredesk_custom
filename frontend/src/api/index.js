@@ -16,6 +16,8 @@ http.interceptors.request.use((request) => {
   return request
 })
 
+const getEmailNotificationSettings = () => http.get('/api/settings/notifications/email')
+const updateEmailNotificationSettings = (data) => http.put('/api/settings/notifications/email', data)
 const getPriorities = () => http.get('/api/priorities')
 const getStatuses = () => http.get('/api/statuses')
 const createStatus = (data) => http.post('/api/statuses', data)
@@ -114,8 +116,8 @@ const updateAssignee = (uuid, assignee_type, data) =>
 const updateConversationStatus = (uuid, data) => http.put(`/api/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversations/${uuid}/last-seen`)
-const getMessage = (uuid) => http.get(`/api/message/${uuid}`)
-const retryMessage = (uuid) => http.get(`/api/message/${uuid}/retry`)
+const getMessage = (cuuid, uuid) => http.get(`/api/conversations/${cuuid}/messages/${uuid}`)
+const retryMessage = (cuuid, uuid) => http.put(`/api/conversations/${cuuid}/messages/${uuid}/retry`)
 const getMessages = (uuid, page) =>
   http.get(`/api/conversations/${uuid}/messages`, {
     params: { page: page }
@@ -254,4 +256,6 @@ export default {
   createStatus,
   updateStatus,
   deleteStatus,
+  getEmailNotificationSettings,
+  updateEmailNotificationSettings,
 }
