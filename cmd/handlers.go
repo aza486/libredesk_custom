@@ -4,6 +4,7 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
@@ -156,6 +157,9 @@ func handleServeUploadedFiles(r *fastglue.Request) error {
 
 	// Extract the file name from the URL path.
 	_, fileName := filepath.Split(string(r.RequestCtx.URI().Path()))
+
+	// Remove the "thumb_" prefix.
+	fileName = strings.TrimPrefix(fileName, "thumb_")
 
 	// Fetch media metadata from the database.
 	media, err := app.media.GetByFilename(fileName)

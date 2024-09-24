@@ -24,10 +24,11 @@ SET model_type = $2,
 WHERE id = $1;
 
 -- name: get-model-media
-SELECT *
+SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", COALESCE(meta->>'disposition', '') AS disposition
 FROM media
 WHERE model_type = $1
     AND model_id = $2;
+
 
 -- name: get-unlinked-media
 SELECT id

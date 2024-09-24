@@ -9,6 +9,7 @@ import (
 
 	"slices"
 
+	"github.com/abhinavxd/artemis/internal/attachment"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/image"
 	"github.com/abhinavxd/artemis/internal/stringutil"
@@ -35,7 +36,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 
 	files, ok := form.File["files"]
 	if !ok || len(files) == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File not found", nil, "InputException")
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File not found", nil, envelope.InputError)
 	}
 
 	fileHeader := files[0]
@@ -45,6 +46,13 @@ func handleMediaUpload(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reading file", nil, envelope.GeneralError)
 	}
 	defer file.Close()
+
+	// Inline?
+	var disposition = attachment.DispositionAttachment
+	inline, ok := form.Value["inline"]
+	if ok && len(inline) > 0 && inline[0] == "true" {
+		disposition = attachment.DispositionInline
+	}
 
 	// Sanitize filename.
 	srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
@@ -65,7 +73,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 			envelope.GeneralError,
 		)
 	}
-	fmt.Println(app.constant.AllowedUploadFileExtensions)
+
 	if !slices.Contains(app.constant.AllowedUploadFileExtensions, "*") && !slices.Contains(app.constant.AllowedUploadFileExtensions, srcExt) {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Unsupported file type", nil, envelope.InputError)
 	}
@@ -103,8 +111,9 @@ func handleMediaUpload(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
 	}
 	meta, _ := json.Marshal(map[string]interface{}{
-		"width":  width,
-		"height": height,
+		"width":       width,
+		"height":      height,
+		"disposition": disposition,
 	})
 
 	file.Seek(0, 0)

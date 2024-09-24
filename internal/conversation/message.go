@@ -257,7 +257,9 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Add this user as a participant.
-	m.AddConversationParticipant(message.SenderID, message.ConversationUUID)
+	if err := m.AddConversationParticipant(message.SenderID, message.ConversationUUID); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
+	}
 
 	// Update conversation meta with the last message details.
 	message.TrimmedContent = stringutil.SanitizeAndTruncate(message.Content, 45)
@@ -603,7 +605,7 @@ func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 		attachment := attachment.Attachment{
 			Name:    media.Filename,
 			Content: blob,
-			Header:  attachment.MakeHeader(media.ContentType, media.Filename, "base64"),
+			Header:  attachment.MakeHeader(media.ContentType, media.Filename, "base64", media.Disposition),
 		}
 		attachments = append(attachments, attachment)
 	}

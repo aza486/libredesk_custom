@@ -37,7 +37,11 @@ const editor = ref(
     content: '',
     extensions: [
       StarterKit,
-      Image,
+      Image.configure({
+        HTMLAttributes: {
+          class: 'inline-image',
+        },
+      }),
       Placeholder.configure({
         placeholder: () => {
           return props.placeholder

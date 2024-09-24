@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/ws"
 	wsmodels "github.com/abhinavxd/artemis/internal/ws/models"
 )
 
@@ -75,7 +74,7 @@ func (m *Manager) broadcastToUsers(userIDs []int, message wsmodels.Message) {
 		m.lo.Error("error marshlling message", "error", err)
 		return
 	}
-	m.wsHub.BroadcastMessage(ws.BroadcastMessage{
+	m.wsHub.BroadcastMessage(wsmodels.BroadcastMessage{
 		Data:  messageBytes,
 		Users: userIDs,
 	})

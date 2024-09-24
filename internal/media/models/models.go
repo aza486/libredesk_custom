@@ -23,8 +23,8 @@ type Media struct {
 	ModelID     null.Int    `db:"model_id" json:"-"`
 	Size        int         `db:"size" json:"size"`
 	Store       string      `db:"store" json:"store"`
+	Disposition string      `db:"disposition" json:"-"`
 	URL         string      `json:"url"`
 	ContentID   string      `json:"-"`
-	Disposition string      `json:"-"`
 	Content     []byte      `json:"-"`
 }

@@ -15,7 +15,7 @@
           'bg-red': message.status === 'failed'
         }"
       >
-        <div v-html="message.content" :class="{ 'mb-3': message.attachments.length > 0 }"></div>
+        <div v-html="getMessageContent" :class="{ 'mb-3': message.attachments.length > 0 }"></div>
         <MessageAttachmentPreview :attachments="message.attachments" />
         <Spinner v-if="message.status === 'pending'" />
 
@@ -61,6 +61,7 @@ import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
 import { Lock } from 'lucide-vue-next'
+import {RevertCIDToImageSrc} from '@/utils/strings'
 import api from '@/api'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -86,6 +87,10 @@ const getFullName = computed(() => {
 
 const getAvatar = computed(() => {
   return participant.value?.avatar_url
+})
+
+const getMessageContent = computed(() => {
+  return RevertCIDToImageSrc(props.message.content)
 })
 
 const isPrivateMessage = computed(() => {

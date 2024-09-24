@@ -37,17 +37,29 @@ func (a *Attachments) Scan(value interface{}) error {
 	return json.Unmarshal(bytes, a)
 }
 
-func MakeHeader(contentType, fileName, encoding string) textproto.MIMEHeader {
-	if encoding == "" {
-		encoding = "base64"
-	}
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+// MakeHeader creates a MIME header for email attachments or inline content.
+func MakeHeader(contentType, fileName, encoding, disposition string) textproto.MIMEHeader {
+    if encoding == "" {
+        encoding = "base64"
+    }
+    if contentType == "" {
+        contentType = "application/octet-stream"
+    }
+    if disposition == "" {
+        disposition = "attachment"
+    }
 
-	h := textproto.MIMEHeader{}
-	h.Set("Content-Disposition", "attachment; filename="+fileName)
-	h.Set("Content-Type", fmt.Sprintf("%s; name=\""+fileName+"\"", contentType))
-	h.Set("Content-Transfer-Encoding", encoding)
-	return h
+    h := textproto.MIMEHeader{}
+    
+    if disposition == "inline" {
+        h.Set("Content-Disposition", "inline")
+        h.Set("Content-ID", "<"+fileName+">")
+    } else {
+        h.Set("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, fileName))
+    }
+
+    h.Set("Content-Type", fmt.Sprintf("%s; name=\"%s\"", contentType, fileName))
+    h.Set("Content-Transfer-Encoding", encoding)
+
+    return h
 }
