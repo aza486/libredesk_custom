@@ -4,17 +4,9 @@
     <div class="bg-background text-foreground">
       <div v-if="$route.path !== '/'">
         <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-          <ResizablePanel
-            id="resize-panel-1"
-            collapsible
-            :default-size="10"
-            :collapsed-size="1"
-            :min-size="7"
-            :max-size="20"
-            :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
-            @expand="toggleNav(false)"
-            @collapse="toggleNav(true)"
-          >
+          <ResizablePanel id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="7"
+            :max-size="20" :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
+            @expand="toggleNav(false)" @collapse="toggleNav(true)">
             <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks" />
           </ResizablePanel>
           <ResizableHandle id="resize-handle-1" />
@@ -39,13 +31,17 @@ import { cn } from '@/lib/utils'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
+import { useEmitter } from '@/composables/useEmitter'
 
 import { Toaster } from '@/components/ui/toast'
 import NavBar from '@/components/NavBar.vue'
+import { useToast } from '@/components/ui/toast/use-toast'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 const { t } = useI18n()
+const { toast } = useToast()
+const emitter = useEmitter()
 const isCollapsed = ref(false)
 const allNavLinks = ref([
   {
@@ -85,7 +81,7 @@ const bottomLinks = ref([
 const userStore = useUserStore()
 const router = useRouter()
 
-function toggleNav(v) {
+function toggleNav (v) {
   isCollapsed.value = v
 }
 
@@ -96,6 +92,9 @@ onMounted(() => {
     }
   })
   initWS()
+  emitter.on('showToast', (data) => {
+    toast(data)
+  })
 })
 
 const navLinks = computed(() =>

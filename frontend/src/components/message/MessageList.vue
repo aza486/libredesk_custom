@@ -1,28 +1,27 @@
 <template>
   <div ref="threadEl" class="overflow-y-scroll">
-    <div
-      class="text-center mt-3"
-      v-if="conversationStore.messages.hasMore && !conversationStore.messages.loading"
-    >
+    <div class="text-center mt-3" v-if="conversationStore.messages.hasMore && !conversationStore.messages.loading">
       <Button variant="ghost" @click="conversationStore.fetchNextMessages">
         <RefreshCw size="17" class="mr-2" />
         Load more
       </Button>
     </div>
-    <div
-      v-for="message in conversationStore.sortedMessages"
-      :key="message.uuid"
-      :class="message.type === 'activity' ? 'm-4' : 'm-6'"
-    >
-      <div v-if="!message.private">
-        <ContactMessageBubble :message="message" v-if="message.type === 'incoming'" />
-        <AgentMessageBubble :message="message" v-if="message.type === 'outgoing'" />
+    <div v-for="message in conversationStore.sortedMessages" :key="message.uuid"
+      :class="message.type === 'activity' ? 'm-4' : 'm-6'">
+      <div v-if=conversationStore.messages.loading>
+        <MessagesSkeleton></MessagesSkeleton>
       </div>
-      <div v-else-if="isPrivateNote(message)">
-        <AgentMessageBubble :message="message" v-if="message.type === 'outgoing'" />
-      </div>
-      <div v-else-if="message.type === 'activity'">
-        <ActivityMessageBubble :message="message" />
+      <div v-else>
+        <div v-if="!message.private">
+          <ContactMessageBubble :message="message" v-if="message.type === 'incoming'" />
+          <AgentMessageBubble :message="message" v-if="message.type === 'outgoing'" />
+        </div>
+        <div v-else-if="isPrivateNote(message)">
+          <AgentMessageBubble :message="message" v-if="message.type === 'outgoing'" />
+        </div>
+        <div v-else-if="message.type === 'activity'">
+          <ActivityMessageBubble :message="message" />
+        </div>
       </div>
     </div>
   </div>
@@ -33,6 +32,7 @@ import { ref, onMounted, watch } from 'vue'
 import ContactMessageBubble from './ContactMessageBubble.vue'
 import ActivityMessageBubble from './ActivityMessageBubble.vue'
 import AgentMessageBubble from './AgentMessageBubble.vue'
+import MessagesSkeleton from './MessagesSkeleton.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-vue-next'

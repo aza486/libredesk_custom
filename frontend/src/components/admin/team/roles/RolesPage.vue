@@ -5,8 +5,9 @@
   <div class="flex justify-end mb-5">
     <Button @click="navigateToAddRole" size="sm"> New role </Button>
   </div>
-  <div class="w-full">
-    <DataTable :columns="columns" :data="roles" />
+  <div>
+    <Spinner v-if="isLoading"></Spinner>
+    <DataTable :columns="columns" :data="roles" v-else />
   </div>
   <router-view></router-view>
 </template>
@@ -21,10 +22,12 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import api from '@/api'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { Spinner } from '@/components/ui/spinner'
 const { toast } = useToast()
 
 const router = useRouter()
 const roles = ref([])
+const isLoading = ref(false)
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
   { path: '#', label: 'Roles' }
@@ -32,6 +35,7 @@ const breadcrumbLinks = [
 
 const getRoles = async () => {
   try {
+    isLoading.value = true
     const resp = await api.getRoles()
     roles.value = resp.data.data
   } catch (error) {
@@ -40,6 +44,8 @@ const getRoles = async () => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    isLoading.value = false
   }
 }
 

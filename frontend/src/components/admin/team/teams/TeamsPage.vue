@@ -6,8 +6,9 @@
     <Button @click="navigateToAddTeam" size="sm"> New team </Button>
   </div>
   <div>
-    <div class="w-full">
-      <DataTable :columns="columns" :data="data" />
+    <div>
+      <Spinner v-if="isLoading"></Spinner>
+      <DataTable :columns="columns" :data="data" v-else />
     </div>
   </div>
   <div>
@@ -25,6 +26,7 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import DataTable from '@/components/admin/DataTable.vue'
 import api from '@/api'
 import { useRouter } from 'vue-router'
+import { Spinner } from '@/components/ui/spinner'
 
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
@@ -33,10 +35,12 @@ const breadcrumbLinks = [
 
 const router = useRouter()
 const data = ref([])
+const isLoading = ref(false)
 const { toast } = useToast()
 
 const getData = async () => {
   try {
+    isLoading.value = true
     const response = await api.getTeams()
     data.value = response.data.data
   } catch (error) {
@@ -45,6 +49,8 @@ const getData = async () => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    isLoading.value = false
   }
 }
 

@@ -6,13 +6,13 @@
       <TabsTrigger value="time_triggers"> Time triggers </TabsTrigger>
     </TabsList>
     <TabsContent value="conversation_creation">
-      <TabConversationCreation />
+      <RuleTab type="new_conversation" helptext="Rules that run when a new conversation is created" />
     </TabsContent>
     <TabsContent value="conversation_updates">
-      <TabConversationUpdate />
+      <RuleTab type="conversation_update" helptext="Rules that run when a conversation is updated" />
     </TabsContent>
     <TabsContent value="time_triggers">
-      <TabTimeTrigger />
+      <RuleTab type="time_trigger" helptext="Rules that run once an hour" />
     </TabsContent>
   </Tabs>
 </template>
@@ -20,7 +20,5 @@
 <script setup>
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-import TabConversationCreation from './TabConversationCreation.vue'
-import TabConversationUpdate from './TabConversationUpdate.vue'
-import TabTimeTrigger from './TabTimeTrigger.vue'
+import RuleTab from './RuleTab.vue'
 </script>

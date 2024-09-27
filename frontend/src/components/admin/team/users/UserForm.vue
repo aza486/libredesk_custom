@@ -33,11 +33,7 @@
       <FormItem>
         <FormLabel>Select teams</FormLabel>
         <FormControl>
-          <SelectTag
-            v-model="componentField.modelValue"
-            :items="teamNames"
-            placeHolder="Select teams"
-          ></SelectTag>
+          <SelectTag v-model="componentField.modelValue" :items="teamNames" placeHolder="Select teams"></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -47,11 +43,7 @@
       <FormItem>
         <FormLabel>Select roles</FormLabel>
         <FormControl>
-          <SelectTag
-            v-model="componentField.modelValue"
-            :items="roleNames"
-            placeHolder="Select roles"
-          ></SelectTag>
+          <SelectTag v-model="componentField.modelValue" :items="roleNames" placeHolder="Select roles"></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -69,7 +61,7 @@
       </FormItem>
     </FormField>
 
-    <Button type="submit" size="sm"> {{ submitLabel }} </Button>
+    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
@@ -108,6 +100,10 @@ const props = defineProps({
     type: Boolean,
     required: false,
     default: false
+  },
+  isLoading: {
+    Type: Boolean,
+    required: false
   }
 })
 

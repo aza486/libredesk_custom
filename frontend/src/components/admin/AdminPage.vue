@@ -11,7 +11,7 @@ const allNavItems = [
     title: 'General',
     href: '/admin/general',
     description: 'Configure general app settings',
-    permission: 'settings:manage_general'
+    permission: null,
   },
   {
     title: 'Conversations',
@@ -23,37 +23,37 @@ const allNavItems = [
     title: 'Inboxes',
     href: '/admin/inboxes',
     description: 'Manage your inboxes',
-    permission: 'inboxes:manage'
+    permission: null,
   },
   {
     title: 'Teams',
     href: '/admin/teams',
     description: 'Manage teams, manage agents and roles',
-    permission: 'teams:manage'
+    permission: null,
   },
   {
     title: 'Automations',
     href: '/admin/automations',
     description: 'Manage automations and time triggers',
-    permission: 'automations:manage'
+    permission: null,
   },
   {
     title: 'Notification',
     href: '/admin/notification',
     description: 'Manage email notification settings',
-    permission: ''
+    permission: null,
   },
   {
     title: 'Templates',
     href: '/admin/templates',
     description: 'Manage email templates',
-    permission: 'templates:manage'
+    permission: null,
   },
   {
     title: 'OpenID',
     href: '/admin/oidc',
     description: 'Manage OpenID Connect configurations',
-    permission: 'login:manage'
+    permission: null,
   }
 ]
 

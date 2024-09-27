@@ -9,30 +9,10 @@ import './utils/strings.js'
 import api from './api'
 
 async function initApp () {
-  const emitter = mitt()
-
-  let lang = 'en'
   const settings = (await api.getSettings('general')).data.data
-
-  // Set the language
-  lang = settings['app.lang']
+  const emitter = mitt()
+  const lang = settings['app.lang'] || 'en'
   const langMessages = await api.getLanguage(lang)
-
-  // Set the favicon based on settings
-  const faviconUrl = settings['app.favicon_url'] || '/default-favicon.ico'
-  const link = document.querySelector("link[rel~='icon']")
-  if (link) {
-    link.href = faviconUrl
-  } else {
-    const newLink = document.createElement('link')
-    newLink.rel = 'icon'
-    newLink.href = faviconUrl
-    document.head.appendChild(newLink)
-  }
-
-  // Set the page title based on settings
-  const pageTitle = settings['app.site_name'] || 'Support'
-  document.title = pageTitle
 
   // Initialize i18n
   const i18nConfig = {
@@ -47,7 +27,9 @@ async function initApp () {
   const app = createApp(App)
   const pinia = createPinia()
 
+  // Add emitter to global properties.
   app.config.globalProperties.emitter = emitter
+
   app.use(router)
   app.use(pinia)
   app.use(i18n)

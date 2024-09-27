@@ -6,8 +6,9 @@
         <Button @click="navigateToAddInbox" size="sm"> New inbox </Button>
       </div>
     </div>
-    <div class="w-full">
-      <DataTable :columns="columns" :data="data" />
+    <div>
+      <Spinner v-if="isLoading"></Spinner>
+      <DataTable :columns="columns" :data="data" v-else />
     </div>
   </div>
   <div>
@@ -26,11 +27,13 @@ import DataTable from '@/components/admin/DataTable.vue'
 import { useRouter } from 'vue-router'
 import PageHeader from '../common/PageHeader.vue'
 import { format } from 'date-fns'
+import { Spinner } from '@/components/ui/spinner'
 import api from '@/api'
 
 const { toast } = useToast()
 const router = useRouter()
 
+const isLoading = ref(false)
 const data = ref([])
 const showTable = ref(true)
 
@@ -40,6 +43,7 @@ onMounted(async () => {
 
 const getInboxes = async () => {
   try {
+    isLoading.value = true
     const response = await api.getInboxes()
     data.value = response.data.data
   } catch (error) {
@@ -48,6 +52,8 @@ const getInboxes = async () => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    isLoading.value = false
   }
 }
 

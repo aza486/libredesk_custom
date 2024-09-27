@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { isGoDuration } from '@/utils/validation';
+import { isGoDuration } from '@/utils/strings';
 
 export const smtpConfigSchema = z.object({
     enabled: z.boolean().describe('Enabled status').default(false),

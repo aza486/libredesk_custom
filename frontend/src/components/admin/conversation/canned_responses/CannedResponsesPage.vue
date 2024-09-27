@@ -27,7 +27,7 @@
                 <FormItem>
                   <FormLabel>Content</FormLabel>
                   <FormControl>
-                    <Textarea v-bind="componentField"  class="h-52"></Textarea>
+                    <Textarea v-bind="componentField" class="h-52"></Textarea>
                   </FormControl>
                   <FormDescription></FormDescription>
                   <FormMessage />
@@ -41,7 +41,8 @@
         </Dialog>
       </div>
     </div>
-    <div class="w-full">
+    <Spinner v-if="formLoading"></Spinner>
+    <div v-else>
       <DataTable :columns="columns" :data="cannedResponses" />
     </div>
   </div>
@@ -54,6 +55,7 @@ import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
 import { Textarea } from '@/components/ui/textarea'
+import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormDescription,
@@ -78,6 +80,7 @@ import { formSchema } from './formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import api from '@/api'
 
+const formLoading = ref(false)
 const cannedResponses = ref([])
 const emit = useEmitter()
 const dialogOpen = ref(false)
@@ -100,17 +103,25 @@ const form = useForm({
 })
 
 const getCannedResponses = async () => {
-  const resp = await api.getCannedResponses()
-  cannedResponses.value = resp.data.data
+  try {
+    formLoading.value = true
+    const resp = await api.getCannedResponses()
+    cannedResponses.value = resp.data.data
+  } finally {
+    formLoading.value = false
+  }
 }
 
 const onSubmit = form.handleSubmit(async (values) => {
   try {
+    formLoading.value = true
     await api.createCannedResponse(values)
     dialogOpen.value = false
     getCannedResponses()
   } catch (error) {
     console.error('Failed to create canned response:', error)
+  } finally {
+    formLoading.value = false
   }
 })
 </script>

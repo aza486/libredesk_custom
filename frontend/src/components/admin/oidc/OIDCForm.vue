@@ -66,9 +66,7 @@
         <FormLabel>Redirect URI</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Redirect URI" v-bind="componentField" readonly />
-          <span
-            class="absolute end-0 inset-y-0 flex items-center justify-center px-2 cursor-pointer"
-          >
+          <span class="absolute end-0 inset-y-0 flex items-center justify-center px-2 cursor-pointer">
             <Copy size="16" />
           </span>
         </FormControl>
@@ -90,7 +88,7 @@
       </FormItem>
     </FormField>
 
-    <Button type="submit" size="sm"> {{ submitLabel }} </Button>
+    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
@@ -138,7 +136,11 @@ const props = defineProps({
   },
   isNewForm: {
     type: Boolean
-  }
+  },
+  isLoading: {
+    type: Boolean,
+    required: false
+  },
 })
 
 const form = useForm({

@@ -66,6 +66,10 @@ const props = defineProps({
     type: String,
     required: false,
     default: () => 'Submit'
+  },
+  isLoading: {
+    type: Boolean,
+    required: false,
   }
 })
 

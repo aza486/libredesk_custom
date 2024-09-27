@@ -17,7 +17,7 @@ String.prototype.titleCase = function () {
  * @param {string} htmlString - The input HTML string.
  * @returns {string} - The updated HTML string with `src` replaced by `cid:title`.
  */
-export function TransformImageSrcToCID (htmlString) {
+export function transformImageSrcToCID (htmlString) {
   return htmlString.replace(/(<img\s+class="inline-image"[^>]*?src=")[^"]*(".*?title=")([^"]*)("[^>]*?>)/g, '$1cid:$3$2$3$4');
 }
 
@@ -29,6 +29,16 @@ export function TransformImageSrcToCID (htmlString) {
  * @param {string} htmlString - The input HTML string.
  * @returns {string} - The updated HTML string with `cid:title` replaced by `/uploads/title`.
  */
-export function RevertCIDToImageSrc (htmlString) {
+export function revertCIDToImageSrc (htmlString) {
   return htmlString.replace(/(<img\s+class="inline-image"[^>]*?src=")cid:([^"]*)(".*?title=")\2("[^>]*?>)/g, '$1/uploads/$2$3$2$4');
+}
+
+export function validateEmail (email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export const isGoDuration = (value) => {
+  const regex = /^[0-9]+[smh]$/
+  return regex.test(value)
 }

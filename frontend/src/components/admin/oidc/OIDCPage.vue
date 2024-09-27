@@ -5,8 +5,9 @@
       <Button size="sm" @click="navigateToAddOIDC">New OIDC</Button>
     </div>
   </div>
-  <div class="w-full">
-    <DataTable :columns="columns" :data="oidc" />
+  <div>
+    <Spinner v-if="isLoading"></Spinner>
+    <DataTable :columns="columns" :data="oidc" v-else />
   </div>
 </template>
 
@@ -18,9 +19,11 @@ import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import PageHeader from '../common/PageHeader.vue'
+import { Spinner } from '@/components/ui/spinner'
 import api from '@/api'
 
 const oidc = ref([])
+const isLoading = ref(false)
 const router = useRouter()
 const emit = useEmitter()
 
@@ -32,8 +35,13 @@ onMounted(() => {
 })
 
 const fetchAll = async () => {
-  const resp = await api.getAllOIDC()
-  oidc.value = resp.data.data
+  try {
+    isLoading.value = true
+    const resp = await api.getAllOIDC()
+    oidc.value = resp.data.data
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const navigateToAddOIDC = () => {

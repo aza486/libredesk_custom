@@ -1,16 +1,19 @@
 <template>
   <div>
+
+    <!-- Canned responses -->
     <div v-if="filteredCannedResponses.length > 0" class="w-full overflow-hidden p-2 border-t backdrop-blur">
       <ul ref="responsesList" class="space-y-2 max-h-96 overflow-y-auto">
         <li v-for="(response, index) in filteredCannedResponses" :key="response.id" :class="[
           'cursor-pointer rounded p-1 hover:bg-secondary',
           { 'bg-secondary': index === selectedResponseIndex }
-        ]" @click="selectResponse(response.content)" @mouseenter="selectedResponseIndex = index">
+        ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
           <span class="font-semibold">{{ response.title }}</span> - {{ response.content }}
         </li>
       </ul>
     </div>
     <div class="border-t">
+
       <!-- Message type toggle -->
       <div class="flex justify-between px-2 border-b py-2">
         <Tabs v-model:model-value="messageType">
@@ -35,22 +38,26 @@
         :isBold="isBold" :isItalic="isItalic" @toggleBold="toggleBold" @toggleItalic="toggleItalic" :hasText="hasText"
         :handleSend="handleSend">
       </ReplyBoxBottomMenuBar>
+
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { TransformImageSrcToCID } from '@/utils/strings'
+import { transformImageSrcToCID } from '@/utils/strings'
+import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 
 import Editor from './Editor.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { useCannedResponses } from '@/stores/canned_responses'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useEmitter } from '@/composables/useEmitter'
 import AttachmentsPreview from '@/components/attachment/AttachmentsPreview.vue'
 import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxBottomMenuBar.vue'
 
+const emitter = useEmitter()
 const clearContent = ref(false)
 const isBold = ref(false)
 const isItalic = ref(false)
@@ -133,8 +140,12 @@ const handleFileUpload = (event) => {
       .then((resp) => {
         uploadedFiles.value.push(resp.data.data)
       })
-      .catch((err) => {
-        console.error(err)
+      .catch((error) => {
+        emitter.emit('showToast', {
+          title: 'Error uploading file',
+          variant: 'destructive',
+          description: handleHTTPError(error).message
+        })
       })
   }
 }
@@ -154,8 +165,12 @@ const handleInlineImageUpload = (event) => {
         })
         uploadedFiles.value.push(resp.data.data)
       })
-      .catch((err) => {
-        console.error(err)
+      .catch((error) => {
+        emitter.emit('showToast', {
+          title: 'Error uploading file',
+          variant: 'destructive',
+          description: handleHTTPError(error).message
+        })
       })
   }
 }
@@ -165,17 +180,25 @@ const handleContentCleared = () => {
 }
 
 const handleSend = async () => {
-  const attachmentIDs = uploadedFiles.value.map((file) => file.id)
-  // Replace inline attachment source with filename. (cid:filename).
-  const message = TransformImageSrcToCID(editorHTML.value)
-  await api.sendMessage(conversationStore.conversation.data.uuid, {
-    private: messageType.value === 'private_note',
-    message: message,
-    attachments: attachmentIDs
-  })
+  try {
+    // Replace image source url with cid.
+    const message = transformImageSrcToCID(editorHTML.value)
+    await api.sendMessage(conversationStore.conversation.data.uuid, {
+      private: messageType.value === 'private_note',
+      message: message,
+      attachments: uploadedFiles.value.map((file) => file.id)
+    })
+  } catch (error) {
+    emitter.emit('showToast', {
+      title: 'Error sending message',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    clearContent.value = true
+    uploadedFiles.value = []
+  }
   api.updateAssigneeLastSeen(conversationStore.conversation.data.uuid)
-  clearContent.value = true
-  uploadedFiles.value = []
 }
 
 const handleOnFileDelete = (uuid) => {
@@ -197,7 +220,7 @@ const handleKeydown = (event) => {
       scrollToSelectedItem()
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      selectResponse(filteredCannedResponses.value[selectedResponseIndex.value].content)
+      selectCannedResponse(filteredCannedResponses.value[selectedResponseIndex.value].content)
     }
   }
 }
@@ -213,7 +236,7 @@ const scrollToSelectedItem = () => {
   }
 }
 
-const selectResponse = (content) => {
+const selectCannedResponse = (content) => {
   contentToSet.value = content
   filteredCannedResponses.value = []
   selectedResponseIndex.value = -1

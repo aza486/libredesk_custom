@@ -24,7 +24,7 @@
       </FormItem>
     </FormField>
 
-    <Button type="submit" size="sm"> {{ submitLabel }} </Button>
+    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
@@ -60,6 +60,10 @@ const props = defineProps({
     type: String,
     required: false,
     default: () => 'Submit'
+  },
+  isLoading: {
+    type: Boolean,
+    required: false,
   }
 })
 

@@ -31,7 +31,9 @@
         </Dialog>
       </div>
     </div>
-    <div class="w-full">
+
+    <Spinner v-if="isLoading"></Spinner>
+    <div>
       <DataTable :columns="columns" :data="statuses" />
     </div>
   </div>
@@ -43,6 +45,7 @@ import DataTable from '@/components/admin/DataTable.vue'
 import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
+import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormDescription,
@@ -67,6 +70,7 @@ import { formSchema } from './formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import api from '@/api'
 
+const isLoading = ref(false)
 const statuses = ref([])
 const emit = useEmitter()
 const dialogOpen = ref(false)
@@ -83,17 +87,25 @@ const form = useForm({
 })
 
 const getStatuses = async () => {
-  const resp = await api.getStatuses()
-  statuses.value = resp.data.data
+  try {
+    isLoading.value = true
+    const resp = await api.getStatuses()
+    statuses.value = resp.data.data
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const onSubmit = form.handleSubmit(async (values) => {
   try {
+    isLoading.value = true
     await api.createStatus(values)
     dialogOpen.value = false
     getStatuses()
   } catch (error) {
     console.error('Failed to create status:', error)
+  } finally {
+    isLoading.value = false
   }
 })
 </script>

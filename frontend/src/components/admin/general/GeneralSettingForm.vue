@@ -1,7 +1,8 @@
 <template>
-  <form @submit="onSubmit" class="w-2/3 space-y-6">
+  <Spinner v-if="formLoading"></Spinner>
+  <form @submit="onSubmit" class="w-2/3 space-y-6" :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
     <FormField v-slot="{ field }" name="site_name">
-      <FormItem v-auto-animate>
+      <FormItem>
         <FormLabel>Site Name</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Site Name" v-bind="field" />
@@ -32,7 +33,7 @@
     </FormField>
 
     <FormField v-slot="{ field }" name="root_url">
-      <FormItem v-auto-animate>
+      <FormItem>
         <FormLabel>Root URL</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Root URL" v-bind="field" />
@@ -43,7 +44,7 @@
     </FormField>
 
     <FormField v-slot="{ field }" name="favicon_url" :value="props.initialValues.favicon_url">
-      <FormItem v-auto-animate>
+      <FormItem>
         <FormLabel>Favicon URL</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Favicon URL" v-bind="field" />
@@ -53,12 +54,8 @@
       </FormItem>
     </FormField>
 
-    <FormField
-      v-slot="{ field }"
-      name="max_file_upload_size"
-      :value="props.initialValues.max_file_upload_size"
-    >
-      <FormItem v-auto-animate>
+    <FormField v-slot="{ field }" name="max_file_upload_size" :value="props.initialValues.max_file_upload_size">
+      <FormItem>
         <FormLabel>Max allowed file upload size</FormLabel>
         <FormControl>
           <Input type="number" placeholder="10" v-bind="field" />
@@ -84,18 +81,19 @@
         <FormMessage />
       </FormItem>
     </FormField>
-
-    <Button type="submit" size="sm"> {{ submitLabel }} </Button>
+    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
-import { vAutoAnimate } from '@formkit/auto-animate/vue'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
+import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormField,
@@ -121,6 +119,9 @@ import {
 } from '@/components/ui/tags-input'
 import { Input } from '@/components/ui/input'
 
+const isLoading = ref(false)
+const formLoading = ref(true)
+const emitter = useEmitter()
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -141,8 +142,22 @@ const form = useForm({
   validationSchema: toTypedSchema(formSchema)
 })
 
-const onSubmit = form.handleSubmit((values) => {
-  props.submitForm(values)
+const onSubmit = form.handleSubmit(async (values) => {
+  try {
+    isLoading.value = true
+    await props.submitForm(values)
+    emitter.emit('showToast', {
+      description: "Saved"
+    })
+  } catch (error) {
+    emitter.emit('showToast', {
+      title: 'Something went wrong',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    isLoading.value = false
+  }
 })
 
 // Watch for changes in initialValues and update the form.
@@ -150,6 +165,7 @@ watch(
   () => props.initialValues,
   (newValues) => {
     form.setValues(newValues)
+    formLoading.value = false
   },
   { deep: true }
 )

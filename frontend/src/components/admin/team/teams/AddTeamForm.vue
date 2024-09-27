@@ -2,10 +2,11 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <TeamForm :initial-values="{}" :submitForm="submitForm" />
+  <TeamForm :initial-values="{}" :submitForm="submitForm" :isLoading="formLoading" />
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { handleHTTPError } from '@/utils/http'
 import TeamForm from '@/components/admin/team/teams/TeamForm.vue'
 import { useToast } from '@/components/ui/toast/use-toast'
@@ -13,6 +14,7 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import api from '@/api'
 
 const { toast } = useToast()
+const formLoading = ref(false)
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
   { path: '/admin/teams/teams', label: 'Teams' },
@@ -25,6 +27,7 @@ const submitForm = (values) => {
 
 const createTeam = async (values) => {
   try {
+    formLoading.value = true
     await api.createTeam(values)
   } catch (error) {
     toast({
@@ -32,6 +35,8 @@ const createTeam = async (values) => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    formLoading.value = false
   }
 }
 </script>

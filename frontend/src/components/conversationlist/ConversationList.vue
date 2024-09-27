@@ -37,7 +37,8 @@
       </Popover>
     </div>
 
-    <EmptyList v-if="emptyConversations"></EmptyList>
+    <EmptyList v-if="emptyConversations" title="No conversation found" message="Try adjusting filters."></EmptyList>
+    <EmptyList v-if="conversationStore.conversations.errorMessage" title="Something went wrong" :message="conversationStore.conversations.errorMessage"></EmptyList>
 
     <div class="h-screen overflow-y-scroll pb-[180px] flex flex-col">
       <ConversationListItem />

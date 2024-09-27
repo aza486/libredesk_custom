@@ -1,5 +1,5 @@
 import * as z from 'zod'
-import { isGoDuration } from '@/utils/validation'
+import { isGoDuration } from '@/utils/strings'
 
 export const emailChannelFormSchema = z.object({
   name: z.string().describe('Name').default(''),

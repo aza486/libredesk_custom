@@ -4,7 +4,7 @@
     <div class="px-4 border-b h-[47px] flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
         <div class="font-bold">
-          {{ getContactFullName }}
+          {{ contactFullName }}
         </div>
         <Tooltip>
           <TooltipTrigger>
@@ -76,7 +76,7 @@ const handleUpdateStatus = (status) => {
   conversationStore.updateStatus(status)
 }
 
-const getContactFullName = computed(() => {
+const contactFullName = computed(() => {
   return conversationStore.getContactFullName(conversationStore.conversation.data?.uuid)
 })
 </script>

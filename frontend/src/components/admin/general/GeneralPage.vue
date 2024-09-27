@@ -25,11 +25,11 @@ onMounted(async () => {
   }, {})
 })
 
-const submitForm = (values) => {
+const submitForm = async (values) => {
   // Prepend keys with `app.`
   const updatedValues = Object.fromEntries(
     Object.entries(values).map(([key, value]) => [`app.${key}`, value])
   )
-  api.updateSettings('general', updatedValues)
+  await api.updateSettings('general', updatedValues)
 }
 </script>

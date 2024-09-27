@@ -59,7 +59,7 @@
     }"
     @submit="submitForm"
   >
-    <Button type="submit" size="sm"> {{ props.submitLabel }} </Button>
+    <Button type="submit" size="sm" :is-loading="isLoading"> {{ props.submitLabel }} </Button>
   </AutoForm>
 </template>
 
@@ -84,6 +84,10 @@ const props = defineProps({
     type: String,
     required: false,
     default: () => 'Submit'
+  },
+  isLoading: {
+    type: Boolean,
+    required: false,
   }
 })
 

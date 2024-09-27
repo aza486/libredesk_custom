@@ -5,8 +5,9 @@
   <div class="flex justify-end mb-5">
     <Button @click="navigateToAddUser" size="sm"> New user </Button>
   </div>
-  <div class="w-full">
-    <DataTable :columns="columns" :data="data" />
+  <div>
+    <Spinner v-if="isLoading"></Spinner>
+    <DataTable :columns="columns" :data="data" v-else />
   </div>
   <router-view></router-view>
 </template>
@@ -21,17 +22,24 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import api from '@/api'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { Spinner } from '@/components/ui/spinner'
 const { toast } = useToast()
 
 const router = useRouter()
+const isLoading = ref(false)
 const data = ref([])
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
   { path: '#', label: 'Users' }
 ]
 
+onMounted(async () => {
+  getData()
+})
+
 const getData = async () => {
   try {
+    isLoading.value = true
     const response = await api.getUsers()
     data.value = response.data.data
   } catch (error) {
@@ -40,12 +48,10 @@ const getData = async () => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    isLoading.value = false
   }
 }
-
-onMounted(async () => {
-  getData()
-})
 
 const navigateToAddUser = () => {
   router.push('/admin/teams/users/new')

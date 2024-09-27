@@ -61,7 +61,7 @@ import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
 import { Lock } from 'lucide-vue-next'
-import {RevertCIDToImageSrc} from '@/utils/strings'
+import {revertCIDToImageSrc} from '@/utils/strings'
 import api from '@/api'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -90,7 +90,7 @@ const getAvatar = computed(() => {
 })
 
 const getMessageContent = computed(() => {
-  return RevertCIDToImageSrc(props.message.content)
+  return revertCIDToImageSrc(props.message.content)
 })
 
 const isPrivateMessage = computed(() => {
