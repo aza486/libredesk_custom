@@ -25,14 +25,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
 import { cn } from '@/lib/utils'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
 import { useEmitter } from '@/composables/useEmitter'
-
 import { Toaster } from '@/components/ui/toast'
 import NavBar from '@/components/NavBar.vue'
 import { useToast } from '@/components/ui/toast/use-toast'
@@ -67,7 +66,7 @@ const allNavLinks = ref([
     to: '/admin/general',
     label: '',
     icon: 'lucide:settings',
-    permission: 'admin:get'
+    permission: ''
   }
 ])
 
@@ -86,16 +85,30 @@ function toggleNav (v) {
 }
 
 onMounted(() => {
+  initToaster()
+  getCurrentUser()
+  initWS()
+})
+
+onUnmounted(() => {
+  emitter.off('showToast', showToast)
+})
+
+const getCurrentUser = () => {
   userStore.getCurrentUser().catch((err) => {
     if (err.response && err.response.status === 401) {
       router.push('/login')
     }
   })
-  initWS()
-  emitter.on('showToast', (data) => {
-    toast(data)
-  })
-})
+}
+
+const initToaster = () => {
+  emitter.on('showToast', showToast)
+}
+
+const showToast = (data) => {
+  toast(data)
+}
 
 const navLinks = computed(() =>
   allNavLinks.value.filter((link) =>

@@ -4,9 +4,9 @@ import { createI18n } from 'vue-i18n'
 import App from './App.vue'
 import router from './router'
 import mitt from 'mitt'
+import api from './api'
 import './assets/styles/main.scss'
 import './utils/strings.js'
-import api from './api'
 
 async function initApp () {
   const settings = (await api.getSettings('general')).data.data

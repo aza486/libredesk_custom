@@ -217,7 +217,7 @@ WITH new_conversations AS (
             TO_CHAR(created_at::date, 'YYYY-MM-DD') AS date,
             COUNT(*) AS new_conversations
         FROM
-            conversations
+            conversations c
         WHERE 1=1 %s
         GROUP BY
             date

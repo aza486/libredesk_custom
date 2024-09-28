@@ -15,7 +15,7 @@ import (
 
 // initHandlers initializes the HTTP routes and handlers for the application.
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
-	// Authentication routes.
+	// Authentication.
 	g.POST("/api/login", handleLogin)
 	g.GET("/api/logout", sess(handleLogout))
 	g.GET("/api/oidc/{id}/login", handleOIDCLogin)
@@ -27,20 +27,20 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Serve uploaded files.
 	g.GET("/uploads/{all:*}", sess(handleServeUploadedFiles))
 
-	// Settings routes.
+	// Settings.
 	g.GET("/api/settings/general", handleGetGeneralSettings)
 	g.PUT("/api/settings/general", perm(handleUpdateGeneralSettings, "settings_general", "write"))
 	g.GET("/api/settings/notifications/email", perm(handleGetEmailNotificationSettings, "settings_notifications", "read"))
 	g.PUT("/api/settings/notifications/email", perm(handleUpdateEmailNotificationSettings, "settings_notifications", "write"))
 
-	// OpenID routes.
+	// OpenID.
 	g.GET("/api/oidc", handleGetAllOIDC)
 	g.GET("/api/oidc/{id}", perm(handleGetOIDC, "oidc", "read"))
 	g.POST("/api/oidc", perm(handleCreateOIDC, "oidc", "write"))
 	g.PUT("/api/oidc/{id}", perm(handleUpdateOIDC, "oidc", "write"))
 	g.DELETE("/api/oidc/{id}", perm(handleDeleteOIDC, "oidc", "delete"))
 
-	// Conversation and message routes.
+	// Conversation and message.
 	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversations", "read_all"))
 	g.GET("/api/conversations/team", perm(handleGetTeamConversations, "conversations", "read_team"))
 	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversations", "read_assigned"))
@@ -59,29 +59,29 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/conversations/{cuuid}/messages/{uuid}/retry", perm(handleRetryMessage, "messages", "write"))
 	g.GET("/api/conversations/{cuuid}/messages/{uuid}", perm(handleGetMessage, "messages", "read"))
 
-	// Status and priority routes.
+	// Status and priority.
 	g.GET("/api/statuses", sess(handleGetStatuses))
 	g.POST("/api/statuses", perm(handleCreateStatus, "status", "write"))
 	g.PUT("/api/statuses/{id}", perm(handleUpdateStatus, "status", "write"))
 	g.DELETE("/api/statuses/{id}", perm(handleDeleteStatus, "status", "delete"))
 	g.GET("/api/priorities", sess(handleGetPriorities))
 
-	// Tag routes.
+	// Tag.
 	g.GET("/api/tags", sess(handleGetTags))
 	g.POST("/api/tags", perm(handleCreateTag, "tags", "write"))
 	g.PUT("/api/tags/{id}", perm(handleUpdateTag, "tags", "write"))
 	g.DELETE("/api/tags/{id}", perm(handleDeleteTag, "tags", "delete"))
 
-	// Media routes.
+	// Media.
 	g.POST("/api/media", sess(handleMediaUpload))
 
-	// Canned response routes.
+	// Canned response.
 	g.GET("/api/canned-responses", sess(handleGetCannedResponses))
 	g.POST("/api/canned-responses", perm(handleCreateCannedResponse, "canned_responses", "write"))
 	g.PUT("/api/canned-responses/{id}", perm(handleUpdateCannedResponse, "canned_responses", "write"))
 	g.DELETE("/api/canned-responses/{id}", perm(handleDeleteCannedResponse, "canned_responses", "delete"))
 
-	// User routes.
+	// User.
 	g.GET("/api/users/me", sess(handleGetCurrentUser))
 	g.PUT("/api/users/me", sess(handleUpdateCurrentUser))
 	g.DELETE("/api/users/me/avatar", sess(handleDeleteAvatar))
@@ -90,16 +90,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/users", perm(handleCreateUser, "users", "write"))
 	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users", "write"))
 
-	// Team routes.
+	// Team.
 	g.GET("/api/teams", perm(handleGetTeams, "teams", "read"))
 	g.GET("/api/teams/{id}", perm(handleGetTeam, "teams", "read"))
 	g.PUT("/api/teams/{id}", perm(handleUpdateTeam, "teams", "write"))
 	g.POST("/api/teams", perm(handleCreateTeam, "teams", "write"))
 
-	// i18n routes.
+	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
 
-	// Automation routes.
+	// Automation.
 	g.GET("/api/automation/rules", perm(handleGetAutomationRules, "automations", "read"))
 	g.GET("/api/automation/rules/{id}", perm(handleGetAutomationRule, "automations", "read"))
 	g.POST("/api/automation/rules", perm(handleCreateAutomationRule, "automations", "write"))
@@ -107,7 +107,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/automation/rules/{id}", perm(handleUpdateAutomationRule, "automations", "write"))
 	g.DELETE("/api/automation/rules/{id}", perm(handleDeleteAutomationRule, "automations", "delete"))
 
-	// Inbox routes.
+	// Inbox.
 	g.GET("/api/inboxes", perm(handleGetInboxes, "inboxes", "read"))
 	g.GET("/api/inboxes/{id}", perm(handleGetInbox, "inboxes", "read"))
 	g.POST("/api/inboxes", perm(handleCreateInbox, "inboxes", "write"))
@@ -115,26 +115,24 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/inboxes/{id}", perm(handleUpdateInbox, "inboxes", "write"))
 	g.DELETE("/api/inboxes/{id}", perm(handleDeleteInbox, "inboxes", "delete"))
 
-	// Role routes.
+	// Role.
 	g.GET("/api/roles", perm(handleGetRoles, "roles", "read"))
 	g.GET("/api/roles/{id}", perm(handleGetRole, "roles", "read"))
 	g.POST("/api/roles", perm(handleCreateRole, "roles", "write"))
 	g.PUT("/api/roles/{id}", perm(handleUpdateRole, "roles", "write"))
 	g.DELETE("/api/roles/{id}", perm(handleDeleteRole, "roles", "delete"))
 
-	// Dashboard routes.
+	// Dashboard.
 	g.GET("/api/dashboard/global/counts", perm(handleDashboardCounts, "dashboard_global", "read"))
 	g.GET("/api/dashboard/global/charts", perm(handleDashboardCharts, "dashboard_global", "read"))
-	g.GET("/api/dashboard/me/counts", sess(handleUserDashboardCounts))
-	g.GET("/api/dashboard/me/charts", sess(handleUserDashboardCharts))
 
-	// Template routes.
+	// Template.
 	g.GET("/api/templates", perm(handleGetTemplates, "templates", "read"))
 	g.GET("/api/templates/{id}", perm(handleGetTemplate, "templates", "read"))
 	g.POST("/api/templates", perm(handleCreateTemplate, "templates", "read"))
 	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate, "templates", "read"))
 
-	// WebSocket route for real-time updates.
+	// WebSocket.
 	g.GET("/api/ws", sess(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
 	}))

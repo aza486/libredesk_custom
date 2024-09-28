@@ -1,91 +1,38 @@
 <template>
-  <div class="page-content w-10/12">
-    <div class="flex flex-col space-y-6">
-      <div>
-        <span class="font-medium text-2xl space-y-1" v-if="userStore.getFullName">
-          <p>Hi, {{ userStore.getFullName }}</p>
-          <p class="text-sm-muted">🌤️ {{ format(new Date(), 'EEEE, MMMM d, HH:mm a') }}</p>
-        </span>
-      </div>
-      <div>
-        <Select :model-value="filter" @update:model-value="onDashboardFilterChange">
-          <SelectTrigger class="w-[130px]">
-            <SelectValue placeholder="Select a filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="me"> Mine </SelectItem>
-              <SelectItem value="all_teams"> All teams </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+  <Spinner v-if="isLoading"></Spinner>
+  <div class="page-content w-10/12" :class="{ 'soft-fade': isLoading }">
+    <div>
+      <DashboardGreet></DashboardGreet>
     </div>
     <div class="mt-7">
       <Card :counts="cardCounts" :labels="agentCountCardsLabels" />
     </div>
     <div class="flex my-7 justify-between items-center space-x-5">
       <div class="dashboard-card p-5">
-        <Select :model-value="lineChartFilter" @update:model-value="onLineChartFilterChange">
-          <SelectTrigger class="w-[7rem] text-xs">
-            <SelectValue placeholder="Select a filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="last_week"> Last week </SelectItem>
-              <SelectItem value="last_month"> Last month </SelectItem>
-              <SelectItem value="last_year"> Last year </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <LineChart :data="chartData.new_conversations"> </LineChart>
+        <LineChart :data="chartData.new_conversations"></LineChart>
       </div>
       <div class="dashboard-card p-5">
-        <Select :model-value="barChartFilter" @update:model-value="onBarChartFilterChange">
-          <SelectTrigger class="w-[7rem] text-xs">
-            <SelectValue placeholder="Select a filter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="last_week"> Last week </SelectItem>
-              <SelectItem value="last_month"> Last month </SelectItem>
-              <SelectItem value="last_year"> Last year </SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <BarChart :data="chartData.status_summary"> </BarChart>
+        <BarChart :data="chartData.status_summary"></BarChart>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue'
-import { useUserStore } from '@/stores/user'
-import { format } from 'date-fns'
-import api from '@/api'
+import { onMounted, ref } from 'vue'
 import { useToast } from '@/components/ui/toast/use-toast'
+import api from '@/api'
 
-import Card from '@/components/dashboard/agent/DashboardCard.vue'
-import LineChart from '@/components/dashboard/agent/DashboardLineChart.vue'
-import BarChart from '@/components/dashboard/agent/DashboardBarChart.vue'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { useLocalStorage } from '@vueuse/core'
+import Card from '@/components/dashboard/DashboardCard.vue'
+import LineChart from '@/components/dashboard/DashboardLineChart.vue'
+import BarChart from '@/components/dashboard/DashboardBarChart.vue'
+import DashboardGreet from '@/components/dashboard/DashboardGreet.vue'
+import Spinner from '@/components/ui/spinner/Spinner.vue'
 
 const { toast } = useToast()
-const userStore = useUserStore()
+const isLoading = ref(false)
 const cardCounts = ref({})
 const chartData = ref({})
-const filter = useLocalStorage('dashboard_filter', 'me')
-const barChartFilter = ref('last_week')
-const lineChartFilter = ref('last_week')
 const agentCountCardsLabels = {
   total_count: 'Total',
   resolved_count: 'Resolved',
@@ -94,41 +41,19 @@ const agentCountCardsLabels = {
 }
 
 onMounted(() => {
-  getCardStats()
-  getDashboardCharts()
+  getDashboardData()
 })
 
-watch(filter, () => {
-  getDashboardCharts()
-  getCardStats()
-})
-
-const onDashboardFilterChange = (v) => {
-  filter.value = v
-}
-
-const onLineChartFilterChange = (v) => {
-  lineChartFilter.value = v
-}
-
-const onBarChartFilterChange = (v) => {
-  barChartFilter.value = v
+const getDashboardData = () => {
+  isLoading.value = true
+  Promise.all([getCardStats(), getDashboardCharts()])
+    .finally(() => {
+      isLoading.value = false
+    })
 }
 
 const getCardStats = () => {
-  let apiCall
-  switch (filter.value) {
-    case 'all_teams':
-      apiCall = api.getGlobalDashboardCounts
-      break
-    case 'me':
-      apiCall = api.getUserDashboardCounts
-      break
-    default:
-      throw new Error('Invalid filter value')
-  }
-
-  apiCall()
+  return api.getGlobalDashboardCounts()
     .then((resp) => {
       cardCounts.value = resp.data.data
     })
@@ -142,19 +67,7 @@ const getCardStats = () => {
 }
 
 const getDashboardCharts = () => {
-  let apiCall
-  switch (filter.value) {
-    case 'all_teams':
-      apiCall = api.getGlobalDashboardCharts
-      break
-    case 'me':
-      apiCall = api.getUserDashboardCharts
-      break
-    default:
-      throw new Error('Invalid filter value')
-  }
-
-  apiCall()
+  return api.getGlobalDashboardCharts()
     .then((resp) => {
       chartData.value = resp.data.data
     })

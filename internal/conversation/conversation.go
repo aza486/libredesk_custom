@@ -489,6 +489,7 @@ func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error
 		cond = " AND assigned_team_id = $1"
 		qArgs = append(qArgs, teamID)
 	}
+	cond += " AND c.created_at >= NOW() - INTERVAL '30 days'"
 
 	query := fmt.Sprintf(c.q.GetDashboardCounts, cond)
 	if err := tx.Get(&counts, query, qArgs...); err != nil {
@@ -504,13 +505,13 @@ func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error
 	return counts, nil
 }
 
-// GetDashboardChartData returns dashboard chart data
-func (c *Manager) GetDashboardChartData(userID, teamID int) (json.RawMessage, error) {
+// GetDashboardChart returns dashboard chart data
+func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error) {
 	var stats = json.RawMessage{}
 	tx, err := c.db.BeginTxx(context.Background(), nil)
 	if err != nil {
 		c.lo.Error("error starting db txn", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard chart data", nil)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard charts", nil)
 	}
 	defer tx.Rollback()
 
@@ -518,6 +519,8 @@ func (c *Manager) GetDashboardChartData(userID, teamID int) (json.RawMessage, er
 		cond  string
 		qArgs []interface{}
 	)
+
+	// TODO: Add date range filter on the UI.
 	if userID > 0 {
 		cond = " AND assigned_user_id = $1"
 		qArgs = append(qArgs, userID)
@@ -525,6 +528,7 @@ func (c *Manager) GetDashboardChartData(userID, teamID int) (json.RawMessage, er
 		cond = " AND assigned_team_id = $1"
 		qArgs = append(qArgs, teamID)
 	}
+	cond += " AND c.created_at >= NOW() - INTERVAL '30 days'"
 
 	// Apply the same condition across queries.
 	query := fmt.Sprintf(c.q.GetDashboardCharts, cond, cond)

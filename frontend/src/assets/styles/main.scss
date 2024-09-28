@@ -171,8 +171,7 @@ body {
 }
 
 .box {
-  @apply border shadow-sm;
-  // box-shadow: 2px 2px 0 #f3f3f3;
+  @apply border shadow;
 }
 
 .dashboard-card {

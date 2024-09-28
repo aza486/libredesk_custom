@@ -1,6 +1,6 @@
 <template>
   <div class="flex gap-x-5">
-    <Card class="w-1/6 dashboard-card" v-for="(value, key) in counts" :key="key">
+    <Card class="w-1/6 box" v-for="(value, key) in counts" :key="key">
       <CardHeader>
         <CardTitle class="text-2xl">
           {{ value }}

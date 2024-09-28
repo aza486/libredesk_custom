@@ -254,48 +254,17 @@ func handleAddConversationTags(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleUserDashboardCounts retrieves dashboard statistics for the current user.
-func handleUserDashboardCounts(r *fastglue.Request) error {
-	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
-	)
-
-	// Fetch dashboard counts
-	stats, err := app.conversation.GetDashboardCounts(user.ID, 0)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(stats)
-}
-
-// handleUserDashboardCharts retrieves chart data for the current user's dashboard.
-func handleUserDashboardCharts(r *fastglue.Request) error {
-	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
-	)
-
-	// Fetch dashboard chart data
-	stats, err := app.conversation.GetDashboardChartData(user.ID, 0)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(stats)
-}
 
 // handleDashboardCounts retrieves general dashboard counts for all users.
 func handleDashboardCounts(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-
-	// Fetch dashboard counts
-	stats, err := app.conversation.GetDashboardCounts(0, 0)
+	counts, err := app.conversation.GetDashboardCounts(0, 0)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(stats)
+	return r.SendEnvelope(counts)
 }
 
 // handleDashboardCharts retrieves general dashboard chart data.
@@ -303,13 +272,11 @@ func handleDashboardCharts(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-
-	// Fetch dashboard chart data
-	stats, err := app.conversation.GetDashboardChartData(0, 0)
+	charts, err := app.conversation.GetDashboardChart(0, 0)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(stats)
+	return r.SendEnvelope(charts)
 }
 
 // enforceConversationAccess fetches the conversation and checks if the user has access to it.
