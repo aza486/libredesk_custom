@@ -110,7 +110,6 @@ const props = defineProps({
 onMounted(async () => {
   try {
     const [teamsResp, rolesResp] = await Promise.all([api.getTeams(), api.getRoles()])
-
     teams.value = teamsResp.data.data
     roles.value = rolesResp.data.data
   } catch (err) {
@@ -123,7 +122,6 @@ const roleNames = computed(() => roles.value.map((role) => role.name))
 
 const form = useForm({
   validationSchema: toTypedSchema(userFormSchema),
-  initialValues: props.initialValues
 })
 
 const onSubmit = form.handleSubmit((values) => {
@@ -134,8 +132,10 @@ const onSubmit = form.handleSubmit((values) => {
 watch(
   () => props.initialValues,
   (newValues) => {
-    form.setValues(newValues)
+    // Hack.
+    setTimeout(() => form.setValues(newValues), 50)
+    console.log(newValues)
   },
-  { immediate: true, deep: true }
+  { deep: true, immediate: true }
 )
 </script>

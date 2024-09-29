@@ -486,7 +486,7 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 	for _, attachment := range message.Attachments {
 		// Upload & insert the attachment.
 		reader := bytes.NewReader(attachment.Content)
-		media, err := m.mediaStore.UploadAndInsert(attachment.Name, attachment.ContentType, reader, attachment.Size, []byte("{}"))
+		media, err := m.mediaStore.UploadAndInsert(attachment.Name, attachment.ContentType, mmodels.ModelMessages, message.ID, reader, attachment.Size, []byte("{}"))
 		if err != nil {
 			m.lo.Error("error uploading message media", "error", err)
 			return err
@@ -496,12 +496,6 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 		if attachment.Disposition == mmodels.DispositionInline {
 			hasInline = true
 			message.Content = strings.ReplaceAll(message.Content, "cid:"+attachment.ContentID, media.URL)
-		}
-
-		// Attach message to media.
-		if err := m.mediaStore.Attach(media.ID, mmodels.ModelMessages, message.ID); err != nil {
-			m.lo.Error("error attaching message to media", "error", err)
-			return err
 		}
 	}
 

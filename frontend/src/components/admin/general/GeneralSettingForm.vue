@@ -1,6 +1,7 @@
 <template>
   <Spinner v-if="formLoading"></Spinner>
-  <form @submit="onSubmit" class="w-2/3 space-y-6" :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
+  <form @submit="onSubmit" class="w-2/3 space-y-6"
+    :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
         <FormLabel>Site Name</FormLabel>
@@ -91,6 +92,7 @@ import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { Spinner } from '@/components/ui/spinner'
@@ -146,11 +148,11 @@ const onSubmit = form.handleSubmit(async (values) => {
   try {
     isLoading.value = true
     await props.submitForm(values)
-    emitter.emit('showToast', {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: "Saved"
     })
   } catch (error) {
-    emitter.emit('showToast', {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Something went wrong',
       variant: 'destructive',
       description: handleHTTPError(error).message

@@ -12,40 +12,29 @@
         </Avatar>
 
         <div class="flex flex-col space-y-5 justify-center">
-          <input
-            ref="uploadInput"
-            type="file"
-            hidden
-            accept="image/jpg, image/jpeg, image/png, image/gif"
-            @change="selectFile"
-          />
+          <input ref="uploadInput" type="file" hidden accept="image/jpg, image/jpeg, image/png, image/gif"
+            @change="selectFile" />
           <Button class="w-28" @click="selectAvatar" size="sm"> Choose a file... </Button>
-
-          <Button class="w-28" @click="removeAvatar" variant="destructive" size="sm">
-            Remove avatar
-          </Button>
+          <Button class="w-28" @click="removeAvatar" variant="destructive" size="sm">Remove
+            avatar</Button>
         </div>
       </div>
 
-      <Button class="w-28" @click="saveUser" size="sm">Save Changes</Button>
+      <Button class="w-28" @click="saveUser" size="sm" :isLoading="isSaving">Save Changes</Button>
 
+      <!-- Cropped dialog -->
       <Dialog :open="showCropper">
         <DialogContent class="sm:max-w-md">
           <DialogHeader>
             <DialogTitle class="text-xl">Crop avatar</DialogTitle>
           </DialogHeader>
 
-          <VuePictureCropper
-            :boxStyle="{
-              width: '100%',
-              height: '400px',
-              backgroundColor: '#f8f8f8',
-              margin: 'auto'
-            }"
-            :img="newUserAvatar"
-            :options="{ viewMode: 1, dragMode: 'crop', aspectRatio: 1 }"
-          />
-
+          <VuePictureCropper :boxStyle="{
+            width: '100%',
+            height: '400px',
+            backgroundColor: '#f8f8f8',
+            margin: 'auto'
+          }" :img="newUserAvatar" :options="{ viewMode: 1, dragMode: 'crop', aspectRatio: 1 }" />
           <DialogFooter class="sm:justify-end">
             <Button variant="secondary" @click="closeDialog"> Close </Button>
             <Button @click="getResult">Save</Button>
@@ -62,6 +51,9 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ref } from 'vue'
 import VuePictureCropper, { cropper } from 'vue-picture-cropper'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import {
   Dialog,
   DialogContent,
@@ -71,6 +63,8 @@ import {
 } from '@/components/ui/dialog'
 import api from '@/api'
 
+const emitter = useEmitter()
+const isSaving = ref(false)
 const userStore = useUserStore()
 const uploadInput = ref(null)
 const newUserAvatar = ref('')
@@ -86,7 +80,6 @@ const selectFile = (event) => {
   newUserAvatar.value = ''
   const { files } = event.target
   if (!files || !files.length) return
-
   avatarFile = files[0]
   const reader = new FileReader()
   reader.readAsDataURL(avatarFile)
@@ -113,10 +106,19 @@ const saveUser = async () => {
   const formData = new FormData()
   formData.append('files', croppedBlob, 'avatar.png')
   try {
+    isSaving.value = true
     await api.updateCurrentUser(formData)
-    // Handle success
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      description: "Profile updated successfully"
+    })
   } catch (error) {
-    // Handle error
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: "Could not save profile",
+      variant: "destructive",
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -124,9 +126,16 @@ const removeAvatar = async () => {
   croppedBlob = null
   try {
     await api.deleteUserAvatar()
-    // Handle success
+    userStore.clearAvatar()
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      description: "Avatar removed"
+    })
   } catch (error) {
-    // Handle error
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: "Could not remove avatar",
+      variant: "destructive",
+      description: handleHTTPError(error).message
+    })
   }
 }
 </script>

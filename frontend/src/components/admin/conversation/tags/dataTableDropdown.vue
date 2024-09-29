@@ -72,6 +72,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api/index.js'
 
 const dialogOpen = ref(false)
@@ -105,8 +106,8 @@ const deleteTag = async () => {
 }
 
 const emitRefreshTagsList = () => {
-  emit.emit('refresh-list', {
-    name: 'tags'
+  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+    model: 'tags'
   })
 }
 

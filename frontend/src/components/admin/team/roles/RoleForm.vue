@@ -132,7 +132,8 @@ const permissions = ref([
       { name: 'roles:delete', label: 'Delete roles' },
 
       { name: 'templates:read', label: 'View templates' },
-      { name: 'templates:write', label: 'Create and update templates' }
+      { name: 'templates:write', label: 'Create and update templates' },
+      { name: 'templates:delete', label: 'Delete templates' }
     ]
   }
 ])

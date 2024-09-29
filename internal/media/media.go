@@ -1,5 +1,5 @@
-// Package media provides functionality for managing media files in the system.
-// It allows uploading, retrieving, and deleting media files, and interfaces with a storage backend.
+// Package media provides functionality for managing files backed by localfs or S3.
+// It supports uploading, retrieving, attaching to models, and deleting files.
 package media
 
 import (
@@ -34,6 +34,7 @@ type Store interface {
 // Manager manages media files, including their upload and retrieval.
 type Manager struct {
 	Store      Store
+	UploadPath string
 	lo         *logf.Logger
 	queries    queries
 	appBaseURL string
@@ -47,8 +48,7 @@ type Opts struct {
 	AppBaseURL string
 }
 
-// New initializes a new Manager with the provided options.
-// It scans and prepares SQL queries needed for media management.
+// New initializes and returns a new Manager instance for handling media operations.
 func New(opt Opts) (*Manager, error) {
 	var q queries
 
@@ -61,10 +61,11 @@ func New(opt Opts) (*Manager, error) {
 		lo:         opt.Lo,
 		queries:    q,
 		appBaseURL: opt.AppBaseURL,
+		UploadPath: "uploads",
 	}, nil
 }
 
-// queries holds the prepared SQL statements for media operations.
+// queries holds the prepared SQL statements.
 type queries struct {
 	InsertMedia        *sqlx.Stmt `query:"insert-media"`
 	GetMedia           *sqlx.Stmt `query:"get-media"`
@@ -75,7 +76,9 @@ type queries struct {
 	GetUnlinkedMedia   *sqlx.Stmt `query:"get-unlinked-media"`
 }
 
-func (m *Manager) UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (models.Media, error) {
+// UploadAndInsert uploads the media to the storage backend and inserts its details into the database.
+// It returns the media record on success.
+func (m *Manager) UploadAndInsert(fileName, contentType, modelType string, modelID int, content io.ReadSeeker, fileSize int, meta []byte) (models.Media, error) {
 	// Upload the media to storage
 	uploadedFileName, err := m.Upload(fileName, contentType, content)
 	if err != nil {
@@ -83,7 +86,7 @@ func (m *Manager) UploadAndInsert(fileName, contentType string, content io.ReadS
 	}
 
 	// Insert media details into the database
-	media, err := m.Insert(uploadedFileName, contentType, fileSize, meta)
+	media, err := m.Insert(uploadedFileName, contentType, modelType, modelID, fileSize, meta)
 	if err != nil {
 		m.Store.Delete(uploadedFileName)
 		return models.Media{}, err
@@ -92,7 +95,7 @@ func (m *Manager) UploadAndInsert(fileName, contentType string, content io.ReadS
 	return media, nil
 }
 
-// Upload saves the media to storage and returns the filename.
+// Upload saves the media file to the storage backend and returns the generated filename.
 func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (string, error) {
 	fName, err := m.Store.Put(fileName, contentType, content)
 	if err != nil {
@@ -103,16 +106,16 @@ func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (s
 	return fName, nil
 }
 
-func (m *Manager) Insert(fileName, contentType string, fileSize int, meta []byte) (models.Media, error) {
+// Insert inserts media details into the database and returns the inserted media record.
+func (m *Manager) Insert(fileName, contentType, modelType string, modelID int, fileSize int, meta []byte) (models.Media, error) {
 	var id int
-	if err := m.queries.InsertMedia.QueryRow(m.Store.Name(), fileName, contentType, fileSize, meta).Scan(&id); err != nil {
+	if err := m.queries.InsertMedia.QueryRow(m.Store.Name(), fileName, contentType, fileSize, meta, modelID, modelType).Scan(&id); err != nil {
 		m.lo.Error("error inserting media", "error", err)
 	}
 	return m.Get(id)
 }
 
-// Get retrieves the media record by UUID and returns it along with its URL.
-// If an error occurs, it returns the error and an empty media record.
+// Get retrieves the media record by its ID and returns the media along with its URL.
 func (m *Manager) Get(id int) (models.Media, error) {
 	var media models.Media
 	if err := m.queries.GetMedia.Get(&media, id); err != nil {
@@ -123,12 +126,12 @@ func (m *Manager) Get(id int) (models.Media, error) {
 	return media, nil
 }
 
-// GetByFilename retrieves the media record by it's filename.
+// GetByFilename retrieves the media record by its filename.
 func (m *Manager) GetByFilename(fileName string) (models.Media, error) {
 	var media models.Media
 	if err := m.queries.GetMediaByFilename.Get(&media, fileName); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return media, envelope.NewError(envelope.GeneralError, "File not found", nil)	
+			return media, envelope.NewError(envelope.GeneralError, "File not found", nil)
 		}
 		m.lo.Error("error fetching media", "error", err)
 		return media, envelope.NewError(envelope.GeneralError, "Error fetching media", nil)
@@ -137,14 +140,17 @@ func (m *Manager) GetByFilename(fileName string) (models.Media, error) {
 	return media, nil
 }
 
+// GetBlob retrieves the raw binary content of a media file by its name.
 func (m *Manager) GetBlob(name string) ([]byte, error) {
 	return m.Store.GetBlob(name)
 }
 
+// GetURL returns the URL for accessing a media file by its name.
 func (m *Manager) GetURL(name string) string {
 	return m.Store.GetURL(name)
 }
 
+// Attach associates a media file with a specific model by its ID and model name.
 func (m *Manager) Attach(id int, model string, modelID int) error {
 	if _, err := m.queries.Attach.Exec(id, model, modelID); err != nil {
 		m.lo.Error("error attaching media to model", "model", model, "model_id", modelID, "error", err)
@@ -153,6 +159,7 @@ func (m *Manager) Attach(id int, model string, modelID int) error {
 	return nil
 }
 
+// GetModelMedia retrieves all media files attached to a specific model by its ID and model name.
 func (m *Manager) GetModelMedia(modelID int, model string) ([]models.Media, error) {
 	var media = make([]models.Media, 0)
 	err := m.queries.GetModelMedia.Select(&media, model, modelID)
@@ -163,17 +170,12 @@ func (m *Manager) GetModelMedia(modelID int, model string) ([]models.Media, erro
 	return media, nil
 }
 
-// Delete deletes media from store.
-func (m *Manager) Delete(name string) error {
+// DeleteMediaAndStore deletes a media file from both the storage backend and the database.
+func (m *Manager) DeleteMedia(name string) error {
 	if err := m.Store.Delete(name); err != nil {
 		m.lo.Error("error deleting media from store", "error", err)
 		return err
 	}
-	return nil
-}
-
-// DeleteMedia deletes media record from DB.
-func (m *Manager) DeleteMedia(name string) error {
 	if _, err := m.queries.DeleteMedia.Exec(name); err != nil {
 		m.lo.Error("error deleting media from db", "error", err)
 		return err
@@ -181,18 +183,8 @@ func (m *Manager) DeleteMedia(name string) error {
 	return nil
 }
 
-// DeleteMediaAndStore deletes media from both the database and the store.
-func (m *Manager) DeleteMediaAndStore(name string) error {
-	if err := m.DeleteMedia(name); err != nil {
-		return err
-	}
-	m.Delete(name)
-	return nil
-}
-
-// CleanMedia periodically deletes media entries that are not linked to any model.
-// This function should be run as a goroutine to avoid blocking. It uses a ticker to
-// trigger the deletion process every 12 hours.
+// CleanMedia periodically deletes unlinked media entries older than a specified number of days.
+// It should be run as a goroutine.
 func (m *Manager) CleanMedia(ctx context.Context) {
 	m.deleteUnlinkedMedia(3)
 	ticker := time.NewTicker(12 * time.Hour)
@@ -207,21 +199,17 @@ func (m *Manager) CleanMedia(ctx context.Context) {
 	}
 }
 
-// deleteUnlinkedMedia fetches media entries that are not linked to any model
-// and are older than 3 days, then deletes them.
+// deleteUnlinkedMedia fetches and deletes media entries that are unlinked and older than the specified number of days.
 func (m *Manager) deleteUnlinkedMedia(days int) {
-	var unlinkedMedia []int
-	if err := m.queries.GetUnlinkedMedia.Select(&unlinkedMedia, time.Now().AddDate(0, 0, -1 * days)); err != nil {
+	var unlinkedMedia []string
+	if err := m.queries.GetUnlinkedMedia.Select(&unlinkedMedia, time.Now().AddDate(0, 0, -1*days)); err != nil {
 		m.lo.Error("error fetching unlinked media", "error", err)
 		return
 	}
-
 	m.lo.Info("found unlinked media to delete", "count", len(unlinkedMedia))
-
-	for _, id := range unlinkedMedia {
-		_, err := m.queries.DeleteMedia.Exec(id)
-		if err != nil {
-			m.lo.Error("error deleting unlinked media", "id", id, "error", err)
+	for _, filename := range unlinkedMedia {
+		if err := m.DeleteMedia(filename); err != nil {
+			m.lo.Error("error deleting unlinked media", "filename", filename, "error", err)
 		}
 	}
 }

@@ -82,8 +82,8 @@ func handleMediaUpload(r *fastglue.Request) error {
 	thumbName := thumbPrefix + srcFileName
 	defer func() {
 		if cleanUp {
-			app.media.DeleteMediaAndStore(srcFileName)
-			app.media.DeleteMediaAndStore(thumbName)
+			app.media.DeleteMedia(srcFileName)
+			app.media.DeleteMedia(thumbName)
 		}
 	}()
 
@@ -125,7 +125,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Insert in DB.
-	media, err := app.media.Insert(srcFileName, srcContentType, int(srcFileSize), meta)
+	media, err := app.media.Insert(srcFileName, srcContentType, "" /**model_type**/, 0, int(srcFileSize), meta)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error inserting metadata into database", "error", err)

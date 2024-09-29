@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const router = useRouter()
 const emit = useEmitter()
-
 const props = defineProps({
   role: {
     type: Object,
@@ -24,14 +24,14 @@ const props = defineProps({
   }
 })
 
-function edit(id) {
+function edit (id) {
   router.push({ path: `/admin/oidc/${id}/edit` })
 }
 
-async function deleteOIDC(id) {
+async function deleteOIDC (id) {
   await api.deleteOIDC(id)
-  emit.emit('refresh-list', {
-    name: 'inbox'
+  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+    model: 'oidc'
   })
 }
 </script>

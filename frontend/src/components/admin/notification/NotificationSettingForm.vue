@@ -1,5 +1,6 @@
 <template>
-    <form @submit="onSmtpSubmit" class="w-2/3 space-y-6">
+    <form @submit="onSmtpSubmit" class="w-2/3 space-y-6"
+        :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
 
         <!-- Enabled Field -->
         <FormField name="enabled" v-slot="{ value, handleChange }">

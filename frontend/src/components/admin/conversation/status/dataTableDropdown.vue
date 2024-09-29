@@ -70,6 +70,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api/index.js'
 
 const dialogOpen = ref(false)
@@ -103,8 +104,8 @@ const deleteStatus = async () => {
 }
 
 const emitRefreshStatusList = () => {
-  emit.emit('refresh-list', {
-    name: 'status'
+  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+    model: 'status'
   })
 }
 

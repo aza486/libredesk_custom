@@ -79,7 +79,7 @@ type mediaStore interface {
 	GetBlob(name string) ([]byte, error)
 	Attach(id int, model string, modelID int) error
 	GetModelMedia(id int, model string) ([]mmodels.Media, error)
-	UploadAndInsert(fileName, contentType string, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
+	UploadAndInsert(fileName, contentType, modelType string, modelID int, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
 }
 
 type inboxStore interface {

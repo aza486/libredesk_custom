@@ -68,6 +68,7 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
 const isLoading = ref(false)
@@ -77,8 +78,8 @@ const dialogOpen = ref(false)
 
 onMounted(() => {
   getStatuses()
-  emit.on('refresh-list', (data) => {
-    if (data?.name === 'status') getStatuses()
+  emit.on(EMITTER_EVENTS.REFRESH_LIST, (data) => {
+    if (data?.model === 'status') getStatuses()
   })
 })
 

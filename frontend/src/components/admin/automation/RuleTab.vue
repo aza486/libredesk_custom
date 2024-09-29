@@ -3,10 +3,12 @@
     <div>
       <p class="text-sm-muted">{{ helptext }}</p>
     </div>
-    <Spinner v-if=isLoading></Spinner>
-    <div class="space-y-5" v-else>
-      <RuleList v-for="rule in rules" :key="rule.name" :rule="rule" @delete-rule="deleteRule"
-        @toggle-rule="toggleRule" />
+    <div>
+      <Spinner v-if=isLoading></Spinner>
+      <div class="space-y-5" v-else>
+        <RuleList v-for="rule in rules" :key="rule.name" :rule="rule" @delete-rule="deleteRule"
+          @toggle-rule="toggleRule" />
+      </div>
     </div>
   </div>
 </template>
@@ -19,7 +21,6 @@ import api from '@/api'
 
 const isLoading = ref(false)
 const rules = ref([])
-
 const props = defineProps({
   type: {
     type: String,

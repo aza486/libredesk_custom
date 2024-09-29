@@ -34,6 +34,7 @@ const createTemplate = (data) =>
       'Content-Type': 'application/json'
     }
   })
+const deleteTemplate = (id) => http.delete(`/api/templates/${id}`)
 const updateTemplate = (id, data) =>
   http.put(`/api/templates/${id}`, data, {
     headers: {
@@ -247,6 +248,7 @@ export default {
   getTemplates,
   createTemplate,
   updateTemplate,
+  deleteTemplate,
   deleteUserAvatar,
   createTag,
   updateTag,

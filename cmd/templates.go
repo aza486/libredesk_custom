@@ -73,3 +73,24 @@ func handleUpdateTemplate(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(true)
 }
+
+func handleDeleteTemplate(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req = models.Template{}
+	)
+	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	if err != nil || id == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+			"Invalid template `id`.", nil, envelope.InputError)
+	}
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, envelope.GeneralError)
+	}
+
+	if err = app.tmpl.Delete(id); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}

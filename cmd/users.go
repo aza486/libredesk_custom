@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/image"
+	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
@@ -88,6 +90,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		srcContentType := fileHeader.Header.Get("Content-Type")
 		srcFileSize := fileHeader.Size
 		srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
+		srcMeta := []byte("{}")
 
 		if !slices.Contains(image.Exts, srcExt) {
 			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File type is not an image", nil, envelope.GeneralError)
@@ -104,8 +107,9 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 			)
 		}
 
+		// Reset ptr.
 		file.Seek(0, 0)
-		srcFileName, err = app.media.Upload(srcFileName, srcContentType, file)
+		_, err = app.media.UploadAndInsert(srcFileName, srcContentType, mmodels.ModelUser, user.ID, file, int(srcFileSize), srcMeta)
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
@@ -114,12 +118,12 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		// Delete current avatar.
 		if currentUser.AvatarURL.Valid {
 			fileName := filepath.Base(currentUser.AvatarURL.String)
-			app.media.Delete(fileName)
+			app.lo.Info("deleting user avatar file", "filename", fileName)
+			app.media.DeleteMedia(fileName)
 		}
 
 		// Update user with new avatar.
-		avatarURL := app.media.GetURL(srcFileName)
-		currentUser.AvatarURL = null.NewString(avatarURL, avatarURL != "")
+		currentUser.AvatarURL = null.StringFrom("/" + path.Join(app.media.UploadPath, srcFileName))
 		if err := app.user.UpdateUser(user.ID, currentUser); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
@@ -209,15 +213,14 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 
 	// Valid str?
 	if !user.AvatarURL.Valid {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"User does not have an avatar.", nil, envelope.InputError)
+		return r.SendEnvelope(true)
 	}
 
 	// Get filename from the avatar url path.
 	fileName := filepath.Base(user.AvatarURL.String)
 
 	// Delete file from the store.
-	if err := app.media.Delete(fileName); err != nil {
+	if err := app.media.DeleteMedia(fileName); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
 			"Error deleting avatar", nil, envelope.InputError)
 	}

@@ -34,7 +34,7 @@
           <FormItem>
             <FormLabel>Content</FormLabel>
             <FormControl>
-              <Textarea v-bind="componentField"  class="h-52"></Textarea>
+              <Textarea v-bind="componentField" class="h-52"></Textarea>
             </FormControl>
             <FormDescription></FormDescription>
             <FormMessage />
@@ -81,6 +81,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api/index.js'
 
 const dialogOpen = ref(false)
@@ -114,8 +115,8 @@ const deleteCannedResponse = async () => {
 }
 
 const emitRefreshCannedResponseList = () => {
-  emit.emit('refresh-list', {
-    name: 'canned_responses'
+  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+    model: 'canned_responses'
   })
 }
 

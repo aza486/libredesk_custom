@@ -1,21 +1,29 @@
 -- name: insert-media
-INSERT INTO media (store, filename, content_type, size, meta)
-VALUES($1, $2, $3, $4, $5)
+INSERT INTO media (store, filename, content_type, size, meta, model_id, model_type)
+VALUES(
+  $1, 
+  $2, 
+  $3, 
+  $4, 
+  $5, 
+  NULLIF($6, 0),
+  NULLIF($7, '')
+)
 RETURNING id;
 
 -- name: get-media
 SELECT *
-from media
-where id = $1;
+FROM media
+WHERE id = $1;
 
 -- name: get-media-by-filename
 SELECT *
-from media
-where filename = $1;
+FROM media
+WHERE filename = $1;
 
 -- name: delete-media
-DELETE from media
-where id = $1;
+DELETE FROM media
+WHERE filename = $1;
 
 -- name: attach-to-model
 UPDATE media
@@ -29,9 +37,8 @@ FROM media
 WHERE model_type = $1
     AND model_id = $2;
 
-
 -- name: get-unlinked-media
-SELECT id
+SELECT filename
 FROM media
 WHERE (
         model_type IS NULL

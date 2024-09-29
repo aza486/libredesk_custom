@@ -8,9 +8,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { handleHTTPError } from '@/utils/http'
+import api from '@/api'
 
 const router = useRouter()
-
+const emit = useEmitter()
 const props = defineProps({
   template: {
     type: Object,
@@ -21,8 +25,23 @@ const props = defineProps({
   }
 })
 
-function editTemplate(id) {
+const editTemplate = (id) => {
   router.push({ path: `/admin/templates/${id}/edit` })
+}
+
+const deleteTemplate = async (id) => {
+  try {
+    await api.deleteTemplate(id)
+    emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+      model: 'templates'
+    })
+  } catch (error) {
+    emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not delete template',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
 }
 </script>
 
@@ -36,6 +55,7 @@ function editTemplate(id) {
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editTemplate(props.template.id)"> Edit </DropdownMenuItem>
+      <DropdownMenuItem @click="deleteTemplate(props.template.id)"> Delete </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

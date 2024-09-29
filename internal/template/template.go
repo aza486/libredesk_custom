@@ -30,6 +30,7 @@ type Manager struct {
 type queries struct {
 	InsertTemplate     *sqlx.Stmt `query:"insert"`
 	UpdateTemplate     *sqlx.Stmt `query:"update"`
+	DeleteTemplate     *sqlx.Stmt `query:"delete"`
 	GetDefaultTemplate *sqlx.Stmt `query:"get-default"`
 	GetAllTemplates    *sqlx.Stmt `query:"get-all"`
 	GetTemplate        *sqlx.Stmt `query:"get-template"`
@@ -95,4 +96,13 @@ func (m *Manager) Get(id int) (models.Template, error) {
 		return templates, envelope.NewError(envelope.GeneralError, "Error fetching template", nil)
 	}
 	return templates, nil
+}
+
+// Delete deletes a template by id.
+func (m *Manager) Delete(id int) error {
+	if _, err := m.q.DeleteTemplate.Exec(id); err != nil {
+		m.lo.Error("error deleting template", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting template", nil)
+	}
+	return nil
 }

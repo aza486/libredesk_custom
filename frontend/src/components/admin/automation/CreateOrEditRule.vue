@@ -5,66 +5,100 @@
   <Spinner v-if="isLoading"></Spinner>
   <span>{{ formTitle }}</span>
   <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
-    <div class="space-y-5">
+    <form @submit="onSubmit">
       <div class="space-y-5">
-        <div class="grid w-full max-w-sm items-center gap-1.5">
-          <Label for="rule_name">Name</Label>
-          <Input id="rule_name" type="text" placeholder="Name for this rule" v-model="rule.name" />
+        <div class="space-y-5">
+
+          <FormField v-slot="{ field }" name="name">
+            <FormItem v-auto-animate>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="My new rule" v-bind="field" />
+              </FormControl>
+              <FormDescription>Name for the rule.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ field }" name="description">
+            <FormItem v-auto-animate>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="Description for new rule" v-bind="field" />
+              </FormControl>
+              <FormDescription>Description for the rule.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ field }" name="type">
+            <FormItem v-auto-animate>
+              <FormLabel>Type</FormLabel>
+              <FormControl>
+                <Select v-bind="field" :modelValue="field.value" defaultValue="new_conversation">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="new_conversation"> New conversation </SelectItem>
+                      <SelectItem value="conversation_update"> Conversation update </SelectItem>
+                      <SelectItem value="time_trigger"> Time trigger </SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormDescription>Type of rule.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          </FormField>
         </div>
-        <div class="grid w-full max-w-sm items-center gap-1.5">
-          <Label for="rule_name">Description</Label>
-          <Input id="rule_name" type="text" placeholder="Description for this rule" v-model="rule.description" />
+
+        <p class="font-semibold">Match these rules</p>
+        
+        <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
+          @remove-condition="handleRemoveCondition" :groupIndex="0" v-auto-animate />
+        
+          <div class="flex justify-center" v-auto-animate>
+          <div class="flex items-center space-x-2">
+            <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
+              @click="toggleGroupOperator('AND')">
+              AND
+            </Button>
+            <Button :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
+              @click="toggleGroupOperator('OR')">
+              OR
+            </Button>
+          </div>
         </div>
-        <div class="grid w-full max-w-sm items-center gap-1.5">
-          <Label for="rule_type">Type</Label>
-          <Select id="rule_type" :modelValue="rule.type" @update:modelValue="handeTypeUpdate">
-            <SelectTrigger>
-              <SelectValue placeholder="Select a type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="new_conversation"> New conversation </SelectItem>
-                <SelectItem value="conversation_update"> Conversation update </SelectItem>
-                <SelectItem value="time_trigger"> Time trigger </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
+        
+        <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
+          @remove-condition="handleRemoveCondition" :groupIndex="1"  v-auto-animate/>
+        <p class="font-semibold">Perform these actions</p>
+        
+        <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
+          @remove-action="handleRemoveAction" v-auto-animate />
+        
+          <Button @click="handleSave" :isLoading="isLoading" size="sm">Save</Button>
       </div>
-      <p class="font-semibold">Match these rules</p>
-      <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-        @remove-condition="handleRemoveCondition" :groupIndex="0" />
-      <div class="flex justify-center">
-        <div class="flex items-center space-x-2">
-          <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
-            @click="toggleGroupOperator('AND')">
-            AND
-          </Button>
-          <Button :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
-            @click="toggleGroupOperator('OR')">
-            OR
-          </Button>
-        </div>
-      </div>
-      <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-        @remove-condition="handleRemoveCondition" :groupIndex="1" />
-      <p class="font-semibold">Perform these actions</p>
-      <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
-        @remove-action="handleRemoveAction" />
-      <Button @click="handleSave" :isLoading="isLoading">Save</Button>
-    </div>
+    </form>
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import { Label } from '@/components/ui/label'
+import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import RuleBox from './RuleBox.vue'
 import ActionBox from './ActionBox.vue'
 import api from '@/api'
-import { useRouter } from 'vue-router'
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { formSchema } from './formSchema.js'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 import {
   Select,
   SelectContent,
@@ -73,10 +107,19 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription
+} from '@/components/ui/form'
 import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 
 const isLoading = ref(false)
+const emitter = useEmitter()
 const rule = ref({
   id: 0,
   name: '',
@@ -122,8 +165,6 @@ const breadcrumbLinks = [
   { path: '/admin/automations', label: 'Automations' },
   { path: '#', label: breadcrumbPageLabel() }
 ]
-
-const router = useRouter()
 
 const firstRuleGroup = ref([])
 const secondRuleGroup = ref([])
@@ -188,9 +229,13 @@ const handleRemoveAction = (index) => {
   rule.value.rules[0].actions.splice(index, 1)
 }
 
-const handeTypeUpdate = (value) => {
-  rule.value.type = value
-}
+const form = useForm({
+  validationSchema: toTypedSchema(formSchema)
+})
+
+const onSubmit = form.handleSubmit(async () => {
+  handleSave()
+})
 
 const handleSave = async () => {
   try {
@@ -201,6 +246,15 @@ const handleSave = async () => {
     delete updatedRule.updated_at
     if (props.id > 0) await api.updateAutomationRule(props.id, updatedRule)
     else await api.createAutomationRule(updatedRule)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      description: "Rule saved"
+    })
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not save rule',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     isLoading.value = false
   }
@@ -212,9 +266,13 @@ onMounted(async () => {
       isLoading.value = true
       let resp = await api.getAutomationRule(props.id)
       rule.value = resp.data.data
+      form.setValues(resp.data.data)
     } catch (error) {
-      console.log(error)
-      router.push({ path: `/admin/automations` })
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Could not fetch rule',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
     } finally {
       isLoading.value = false
     }
@@ -223,4 +281,5 @@ onMounted(async () => {
   secondRuleGroup.value = getSecondGroup()
   groupOperator.value = getGroupOperator()
 })
+
 </script>

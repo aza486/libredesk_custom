@@ -56,6 +56,10 @@ export const useUserStore = defineStore('user', () => {
     return userPermissions.value.includes(permission)
   }
 
+  const clearAvatar = () => {
+    userAvatar.value = ''
+  }
+
   return {
     // State
     userFirstName,
@@ -72,6 +76,7 @@ export const useUserStore = defineStore('user', () => {
     setFirstName,
     setLastName,
     getCurrentUser,
-    hasPermission
+    hasPermission,
+    clearAvatar
   }
 })

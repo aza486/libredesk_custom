@@ -31,7 +31,7 @@ const createNewUser = async (values) => {
     await api.createUser(values)
   } catch (error) {
     toast({
-      title: 'Could not create user.',
+      title: 'Could not create user',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

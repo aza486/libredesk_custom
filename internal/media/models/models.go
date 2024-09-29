@@ -8,6 +8,7 @@ import (
 
 const (
 	ModelMessages = "messages"
+	ModelUser     = "users"
 
 	DispositionInline = "inline"
 )

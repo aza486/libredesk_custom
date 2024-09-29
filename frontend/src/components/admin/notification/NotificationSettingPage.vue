@@ -4,8 +4,7 @@
     </div>
     <div>
         <Spinner v-if="formLoading"></Spinner>
-        <NotificationsForm :initial-values="initialValues" :submit-form="submitForm"
-            :class="{ 'opacity-50 transition-opacity duration-300': formLoading }" :isLoading="formLoading"/>
+        <NotificationsForm :initial-values="initialValues" :submit-form="submitForm" :isLoading="formLoading" />
     </div>
 </template>
 
@@ -14,10 +13,14 @@ import { ref, onMounted } from 'vue'
 import api from '@/api'
 import PageHeader from '../common/PageHeader.vue'
 import NotificationsForm from './NotificationSettingForm.vue'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 import { Spinner } from '@/components/ui/spinner'
 
 const initialValues = ref({})
 const formLoading = ref(false)
+const emitter = useEmitter()
 
 onMounted(() => {
     getNotificationSettings()
@@ -26,25 +29,40 @@ onMounted(() => {
 const getNotificationSettings = async () => {
     try {
         formLoading.value = true
-        const resp = await api.getEmailNotificationSettings();
+        const resp = await api.getEmailNotificationSettings()
         initialValues.value = Object.fromEntries(
             Object.entries(resp.data.data).map(([key, value]) => [key.replace('notification.email.', ''), value])
-        );
+        )
+    } catch (error) {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+            title: 'Could not save',
+            variant: 'destructive',
+            description: handleHTTPError(error).message
+        })
     } finally {
         formLoading.value = false
     }
-};
+}
 
-const submitForm = (values) => {
+const submitForm = async (values) => {
     try {
         formLoading.value = true
         const updatedValues = Object.fromEntries(
             Object.entries(values).map(([key, value]) => [`notification.email.${key}`, value])
         );
-        api.updateEmailNotificationSettings(updatedValues)
+        await api.updateEmailNotificationSettings(updatedValues)
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+            description: "Saved"
+        })
+    } catch (error) {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+            title: 'Could not save',
+            variant: 'destructive',
+            description: handleHTTPError(error).message
+        })
     } finally {
         formLoading.value = false
     }
-};
+}
 
 </script>

@@ -72,7 +72,7 @@ func main() {
 	// Init DB.
 	db := initDB()
 
-	// Load app settings into Koanf.
+	// Load app settings from DB into Koanf.
 	setting := initSettingsManager(db)
 	loadSettings(setting)
 
@@ -98,7 +98,6 @@ func main() {
 		autoassigner = initAutoAssigner(team, user, conversation)
 	)
 
-	// Set required stores.
 	wsHub.SetConversationStore(conversation)
 	automation.SetConversationStore(conversation)
 
@@ -115,7 +114,7 @@ func main() {
 	// Listen to incoming messages and dispatch pending outgoing messages.
 	go conversation.ListenAndDispatchMessages(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
-	// Delete media not linked to any model at regular intervals.
+	// Delete media not linked to any model.
 	go media.CleanMedia(ctx)
 
 	// Start notification service.

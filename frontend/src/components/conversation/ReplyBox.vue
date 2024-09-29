@@ -47,6 +47,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
 import Editor from './ConversationTextEditor.vue'
@@ -141,7 +142,7 @@ const handleFileUpload = (event) => {
         uploadedFiles.value.push(resp.data.data)
       })
       .catch((error) => {
-        emitter.emit('showToast', {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
           title: 'Error uploading file',
           variant: 'destructive',
           description: handleHTTPError(error).message
@@ -166,7 +167,7 @@ const handleInlineImageUpload = (event) => {
         uploadedFiles.value.push(resp.data.data)
       })
       .catch((error) => {
-        emitter.emit('showToast', {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
           title: 'Error uploading file',
           variant: 'destructive',
           description: handleHTTPError(error).message
@@ -189,7 +190,7 @@ const handleSend = async () => {
       attachments: uploadedFiles.value.map((file) => file.id)
     })
   } catch (error) {
-    emitter.emit('showToast', {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error sending message',
       variant: 'destructive',
       description: handleHTTPError(error).message

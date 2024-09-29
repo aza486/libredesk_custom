@@ -33,7 +33,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/settings/notifications/email", perm(handleGetEmailNotificationSettings, "settings_notifications", "read"))
 	g.PUT("/api/settings/notifications/email", perm(handleUpdateEmailNotificationSettings, "settings_notifications", "write"))
 
-	// OpenID.
+	// OpenID SSO.
 	g.GET("/api/oidc", handleGetAllOIDC)
 	g.GET("/api/oidc/{id}", perm(handleGetOIDC, "oidc", "read"))
 	g.POST("/api/oidc", perm(handleCreateOIDC, "oidc", "write"))
@@ -129,8 +129,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Template.
 	g.GET("/api/templates", perm(handleGetTemplates, "templates", "read"))
 	g.GET("/api/templates/{id}", perm(handleGetTemplate, "templates", "read"))
-	g.POST("/api/templates", perm(handleCreateTemplate, "templates", "read"))
-	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate, "templates", "read"))
+	g.POST("/api/templates", perm(handleCreateTemplate, "templates", "write"))
+	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate, "templates", "write"))
+	g.DELETE("/api/templates/{id}", perm(handleDeleteTemplate, "templates", "delete"))
 
 	// WebSocket.
 	g.GET("/api/ws", sess(func(r *fastglue.Request) error {
@@ -143,6 +144,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/conversations", sess(authPage(serveIndexPage)))
 	g.GET("/conversations/{all:*}", sess(authPage(serveIndexPage)))
 	g.GET("/account/profile", sess(authPage(serveIndexPage)))
+	g.GET("/admin/{all:*}", sess(authPage(serveIndexPage)))
 	g.GET("/assets/{all:*}", serveStaticFiles)
 }
 
@@ -159,13 +161,14 @@ func handleServeUploadedFiles(r *fastglue.Request) error {
 	// Remove the "thumb_" prefix.
 	fileName = strings.TrimPrefix(fileName, "thumb_")
 
-	// Fetch media metadata from the database.
+	// Fetch media metadata from DB.
 	media, err := app.media.GetByFilename(fileName)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Check if the user has permission to access the linked model.
+	// TODO: Move authz out of here.
 	if media.Model.String == "messages" {
 		allowed, err := app.authz.Enforce(user, media.Model.String, "read")
 		if err != nil {
@@ -187,14 +190,12 @@ func handleServeUploadedFiles(r *fastglue.Request) error {
 		}
 	}
 
-	var uploadProvider = ko.String("upload.provider")
-	if uploadProvider == "localfs" {
+	switch ko.String("upload.provider") {
+	case "localfs":
 		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.localfs.upload_path"), fileName))
-	}
-	if uploadProvider == "s3" {
+	case "s3":
 		s3URL := app.media.GetURL(fileName)
 		r.RequestCtx.Redirect(s3URL, http.StatusFound)
-		return nil
 	}
 	return nil
 }

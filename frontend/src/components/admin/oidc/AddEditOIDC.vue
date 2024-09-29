@@ -21,7 +21,6 @@ const oidc = ref({
 const isLoading = ref(false)
 const formLoading = ref(false)
 const router = useRouter()
-
 const props = defineProps({
   id: {
     type: String,

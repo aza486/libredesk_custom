@@ -78,6 +78,7 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
 const formLoading = ref(false)
@@ -87,15 +88,15 @@ const dialogOpen = ref(false)
 
 onMounted(() => {
   getCannedResponses()
-  emit.on('refresh-list', refreshList)
+  emit.on(EMITTER_EVENTS.REFRESH_LIST, refreshList)
 })
 
 onUnmounted(() => {
-  emit.off('refresh-list', refreshList)
+  emit.off(EMITTER_EVENTS.REFRESH_LIST, refreshList)
 })
 
 const refreshList = (data) => {
-  if (data?.name === 'canned_responses') getCannedResponses()
+  if (data?.model === 'canned_responses') getCannedResponses()
 }
 
 const form = useForm({

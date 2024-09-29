@@ -52,7 +52,7 @@ const allNavItems = [
   {
     title: 'OpenID',
     href: '/admin/oidc',
-    description: 'Manage OpenID Connect configurations',
+    description: 'Manage OpenID SSO configurations',
     permission: null,
   }
 ]

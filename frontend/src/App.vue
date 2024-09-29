@@ -37,6 +37,7 @@ import NavBar from '@/components/NavBar.vue'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const { t } = useI18n()
 const { toast } = useToast()
@@ -91,7 +92,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  emitter.off('showToast', showToast)
+  emitter.off(EMITTER_EVENTS.SHOW_TOAST, toast)
 })
 
 const getCurrentUser = () => {
@@ -103,11 +104,7 @@ const getCurrentUser = () => {
 }
 
 const initToaster = () => {
-  emitter.on('showToast', showToast)
-}
-
-const showToast = (data) => {
-  toast(data)
+  emitter.on(EMITTER_EVENTS.SHOW_TOAST, toast)
 }
 
 const navLinks = computed(() =>
