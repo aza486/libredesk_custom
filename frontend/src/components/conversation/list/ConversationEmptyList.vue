@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col items-center justify-center h-64 space-y-2">
-    <MessageCircleWarning :stroke-width="1.4" :size="90" />
+    <component :is="icon" :stroke-width="1.4" :size="90" />
     <h1 class="text-lg font-semibold text-gray-800">
       {{ title }}
     </h1>
@@ -11,9 +11,11 @@
 </template>
 
 <script setup>
-import { MessageCircleWarning } from 'lucide-vue-next'
-
 defineProps({
+  icon: {
+    type: Object,
+    required: true
+  },
   title: {
     type: String,
     required: true

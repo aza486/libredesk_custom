@@ -1,5 +1,6 @@
 <template>
   <div class="relative" v-if="conversationStore.messages.data">
+
     <!-- Header -->
     <div class="px-4 border-b h-[47px] flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
@@ -30,12 +31,17 @@
         </DropdownMenu>
       </div>
     </div>
+    <!-- Header end -->
+    
     <Error class="sticky" :error-message="conversationStore.messages.errorMessage"></Error>
+    
+    <!-- Messages & reply box -->
     <div class="flex flex-col h-screen">
-      <!-- flex-1-->
       <MessageList class="flex-1" />
       <ReplyBox class="h-max mb-12" />
     </div>
+    <!-- Messages & reply box end -->
+
   </div>
 </template>
 

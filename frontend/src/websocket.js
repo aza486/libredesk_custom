@@ -108,7 +108,7 @@ export function sendMessage (message) {
 
 export function subscribeConversationsList (type, filter) {
   const message = {
-    action: 'conversations_sub',
+    action: 'conversations_list_sub',
     type: type,
     filter: filter
   };

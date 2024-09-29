@@ -2,9 +2,7 @@ package models
 
 // Action constants for WebSocket messages.
 const (
-	ActionConversationsListSub            = "conversations_sub"
-	ActionConversationSub                 = "conversation_sub"
-	ActionConversationUnSub               = "conversation_unsub"
+	ActionConversationsListSub            = "conversations_list_sub"
 	MessageTypeMessagePropUpdate          = "message_prop_update"
 	MessageTypeConversationPropertyUpdate = "conversation_prop_update"
 	MessageTypeNewMessage                 = "new_message"

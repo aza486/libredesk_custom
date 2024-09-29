@@ -11,27 +11,17 @@
       <ComboboxRoot v-model:open="isOpen" class="w-full">
         <ComboboxAnchor as-child>
           <ComboboxInput :placeholder="placeHolder" as-child>
-            <TagsInputInput
-              class="w-full px-3"
-              :class="selectedItems.length > 0 ? 'mt-2' : ''"
-              @keydown.enter.prevent
-            />
+            <TagsInputInput class="w-full px-3" :class="selectedItems.length > 0 ? 'mt-2' : ''"
+              @keydown.enter.prevent />
           </ComboboxInput>
         </ComboboxAnchor>
 
         <ComboboxPortal>
-          <CommandList
-            position="popper"
-            class="w-[--radix-popper-anchor-width] rounded-md mt-2 border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
-          >
+          <CommandList position="popper"
+            class="w-[--radix-popper-anchor-width] rounded-md mt-2 border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2">
             <CommandEmpty />
             <CommandGroup>
-              <CommandItem
-                v-for="item in filteredItems"
-                :key="item"
-                :value="item"
-                @select.prevent="selectItem(item)"
-              >
+              <CommandItem v-for="item in filteredItems" :key="item" :value="item" @select.prevent="selectItem(item)">
                 {{ item }}
               </CommandItem>
             </CommandGroup>
@@ -96,7 +86,7 @@ const filteredItems = computed(() => {
   return props.items.filter((item) => !selectedItems.value.includes(item))
 })
 
-function selectItem(item) {
+function selectItem (item) {
   if (!selectedItems.value.includes(item)) {
     selectedItems.value.push(item)
   }

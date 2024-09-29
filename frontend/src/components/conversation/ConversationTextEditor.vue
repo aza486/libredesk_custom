@@ -39,6 +39,7 @@ const editor = ref(
       StarterKit,
       Image.configure({
         HTMLAttributes: {
+          // Common class for all inline images.
           class: 'inline-image',
         },
       }),

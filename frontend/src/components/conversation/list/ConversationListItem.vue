@@ -3,6 +3,7 @@
     :class="{ 'bg-slate-100': conversation.uuid === conversationStore.conversation.data?.uuid }"
     v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid"
     @click="router.push('/conversations/' + conversation.uuid)">
+
     <div class="pl-3">
       <Avatar class="size-[45px]">
         <AvatarImage :src="conversation.avatar_url" v-if="conversation.avatar_url" />
@@ -11,11 +12,12 @@
         </AvatarFallback>
       </Avatar>
     </div>
+  
     <div class="ml-3 w-full border-b pb-2">
       <div class="flex justify-between pt-2 pr-3">
         <div>
           <p class="text-xs text-gray-600 flex gap-x-1">
-            <Mail size="12" />
+            <Mail size="13" />
             {{ conversation.inbox_name }}
           </p>
           <p class="text-base font-normal">
@@ -49,7 +51,6 @@
 import { useRouter } from 'vue-router'
 import { useConversationStore } from '@/stores/conversation'
 import { formatTime } from '@/utils/datetime'
-
 import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 

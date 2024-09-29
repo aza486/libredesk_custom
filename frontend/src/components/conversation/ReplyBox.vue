@@ -49,13 +49,13 @@ import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 
-import Editor from './Editor.vue'
+import Editor from './ConversationTextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { useCannedResponses } from '@/stores/canned_responses'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEmitter } from '@/composables/useEmitter'
 import AttachmentsPreview from '@/components/attachment/AttachmentsPreview.vue'
-import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxBottomMenuBar.vue'
+import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxMenuBar.vue'
 
 const emitter = useEmitter()
 const clearContent = ref(false)

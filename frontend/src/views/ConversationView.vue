@@ -1,5 +1,4 @@
 <template>
-  <!-- Resizable panel last resize value is stored in the localstorage -->
   <ResizablePanelGroup direction="horizontal" auto-save-id="conversation.vue.resizable.panel">
     <ResizablePanel :min-size="23" :default-size="23" :max-size="40">
       <ConversationList></ConversationList>
@@ -25,9 +24,9 @@
 import { onMounted, watch } from 'vue'
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import ConversationList from '@/components/conversationlist/ConversationList.vue'
+import ConversationList from '@/components/conversation/list/ConversationList.vue'
 import Conversation from '@/components/conversation/ConversationPage.vue'
-import ConversationSideBar from '@/components/conversation/ConversationSideBar.vue'
+import ConversationSideBar from '@/components/conversation/sidebar/ConversationSideBar.vue'
 import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'
 import { useConversationStore } from '@/stores/conversation'
 

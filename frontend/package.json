@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
-    "@heroicons/vue": "^2.1.1",
     "@internationalized/date": "^3.5.5",
     "@radix-icons/vue": "^1.0.0",
     "@tailwindcss/typography": "^0.5.10",
