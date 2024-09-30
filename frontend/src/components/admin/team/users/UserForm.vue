@@ -29,21 +29,24 @@
       </FormItem>
     </FormField>
 
-    <FormField name="teams" v-slot="{ componentField }">
-      <FormItem>
-        <FormLabel>Select teams</FormLabel>
+
+    <FormField name="teams">
+      <FormItem v-auto-animate>
+        <FormLabel>Teams</FormLabel>
         <FormControl>
-          <SelectTag v-model="componentField.modelValue" :items="teamNames" placeHolder="Select teams"></SelectTag>
+          <SelectTag v-model="selectedTeams" :items="teamNames" :initialValue="initialTeamNames"
+            placeHolder="Select teams"></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField name="roles" v-slot="{ componentField }">
-      <FormItem>
-        <FormLabel>Select roles</FormLabel>
+    <FormField name="roles">
+      <FormItem v-auto-animate>
+        <FormLabel>Roles</FormLabel>
         <FormControl>
-          <SelectTag v-model="componentField.modelValue" :items="roleNames" placeHolder="Select roles"></SelectTag>
+          <SelectTag v-model="selectedRoles" :items="roleNames" :initialValue="initialValues.roles"
+            placeHolder="Select roles"></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -81,6 +84,9 @@ import api from '@/api'
 
 const teams = ref([])
 const roles = ref([])
+const selectedRoles = ref([])
+const selectedTeams = ref([])
+const initialTeamNames = computed(() => props.initialValues.teams?.map(team => team.name) || [])
 
 const props = defineProps({
   initialValues: {
@@ -125,17 +131,19 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
+  values.teams = selectedTeams.value.map(team => ({ name: team }))
+  values.roles = selectedRoles.value
   props.submitForm(values)
 })
 
-// Watch for changes in initialValues and update the form.
 watch(
   () => props.initialValues,
   (newValues) => {
     // Hack.
-    setTimeout(() => form.setValues(newValues), 50)
-    console.log(newValues)
+    if (Object.keys(newValues).length)
+      setTimeout(() => form.setValues(newValues), 0)
   },
   { deep: true, immediate: true }
 )
+
 </script>

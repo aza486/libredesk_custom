@@ -14,10 +14,14 @@ import OIDCForm from './OIDCForm.vue'
 import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 
 const oidc = ref({
   provider: 'Google'
 })
+const emitter = useEmitter()
 const isLoading = ref(false)
 const formLoading = ref(false)
 const router = useRouter()
@@ -31,12 +35,19 @@ const props = defineProps({
 const submitForm = async (values) => {
   try {
     formLoading.value = true
+    let toastDescription = ''
     if (props.id) {
       await api.updateOIDC(props.id, values)
+      toastDescription = 'Updated successfully'
     } else {
       await api.createOIDC(values)
+      toastDescription = 'Created successfully'
       router.push('/admin/oidc')
     }
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Saved',
+      description: toastDescription,
+    })
   } finally {
     formLoading.value = false
 
@@ -63,7 +74,11 @@ onMounted(async () => {
       const resp = await api.getOIDC(props.id)
       oidc.value = resp.data.data
     } catch (error) {
-      console.log(error)
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Could not fetch OIDC config',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
     } finally {
       isLoading.value = false
     }

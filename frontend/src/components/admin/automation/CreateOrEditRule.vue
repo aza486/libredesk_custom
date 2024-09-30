@@ -31,11 +31,11 @@
             </FormItem>
           </FormField>
 
-          <FormField v-slot="{ field }" name="type">
+          <FormField v-slot="{ componentField }" name="type">
             <FormItem v-auto-animate>
               <FormLabel>Type</FormLabel>
               <FormControl>
-                <Select v-bind="field" :modelValue="field.value" defaultValue="new_conversation">
+                <Select v-bind="componentField">
                   <SelectTrigger>
                     <SelectValue placeholder="Select a type" />
                   </SelectTrigger>
@@ -55,31 +55,30 @@
         </div>
 
         <p class="font-semibold">Match these rules</p>
-        
+
         <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
           @remove-condition="handleRemoveCondition" :groupIndex="0" v-auto-animate />
-        
-          <div class="flex justify-center" v-auto-animate>
+
+        <div class="flex justify-center" v-auto-animate>
           <div class="flex items-center space-x-2">
             <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
-              @click="toggleGroupOperator('AND')">
+              @click.prevent="toggleGroupOperator('AND')">
               AND
             </Button>
             <Button :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
-              @click="toggleGroupOperator('OR')">
+              @click.prevent="toggleGroupOperator('OR')">
               OR
             </Button>
           </div>
         </div>
-        
+
         <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-          @remove-condition="handleRemoveCondition" :groupIndex="1"  v-auto-animate/>
+          @remove-condition="handleRemoveCondition" :groupIndex="1" v-auto-animate />
         <p class="font-semibold">Perform these actions</p>
-        
+
         <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
           @remove-action="handleRemoveAction" v-auto-animate />
-        
-          <Button @click="handleSave" :isLoading="isLoading" size="sm">Save</Button>
+        <Button type="submit" :isLoading="isLoading" size="sm">Save</Button>
       </div>
     </form>
   </div>
@@ -99,6 +98,7 @@ import { formSchema } from './formSchema.js'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { useRouter } from 'vue-router'
 import {
   Select,
   SelectContent,
@@ -119,6 +119,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 
 const isLoading = ref(false)
+const router = useRouter()
 const emitter = useEmitter()
 const rule = ref({
   id: 0,
@@ -233,22 +234,33 @@ const form = useForm({
   validationSchema: toTypedSchema(formSchema)
 })
 
-const onSubmit = form.handleSubmit(async () => {
-  handleSave()
+const onSubmit = form.handleSubmit(async (values) => {
+  handleSave(values)
 })
 
-const handleSave = async () => {
+const handleSave = async (values) => {
+  if (!areRulesValid()) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Invalid rules',
+      variant: 'destructive',
+      description: "Make sure your rules have atleast one action and one rule."
+    })
+    return
+  }
+
   try {
     isLoading.value = true
-    const updatedRule = { ...rule.value }
+    const updatedRule = { ...rule.value, ...values }
     // Delete fields not required.
     delete updatedRule.created_at
     delete updatedRule.updated_at
     if (props.id > 0) await api.updateAutomationRule(props.id, updatedRule)
     else await api.createAutomationRule(updatedRule)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: "Rule saved"
+      title: 'Saved',
+      description: "Rule saved successfully"
     })
+    router.push("/admin/automations")
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Could not save rule',
@@ -258,6 +270,25 @@ const handleSave = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+// TODO: Figure out how to validate with vee-validate.
+const areRulesValid = () => {
+  // Must have atleast one action.
+  if (rule.value.rules[0].actions.length == 0) {
+    return false
+  }
+
+  // Must have atleast 1 group.
+  if (rule.value.rules[0].groups.length == 0) {
+    return false
+  }
+
+  // Group should have atleast one rule.
+  if (rule.value.rules[0].groups[0].rules.length == 0) {
+    return false
+  }
+  return true
 }
 
 onMounted(async () => {

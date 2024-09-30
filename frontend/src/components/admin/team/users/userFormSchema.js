@@ -18,10 +18,5 @@ export const userFormSchema = z.object({
     .email({
       message: 'Invalid email address.'
     }),
-
-  teams: z.array(z.string()).optional(),
-
-  roles: z.array(z.string()).optional(),
-
   send_welcome_email: z.boolean().optional()
 })

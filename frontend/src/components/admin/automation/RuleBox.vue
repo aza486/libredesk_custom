@@ -57,7 +57,7 @@
                 </SelectContent>
               </Select>
             </div>
-            <div class="cursor-pointer" @click="removeCondition(index)">
+            <div class="cursor-pointer" @click.prevent="removeCondition(index)">
               <CircleX size="21" />
             </div>
           </div>
@@ -80,7 +80,7 @@
         </div>
       </div>
       <div>
-        <Button variant="outline" size="sm" @click="addCondition">Add condition</Button>
+        <Button variant="outline" size="sm" @click.prevent="addCondition">Add condition</Button>
       </div>
     </div>
   </div>

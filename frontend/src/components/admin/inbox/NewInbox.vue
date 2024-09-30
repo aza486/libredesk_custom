@@ -60,7 +60,6 @@
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast/use-toast'
-import { handleHTTPError } from '@/utils/http'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
 import { Check, Mail } from 'lucide-vue-next'
@@ -74,10 +73,20 @@ import {
 } from '@/components/ui/stepper'
 import EmailInboxForm from '@/components/admin/inbox/EmailInboxForm.vue'
 import api from '@/api'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 
+const emitter = useEmitter()
 const isLoading = ref(false)
 const currentStep = ref(1)
 const selectedChannel = ref(null)
+const router = useRouter()
+const breadcrumbLinks = [
+  { path: '/admin/inboxes', label: 'Inboxes' },
+  { path: '#', label: 'New Inbox' }
+]
+
 
 const steps = [
   {
@@ -110,14 +119,6 @@ const channels = [
   }
 ]
 
-const breadcrumbLinks = [
-  { path: '/admin/inboxes', label: 'Inboxes' },
-  { path: '#', label: 'New Inbox' }
-]
-
-const router = useRouter()
-const { toast } = useToast()
-
 const goBack = () => {
   currentStep.value = 1
   selectedChannel.value = null
@@ -145,10 +146,14 @@ async function createInbox (payload) {
   try {
     isLoading.value = true
     await api.createInbox(payload)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Saved',
+      description: 'Inbox created successfully'
+    })
     router.push('/admin/inboxes')
   } catch (error) {
-    toast({
-      title: 'Could not create inbox.',
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not create inbox',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

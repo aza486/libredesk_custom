@@ -11,9 +11,13 @@ import { onMounted, ref } from 'vue'
 import api from '@/api'
 import TeamForm from '@/components/admin/team/teams/TeamForm.vue'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 import { Spinner } from '@/components/ui/spinner'
 
 const team = ref({})
+const emitter = useEmitter()
 const formLoading = ref(false)
 const isLoading = ref(false)
 
@@ -31,8 +35,16 @@ const updateTeam = async (payload) => {
   try {
     formLoading.value = true
     await api.updateTeam(team.value.id, payload)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Saved',
+      description: "Updated successfully"
+    })
   } catch (error) {
-    console.log(error)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not update team',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     formLoading.value = false
   }
@@ -44,7 +56,11 @@ onMounted(async () => {
     const resp = await api.getTeam(props.id)
     team.value = resp.data.data
   } catch (error) {
-    console.log(error)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not fetch team',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     isLoading.value = false
   }

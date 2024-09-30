@@ -50,7 +50,7 @@ const allNavItems = [
     permission: null,
   },
   {
-    title: 'OpenID',
+    title: 'OpenID Connect SSO',
     href: '/admin/oidc',
     description: 'Manage OpenID SSO configurations',
     permission: null,
@@ -63,7 +63,7 @@ const sidebarNavItems = computed(() =>
 </script>
 
 <template>
-  <div class="space-y-4 md:block overflow-y-scroll">
+  <div class="space-y-4 md:block overflow-y-auto">
     <PageHeader title="Admin settings" subTitle="Manage your helpdesk settings." />
     <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-10 lg:space-y-5">
       <aside class="lg:w-1/6 md:w-1/7 h-[calc(100vh-10rem)] border-r pr-3">

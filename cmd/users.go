@@ -15,7 +15,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
-	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 )
 
@@ -122,9 +121,9 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 			app.media.DeleteMedia(fileName)
 		}
 
-		// Update user with new avatar.
-		currentUser.AvatarURL = null.StringFrom("/" + path.Join(app.media.UploadPath, srcFileName))
-		if err := app.user.UpdateUser(user.ID, currentUser); err != nil {
+		// Update user avatar.
+		avatar:= "/" + path.Join(app.media.UploadPath, srcFileName)
+		if err := app.user.UpdateAvatar(user.ID, avatar); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}

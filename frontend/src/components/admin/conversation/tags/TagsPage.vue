@@ -22,7 +22,7 @@
                   <FormMessage />
                 </FormItem>
               </FormField>
-              <DialogFooter>
+              <DialogFooter class="mt-7">
                 <Button type="submit" size="sm">Save Changes</Button>
               </DialogFooter>
             </form>

@@ -92,9 +92,6 @@ import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
-import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { useEmitter } from '@/composables/useEmitter'
-import { handleHTTPError } from '@/utils/http'
 import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
@@ -120,10 +117,13 @@ import {
   TagsInputItemText
 } from '@/components/ui/tags-input'
 import { Input } from '@/components/ui/input'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 
+const emitter = useEmitter()
 const isLoading = ref(false)
 const formLoading = ref(true)
-const emitter = useEmitter()
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -153,7 +153,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Something went wrong',
+      title: 'Could not update settings',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

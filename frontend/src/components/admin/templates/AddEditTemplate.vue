@@ -34,14 +34,18 @@ const props = defineProps({
 const submitForm = async (values) => {
   try {
     formLoading.value = true
+    let toastDescription = ''
     if (props.id) {
       await api.updateTemplate(props.id, values)
+      toastDescription = 'Template updated successfully'
     } else {
       await api.createTemplate(values)
+      toastDescription = 'Template created successfully'
       router.push('/admin/templates')
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: "Saved"
+      title: 'Saved',
+      description: toastDescription,
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

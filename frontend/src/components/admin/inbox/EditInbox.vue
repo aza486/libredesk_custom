@@ -3,26 +3,27 @@
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
   <Spinner v-if="formLoading"></Spinner>
-  <EmailInboxForm :initialValues="inbox" :submitForm="submitForm" :isLoading="isLoading" v-else/>
+  <EmailInboxForm :initialValues="inbox" :submitForm="submitForm" :isLoading="isLoading" v-else />
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
 import api from '@/api'
 import EmailInboxForm from '@/components/admin/inbox/EmailInboxForm.vue'
-import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
 import { Spinner } from '@/components/ui/spinner'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 
+const emitter = useEmitter()
+const formLoading = ref(false)
+const isLoading = ref(false)
+const inbox = ref({})
 const breadcrumbLinks = [
   { path: '/admin/inboxes', label: 'Inboxes' },
   { path: '#', label: 'Edit Inbox' }
 ]
-
-const formLoading = ref(false)
-const isLoading = ref(false)
-const router = useRouter()
-const inbox = ref({})
 
 const submitForm = (values) => {
   const channelName = inbox.value.channel
@@ -42,9 +43,16 @@ const updateInbox = async (payload) => {
   try {
     isLoading.value = true
     await api.updateInbox(inbox.value.id, payload)
-    router.push('/admin/inboxes')
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Saved',
+      description: 'Inbox updated succcessfully'
+    })
   } catch (error) {
-    console.log(error)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not update inbox',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     isLoading.value = false
   }
@@ -66,7 +74,11 @@ onMounted(async () => {
 
     inbox.value = inboxData
   } catch (error) {
-    console.log(error)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not fetch inbox',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     formLoading.value = false
   }

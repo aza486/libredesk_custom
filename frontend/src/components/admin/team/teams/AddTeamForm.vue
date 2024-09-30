@@ -7,14 +7,17 @@
 
 <script setup>
 import { ref } from 'vue'
-import { handleHTTPError } from '@/utils/http'
 import TeamForm from '@/components/admin/team/teams/TeamForm.vue'
-import { useToast } from '@/components/ui/toast/use-toast'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { useRouter } from 'vue-router'
 import api from '@/api'
 
-const { toast } = useToast()
 const formLoading = ref(false)
+const router = useRouter()
+const emitter = useEmitter()
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
   { path: '/admin/teams/teams', label: 'Teams' },
@@ -29,9 +32,14 @@ const createTeam = async (values) => {
   try {
     formLoading.value = true
     await api.createTeam(values)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Saved',
+      description: "Team created successfully"
+    })
+    router.push('/admin/teams/teams')
   } catch (error) {
-    toast({
-      title: 'Could not create team.',
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Something went wrong',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

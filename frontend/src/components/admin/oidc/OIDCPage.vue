@@ -1,6 +1,6 @@
 <template>
   <div class="flex justify-between mb-5">
-    <PageHeader title="OIDC" description="Manage OpenID SSO configurations" />
+    <PageHeader title="OpenID Connect SSO" description="Manage OpenID SSO configurations" />
     <div>
       <Button size="sm" @click="navigateToAddOIDC">New OIDC</Button>
     </div>

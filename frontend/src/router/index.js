@@ -4,14 +4,6 @@ import ConversationsView from '../views/ConversationView.vue'
 import UserLoginView from '../views/UserLoginView.vue'
 import AccountView from '@/views/AccountView.vue'
 import AdminView from '@/views/AdminView.vue'
-import Inbox from '@/components/admin/inbox/InboxPage.vue'
-import Team from '@/components/admin/team/TeamPage.vue'
-import Teams from '@/components/admin/team/teams/TeamsPage.vue'
-import Users from '@/components/admin/team/users/UsersCard.vue'
-import Automation from '@/components/admin/automation/AutomationPage.vue'
-import General from '@/components/admin/general/GeneralPage.vue'
-import Templates from '@/components/admin/templates/TemplatesPage.vue'
-import OIDC from '@/components/admin/oidc/OIDCPage.vue'
 
 const routes = [
   {
@@ -50,7 +42,7 @@ const routes = [
     children: [
       {
         path: 'inboxes',
-        component: Inbox
+        component: () => import('@/components/admin/inbox/InboxPage.vue')
       },
       {
         path: 'inboxes/new',
@@ -67,11 +59,11 @@ const routes = [
       },
       {
         path: 'teams',
-        component: Team
+        component: () => import('@/components/admin/team/TeamPage.vue')
       },
       {
         path: 'teams/users',
-        component: Users
+        component: () => import('@/components/admin/team/users/UsersCard.vue')
       },
       {
         path: 'teams/users/new',
@@ -84,7 +76,7 @@ const routes = [
       },
       {
         path: 'teams/teams',
-        component: Teams
+        component: () => import('@/components/admin/team/teams/TeamsPage.vue')
       },
       {
         path: 'teams/teams/new',
@@ -110,7 +102,7 @@ const routes = [
       },
       {
         path: 'automations',
-        component: Automation
+        component: () => import('@/components/admin/automation/AutomationPage.vue')
       },
       {
         path: 'automations/new',
@@ -124,11 +116,11 @@ const routes = [
       },
       {
         path: 'general',
-        component: General
+        component: () => import('@/components/admin/general/GeneralPage.vue')
       },
       {
         path: 'templates',
-        component: Templates
+        component: () => import('@/components/admin/templates/TemplatesPage.vue')
       },
       {
         path: 'templates/:id/edit',
@@ -141,7 +133,7 @@ const routes = [
       },
       {
         path: 'oidc',
-        component: OIDC
+        component: () => import('@/components/admin/oidc/OIDCPage.vue')
       },
       {
         path: 'oidc/:id/edit',

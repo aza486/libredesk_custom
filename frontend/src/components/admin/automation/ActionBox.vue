@@ -26,7 +26,7 @@
               </SelectGroup>
             </SelectContent>
           </Select>
-          <div class="cursor-pointer" @click="removeAction(index)">
+          <div class="cursor-pointer" @click.prevent="removeAction(index)">
             <CircleX size="21" />
           </div>
         </div>
@@ -41,7 +41,7 @@
       </div>
     </div>
     <div>
-      <Button variant="outline" @click="addAction" size="sm">Add action</Button>
+      <Button variant="outline" @click.prevent="addAction" size="sm">Add action</Button>
     </div>
   </div>
 </template>
