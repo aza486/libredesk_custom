@@ -91,7 +91,7 @@ func noAuthPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler
 		// User is logged in direct if `next` is available else redirect.
 		nextURI := string(r.RequestCtx.QueryArgs().Peek("next"))
 		if len(nextURI) == 0 {
-			nextURI = "/"
+			nextURI = "/dashboard"
 		}
 
 		return r.RedirectURI(nextURI, fasthttp.StatusFound, nil, "")
