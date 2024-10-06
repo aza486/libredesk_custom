@@ -18,7 +18,6 @@ import { LineChart } from '@/components/ui/chart-line'
 const props = defineProps({
   data: {
     type: Array,
-    required: true,
     default: () => []
   }
 })

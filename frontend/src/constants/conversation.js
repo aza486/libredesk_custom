@@ -8,6 +8,6 @@ export const CONVERSATION_FILTERS = {
 
 export const CONVERSATION_LIST_TYPE = {
   ASSIGNED: 'assigned',
-  UNASSIGNED: 'unassigned',
+  UNASSIGNED: 'team',
   ALL: 'all'
 }

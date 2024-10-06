@@ -5,7 +5,7 @@ VERSION := $(shell git describe --tags)
 BUILDSTR := ${VERSION} (Commit: ${LAST_COMMIT_DATE} (${LAST_COMMIT}), Build: $(shell date +"%Y-%m-%d %H:%M:%S %z"))
 
 BIN_ARTEMIS := artemis.bin
-STATIC := frontend/dist i18n
+STATIC := frontend/dist i18n schema.sql
 GOPATH ?= $(HOME)/go
 STUFFBIN ?= $(GOPATH)/bin/stuffbin
 

@@ -59,9 +59,9 @@ func New(opts Opts) (*Manager, error) {
 
 // GetAll retrieves all teams.
 func (u *Manager) GetAll() ([]models.Team, error) {
-	var teams []models.Team
+	var teams = make([]models.Team, 0)
 	if err := u.q.GetTeams.Select(&teams); err != nil {
-		if errors.Is(sql.ErrNoRows, err) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return teams, nil
 		}
 		u.lo.Error("error fetching teams from db", "error", err)
@@ -74,7 +74,7 @@ func (u *Manager) GetAll() ([]models.Team, error) {
 func (u *Manager) GetTeam(id int) (models.Team, error) {
 	var team models.Team
 	if err := u.q.GetTeam.Get(&team, id); err != nil {
-		if errors.Is(sql.ErrNoRows, err) {
+		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("team not found", "id", id, "error", err)
 			return team, nil
 		}

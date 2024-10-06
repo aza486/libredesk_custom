@@ -96,7 +96,7 @@ const redirectToOIDC = (provider) => {
 }
 
 const validateForm = () => {
-  if (!validateEmail(loginForm.value.email)) {
+  if (!validateEmail(loginForm.value.email)  && loginForm.value.email !== 'System') {
     errorMessage.value = 'Invalid email address.'
     useTemporaryClass('login-container', 'animate-shake')
     return false
@@ -144,7 +144,10 @@ const enabledOIDCProviders = computed(() => {
   return oidcProviders.value.filter((provider) => !provider.disabled)
 })
 
-const emailHasError = computed(() => !validateEmail(loginForm.value.email) && loginForm.value.email !== '')
+const emailHasError = computed(() => {
+  const email = loginForm.value.email;
+  return email !== 'System' && !validateEmail(email) && email !== '';
+})
 const passwordHasError = computed(() => !loginForm.value.password && loginForm.value.password !== '')
 
 </script>

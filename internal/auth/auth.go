@@ -75,12 +75,12 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 	}
 
 	sess := simplesessions.New(simplesessions.Options{
-		EnableAutoCreate: false,
+		EnableAutoCreate: true,
 		SessionIDLength:  64,
 		Cookie: simplesessions.CookieOptions{
 			IsHTTPOnly: true,
 			IsSecure:   true,
-			MaxAge:     time.Hour * 12,
+			MaxAge:     time.Hour * 6,
 		},
 	})
 
@@ -166,12 +166,14 @@ func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
+		a.logger.Error("error acquiring session", "error", err)
 		return models.User{}, err
 	}
 
 	// Get the session variables
 	sessVals, err := sess.GetMulti("id", "email", "first_name", "last_name")
 	if err != nil {
+		a.logger.Error("error fetching session variables", "error", err)
 		return models.User{}, err
 	}
 
@@ -184,7 +186,6 @@ func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 
 	// Logged in?
 	if userID <= 0 {
-		a.logger.Error("error fetching session", "error", err)
 		return models.User{}, err
 	}
 
@@ -203,7 +204,7 @@ func (a *Auth) DestroySession(r *fastglue.Request) error {
 		a.logger.Error("error acquiring session", "error", err)
 		return err
 	}
-	if err := sess.Destroy(); err != nil {
+	if err := sess.Clear(); err != nil {
 		a.logger.Error("error clearing session", "error", err)
 		return err
 	}

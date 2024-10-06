@@ -322,22 +322,8 @@ SELECT
     m.uuid,
     m.private,
     m.sender_type,
-    u.uuid as sender_uuid,
-    COALESCE(
-        json_agg(
-            json_build_object(
-                'name', a.filename,
-                'content_type', a.content_type,
-                'uuid', a.uuid,
-                'size', a.size
-            ) ORDER BY a.filename
-        ) FILTER (WHERE a.message_id IS NOT NULL), 
-        '[]'::json
-    ) AS attachments
+    u.uuid as sender_uuid
 FROM messages m
-LEFT JOIN attachments a 
-    ON a.message_id = m.id 
-    AND a.content_disposition = 'attachment'
 LEFT JOIN users u on u.id = m.sender_id
 WHERE m.uuid = $1
 GROUP BY 

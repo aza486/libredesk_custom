@@ -82,6 +82,8 @@ func initFlags() {
 	f.StringSlice("config", []string{"config.toml"},
 		"path to one or more config files (will be merged in order)")
 	f.Bool("version", false, "show current version of the build")
+	f.Bool("install", false, "setup database")
+	f.Bool("set-system-user-password", false, "set password for the system user")
 
 	if err := f.Parse(os.Args[1:]); err != nil {
 		log.Fatalf("loading flags: %v", err)
@@ -151,7 +153,7 @@ func loadSettings(m *setting.Manager) {
 	}
 }
 
-func initSettingsManager(db *sqlx.DB) *setting.Manager {
+func initSettings(db *sqlx.DB) *setting.Manager {
 	s, err := setting.New(setting.Opts{
 		DB: db,
 		Lo: initLogger("settings"),

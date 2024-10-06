@@ -36,7 +36,7 @@ func perm(handler fastglue.FastRequestHandler, obj, act string) fastglue.FastReq
 			return r.SendErrorEnvelope(http.StatusForbidden, "Permission denied", nil, envelope.PermissionError)
 		}
 
-		// Call the handler.
+		// Return handler.
 		return handler(r)
 	}
 }
@@ -88,10 +88,10 @@ func noAuthPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler
 			return handler(r)
 		}
 
-		// User is logged in direct if `next` is available else redirect to the dashboard.
+		// User is logged in direct if `next` is available else redirect.
 		nextURI := string(r.RequestCtx.QueryArgs().Peek("next"))
 		if len(nextURI) == 0 {
-			nextURI = "/dashboard"
+			nextURI = "/"
 		}
 
 		return r.RedirectURI(nextURI, fasthttp.StatusFound, nil, "")

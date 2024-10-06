@@ -52,7 +52,7 @@ func New(opts Opts) (*Manager, error) {
 
 // GetAll retrieves all tags.
 func (t *Manager) GetAll() ([]models.Tag, error) {
-	var tags []models.Tag
+	var tags = make([]models.Tag, 0)
 	if err := t.q.GetAllTags.Select(&tags); err != nil {
 		t.lo.Error("error fetching tags", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, "Error fetching tags", nil)

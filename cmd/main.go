@@ -69,18 +69,41 @@ func main() {
 	// Load the config files into Koanf.
 	initConfig(ko)
 
+	// Init stuffbin fs.
+	fs := initFS()
+
 	// Init DB.
 	db := initDB()
 
+	// Installer.
+	if ko.Bool("install") {
+		install(db, fs)
+		os.Exit(0)
+	}
+
+	if ko.Bool("set-system-user-password") {
+		setSystemUserPass(db)
+		os.Exit(0)
+	}
+
+	// Check if schema is installed.
+	installed, err := checkSchema(db)
+	if err != nil {
+		log.Fatalf("error checking db schema: %v", err)
+	}
+	if !installed {
+		log.Println("Database tables are missing. Use the `--install` flag to set up the database schema.")
+		os.Exit(0)
+	}
+
 	// Load app settings from DB into Koanf.
-	setting := initSettingsManager(db)
-	loadSettings(setting)
+	settings := initSettings(db)
+	loadSettings(settings)
 
 	var (
 		shutdownCh   = make(chan struct{})
 		ctx, stop    = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 		wsHub        = ws.NewHub()
-		fs           = initFS()
 		i18n         = initI18n(fs)
 		lo           = initLogger("artemis")
 		rdb          = initRedis()
@@ -127,7 +150,7 @@ func main() {
 		fs:           fs,
 		i18n:         i18n,
 		media:        media,
-		setting:      setting,
+		setting:      settings,
 		contact:      contact,
 		inbox:        inbox,
 		user:         user,

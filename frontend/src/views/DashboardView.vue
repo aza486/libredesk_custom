@@ -69,7 +69,8 @@ const getCardStats = () => {
 const getDashboardCharts = () => {
   return api.getGlobalDashboardCharts()
     .then((resp) => {
-      chartData.value = resp.data.data
+      chartData.value.new_conversations = resp.data.data.new_conversations || []
+      chartData.value.status_summary = resp.data.data.status_summary || []
     })
     .catch((err) => {
       toast({

@@ -103,7 +103,6 @@ func (s *Service) worker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			s.lo.Info("worker exiting due to context cancellation")
 			return
 		case message := <-s.messageChannel:
 			sender, exists := s.providers[message.Provider]

@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
@@ -30,7 +31,9 @@ var (
 )
 
 const (
-	SystemUserUUID = "00000000-0000-0000-0000-000000000000"
+	SystemUserEmail          = "System"
+	MinSystemUserPasswordLen = 8
+	MaxSystemUserPasswordLen = 50
 )
 
 // Manager handles user-related operations.
@@ -48,15 +51,15 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	CreateUser         *sqlx.Stmt `query:"create-user"`
-	GetUsers           *sqlx.Stmt `query:"get-users"`
-	GetUser            *sqlx.Stmt `query:"get-user"`
-	GetEmail           *sqlx.Stmt `query:"get-email"`
-	GetPermissions     *sqlx.Stmt `query:"get-permissions"`
-	GetUserByEmail     *sqlx.Stmt `query:"get-user-by-email"`
-	UpdateUser         *sqlx.Stmt `query:"update-user"`
-	UpdateAvatar       *sqlx.Stmt `query:"update-avatar"`
-	SetUserPassword    *sqlx.Stmt `query:"set-user-password"`
+	CreateUser      *sqlx.Stmt `query:"create-user"`
+	GetUsers        *sqlx.Stmt `query:"get-users"`
+	GetUser         *sqlx.Stmt `query:"get-user"`
+	GetEmail        *sqlx.Stmt `query:"get-email"`
+	GetPermissions  *sqlx.Stmt `query:"get-permissions"`
+	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
+	UpdateUser      *sqlx.Stmt `query:"update-user"`
+	UpdateAvatar    *sqlx.Stmt `query:"update-avatar"`
+	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -79,7 +82,7 @@ func (u *Manager) Login(email string, password []byte) (models.User, error) {
 	var user models.User
 
 	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
-		if errors.Is(sql.ErrNoRows, err) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
@@ -97,7 +100,7 @@ func (u *Manager) Login(email string, password []byte) (models.User, error) {
 func (u *Manager) GetUsers() ([]models.User, error) {
 	var users []models.User
 	if err := u.q.GetUsers.Select(&users); err != nil {
-		if errors.Is(sql.ErrNoRows, err) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
 		}
 		u.lo.Error("error fetching users from db", "error", err)
@@ -156,7 +159,7 @@ func (u *Manager) GetByEmail(email string) (models.User, error) {
 
 // GetSystemUser retrieves the system user.
 func (u *Manager) GetSystemUser() (models.User, error) {
-	return u.Get(0, SystemUserUUID)
+	return u.GetByEmail(SystemUserEmail)
 }
 
 // UpdateAvatar updates the user avatar.
@@ -208,22 +211,6 @@ func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {
 	return nil
 }
 
-// setPassword sets a new password for a user.
-func (u *Manager) setPassword(uid int, pwd string) error {
-	if len(pwd) > 72 {
-		return ErrPasswordTooLong
-	}
-	bytes, err := bcrypt.GenerateFromPassword([]byte(pwd), 12)
-	if err != nil {
-		return err
-	}
-	if _, err := u.q.SetUserPassword.Exec(bytes, uid); err != nil {
-		u.lo.Error("setting password", "error", err)
-		return fmt.Errorf("error setting password")
-	}
-	return nil
-}
-
 // generatePassword generates a random password and returns its bcrypt hash.
 func (u *Manager) generatePassword() ([]byte, error) {
 	password, _ := stringutil.RandomAlNumString(16)
@@ -233,4 +220,78 @@ func (u *Manager) generatePassword() ([]byte, error) {
 		return nil, fmt.Errorf("error generating bcrypt password: %w", err)
 	}
 	return bytes, nil
+}
+
+// CreateSystemUser inserts a default system user into the users table with the prompted password.
+func CreateSystemUser(db *sqlx.DB) error {
+	// Prompt for password and get hashed password
+	hashedPassword, err := promptAndHashPassword()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		INSERT INTO users (email, first_name, last_name, password, roles) 
+		VALUES ($1, $2, $3, $4, $5)`,
+		SystemUserEmail, "System", "", hashedPassword, pq.StringArray{"Admin"})
+	if err != nil {
+		return fmt.Errorf("failed to create system user: %v", err)
+	}
+	fmt.Println("System user created successfully")
+	return nil
+}
+
+// ChangeSystemUserPassword updates the system user's password with a newly prompted one.
+func ChangeSystemUserPassword(db *sqlx.DB) error {
+	// Prompt for password and get hashed password
+	hashedPassword, err := promptAndHashPassword()
+	if err != nil {
+		return err
+	}
+
+	// Update system user's password in the database.
+	if err := updateSystemUserPassword(db, hashedPassword); err != nil {
+		return fmt.Errorf("error updating system user password: %v", err)
+	}
+	fmt.Println("System user password updated successfully.")
+	return nil
+}
+
+// promptAndHashPassword handles password input and validation, and returns the hashed password.
+func promptAndHashPassword() ([]byte, error) {
+	var password string
+	for {
+		fmt.Print("Please set System admin password (min 8, max 50 characters, at least 1 uppercase letter, 1 number): ")
+		fmt.Scanf("%s", &password)
+		if isValidSystemUserPassword(password) {
+			break
+		}
+		fmt.Println("Password does not meet the strength requirements.")
+	}
+
+	// Hash the password using bcrypt.
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %v", err)
+	}
+	return hashedPassword, nil
+}
+
+// updateSystemUserPassword updates the password of the system user in the database.
+func updateSystemUserPassword(db *sqlx.DB, hashedPassword []byte) error {
+	_, err := db.Exec(`UPDATE users SET password = $1 WHERE email = $2`, hashedPassword, SystemUserEmail)
+	if err != nil {
+		return fmt.Errorf("failed to update system user password: %v", err)
+	}
+	return nil
+}
+
+// isValidSystemUserPassword checks if the password meets the required strength for system user.
+func isValidSystemUserPassword(password string) bool {
+	if len(password) < MinSystemUserPasswordLen || len(password) > MaxSystemUserPasswordLen {
+		return false
+	}
+	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
+	return hasUppercase && hasNumber
 }
