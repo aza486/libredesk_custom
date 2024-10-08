@@ -18,8 +18,8 @@ func perm(handler fastglue.FastRequestHandler, obj, act string) fastglue.FastReq
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
 
-		// Fetch user and permissions.
-		user, err = app.user.Get(user.ID, "")
+		// Fetch user and permissions from DB.
+		user, err = app.user.Get(user.ID)
 		if err != nil {
 			return r.SendErrorEnvelope(http.StatusInternalServerError, "Something went wrong", nil, envelope.GeneralError)
 		}
@@ -75,8 +75,9 @@ func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		if err != nil {
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
-		// User is loggedin, Set user in the request context.
-		r.RequestCtx.SetUserValue("user", user)
+		if user.ID >= 0 {
+			r.RequestCtx.SetUserValue("user", user)
+		}
 		return handler(r)
 	}
 }

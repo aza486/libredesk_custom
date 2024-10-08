@@ -6,7 +6,7 @@
     </ConversationListFilters>
 
     <!-- Error / Empty list -->
-    <EmptyList v-if="emptyConversations" title="No conversation found" message="Try adjusting filters."
+    <EmptyList v-if="emptyConversations" title="No conversations found" message="Try adjusting filters."
       :icon="MessageCircleQuestion"></EmptyList>
     <EmptyList v-if="conversationStore.conversations.errorMessage" title="Could not fetch conversations"
       :message="conversationStore.conversations.errorMessage" :icon="MessageCircleWarning"></EmptyList>

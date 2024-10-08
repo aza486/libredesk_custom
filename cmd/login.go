@@ -14,12 +14,10 @@ func handleLogin(r *fastglue.Request) error {
 		email    = string(p.Peek("email"))
 		password = p.Peek("password")
 	)
-
 	user, err := app.user.Login(email, password)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
 	if err := app.auth.SaveSession(user, r); err != nil {
 		app.lo.Error("error saving session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))

@@ -68,7 +68,7 @@ type teamStore interface {
 }
 
 type userStore interface {
-	Get(int, string) (umodels.User, error)
+	Get(int) (umodels.User, error)
 }
 
 type contactStore interface {
@@ -79,7 +79,7 @@ type mediaStore interface {
 	GetBlob(name string) ([]byte, error)
 	Attach(id int, model string, modelID int) error
 	GetModelMedia(id int, model string) ([]mmodels.Media, error)
-	UploadAndInsert(fileName, contentType, modelType string, modelID int, content io.ReadSeeker, fileSize int, meta []byte) (mmodels.Media, error)
+	UploadAndInsert(fileName, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition string, meta []byte) (mmodels.Media, error)
 }
 
 type inboxStore interface {
@@ -618,7 +618,7 @@ func (m *Manager) GetToAddress(conversationID int, channel string) ([]string, er
 func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, error) {
 	var out string
 	if err := m.q.GetLatestReceivedMessageSourceID.Get(&out, conversationID); err != nil {
-		m.lo.Error("error fetching `in reply to`", "error", err, "conversation_id", conversationID)
+		m.lo.Error("error fetching message source id", "error", err, "conversation_id", conversationID)
 		return out, err
 	}
 	return out, nil

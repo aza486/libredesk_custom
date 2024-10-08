@@ -13,7 +13,6 @@ func handleGetStatuses(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-
 	out, err := app.status.GetAll()
 	if err != nil {
 		return sendErrorEnvelope(r, err)

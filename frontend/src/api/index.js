@@ -101,7 +101,9 @@ const deleteAutomationRule = (id) => http.delete(`/api/automation/rules/${id}`)
 const getUser = (id) => http.get(`/api/users/${id}`)
 const getTeam = (id) => http.get(`/api/teams/${id}`)
 const getTeams = () => http.get('/api/teams')
+const getTeamsCompact = () => http.get('/api/teams/compact')
 const getUsers = () => http.get('/api/users')
+const getUsersCompact = () => http.get('/api/users/compact')
 const updateCurrentUser = (data) =>
   http.put('/api/users/me', data, {
     headers: {
@@ -258,6 +260,8 @@ export default {
   createStatus,
   updateStatus,
   deleteStatus,
+  getTeamsCompact,
+  getUsersCompact,
   getEmailNotificationSettings,
   updateEmailNotificationSettings,
 }

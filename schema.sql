@@ -82,9 +82,12 @@ CREATE TABLE media (
 	content_type TEXT NOT NULL,
 	model_id INT NULL,
 	model_type TEXT NULL,
+	disposition VARCHAR(50) NULL,
+	content_id TEXT NULL,
 	"size" INT NULL,
 	meta jsonb DEFAULT '{}'::jsonb NOT NULL,
 	CONSTRAINT constraint_media_on_filename CHECK (length(filename) <= 1000)
+	CONSTRAINT constraint_media_on_content_id CHECK (length(content_id) <= 100)
 );
 
 DROP TABLE IF EXISTS oidc CASCADE;
@@ -120,7 +123,7 @@ CREATE TABLE roles (
 -- Create roles.
 INSERT INTO roles
 (permissions, "name", description)
-VALUES('{conversations:read_team,conversations:read_all,conversations:read,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,templates:write,templates:read,roles:delete,roles:write,roles:read,inboxes:delete,inboxes:write,inboxes:read,automations:write,automations:delete,automations:read,teams:write,teams:read,users:write,users:read,dashboard_global:read,canned_responses:delete,tags:delete,canned_responses:write,tags:write,status:delete,status:write,status:read,oidc:delete,oidc:read,oidc:write,settings_notifications:read,settings_notifications:write,settings_general:write,templates:delete}', 'Admin', 'Role for users who have access to the admin panel.');
+VALUES('{conversations:read_team,conversations:read_all,conversations:read,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,templates:write,templates:read,roles:delete,roles:write,roles:read,inboxes:delete,inboxes:write,inboxes:read,automations:write,automations:delete,automations:read,teams:write,teams:read,users:write,users:read,dashboard_global:read,canned_responses:delete,tags:delete,canned_responses:write,tags:write,status:delete,status:write,status:read,oidc:delete,oidc:read,oidc:write,settings_notifications:read,settings_notifications:write,settings_general:write,templates:delete,admin:read}', 'Admin', 'Role for users who have access to the admin panel.');
 INSERT INTO roles
 (permissions, "name", description)
 VALUES('{conversations:read,conversations:read_team,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,status:write,status:delete,tags:write,tags:delete,canned_responses:write,canned_responses:delete,dashboard:global,users:write,users:read,teams:read,teams:write,automations:read,automations:write,automations:delete,inboxes:read,inboxes:write,inboxes:delete,roles:read,roles:write,roles:delete,templates:read,templates:write,messages:read,messages:write,dashboard_global:read,oidc:delete,status:read,oidc:write,settings_notifications:read,oidc:read,settings_general:write,settings_notifications:write,conversations:read_all,templates:delete}', 'Agent', 'Role for all agents with limited access.');
@@ -243,12 +246,11 @@ CREATE TABLE messages (
 	sender_id INT NULL,
 	private bool NULL,
 	content_type TEXT,
-	source_id TEXT NOT NULL,
+	source_id TEXT NULL,
 	meta jsonb DEFAULT '{}'::jsonb NULL,
 	inbox_id INT NULL,
 	sender_type varchar NULL,
 	created_at TIMESTAMPTZ DEFAULT now(),
-	CONSTRAINT constraint_messages_on_source_id_unique UNIQUE (source_id),
 	CONSTRAINT constraint_messages_on_content_type CHECK (length(content_type) <= 50)
 );
 

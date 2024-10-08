@@ -52,7 +52,7 @@ func New(opts Opts) (*Manager, error) {
 
 // GetAll retrieves all statuses.
 func (m *Manager) GetAll() ([]models.Status, error) {
-	var statuses []models.Status
+	var statuses = make([]models.Status, 0)
 	if err := m.q.GetAllStatuses.Select(&statuses); err != nil {
 		m.lo.Error("error fetching statuses", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, "Error fetching statuses", nil)

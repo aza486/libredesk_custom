@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
@@ -292,7 +291,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	}
 
 	// Assignment to another user.
-	assignee, err := m.userStore.Get(assigneeID, "")
+	assignee, err := m.userStore.Get(assigneeID)
 	if err != nil {
 		return err
 	}
@@ -479,31 +478,13 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 
 // uploadMessageAttachments uploads attachments for a message.
 func (m *Manager) uploadMessageAttachments(message *models.Message) error {
-	var (
-		hasInline bool
-	)
-
 	for _, attachment := range message.Attachments {
-		// Upload & insert the attachment.
+		m.lo.Debug("uploading message attachment", "name", attachment.Name)
 		reader := bytes.NewReader(attachment.Content)
-		media, err := m.mediaStore.UploadAndInsert(attachment.Name, attachment.ContentType, mmodels.ModelMessages, message.ID, reader, attachment.Size, []byte("{}"))
+		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
+		_, err := m.mediaStore.UploadAndInsert(attachment.Name, attachment.ContentType, attachment.ContentID, mmodels.ModelMessages, message.ID, reader, attachment.Size, attachment.Disposition, []byte("{}"))
 		if err != nil {
-			m.lo.Error("error uploading message media", "error", err)
-			return err
-		}
-
-		// Inline? Replace cids with actual URL.
-		if attachment.Disposition == mmodels.DispositionInline {
-			hasInline = true
-			message.Content = strings.ReplaceAll(message.Content, "cid:"+attachment.ContentID, media.URL)
-		}
-	}
-
-	// Update message content if the `cid:content_id` URLs have been replaced.
-	if hasInline {
-		if _, err := m.q.UpdateMessageContent.Exec(message.Content, message.ID); err != nil {
-			m.lo.Error("error updating message content", "error", err)
-			return err
+			continue
 		}
 	}
 	return nil

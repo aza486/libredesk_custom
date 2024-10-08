@@ -4,7 +4,7 @@
         <Tabs v-model="conversationType">
             <TabsList class="w-full flex justify-evenly">
                 <TabsTrigger value="assigned" class="w-full"> Assigned </TabsTrigger>
-                <TabsTrigger value="team" class="w-full"> Team </TabsTrigger>
+                <TabsTrigger value="team" class="w-full"> Unassigned </TabsTrigger>
                 <TabsTrigger value="all" class="w-full"> All </TabsTrigger>
             </TabsList>
         </Tabs>

@@ -10,12 +10,13 @@ import (
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
+	"github.com/zerodha/logf"
 )
 
-// TODO: pass logger.
 // Enforcer is a struct that holds the Casbin enforcer
 type Enforcer struct {
 	enforcer *casbin.Enforcer
+	lo       *logf.Logger
 }
 
 const casbinModel = `
@@ -33,7 +34,7 @@ m = r.sub == p.sub && r.obj == p.obj && r.act == p.act
 `
 
 // NewEnforcer initializes a new Enforcer with the hardcoded model
-func NewEnforcer() (*Enforcer, error) {
+func NewEnforcer(lo *logf.Logger) (*Enforcer, error) {
 	m, err := model.NewModelFromString(casbinModel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Casbin model: %v", err)
@@ -44,7 +45,7 @@ func NewEnforcer() (*Enforcer, error) {
 		return nil, fmt.Errorf("failed to create Casbin enforcer: %v", err)
 	}
 
-	return &Enforcer{enforcer: e}, nil
+	return &Enforcer{enforcer: e, lo: lo}, nil
 }
 
 // LoadPermissions adds the user's permissions to the Casbin enforcer if not already present
@@ -96,6 +97,15 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 		return true, nil
 	}
 
+	// Check for `read_assigned` permission
+	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_assigned")
+	if err != nil {
+		return false, envelope.NewError(envelope.GeneralError, "Error checking permissions", nil)
+	}
+	if allowed && conversation.AssignedUserID.Int == user.ID {
+		return true, nil
+	}
+
 	// Check for `read_team` permission
 	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_team")
 	if err != nil {
@@ -107,15 +117,6 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 				return true, nil
 			}
 		}
-	}
-
-	// Check for `read_assigned` permission
-	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_assigned")
-	if err != nil {
-		return false, envelope.NewError(envelope.GeneralError, "Error checking permissions", nil)
-	}
-	if allowed && conversation.AssignedUserID.Int == user.ID {
-		return true, nil
 	}
 
 	return false, nil

@@ -423,7 +423,7 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 }
 
 func initAuthz() *authz.Enforcer {
-	enforcer, err := authz.NewEnforcer() 
+	enforcer, err := authz.NewEnforcer(initLogger("authz")) 
 	if err != nil {
 		log.Fatalf("error initializing authz: %v", err)
 	}

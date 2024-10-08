@@ -1,5 +1,10 @@
 -- name: get-users
 SELECT u.id, u.updated_at, u.first_name, u.last_name, u.email, u.disabled
+FROM users u where u.email != 'System'
+ORDER BY u.updated_at DESC;
+
+-- name: get-users-compact
+SELECT u.id, u.first_name, u.last_name, u.disabled
 FROM users u
 ORDER BY u.updated_at DESC;
 
@@ -38,10 +43,7 @@ SELECT
 FROM
     users u
 WHERE
-    CASE
-        WHEN $1 > 0 THEN u.id = $1
-        ELSE u.uuid = $2
-    END;
+    u.id = $1;
 
 
 -- name: set-user-password
@@ -60,6 +62,7 @@ SET first_name = COALESCE($2, first_name),
     email = COALESCE($4, email),
     roles = COALESCE($5, roles),
     avatar_url = COALESCE($6, avatar_url),
+    password = COALESCE($7, password),
     updated_at = now()
 WHERE id = $1
 

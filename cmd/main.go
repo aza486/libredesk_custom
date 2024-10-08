@@ -137,9 +137,6 @@ func main() {
 	// Listen to incoming messages and dispatch pending outgoing messages.
 	go conversation.ListenAndDispatchMessages(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
 
-	// Delete media not linked to any model.
-	go media.CleanMedia(ctx)
-
 	// Start notification service.
 	go notifier.Run(ctx)
 

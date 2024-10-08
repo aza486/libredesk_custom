@@ -53,6 +53,7 @@ type Opts struct {
 type queries struct {
 	CreateUser      *sqlx.Stmt `query:"create-user"`
 	GetUsers        *sqlx.Stmt `query:"get-users"`
+	GetUserCompact  *sqlx.Stmt `query:"get-users-compact"`
 	GetUser         *sqlx.Stmt `query:"get-user"`
 	GetEmail        *sqlx.Stmt `query:"get-email"`
 	GetPermissions  *sqlx.Stmt `query:"get-permissions"`
@@ -96,15 +97,29 @@ func (u *Manager) Login(email string, password []byte) (models.User, error) {
 	return user, nil
 }
 
-// GetUsers retrieves all users.
-func (u *Manager) GetUsers() ([]models.User, error) {
+// GetAll retrieves all users.
+func (u *Manager) GetAll() ([]models.User, error) {
 	var users []models.User
 	if err := u.q.GetUsers.Select(&users); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
 		}
 		u.lo.Error("error fetching users from db", "error", err)
-		return users, fmt.Errorf("error fetching users: %w", err)
+		return users, envelope.NewError(envelope.GeneralError, "Error fetching users", nil)
+	}
+
+	return users, nil
+}
+
+// GetAllCompact returns a compact list of users with limited fields.
+func (u *Manager) GetAllCompact() ([]models.User, error) {
+	var users []models.User
+	if err := u.q.GetUserCompact.Select(&users); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return users, nil
+		}
+		u.lo.Error("error fetching users from db", "error", err)
+		return users, envelope.NewError(envelope.GeneralError, "Error fetching users", nil)
 	}
 
 	return users, nil
@@ -127,14 +142,9 @@ func (u *Manager) Create(user *models.User) error {
 }
 
 // Get retrieves a user by ID or UUID.
-func (u *Manager) Get(id int, uuid string) (models.User, error) {
-	var uu interface{}
-	if uuid != "" {
-		uu = uuid
-	}
-
+func (u *Manager) Get(id int) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, id, uu); err != nil {
+	if err := u.q.GetUser.Get(&user, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, fmt.Errorf("user not found")
 		}
@@ -173,7 +183,24 @@ func (u *Manager) UpdateAvatar(id int, avatar string) error {
 
 // UpdateUser updates a user.
 func (u *Manager) UpdateUser(id int, user models.User) error {
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL); err != nil {
+	var (
+		hashedPassword interface{}
+		err            error
+	)
+
+	if user.NewPassword != "" {
+		if !u.isStrongPassword(user.NewPassword) {
+			return envelope.NewError(envelope.InputError, "Entered password is not strong please make sure the password has min 8, max 50 characters, at least 1 uppercase letter, 1 number", nil)
+		}
+		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			u.lo.Error("error generating bcrypt password", "error", err)
+			return envelope.NewError(envelope.GeneralError, "Error updating user", nil)
+		}
+		u.lo.Debug("setting new password for user", "user_id", id)
+	}
+
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating user", nil)
 	}
@@ -214,12 +241,21 @@ func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {
 // generatePassword generates a random password and returns its bcrypt hash.
 func (u *Manager) generatePassword() ([]byte, error) {
 	password, _ := stringutil.RandomAlNumString(16)
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		u.lo.Error("error generating bcrypt password", "error", err)
 		return nil, fmt.Errorf("error generating bcrypt password: %w", err)
 	}
 	return bytes, nil
+}
+
+func (u *Manager) isStrongPassword(password string) bool {
+	if len(password) < MinSystemUserPasswordLen || len(password) > MaxSystemUserPasswordLen {
+		return false
+	}
+	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
+	return hasUppercase && hasNumber
 }
 
 // CreateSystemUser inserts a default system user into the users table with the prompted password.
@@ -263,7 +299,7 @@ func promptAndHashPassword() ([]byte, error) {
 	for {
 		fmt.Print("Please set System admin password (min 8, max 50 characters, at least 1 uppercase letter, 1 number): ")
 		fmt.Scanf("%s", &password)
-		if isValidSystemUserPassword(password) {
+		if isStringSystemUserPassword(password) {
 			break
 		}
 		fmt.Println("Password does not meet the strength requirements.")
@@ -286,8 +322,8 @@ func updateSystemUserPassword(db *sqlx.DB, hashedPassword []byte) error {
 	return nil
 }
 
-// isValidSystemUserPassword checks if the password meets the required strength for system user.
-func isValidSystemUserPassword(password string) bool {
+// isStringSystemUserPassword checks if the password meets the required strength for system user.
+func isStringSystemUserPassword(password string) bool {
 	if len(password) < MinSystemUserPasswordLen || len(password) > MaxSystemUserPasswordLen {
 		return false
 	}

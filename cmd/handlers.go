@@ -4,10 +4,8 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
-	"strings"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -85,12 +83,14 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/users/me", sess(handleGetCurrentUser))
 	g.PUT("/api/users/me", sess(handleUpdateCurrentUser))
 	g.DELETE("/api/users/me/avatar", sess(handleDeleteAvatar))
+	g.GET("/api/users/compact", sess(handleGetUsersCompact))
 	g.GET("/api/users", perm(handleGetUsers, "users", "read"))
 	g.GET("/api/users/{id}", perm(handleGetUser, "users", "read"))
 	g.POST("/api/users", perm(handleCreateUser, "users", "write"))
 	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users", "write"))
 
 	// Team.
+	g.GET("/api/teams/compact", sess(handleGetTeamsCompact))
 	g.GET("/api/teams", perm(handleGetTeams, "teams", "read"))
 	g.GET("/api/teams/{id}", perm(handleGetTeam, "teams", "read"))
 	g.PUT("/api/teams/{id}", perm(handleUpdateTeam, "teams", "write"))
@@ -146,58 +146,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/account/profile", sess(authPage(serveIndexPage)))
 	g.GET("/admin/{all:*}", sess(authPage(serveIndexPage)))
 	g.GET("/assets/{all:*}", serveStaticFiles)
-}
-
-// handleServeUploadedFiles serves uploaded files from the local filesystem or S3.
-func handleServeUploadedFiles(r *fastglue.Request) error {
-	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
-	)
-
-	// Extract the file name from the URL path.
-	_, fileName := filepath.Split(string(r.RequestCtx.URI().Path()))
-
-	// Remove the "thumb_" prefix.
-	fileName = strings.TrimPrefix(fileName, "thumb_")
-
-	// Fetch media metadata from DB.
-	media, err := app.media.GetByFilename(fileName)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-
-	// Check if the user has permission to access the linked model.
-	// TODO: Move authz out of here.
-	if media.Model.String == "messages" {
-		allowed, err := app.authz.Enforce(user, media.Model.String, "read")
-		if err != nil {
-			return r.SendErrorEnvelope(http.StatusInternalServerError, "Error checking permissions", nil, envelope.GeneralError)
-		}
-		if !allowed {
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
-		}
-
-		// Validate access to the related conversation.
-		conversation, err := app.conversation.GetConversationByMessageID(media.ModelID.Int)
-		if err != nil {
-			return sendErrorEnvelope(r, err)
-		}
-
-		_, err = enforceConversationAccess(app, conversation.UUID, user)
-		if err != nil {
-			return sendErrorEnvelope(r, err)
-		}
-	}
-
-	switch ko.String("upload.provider") {
-	case "localfs":
-		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.localfs.upload_path"), fileName))
-	case "s3":
-		s3URL := app.media.GetURL(fileName)
-		r.RequestCtx.Redirect(s3URL, http.StatusFound)
-	}
-	return nil
 }
 
 // serveIndexPage serves the main index page of the application.

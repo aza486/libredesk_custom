@@ -76,7 +76,7 @@ onMounted(() => {
 
 const fetchUsers = async () => {
   try {
-    const resp = await api.getUsers()
+    const resp = await api.getUsersCompact()
     agents.value = resp.data.data
     filteredAgents.value = resp.data.data
   } catch (error) {
@@ -90,7 +90,7 @@ const fetchUsers = async () => {
 
 const fetchTeams = async () => {
   try {
-    const resp = await api.getTeams()
+    const resp = await api.getTeamsCompact()
     teams.value = resp.data.data
   } catch (error) {
     toast({

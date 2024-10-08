@@ -21,6 +21,17 @@ func handleGetTeams(r *fastglue.Request) error {
 	return r.SendEnvelope(teams)
 }
 
+func handleGetTeamsCompact(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+	teams, err := app.team.GetAllCompact()
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(teams)
+}
+
 func handleGetTeam(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)

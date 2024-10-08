@@ -26,7 +26,18 @@ func handleGetUsers(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	agents, err := app.user.GetUsers()
+	agents, err := app.user.GetAll()
+	if err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
+	}
+	return r.SendEnvelope(agents)
+}
+
+func handleGetUsersCompact(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+	agents, err := app.user.GetAllCompact()
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -42,7 +53,7 @@ func handleGetUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid user `id`.", nil, envelope.InputError)
 	}
-	user, err := app.user.Get(id, "")
+	user, err := app.user.Get(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -56,7 +67,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 	)
 
 	// Get current user.
-	currentUser, err := app.user.Get(user.ID, "")
+	currentUser, err := app.user.Get(user.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -108,7 +119,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 		// Reset ptr.
 		file.Seek(0, 0)
-		_, err = app.media.UploadAndInsert(srcFileName, srcContentType, mmodels.ModelUser, user.ID, file, int(srcFileSize), srcMeta)
+		_, err = app.media.UploadAndInsert(srcFileName, srcContentType, "", mmodels.ModelUser, user.ID, file, int(srcFileSize), "", srcMeta)
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
@@ -191,7 +202,7 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 		app  = r.Context.(*App)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-	u, err := app.user.Get(user.ID, "")
+	u, err := app.user.Get(user.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -205,7 +216,7 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	)
 
 	// Get user
-	user, err := app.user.Get(user.ID, "")
+	user, err := app.user.Get(user.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

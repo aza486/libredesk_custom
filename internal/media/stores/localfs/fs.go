@@ -34,8 +34,6 @@ func (c *Client) Put(filename string, cType string, src io.ReadSeeker) (string, 
 
 	// Get the directory path
 	dir := getDir(c.opts.UploadPath)
-	fmt.Println("dir ", dir)
-	fmt.Println("-- ", c.opts.UploadPath)
 	o, err := os.OpenFile(filepath.Join(dir, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return "", err
@@ -49,7 +47,7 @@ func (c *Client) Put(filename string, cType string, src io.ReadSeeker) (string, 
 	return filename, nil
 }
 
-// GetURL accepts a filename and retrieves the full path from disk.
+// GetURL accepts a filename and retrieves the full URL for file.
 func (c *Client) GetURL(name string) string {
 	return fmt.Sprintf("%s%s/%s", c.opts.RootURL, c.opts.UploadURI, name)
 }

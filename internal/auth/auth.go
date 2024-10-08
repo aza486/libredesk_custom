@@ -186,7 +186,7 @@ func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 
 	// Logged in?
 	if userID <= 0 {
-		return models.User{}, err
+		return models.User{}, nil
 	}
 
 	return models.User{
@@ -204,7 +204,7 @@ func (a *Auth) DestroySession(r *fastglue.Request) error {
 		a.logger.Error("error acquiring session", "error", err)
 		return err
 	}
-	if err := sess.Clear(); err != nil {
+	if err := sess.Destroy(); err != nil {
 		a.logger.Error("error clearing session", "error", err)
 		return err
 	}

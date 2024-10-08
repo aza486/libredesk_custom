@@ -52,6 +52,16 @@
       </FormItem>
     </FormField>
 
+    <FormField v-slot="{ field }" name="new_password" v-if="!isNewForm">
+      <FormItem v-auto-animate>
+        <FormLabel>Set password</FormLabel>
+        <FormControl>
+          <Input type="password" placeholder="Password" v-bind="field" />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
     <FormField name="send_welcome_email" v-slot="{ value, handleChange }" v-if="isNewForm">
       <FormItem>
         <FormControl>

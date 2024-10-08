@@ -24,6 +24,7 @@ type Opt struct {
 	Bucket     string        `koanf:"bucket"`
 	BucketPath string        `koanf:"bucket_path"`
 	BucketType string        `koanf:"bucket_type"`
+	UploadURI  string        `koanf:"upload_uri"`
 	Expiry     time.Duration `koanf:"expiry"`
 }
 

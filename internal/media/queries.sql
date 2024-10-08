@@ -1,5 +1,5 @@
 -- name: insert-media
-INSERT INTO media (store, filename, content_type, size, meta, model_id, model_type)
+INSERT INTO media (store, filename, content_type, size, meta, model_id, model_type, disposition, content_id)
 VALUES(
   $1, 
   $2, 
@@ -7,17 +7,19 @@ VALUES(
   $4, 
   $5, 
   NULLIF($6, 0),
-  NULLIF($7, '')
+  NULLIF($7, ''),
+  $8,
+  $9
 )
 RETURNING id;
 
 -- name: get-media
-SELECT *
+SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", COALESCE(disposition, '') AS disposition
 FROM media
 WHERE id = $1;
 
 -- name: get-media-by-filename
-SELECT *
+SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", COALESCE(disposition, '') AS disposition
 FROM media
 WHERE filename = $1;
 
@@ -32,16 +34,7 @@ SET model_type = $2,
 WHERE id = $1;
 
 -- name: get-model-media
-SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", COALESCE(meta->>'disposition', '') AS disposition
+SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", COALESCE(disposition, '') AS disposition
 FROM media
 WHERE model_type = $1
     AND model_id = $2;
-
--- name: get-unlinked-media
-SELECT filename
-FROM media
-WHERE (
-        model_type IS NULL
-        OR model_id IS NULL
-    )
-    AND created_at < $1;

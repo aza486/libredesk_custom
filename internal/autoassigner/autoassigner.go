@@ -153,7 +153,7 @@ func (e *Engine) getUserFromPool(conversation models.Conversation) (string, erro
 
 	pool, ok := e.roundRobinBalancer[conversation.AssignedTeamID.Int]
 	if !ok {
-		e.lo.Warn("team not found in balancer", "id", conversation.AssignedTeamID.Int)
+		e.lo.Warn("team not found in balancer", "team_id", conversation.AssignedTeamID.Int)
 		return "", ErrTeamNotFound
 	}
 	return pool.Get(), nil

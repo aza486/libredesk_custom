@@ -45,6 +45,7 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 
 // processMailbox processes emails in the specified mailbox.
 func (e *Email) processMailbox(cfg IMAPConfig) error {
+	e.lo.Debug("processing mailbox", "mailbox", cfg.Mailbox)
 	client, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
 	if err != nil {
 		return fmt.Errorf("error connecting to IMAP server: %w", err)
@@ -60,9 +61,8 @@ func (e *Email) processMailbox(cfg IMAPConfig) error {
 	}
 
 	since := time.Now().Add(-12 * time.Hour)
-	before := time.Now().Add(24 * time.Hour)
 
-	searchData, err := e.searchMessages(client, since, before)
+	searchData, err := e.searchMessages(client, since)
 	if err != nil {
 		return fmt.Errorf("error searching messages: %w", err)
 	}
@@ -71,10 +71,9 @@ func (e *Email) processMailbox(cfg IMAPConfig) error {
 }
 
 // searchMessages searches for messages in the specified time range.
-func (e *Email) searchMessages(client *imapclient.Client, since, before time.Time) (*imap.SearchData, error) {
+func (e *Email) searchMessages(client *imapclient.Client, since time.Time) (*imap.SearchData, error) {
 	searchCMD := client.Search(&imap.SearchCriteria{
 		Since:  since,
-		Before: before,
 	},
 		&imap.SearchOptions{
 			ReturnMin:   true,
@@ -119,18 +118,22 @@ func (e *Email) fetchAndProcessMessages(client *imapclient.Client, searchData *i
 // processEnvelope processes an email envelope.
 func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, seqNum uint32, inboxID int) error {
 	if len(env.From) == 0 {
-		e.lo.Debug("no sender found for email", "message_id", env.MessageID)
+		e.lo.Warn("no sender received for email", "message_id", env.MessageID)
 		return nil
 	}
 
 	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if err != nil {
+		e.lo.Error("error checking if message exists", "message_id", env.MessageID)
 		return err
 	}
 
 	if exists {
+		e.lo.Debug("message already exists", "message_id", env.MessageID)
 		return nil
 	}
+
+	e.lo.Debug("message does not exist", "message_id", env.MessageID)
 
 	var contact = cmodels.Contact{
 		Source:   e.Channel(),
@@ -168,6 +171,7 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 
 	for fullFetchItem := fullMsg.Next(); fullFetchItem != nil; fullFetchItem = fullMsg.Next() {
 		if fullItem, ok := fullFetchItem.(imapclient.FetchItemDataBodySection); ok {
+			e.lo.Debug("fetching full message body", "message_id", env.MessageID)
 			return e.processFullMessage(fullItem, incomingMsg)
 		}
 	}
@@ -179,7 +183,8 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, incomingMsg models.IncomingMessage) error {
 	envelope, err := enmime.ReadEnvelope(item.Literal)
 	if err != nil {
-		return fmt.Errorf("error parsing email envelope: %w", err)
+		e.lo.Error("error parsing email envelope", "error", err, "envelope_errors", envelope.Errors)
+		return fmt.Errorf("parsing email envelope: %w", err)
 	}
 
 	if len(envelope.HTML) > 0 {
@@ -218,7 +223,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Disposition: attachment.DispositionInline,
 		})
 	}
-
+	e.lo.Debug("enqueuing message", "message_id", incomingMsg.Message.SourceID, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
 	if err := e.messageStore.EnqueueIncoming(incomingMsg); err != nil {
 		return err
 	}

@@ -1,6 +1,9 @@
 -- name: get-teams
 SELECT id, created_at, updated_at, name, auto_assign_conversations, disabled from teams order by updated_at desc;
 
+-- name: get-teams-compact
+SELECT id, name from teams order by name;
+
 -- name: get-team
 SELECT id, name, auto_assign_conversations from teams where id = $1;
 

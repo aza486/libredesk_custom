@@ -4,13 +4,18 @@
       <div>
         <span class="size-20">📄</span>
       </div>
-      <div
-        class="p-1 absolute inset-0 text-gray-50 opacity-10 group-hover:opacity-100 overlay text-wrap"
-      >
-        <p class="font-bold text-xs opacity-0 group-hover:opacity-100">
-          {{ getAttachmentName(attachment.name) }}
-        </p>
-        <p class="text-xs opacity-0 group-hover:opacity-100">{{ formatBytes(attachment.size) }}</p>
+      <div class="p-1 absolute inset-0 text-gray-50 opacity-10 group-hover:opacity-100 overlay text-wrap">
+        <div class="flex flex-col justify-between h-full">
+          <div>
+            <p class="font-bold text-xs opacity-80 group-hover:opacity-100">
+              {{ getAttachmentName(attachment.name) }}
+            </p>
+            <p class="text-xs opacity-0 group-hover:opacity-100">{{ formatBytes(attachment.size) }}</p>
+          </div>
+          <div @click="downloadAttachment">
+            <Download size=20></Download>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -18,7 +23,9 @@
 
 <script setup>
 import { formatBytes } from '@/utils/file.js'
-defineProps({
+import { Download } from 'lucide-vue-next';
+
+const props = defineProps({
   attachment: {
     type: Object,
     required: true
@@ -27,5 +34,9 @@ defineProps({
 
 const getAttachmentName = (name) => {
   return name.substring(0, 50)
+}
+
+const downloadAttachment = () => {
+  window.open(props.attachment.url, '_blank');
 }
 </script>

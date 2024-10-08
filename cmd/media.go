@@ -13,6 +13,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/image"
 	"github.com/abhinavxd/artemis/internal/stringutil"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -113,7 +114,6 @@ func handleMediaUpload(r *fastglue.Request) error {
 	meta, _ := json.Marshal(map[string]interface{}{
 		"width":       width,
 		"height":      height,
-		"disposition": disposition,
 	})
 
 	file.Seek(0, 0)
@@ -125,13 +125,66 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Insert in DB.
-	media, err := app.media.Insert(srcFileName, srcContentType, "" /**model_type**/, 0, int(srcFileSize), meta)
+	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, "" /**model_type**/, disposition, 0, int(srcFileSize), meta)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error inserting metadata into database", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error inserting media", nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(media)
+}
+
+
+// handleServeUploadedFiles serves uploaded files from the local filesystem or S3.
+func handleServeUploadedFiles(r *fastglue.Request) error {
+	var (
+		app  = r.Context.(*App)
+		user = r.RequestCtx.UserValue("user").(umodels.User)
+	)
+
+	// Extract the file name from the URL path.
+	_, fileName := filepath.Split(string(r.RequestCtx.URI().Path()))
+
+	// Remove the "thumb_" prefix.
+	fileName = strings.TrimPrefix(fileName, "thumb_")
+
+	// Fetch media metadata from DB.
+	media, err := app.media.GetByFilename(fileName)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Check if the user has permission to access the linked model.
+	// TODO: Move this out of here.
+	if media.Model.String == "messages" {
+		allowed, err := app.authz.Enforce(user, media.Model.String, "read")
+		if err != nil {
+			return r.SendErrorEnvelope(http.StatusInternalServerError, "Error checking permissions", nil, envelope.GeneralError)
+		}
+		if !allowed {
+			return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
+		}
+
+		// Validate access to the related conversation.
+		conversation, err := app.conversation.GetConversationByMessageID(media.ModelID.Int)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+
+		_, err = enforceConversationAccess(app, conversation.UUID, user)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
+
+	switch ko.String("upload.provider") {
+	case "localfs":
+		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.localfs.upload_path"), fileName))
+	case "s3":
+		s3URL := app.media.GetURL(fileName)
+		r.RequestCtx.Redirect(s3URL, http.StatusFound)
+	}
+	return nil
 }
 
 func bytesToMegabytes(bytes int64) float64 {

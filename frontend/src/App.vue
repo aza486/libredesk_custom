@@ -48,7 +48,8 @@ const allNavLinks = ref([
     title: t('navbar.dashboard'),
     to: '/dashboard',
     label: '',
-    icon: 'lucide:layout-dashboard'
+    icon: 'lucide:layout-dashboard',
+    permission: 'dashboard_global:read',
   },
   {
     title: t('navbar.conversations'),
@@ -67,7 +68,7 @@ const allNavLinks = ref([
     to: '/admin/general',
     label: '',
     icon: 'lucide:settings',
-    permission: ''
+    permission: 'admin:read'
   }
 ])
 

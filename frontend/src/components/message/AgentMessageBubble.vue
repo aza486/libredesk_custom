@@ -6,17 +6,14 @@
       </p>
     </div>
     <div class="flex flex-row gap-2 justify-end">
-      <div
-        class="flex flex-col message-bubble justify-end items-end relative !rounded-tr-none"
-        :class="{
-          '!bg-[#FEF1E1]': message.private,
-          'bg-white': !message.private,
-          'opacity-50 animate-pulse': message.status === 'pending',
-          'bg-red': message.status === 'failed'
-        }"
-      >
-        <div v-html="getMessageContent" :class="{ 'mb-3': message.attachments.length > 0 }"></div>
-        <MessageAttachmentPreview :attachments="message.attachments" />
+      <div class="flex flex-col message-bubble justify-end items-end relative !rounded-tr-none" :class="{
+        '!bg-[#FEF1E1]': message.private,
+        'bg-white': !message.private,
+        'opacity-50 animate-pulse': message.status === 'pending',
+        'bg-red': message.status === 'failed'
+      }">
+        <div v-html="messageContent" :class="{ 'mb-3': message.attachments.length > 0 }"></div>
+        <MessageAttachmentPreview :attachments="nonInlineAttachments" />
         <Spinner v-if="message.status === 'pending'" />
 
         <!-- Icons -->
@@ -25,12 +22,7 @@
 
           <CheckCheck :size="14" v-if="showCheckCheck" />
 
-          <RotateCcw
-            size="10"
-            @click="retryMessage(message)"
-            class="cursor-pointer"
-            v-if="showRetry"
-          ></RotateCcw>
+          <RotateCcw size="10" @click="retryMessage(message)" class="cursor-pointer" v-if="showRetry"></RotateCcw>
         </div>
       </div>
       <Avatar class="cursor-pointer">
@@ -61,7 +53,7 @@ import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
 import { Lock } from 'lucide-vue-next'
-import {revertCIDToImageSrc} from '@/utils/strings'
+import { revertCIDToImageSrc } from '@/utils/strings'
 import api from '@/api'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -89,9 +81,13 @@ const getAvatar = computed(() => {
   return participant.value?.avatar_url
 })
 
-const getMessageContent = computed(() => {
+const messageContent = computed(() => {
   return revertCIDToImageSrc(props.message.content)
 })
+
+const nonInlineAttachments = computed(() =>
+  props.message.attachments.filter(attachment => attachment.disposition !== 'inline')
+)
 
 const isPrivateMessage = computed(() => {
   return props.message.private

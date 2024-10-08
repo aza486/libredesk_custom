@@ -345,7 +345,9 @@ attachments AS (
                 'name', filename,
                 'content_type', content_type,
                 'uuid', uuid,
-                'size', size
+                'size', size,
+                'content_id', content_id,
+                'disposition', disposition
             ) ORDER BY filename
         ) AS attachment_details
     FROM media

@@ -3,12 +3,10 @@
 package media
 
 import (
-	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"io"
-	"time"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -73,12 +71,11 @@ type queries struct {
 	DeleteMedia        *sqlx.Stmt `query:"delete-media"`
 	Attach             *sqlx.Stmt `query:"attach-to-model"`
 	GetModelMedia      *sqlx.Stmt `query:"get-model-media"`
-	GetUnlinkedMedia   *sqlx.Stmt `query:"get-unlinked-media"`
 }
 
 // UploadAndInsert uploads the media to the storage backend and inserts its details into the database.
 // It returns the media record on success.
-func (m *Manager) UploadAndInsert(fileName, contentType, modelType string, modelID int, content io.ReadSeeker, fileSize int, meta []byte) (models.Media, error) {
+func (m *Manager) UploadAndInsert(fileName, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition string, meta []byte) (models.Media, error) {
 	// Upload the media to storage
 	uploadedFileName, err := m.Upload(fileName, contentType, content)
 	if err != nil {
@@ -86,7 +83,7 @@ func (m *Manager) UploadAndInsert(fileName, contentType, modelType string, model
 	}
 
 	// Insert media details into the database
-	media, err := m.Insert(uploadedFileName, contentType, modelType, modelID, fileSize, meta)
+	media, err := m.Insert(uploadedFileName, contentType, contentID, modelType, disposition, modelID, fileSize, meta)
 	if err != nil {
 		m.Store.Delete(uploadedFileName)
 		return models.Media{}, err
@@ -107,9 +104,9 @@ func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (s
 }
 
 // Insert inserts media details into the database and returns the inserted media record.
-func (m *Manager) Insert(fileName, contentType, modelType string, modelID int, fileSize int, meta []byte) (models.Media, error) {
+func (m *Manager) Insert(fileName, contentType, contentID, modelType, disposition string, modelID int, fileSize int, meta []byte) (models.Media, error) {
 	var id int
-	if err := m.queries.InsertMedia.QueryRow(m.Store.Name(), fileName, contentType, fileSize, meta, modelID, modelType).Scan(&id); err != nil {
+	if err := m.queries.InsertMedia.QueryRow(m.Store.Name(), fileName, contentType, fileSize, meta, modelID, modelType, disposition, contentID).Scan(&id); err != nil {
 		m.lo.Error("error inserting media", "error", err)
 	}
 	return m.Get(id)
@@ -183,33 +180,3 @@ func (m *Manager) DeleteMedia(name string) error {
 	return nil
 }
 
-// CleanMedia periodically deletes unlinked media entries older than a specified number of days.
-// It should be run as a goroutine.
-func (m *Manager) CleanMedia(ctx context.Context) {
-	m.deleteUnlinkedMedia(3)
-	ticker := time.NewTicker(12 * time.Hour)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			m.deleteUnlinkedMedia(3)
-		}
-	}
-}
-
-// deleteUnlinkedMedia fetches and deletes media entries that are unlinked and older than the specified number of days.
-func (m *Manager) deleteUnlinkedMedia(days int) {
-	var unlinkedMedia []string
-	if err := m.queries.GetUnlinkedMedia.Select(&unlinkedMedia, time.Now().AddDate(0, 0, -1*days)); err != nil {
-		m.lo.Error("error fetching unlinked media", "error", err)
-		return
-	}
-	m.lo.Info("found unlinked media to delete", "count", len(unlinkedMedia))
-	for _, filename := range unlinkedMedia {
-		if err := m.DeleteMedia(filename); err != nil {
-			m.lo.Error("error deleting unlinked media", "filename", filename, "error", err)
-		}
-	}
-}

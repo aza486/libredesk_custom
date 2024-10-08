@@ -36,6 +36,7 @@ type Opts struct {
 // queries contains prepared SQL queries.
 type queries struct {
 	GetTeams        *sqlx.Stmt `query:"get-teams"`
+	GetTeamsCompact *sqlx.Stmt `query:"get-teams-compact"`
 	GetTeam         *sqlx.Stmt `query:"get-team"`
 	InsertTeam      *sqlx.Stmt `query:"insert-team"`
 	UpdateTeam      *sqlx.Stmt `query:"update-team"`
@@ -65,7 +66,20 @@ func (u *Manager) GetAll() ([]models.Team, error) {
 			return teams, nil
 		}
 		u.lo.Error("error fetching teams from db", "error", err)
-		return teams, fmt.Errorf("error fetching teams")
+		return teams, envelope.NewError(envelope.GeneralError, "Error fetching teams", nil)
+	}
+	return teams, nil
+}
+
+// GetAllCompact retrieves all teams with limited fields.
+func (u *Manager) GetAllCompact() ([]models.Team, error) {
+	var teams = make([]models.Team, 0)
+	if err := u.q.GetTeamsCompact.Select(&teams); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return teams, nil
+		}
+		u.lo.Error("error fetching teams from db", "error", err)
+		return teams, envelope.NewError(envelope.GeneralError, "Error fetching teams", nil)
 	}
 	return teams, nil
 }
@@ -79,7 +93,7 @@ func (u *Manager) GetTeam(id int) (models.Team, error) {
 			return team, nil
 		}
 		u.lo.Error("error fetching team", "id", id, "error", err)
-		return team, err
+		return team, envelope.NewError(envelope.GeneralError, "Error fetching team", nil)
 	}
 	return team, nil
 }

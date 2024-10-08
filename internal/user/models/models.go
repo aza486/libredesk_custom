@@ -19,6 +19,7 @@ type User struct {
 	AvatarURL        null.String    `db:"avatar_url" json:"avatar_url"`
 	Disabled         bool           `db:"disabled" json:"disabled"`
 	Password         string         `db:"password" json:"-"`
+	NewPassword      string         `db:"-" json:"new_password"`
 	SendWelcomeEmail bool           `db:"-" json:"send_welcome_email"`
 	Roles            pq.StringArray `db:"roles" json:"roles"`
 	Permissions      pq.StringArray `db:"permissions" json:"permissions"`

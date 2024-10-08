@@ -13,12 +13,9 @@
         </AvatarFallback>
       </Avatar>
       <div class="flex flex-col justify-end message-bubble !rounded-tl-none">
-        <Letter
-          :html="message.content"
-          class="mb-1"
-          :class="{ 'mb-3': message.attachments.length > 0 }"
-        />
-        <MessageAttachmentPreview :attachments="message.attachments" />
+        <Letter :html="messageContent" :allowedSchemas="['cid', 'https', 'http']" class="mb-1"
+          :class="{ 'mb-3': message.attachments.length > 0 }" />
+        <MessageAttachmentPreview :attachments="nonInlineAttachments" />
       </div>
     </div>
     <div class="pl-[47px]">
@@ -48,7 +45,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Letter } from 'vue-letter'
 import MessageAttachmentPreview from '@/components/attachment/MessageAttachmentPreview.vue'
 
-defineProps({
+const props = defineProps({
   message: Object
 })
 const convStore = useConversationStore()
@@ -56,6 +53,17 @@ const convStore = useConversationStore()
 const getAvatar = computed(() => {
   return convStore.conversation.data.avatar_url ? convStore.conversation.avatar_url : ''
 })
+
+const messageContent = computed(() => 
+  props.message.attachments.reduce((content, { content_id, url }) => 
+    content.replace(new RegExp(`cid:${content_id}`, 'g'), url), 
+    props.message.content
+  )
+)
+
+const nonInlineAttachments = computed(() => 
+  props.message.attachments.filter(attachment => attachment.disposition !== 'inline')
+)
 
 const getFullName = computed(() => {
   return convStore.conversation.data.first_name + ' ' + convStore.conversation.data.last_name
