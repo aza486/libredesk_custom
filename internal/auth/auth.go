@@ -184,11 +184,6 @@ func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 		lastName, _  = sess.String(sessVals["last_name"], nil)
 	)
 
-	// Logged in?
-	if userID <= 0 {
-		return models.User{}, nil
-	}
-
 	return models.User{
 		ID:        userID,
 		Email:     email,

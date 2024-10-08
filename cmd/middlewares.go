@@ -73,10 +73,24 @@ func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		var app = r.Context.(*App)
 		user, err := app.auth.ValidateSession(r)
 		if err != nil {
+			app.lo.Error("error validating session", "error", err)
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
 		if user.ID >= 0 {
 			r.RequestCtx.SetUserValue("user", user)
+		}
+		return handler(r)
+	}
+}
+
+func authSess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+	return func(r *fastglue.Request) error {
+		var (
+			userID, ok = getAuthUserFromSess(r)
+		)
+		if !ok || userID <= 0 {
+			return sendErrorEnvelope(r,
+				envelope.NewError(envelope.GeneralError, "Invalid or expired session.", nil))
 		}
 		return handler(r)
 	}
@@ -88,13 +102,11 @@ func noAuthPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler
 		if !ok {
 			return handler(r)
 		}
-
 		// User is logged in direct if `next` is available else redirect.
 		nextURI := string(r.RequestCtx.QueryArgs().Peek("next"))
 		if len(nextURI) == 0 {
 			nextURI = "/dashboard"
 		}
-
 		return r.RedirectURI(nextURI, fasthttp.StatusFound, nil, "")
 	}
 }

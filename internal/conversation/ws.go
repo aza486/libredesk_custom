@@ -65,6 +65,7 @@ func (m *Manager) BroadcastConversationPropertyUpdate(conversationUUID, prop, va
 
 func (m *Manager) broadcastToConversation(conversationUUID string, message wsmodels.Message) {
 	userIDs := m.wsHub.GetConversationSubscribers(conversationUUID)
+	m.lo.Debug("broadcasting new message to conversation subscribers", "user_ids", userIDs, "conversation_uuid", conversationUUID, "message", message)
 	m.broadcastToUsers(userIDs, message)
 }
 

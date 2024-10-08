@@ -15,7 +15,7 @@ import (
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Authentication.
 	g.POST("/api/login", handleLogin)
-	g.GET("/api/logout", sess(handleLogout))
+	g.GET("/api/logout", sess(authSess((handleLogout))))
 	g.GET("/api/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/oidc/finish", handleOIDCCallback)
 
@@ -23,7 +23,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/health", handleHealthCheck)
 
 	// Serve uploaded files.
-	g.GET("/uploads/{all:*}", sess(handleServeUploadedFiles))
+	g.GET("/uploads/{all:*}", sess(authSess(handleServeUploadedFiles)))
 
 	// Settings.
 	g.GET("/api/settings/general", handleGetGeneralSettings)
@@ -58,14 +58,14 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/conversations/{cuuid}/messages/{uuid}", perm(handleGetMessage, "messages", "read"))
 
 	// Status and priority.
-	g.GET("/api/statuses", sess(handleGetStatuses))
+	g.GET("/api/statuses", sess(authSess(handleGetStatuses)))
 	g.POST("/api/statuses", perm(handleCreateStatus, "status", "write"))
 	g.PUT("/api/statuses/{id}", perm(handleUpdateStatus, "status", "write"))
 	g.DELETE("/api/statuses/{id}", perm(handleDeleteStatus, "status", "delete"))
-	g.GET("/api/priorities", sess(handleGetPriorities))
+	g.GET("/api/priorities", sess(authSess(handleGetPriorities)))
 
 	// Tag.
-	g.GET("/api/tags", sess(handleGetTags))
+	g.GET("/api/tags", sess(authSess(handleGetTags)))
 	g.POST("/api/tags", perm(handleCreateTag, "tags", "write"))
 	g.PUT("/api/tags/{id}", perm(handleUpdateTag, "tags", "write"))
 	g.DELETE("/api/tags/{id}", perm(handleDeleteTag, "tags", "delete"))
@@ -74,23 +74,23 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/media", sess(handleMediaUpload))
 
 	// Canned response.
-	g.GET("/api/canned-responses", sess(handleGetCannedResponses))
+	g.GET("/api/canned-responses", sess(authSess(handleGetCannedResponses)))
 	g.POST("/api/canned-responses", perm(handleCreateCannedResponse, "canned_responses", "write"))
 	g.PUT("/api/canned-responses/{id}", perm(handleUpdateCannedResponse, "canned_responses", "write"))
 	g.DELETE("/api/canned-responses/{id}", perm(handleDeleteCannedResponse, "canned_responses", "delete"))
 
 	// User.
-	g.GET("/api/users/me", sess(handleGetCurrentUser))
-	g.PUT("/api/users/me", sess(handleUpdateCurrentUser))
-	g.DELETE("/api/users/me/avatar", sess(handleDeleteAvatar))
-	g.GET("/api/users/compact", sess(handleGetUsersCompact))
+	g.GET("/api/users/me", sess(authSess(handleGetCurrentUser)))
+	g.PUT("/api/users/me", sess(authSess(handleUpdateCurrentUser)))
+	g.DELETE("/api/users/me/avatar", sess(authSess(handleDeleteAvatar)))
+	g.GET("/api/users/compact", sess(authSess(handleGetUsersCompact)))
 	g.GET("/api/users", perm(handleGetUsers, "users", "read"))
 	g.GET("/api/users/{id}", perm(handleGetUser, "users", "read"))
 	g.POST("/api/users", perm(handleCreateUser, "users", "write"))
 	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users", "write"))
 
 	// Team.
-	g.GET("/api/teams/compact", sess(handleGetTeamsCompact))
+	g.GET("/api/teams/compact", sess(authSess(handleGetTeamsCompact)))
 	g.GET("/api/teams", perm(handleGetTeams, "teams", "read"))
 	g.GET("/api/teams/{id}", perm(handleGetTeam, "teams", "read"))
 	g.PUT("/api/teams/{id}", perm(handleUpdateTeam, "teams", "write"))
@@ -134,9 +134,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/templates/{id}", perm(handleDeleteTemplate, "templates", "delete"))
 
 	// WebSocket.
-	g.GET("/api/ws", sess(func(r *fastglue.Request) error {
+	g.GET("/api/ws", sess(authSess(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
-	}))
+	})))
 
 	// Frontend pages.
 	g.GET("/", sess(noAuthPage(serveIndexPage)))
