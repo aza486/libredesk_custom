@@ -19,7 +19,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
 	"github.com/abhinavxd/artemis/internal/media"
-	"github.com/abhinavxd/artemis/internal/media/stores/localfs"
+	fs "github.com/abhinavxd/artemis/internal/media/stores/localfs"
 	"github.com/abhinavxd/artemis/internal/media/stores/s3"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
 	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
@@ -270,24 +270,23 @@ func initMedia(db *sqlx.DB) *media.Manager {
 		if err != nil {
 			log.Fatalf("error initializing s3 media store: %v", err)
 		}
-	case "localfs":
-		store, err = localfs.New(localfs.Opts{
+	case "fs":
+		store, err = fs.New(fs.Opts{
 			UploadURI:  "/uploads",
-			UploadPath: filepath.Clean(ko.String("upload.localfs.upload_path")),
+			UploadPath: filepath.Clean(ko.String("upload.fs.upload_path")),
 			RootURL:    appRootURL,
 		})
 		if err != nil {
-			log.Fatalf("error initializing localfs media store: %v", err)
+			log.Fatalf("error initializing fs media store: %v", err)
 		}
 	default:
 		log.Fatalf("unknown media store: %s", s)
 	}
 
 	media, err := media.New(media.Opts{
-		Store:      store,
-		Lo:         lo,
-		DB:         db,
-		AppBaseURL: appRootURL,
+		Store: store,
+		Lo:    lo,
+		DB:    db,
 	})
 	if err != nil {
 		log.Fatalf("error initializing media: %v", err)
@@ -423,13 +422,13 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 }
 
 func initAuthz() *authz.Enforcer {
-	enforcer, err := authz.NewEnforcer(initLogger("authz")) 
+	enforcer, err := authz.NewEnforcer(initLogger("authz"))
 	if err != nil {
 		log.Fatalf("error initializing authz: %v", err)
 	}
 	return enforcer
 }
- 
+
 func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 	var lo = initLogger("auth")
 

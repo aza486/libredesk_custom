@@ -162,7 +162,7 @@ const handleInlineImageUpload = (event) => {
         editorInstance.commands.setImage({
           src: resp.data.data.url,
           alt: resp.data.data.filename,
-          title: resp.data.data.filename
+          title: resp.data.data.uuid,
         })
         uploadedFiles.value.push(resp.data.data)
       })

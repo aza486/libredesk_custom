@@ -19,6 +19,7 @@ type Attachment struct {
 	ContentID   string               `json:"content_id"`
 	ContentType string               `json:"content_type"`
 	Disposition string               `json:"disposition"`
+	UUID        string               `json:"uuid"`
 	URL         string               `json:"url"`
 	Header      textproto.MIMEHeader `json:"-"`
 }
@@ -38,28 +39,28 @@ func (a *Attachments) Scan(value interface{}) error {
 }
 
 // MakeHeader creates a MIME header for email attachments or inline content.
-func MakeHeader(contentType, fileName, encoding, disposition string) textproto.MIMEHeader {
-    if encoding == "" {
-        encoding = "base64"
-    }
-    if contentType == "" {
-        contentType = "application/octet-stream"
-    }
-    if disposition == "" {
-        disposition = "attachment"
-    }
+func MakeHeader(contentType, contentID, fileName, encoding, disposition string) textproto.MIMEHeader {
+	if encoding == "" {
+		encoding = "base64"
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	if disposition == "" {
+		disposition = "attachment"
+	}
 
-    h := textproto.MIMEHeader{}
-    
-    if disposition == "inline" {
-        h.Set("Content-Disposition", "inline")
-        h.Set("Content-ID", "<"+fileName+">")
-    } else {
-        h.Set("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, fileName))
-    }
+	h := textproto.MIMEHeader{}
 
-    h.Set("Content-Type", fmt.Sprintf("%s; name=\"%s\"", contentType, fileName))
-    h.Set("Content-Transfer-Encoding", encoding)
+	if disposition == "inline" {
+		h.Set("Content-Disposition", "inline")
+		h.Set("Content-ID", "<"+contentID+">")
+	} else {
+		h.Set("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, fileName))
+	}
 
-    return h
+	h.Set("Content-Type", fmt.Sprintf("%s; name=\"%s\"", contentType, fileName))
+	h.Set("Content-Transfer-Encoding", encoding)
+
+	return h
 }

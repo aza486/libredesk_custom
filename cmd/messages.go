@@ -39,7 +39,7 @@ func handleGetMessages(r *fastglue.Request) error {
 
 	for i := range messages {
 		for j := range messages[i].Attachments {
-			messages[i].Attachments[j].URL = app.media.Store.GetURL(messages[i].Attachments[j].Name)
+			messages[i].Attachments[j].URL = app.media.GetURL(messages[i].Attachments[j].UUID)
 		}
 	}
 	return r.SendEnvelope(messages)
@@ -65,7 +65,7 @@ func handleGetMessage(r *fastglue.Request) error {
 	}
 
 	for j := range messages.Attachments {
-		messages.Attachments[j].URL = app.media.Store.GetURL("")
+		messages.Attachments[j].URL = app.media.GetURL(messages.Attachments[j].UUID)
 	}
 
 	return r.SendEnvelope(messages)

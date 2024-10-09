@@ -564,7 +564,7 @@ func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 	var attachments attachment.Attachments
 
 	// Get all media for this message.
-	medias, err := m.mediaStore.GetModelMedia(message.ID, mmodels.ModelMessages)
+	medias, err := m.mediaStore.GetByModel(message.ID, mmodels.ModelMessages)
 	if err != nil {
 		m.lo.Error("error fetching message attachments", "error", err)
 		return err
@@ -572,7 +572,7 @@ func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 
 	// Fetch blobs.
 	for _, media := range medias {
-		blob, err := m.mediaStore.GetBlob(media.Filename)
+		blob, err := m.mediaStore.GetBlob(media.UUID)
 		if err != nil {
 			m.lo.Error("error fetching media blob", "error", err)
 			return err
@@ -580,7 +580,7 @@ func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 		attachment := attachment.Attachment{
 			Name:    media.Filename,
 			Content: blob,
-			Header:  attachment.MakeHeader(media.ContentType, media.Filename, "base64", media.Disposition),
+			Header:  attachment.MakeHeader(media.ContentType, media.UUID, media.Filename, "base64", media.Disposition),
 		}
 		attachments = append(attachments, attachment)
 	}

@@ -8,6 +8,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/emersion/go-imap/v2 v2.0.0-beta.3
 	github.com/fasthttp/websocket v1.5.9
+	github.com/google/uuid v1.6.0
 	github.com/jhillyerd/enmime v1.2.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/k3a/html2text v1.2.1

@@ -12,7 +12,7 @@ String.prototype.titleCase = function () {
 /**
  * Replaces the `src` attribute of all <img> tags with the class `inline-image`
  * to use the value of the `title` attribute as a Content-ID (cid).
- * The resulting `src` will be in the format `cid:filename`, where `filename` is extracted from the `title` attribute.
+ * The resulting `src` will be in the format `cid:content_id`
  *
  * @param {string} htmlString - The input HTML string.
  * @returns {string} - The updated HTML string with `src` replaced by `cid:title`.

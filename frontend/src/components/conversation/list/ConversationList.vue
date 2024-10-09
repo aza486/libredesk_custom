@@ -2,7 +2,8 @@
   <div class="h-screen">
 
     <!-- Filters -->
-    <ConversationListFilters v-model:type="conversationType" v-model:filter="conversationFilter" :handleFilterChange="handleFilterChange">
+    <ConversationListFilters v-model:type="conversationType" v-model:filter="conversationFilter"
+      :handleFilterChange="handleFilterChange">
     </ConversationListFilters>
 
     <!-- Error / Empty list -->
@@ -36,7 +37,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed, onUnmounted } from 'vue'
+import { onMounted, watch, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { subscribeConversationsList } from '@/websocket.js'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_FILTERS } from '@/constants/conversation'
@@ -47,10 +48,11 @@ import EmptyList from '@/components/conversation/list/ConversationEmptyList.vue'
 import ConversationListItem from '@/components/conversation/list/ConversationListItem.vue'
 import ConversationListItemSkeleton from '@/components/conversation/list/ConversationListItemSkeleton.vue'
 import ConversationListFilters from '@/components/conversation/list/ConversationListFilters.vue'
+import { useStorage } from '@vueuse/core'
 
 const conversationStore = useConversationStore()
-const conversationFilter = ref(CONVERSATION_FILTERS.ALL)
-const conversationType = ref(CONVERSATION_LIST_TYPE.ASSIGNED)
+const conversationType = useStorage('conversation_type', CONVERSATION_LIST_TYPE.ASSIGNED)
+const conversationFilter = useStorage('conversation_filter', CONVERSATION_FILTERS.ALL)
 let listRefreshInterval = null
 
 onMounted(() => {
@@ -58,7 +60,7 @@ onMounted(() => {
   subscribeConversationsList(conversationType.value, conversationFilter.value)
   // Refresh list every min.
   listRefreshInterval = setInterval(() => {
-    conversationStore.fetchConversations(conversationType.value, conversationFilter.value)
+    conversationStore.fetchConversations(conversationType.value, conversationFilter.value, false)
   }, 60000)
 })
 

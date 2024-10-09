@@ -157,7 +157,7 @@ SET meta = meta || $3
 WHERE CASE WHEN $1 > 0 THEN id = $1 ELSE uuid = $2 END;
 
 -- name: get-conversation-participants
-SELECT users.uuid as uuid, first_name, last_name, avatar_url 
+SELECT users.id as id, first_name, last_name, avatar_url 
 FROM conversation_participants
 INNER JOIN users ON users.id = conversation_participants.user_id
 WHERE conversation_id =
@@ -322,7 +322,7 @@ SELECT
     m.uuid,
     m.private,
     m.sender_type,
-    u.uuid AS sender_uuid,
+    m.sender_id,
     COALESCE(
         json_agg(
             json_build_object(
@@ -337,11 +337,10 @@ SELECT
         '[]'::json
     ) AS attachments
 FROM messages m
-LEFT JOIN users u ON u.id = m.sender_id
 LEFT JOIN media ON media.model_id = m.id AND media.model_type = 'messages'
 WHERE m.uuid = $1
 GROUP BY 
-    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type, u.uuid
+    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type
 ORDER BY m.created_at;
 
 -- name: get-messages
@@ -378,11 +377,9 @@ SELECT
     m.private,
     m.sender_id,
     m.sender_type,
-    u.uuid as sender_uuid,
     COALESCE(a.attachment_details, '[]'::json) AS attachments
 FROM messages m
 LEFT JOIN attachments a ON a.message_id = m.id
-LEFT JOIN users u on u.id = m.sender_id
 WHERE m.conversation_id = (SELECT id FROM conversation_id) ORDER BY m.created_at DESC
 %s
 

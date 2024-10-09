@@ -68,17 +68,17 @@ const props = defineProps({
 const convStore = useConversationStore()
 
 const participant = computed(() => {
-  return convStore.conversation?.participants?.[props.message.sender_uuid] ?? {}
+  return convStore.conversation?.participants?.[props.message.sender_id] ?? {}
 })
 
 const getFullName = computed(() => {
-  const firstName = participant.value?.first_name ?? 'Unknown'
-  const lastName = participant.value?.last_name ?? 'User'
+  const firstName = participant.value?.first_name ?? 'User'
+  const lastName = participant.value?.last_name ?? ''
   return `${firstName} ${lastName}`
 })
 
 const getAvatar = computed(() => {
-  return participant.value?.avatar_url
+  return "/uploads/" + participant.value?.avatar_url
 })
 
 const messageContent = computed(() => {

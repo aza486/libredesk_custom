@@ -37,7 +37,7 @@ export const useConversationStore = defineStore('conversation', () => {
   let seenConversationUUIDs = new Map()
   let seenMessageUUIDs = new Set()
   let previousConvListType = ''
-  let previousPreDefinedFilter = ''
+  let previousFilter = ''
   let reRenderInterval = setInterval(() => {
     conversations.data = [...conversations.data]
   }, 60000)
@@ -101,7 +101,7 @@ export const useConversationStore = defineStore('conversation', () => {
     try {
       const resp = await api.getConversationParticipants(uuid)
       const participants = resp.data.data.reduce((acc, p) => {
-        acc[p.uuid] = p
+        acc[p.id] = p
         return acc
       }, {})
       updateParticipants(participants)
@@ -175,27 +175,28 @@ export const useConversationStore = defineStore('conversation', () => {
     seenConversationUUIDs.clear()
   }
 
-  async function fetchConversations (type, preDefinedFilter) {
-    conversations.loading = true
+  async function fetchConversations (type, filter, showLoader = true) {
+    if (showLoader)
+      conversations.loading = true
     conversations.errorMessage = ''
 
-    if (type !== previousConvListType || preDefinedFilter !== previousPreDefinedFilter) {
+    if (type !== previousConvListType || filter !== previousFilter) {
       onFilterchange()
       previousConvListType = type
-      previousPreDefinedFilter = preDefinedFilter
+      previousFilter = filter
     }
 
     try {
       let response
       switch (type) {
         case CONVERSATION_LIST_TYPE.ASSIGNED:
-          response = await api.getAssignedConversations(conversations.page, preDefinedFilter)
+          response = await api.getAssignedConversations(conversations.page, filter)
           break
         case CONVERSATION_LIST_TYPE.UNASSIGNED:
-          response = await api.getTeamConversations(conversations.page, preDefinedFilter)
+          response = await api.getTeamConversations(conversations.page, filter)
           break
         case CONVERSATION_LIST_TYPE.ALL:
-          response = await api.getAllConversations(conversations.page, preDefinedFilter)
+          response = await api.getAllConversations(conversations.page, filter)
           break
         default:
           console.warn(`Invalid type ${type}`)
@@ -232,9 +233,9 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   // Increments the page and fetches the next set of conversations.
-  function fetchNextConversations (type, preDefinedFilter) {
+  function fetchNextConversations (type, filter) {
     conversations.page++
-    fetchConversations(type, preDefinedFilter)
+    fetchConversations(type, filter)
   }
 
   async function updatePriority (v) {

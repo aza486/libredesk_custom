@@ -6,10 +6,8 @@ export function formatBytes(bytes) {
   }
 }
 
-export function getThumbFilepath(filepath) {
+export function getThumbFilepath (filepath) {
   const urlParts = filepath.split('/')
   const filename = urlParts.pop()
-  const thumbFilename = `thumb_${filename}`
-  urlParts.push(thumbFilename)
-  return urlParts.join('/')
+  return `/uploads/thumb_${filename}`
 }

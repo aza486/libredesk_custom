@@ -31,7 +31,7 @@ export const useUserStore = defineStore('user', () => {
   const getFullName = computed(() => {
     return `${userFirstName.value} ${userLastName.value}`
   })
-
+  
   // Fetch current user data
   const getCurrentUser = async () => {
     try {
@@ -40,7 +40,7 @@ export const useUserStore = defineStore('user', () => {
 
       if (userData) {
         const { avatar_url, first_name, last_name, permissions } = userData
-        setAvatar(avatar_url)
+        setAvatar("/uploads/" +avatar_url)
         setFirstName(first_name)
         setLastName(last_name)
         userPermissions.value = permissions || []

@@ -23,7 +23,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/health", handleHealthCheck)
 
 	// Serve uploaded files.
-	g.GET("/uploads/{all:*}", sess(authSess(handleServeUploadedFiles)))
+	g.GET("/uploads/{uuid}", sess(authSess(handleServeUploadedFiles)))
 
 	// Settings.
 	g.GET("/api/settings/general", handleGetGeneralSettings)

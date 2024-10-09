@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -85,25 +84,19 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		fileHeader := files[0]
 		file, err := fileHeader.Open()
 		if err != nil {
-			app.lo.Error("error reading uploaded file into memory", "error", err)
+			app.lo.Error("error reading uploaded", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reading file", nil, envelope.GeneralError)
 		}
 		defer file.Close()
 
 		// Sanitize filename.
 		srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
-
-		// Add a random suffix to the filename to ensure uniqueness.
-		suffix, _ := stringutil.RandomAlNumString(6)
-		srcFileName = stringutil.AppendSuffixToFilename(srcFileName, suffix)
-
 		srcContentType := fileHeader.Header.Get("Content-Type")
 		srcFileSize := fileHeader.Size
 		srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
-		srcMeta := []byte("{}")
 
 		if !slices.Contains(image.Exts, srcExt) {
-			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File type is not an image", nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File type is not an image", nil, envelope.InputError)
 		}
 
 		// Check file size
@@ -119,7 +112,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 		// Reset ptr.
 		file.Seek(0, 0)
-		_, err = app.media.UploadAndInsert(srcFileName, srcContentType, "", mmodels.ModelUser, user.ID, file, int(srcFileSize), "", srcMeta)
+		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, "", mmodels.ModelUser, user.ID, file, int(srcFileSize), "", []byte("{}"))
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
@@ -129,12 +122,11 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		if currentUser.AvatarURL.Valid {
 			fileName := filepath.Base(currentUser.AvatarURL.String)
 			app.lo.Info("deleting user avatar file", "filename", fileName)
-			app.media.DeleteMedia(fileName)
+			app.media.Delete(fileName)
 		}
 
 		// Update user avatar.
-		avatar:= "/" + path.Join(app.media.UploadPath, srcFileName)
-		if err := app.user.UpdateAvatar(user.ID, avatar); err != nil {
+		if err := app.user.UpdateAvatar(user.ID, media.UUID); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}
@@ -222,20 +214,15 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	}
 
 	// Valid str?
-	if !user.AvatarURL.Valid {
+	if user.AvatarURL.String == "" {
 		return r.SendEnvelope(true)
 	}
 
-	// Get filename from the avatar url path.
-	fileName := filepath.Base(user.AvatarURL.String)
-
 	// Delete file from the store.
-	if err := app.media.DeleteMedia(fileName); err != nil {
+	if err := app.media.Delete(user.AvatarURL.String); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
 			"Error deleting avatar", nil, envelope.InputError)
 	}
-
-	// Update as null.
 	err = app.user.UpdateAvatar(user.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)

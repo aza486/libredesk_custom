@@ -1,4 +1,4 @@
-package localfs
+package fs
 
 import (
 	"fmt"
@@ -70,7 +70,7 @@ func (c *Client) Delete(file string) error {
 
 // Name returns the name of the store.
 func (c *Client) Name() string {
-	return "localfs"
+	return "fs"
 }
 
 // getDir returns the current working directory path if no directory is specified,

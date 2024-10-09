@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	StatusOpen       = "Open"	
+	StatusOpen = "Open"
 
 	ValidFilters = map[string]string{
 		"status_open":       " c.status = 'Open'",
@@ -60,7 +60,7 @@ type Conversation struct {
 }
 
 type ConversationParticipant struct {
-	UUID      string      `db:"uuid" json:"uuid"`
+	ID        string      `db:"id" json:"id"`
 	FirstName string      `db:"first_name" json:"first_name"`
 	LastName  string      `db:"last_name" json:"last_name"`
 	AvatarURL null.String `db:"avatar_url" json:"avatar_url"`
@@ -99,7 +99,6 @@ type Message struct {
 	// Psuedo fields.
 	FirstName        string               `db:"first_name" json:"first_name"`
 	LastName         string               `db:"first_name" json:"last_name"`
-	SenderUUID       *string              `db:"sender_uuid" json:"sender_uuid"`
 	AvatarURL        string               `db:"avatar_url" json:"avatar_url"`
 	ConversationUUID string               `db:"conversation_uuid" json:"-"`
 	From             string               `db:"from"  json:"-"`

@@ -14,6 +14,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/image"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -43,7 +44,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	fileHeader := files[0]
 	file, err := fileHeader.Open()
 	if err != nil {
-		app.lo.Error("error reading uploaded file into memory", "error", err)
+		app.lo.Error("error reading uploaded file", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reading file", nil, envelope.GeneralError)
 	}
 	defer file.Close()
@@ -57,9 +58,6 @@ func handleMediaUpload(r *fastglue.Request) error {
 
 	// Sanitize filename.
 	srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
-	if srcFileName == "" {
-		srcFileName, _ = stringutil.RandomAlNumString(16)
-	}
 	srcContentType := fileHeader.Header.Get("Content-Type")
 	srcFileSize := fileHeader.Size
 	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
@@ -80,11 +78,12 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Delete files on any error.
-	thumbName := thumbPrefix + srcFileName
+	var uuid = uuid.New()
+	thumbName := thumbPrefix + uuid.String()
 	defer func() {
 		if cleanUp {
-			app.media.DeleteMedia(srcFileName)
-			app.media.DeleteMedia(thumbName)
+			app.media.Delete(uuid.String())
+			app.media.Delete(thumbName)
 		}
 	}()
 
@@ -93,7 +92,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 		file.Seek(0, 0)
 		thumbFile, err := image.CreateThumb(thumbnailSize, file)
 		if err != nil {
-			app.lo.Error("error resizing image", "error", err)
+			app.lo.Error("error creating thumb image", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error creating image thumbnail", nil, envelope.GeneralError)
 		}
 		thumbName, err = app.media.Upload(thumbName, srcContentType, thumbFile)
@@ -112,12 +111,12 @@ func handleMediaUpload(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
 	}
 	meta, _ := json.Marshal(map[string]interface{}{
-		"width":       width,
-		"height":      height,
+		"width":  width,
+		"height": height,
 	})
 
 	file.Seek(0, 0)
-	srcFileName, err = app.media.Upload(srcFileName, srcContentType, file)
+	_, err = app.media.Upload(uuid.String(), srcContentType, file)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error uploading file", "error", err)
@@ -125,7 +124,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Insert in DB.
-	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, "" /**model_type**/, disposition, 0, int(srcFileSize), meta)
+	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, "" /**model_type**/, disposition, uuid.String(), 0, int(srcFileSize), meta)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error inserting metadata into database", "error", err)
@@ -134,22 +133,16 @@ func handleMediaUpload(r *fastglue.Request) error {
 	return r.SendEnvelope(media)
 }
 
-
 // handleServeUploadedFiles serves uploaded files from the local filesystem or S3.
 func handleServeUploadedFiles(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
+		uuid = r.RequestCtx.UserValue("uuid").(string)
 	)
 
-	// Extract the file name from the URL path.
-	_, fileName := filepath.Split(string(r.RequestCtx.URI().Path()))
-
-	// Remove the "thumb_" prefix.
-	fileName = strings.TrimPrefix(fileName, "thumb_")
-
-	// Fetch media metadata from DB.
-	media, err := app.media.GetByFilename(fileName)
+	// Fetch media from DB.
+	media, err := app.media.GetByUUID(strings.TrimPrefix(uuid, thumbPrefix))
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -178,11 +171,10 @@ func handleServeUploadedFiles(r *fastglue.Request) error {
 	}
 
 	switch ko.String("upload.provider") {
-	case "localfs":
-		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.localfs.upload_path"), fileName))
+	case "fs":
+		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), uuid))
 	case "s3":
-		s3URL := app.media.GetURL(fileName)
-		r.RequestCtx.Redirect(s3URL, http.StatusFound)
+		r.RequestCtx.Redirect(app.media.GetURL(uuid), http.StatusFound)
 	}
 	return nil
 }
