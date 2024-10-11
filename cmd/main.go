@@ -78,6 +78,7 @@ func main() {
 	// Installer.
 	if ko.Bool("install") {
 		install(db, fs)
+		setSystemUserPass(db)
 		os.Exit(0)
 	}
 

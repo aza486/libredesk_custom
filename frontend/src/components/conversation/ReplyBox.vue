@@ -8,7 +8,7 @@
           'cursor-pointer rounded p-1 hover:bg-secondary',
           { 'bg-secondary': index === selectedResponseIndex }
         ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
-          <span class="font-semibold">{{ response.title }}</span> - {{ response.content }}
+          <span class="font-semibold">{{ response.title }}</span> - {{ response.content.slice(0, 100) }}...
         </li>
       </ul>
     </div>
@@ -184,7 +184,7 @@ const handleSend = async () => {
   try {
     // Replace image source url with cid.
     const message = transformImageSrcToCID(editorHTML.value)
-    await api.sendMessage(conversationStore.conversation.data.uuid, {
+    await api.sendMessage(conversationStore.current.uuid, {
       private: messageType.value === 'private_note',
       message: message,
       attachments: uploadedFiles.value.map((file) => file.id)
@@ -199,7 +199,7 @@ const handleSend = async () => {
     clearContent.value = true
     uploadedFiles.value = []
   }
-  api.updateAssigneeLastSeen(conversationStore.conversation.data.uuid)
+  api.updateAssigneeLastSeen(conversationStore.current.uuid)
 }
 
 const handleOnFileDelete = (uuid) => {

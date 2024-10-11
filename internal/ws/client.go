@@ -118,7 +118,7 @@ func (c *Client) processIncomingMessage(data []byte) {
 
 		// Add the new subscriptions.
 		for page := 1; page <= maxConversationsPagesToSub; page++ {
-			conversationUUIDs, err := c.Hub.conversationStore.GetConversationUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type, subReq.Filter)
+			conversationUUIDs, err := c.Hub.conversationStore.GetConversationUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type)
 			if err != nil {
 				log.Println("error fetching conversation ids", err)
 				continue

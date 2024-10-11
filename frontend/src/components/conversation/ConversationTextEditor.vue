@@ -111,7 +111,9 @@ watch(
   () => props.contentToSet,
   (newContent) => {
     if (newContent) {
-      editor.value.commands.setContent(newContent)
+      editor.value.commands.setContent(newContent, false, {
+        preserveWhitespace: "full"
+      })
       editor.value.commands.focus()
       emit('contentSet')
     }

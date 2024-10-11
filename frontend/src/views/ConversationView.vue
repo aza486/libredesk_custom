@@ -1,11 +1,11 @@
 <template>
   <ResizablePanelGroup direction="horizontal" auto-save-id="conversation.vue.resizable.panel">
-    <ResizablePanel :min-size="23" :default-size="23" :max-size="40">
+    <ResizablePanel :min-size="23" :default-size="23" :max-size="40" class="shadow-md shadow-gray-300">
       <ConversationList></ConversationList>
     </ResizablePanel>
     <ResizableHandle />
     <ResizablePanel>
-      <Conversation v-if="conversationStore.conversation.data"></Conversation>
+      <Conversation v-if="conversationStore.current"></Conversation>
       <ConversationPlaceholder v-else></ConversationPlaceholder>
     </ResizablePanel>
     <ResizableHandle />
@@ -13,7 +13,8 @@
       :min-size="10"
       :default-size="16"
       :max-size="30"
-      v-if="conversationStore.conversation.data"
+      v-if="conversationStore.current"
+      class="shadow shadow-gray-300"
     >
       <ConversationSideBar></ConversationSideBar>
     </ResizablePanel>

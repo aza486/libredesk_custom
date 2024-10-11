@@ -76,9 +76,9 @@ const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
-      { name: 'conversations:read_all', label: 'View all conversations list' },
-      { name: 'conversations:read_team', label: 'View team conversations list' },
-      { name: 'conversations:read_assigned', label: 'View assigned conversations list' },
+      { name: 'conversations:read_all', label: 'View all conversations' },
+      { name: 'conversations:read_unassigned', label: 'View unassigned conversations' },
+      { name: 'conversations:read_assigned', label: 'View assigned conversations' },
       { name: 'conversations:read', label: 'View conversation' },
       { name: 'conversations:update_user_assignee', label: 'Edit assigned user' },
       { name: 'conversations:update_team_assignee', label: 'Edit assigned team' },

@@ -1,7 +1,7 @@
 <template>
   <div class="p-3">
-    <ConversationSideBarContact :conversation="conversationStore.conversation.data"></ConversationSideBarContact>
-    <Accordion type="multiple" collapsible class="border-t mt-4">
+    <ConversationSideBarContact :conversation="conversationStore.current"></ConversationSideBarContact>
+    <Accordion type="multiple" collapsible class="border-t mt-4" :default-value="['Actions', 'Information']">
       <AccordionItem value="Actions">
         <AccordionTrigger>
           <h4 class="scroll-m-20 text-base font-medium tracking-tight">
@@ -10,16 +10,16 @@
         </AccordionTrigger>
         <AccordionContent class="space-y-5">
           <!-- Agent -->
-          <AssignAgent :agents="agents" :conversation="conversationStore.conversation.data" :selectAgent="selectAgent">
+          <AssignAgent :agents="agents" :conversation="conversationStore.current" :selectAgent="selectAgent">
           </AssignAgent>
           <!-- Team -->
-          <AssignTeam :teams="teams" :conversation="conversationStore.conversation.data" :selectTeam="selectTeam">
+          <AssignTeam :teams="teams" :conversation="conversationStore.current" :selectTeam="selectTeam">
           </AssignTeam>
           <!-- Priority  -->
-          <PriorityChange :priorities="priorities" :conversation="conversationStore.conversation.data"
+          <PriorityChange :priorities="priorities" :conversation="conversationStore.current"
             :selectPriority="selectPriority"></PriorityChange>
           <!-- Tags -->
-          <SelectTag :initialValue="conversationStore.conversation.data.tags" v-model="selectedTags" :items="tags"
+          <SelectTag :initialValue="conversationStore.current.tags" v-model="selectedTags" :items="tags"
             placeHolder="Select tags"></SelectTag>
         </AccordionContent>
       </AccordionItem>
@@ -30,7 +30,7 @@
           </span>
         </AccordionTrigger>
         <AccordionContent>
-          <ConversationInfo :conversation="conversationStore.conversation.data"></ConversationInfo>
+          <ConversationInfo :conversation="conversationStore.current"></ConversationInfo>
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -154,17 +154,17 @@ const handleUpsertTags = () => {
 }
 
 const selectAgent = (id) => {
-  conversationStore.conversation.data.assigned_user_id = id
+  conversationStore.current.assigned_user_id = id
   handleAssignedUserChange(id)
 }
 
 const selectTeam = (id) => {
-  conversationStore.conversation.data.assigned_team_id = id
+  conversationStore.current.assigned_team_id = id
   handleAssignedTeamChange(id)
 }
 
 const selectPriority = (priority) => {
-  conversationStore.conversation.data.priority = priority
+  conversationStore.current.priority = priority
   handlePriorityChange(priority)
 }
 </script>

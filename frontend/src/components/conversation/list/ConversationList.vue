@@ -2,9 +2,7 @@
   <div class="h-screen">
 
     <!-- Filters -->
-    <ConversationListFilters v-model:type="conversationType" v-model:filter="conversationFilter"
-      :handleFilterChange="handleFilterChange">
-    </ConversationListFilters>
+    <ConversationListFilters v-model:type="conversationType"></ConversationListFilters>
 
     <!-- Error / Empty list -->
     <EmptyList v-if="emptyConversations" title="No conversations found" message="Try adjusting filters."
@@ -13,13 +11,13 @@
       :message="conversationStore.conversations.errorMessage" :icon="MessageCircleWarning"></EmptyList>
 
     <div class="h-screen overflow-y-scroll pb-[180px] flex flex-col">
+      <!-- Item -->
+      <ConversationListItem />
+
       <!-- List skeleton -->
       <div v-if="conversationsLoading">
         <ConversationListItemSkeleton v-for="index in 8" :key="index"></ConversationListItemSkeleton>
       </div>
-
-      <!-- Item -->
-      <ConversationListItem />
 
       <!-- Load more  -->
       <div class="flex justify-center items-center mt-5 relative">
@@ -40,7 +38,7 @@
 import { onMounted, watch, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { subscribeConversationsList } from '@/websocket.js'
-import { CONVERSATION_LIST_TYPE, CONVERSATION_FILTERS } from '@/constants/conversation'
+import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
 import { MessageCircleWarning, MessageCircleQuestion } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
@@ -52,15 +50,14 @@ import { useStorage } from '@vueuse/core'
 
 const conversationStore = useConversationStore()
 const conversationType = useStorage('conversation_type', CONVERSATION_LIST_TYPE.ASSIGNED)
-const conversationFilter = useStorage('conversation_filter', CONVERSATION_FILTERS.ALL)
 let listRefreshInterval = null
 
 onMounted(() => {
-  conversationStore.fetchConversations(conversationType.value, conversationFilter.value)
-  subscribeConversationsList(conversationType.value, conversationFilter.value)
+  conversationStore.fetchConversationsList(conversationType.value)
+  subscribeConversationsList(conversationType.value)
   // Refresh list every min.
   listRefreshInterval = setInterval(() => {
-    conversationStore.fetchConversations(conversationType.value, conversationFilter.value, false)
+    conversationStore.fetchConversationsList(conversationType.value, false)
   }, 60000)
 })
 
@@ -69,18 +66,12 @@ onUnmounted(() => {
 })
 
 watch(conversationType, (newType) => {
-  conversationStore.fetchConversations(newType, conversationFilter.value)
-  subscribeConversationsList(newType, conversationFilter.value)
+  conversationStore.fetchConversationsList(newType)
+  subscribeConversationsList(newType)
 })
 
-const handleFilterChange = (filter) => {
-  conversationFilter.value = filter
-  conversationStore.fetchConversations(conversationType.value, filter)
-  subscribeConversationsList(conversationType.value, conversationFilter.value)
-}
-
 const loadNextPage = () => {
-  conversationStore.fetchNextConversations(conversationType.value, conversationFilter.value)
+  conversationStore.fetchNextConversations(conversationType.value)
 }
 
 const hasConversations = computed(() => {

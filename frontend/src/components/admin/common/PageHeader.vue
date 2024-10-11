@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col space-y-1">
     <span class="text-2xl">{{ title }}</span>
-    <p class="text-xs-muted">{{ description }}</p>
+    <p class="text-muted-foreground text-lg">{{ description }}</p>
   </div>
 </template>
 

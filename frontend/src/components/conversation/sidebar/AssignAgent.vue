@@ -53,9 +53,9 @@ const filteredAgents = ref([])
 
 const assignedAgentName = computed(() => {
     const assignedUserId = props.conversation.assigned_user_id
-    if (!assignedUserId) return 'Select agent...'
+    if (!assignedUserId) return 'Select agent'
     const agent = props.agents.find(agent => agent.id === assignedUserId)
-    return agent ? `${agent.first_name} ${agent.last_name}` : 'Select agent...'
+    return agent ? `${agent.first_name} ${agent.last_name}` : 'Select agent'
 })
 
 const handleFilterAgents = (search) => {

@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center cursor-pointer flex-row hover:bg-slate-50"
-    :class="{ 'bg-slate-100': conversation.uuid === conversationStore.conversation.data?.uuid }"
+    :class="{ 'bg-slate-100': conversation.uuid === conversationStore.current?.uuid }"
     v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid"
     @click="router.push('/conversations/' + conversation.uuid)">
 

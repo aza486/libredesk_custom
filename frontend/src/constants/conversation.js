@@ -1,13 +1,5 @@
-export const CONVERSATION_FILTERS = {
-  ALL: 'status_all',
-  STATUS_OPEN: 'status_open',
-  STATUS_PROCESSING: 'status_processing',
-  STATUS_SPAM: 'status_spam',
-  STATUS_RESOLVED: 'status_resolved'
-}
-
 export const CONVERSATION_LIST_TYPE = {
   ASSIGNED: 'assigned',
-  UNASSIGNED: 'team',
+  UNASSIGNED: 'unassigned',
   ALL: 'all'
 }

@@ -119,9 +119,9 @@ const updateAssignee = (uuid, assignee_type, data) =>
 const updateConversationStatus = (uuid, data) => http.put(`/api/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversations/${uuid}/last-seen`)
-const getMessage = (cuuid, uuid) => http.get(`/api/conversations/${cuuid}/messages/${uuid}`)
+const getConversationMessage = (cuuid, uuid) => http.get(`/api/conversations/${cuuid}/messages/${uuid}`)
 const retryMessage = (cuuid, uuid) => http.put(`/api/conversations/${cuuid}/messages/${uuid}/retry`)
-const getMessages = (uuid, page) =>
+const getConversationMessages = (uuid, page) =>
   http.get(`/api/conversations/${uuid}/messages`, {
     params: { page: page }
   })
@@ -137,12 +137,12 @@ const getCannedResponses = () => http.get('/api/canned-responses')
 const createCannedResponse = (data) => http.post('/api/canned-responses', data)
 const updateCannedResponse = (id, data) => http.put(`/api/canned-responses/${id}`, data)
 const deleteCannedResponse = (id) => http.delete(`/api/canned-responses/${id}`)
-const getAssignedConversations = (page, filter) =>
-  http.get(`/api/conversations/assigned?page=${page}&filter=${filter}`)
-const getTeamConversations = (page, filter) =>
-  http.get(`/api/conversations/team?page=${page}&filter=${filter}`)
-const getAllConversations = (page, filter) =>
-  http.get(`/api/conversations/all?page=${page}&filter=${filter}`)
+const getAssignedConversations = (page) =>
+  http.get(`/api/conversations/assigned?page=${page}`)
+const getUnassignedConversations = (page) =>
+  http.get(`/api/conversations/unassigned?page=${page}`)
+const getAllConversations = (page) =>
+  http.get(`/api/conversations/all?page=${page}`)
 const uploadMedia = (data) =>
   http.post('/api/media', data, {
     headers: {
@@ -204,15 +204,15 @@ export default {
   getAutomationRule,
   getAutomationRules,
   getAssignedConversations,
-  getTeamConversations,
+  getUnassignedConversations,
   getAllConversations,
   getGlobalDashboardCharts,
   getGlobalDashboardCounts,
   getUserDashboardCounts,
   getUserDashboardCharts,
   getConversationParticipants,
-  getMessage,
-  getMessages,
+  getConversationMessage,
+  getConversationMessages,
   getCurrentUser,
   getCannedResponses,
   createCannedResponse,

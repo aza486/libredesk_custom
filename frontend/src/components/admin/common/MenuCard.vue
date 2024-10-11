@@ -4,10 +4,10 @@
     @click="handleClick"
   >
     <div class="flex items-center mb-4">
-      <component :is="icon" size="16" class="mr-2" />
+      <component :is="icon" size="25" class="mr-2" />
       <p class="text-lg">{{ title }}</p>
     </div>
-    <p class="text-xs-muted">{{ subTitle }}</p>
+    <p class="text-sm text-muted-foreground">{{ subTitle }}</p>
   </div>
 </template>
 

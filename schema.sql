@@ -123,10 +123,10 @@ CREATE TABLE roles (
 -- Create roles.
 INSERT INTO roles
 (permissions, "name", description)
-VALUES('{conversations:read_team,conversations:read_all,conversations:read,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,templates:write,templates:read,roles:delete,roles:write,roles:read,inboxes:delete,inboxes:write,inboxes:read,automations:write,automations:delete,automations:read,teams:write,teams:read,users:write,users:read,dashboard_global:read,canned_responses:delete,tags:delete,canned_responses:write,tags:write,status:delete,status:write,status:read,oidc:delete,oidc:read,oidc:write,settings_notifications:read,settings_notifications:write,settings_general:write,templates:delete,admin:read}', 'Admin', 'Role for users who have access to the admin panel.');
+VALUES('{conversations:read_unassigned,conversations:read_all,conversations:read,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,templates:write,templates:read,roles:delete,roles:write,roles:read,inboxes:delete,inboxes:write,inboxes:read,automations:write,automations:delete,automations:read,teams:write,teams:read,users:write,users:read,dashboard_global:read,canned_responses:delete,tags:delete,canned_responses:write,tags:write,status:delete,status:write,status:read,oidc:delete,oidc:read,oidc:write,settings_notifications:read,settings_notifications:write,settings_general:write,templates:delete,admin:read}', 'Admin', 'Role for users who have access to the admin panel.');
 INSERT INTO roles
 (permissions, "name", description)
-VALUES('{conversations:read,conversations:read_team,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,status:write,status:delete,tags:write,tags:delete,canned_responses:write,canned_responses:delete,dashboard:global,users:write,users:read,teams:read,teams:write,automations:read,automations:write,automations:delete,inboxes:read,inboxes:write,inboxes:delete,roles:read,roles:write,roles:delete,templates:read,templates:write,messages:read,messages:write,dashboard_global:read,oidc:delete,status:read,oidc:write,settings_notifications:read,oidc:read,settings_general:write,settings_notifications:write,conversations:read_all,templates:delete}', 'Agent', 'Role for all agents with limited access.');
+VALUES('{conversations:read,conversations:read_unassigned,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,status:write,status:delete,tags:write,tags:delete,canned_responses:write,canned_responses:delete,dashboard:global,users:write,users:read,teams:read,teams:write,automations:read,automations:write,automations:delete,inboxes:read,inboxes:write,inboxes:delete,roles:read,roles:write,roles:delete,templates:read,templates:write,messages:read,messages:write,dashboard_global:read,oidc:delete,status:read,oidc:write,settings_notifications:read,oidc:read,settings_general:write,settings_notifications:write,conversations:read_all,templates:delete}', 'Agent', 'Role for all agents with limited access.');
 
 DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
@@ -285,3 +285,27 @@ VALUES
     ('notification.email.email_address', '""'::jsonb),
     ('notification.email.max_msg_retries', '3'::jsonb),
     ('notification.email.enabled', 'false'::jsonb);
+
+
+INSERT INTO priority
+(id, "name")
+VALUES(1, 'Low');
+INSERT INTO priority
+(id, "name")
+VALUES(2, 'Medium');
+INSERT INTO priority
+(id, "name")
+VALUES(3, 'High');
+
+INSERT INTO status
+(id, "name")
+VALUES(1, 'Open');
+INSERT INTO status
+(id, "name")
+VALUES(2, 'Replied');
+INSERT INTO status
+(id, "name")
+VALUES(3, 'Resolved');
+INSERT INTO status
+(id, "name")
+VALUES(4, 'Closed');

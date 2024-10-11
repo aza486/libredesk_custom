@@ -16,7 +16,7 @@
         >
           <div class="flex flex-col items-start space-y-1">
             <span class="text-sm">{{ item.title }}</span>
-            <p class="text-xs-muted break-words whitespace-normal">{{ item.description }}</p>
+            <p class="text-muted-foreground text-xs break-words whitespace-normal">{{ item.description }}</p>
           </div>
         </Button>
       </template>

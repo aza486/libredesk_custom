@@ -1,14 +1,8 @@
 <template>
-  <LineChart
-    :data="renamedData"
-    index="date"
-    :categories="['New conversations']"
-    :y-formatter="
-      (tick) => {
-        return tick
-      }
-    "
-  />
+  <LineChart :data="chartData" index="date" :categories="['New conversations']" :y-formatter="(tick) => {
+    return tick
+  }
+    " />
 </template>
 
 <script setup>
@@ -22,10 +16,10 @@ const props = defineProps({
   }
 })
 
-const renamedData = computed(() =>
-  props.data.map((item) => ({
-    ...item,
-    'New conversations': item.new_conversations
+const chartData = computed(() =>
+  props.data.map(item => ({
+    date: item.date,
+    "New conversations": item.new_conversations
   }))
 )
 </script>

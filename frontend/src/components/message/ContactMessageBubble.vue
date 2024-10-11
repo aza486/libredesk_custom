@@ -51,7 +51,7 @@ const props = defineProps({
 const convStore = useConversationStore()
 
 const getAvatar = computed(() => {
-  return convStore.conversation.data.avatar_url ? convStore.conversation.avatar_url : ''
+  return convStore.current.avatar_url ? convStore.conversation.avatar_url : ''
 })
 
 const messageContent = computed(() => 
@@ -66,10 +66,10 @@ const nonInlineAttachments = computed(() =>
 )
 
 const getFullName = computed(() => {
-  return convStore.conversation.data.first_name + ' ' + convStore.conversation.data.last_name
+  return convStore.current.first_name + ' ' + convStore.current.last_name
 })
 
 const avatarFallback = computed(() => {
-  return convStore.conversation.data.first_name.toUpperCase().substring(0, 2)
+  return convStore.current.first_name.toUpperCase().substring(0, 2)
 })
 </script>

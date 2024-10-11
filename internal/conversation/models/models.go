@@ -27,9 +27,9 @@ var (
 	AssigneeTypeTeam = "team"
 	AssigneeTypeUser = "user"
 
-	AllConversations      = "all"
-	AssignedConversations = "assigned"
-	TeamConversations     = "team"
+	AllConversations        = "all"
+	AssignedConversations   = "assigned"
+	UnassignedConversations = "unassigned"
 )
 
 type Conversation struct {

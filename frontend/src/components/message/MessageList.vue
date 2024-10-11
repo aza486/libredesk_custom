@@ -37,6 +37,7 @@ import { useConversationStore } from '@/stores/conversation'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-vue-next'
 import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 
 const conversationStore = useConversationStore()
 const threadEl = ref(null)
@@ -44,18 +45,19 @@ const emitter = useEmitter()
 
 const scrollToBottom = () => {
   setTimeout(() => {
+    console.log('scrolling..')
     const thread = threadEl.value
     if (thread) {
       thread.scrollTop = thread.scrollHeight
     }
-  }, 0)
+  }, 50)
 }
 
 onMounted(() => {
   scrollToBottom()
   // On new outgoing message to the current conversation, scroll to the bottom.
-  emitter.on('new-outgoing-message', (data) => {
-    if (data.conversation_uuid === conversationStore.conversation.data.uuid) {
+  emitter.on(EMITTER_EVENTS.NEW_OUTGOING_MESSAGE, (data) => {
+    if (data.conversation_uuid === conversationStore.current.uuid) {
       scrollToBottom()
     }
   })
@@ -63,7 +65,7 @@ onMounted(() => {
 
 // On conversation change scroll to the bottom
 watch(
-  () => conversationStore.conversation.data,
+  () => conversationStore.current.uuid,
   () => {
     scrollToBottom()
   }

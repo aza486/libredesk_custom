@@ -40,7 +40,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Conversation and message.
 	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversations", "read_all"))
-	g.GET("/api/conversations/team", perm(handleGetTeamConversations, "conversations", "read_team"))
+	g.GET("/api/conversations/unassigned", perm(handleGetUnassignedConversations, "conversations", "read_unassigned"))
 	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversations", "read_assigned"))
 
 	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateConversationUserAssignee, "conversations", "update_user_assignee"))

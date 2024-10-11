@@ -17,12 +17,10 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		app         = r.Context.(*App)
 		order       = string(r.RequestCtx.QueryArgs().Peek("order"))
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
-		filter      = string(r.RequestCtx.QueryArgs().Peek("filter"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
-	// Fetch all conversations
-	c, err := app.conversation.GetAllConversations(order, orderBy, filter, page, pageSize)
+	c, err := app.conversation.GetAllConversationsList(order, orderBy, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -36,31 +34,27 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		user        = r.RequestCtx.UserValue("user").(umodels.User)
 		order       = string(r.RequestCtx.QueryArgs().Peek("order"))
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
-		filter      = string(r.RequestCtx.QueryArgs().Peek("filter"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
-	// Fetch conversations assigned to the user
-	c, err := app.conversation.GetAssignedConversations(user.ID, order, orderBy, filter, page, pageSize)
+	c, err := app.conversation.GetAssignedConversationsList(user.ID, order, orderBy, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
 	return r.SendEnvelope(c)
 }
 
-// handleGetTeamConversations retrieves team-specific conversations.
-func handleGetTeamConversations(r *fastglue.Request) error {
+// handleGetUnassignedConversations retrieves unassigned conversations.
+func handleGetUnassignedConversations(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
 		user        = r.RequestCtx.UserValue("user").(umodels.User)
 		order       = string(r.RequestCtx.QueryArgs().Peek("order"))
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
-		filter      = string(r.RequestCtx.QueryArgs().Peek("filter"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 	)
-	// Fetch conversations assigned to the user's team
-	c, err := app.conversation.GetTeamConversations(user.ID, order, orderBy, filter, page, pageSize)
+	c, err := app.conversation.GetUnassignedConversationsList(user.ID, order, orderBy, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -74,8 +68,6 @@ func handleGetConversation(r *fastglue.Request) error {
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-
-	// Check if the user has access to the conversation
 	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -91,14 +83,10 @@ func handleUpdateConversationAssigneeLastSeen(r *fastglue.Request) error {
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-
-	// Check permission
 	_, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	// Update last seen
 	if err = app.conversation.UpdateConversationAssigneeLastSeen(uuid); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -112,14 +100,10 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-
-	// Check permission
 	_, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	// Fetch participants
 	p, err := app.conversation.GetConversationParticipants(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -139,13 +123,11 @@ func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid assignee `id`.", nil, envelope.InputError)
 	}
 
-	// Check permission
 	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Update the user assignee
 	if err := app.conversation.UpdateConversationUserAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -163,14 +145,10 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid assignee `id`.", nil, envelope.InputError)
 	}
-
-	// Check permission
 	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	// Update the team assignee
 	if err := app.conversation.UpdateConversationTeamAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -186,14 +164,10 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 		uuid     = r.RequestCtx.UserValue("uuid").(string)
 		user     = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-
-	// Check permission
 	_, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	// Update priority
 	if err := app.conversation.UpdateConversationPriority(uuid, priority, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -209,14 +183,10 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 		uuid   = r.RequestCtx.UserValue("uuid").(string)
 		user   = r.RequestCtx.UserValue("user").(umodels.User)
 	)
-
-	// Check permission
 	_, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	// Update status
 	if err := app.conversation.UpdateConversationStatus(uuid, status, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -241,13 +211,11 @@ func handleAddConversationTags(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error adding tags", nil, "")
 	}
 
-	// Check permission
 	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Upsert tags
 	if err := app.conversation.UpsertConversationTags(uuid, tagIDs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}

@@ -2,26 +2,18 @@
   <div class="relative" v-if="conversationStore.messages.data">
 
     <!-- Header -->
-    <div class="px-4 border-b h-[47px] flex items-center justify-between">
+    <div class="px-4 border-b h-[47px] flex items-center justify-between shadow shadow-gray-100">
       <div class="flex items-center space-x-3 text-sm">
         <div class="font-bold">
-          {{ contactFullName }}
+          {{ conversationStore.current.subject }}
         </div>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge :variant="getBadgeVariant">
-              {{ conversationStore.conversation.data.status }}
-            </Badge>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Status</p>
-          </TooltipContent>
-        </Tooltip>
       </div>
       <div>
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <Icon icon="lucide:ellipsis-vertical" class="mt-2 size-6"></Icon>
+            <Badge :variant="getBadgeVariant">
+              {{ conversationStore.current.status }}
+            </Badge>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem v-for="status in statuses" :key="status.name" @click="handleUpdateStatus(status.name)">
@@ -32,9 +24,7 @@
       </div>
     </div>
     <!-- Header end -->
-    
-    <Error class="sticky" :error-message="conversationStore.messages.errorMessage"></Error>
-    
+
     <!-- Messages & reply box -->
     <div class="flex flex-col h-screen">
       <MessageList class="flex-1" />
@@ -48,7 +38,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-import { Error } from '@/components/ui/error'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -56,11 +45,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
 import api from '@/api'
-import { Icon } from '@iconify/vue'
 
 const conversationStore = useConversationStore()
 const statuses = ref([])
@@ -75,14 +62,10 @@ const getStatuses = async () => {
 }
 
 const getBadgeVariant = computed(() => {
-  return conversationStore.conversation.data?.status == 'Spam' ? 'destructive' : 'primary'
+  return conversationStore.current?.status == 'Spam' ? 'destructive' : 'primary'
 })
 
 const handleUpdateStatus = (status) => {
   conversationStore.updateStatus(status)
 }
-
-const contactFullName = computed(() => {
-  return conversationStore.getContactFullName(conversationStore.conversation.data?.uuid)
-})
 </script>

@@ -52,9 +52,9 @@ const filteredTeams = ref([])
 
 const assignedTeamName = computed(() => {
     const assignedTeamId = props.conversation.assigned_team_id
-    if (!assignedTeamId) return 'Select team...'
+    if (!assignedTeamId) return 'Select team'
     const team = props.teams.find(team => team.id === assignedTeamId)
-    return team ? team.name : 'Select team...'
+    return team ? team.name : 'Select team'
 })
 
 const handleFilterTeams = (search) => {
