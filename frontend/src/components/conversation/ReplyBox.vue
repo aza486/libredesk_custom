@@ -28,7 +28,7 @@
       <Editor @keydown="handleKeydown" @editorText="handleEditorText" :placeholder="editorPlaceholder" :isBold="isBold"
         :clearContent="clearContent" :isItalic="isItalic" @updateBold="updateBold" @updateItalic="updateItalic"
         @contentCleared="handleContentCleared" @contentSet="clearContentToSet" @editorReady="onEditorReady"
-        :messageType="messageType" :contentToSet="contentToSet" :cannedResponses="cannedResponsesStore.responses" />
+        :messageType="messageType" :contentToSet="contentToSet" :cannedResponses="cannedResponses" />
 
       <!-- Attachments preview -->
       <AttachmentsPreview :attachments="uploadedFiles" :onDelete="handleOnFileDelete"></AttachmentsPreview>
@@ -52,7 +52,6 @@ import api from '@/api'
 
 import Editor from './ConversationTextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
-import { useCannedResponses } from '@/stores/canned_responses'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEmitter } from '@/composables/useEmitter'
 import AttachmentsPreview from '@/components/attachment/AttachmentsPreview.vue'
@@ -66,7 +65,6 @@ const editorText = ref('')
 const editorHTML = ref('')
 const contentToSet = ref('')
 const conversationStore = useConversationStore()
-const cannedResponsesStore = useCannedResponses()
 const filteredCannedResponses = ref([])
 const uploadedFiles = ref([])
 const messageType = ref('reply')
@@ -74,9 +72,16 @@ const selectedResponseIndex = ref(-1)
 const responsesList = ref(null)
 let editorInstance = null
 
-onMounted(() => {
-  cannedResponsesStore.fetchAll()
+onMounted(async () => {
+  try {
+    const resp = await api.getCannedResponses()
+    cannedResponses.value = resp.data.data
+  } catch (error) {
+    console.error(error)
+  }
 })
+
+const cannedResponses = ref([])
 
 const updateBold = (newState) => {
   isBold.value = newState
@@ -105,7 +110,7 @@ const filterCannedResponses = (input) => {
     const searchText = input.substring(lastSlashIndex + 1).trim()
 
     // Filter canned responses based on the search text
-    filteredCannedResponses.value = cannedResponsesStore.responses.filter((response) =>
+    filteredCannedResponses.value = cannedResponses.value.filter((response) =>
       response.title.toLowerCase().includes(searchText.toLowerCase())
     )
 

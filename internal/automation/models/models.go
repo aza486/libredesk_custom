@@ -15,22 +15,22 @@ const (
 	OperatorOR  = "OR"
 
 	RuleContains    = "contains"
-	RuleNotContains = "not_contains"
+	RuleNotContains = "not contains"
 	RuleEquals      = "equals"
-	RuleNotEqual    = "not_equals"
+	RuleNotEqual    = "not equals"
 	RuleSet         = "set"
-	RuleNotSet      = "not_set"
+	RuleNotSet      = "not set"
 
 	RuleTypeNewConversation    = "new_conversation"
 	RuleTypeConversationUpdate = "conversation_update"
 	RuleTypeTimeTrigger        = "time_trigger"
 
-	ConversationFieldSubject        = "subject"
-	ConversationFieldContent        = "content"
-	ConversationFieldStatus         = "status"
-	ConversationFieldPriority       = "priority"
-	ConversationFieldAssignedUserID = "assigned_user_id"
-	ConversationFieldAssignedTeamID = "assigned_team_id"
+	ConversationFieldSubject      = "subject"
+	ConversationFieldContent      = "content"
+	ConversationFieldStatus       = "status"
+	ConversationFieldPriority     = "priority"
+	ConversationFieldAssignedUser = "assigned_user"
+	ConversationFieldAssignedTeam = "assigned_team"
 )
 
 // RuleRecord represents a rule record in the database

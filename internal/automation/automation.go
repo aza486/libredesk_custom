@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -43,7 +44,7 @@ type Opts struct {
 
 type ConversationStore interface {
 	GetConversation(uuid string) (cmodels.Conversation, error)
-	GetRecentConversations(t time.Time) ([]cmodels.Conversation, error)
+	GetConversationsCreatedAfter(t time.Time) ([]cmodels.Conversation, error)
 	UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error
 	UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error
 	UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error
@@ -65,6 +66,7 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 	var (
 		q queries
 		e = &Engine{
+			systemUser:          systemUser,
 			lo:                  opt.Lo,
 			newConversationQ:    make(chan string, 5000),
 			updateConversationQ: make(chan string, 5000),
@@ -108,9 +110,11 @@ func (e *Engine) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case conversationUUID := <-e.newConversationQ:
+			e.lo.Info("evaluating new conversation rules", "uuid", conversationUUID)
 			newConversationSemaphore <- struct{}{}
 			go e.handleNewConversation(conversationUUID, newConversationSemaphore)
 		case conversationUUID := <-e.updateConversationQ:
+			e.lo.Info("evaluating conversation rules on update", "uuid", conversationUUID)
 			updateConversationSemaphore <- struct{}{}
 			go e.handleUpdateConversation(conversationUUID, updateConversationSemaphore)
 		case <-ticker.C:
@@ -216,11 +220,12 @@ func (e *Engine) handleTimeTrigger(semaphore chan struct{}) {
 	defer func() { <-semaphore }()
 
 	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
-	conversations, err := e.conversationStore.GetRecentConversations(thirtyDaysAgo)
+	conversations, err := e.conversationStore.GetConversationsCreatedAfter(thirtyDaysAgo)
 	if err != nil {
 		return
 	}
 	rules := e.filterRulesByType(models.RuleTypeTimeTrigger)
+	e.lo.Debug("fetched conversations for evaluating time triggers", "conversations_count", len(conversations), "rules_count", len(rules))
 	for _, conversation := range conversations {
 		e.evalConversationRules(rules, conversation)
 	}
@@ -249,26 +254,33 @@ func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string) {
 // queryRules fetches automation rules from the database.
 func (e *Engine) queryRules() []models.Rule {
 	var (
-		rulesJSON []string
-		rules     []models.Rule
+		rules []struct {
+			Type  string `db:"type"`
+			Rules string `db:"rules"`
+		}
+		filteredRules []models.Rule
 	)
-	err := e.q.GetEnabledRules.Select(&rulesJSON)
+	err := e.q.GetEnabledRules.Select(&rules)
 	if err != nil {
 		e.lo.Error("error fetching automation rules", "error", err)
-		return rules
+		return filteredRules
 	}
 
-	e.lo.Debug("fetched rules from db", "count", len(rulesJSON))
+	e.lo.Info("fetched rules from db", "count", len(rules))
 
-	for _, ruleJSON := range rulesJSON {
+	for _, rule := range rules {
 		var rulesBatch []models.Rule
-		if err := json.Unmarshal([]byte(ruleJSON), &rulesBatch); err != nil {
+		if err := json.Unmarshal([]byte(rule.Rules), &rulesBatch); err != nil {
 			e.lo.Error("error unmarshalling rule JSON", "error", err)
 			continue
 		}
-		rules = append(rules, rulesBatch...)
+		// Set the Type for each rule in rulesBatch
+		for i := range rulesBatch {
+			rulesBatch[i].Type = rule.Type
+		}
+		filteredRules = append(filteredRules, rulesBatch...)
 	}
-	return rules
+	return filteredRules
 }
 
 // filterRulesByType filters rules by type.
@@ -278,6 +290,7 @@ func (e *Engine) filterRulesByType(ruleType string) []models.Rule {
 
 	var filteredRules []models.Rule
 	for _, rule := range e.rules {
+		fmt.Println(rule)
 		if rule.Type == ruleType {
 			filteredRules = append(filteredRules, rule)
 		}

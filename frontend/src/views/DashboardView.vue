@@ -4,7 +4,7 @@
     <div>
       <DashboardGreet></DashboardGreet>
     </div>
-    <div class="mt-7">
+    <div class="mt-7" v-auto-animate>
       <Card :counts="cardCounts" :labels="agentCountCardsLabels" />
     </div>
     <div class="flex my-7 justify-between items-center space-x-5">
@@ -23,6 +23,7 @@ import { onMounted, ref } from 'vue'
 import { useToast } from '@/components/ui/toast/use-toast'
 import api from '@/api'
 
+import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import Card from '@/components/dashboard/DashboardCard.vue'
 import LineChart from '@/components/dashboard/DashboardLineChart.vue'
 import BarChart from '@/components/dashboard/DashboardBarChart.vue'

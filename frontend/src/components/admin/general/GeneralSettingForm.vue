@@ -68,7 +68,7 @@
 
     <FormField name="allowed_file_upload_extensions" v-slot="{ componentField }">
       <FormItem>
-        <FormLabel>Allowed file extensions</FormLabel>
+        <FormLabel>Allowed file upload extensions</FormLabel>
         <FormControl>
           <TagsInput v-model="componentField.modelValue">
             <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">

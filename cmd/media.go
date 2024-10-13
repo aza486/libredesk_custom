@@ -133,8 +133,8 @@ func handleMediaUpload(r *fastglue.Request) error {
 	return r.SendEnvelope(media)
 }
 
-// handleServeUploadedFiles serves uploaded files from the local filesystem or S3.
-func handleServeUploadedFiles(r *fastglue.Request) error {
+// handleServeMedia serves uploaded media.
+func handleServeMedia(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
@@ -148,26 +148,26 @@ func handleServeUploadedFiles(r *fastglue.Request) error {
 	}
 
 	// Check if the user has permission to access the linked model.
-	// TODO: Move this out of here.
-	if media.Model.String == "messages" {
-		allowed, err := app.authz.Enforce(user, media.Model.String, "read")
-		if err != nil {
-			return r.SendErrorEnvelope(http.StatusInternalServerError, "Error checking permissions", nil, envelope.GeneralError)
-		}
-		if !allowed {
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
-		}
+	allowed, err := app.authz.EnforceMediaAccess(user, media.Model.String)
+	if err != nil  {
+		app.lo.Error("error checking media permission", "error", err, "model", media.Model.String, "model_id", media.ModelID)
+		return sendErrorEnvelope(r, err)
+	}
 
-		// Validate access to the related conversation.
+	// For messages, check access to the conversation this message is part of.
+	if media.Model.String == "messages" {
 		conversation, err := app.conversation.GetConversationByMessageID(media.ModelID.Int)
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-
-		_, err = enforceConversationAccess(app, conversation.UUID, user)
+		allowed, err = app.authz.EnforceConversationAccess(user, conversation)
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
+	}
+
+	if !allowed {
+		return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
 	}
 
 	switch ko.String("upload.provider") {

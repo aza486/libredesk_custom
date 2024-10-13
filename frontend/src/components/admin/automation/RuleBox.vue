@@ -1,11 +1,7 @@
 <template>
   <div>
     <div class="mb-5">
-      <RadioGroup
-        class="flex"
-        :modelValue="ruleGroup.logical_op"
-        @update:modelValue="handleGroupOperator"
-      >
+      <RadioGroup class="flex" :modelValue="ruleGroup.logical_op" @update:modelValue="handleGroupOperator">
         <div class="flex items-center space-x-2">
           <RadioGroupItem value="OR" />
           <Label for="r1">Match <b>ANY</b> of below.</Label>
@@ -24,10 +20,8 @@
           </div>
           <div class="flex justify-between">
             <div class="flex space-x-5">
-              <Select
-                v-model="rule.field"
-                @update:modelValue="(value) => handleFieldChange(value, index)"
-              >
+              <!-- Field selection -->
+              <Select v-model="rule.field" @update:modelValue="(value) => handleFieldChange(value, index)">
                 <SelectTrigger class="w-56">
                   <SelectValue placeholder="Select field" />
                 </SelectTrigger>
@@ -41,17 +35,15 @@
                 </SelectContent>
               </Select>
 
-              <Select
-                v-model="rule.operator"
-                @update:modelValue="(value) => handleOperatorChange(value, index)"
-              >
+              <!-- Operator selection -->
+              <Select v-model="rule.operator" @update:modelValue="(value) => handleOperatorChange(value, index)">
                 <SelectTrigger class="w-56">
                   <SelectValue placeholder="Select operator" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem v-for="(field, key) in operators" :key="key" :value="key">
-                      {{ field.label }}
+                    <SelectItem v-for="(op, key) in getFieldOperators(rule.field)" :key="key" :value="op">
+                      {{ op }}
                     </SelectItem>
                   </SelectGroup>
                 </SelectContent>
@@ -61,20 +53,32 @@
               <CircleX size="21" />
             </div>
           </div>
-          <div>
-            <Input
-              type="text"
-              placeholder="Set value"
-              :modelValue="rule.value"
-              @update:modelValue="(value) => handleValueChange(value, index)"
-            />
+
+          <!-- Value input based on field type -->
+          <div v-if="showInput(index)">
+            <!-- Text input -->
+            <Input type="text" placeholder="Set value" v-if="inputType(index) === 'text'" :modelValue="rule.value"
+              @update:modelValue="(value) => handleValueChange(value, index)" />
+
+            <!-- Dropdown -->
+            <Select v-model="rule.value" @update:modelValue="(value) => handleValueChange(value, index)"
+              v-if="inputType(index) === 'select'">
+              <SelectTrigger class="w-56">
+                <SelectValue placeholder="Select value" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem v-for="(op, key) in getFieldOptions(rule.field)" :key="key" :value="op">
+                    {{ op }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
+
           <div class="flex items-center space-x-2">
-            <Checkbox
-              id="terms"
-              :defaultChecked="rule.case_sensitive_match"
-              @update:checked="(value) => handleCaseSensitiveCheck(value, index)"
-            />
+            <Checkbox id="terms" :defaultChecked="rule.case_sensitive_match"
+              @update:checked="(value) => handleCaseSensitiveCheck(value, index)" />
             <label for="terms"> Case sensitive match </label>
           </div>
         </div>
@@ -87,7 +91,7 @@
 </template>
 
 <script setup>
-import { toRefs } from 'vue'
+import { toRefs, ref, onMounted } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
@@ -103,6 +107,10 @@ import {
 import { CircleX } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
+import api from '@/api'
 
 const props = defineProps({
   ruleGroup: {
@@ -110,12 +118,30 @@ const props = defineProps({
     required: true
   },
   groupIndex: {
-    Type: Number,
+    type: Number,
     required: true
   }
 })
 
+const emitter = useEmitter()
+const statuses = ref([])
+const priorities = ref([
+  "Low", "Medium", "High"
+])
 const { ruleGroup } = toRefs(props)
+
+onMounted(async () => {
+  try {
+    const [statusesResp] = await Promise.all([api.getStatuses()])
+    statuses.value = statusesResp.data.data.map(status => (status.name))
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Could not fetch statuses',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
+})
 
 const emit = defineEmits(['update-group', 'add-condition', 'remove-condition'])
 
@@ -125,11 +151,16 @@ const handleGroupOperator = (value) => {
 }
 
 const handleFieldChange = (value, ruleIndex) => {
+  // Clear operator and value on field change
+  ruleGroup.value.rules[ruleIndex].operator = ''
+  ruleGroup.value.rules[ruleIndex].value = ''
   ruleGroup.value.rules[ruleIndex].field = value
   emitUpdate()
 }
 
 const handleOperatorChange = (value, ruleIndex) => {
+  // Clear value on operator change
+  ruleGroup.value.rules[ruleIndex].value = ''
   ruleGroup.value.rules[ruleIndex].operator = value
   emitUpdate()
 }
@@ -157,44 +188,50 @@ const emitUpdate = () => {
 }
 
 const conversationFields = {
-  content: {
-    label: 'Content'
-  },
-  subject: {
-    label: 'Subject'
-  },
-  status: {
-    label: 'Status'
-  },
-  priority: {
-    label: 'Priority'
-  },
-  assigned_team: {
-    label: 'Assigned team'
-  },
-  assigned_user: {
-    label: 'Assigned user'
-  }
+  content: { label: 'Content' },
+  subject: { label: 'Subject' },
+  status: { label: 'Status' },
+  priority: { label: 'Priority' },
+  assigned_team: { label: 'Assigned team' },
+  assigned_user: { label: 'Assigned user' }
 }
 
-const operators = {
-  contains: {
-    label: 'Contains'
-  },
-  not_contains: {
-    label: 'Not contains'
-  },
-  equals: {
-    label: 'Equals'
-  },
-  not_equals: {
-    label: 'Not equals'
-  },
-  set: {
-    label: 'Set'
-  },
-  not_set: {
-    label: 'Not set'
+const fieldOperators = {
+  content: ["contains", "not contains", "equals", "not equals", "set", "not set"],
+  subject: ["contains", "not contains", "equals", "not equals", "set", "not set"],
+  status: ["equals", "not equals", "set", "not set"],
+  priority: ["equals", "not equals", "set", "not set"],
+  assigned_team: ["set", "not set"],
+  assigned_user: ["set", "not set"]
+}
+
+const fieldOptions = {
+  status: statuses,
+  priority: priorities,
+}
+
+const getFieldOperators = (field) => {
+  return fieldOperators[field] || []
+}
+
+const getFieldOptions = (field) => {
+  return fieldOptions[field]?.value || []
+}
+
+const inputType = (index) => {
+  const field = ruleGroup.value.rules[index]?.field
+  const operator = ruleGroup.value.rules[index]?.operator
+  if (["status", "priority"].includes(field)) {
+    return "select"
   }
+  if (["equals", "not equals", "contains", "not contains"].includes(operator)) {
+    return "text"
+  }
+  return ""
+}
+
+const showInput = (index) => {
+  const operator = ruleGroup.value.rules[index]?.operator
+  return !["set", "not set"].includes(operator)
 }
 </script>

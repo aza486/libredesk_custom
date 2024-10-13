@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, onUnmounted } from 'vue'
-import { handleHTTPError } from '@/utils/http'
+import { computed, reactive } from 'vue'
 import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
+import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import api from '@/api'
@@ -42,10 +42,10 @@ export const useConversationStore = defineStore('conversation', () => {
   }, 120000)
   const emitter = useEmitter()
 
-  // Cleanup.
-  onUnmounted(() => {
+  // Clears the re-render interval
+  function clearListReRenderInterval() {
     clearInterval(reRenderInterval)
-  })
+  }
 
   // Sort conversations by last_message_at
   const sortedConversations = computed(() => {
@@ -96,6 +96,8 @@ export const useConversationStore = defineStore('conversation', () => {
       conversation.data = resp.data.data
       // Mark this conversation as read.
       markAsRead(uuid)
+      // Reset messages state.
+      resetMessages()
     } catch (error) {
       conversation.errorMessage = handleHTTPError(error).message
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -128,8 +130,6 @@ export const useConversationStore = defineStore('conversation', () => {
 
   // Fetches messages of a conversation.
   async function fetchMessages (uuid) {
-    // Reset state.
-    resetMessages()
     messages.loading = true
     try {
       const response = await api.getConversationMessages(uuid, messages.page)
@@ -394,22 +394,11 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function $reset () {
-    // Reset conversations state
-    conversations.data = []
-    conversations.loading = false
-    conversations.page = 1
-    conversations.hasMore = true
-    conversations.errorMessage = ''
-
-    // Reset conversation state
+  function resetCurrentConversation () {
     conversation.data = null
     conversation.participants = {}
-    conversation.loading = false
+    conversation.loading = false,
     conversation.errorMessage = ''
-
-    // Reset messages state
-    resetMessages()
   }
 
   function resetMessages () {
@@ -429,6 +418,7 @@ export const useConversationStore = defineStore('conversation', () => {
     sortedMessages,
     current,
     currentContactName,
+    clearListReRenderInterval,
     conversationUUIDExists,
     updateConversationProp,
     addNewConversation,
@@ -447,6 +437,7 @@ export const useConversationStore = defineStore('conversation', () => {
     updatePriority,
     updateStatus,
     updateConversationLastMessage,
-    $reset
+    resetMessages,
+    resetCurrentConversation,
   }
 })

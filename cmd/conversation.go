@@ -131,6 +131,8 @@ func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 	if err := app.conversation.UpdateConversationUserAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	app.automation.EvaluateConversationUpdateRules(uuid)
 	return r.SendEnvelope(true)
 }
 
@@ -152,6 +154,8 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 	if err := app.conversation.UpdateConversationTeamAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	app.automation.EvaluateConversationUpdateRules(uuid)
 	return r.SendEnvelope(true)
 }
 
@@ -171,6 +175,8 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 	if err := app.conversation.UpdateConversationPriority(uuid, priority, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	app.automation.EvaluateConversationUpdateRules(uuid)
 	return r.SendEnvelope(true)
 }
 
@@ -190,6 +196,8 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	if err := app.conversation.UpdateConversationStatus(uuid, status, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	app.automation.EvaluateConversationUpdateRules(uuid)
 	return r.SendEnvelope(true)
 }
 
@@ -219,9 +227,9 @@ func handleAddConversationTags(r *fastglue.Request) error {
 	if err := app.conversation.UpsertConversationTags(uuid, tagIDs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	app.automation.EvaluateConversationUpdateRules(uuid)
 	return r.SendEnvelope(true)
 }
-
 
 // handleDashboardCounts retrieves general dashboard counts for all users.
 func handleDashboardCounts(r *fastglue.Request) error {

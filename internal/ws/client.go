@@ -26,7 +26,7 @@ type SafeBool struct {
 func (b *SafeBool) Set(value bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.flag = value	
+	b.flag = value
 }
 
 // Get returns the value of the SafeBool.
@@ -49,6 +49,9 @@ type Client struct {
 
 	// To prevent pushes to the channel.
 	Closed SafeBool
+
+	// Currently opened conversation UUID.
+	CurrentConversationUUID string
 
 	// Buffered channel of outbound ws messages.
 	Send chan models.WSMessage
@@ -118,13 +121,27 @@ func (c *Client) processIncomingMessage(data []byte) {
 
 		// Add the new subscriptions.
 		for page := 1; page <= maxConversationsPagesToSub; page++ {
-			conversationUUIDs, err := c.Hub.conversationStore.GetConversationUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type)
+			conversationUUIDs, err := c.Hub.conversationStore.GetConversationsListUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type)
 			if err != nil {
-				log.Println("error fetching conversation ids", err)
 				continue
 			}
 			c.SubscribeConversations(c.ID, conversationUUIDs)
 		}
+	case models.ActionSetCurrentConversation:
+		var subReq models.ConversationCurrentSet
+		if err := json.Unmarshal(data, &subReq); err != nil {
+			c.SendError("error unmarshalling request")
+			return
+		}
+
+		if c.CurrentConversationUUID != subReq.UUID {
+			c.UnsubscribeConversation(c.ID, c.CurrentConversationUUID)
+			c.CurrentConversationUUID = subReq.UUID
+			c.SubscribeConversations(c.ID, []string{subReq.UUID})
+		}
+	case models.ActionUnsetCurrentConversation:
+		c.UnsubscribeConversation(c.ID, c.CurrentConversationUUID)
+		c.CurrentConversationUUID = ""
 	default:
 		c.SendError("unknown action")
 	}
@@ -170,6 +187,22 @@ func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
 				break
 			}
 		}
+		if len(c.Hub.conversationSubs[conversationUUID]) == 0 {
+			delete(c.Hub.conversationSubs, conversationUUID)
+		}
+	}
+}
+
+// UnsubscribeConversation unsubscribes the user from the specified conversation.
+func (c *Client) UnsubscribeConversation(userID int, conversationUUID string) {
+	if userIDs, ok := c.Hub.conversationSubs[conversationUUID]; ok {
+		for i, id := range userIDs {
+			if id == userID {
+				c.Hub.conversationSubs[conversationUUID] = append(userIDs[:i], userIDs[i+1:]...)
+				break
+			}
+		}
+		// Remove the conversation from the map if no users are subscribed
 		if len(c.Hub.conversationSubs[conversationUUID]) == 0 {
 			delete(c.Hub.conversationSubs, conversationUUID)
 		}

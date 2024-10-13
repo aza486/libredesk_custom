@@ -142,10 +142,10 @@ type queries struct {
 	GetConversationID                *sqlx.Stmt `query:"get-conversation-id"`
 	GetConversationUUID              *sqlx.Stmt `query:"get-conversation-uuid"`
 	GetConversation                  *sqlx.Stmt `query:"get-conversation"`
-	GetRecentConversations           *sqlx.Stmt `query:"get-recent-conversations"`
+	GetConversationsCreatedAfter     *sqlx.Stmt `query:"get-conversations-created-after"`
 	GetUnassignedConversations       *sqlx.Stmt `query:"get-unassigned-conversations"`
 	GetConversations                 string     `query:"get-conversations"`
-	GetConversationsUUIDs            string     `query:"get-conversations-uuids"`
+	GetConversationsListUUIDs        string     `query:"get-conversations-list-uuids"`
 	GetConversationParticipants      *sqlx.Stmt `query:"get-conversation-participants"`
 	GetAssignedConversations         *sqlx.Stmt `query:"get-assigned-conversations"`
 
@@ -203,10 +203,10 @@ func (c *Manager) GetConversation(uuid string) (models.Conversation, error) {
 	return conversation, nil
 }
 
-// GetRecentConversations retrieves conversations created after the specified time.
-func (c *Manager) GetRecentConversations(time time.Time) ([]models.Conversation, error) {
+// GetConversationsCreatedAfter retrieves conversations created after the specified time.
+func (c *Manager) GetConversationsCreatedAfter(time time.Time) ([]models.Conversation, error) {
 	var conversations = make([]models.Conversation, 0)
-	if err := c.q.GetRecentConversations.Select(&conversations, time); err != nil {
+	if err := c.q.GetConversationsCreatedAfter.Select(&conversations, time); err != nil {
 		if err == sql.ErrNoRows {
 			c.lo.Error("conversations not found", "created_after", time)
 			return conversations, err
@@ -334,11 +334,11 @@ func (c *Manager) GetConversations(userID int, typ, order, orderBy string, page,
 	return conversations, nil
 }
 
-// GetConversationUUIDs retrieves the UUIDs of conversations based on user ID, type, and optional filtering, ordering, and pagination.
-func (c *Manager) GetConversationUUIDs(userID, page, pageSize int, typ string) ([]string, error) {
+// GetConversationsListUUIDs retrieves the UUIDs of conversations list.
+func (c *Manager) GetConversationsListUUIDs(userID, page, pageSize int, typ string) ([]string, error) {
 	var ids = make([]string, 0)
 
-	query, qArgs, err := c.generateConversationsListQuery(userID, c.q.GetConversationsUUIDs, typ, "", "", page, pageSize)
+	query, qArgs, err := c.generateConversationsListQuery(userID, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize)
 	if err != nil {
 		c.lo.Error("error generating conversations query", "error", err)
 		return ids, err

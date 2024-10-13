@@ -1,3 +1,4 @@
+// package authz provides Casbin-based authorization.
 package authz
 
 import (
@@ -20,17 +21,17 @@ type Enforcer struct {
 }
 
 const casbinModel = `
-[request_definition]
-r = sub, obj, act
+	[request_definition]
+	r = sub, obj, act
 
-[policy_definition]
-p = sub, obj, act
+	[policy_definition]
+	p = sub, obj, act
 
-[policy_effect]
-e = some(where (p.eft == allow))
+	[policy_effect]
+	e = some(where (p.eft == allow))
 
-[matchers]
-m = r.sub == p.sub && r.obj == p.obj && r.act == p.act
+	[matchers]
+	m = r.sub == p.sub && r.obj == p.obj && r.act == p.act
 `
 
 // NewEnforcer initializes a new Enforcer with the hardcoded model
@@ -39,7 +40,6 @@ func NewEnforcer(lo *logf.Logger) (*Enforcer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Casbin model: %v", err)
 	}
-
 	e, err := casbin.NewEnforcer(m)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Casbin enforcer: %v", err)
@@ -56,11 +56,10 @@ func (e *Enforcer) LoadPermissions(user umodels.User) error {
 			return fmt.Errorf("invalid permission format: %s", perm)
 		}
 
-		permObj, permAct := parts[0], parts[1]
-
-		ok, err := e.enforcer.HasPolicy(strconv.Itoa(user.ID), permObj, permAct)
+		userID, permObj, permAct := strconv.Itoa(user.ID), parts[0], parts[1]
+		ok, err := e.enforcer.HasPolicy(userID, permObj, permAct)
 		if err != nil || !ok {
-			if _, err := e.enforcer.AddPolicy(strconv.Itoa(user.ID), permObj, permAct); err != nil {
+			if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
 				return fmt.Errorf("failed to add policy: %v", err)
 			}
 		}
@@ -85,7 +84,7 @@ func (e *Enforcer) Enforce(user umodels.User, obj, act string) (bool, error) {
 }
 
 // EnforceConversationAccess checks if a user has access to a conversation based on their permissions.
-// It returns true if the user has read_all permission, or read_team permission and is in the assigned team,
+// It returns true if the user has read_all permission, or read_assigned permission and is in the assigned team,
 // or read_assigned permission and is the assigned user. Returns false otherwise.
 func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmodels.Conversation) (bool, error) {
 	// Check for `read_all` permission
@@ -106,8 +105,8 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 		return true, nil
 	}
 
-	// Check for `read_team` permission
-	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_team")
+	// Check for `read_assigned` permission
+	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_assigned")
 	if err != nil {
 		return false, envelope.NewError(envelope.GeneralError, "Error checking permissions", nil)
 	}
@@ -120,4 +119,21 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 	}
 
 	return false, nil
+}
+
+// EnforceMediaAccess checks for read access on linked model to media.
+func (e *Enforcer) EnforceMediaAccess(user umodels.User, model string) (bool, error) {
+	switch model {
+	case "messages":
+		allowed, err := e.Enforce(user, model, "read")
+		if err != nil {
+			return false, envelope.NewError(envelope.GeneralError, "Error checking permissions", nil)
+		}
+		if !allowed {
+			return false, envelope.NewError(envelope.UnauthorizedError, "Permission denied", nil)
+		}
+	default:
+		return true, nil
+	}
+	return true, nil
 }

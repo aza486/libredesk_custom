@@ -1,7 +1,6 @@
 <template>
   <div class="flex items-center cursor-pointer flex-row hover:bg-slate-50"
-    :class="{ 'bg-slate-100': conversation.uuid === conversationStore.current?.uuid }"
-    v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid"
+    :class="{ 'bg-slate-100': conversation.uuid === currentConversation?.uuid }"
     @click="router.push('/conversations/' + conversation.uuid)">
 
     <div class="pl-3">
@@ -12,7 +11,7 @@
         </AvatarFallback>
       </Avatar>
     </div>
-  
+
     <div class="ml-3 w-full border-b pb-2">
       <div class="flex justify-between pt-2 pr-3">
         <div>
@@ -55,6 +54,10 @@ import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const router = useRouter()
+defineProps({
+  conversation: Object,
+  currentConversation: Object
+})
 const conversationStore = useConversationStore()
 const getContactFullName = (uuid) => {
   return conversationStore.getContactFullName(uuid)

@@ -6,8 +6,27 @@ const http = axios.create({
   responseType: 'json'
 })
 
+// Function to extract CSRF token from cookies
+function getCSRFToken() {
+  const name = 'csrf_token=';
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+      let c = cookies[i].trim();
+      if (c.indexOf(name) === 0) {
+          return c.substring(name.length, c.length);
+      }
+  }
+  return '';
+}
+
 // Request interceptor.
 http.interceptors.request.use((request) => {
+  // Add csrf token
+  const token = getCSRFToken()
+  if (token) {
+    request.headers['X-CSRFTOKEN'] = token
+  }
+
   // Set content type for POST/PUT requests if the content type is not set.
   if ((request.method === 'post' || request.method === 'put') && !request.headers['Content-Type']) {
     request.headers['Content-Type'] = 'application/x-www-form-urlencoded'

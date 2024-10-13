@@ -6,37 +6,42 @@
           <hr class="border-t-2 border-dotted border-gray-300" />
         </div>
         <div class="flex space-x-5 justify-between">
-          <Select
-            v-model="action.type"
-            @update:modelValue="(value) => handleFieldChange(value, index)"
-          >
-            <SelectTrigger class="w-56">
-              <SelectValue placeholder="Select action" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Conversation</SelectLabel>
-                <SelectItem
-                  v-for="(actionItem, key) in conversationActions"
-                  :key="key"
-                  :value="key"
-                >
-                  {{ actionItem.label }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <div class="flex space-x-5">
+
+            <!-- Field -->
+            <Select v-model="action.type" @update:modelValue="(value) => handleFieldChange(value, index)">
+              <SelectTrigger class="w-56">
+                <SelectValue placeholder="Select action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Conversation</SelectLabel>
+                  <SelectItem v-for="(actionItem, key) in conversationActions" :key="key" :value="key">
+                    {{ actionItem.label }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <!-- Value -->
+            <Select v-model="action.value" @update:modelValue="(value) => handleValueChange(value, index)">
+              <SelectTrigger class="w-56">
+                <SelectValue placeholder="Select value" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem v-for="(act, index) in getDropdownValues(action.type).value" :key="index"
+                    :value="act.value.toString()">
+                    {{ act.name }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+          </div>
           <div class="cursor-pointer" @click.prevent="removeAction(index)">
             <CircleX size="21" />
           </div>
-        </div>
-        <div>
-          <Input
-            type="text"
-            placeholder="Set value"
-            :modelValue="action.value"
-            @update:modelValue="(value) => handleValueChange(value, index)"
-          />
         </div>
       </div>
     </div>
@@ -47,7 +52,7 @@
 </template>
 
 <script setup>
-import { toRefs } from 'vue'
+import { toRefs, ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { CircleX } from 'lucide-vue-next'
 import {
@@ -59,7 +64,10 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
+import api from '@/api'
 
 const props = defineProps({
   actions: {
@@ -69,10 +77,59 @@ const props = defineProps({
 })
 
 const { actions } = toRefs(props)
-
+const emitter = useEmitter()
+const teams = ref([])
+const users = ref([])
+const statuses = ref([])
+const priorities = ref([
+  {
+    value: "Low",
+    name: "Low"
+  },
+  {
+    value: "Medium",
+    name: "Medium"
+  },
+  {
+    value: "High",
+    name: "High"
+  },
+])
 const emit = defineEmits(['update-actions', 'add-action', 'remove-action'])
 
+onMounted(async () => {
+  try {
+    const [teamsResp, usersResp, statusesResp] = await Promise.all([
+      api.getTeamsCompact(),
+      api.getUsersCompact(),
+      api.getStatuses()
+    ])
+
+    teams.value = teamsResp.data.data.map(team => ({
+      value: team.id,
+      name: team.name
+    }))
+
+    users.value = usersResp.data.data.map(user => ({
+      value: user.id,
+      name: user.first_name + ' ' + user.last_name
+    }))
+
+    statuses.value = statusesResp.data.data.map(status => ({
+      value: status.name,
+      name: status.name
+    }))
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Something went wrong',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
+})
+
 const handleFieldChange = (value, index) => {
+  actions.value[index].value = ''
   actions.value[index].type = value
   emitUpdate(index)
 }
@@ -107,5 +164,16 @@ const conversationActions = {
   set_priority: {
     label: 'Set priority'
   }
+}
+
+const actionDropdownValues = {
+  assign_team: teams,
+  assign_user: users,
+  set_status: statuses,
+  set_priority: priorities,
+}
+
+const getDropdownValues = (field) => {
+  return actionDropdownValues[field] || []
 }
 </script>

@@ -22,6 +22,7 @@ func handleLogin(r *fastglue.Request) error {
 		app.lo.Error("error saving session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
+	app.auth.SetCSRFCookie(r)
 	return r.SendEnvelope(user)
 }
 

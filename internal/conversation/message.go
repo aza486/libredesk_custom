@@ -412,8 +412,6 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	// Evaluate automation rules for this conversation.
 	if isNewConversation {
 		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
-	} else {
-		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID)
 	}
 	return nil
 }

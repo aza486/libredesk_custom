@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -18,6 +20,10 @@ import (
 	"github.com/zerodha/simplesessions/v3"
 
 	"golang.org/x/oauth2"
+)
+
+const (
+	csrfTokenLength = 20
 )
 
 type OIDCclaim struct {
@@ -162,6 +168,22 @@ func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 	return nil
 }
 
+// SetCSRFCookie sets the CSRF token in the response cookie
+func (a *Auth) SetCSRFCookie(r *fastglue.Request) error {
+	token, err := generateCSRFToken()
+	if err != nil {
+		return err
+	}
+	var csrfCookie fasthttp.Cookie
+	csrfCookie.SetKey("csrf_token")
+	csrfCookie.SetValue(token)
+	csrfCookie.SetPath("/")
+	csrfCookie.SetSecure(true)
+	csrfCookie.SetHTTPOnly(false)
+	r.RequestCtx.Response.Header.SetCookie(&csrfCookie)
+	return nil
+}
+
 // ValidateSession validates session and returns the user.
 func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
@@ -204,6 +226,15 @@ func (a *Auth) DestroySession(r *fastglue.Request) error {
 		return err
 	}
 	return nil
+}
+
+// generateCSRFToken creates a random CSRF token
+func generateCSRFToken() (string, error) {
+	b := make([]byte, csrfTokenLength)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(b), nil
 }
 
 // getRequestCookie returns fashttp.Cookie for the given name.

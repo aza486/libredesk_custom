@@ -1,6 +1,5 @@
 <template>
   <div class="h-screen">
-
     <!-- Filters -->
     <ConversationListFilters v-model:type="conversationType"></ConversationListFilters>
 
@@ -11,12 +10,15 @@
       :message="conversationStore.conversations.errorMessage" :icon="MessageCircleWarning"></EmptyList>
 
     <div class="h-screen overflow-y-scroll pb-[180px] flex flex-col">
-      <!-- Item -->
-      <ConversationListItem />
-
       <!-- List skeleton -->
       <div v-if="conversationsLoading">
-        <ConversationListItemSkeleton v-for="index in 8" :key="index"></ConversationListItemSkeleton>
+        <ConversationListItemSkeleton v-for="index in 10" :key="index"></ConversationListItemSkeleton>
+      </div>
+
+      <!-- Item -->
+      <div v-auto-animate>
+        <ConversationListItem :conversation="conversation" :currentConversation="conversationStore.current"
+          v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid" />
       </div>
 
       <!-- Load more  -->
@@ -36,6 +38,7 @@
 
 <script setup>
 import { onMounted, watch, computed, onUnmounted } from 'vue'
+import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { useConversationStore } from '@/stores/conversation'
 import { subscribeConversationsList } from '@/websocket.js'
 import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
@@ -63,6 +66,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(listRefreshInterval)
+  conversationStore.clearListReRenderInterval()
 })
 
 watch(conversationType, (newType) => {

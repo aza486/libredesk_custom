@@ -4,6 +4,7 @@ package role
 import (
 	"embed"
 
+	amodels "github.com/abhinavxd/artemis/internal/authz/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/role/models"
@@ -83,6 +84,9 @@ func (t *Manager) Delete(id int) error {
 
 // Create creates a new role.
 func (u *Manager) Create(r models.Role) error {
+	if !u.areValidPerms(r.Permissions) {
+		return envelope.NewError(envelope.InputError, "Invalid permissions", nil)
+	}
 	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error inserting role", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating role", nil)
@@ -92,9 +96,23 @@ func (u *Manager) Create(r models.Role) error {
 
 // Update updates an existing role.
 func (u *Manager) Update(id int, r models.Role) error {
+	if !u.areValidPerms(r.Permissions) {
+		return envelope.NewError(envelope.InputError, "Invalid permissions", nil)
+	}
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating role", nil)
 	}
 	return nil
+}
+
+// areValidPerms returns true if the permissions are one of the valid permissions
+func (u *Manager) areValidPerms(permissions []string) bool {
+	for _, perm := range permissions {
+		if !amodels.IsValidPermission(perm) {
+			u.lo.Error("invalid permission", "permission", perm)
+			return false
+		}
+	}
+	return true
 }

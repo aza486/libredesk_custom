@@ -14,29 +14,29 @@ import (
 // the corresponding actions are executed.
 func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
 	for _, rule := range rules {
+		e.lo.Debug("evaluating rule for conversation", "rule", rule, "conversation_uuid", conversation.UUID)
+
 		// At max there can be only 2 groups.
 		if len(rule.Groups) > 2 {
-			e.lo.Warn("more than 2 groups found for rules")
+			e.lo.Warn("WARNING: more than 2 groups found for rules skipping evaluation")
 			continue
 		}
 
 		var results []bool
-
 		for _, group := range rule.Groups {
-			e.lo.Debug("evaluating group rule", "logical_op", group.LogicalOp)
 			result := e.evaluateGroup(group.Rules, group.LogicalOp, conversation)
-			e.lo.Debug("group evaluation status", "status", result)
+			e.lo.Debug("evaluating group rules", "logical_op", group.LogicalOp, "result", result, "conversation_uuid", conversation.UUID)
 			results = append(results, result)
 		}
 
 		if evaluateFinalResult(results, rule.GroupOperator) {
-			e.lo.Debug("rule fully evaluated, executing actions")
+			e.lo.Debug("rule evaluation successfull executing actions", "conversation_uuid", conversation.UUID)
 			// All group rule evaluations successful, execute the actions.
 			for _, action := range rule.Actions {
 				e.applyAction(action, conversation)
 			}
 		} else {
-			e.lo.Debug("rule evaluation failed, NOT executing actions")
+			e.lo.Debug("rule evaluation failed", "conversation_uuid", conversation.UUID)
 		}
 	}
 }
@@ -106,16 +106,16 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		valueToCompare = conversation.Status.String
 	case models.ConversationFieldPriority:
 		valueToCompare = conversation.Priority.String
-	case models.ConversationFieldAssignedTeamID:
+	case models.ConversationFieldAssignedTeam:
 		if conversation.AssignedTeamID.Valid {
 			valueToCompare = strconv.Itoa(conversation.AssignedTeamID.Int)
 		}
-	case models.ConversationFieldAssignedUserID:
+	case models.ConversationFieldAssignedUser:
 		if conversation.AssignedUserID.Valid {
 			valueToCompare = strconv.Itoa(conversation.AssignedUserID.Int)
 		}
 	default:
-		e.lo.Error("rule field not recognized", "field", rule.Field)
+		e.lo.Error("unrecognized rule field", "field", rule.Field)
 		return false
 	}
 
@@ -124,8 +124,9 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		rule.Value = strings.ToLower(rule.Value)
 	}
 
-	e.lo.Debug("comparing values", "conversation_value", valueToCompare, "rule_value", rule.Value)
+	e.lo.Debug("evaluating rule", "rule_field", rule.Field, "rule_operator", rule.Operator, "rule_value", rule.Value, "compared_with", valueToCompare, "coversation_uuid", conversation.UUID)
 
+	// Compare with set operator.
 	switch rule.Operator {
 	case models.RuleEquals:
 		conditionMet = valueToCompare == rule.Value
@@ -140,9 +141,10 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.RuleNotSet:
 		conditionMet = len(valueToCompare) == 0
 	default:
-		e.lo.Error("rule logical operator not recognized", "operator", rule.Operator)
+		e.lo.Error("unrecognized rule logical operator", "operator", rule.Operator)
 		return false
 	}
+	e.lo.Debug("rule conditions met", "coversation_uuid", conversation.UUID)
 	return conditionMet
 }
 
@@ -150,6 +152,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conversation) error {
 	switch action.Type {
 	case models.ActionAssignTeam:
+		e.lo.Debug("executing assign team action", "value", action.Action, "conversation_uuid", conversation.UUID)
 		teamID, err := strconv.Atoi(action.Action)
 		if err != nil {
 			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
@@ -159,6 +162,7 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 			return err
 		}
 	case models.ActionAssignUser:
+		e.lo.Debug("executing assign user action", "value", action.Action, "conversation_uuid", conversation.UUID)
 		agentID, err := strconv.Atoi(action.Action)
 		if err != nil {
 			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
@@ -168,10 +172,12 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 			return err
 		}
 	case models.ActionSetPriority:
+		e.lo.Debug("executing set priority action", "value", action.Action, "conversation_uuid", conversation.UUID)
 		if err := e.conversationStore.UpdateConversationPriority(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetStatus:
+		e.lo.Debug("executing set status action", "value", action.Action, "conversation_uuid", conversation.UUID)
 		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
 			return err
 		}

@@ -1,8 +1,8 @@
 <template>
   <Tabs default-value="conversation_creation">
     <TabsList class="grid w-full grid-cols-3 mb-5">
-      <TabsTrigger value="conversation_creation"> Conversation creation </TabsTrigger>
-      <TabsTrigger value="conversation_updates"> Conversation updates </TabsTrigger>
+      <TabsTrigger value="conversation_creation"> New conversation </TabsTrigger>
+      <TabsTrigger value="conversation_updates"> Conversation update </TabsTrigger>
       <TabsTrigger value="time_triggers"> Time triggers </TabsTrigger>
     </TabsList>
     <TabsContent value="conversation_creation">

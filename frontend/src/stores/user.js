@@ -1,5 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { handleHTTPError } from '@/utils/http'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import api from '@/api'
 
 export const useUserStore = defineStore('user', () => {
@@ -7,6 +10,7 @@ export const useUserStore = defineStore('user', () => {
   const userFirstName = ref('')
   const userLastName = ref('')
   const userPermissions = ref([])
+  const emitter = useEmitter()
 
   // Setters
   const setAvatar = (avatar) => {
@@ -31,22 +35,25 @@ export const useUserStore = defineStore('user', () => {
   const getFullName = computed(() => {
     return `${userFirstName.value} ${userLastName.value}`
   })
-  
-  // Fetch current user data
+
+  // Fetches current user.
   const getCurrentUser = async () => {
     try {
       const response = await api.getCurrentUser()
       const userData = response?.data?.data
-
       if (userData) {
         const { avatar_url, first_name, last_name, permissions } = userData
-        setAvatar("/uploads/" +avatar_url)
+        setAvatar("/uploads/" + avatar_url)
         setFirstName(first_name)
         setLastName(last_name)
         userPermissions.value = permissions || []
       }
     } catch (error) {
-      console.error('Error fetching current user:', error)
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Something went wrong',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
     }
   }
 

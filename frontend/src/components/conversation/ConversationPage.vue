@@ -26,7 +26,7 @@
     <!-- Header end -->
 
     <!-- Messages & reply box -->
-    <div class="flex flex-col h-screen">
+    <div class="flex flex-col h-screen" v-auto-animate>
       <MessageList class="flex-1" />
       <ReplyBox class="h-max mb-12" />
     </div>
@@ -37,6 +37,7 @@
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
+import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Badge } from '@/components/ui/badge'
 import {

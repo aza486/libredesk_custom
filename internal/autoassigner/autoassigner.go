@@ -54,7 +54,7 @@ func New(teamManager *team.Manager, conversationManager *conversation.Manager, s
 // Run initiates the conversation assignment process and is to be invoked as a goroutine.
 // This function continuously assigns unassigned conversations to agents at regular intervals.
 func (e *Engine) Run(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {

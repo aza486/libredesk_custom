@@ -1,4 +1,5 @@
 import { useConversationStore } from './stores/conversation';
+import { CONVERSTION_WS_ACTIONS } from './constants/conversation';
 
 let socket;
 let reconnectInterval = 1000;
@@ -10,19 +11,18 @@ let convStore;
 
 function initializeWebSocket () {
   // TODO: Update URL.
-  socket = new WebSocket('ws://localhost:9009/api/ws');
-
-  socket.addEventListener('open', handleOpen);
-  socket.addEventListener('message', handleMessage);
-  socket.addEventListener('error', handleError);
-  socket.addEventListener('close', handleClose);
+  socket = new WebSocket('ws://localhost:9009/api/ws')
+  socket.addEventListener('open', handleOpen)
+  socket.addEventListener('message', handleMessage)
+  socket.addEventListener('error', handleError)
+  socket.addEventListener('close', handleClose)
 }
 
 function handleOpen () {
-  console.log('WebSocket connection established');
+  console.log('WebSocket connection established')
   reconnectInterval = 1000;
   if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout);
+    clearTimeout(reconnectTimeout)
     reconnectTimeout = null;
   }
 }
@@ -30,37 +30,37 @@ function handleOpen () {
 function handleMessage (event) {
   try {
     if (event.data) {
-      const data = JSON.parse(event.data);
+      const data = JSON.parse(event.data)
       switch (data.type) {
         case 'new_message':
-          convStore.updateConversationLastMessage(data.data);
-          convStore.updateConversationMessageList(data.data);
+          convStore.updateConversationLastMessage(data.data)
+          convStore.updateConversationMessageList(data.data)
           break;
         case 'message_prop_update':
-          convStore.updateMessageProp(data.data);
+          convStore.updateMessageProp(data.data)
           break;
         case 'new_conversation':
-          convStore.addNewConversation(data.data);
+          convStore.addNewConversation(data.data)
           break;
         case 'conversation_prop_update':
-          convStore.updateConversationProp(data.data);
+          convStore.updateConversationProp(data.data)
           break;
         default:
-          console.warn(`Unknown websocket event type: ${data.type}`);
+          console.warn(`Unknown websocket event type: ${data.type}`)
       }
     }
   } catch (error) {
-    console.error('Error handling WebSocket message:', error);
+    console.error('Error handling WebSocket message:', error)
   }
 }
 
 function handleError (event) {
-  console.error('WebSocket error observed:', event);
+  console.error('WebSocket error observed:', event)
 }
 
 function handleClose () {
   if (!manualClose) {
-    reconnect();
+    reconnect()
   }
 }
 
@@ -68,58 +68,77 @@ function reconnect () {
   if (isReconnecting) return;
   isReconnecting = true;
   reconnectTimeout = setTimeout(() => {
-    initializeWebSocket();
-    reconnectInterval = Math.min(reconnectInterval * 2, maxReconnectInterval);
+    initializeWebSocket()
+    reconnectInterval = Math.min(reconnectInterval * 2, maxReconnectInterval)
     isReconnecting = false;
-  }, reconnectInterval);
+  }, reconnectInterval)
 }
 
 function setupNetworkListeners () {
   window.addEventListener('online', () => {
     if (!isReconnecting && socket.readyState !== WebSocket.OPEN) {
       reconnectInterval = 1000;
-      reconnect();
+      reconnect()
     }
-  });
+  })
 }
 
 export function initWS () {
-  convStore = useConversationStore();
-  initializeWebSocket();
-  setupNetworkListeners();
+  convStore = useConversationStore()
+  initializeWebSocket()
+  setupNetworkListeners()
 }
 
 function waitForWebSocketOpen (callback) {
   if (socket.readyState === WebSocket.OPEN) {
-    callback();
+    callback()
   } else {
     socket.addEventListener('open', function handler () {
-      socket.removeEventListener('open', handler);
-      callback();
-    });
+      socket.removeEventListener('open', handler)
+      callback()
+    })
   }
 }
 
 export function sendMessage (message) {
   waitForWebSocketOpen(() => {
-    socket.send(JSON.stringify(message));
-  });
+    socket.send(JSON.stringify(message))
+  })
 }
 
 export function subscribeConversationsList (type, filter) {
   const message = {
-    action: 'conversations_list_sub',
+    action: CONVERSTION_WS_ACTIONS.SUB_LIST,
     type: type,
     filter: filter
-  };
+  }
   waitForWebSocketOpen(() => {
-    socket.send(JSON.stringify(message));
-  });
+    socket.send(JSON.stringify(message))
+  })
+}
+
+export function setCurrentConversation (uuid) {
+  const message = {
+    action: CONVERSTION_WS_ACTIONS.SET_CURRENT,
+    uuid: uuid,
+  }
+  waitForWebSocketOpen(() => {
+    socket.send(JSON.stringify(message))
+  })
+}
+
+export function unsetCurrentConversation () {
+  const message = {
+    action: CONVERSTION_WS_ACTIONS.UNSET_CURRENT
+  }
+  waitForWebSocketOpen(() => {
+    socket.send(JSON.stringify(message))
+  })
 }
 
 export function closeWebSocket () {
   manualClose = true;
   if (socket) {
-    socket.close();
+    socket.close()
   }
 }

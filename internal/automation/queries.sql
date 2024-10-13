@@ -1,5 +1,6 @@
 -- name: get-enabled-rules
-select 
+select
+    type,
     rules
 from automation_rules where disabled is not TRUE;
 

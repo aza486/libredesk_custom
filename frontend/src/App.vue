@@ -75,7 +75,6 @@ const allNavLinks = ref([
 const bottomLinks = ref([
   {
     to: '/api/logout',
-    isLink: false,
     icon: 'lucide:log-out',
     title: 'Logout'
   }

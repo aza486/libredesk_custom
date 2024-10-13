@@ -34,7 +34,7 @@ FROM conversations c
     LEFT JOIN priority p ON c.priority_id = p.id
 WHERE 1=1 %s
 
--- name: get-conversations-uuids
+-- name: get-conversations-list-uuids
 SELECT
     c.uuid
 FROM conversations c
@@ -81,7 +81,7 @@ LEFT JOIN status s ON c.status_id = s.id
 LEFT JOIN priority p ON c.priority_id = p.id
 WHERE c.uuid = $1;
 
--- name: get-recent-conversations
+-- name: get-conversations-created-after
 SELECT
     c.created_at,
     c.updated_at,
@@ -111,7 +111,7 @@ LEFT JOIN users u ON u.id = c.assigned_user_id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN status s ON c.status_id = s.id
 LEFT JOIN priority p ON c.priority_id = p.id
-WHERE c.created_at > $1 AND c.uuid = 'e2f69c9f-17f5-4d09-9aae-12c2a79046a2';
+WHERE c.created_at > $1;
 
 -- name: get-conversation-id
 SELECT id from conversations where uuid = $1;
@@ -428,7 +428,9 @@ WHERE source_id = ANY($1::text []);
 -- name: get-conversation-by-message-id
 SELECT
     c.id,
-    c.uuid
+    c.uuid,
+    c.assigned_team_id,
+    c.assigned_user_id
 FROM messages m
 JOIN conversations c ON m.conversation_id = c.id
 WHERE m.id = $1;

@@ -128,7 +128,6 @@ const rule = ref({
   type: 'new_conversation',
   rules: [
     {
-      type: 'new_conversation',
       groups: [
         {
           rules: [],

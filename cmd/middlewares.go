@@ -9,44 +9,60 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-func perm(handler fastglue.FastRequestHandler, obj, act string) fastglue.FastRequestHandler {
+// authMiddleware does session validation, CSRF checking, and permission enforcement.
+func authMiddleware(handler fastglue.FastRequestHandler, object, action string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
-		var app = r.Context.(*App)
+		app := r.Context.(*App)
 
-		user, err := app.auth.ValidateSession(r)
+		// Validate session and fetch user.
+		userSession, err := app.auth.ValidateSession(r)
 		if err != nil {
+			app.lo.Error("error validating session", "error", err)
 			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
 		}
 
-		// Fetch user and permissions from DB.
-		user, err = app.user.Get(user.ID)
+		user, err := app.user.Get(userSession.ID)
 		if err != nil {
 			return r.SendErrorEnvelope(http.StatusInternalServerError, "Something went wrong", nil, envelope.GeneralError)
+		}
+
+		// CSRF check.
+		cookieToken := string(r.RequestCtx.Request.Header.Cookie("csrf_token"))
+		hdrToken := string(r.RequestCtx.Request.Header.Peek("X-CSRFTOKEN"))
+		if cookieToken == "" || hdrToken == "" || cookieToken != hdrToken {
+			return r.SendErrorEnvelope(http.StatusForbidden, "Invalid CSRF token", nil, envelope.PermissionError)
+		}
+
+		// Permission enforcement.
+		if object != "" && action != "" {
+			ok, err := app.authz.Enforce(user, object, action)
+			if err != nil {
+				return r.SendErrorEnvelope(http.StatusInternalServerError, "Error checking permissions", nil, envelope.GeneralError)
+			}
+			if !ok {
+				return r.SendErrorEnvelope(http.StatusForbidden, "Permission denied", nil, envelope.PermissionError)
+			}
 		}
 
 		// Set user in the request context.
 		r.RequestCtx.SetUserValue("user", user)
 
-		// Enforce the permissions with the user, object, and action.
-		ok, err := app.authz.Enforce(user, obj, act)
-		if err != nil {
-			return r.SendErrorEnvelope(http.StatusInternalServerError, "Something went wrong", nil, envelope.GeneralError)
-		}
-		if !ok {
-			return r.SendErrorEnvelope(http.StatusForbidden, "Permission denied", nil, envelope.PermissionError)
-		}
-
-		// Return handler.
+		// Proceed to the next handler.
 		return handler(r)
 	}
 }
 
-// authPage middleware makes sure user is logged in to access the page else redirects to login page.
-func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+// getUserFromContext retrieves the authenticated user from the request context.
+func getUserFromContext(r *fastglue.Request) (umodels.User, bool) {
+	user, ok := r.RequestCtx.UserValue("user").(umodels.User)
+	return user, ok
+}
+
+// authenticatedPage ensures the user is logged in; otherwise, redirects to the login page.
+func authenticatedPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
-		// Check if user is logged in. If logged in return next handler.
-		userID, ok := getAuthUserFromSess(r)
-		if ok && userID > 0 {
+		user, ok := getUserFromContext(r)
+		if ok && user.ID > 0 {
 			return handler(r)
 		}
 		nextURI := r.RequestCtx.QueryArgs().Peek("next")
@@ -59,54 +75,17 @@ func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	}
 }
 
-// getAuthUserFromSess retrives authUser from request context set by the sess() middleware.
-func getAuthUserFromSess(r *fastglue.Request) (int, bool) {
-	user, ok := r.RequestCtx.UserValue("user").(umodels.User)
-	if user.ID == 0 || !ok {
-		return user.ID, false
-	}
-	return user.ID, true
-}
-
-func sess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+// notAuthenticatedPage allows access only if the user is not authenticated; otherwise, redirects to the dashboard.
+func notAuthenticatedPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
-		var app = r.Context.(*App)
-		user, err := app.auth.ValidateSession(r)
-		if err != nil {
-			app.lo.Error("error validating session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
-		}
-		if user.ID >= 0 {
-			r.RequestCtx.SetUserValue("user", user)
+		user, _ := getUserFromContext(r)
+		if user.ID != 0 {
+			nextURI := string(r.RequestCtx.QueryArgs().Peek("next"))
+			if nextURI == "" {
+				nextURI = "/dashboard"
+			}
+			return r.RedirectURI(nextURI, fasthttp.StatusFound, nil, "")
 		}
 		return handler(r)
-	}
-}
-
-func authSess(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
-	return func(r *fastglue.Request) error {
-		var (
-			userID, ok = getAuthUserFromSess(r)
-		)
-		if !ok || userID <= 0 {
-			return sendErrorEnvelope(r,
-				envelope.NewError(envelope.GeneralError, "Invalid or expired session.", nil))
-		}
-		return handler(r)
-	}
-}
-
-func noAuthPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
-	return func(r *fastglue.Request) error {
-		_, ok := getAuthUserFromSess(r)
-		if !ok {
-			return handler(r)
-		}
-		// User is logged in direct if `next` is available else redirect.
-		nextURI := string(r.RequestCtx.QueryArgs().Peek("next"))
-		if len(nextURI) == 0 {
-			nextURI = "/dashboard"
-		}
-		return r.RedirectURI(nextURI, fasthttp.StatusFound, nil, "")
 	}
 }

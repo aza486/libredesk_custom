@@ -299,7 +299,7 @@ func promptAndHashPassword() ([]byte, error) {
 	for {
 		fmt.Print("Please set System admin password (min 8, max 50 characters, at least 1 uppercase letter, 1 number): ")
 		fmt.Scanf("%s", &password)
-		if isStringSystemUserPassword(password) {
+		if isStrongSystemUserPassword(password) {
 			break
 		}
 		fmt.Println("Password does not meet the strength requirements.")
@@ -322,8 +322,8 @@ func updateSystemUserPassword(db *sqlx.DB, hashedPassword []byte) error {
 	return nil
 }
 
-// isStringSystemUserPassword checks if the password meets the required strength for system user.
-func isStringSystemUserPassword(password string) bool {
+// isStrongSystemUserPassword checks if the password meets the required strength for system user.
+func isStrongSystemUserPassword(password string) bool {
 	if len(password) < MinSystemUserPasswordLen || len(password) > MaxSystemUserPasswordLen {
 		return false
 	}

@@ -5,7 +5,7 @@ ORDER BY u.updated_at DESC;
 
 -- name: get-users-compact
 SELECT u.id, u.first_name, u.last_name, u.disabled
-FROM users u
+FROM users u where u.email != 'System'
 ORDER BY u.updated_at DESC;
 
 -- name: get-email

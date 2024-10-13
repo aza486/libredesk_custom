@@ -15,136 +15,134 @@ import (
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Authentication.
 	g.POST("/api/login", handleLogin)
-	g.GET("/api/logout", sess(authSess((handleLogout))))
+	g.GET("/api/logout", authMiddleware(handleLogout, "", ""))
 	g.GET("/api/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/oidc/finish", handleOIDCCallback)
 
 	// Health check.
 	g.GET("/health", handleHealthCheck)
 
-	// Serve uploaded files.
-	g.GET("/uploads/{uuid}", sess(authSess(handleServeUploadedFiles)))
+	// Serve media files.
+	g.GET("/uploads/{uuid}", authMiddleware(handleServeMedia, "", ""))
 
 	// Settings.
 	g.GET("/api/settings/general", handleGetGeneralSettings)
-	g.PUT("/api/settings/general", perm(handleUpdateGeneralSettings, "settings_general", "write"))
-	g.GET("/api/settings/notifications/email", perm(handleGetEmailNotificationSettings, "settings_notifications", "read"))
-	g.PUT("/api/settings/notifications/email", perm(handleUpdateEmailNotificationSettings, "settings_notifications", "write"))
+	g.PUT("/api/settings/general", authMiddleware(handleUpdateGeneralSettings, "settings_general", "write"))
+	g.GET("/api/settings/notifications/email", authMiddleware(handleGetEmailNotificationSettings, "settings_notifications", "read"))
+	g.PUT("/api/settings/notifications/email", authMiddleware(handleUpdateEmailNotificationSettings, "settings_notifications", "write"))
 
 	// OpenID SSO.
 	g.GET("/api/oidc", handleGetAllOIDC)
-	g.GET("/api/oidc/{id}", perm(handleGetOIDC, "oidc", "read"))
-	g.POST("/api/oidc", perm(handleCreateOIDC, "oidc", "write"))
-	g.PUT("/api/oidc/{id}", perm(handleUpdateOIDC, "oidc", "write"))
-	g.DELETE("/api/oidc/{id}", perm(handleDeleteOIDC, "oidc", "delete"))
+	g.GET("/api/oidc/{id}", authMiddleware(handleGetOIDC, "oidc", "read"))
+	g.POST("/api/oidc", authMiddleware(handleCreateOIDC, "oidc", "write"))
+	g.PUT("/api/oidc/{id}", authMiddleware(handleUpdateOIDC, "oidc", "write"))
+	g.DELETE("/api/oidc/{id}", authMiddleware(handleDeleteOIDC, "oidc", "delete"))
 
 	// Conversation and message.
-	g.GET("/api/conversations/all", perm(handleGetAllConversations, "conversations", "read_all"))
-	g.GET("/api/conversations/unassigned", perm(handleGetUnassignedConversations, "conversations", "read_unassigned"))
-	g.GET("/api/conversations/assigned", perm(handleGetAssignedConversations, "conversations", "read_assigned"))
-
-	g.PUT("/api/conversations/{uuid}/assignee/user", perm(handleUpdateConversationUserAssignee, "conversations", "update_user_assignee"))
-	g.PUT("/api/conversations/{uuid}/assignee/team", perm(handleUpdateTeamAssignee, "conversations", "update_team_assignee"))
-	g.PUT("/api/conversations/{uuid}/priority", perm(handleUpdateConversationPriority, "conversations", "update_priority"))
-	g.PUT("/api/conversations/{uuid}/status", perm(handleUpdateConversationStatus, "conversations", "update_status"))
-
-	g.GET("/api/conversations/{uuid}", perm(handleGetConversation, "conversations", "read"))
-	g.GET("/api/conversations/{uuid}/participants", perm(handleGetConversationParticipants, "conversations", "read"))
-	g.PUT("/api/conversations/{uuid}/last-seen", perm(handleUpdateConversationAssigneeLastSeen, "conversations", "read"))
-	g.POST("/api/conversations/{uuid}/tags", perm(handleAddConversationTags, "conversations", "update_tags"))
-	g.GET("/api/conversations/{uuid}/messages", perm(handleGetMessages, "messages", "read"))
-	g.POST("/api/conversations/{cuuid}/messages", perm(handleSendMessage, "messages", "write"))
-	g.PUT("/api/conversations/{cuuid}/messages/{uuid}/retry", perm(handleRetryMessage, "messages", "write"))
-	g.GET("/api/conversations/{cuuid}/messages/{uuid}", perm(handleGetMessage, "messages", "read"))
+	g.GET("/api/conversations/all", authMiddleware(handleGetAllConversations, "conversations", "read_all"))
+	g.GET("/api/conversations/unassigned", authMiddleware(handleGetUnassignedConversations, "conversations", "read_unassigned"))
+	g.GET("/api/conversations/assigned", authMiddleware(handleGetAssignedConversations, "conversations", "read_assigned"))
+	g.GET("/api/conversations/{uuid}", authMiddleware(handleGetConversation, "conversations", "read"))
+	g.GET("/api/conversations/{uuid}/participants", authMiddleware(handleGetConversationParticipants, "conversations", "read"))
+	g.PUT("/api/conversations/{uuid}/assignee/user", authMiddleware(handleUpdateConversationUserAssignee, "conversations", "update_user_assignee"))
+	g.PUT("/api/conversations/{uuid}/assignee/team", authMiddleware(handleUpdateTeamAssignee, "conversations", "update_team_assignee"))
+	g.PUT("/api/conversations/{uuid}/priority", authMiddleware(handleUpdateConversationPriority, "conversations", "update_priority"))
+	g.PUT("/api/conversations/{uuid}/status", authMiddleware(handleUpdateConversationStatus, "conversations", "update_status"))
+	g.PUT("/api/conversations/{uuid}/last-seen", authMiddleware(handleUpdateConversationAssigneeLastSeen, "conversations", "read"))
+	g.POST("/api/conversations/{uuid}/tags", authMiddleware(handleAddConversationTags, "conversations", "update_tags"))
+	g.POST("/api/conversations/{cuuid}/messages", authMiddleware(handleSendMessage, "messages", "write"))
+	g.GET("/api/conversations/{uuid}/messages", authMiddleware(handleGetMessages, "messages", "read"))
+	g.PUT("/api/conversations/{cuuid}/messages/{uuid}/retry", authMiddleware(handleRetryMessage, "messages", "write"))
+	g.GET("/api/conversations/{cuuid}/messages/{uuid}", authMiddleware(handleGetMessage, "messages", "read"))
 
 	// Status and priority.
-	g.GET("/api/statuses", sess(authSess(handleGetStatuses)))
-	g.POST("/api/statuses", perm(handleCreateStatus, "status", "write"))
-	g.PUT("/api/statuses/{id}", perm(handleUpdateStatus, "status", "write"))
-	g.DELETE("/api/statuses/{id}", perm(handleDeleteStatus, "status", "delete"))
-	g.GET("/api/priorities", sess(authSess(handleGetPriorities)))
+	g.GET("/api/statuses", authMiddleware(handleGetStatuses, "", ""))
+	g.POST("/api/statuses", authMiddleware(handleCreateStatus, "status", "write"))
+	g.PUT("/api/statuses/{id}", authMiddleware(handleUpdateStatus, "status", "write"))
+	g.DELETE("/api/statuses/{id}", authMiddleware(handleDeleteStatus, "status", "delete"))
+	g.GET("/api/priorities", authMiddleware(handleGetPriorities, "", ""))
 
 	// Tag.
-	g.GET("/api/tags", sess(authSess(handleGetTags)))
-	g.POST("/api/tags", perm(handleCreateTag, "tags", "write"))
-	g.PUT("/api/tags/{id}", perm(handleUpdateTag, "tags", "write"))
-	g.DELETE("/api/tags/{id}", perm(handleDeleteTag, "tags", "delete"))
+	g.GET("/api/tags", authMiddleware(handleGetTags, "", ""))
+	g.POST("/api/tags", authMiddleware(handleCreateTag, "tags", "write"))
+	g.PUT("/api/tags/{id}", authMiddleware(handleUpdateTag, "tags", "write"))
+	g.DELETE("/api/tags/{id}", authMiddleware(handleDeleteTag, "tags", "delete"))
 
 	// Media.
-	g.POST("/api/media", sess(handleMediaUpload))
+	g.POST("/api/media", authMiddleware(handleMediaUpload, "", ""))
 
 	// Canned response.
-	g.GET("/api/canned-responses", sess(authSess(handleGetCannedResponses)))
-	g.POST("/api/canned-responses", perm(handleCreateCannedResponse, "canned_responses", "write"))
-	g.PUT("/api/canned-responses/{id}", perm(handleUpdateCannedResponse, "canned_responses", "write"))
-	g.DELETE("/api/canned-responses/{id}", perm(handleDeleteCannedResponse, "canned_responses", "delete"))
+	g.GET("/api/canned-responses", authMiddleware(handleGetCannedResponses, "", ""))
+	g.POST("/api/canned-responses", authMiddleware(handleCreateCannedResponse, "canned_responses", "write"))
+	g.PUT("/api/canned-responses/{id}", authMiddleware(handleUpdateCannedResponse, "canned_responses", "write"))
+	g.DELETE("/api/canned-responses/{id}", authMiddleware(handleDeleteCannedResponse, "canned_responses", "delete"))
 
 	// User.
-	g.GET("/api/users/me", sess(authSess(handleGetCurrentUser)))
-	g.PUT("/api/users/me", sess(authSess(handleUpdateCurrentUser)))
-	g.DELETE("/api/users/me/avatar", sess(authSess(handleDeleteAvatar)))
-	g.GET("/api/users/compact", sess(authSess(handleGetUsersCompact)))
-	g.GET("/api/users", perm(handleGetUsers, "users", "read"))
-	g.GET("/api/users/{id}", perm(handleGetUser, "users", "read"))
-	g.POST("/api/users", perm(handleCreateUser, "users", "write"))
-	g.PUT("/api/users/{id}", perm(handleUpdateUser, "users", "write"))
+	g.GET("/api/users/me", authMiddleware(handleGetCurrentUser, "", ""))
+	g.PUT("/api/users/me", authMiddleware(handleUpdateCurrentUser, "", ""))
+	g.DELETE("/api/users/me/avatar", authMiddleware(handleDeleteAvatar, "", ""))
+	g.GET("/api/users/compact", authMiddleware(handleGetUsersCompact, "", ""))
+	g.GET("/api/users", authMiddleware(handleGetUsers, "users", "read"))
+	g.GET("/api/users/{id}", authMiddleware(handleGetUser, "users", "read"))
+	g.POST("/api/users", authMiddleware(handleCreateUser, "users", "write"))
+	g.PUT("/api/users/{id}", authMiddleware(handleUpdateUser, "users", "write"))
 
 	// Team.
-	g.GET("/api/teams/compact", sess(authSess(handleGetTeamsCompact)))
-	g.GET("/api/teams", perm(handleGetTeams, "teams", "read"))
-	g.GET("/api/teams/{id}", perm(handleGetTeam, "teams", "read"))
-	g.PUT("/api/teams/{id}", perm(handleUpdateTeam, "teams", "write"))
-	g.POST("/api/teams", perm(handleCreateTeam, "teams", "write"))
+	g.GET("/api/teams/compact", authMiddleware(handleGetTeamsCompact, "", ""))
+	g.GET("/api/teams", authMiddleware(handleGetTeams, "teams", "read"))
+	g.GET("/api/teams/{id}", authMiddleware(handleGetTeam, "teams", "read"))
+	g.PUT("/api/teams/{id}", authMiddleware(handleUpdateTeam, "teams", "write"))
+	g.POST("/api/teams", authMiddleware(handleCreateTeam, "teams", "write"))
 
 	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)
 
 	// Automation.
-	g.GET("/api/automation/rules", perm(handleGetAutomationRules, "automations", "read"))
-	g.GET("/api/automation/rules/{id}", perm(handleGetAutomationRule, "automations", "read"))
-	g.POST("/api/automation/rules", perm(handleCreateAutomationRule, "automations", "write"))
-	g.PUT("/api/automation/rules/{id}/toggle", perm(handleToggleAutomationRule, "automations", "write"))
-	g.PUT("/api/automation/rules/{id}", perm(handleUpdateAutomationRule, "automations", "write"))
-	g.DELETE("/api/automation/rules/{id}", perm(handleDeleteAutomationRule, "automations", "delete"))
+	g.GET("/api/automation/rules", authMiddleware(handleGetAutomationRules, "automations", "read"))
+	g.GET("/api/automation/rules/{id}", authMiddleware(handleGetAutomationRule, "automations", "read"))
+	g.POST("/api/automation/rules", authMiddleware(handleCreateAutomationRule, "automations", "write"))
+	g.PUT("/api/automation/rules/{id}/toggle", authMiddleware(handleToggleAutomationRule, "automations", "write"))
+	g.PUT("/api/automation/rules/{id}", authMiddleware(handleUpdateAutomationRule, "automations", "write"))
+	g.DELETE("/api/automation/rules/{id}", authMiddleware(handleDeleteAutomationRule, "automations", "delete"))
 
 	// Inbox.
-	g.GET("/api/inboxes", perm(handleGetInboxes, "inboxes", "read"))
-	g.GET("/api/inboxes/{id}", perm(handleGetInbox, "inboxes", "read"))
-	g.POST("/api/inboxes", perm(handleCreateInbox, "inboxes", "write"))
-	g.PUT("/api/inboxes/{id}/toggle", perm(handleToggleInbox, "inboxes", "write"))
-	g.PUT("/api/inboxes/{id}", perm(handleUpdateInbox, "inboxes", "write"))
-	g.DELETE("/api/inboxes/{id}", perm(handleDeleteInbox, "inboxes", "delete"))
+	g.GET("/api/inboxes", authMiddleware(handleGetInboxes, "inboxes", "read"))
+	g.GET("/api/inboxes/{id}", authMiddleware(handleGetInbox, "inboxes", "read"))
+	g.POST("/api/inboxes", authMiddleware(handleCreateInbox, "inboxes", "write"))
+	g.PUT("/api/inboxes/{id}/toggle", authMiddleware(handleToggleInbox, "inboxes", "write"))
+	g.PUT("/api/inboxes/{id}", authMiddleware(handleUpdateInbox, "inboxes", "write"))
+	g.DELETE("/api/inboxes/{id}", authMiddleware(handleDeleteInbox, "inboxes", "delete"))
 
 	// Role.
-	g.GET("/api/roles", perm(handleGetRoles, "roles", "read"))
-	g.GET("/api/roles/{id}", perm(handleGetRole, "roles", "read"))
-	g.POST("/api/roles", perm(handleCreateRole, "roles", "write"))
-	g.PUT("/api/roles/{id}", perm(handleUpdateRole, "roles", "write"))
-	g.DELETE("/api/roles/{id}", perm(handleDeleteRole, "roles", "delete"))
+	g.GET("/api/roles", authMiddleware(handleGetRoles, "roles", "read"))
+	g.GET("/api/roles/{id}", authMiddleware(handleGetRole, "roles", "read"))
+	g.POST("/api/roles", authMiddleware(handleCreateRole, "roles", "write"))
+	g.PUT("/api/roles/{id}", authMiddleware(handleUpdateRole, "roles", "write"))
+	g.DELETE("/api/roles/{id}", authMiddleware(handleDeleteRole, "roles", "delete"))
 
 	// Dashboard.
-	g.GET("/api/dashboard/global/counts", perm(handleDashboardCounts, "dashboard_global", "read"))
-	g.GET("/api/dashboard/global/charts", perm(handleDashboardCharts, "dashboard_global", "read"))
+	g.GET("/api/dashboard/global/counts", authMiddleware(handleDashboardCounts, "dashboard_global", "read"))
+	g.GET("/api/dashboard/global/charts", authMiddleware(handleDashboardCharts, "dashboard_global", "read"))
 
 	// Template.
-	g.GET("/api/templates", perm(handleGetTemplates, "templates", "read"))
-	g.GET("/api/templates/{id}", perm(handleGetTemplate, "templates", "read"))
-	g.POST("/api/templates", perm(handleCreateTemplate, "templates", "write"))
-	g.PUT("/api/templates/{id}", perm(handleUpdateTemplate, "templates", "write"))
-	g.DELETE("/api/templates/{id}", perm(handleDeleteTemplate, "templates", "delete"))
+	g.GET("/api/templates", authMiddleware(handleGetTemplates, "templates", "read"))
+	g.GET("/api/templates/{id}", authMiddleware(handleGetTemplate, "templates", "read"))
+	g.POST("/api/templates", authMiddleware(handleCreateTemplate, "templates", "write"))
+	g.PUT("/api/templates/{id}", authMiddleware(handleUpdateTemplate, "templates", "write"))
+	g.DELETE("/api/templates/{id}", authMiddleware(handleDeleteTemplate, "templates", "delete"))
 
 	// WebSocket.
-	g.GET("/api/ws", sess(authSess(func(r *fastglue.Request) error {
+	g.GET("/api/ws", authMiddleware(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
-	})))
+	}, "", ""))
 
 	// Frontend pages.
-	g.GET("/", sess(noAuthPage(serveIndexPage)))
-	g.GET("/dashboard", sess(authPage(serveIndexPage)))
-	g.GET("/conversations", sess(authPage(serveIndexPage)))
-	g.GET("/conversations/{all:*}", sess(authPage(serveIndexPage)))
-	g.GET("/account/profile", sess(authPage(serveIndexPage)))
-	g.GET("/admin/{all:*}", sess(authPage(serveIndexPage)))
+	g.GET("/", notAuthenticatedPage(serveIndexPage))
+	g.GET("/dashboard", authenticatedPage(serveIndexPage))
+	g.GET("/conversations", authenticatedPage(serveIndexPage))
+	g.GET("/conversations/{all:*}", authenticatedPage(serveIndexPage))
+	g.GET("/account/profile", authenticatedPage(serveIndexPage))
+	g.GET("/admin/{all:*}", authenticatedPage(serveIndexPage))
 	g.GET("/assets/{all:*}", serveStaticFiles)
 }
 
