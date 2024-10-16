@@ -146,10 +146,11 @@ func (u *Manager) Get(id int) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUser.Get(&user, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return user, fmt.Errorf("user not found")
+			u.lo.Error("user not found","id", id,  "error", err)
+			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, fmt.Errorf("fetching user: %w", err)
+		return user, envelope.NewError(envelope.GeneralError, "Error fetching user", nil)
 	}
 	return user, nil
 }

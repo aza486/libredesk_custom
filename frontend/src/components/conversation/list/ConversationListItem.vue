@@ -20,7 +20,7 @@
             {{ conversation.inbox_name }}
           </p>
           <p class="text-base font-normal">
-            {{ getContactFullName(conversation.uuid) }}
+            {{ contactFullName }}
           </p>
         </div>
         <div>
@@ -48,18 +48,15 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { useConversationStore } from '@/stores/conversation'
 import { formatTime } from '@/utils/datetime'
 import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { string } from 'zod'
 
 const router = useRouter()
 defineProps({
   conversation: Object,
-  currentConversation: Object
+  currentConversation: Object,
+  contactFullName: string
 })
-const conversationStore = useConversationStore()
-const getContactFullName = (uuid) => {
-  return conversationStore.getContactFullName(uuid)
-}
 </script>

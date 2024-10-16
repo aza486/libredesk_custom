@@ -21,7 +21,7 @@ import { onMounted, watch, onUnmounted } from 'vue'
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import ConversationList from '@/components/conversation/list/ConversationList.vue'
-import Conversation from '@/components/conversation/ConversationPage.vue'
+import Conversation from '@/components/conversation/Conversation.vue'
 import ConversationSideBar from '@/components/conversation/sidebar/ConversationSideBar.vue'
 import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'
 import { useConversationStore } from '@/stores/conversation'

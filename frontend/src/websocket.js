@@ -106,11 +106,10 @@ export function sendMessage (message) {
   })
 }
 
-export function subscribeConversationsList (type, filter) {
+export function subscribeConversationsList (type) {
   const message = {
     action: CONVERSTION_WS_ACTIONS.SUB_LIST,
     type: type,
-    filter: filter
   }
   waitForWebSocketOpen(() => {
     socket.send(JSON.stringify(message))

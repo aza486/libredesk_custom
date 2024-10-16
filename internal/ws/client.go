@@ -110,8 +110,8 @@ func (c *Client) processIncomingMessage(data []byte) {
 
 	switch req.Action {
 	case models.ActionConversationsListSub:
-		var subReq models.ConversationsListSubscribe
-		if err := json.Unmarshal(data, &subReq); err != nil {
+		var sReq models.ConversationsListSubscribe
+		if err := json.Unmarshal(data, &sReq); err != nil {
 			c.SendError("error unmarshalling request")
 			return
 		}
@@ -119,9 +119,9 @@ func (c *Client) processIncomingMessage(data []byte) {
 		// First remove all user conversation subscriptions.
 		c.RemoveAllUserConversationSubscriptions(c.ID)
 
-		// Add the new subscriptions.
+		// Fetch conversations of this list and subscribe to them
 		for page := 1; page <= maxConversationsPagesToSub; page++ {
-			conversationUUIDs, err := c.Hub.conversationStore.GetConversationsListUUIDs(c.ID, page, maxConversationsPageSize, subReq.Type)
+			conversationUUIDs, err := c.Hub.conversationStore.GetConversationsListUUIDs(c.ID, page, maxConversationsPageSize, sReq.Type)
 			if err != nil {
 				continue
 			}

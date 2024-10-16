@@ -19,8 +19,9 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
+		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))
 	)
-	c, err := app.conversation.GetAllConversationsList(order, orderBy, page, pageSize)
+	c, err := app.conversation.GetAllConversationsList(order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -36,8 +37,9 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
+		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))
 	)
-	c, err := app.conversation.GetAssignedConversationsList(user.ID, order, orderBy, page, pageSize)
+	c, err := app.conversation.GetAssignedConversationsList(user.ID, order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
@@ -53,8 +55,9 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
+		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))
 	)
-	c, err := app.conversation.GetUnassignedConversationsList(user.ID, order, orderBy, page, pageSize)
+	c, err := app.conversation.GetUnassignedConversationsList(user.ID, order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}

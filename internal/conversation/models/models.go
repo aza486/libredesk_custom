@@ -13,17 +13,6 @@ import (
 var (
 	StatusOpen = "Open"
 
-	ValidFilters = map[string]string{
-		"status_open":       " c.status = 'Open'",
-		"status_processing": " c.status = 'Processing'",
-		"status_spam":       " c.status = 'Spam'",
-		"status_resolved":   " c.status = 'Resolved'",
-		"status_all":        " 1=1  ",
-	}
-
-	ValidOrderBy = []string{"created_at", "priority", "status", "last_message_at"}
-	ValidOrder   = []string{"ASC", "DESC"}
-
 	AssigneeTypeTeam = "team"
 	AssigneeTypeUser = "user"
 

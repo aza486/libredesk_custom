@@ -1,5 +1,5 @@
 <template>
-  <form @submit="onSubmit" class="w-2/3 space-y-6">
+  <form @submit="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="provider">
       <FormItem>
         <FormLabel>Provider</FormLabel>

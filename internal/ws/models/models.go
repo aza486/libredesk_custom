@@ -38,8 +38,7 @@ type IncomingReq struct {
 
 // ConversationsListSubscribe represents a request to subscribe to conversations list
 type ConversationsListSubscribe struct {
-	Type   string `json:"type"`
-	Filter string `json:"filter"`
+	Type string `json:"type"`
 }
 
 // ConversationCurrentSet represents a request to set current conversation

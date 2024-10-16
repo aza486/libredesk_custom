@@ -43,17 +43,21 @@ export const useUserStore = defineStore('user', () => {
       const userData = response?.data?.data
       if (userData) {
         const { avatar_url, first_name, last_name, permissions } = userData
-        setAvatar("/uploads/" + avatar_url)
+        setAvatar(avatar_url)
         setFirstName(first_name)
         setLastName(last_name)
         userPermissions.value = permissions || []
       }
     } catch (error) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
+      if (error.response) {
+        if (error.response.status !== 401) {
+          emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+            title: 'Could not fetch current user',
+            variant: 'destructive',
+            description: handleHTTPError(error).message
+          })
+        }
+      }
     }
   }
 

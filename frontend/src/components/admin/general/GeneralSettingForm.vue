@@ -1,6 +1,6 @@
 <template>
   <Spinner v-if="formLoading"></Spinner>
-  <form @submit="onSubmit" class="w-2/3 space-y-6"
+  <form @submit="onSubmit" class="space-y-6"
     :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>

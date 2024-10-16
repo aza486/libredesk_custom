@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -40,7 +39,7 @@ var (
 )
 
 const (
-	maxConversationsPageSize = 50
+	conversationsListMaxPageSize = 50
 )
 
 // Manager handles the operations related to conversations
@@ -147,7 +146,6 @@ type queries struct {
 	GetConversations                 string     `query:"get-conversations"`
 	GetConversationsListUUIDs        string     `query:"get-conversations-list-uuids"`
 	GetConversationParticipants      *sqlx.Stmt `query:"get-conversation-participants"`
-	GetAssignedConversations         *sqlx.Stmt `query:"get-assigned-conversations"`
 
 	GetDashboardCharts string `query:"get-dashboard-charts"`
 	GetDashboardCounts string `query:"get-dashboard-counts"`
@@ -289,22 +287,22 @@ func (c *Manager) GetConversationUUID(id int) (string, error) {
 }
 
 // GetAllConversationsList retrieves all conversations with optional filtering, ordering, and pagination.
-func (c *Manager) GetAllConversationsList(order, orderBy string, page, pageSize int) ([]models.Conversation, error) {
-	return c.GetConversations(0, models.AllConversations, order, orderBy, page, pageSize)
+func (c *Manager) GetAllConversationsList(order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(0, models.AllConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetAssignedConversationsList retrieves conversations assigned to a specific user with optional filtering, ordering, and pagination.
-func (c *Manager) GetAssignedConversationsList(userID int, order, orderBy string, page, pageSize int) ([]models.Conversation, error) {
-	return c.GetConversations(userID, models.AssignedConversations, order, orderBy, page, pageSize)
+func (c *Manager) GetAssignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(userID, models.AssignedConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetUnassignedConversationsList retrieves conversations assigned to a team the user is part of with optional filtering, ordering, and pagination.
-func (c *Manager) GetUnassignedConversationsList(userID int, order, orderBy string, page, pageSize int) ([]models.Conversation, error) {
-	return c.GetConversations(userID, models.UnassignedConversations, order, orderBy, page, pageSize)
+func (c *Manager) GetUnassignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(userID, models.UnassignedConversations, order, orderBy, filters, page, pageSize)
 }
 
-// GetConversations retrieves conversations based on user ID, type, and optional filtering, ordering, and pagination.
-func (c *Manager) GetConversations(userID int, typ, order, orderBy string, page, pageSize int) ([]models.Conversation, error) {
+// GetConversations retrieves conversations list based on user ID, type, and optional filtering, ordering, and pagination.
+func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
 	var conversations = make([]models.Conversation, 0)
 
 	if orderBy == "" {
@@ -314,9 +312,12 @@ func (c *Manager) GetConversations(userID int, typ, order, orderBy string, page,
 		order = "DESC"
 	}
 
-	query, qArgs, err := c.generateConversationsListQuery(userID, c.q.GetConversations, typ, order, orderBy, page, pageSize)
+	if filters == "" {
+		filters = "[]"
+	}
+
+	query, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversations, listType, order, orderBy, page, pageSize, filters)
 	if err != nil {
-		c.lo.Error("error generating conversations query", "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
@@ -338,7 +339,7 @@ func (c *Manager) GetConversations(userID int, typ, order, orderBy string, page,
 func (c *Manager) GetConversationsListUUIDs(userID, page, pageSize int, typ string) ([]string, error) {
 	var ids = make([]string, 0)
 
-	query, qArgs, err := c.generateConversationsListQuery(userID, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize)
+	query, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize, "")
 	if err != nil {
 		c.lo.Error("error generating conversations query", "error", err)
 		return ids, err
@@ -555,50 +556,42 @@ func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
 	return nil
 }
 
-// generateConversationsListQuery generates the SQL query to list conversations with optional filtering, ordering, and pagination.
-func (c *Manager) generateConversationsListQuery(userID int, baseQuery, typ, order, orderBy string, page, pageSize int) (string, []interface{}, error) {
-	var (
-		qArgs []interface{}
-		cond  string
-	)
+// makeConversationsListQuery prepares a SQL query string for conversations list
+func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, order, orderBy string, page, pageSize int, filtersJSON string) (string, []interface{}, error) {
+	var qArgs []interface{}
 
-	// Set condition based on the type.
-	switch typ {
+	if pageSize > conversationsListMaxPageSize {
+		pageSize = conversationsListMaxPageSize
+	}
+
+	// Set condition based on the list type.
+	switch listType {
 	case models.AssignedConversations:
-		cond = "AND c.assigned_user_id = $1"
+		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_user_id = $1")
 		qArgs = append(qArgs, userID)
 	case models.UnassignedConversations:
-		cond = "AND c.assigned_user_id IS NULL AND c.assigned_team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)"
+		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_user_id IS NULL AND conversations.assigned_team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)")
 		qArgs = append(qArgs, userID)
 	case models.AllConversations:
-		// No conditions.
+		baseQuery = fmt.Sprintf(baseQuery, "")
 	default:
-		return "", nil, fmt.Errorf("invalid conversation type %s", typ)
+		return "", nil, fmt.Errorf("invalid conversation type %s", listType)
 	}
 
-	// Ensure orderBy & order is valid.
-	var orderByClause = ""
-	if slices.Contains(models.ValidOrderBy, orderBy) {
-		orderByClause = fmt.Sprintf(" ORDER BY %s ", orderBy)
-	}
-	if orderByClause > "" && slices.Contains(models.ValidOrder, order) {
-		orderByClause += order
+	query, qArgs, err := dbutil.PaginateAndFilterQuery(baseQuery, qArgs, dbutil.PaginationOptions{
+		Order:    order,
+		OrderBy:  orderBy,
+		Page:     page,
+		PageSize: pageSize,
+	}, filtersJSON, dbutil.AllowedFields{
+		"conversations": []string{"status_id", "priority_id"},
+	})
+	if err != nil {
+		c.lo.Error("error preparing query", "error", err)
+		return "", nil, err
 	}
 
-	// Calculate offset based on page number and page size.
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 || pageSize > maxConversationsPageSize {
-		pageSize = maxConversationsPageSize
-	}
-	offset := (page - 1) * pageSize
-	qArgs = append(qArgs, pageSize, offset)
-
-	// Include LIMIT, OFFSET, and ORDER BY in the SQL query.
-	sqlQuery := fmt.Sprintf("%s %s LIMIT $%d OFFSET $%d", fmt.Sprintf(baseQuery, cond), orderByClause, len(qArgs)-1, len(qArgs))
-
-	return sqlQuery, qArgs, nil
+	return query, qArgs, err
 }
 
 // GetToAddress retrieves the recipient addresses for a conversation.

@@ -1,7 +1,9 @@
 <template>
-  <div class="h-screen">
+  <div class="h-screen flex flex-col">
     <!-- Filters -->
-    <ConversationListFilters v-model:type="conversationType"></ConversationListFilters>
+    <div class="shrink-0">
+      <ConversationListFilters @updateFilters="handleUpdateFilters" />
+    </div>
 
     <!-- Error / Empty list -->
     <EmptyList v-if="emptyConversations" title="No conversations found" message="Try adjusting filters."
@@ -9,27 +11,28 @@
     <EmptyList v-if="conversationStore.conversations.errorMessage" title="Could not fetch conversations"
       :message="conversationStore.conversations.errorMessage" :icon="MessageCircleWarning"></EmptyList>
 
-    <div class="h-screen overflow-y-scroll pb-[180px] flex flex-col">
+    <!-- List -->
+    <div class="flex-grow overflow-y-auto">
+      <!-- Items -->
+      <div>
+        <ConversationListItem :conversation="conversation" :currentConversation="conversationStore.current"
+          v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid" :contactFullName="conversationStore.getContactFullName(conversation.uuid)" />
+      </div>
+
       <!-- List skeleton -->
       <div v-if="conversationsLoading">
-        <ConversationListItemSkeleton v-for="index in 10" :key="index"></ConversationListItemSkeleton>
+        <ConversationListItemSkeleton v-for="index in 10" :key="index" />
       </div>
 
-      <!-- Item -->
-      <div v-auto-animate>
-        <ConversationListItem :conversation="conversation" :currentConversation="conversationStore.current"
-          v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid" />
-      </div>
-
-      <!-- Load more  -->
-      <div class="flex justify-center items-center mt-5 relative">
+      <!-- Load more -->
+      <div class="flex justify-center items-center p-5">
         <div v-if="conversationStore.conversations.hasMore && !hasErrored && hasConversations">
           <Button variant="link" @click="loadNextPage">
             <Spinner v-if="conversationStore.conversations.loading" />
-            <p v-else>Load more...</p>
+            <p v-else>Load more</p>
           </Button>
         </div>
-        <div v-else-if="everythingLoaded">All conversations loaded!</div>
+        <div v-else-if="!conversationStore.conversations.hasMore">All conversations loaded!</div>
       </div>
     </div>
 
@@ -37,11 +40,8 @@
 </template>
 
 <script setup>
-import { onMounted, watch, computed, onUnmounted } from 'vue'
-import { vAutoAnimate } from '@formkit/auto-animate/vue'
+import { onMounted, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-import { subscribeConversationsList } from '@/websocket.js'
-import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
 import { MessageCircleWarning, MessageCircleQuestion } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
@@ -49,18 +49,15 @@ import EmptyList from '@/components/conversation/list/ConversationEmptyList.vue'
 import ConversationListItem from '@/components/conversation/list/ConversationListItem.vue'
 import ConversationListItemSkeleton from '@/components/conversation/list/ConversationListItemSkeleton.vue'
 import ConversationListFilters from '@/components/conversation/list/ConversationListFilters.vue'
-import { useStorage } from '@vueuse/core'
 
 const conversationStore = useConversationStore()
-const conversationType = useStorage('conversation_type', CONVERSATION_LIST_TYPE.ASSIGNED)
 let listRefreshInterval = null
 
 onMounted(() => {
-  conversationStore.fetchConversationsList(conversationType.value)
-  subscribeConversationsList(conversationType.value)
+  conversationStore.fetchConversationsList()
   // Refresh list every min.
   listRefreshInterval = setInterval(() => {
-    conversationStore.fetchConversationsList(conversationType.value, false)
+    conversationStore.fetchConversationsList(false)
   }, 60000)
 })
 
@@ -69,13 +66,12 @@ onUnmounted(() => {
   conversationStore.clearListReRenderInterval()
 })
 
-watch(conversationType, (newType) => {
-  conversationStore.fetchConversationsList(newType)
-  subscribeConversationsList(newType)
-})
-
 const loadNextPage = () => {
-  conversationStore.fetchNextConversations(conversationType.value)
+  conversationStore.fetchNextConversations()
+}
+
+const handleUpdateFilters = (filters) => {
+  conversationStore.setConversationListFilters(filters)
 }
 
 const hasConversations = computed(() => {
@@ -96,10 +92,6 @@ const emptyConversations = computed(() => {
 
 const hasErrored = computed(() => {
   return conversationStore.conversations.errorMessage ? true : false
-})
-
-const everythingLoaded = computed(() => {
-  return !conversationStore.conversations.errorMessage && !emptyConversations.value
 })
 
 const conversationsLoading = computed(() => {

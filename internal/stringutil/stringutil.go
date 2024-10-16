@@ -3,6 +3,7 @@ package stringutil
 
 import (
 	"crypto/rand"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -72,4 +73,12 @@ func RandomNumericString(n int) (string, error) {
 	}
 
 	return string(bytes), nil
+}
+
+func GetPathFromURL(rawURL string) (string, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	return parsedURL.Path, nil
 }

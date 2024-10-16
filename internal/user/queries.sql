@@ -68,7 +68,7 @@ WHERE id = $1
 
 -- name: update-avatar
 UPDATE users
-SET avatar_url = $2 WHERE id = $1;
+SET avatar_url = $2, updated_at = now() WHERE id = $1;
 
 -- name: get-permissions
 SELECT unnest(r.permissions)

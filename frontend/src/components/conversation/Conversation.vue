@@ -11,7 +11,7 @@
       <div>
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <Badge :variant="getBadgeVariant">
+            <Badge variant="primary">
               {{ conversationStore.current.status }}
             </Badge>
           </DropdownMenuTrigger>
@@ -23,20 +23,18 @@
         </DropdownMenu>
       </div>
     </div>
-    <!-- Header end -->
 
     <!-- Messages & reply box -->
     <div class="flex flex-col h-screen" v-auto-animate>
       <MessageList class="flex-1" />
       <ReplyBox class="h-max mb-12" />
     </div>
-    <!-- Messages & reply box end -->
 
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Badge } from '@/components/ui/badge'
@@ -61,10 +59,6 @@ const getStatuses = async () => {
   const resp = await api.getStatuses()
   statuses.value = resp.data.data
 }
-
-const getBadgeVariant = computed(() => {
-  return conversationStore.current?.status == 'Spam' ? 'destructive' : 'primary'
-})
 
 const handleUpdateStatus = (status) => {
   conversationStore.updateStatus(status)

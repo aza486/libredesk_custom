@@ -42,7 +42,7 @@ const routes = [
     children: [
       {
         path: 'inboxes',
-        component: () => import('@/components/admin/inbox/InboxPage.vue')
+        component: () => import('@/components/admin/inbox/Inbox.vue')
       },
       {
         path: 'inboxes/new',
@@ -55,11 +55,11 @@ const routes = [
       },
       {
         path: 'notification',
-        component: () => import('@/components/admin/notification/NotificationSettingPage.vue')
+        component: () => import('@/components/admin/notification/NotificationSetting.vue')
       },
       {
         path: 'teams',
-        component: () => import('@/components/admin/team/TeamPage.vue')
+        component: () => import('@/components/admin/team/Team.vue')
       },
       {
         path: 'teams/users',
@@ -76,7 +76,7 @@ const routes = [
       },
       {
         path: 'teams/teams',
-        component: () => import('@/components/admin/team/teams/TeamsPage.vue')
+        component: () => import('@/components/admin/team/teams/Teams.vue')
       },
       {
         path: 'teams/teams/new',
@@ -89,7 +89,7 @@ const routes = [
       },
       {
         path: 'teams/roles',
-        component: () => import('@/components/admin/team/roles/RolesPage.vue')
+        component: () => import('@/components/admin/team/roles/Roles.vue')
       },
       {
         path: 'teams/roles/new',
@@ -102,7 +102,7 @@ const routes = [
       },
       {
         path: 'automations',
-        component: () => import('@/components/admin/automation/AutomationPage.vue')
+        component: () => import('@/components/admin/automation/Automation.vue')
       },
       {
         path: 'automations/new',
@@ -116,11 +116,11 @@ const routes = [
       },
       {
         path: 'general',
-        component: () => import('@/components/admin/general/GeneralPage.vue')
+        component: () => import('@/components/admin/general/General.vue')
       },
       {
         path: 'templates',
-        component: () => import('@/components/admin/templates/TemplatesPage.vue')
+        component: () => import('@/components/admin/templates/Templates.vue')
       },
       {
         path: 'templates/:id/edit',
@@ -133,7 +133,7 @@ const routes = [
       },
       {
         path: 'oidc',
-        component: () => import('@/components/admin/oidc/OIDCPage.vue')
+        component: () => import('@/components/admin/oidc/OIDC.vue')
       },
       {
         path: 'oidc/:id/edit',
@@ -146,19 +146,19 @@ const routes = [
       },
       {
         path: 'conversations',
-        component: () => import('@/components/admin/conversation/ConversationPage.vue')
+        component: () => import('@/components/admin/conversation/Conversation.vue')
       },
       {
         path: 'conversations/tags',
-        component: () => import('@/components/admin/conversation/tags/TagsPage.vue')
+        component: () => import('@/components/admin/conversation/tags/Tags.vue')
       },
       {
         path: 'conversations/statuses',
-        component: () => import('@/components/admin/conversation/status/StatusPage.vue')
+        component: () => import('@/components/admin/conversation/status/Status.vue')
       },
       {
         path: 'conversations/canned-responses',
-        component: () => import('@/components/admin/conversation/canned_responses/CannedResponsesPage.vue')
+        component: () => import('@/components/admin/conversation/canned_responses/CannedResponses.vue')
       }
     ]
   },

@@ -1,5 +1,5 @@
 <template>
-  <form @submit="onS3FormSubmit" class="w-2/3 space-y-6">
+  <form @submit="onS3FormSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="provider">
       <FormItem>
         <FormLabel>Provider</FormLabel>

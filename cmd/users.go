@@ -121,12 +121,16 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		// Delete current avatar.
 		if currentUser.AvatarURL.Valid {
 			fileName := filepath.Base(currentUser.AvatarURL.String)
-			app.lo.Info("deleting user avatar file", "filename", fileName)
 			app.media.Delete(fileName)
 		}
 
-		// Update user avatar.
-		if err := app.user.UpdateAvatar(user.ID, media.UUID); err != nil {
+		// Save file path.
+		path, err := stringutil.GetPathFromURL(media.URL)
+		if err != nil {
+			app.lo.Debug("error getting path from URL", "url", media.URL, "error", err)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
+		}
+		if err := app.user.UpdateAvatar(user.ID, path); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}

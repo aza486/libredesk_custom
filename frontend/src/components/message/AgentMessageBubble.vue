@@ -78,7 +78,7 @@ const getFullName = computed(() => {
 })
 
 const getAvatar = computed(() => {
-  return "/uploads/" + participant.value?.avatar_url
+  return participant.value?.avatar_url
 })
 
 const messageContent = computed(() => {

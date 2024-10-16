@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/stringutil"
 
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -15,20 +14,13 @@ func handleOIDCLogin(r *fastglue.Request) error {
 	var (
 		app             = r.Context.(*App)
 		providerID, err = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		csrfToken       = string(r.RequestCtx.Request.Header.Cookie("csrf_token"))
 	)
 	if err != nil {
 		app.lo.Error("error parsing provider id", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error parsing provider id.", nil, envelope.GeneralError)
 	}
-
-	// TODO: Figure csrf thing out
-	state, err := stringutil.RandomAlNumString(30)
-	if err != nil {
-		app.lo.Error("error generating random string", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Something went wrong, Please try again.", nil, envelope.GeneralError)
-	}
-
-	authURL, err := app.auth.LoginURL(providerID, state)
+	authURL, err := app.auth.LoginURL(providerID, csrfToken)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -43,13 +35,14 @@ func handleOIDCCallback(r *fastglue.Request) error {
 		code            = string(r.RequestCtx.QueryArgs().Peek("code"))
 		state           = string(r.RequestCtx.QueryArgs().Peek("state"))
 		providerID, err = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("id")))
+		csrfToken       = string(r.RequestCtx.Request.Header.Cookie("csrf_token"))
 	)
 	if err != nil {
 		app.lo.Error("error parsing provider id", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error parsing provider id.", nil, envelope.GeneralError)
 	}
 
-	_, claims, err := app.auth.ExchangeOIDCToken(r.RequestCtx, providerID, code)
+	_, claims, err := app.auth.ExchangeOIDCToken(r.RequestCtx, providerID, code, csrfToken)
 	if err != nil {
 		app.lo.Error("error exchanging oidc token", "error", err)
 		return err

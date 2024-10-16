@@ -1,16 +1,23 @@
 import { defineStore } from 'pinia'
-import { computed, reactive } from 'vue'
+import { computed, reactive, watch, toRefs } from 'vue'
 import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
+import { useStorage } from '@vueuse/core'
+import { subscribeConversationsList } from '@/websocket'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
+  const conversationsListType = useStorage('conversation_list_type', CONVERSATION_LIST_TYPE.ASSIGNED)
+  const conversationListFilters = useStorage('conversation_list_filters', [])
+
   // List of conversations
   const conversations = reactive({
     data: [],
     loading: false,
+    type: conversationsListType,
+    filters: conversationListFilters,
     page: 1,
     hasMore: true,
     errorMessage: ''
@@ -33,17 +40,23 @@ export const useConversationStore = defineStore('conversation', () => {
     errorMessage: ''
   })
 
+  const { type: conversatonType } = toRefs(conversations);
+
+  // Set type on tab change.
+  watch(conversatonType, (type) => {
+    setConversationList(type)
+  })
+
   // Map to track seen msg UUIDs for deduplication
   let seenConversationUUIDs = new Map()
   let seenMessageUUIDs = new Set()
-  let previousConversationListType = ''
   let reRenderInterval = setInterval(() => {
     conversations.data = [...conversations.data]
   }, 120000)
   const emitter = useEmitter()
 
   // Clears the re-render interval
-  function clearListReRenderInterval() {
+  function clearListReRenderInterval () {
     clearInterval(reRenderInterval)
   }
 
@@ -84,6 +97,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  // Returns the current conversation
   const current = computed(() => {
     return conversation.data
   })
@@ -195,43 +209,49 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  // On conversation type(tab) change reset state.
-  function onConversationTypeChange () {
-    conversations.data = []
-    conversations.page = 1
-    conversations.hasMore = true
-    seenConversationUUIDs.clear()
+  function setConversationList (type) {
+    resetConversations()
+    conversations.type = type
+    subscribeConversationsList(type)
+    fetchConversationsList(true)
   }
 
-  // fetchConversationsList fetches list of conversations based on type(tab).
-  async function fetchConversationsList (type, showLoader = true) {
-    conversations.errorMessage = ''
-    if (showLoader)
-      conversations.loading = true
+  function setConversationListFilters (filters) {
+    resetConversations()
+    conversations.filters = filters
+    fetchConversationsList(true)
+  }
 
-    if (type !== previousConversationListType) {
-      onConversationTypeChange()
-      previousConversationListType = type
-    }
+  async function fetchConversationsList (showLoader = true) {
+    if (showLoader) conversations.loading = true
 
     try {
-      let response
-      switch (type) {
+      conversations.errorMessage = ''
+      let response = null
+
+      switch (conversations.type) {
         case CONVERSATION_LIST_TYPE.ASSIGNED:
-          response = await api.getAssignedConversations(conversations.page)
+          response = await api.getAssignedConversations({
+            page: conversations.page,
+            filters: conversations.filters ? JSON.stringify(conversations.filters) : '[]',
+          })
           break
         case CONVERSATION_LIST_TYPE.UNASSIGNED:
-          response = await api.getUnassignedConversations(conversations.page)
+          response = await api.getUnassignedConversations({
+            page: conversations.page,
+            filters: conversations.filters ? JSON.stringify(conversations.filters) : '[]',
+          })
           break
         case CONVERSATION_LIST_TYPE.ALL:
-          response = await api.getAllConversations(conversations.page)
+          response = await api.getAllConversations({
+            page: conversations.page,
+            filters: conversations.filters ? JSON.stringify(conversations.filters) : '[]',
+          })
           break
         default:
-          console.warn(`Invalid type ${type}`)
           return
       }
 
-      // Merge new conversations if any.
       if (response?.data?.data) {
         const newConversations = response.data.data.filter((conversation) => {
           if (!seenConversationUUIDs.has(conversation.uuid)) {
@@ -241,13 +261,8 @@ export const useConversationStore = defineStore('conversation', () => {
           return false
         })
 
-        if (!conversations.data) {
-          conversations.data = []
-        }
-
-        if (newConversations.length === 0)
-          conversations.hasMore = false
-
+        if (!conversations.data) conversations.data = []
+        if (newConversations.length === 0) conversations.hasMore = false
         conversations.data.push(...newConversations)
       } else {
         conversations.hasMore = false
@@ -259,10 +274,11 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  // Increments the page and fetches the next set of conversations.
-  function fetchNextConversations (type, filter) {
+
+  // Increments the page and fetches conversations
+  function fetchNextConversations () {
     conversations.page++
-    fetchConversationsList(type, filter)
+    fetchConversationsList(true)
   }
 
   async function updatePriority (v) {
@@ -270,7 +286,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationPriority(conversation.data.uuid, { priority: v })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
+        title: 'Could not update priority',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -282,7 +298,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationStatus(conversation.data.uuid, { status: v })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
+        title: 'Could not update status',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -294,7 +310,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.upsertTags(conversation.data.uuid, v)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
+        title: 'Could not add tags',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -306,7 +322,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateAssignee(conversation.data.uuid, type, v)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
+        title: 'Could not update assignee',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -394,10 +410,19 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  function resetConversations () {
+    conversations.data = []
+    conversations.loading = false
+    conversations.page = 1
+    conversations.hasMore = true
+    conversations.errorMessage = ''
+    seenConversationUUIDs.clear()
+  }
+
   function resetCurrentConversation () {
     conversation.data = null
     conversation.participants = {}
-    conversation.loading = false,
+    conversation.loading = false
     conversation.errorMessage = ''
   }
 
@@ -432,6 +457,8 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchConversation,
     fetchConversationsList,
     fetchMessages,
+    setConversationList,
+    setConversationListFilters,
     upsertTags,
     updateAssignee,
     updatePriority,

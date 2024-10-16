@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="onSubmit" class="w-2/3 space-y-6">
+  <form @submit.prevent="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>

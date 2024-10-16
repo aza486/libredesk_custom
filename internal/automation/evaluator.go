@@ -144,7 +144,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		e.lo.Error("unrecognized rule logical operator", "operator", rule.Operator)
 		return false
 	}
-	e.lo.Debug("rule conditions met", "coversation_uuid", conversation.UUID)
+	e.lo.Debug("rule conditions met status", "met", conditionMet, "coversation_uuid", conversation.UUID)
 	return conditionMet
 }
 

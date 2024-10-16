@@ -9,41 +9,38 @@ RETURNING id, uuid;
 
 -- name: get-conversations
 SELECT
-    c.updated_at,
-    c.uuid,
-    c.assignee_last_seen_at,
-    ct.first_name,
-    ct.last_name,
-    ct.avatar_url,
-    inb.channel as inbox_channel,
-    inb.name as inbox_name,
-    COALESCE(c.meta->>'subject', '') as subject,
-    COALESCE(c.meta->>'last_message', '') as last_message,
-    COALESCE((c.meta->>'last_message_at')::timestamp, '1970-01-01 00:00:00'::timestamp) as last_message_at,
+    conversations.updated_at,
+    conversations.uuid,
+    conversations.assignee_last_seen_at,
+    contacts.first_name,
+    contacts.last_name,
+    contacts.avatar_url,
+    inboxes.channel as inbox_channel,
+    inboxes.name as inbox_name,
+    COALESCE(conversations.meta->>'subject', '') as subject,
+    COALESCE(conversations.meta->>'last_message', '') as last_message,
+    COALESCE((conversations.meta->>'last_message_at')::timestamp, '1970-01-01 00:00:00'::timestamp) as last_message_at,
     (
         SELECT COUNT(*)
-        FROM messages m
-        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
+        FROM messages
+        WHERE messages.conversation_id = conversations.id AND messages.created_at > conversations.assignee_last_seen_at
     ) AS unread_message_count,
-    s.name as status,
-    p.name as priority
-FROM conversations c
-    JOIN contacts ct ON c.contact_id = ct.id
-    JOIN inboxes inb ON c.inbox_id = inb.id
-    LEFT JOIN status s ON c.status_id = s.id
-    LEFT JOIN priority p ON c.priority_id = p.id
+    status.name as status,
+    priority.name as priority
+FROM conversations
+    JOIN contacts ON conversations.contact_id = contacts.id
+    JOIN inboxes ON conversations.inbox_id = inboxes.id
+    LEFT JOIN status ON conversations.status_id = status.id
+    LEFT JOIN priority ON conversations.priority_id = priority.id
 WHERE 1=1 %s
 
 -- name: get-conversations-list-uuids
 SELECT
-    c.uuid
-FROM conversations c
-LEFT JOIN status s ON c.status_id = s.id
-LEFT JOIN priority p ON c.priority_id = p.id
+    conversations.uuid
+FROM conversations
+LEFT JOIN status ON conversations.status_id = status.id
+LEFT JOIN priority ON conversations.priority_id = priority.id
 WHERE 1=1 %s
-
--- name: get-assigned-conversations
-SELECT uuid from conversations where assigned_user_id = $1;
 
 -- name: get-conversation
 SELECT

@@ -1,5 +1,5 @@
 -- name: get-all-oidc
-SELECT id, name, disabled, provider_url, provider, client_id, client_secret, updated_at FROM oidc order by updated_at desc;
+SELECT id, name, disabled, provider, updated_at FROM oidc order by updated_at desc;
 
 -- name: get-oidc
 SELECT * FROM oidc WHERE id = $1;

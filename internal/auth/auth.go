@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/artemis/internal/stringutil"
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/redis/go-redis/v9"
@@ -113,7 +113,7 @@ func (a *Auth) LoginURL(providerID int, state string) (string, error) {
 }
 
 // ExchangeOIDCToken takes an OIDC authorization code, validates it, and returns an OIDC token for subsequent auth.
-func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code string) (string, OIDCclaim, error) {
+func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonce string) (string, OIDCclaim, error) {
 	oauthCfg, ok := a.oauthCfgs[providerID]
 	if !ok {
 		return "", OIDCclaim{}, fmt.Errorf("invalid provider ID: %d", providerID)
@@ -139,6 +139,10 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code strin
 	idTk, err := verifier.Verify(ctx, rawIDTk)
 	if err != nil {
 		return "", OIDCclaim{}, fmt.Errorf("error verifying ID token: %v", err)
+	}
+
+	if idTk.Nonce != nonce {
+		return "", OIDCclaim{}, fmt.Errorf("nonce token mismatch")
 	}
 
 	var claims OIDCclaim
@@ -168,19 +172,23 @@ func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 	return nil
 }
 
-// SetCSRFCookie sets the CSRF token in the response cookie
+// SetCSRFCookie sets the CSRF token in the response cookie if not already set.
 func (a *Auth) SetCSRFCookie(r *fastglue.Request) error {
-	token, err := generateCSRFToken()
-	if err != nil {
-		return err
+	cookie := r.RequestCtx.Request.Header.Cookie("csrf_token")
+	if cookie == nil {
+		token, err := generateCSRFToken()
+		if err != nil {
+			return err
+		}
+		var csrfCookie fasthttp.Cookie
+		csrfCookie.SetKey("csrf_token")
+		csrfCookie.SetValue(token)
+		csrfCookie.SetPath("/")
+		csrfCookie.SetSecure(true)
+		csrfCookie.SetHTTPOnly(false)
+		r.RequestCtx.Response.Header.SetCookie(&csrfCookie)
+		return nil
 	}
-	var csrfCookie fasthttp.Cookie
-	csrfCookie.SetKey("csrf_token")
-	csrfCookie.SetValue(token)
-	csrfCookie.SetPath("/")
-	csrfCookie.SetSecure(true)
-	csrfCookie.SetHTTPOnly(false)
-	r.RequestCtx.Response.Header.SetCookie(&csrfCookie)
 	return nil
 }
 
@@ -228,13 +236,13 @@ func (a *Auth) DestroySession(r *fastglue.Request) error {
 	return nil
 }
 
-// generateCSRFToken creates a random CSRF token
+// generateCSRFToken creates a random base64 encoded str.
 func generateCSRFToken() (string, error) {
-	b := make([]byte, csrfTokenLength)
-	if _, err := rand.Read(b); err != nil {
+	b, err := stringutil.RandomAlNumString(30)
+	if err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(b), nil
+	return base64.StdEncoding.EncodeToString([]byte(b)), nil
 }
 
 // getRequestCookie returns fashttp.Cookie for the given name.

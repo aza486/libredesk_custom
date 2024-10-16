@@ -156,12 +156,12 @@ const getCannedResponses = () => http.get('/api/canned-responses')
 const createCannedResponse = (data) => http.post('/api/canned-responses', data)
 const updateCannedResponse = (id, data) => http.put(`/api/canned-responses/${id}`, data)
 const deleteCannedResponse = (id) => http.delete(`/api/canned-responses/${id}`)
-const getAssignedConversations = (page) =>
-  http.get(`/api/conversations/assigned?page=${page}`)
-const getUnassignedConversations = (page) =>
-  http.get(`/api/conversations/unassigned?page=${page}`)
-const getAllConversations = (page) =>
-  http.get(`/api/conversations/all?page=${page}`)
+const getAssignedConversations = (params) =>
+  http.get('/api/conversations/assigned', { params })
+const getUnassignedConversations = (params) =>
+  http.get('/api/conversations/unassigned', { params })
+const getAllConversations = (params) =>
+  http.get('/api/conversations/all', { params })
 const uploadMedia = (data) =>
   http.post('/api/media', data, {
     headers: {
