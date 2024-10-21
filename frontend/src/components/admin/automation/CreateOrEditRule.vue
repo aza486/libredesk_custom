@@ -305,7 +305,20 @@ onMounted(async () => {
     }
   }
   firstRuleGroup.value = getFirstGroup()
+  // Convert multi tag select values separated by commas to an array
+  firstRuleGroup.value.rules.forEach(rule => {
+    if (!Array.isArray(rule.value)) 
+      if (["contains", "not contains"].includes(rule.operator)) {
+        rule.value = rule.value ? rule.value.split(',') : []
+      }
+  })
   secondRuleGroup.value = getSecondGroup()
+  secondRuleGroup.value?.rules?.forEach(rule => {
+    if (!Array.isArray(rule.value)) 
+      if (["contains", "not contains"].includes(rule.operator)) {
+        rule.value = rule.value ? rule.value.split(',') : []
+      }
+  })
   groupOperator.value = getGroupOperator()
 })
 

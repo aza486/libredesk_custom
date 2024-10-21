@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/abhinavxd/artemis/internal/auth"
+	auth_ "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
@@ -431,7 +431,7 @@ func initAuthz() *authz.Enforcer {
 }
 
 // initAuth initializes authentication manager.
-func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
+func initAuth(o *oidc.Manager, rd *redis.Client) *auth_.Auth {
 	var lo = initLogger("auth")
 
 	oidc, err := o.GetAll()
@@ -439,12 +439,12 @@ func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 		log.Fatalf("error initializing auth: %v", err)
 	}
 
-	var providers = make([]auth.Provider, 0, len(oidc))
+	var providers = make([]auth_.Provider, 0, len(oidc))
 	for _, o := range oidc {
 		if o.Disabled {
 			continue
 		}
-		providers = append(providers, auth.Provider{
+		providers = append(providers, auth_.Provider{
 			ID:           o.ID,
 			Provider:     o.Provider,
 			ProviderURL:  o.ProviderURL,
@@ -454,7 +454,7 @@ func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 		})
 	}
 
-	auth, err := auth.New(auth.Config{
+	auth, err := auth_.New(auth_.Config{
 		Providers: providers,
 	}, rd, lo)
 	if err != nil {

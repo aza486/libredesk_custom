@@ -5,7 +5,7 @@ env = "dev"
 
 # HTTP server.
 [app.server]
-name = "artemis"
+name = ""
 address = "0.0.0.0:9009"
 socket = ""
 read_timeout = "5s"
@@ -13,46 +13,53 @@ write_timeout = "5s"
 max_body_size = 10000000
 keepalive_timeout = "10s"
 
-# Upload.
+# File upload.
 [upload]
-provider = "s3"
+provider = "fs"
 
-[upload.localfs]
-upload_path = ""
+# Filesytem provider.
+[upload.fs]
+upload_path = '/home/ubuntu/uploads'
 
+# S3 provider.
 [upload.s3]
 url = ""
 public_url = ""
 access_key = ""
 secret_key = ""
 region = "ap-south-1"
-bucket = "artemis"
+bucket = "bucket"
 bucket_path = ""
 bucket_type = "private"
 expiry = "15m"
 
+# Postgres.
 [db]
 host = "127.0.0.1"
 port = 5432
 user = "postgres"
 password = "postgres"
-database = "artemis"
+database = "database"
 ssl_mode = "disable"
-max_open = 100
-max_idle = 30
+max_open = 10
+max_idle = 10
 max_lifetime = "10s"
 
+# Redis.
 [redis]
 address = "127.0.0.1:6379"
 password = ""
 db = 0
 
 [message]
-dispatch_concurrency = 10
-dispatch_read_interval = "50ms"
-incoming_queue_size = 10000
-outgoing_queue_size = 10000
+dispatch_workers = 10
+dispatch_scan_interval = "50ms"
+incoming_queue_size = 5000
+outgoing_queue_size = 5000
 
 [notification]
 concurrency = 2
 queue_size = 100
+
+[automation]
+worker_count = 10

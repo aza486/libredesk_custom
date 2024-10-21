@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/abhinavxd/artemis/internal/auth"
+	auth_ "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
 
 	"github.com/abhinavxd/artemis/internal/automation"
@@ -39,7 +39,7 @@ var ko = koanf.New(".")
 type App struct {
 	constant     constants
 	fs           stuffbin.FileSystem
-	auth         *auth.Auth
+	auth         *auth_.Auth
 	authz        *authz.Enforcer
 	i18n         *i18n.I18n
 	lo           *logf.Logger
@@ -130,7 +130,7 @@ func main() {
 	automation.SetConversationStore(conversation)
 
 	// Start receivers for each inbox.
-	go inbox.Receive(ctx)
+	go inbox.Start(ctx)
 
 	// Start evaluating automation rules.
 	go automation.Run(ctx, automationWrk)
@@ -139,7 +139,7 @@ func main() {
 	go autoassigner.Run(ctx)
 
 	// Start listening and dispatching messages.
-	go conversation.ListenAndDispatchMessages(ctx, messageDispatchWrk, messageDispatchScanInterval)
+	go conversation.Run(ctx, messageDispatchWrk, messageDispatchScanInterval)
 
 	// Start notification service.
 	go notifier.Run(ctx)

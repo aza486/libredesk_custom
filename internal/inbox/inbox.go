@@ -182,8 +182,8 @@ func (m *Manager) Delete(id int) error {
 	return nil
 }
 
-// Receive starts the receiver for each inbox.
-func (m *Manager) Receive(ctx context.Context) error {
+// Start starts the receiver for each inbox.
+func (m *Manager) Start(ctx context.Context) error {
 	for _, inb := range m.inboxes {
 		m.wg.Add(1)
 		go func(inbox Inbox) {

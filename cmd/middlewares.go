@@ -8,8 +8,8 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-// reqAuth makes sure the user is logged in.
-func reqAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+// auth makes sure the user is logged in.
+func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app         = r.Context.(*App)
@@ -33,8 +33,8 @@ func reqAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	}
 }
 
-// reqAuthAndPerm does session validation, CSRF, and permission enforcement.
-func reqAuthAndPerm(handler fastglue.FastRequestHandler, object, action string) fastglue.FastRequestHandler {
+// authPerm does session validation, CSRF, and permission enforcement.
+func authPerm(handler fastglue.FastRequestHandler, object, action string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
 			app         = r.Context.(*App)
@@ -77,8 +77,8 @@ func reqAuthAndPerm(handler fastglue.FastRequestHandler, object, action string) 
 	}
 }
 
-// authenticatedPage ensures the user is logged in; otherwise, redirects to the login page.
-func authenticatedPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+// authPage ensures the user is logged in; otherwise, redirects to the login page.
+func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		app := r.Context.(*App)
 
@@ -102,8 +102,8 @@ func authenticatedPage(handler fastglue.FastRequestHandler) fastglue.FastRequest
 	}
 }
 
-// notAuthenticatedPage allows access only if the user is not authenticated; otherwise, redirects to the dashboard.
-func notAuthenticatedPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+// notAuthPage allows access only if the user is not authenticated; otherwise, redirects to the dashboard.
+func notAuthPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		app := r.Context.(*App)
 

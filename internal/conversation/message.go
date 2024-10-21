@@ -48,10 +48,9 @@ const (
 	maxMessagesPerPage = 30
 )
 
-// ListenAndDispatchMessages starts a pool of worker goroutines to handle
-// message dispatching via inbox's channel and processes incoming messages. It scans for
+// Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
 // pending outgoing messages at the specified read interval and pushes them to the outgoing queue.
-func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurrency int, scanInterval time.Duration) {
+func (m *Manager) Run(ctx context.Context, dispatchConcurrency int, scanInterval time.Duration) {
 	dbScanner := time.NewTicker(scanInterval)
 	defer dbScanner.Stop()
 

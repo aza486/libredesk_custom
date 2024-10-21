@@ -57,7 +57,7 @@
           <!-- Value input based on field type -->
           <div v-if="showInput(index)">
             <!-- Text input -->
-            <Input type="text" placeholder="Set value" v-if="inputType(index) === 'text'" :modelValue="rule.value"
+            <Input type="text" placeholder="Set value" v-if="inputType(index) === 'text'" v-model="rule.value"
               @update:modelValue="(value) => handleValueChange(value, index)" />
 
             <!-- Dropdown -->
@@ -74,6 +74,15 @@
                 </SelectGroup>
               </SelectContent>
             </Select>
+
+            <!-- Tag -->
+            <TagsInput :defaultValue="fieldValueAsArray(rule.value)" v-if="inputType(index) === 'tag'" @update:modelValue="(value) => handleValueChange(value, index)">
+              <TagsInputItem v-for="item in fieldValueAsArray(rule.value)" :key="item" :value="item">
+                <TagsInputItemText />
+                <TagsInputItemDelete />
+              </TagsInputItem>
+              <TagsInputInput placeholder="Select values" />
+            </TagsInput>
           </div>
 
           <div class="flex items-center space-x-2">
@@ -104,6 +113,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
 import { CircleX } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -159,15 +169,29 @@ const handleFieldChange = (value, ruleIndex) => {
 }
 
 const handleOperatorChange = (value, ruleIndex) => {
-  // Clear value on operator change
-  ruleGroup.value.rules[ruleIndex].value = ''
+  // Set initial value based on operator.
+  if (["contains", "not contains"].includes(value))
+    ruleGroup.value.rules[ruleIndex].value = []
+  else
+    ruleGroup.value.rules[ruleIndex].value = ''
   ruleGroup.value.rules[ruleIndex].operator = value
   emitUpdate()
 }
 
 const handleValueChange = (value, ruleIndex) => {
-  ruleGroup.value.rules[ruleIndex].value = value
+  console.log("value ", value)
+  const operator = ruleGroup.value.rules[ruleIndex].operator
+  // For 'contains' and 'not contains', join array into a single string
+  if (["contains", "not contains"].includes(operator)) {
+    ruleGroup.value.rules[ruleIndex].value = Array.isArray(value) ? value.join(',') : value
+  } else {
+    ruleGroup.value.rules[ruleIndex].value = String(value)
+  }
   emitUpdate()
+}
+
+const fieldValueAsArray = (value) => {
+  return Array.isArray(value) ? value : (value ? value.split(',') : [])
 }
 
 const handleCaseSensitiveCheck = (value, ruleIndex) => {
@@ -221,10 +245,13 @@ const getFieldOptions = (field) => {
 const inputType = (index) => {
   const field = ruleGroup.value.rules[index]?.field
   const operator = ruleGroup.value.rules[index]?.operator
+  if (["contains", "not contains"].includes(operator)) {
+    return "tag"
+  }
   if (["status", "priority"].includes(field)) {
     return "select"
   }
-  if (["equals", "not equals", "contains", "not contains"].includes(operator)) {
+  if (["equals", "not equals"].includes(operator)) {
     return "text"
   }
   return ""
