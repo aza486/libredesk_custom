@@ -34,8 +34,9 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs                     embed.FS
-	ErrConversationNotFound = errors.New("conversation not found")
+	efs                             embed.FS
+	ErrConversationNotFound         = errors.New("conversation not found")
+	ConversationsListAllowedFilters = []string{"status_id", "priority_id", "reference_number"}
 )
 
 const (
@@ -60,6 +61,9 @@ type Manager struct {
 	incomingMessageQueue       chan models.IncomingMessage
 	outgoingMessageQueue       chan models.Message
 	outgoingProcessingMessages sync.Map
+	closed                     bool
+	closedMu                   sync.RWMutex
+	wg                         sync.WaitGroup
 }
 
 type teamStore interface {
@@ -168,7 +172,6 @@ type queries struct {
 	GetPendingMessages                 *sqlx.Stmt `query:"get-pending-messages"`
 	GetConversationUUIDFromMessageUUID *sqlx.Stmt `query:"get-conversation-uuid-from-message-uuid"`
 	InsertMessage                      *sqlx.Stmt `query:"insert-message"`
-	UpdateMessageContent               *sqlx.Stmt `query:"update-message-content"`
 	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
 	MessageExistsBySourceID            *sqlx.Stmt `query:"message-exists-by-source-id"`
 	GetConversationByMessageID         *sqlx.Stmt `query:"get-conversation-by-message-id"`
@@ -584,7 +587,7 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
-		"conversations": []string{"status_id", "priority_id"},
+		"conversations": ConversationsListAllowedFilters,
 	})
 	if err != nil {
 		c.lo.Error("error preparing query", "error", err)

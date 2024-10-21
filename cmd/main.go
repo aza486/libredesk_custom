@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
@@ -34,9 +33,7 @@ import (
 	"github.com/zerodha/logf"
 )
 
-var (
-	ko = koanf.New(".")
-)
+var ko = koanf.New(".")
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
@@ -82,6 +79,7 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Set system user password.
 	if ko.Bool("set-system-user-password") {
 		setSystemUserPass(db)
 		os.Exit(0)
@@ -97,46 +95,51 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Load app settings from DB into Koanf.
+	// Load app settings from DB into the Koanf instance.
 	settings := initSettings(db)
 	loadSettings(settings)
 
 	var (
-		shutdownCh   = make(chan struct{})
-		ctx, stop    = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-		wsHub        = ws.NewHub()
-		i18n         = initI18n(fs)
-		lo           = initLogger("artemis")
-		rdb          = initRedis()
-		oidc         = initOIDC(db)
-		auth         = initAuth(oidc, rdb)
-		template     = initTemplate(db)
-		media        = initMedia(db)
-		contact      = initContact(db)
-		inbox        = initInbox(db)
-		team         = initTeam(db)
-		user         = initUser(i18n, db)
-		notifier     = initNotifier(user, template)
-		automation   = initAutomationEngine(db, user)
-		conversation = initConversations(i18n, wsHub, notifier, db, contact, inbox, user, team, media, automation, template)
-		autoassigner = initAutoAssigner(team, user, conversation)
+		automationWrk               = ko.MustInt("automation.worker_count")
+		messageDispatchWrk          = ko.MustInt("message.dispatch_workers")
+		messageDispatchScanInterval = ko.MustDuration("message.dispatch_scan_interval")
+		ctx, _                      = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		wsHub                       = ws.NewHub()
+		i18n                        = initI18n(fs)
+		lo                          = initLogger("artemis")
+		rdb                         = initRedis()
+		oidc                        = initOIDC(db)
+		auth                        = initAuth(oidc, rdb)
+		template                    = initTemplate(db)
+		media                       = initMedia(db)
+		contact                     = initContact(db)
+		inbox                       = initInbox(db)
+		team                        = initTeam(db)
+		user                        = initUser(i18n, db)
+		notifier                    = initNotifier(user, template)
+		automation                  = initAutomationEngine(db, user)
+		conversation                = initConversations(i18n, wsHub, notifier, db, contact, inbox, user, team, media, automation, template)
+		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
 
+	// Register all active inboxes with inbox manager.
+	registerInboxes(inbox, conversation)
+
+	// Set stores.
 	wsHub.SetConversationStore(conversation)
 	automation.SetConversationStore(conversation)
 
-	// Register all active inboxes with inbox manager & start receiving messages.
-	registerInboxes(inbox, conversation)
-	inbox.Receive(ctx)
+	// Start receivers for each inbox.
+	go inbox.Receive(ctx)
 
 	// Start evaluating automation rules.
-	go automation.Run(ctx)
+	go automation.Run(ctx, automationWrk)
 
 	// Start conversation auto assigner.
 	go autoassigner.Run(ctx)
 
-	// Listen to incoming messages and dispatch pending outgoing messages.
-	go conversation.ListenAndDispatchMessages(ctx, ko.MustInt("message.dispatch_concurrency"), ko.MustDuration("message.dispatch_read_interval"))
+	// Start listening and dispatching messages.
+	go conversation.ListenAndDispatchMessages(ctx, messageDispatchWrk, messageDispatchScanInterval)
 
 	// Start notification service.
 	go notifier.Run(ctx)
@@ -165,13 +168,11 @@ func main() {
 		cannedResp:   initCannedResponse(db),
 	}
 
-	// Init fastglue http server.
+	// Init fastglue and set app in ctx.
 	g := fastglue.NewGlue()
-
-	// Add app the request context.
 	g.SetContext(app)
 
-	// Init the handlers.
+	// Init HTTP handlers.
 	initHandlers(g, wsHub)
 
 	s := &fasthttp.Server{
@@ -183,28 +184,24 @@ func main() {
 		ReadBufferSize:       ko.MustInt("app.server.max_body_size"),
 	}
 
-	// Graceful shutdown
-	go func() {
-		// Wait for the interruption signal
-		<-ctx.Done()
-
-		// Stop notification service.
-		notifier.Stop()
-
-		// TODO: Stop other managers/services here.
-
-		log.Printf("%sShutting down the server. Please wait.\x1b[0m", "\x1b[31m")
-
-		time.Sleep(1 * time.Second)
-
-		// Signal to shutdown the server
-		shutdownCh <- struct{}{}
-		stop()
-	}()
-
 	log.Printf("%s🚀 server listening on %s %s\x1b[0m", "\x1b[32m", ko.String("app.server.address"), ko.String("app.server.socket"))
 
-	if err := g.ListenServeAndWaitGracefully(ko.String("app.server.address"), ko.String("server.socket"), s, shutdownCh); err != nil {
-		log.Fatalf("error starting frontend server: %v", err)
-	}
+	go func() {
+		if err := g.ListenAndServe(ko.String("app.server.address"), ko.String("server.socket"), s); err != nil {
+			log.Fatalf("error starting server: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Printf("%sShutting down the server. Please wait.\x1b[0m", "\x1b[31m")
+	// Shutdown HTTP server.
+	s.Shutdown()
+	// Shutdown services.
+	inbox.Close()
+	automation.Close()
+	autoassigner.Close()
+	notifier.Close()
+	conversation.Close()
+	db.Close()
+	rdb.Close()
 }

@@ -160,11 +160,11 @@ func (m *Manager) GetByModel(modelID int, model string) ([]models.Media, error) 
 func (m *Manager) Delete(name string) error {
 	if err := m.store.Delete(name); err != nil {
 		m.lo.Error("error deleting media from store", "error", err)
-		return err
+		return envelope.NewError(envelope.GeneralError, "Error deleting media from store", nil)
 	}
 	if _, err := m.queries.Delete.Exec(name); err != nil {
 		m.lo.Error("error deleting media from db", "error", err)
-		return err
+		return envelope.NewError(envelope.GeneralError, "Error deleting media from DB", nil)
 	}
 	return nil
 }

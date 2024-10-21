@@ -80,9 +80,6 @@ func handleUpdateTeam(r *fastglue.Request) error {
 	if err := r.Decode(&req, "json"); err != nil {
 		return envelope.NewError(envelope.InputError, "Bad request", nil)
 	}
-
-	fmt.Println("team ", req.AutoAssignConversations)
-
 	err = app.team.UpdateTeam(id, req)
 	if err != nil {
 		return sendErrorEnvelope(r, err)

@@ -57,7 +57,6 @@ SELECT
     c.assigned_team_id,
     c.meta->>'subject' as subject,
     ct.id as contact_id,
-    ct.uuid AS contact_uuid,
     ct.first_name as first_name,
     ct.last_name as last_name,
     ct.email as email,
@@ -89,7 +88,6 @@ SELECT
     c.uuid,
     c.reference_number,
     c.first_reply_at,
-    ct.uuid AS contact_uuid,
     ct.first_name as first_name,
     ct.last_name as last_name,
     ct.email as email,
@@ -133,6 +131,7 @@ WHERE uuid = $1;
 UPDATE conversations
 SET status_id = (SELECT id FROM status WHERE name = $2),
     resolved_at = CASE WHEN $2 = 'Resolved' THEN CURRENT_TIMESTAMP ELSE NULL END,
+    closed_at = CASE WHEN $2 = 'Closed' THEN CURRENT_TIMESTAMP ELSE NULL END,
     updated_at = now()
 WHERE uuid = $1;
 
@@ -150,7 +149,7 @@ WHERE uuid = $1;
 
 -- name: update-conversation-meta
 UPDATE conversations 
-SET meta = meta || $3 
+SET meta = meta || $3, updated_at = now()
 WHERE CASE WHEN $1 > 0 THEN id = $1 ELSE uuid = $2 END;
 
 -- name: get-conversation-participants
@@ -432,10 +431,5 @@ FROM messages m
 JOIN conversations c ON m.conversation_id = c.id
 WHERE m.id = $1;
 
--- name: update-message-content
-update messages
-set content = $1
-where id = $2;
-
 -- name: update-message-status
-update messages set status = $1 where uuid = $2;
+update messages set status = $1, updated_at = now() where uuid = $2;

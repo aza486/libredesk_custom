@@ -24,7 +24,7 @@ const (
 func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error {
 	readInterval, err := time.ParseDuration(cfg.ReadInterval)
 	if err != nil {
-		e.lo.Warn("could not parse IMAP read interval, using the default read interval of 5 minutes.", "error", err)
+		e.lo.Warn("could not parse IMAP read interval, using the default read interval", "interval", cfg.ReadInterval, "inbox_id", e.Identifier(), "error", err)
 		readInterval = DefaultReadInterval
 	}
 
@@ -45,7 +45,7 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 
 // processMailbox processes emails in the specified mailbox.
 func (e *Email) processMailbox(cfg IMAPConfig) error {
-	e.lo.Debug("processing mailbox", "mailbox", cfg.Mailbox)
+	e.lo.Debug("processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 	client, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
 	if err != nil {
 		return fmt.Errorf("error connecting to IMAP server: %w", err)
@@ -73,7 +73,7 @@ func (e *Email) processMailbox(cfg IMAPConfig) error {
 // searchMessages searches for messages in the specified time range.
 func (e *Email) searchMessages(client *imapclient.Client, since time.Time) (*imap.SearchData, error) {
 	searchCMD := client.Search(&imap.SearchCriteria{
-		Since:  since,
+		Since: since,
 	},
 		&imap.SearchOptions{
 			ReturnMin:   true,

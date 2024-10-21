@@ -11,7 +11,6 @@
 import { onMounted, ref, computed } from 'vue'
 import api from '@/api'
 import OIDCForm from './OIDCForm.vue'
-import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
@@ -24,7 +23,6 @@ const oidc = ref({
 const emitter = useEmitter()
 const isLoading = ref(false)
 const formLoading = ref(false)
-const router = useRouter()
 const props = defineProps({
   id: {
     type: String,
@@ -42,7 +40,6 @@ const submitForm = async (values) => {
     } else {
       await api.createOIDC(values)
       toastDescription = 'Created successfully'
-      router.push('/admin/oidc')
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Saved',

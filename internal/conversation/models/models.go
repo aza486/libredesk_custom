@@ -67,7 +67,8 @@ type NewConversationsStats struct {
 	NewConversations int    `db:"new_conversations" json:"new_conversations"`
 }
 
-// Message represents a message in the database.
+// Message represents a message in a conversation
+// TODO: Maybe diffentiate conversation message and a outgoing message.
 type Message struct {
 	ID             int                    `db:"id" json:"id"`
 	CreatedAt      time.Time              `db:"created_at" json:"created_at"`
@@ -86,9 +87,6 @@ type Message struct {
 	Meta           string                 `db:"meta" json:"meta"`
 	Attachments    attachment.Attachments `db:"attachments" json:"attachments"`
 	// Psuedo fields.
-	FirstName        string               `db:"first_name" json:"first_name"`
-	LastName         string               `db:"first_name" json:"last_name"`
-	AvatarURL        string               `db:"avatar_url" json:"avatar_url"`
 	ConversationUUID string               `db:"conversation_uuid" json:"-"`
 	From             string               `db:"from"  json:"-"`
 	To               []string             `db:"from"  json:"-"`
@@ -98,7 +96,6 @@ type Message struct {
 	References       []string             `json:"-"`
 	InReplyTo        string               `json:"-"`
 	Headers          textproto.MIMEHeader `json:"-"`
-	TrimmedContent   string               `db:"-" json:"-"`
 	Media            []mmodels.Media      `db:"-" json:"-"`
 }
 

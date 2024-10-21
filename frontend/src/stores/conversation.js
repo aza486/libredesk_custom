@@ -269,6 +269,11 @@ export const useConversationStore = defineStore('conversation', () => {
       }
     } catch (error) {
       conversations.errorMessage = handleHTTPError(error).message
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Could not fetch conversations',
+        variant: 'destructive',
+        description: conversations.errorMessage
+      })
     } finally {
       conversations.loading = false
     }

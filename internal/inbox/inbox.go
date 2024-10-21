@@ -5,6 +5,7 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"sync"
 
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
@@ -69,6 +70,7 @@ type Manager struct {
 	queries queries
 	inboxes map[int]Inbox
 	lo      *logf.Logger
+	wg      *sync.WaitGroup
 }
 
 // Prepared queries.
@@ -95,6 +97,7 @@ func New(lo *logf.Logger, db *sqlx.DB) (*Manager, error) {
 		lo:      lo,
 		inboxes: make(map[int]Inbox),
 		queries: q,
+		wg:      &sync.WaitGroup{},
 	}
 	return m, nil
 }
@@ -180,8 +183,24 @@ func (m *Manager) Delete(id int) error {
 }
 
 // Receive starts the receiver for each inbox.
-func (m *Manager) Receive(ctx context.Context) {
+func (m *Manager) Receive(ctx context.Context) error {
 	for _, inb := range m.inboxes {
-		go inb.Receive(ctx)
+		m.wg.Add(1)
+		go func(inbox Inbox) {
+			defer m.wg.Done()
+			if err := inbox.Receive(ctx); err != nil {
+				m.lo.Error("error starting inbox receiver", "error", err)
+			}
+		}(inb)
 	}
+	m.wg.Wait()
+	return nil
+}
+
+// Close closes all inboxes.
+func (m *Manager) Close() {
+	for _, inb := range m.inboxes {
+		inb.Close()
+	}
+	m.wg.Wait()
 }

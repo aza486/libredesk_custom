@@ -3,6 +3,7 @@ package email
 
 import (
 	"context"
+	"sync"
 
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/knadh/smtppool"
@@ -50,6 +51,7 @@ type Email struct {
 	lo           *logf.Logger
 	from         string
 	messageStore inbox.MessageStore
+	wg           sync.WaitGroup
 }
 
 // Opts holds the options required for the email inbox.
@@ -83,20 +85,24 @@ func (e *Email) Identifier() int {
 	return e.id
 }
 
-// Close closes the email inbox and releases all the resources.
-func (e *Email) Close() error {
-	for _, p := range e.smtpPools {
-		p.Close()
-	}
-	return nil
-}
-
 // Receive starts reading incoming messages for each IMAP client.
 func (e *Email) Receive(ctx context.Context) error {
 	for _, cfg := range e.imapCfg {
-		go e.ReadIncomingMessages(ctx, cfg)
+		e.wg.Add(1)
+		go func(cfg IMAPConfig) {
+			defer e.wg.Done()
+			if err := e.ReadIncomingMessages(ctx, cfg); err != nil {
+				e.lo.Error("error reading incoming messages", "error", err)
+			}
+		}(cfg)
 	}
+	e.wg.Wait()
 	return nil
+}
+
+// Close cloes email channel by closing the smtp pool
+func (e *Email) Close() error {
+	return e.closeSMTPPool()
 }
 
 // FromAddress returns the from address for this inbox.
@@ -107,4 +113,12 @@ func (e *Email) FromAddress() string {
 // Channel returns the channel name for this inbox.
 func (e *Email) Channel() string {
 	return ChannelEmail
+}
+
+// closeSMTPPool closes the smtp pool.
+func (e *Email) closeSMTPPool() error {
+	for _, p := range e.smtpPools {
+		p.Close()
+	}
+	return nil
 }

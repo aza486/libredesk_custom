@@ -5,11 +5,9 @@
       <ConversationListFilters @updateFilters="handleUpdateFilters" />
     </div>
 
-    <!-- Error / Empty list -->
+    <!-- Empty list -->
     <EmptyList v-if="emptyConversations" title="No conversations found" message="Try adjusting filters."
       :icon="MessageCircleQuestion"></EmptyList>
-    <EmptyList v-if="conversationStore.conversations.errorMessage" title="Could not fetch conversations"
-      :message="conversationStore.conversations.errorMessage" :icon="MessageCircleWarning"></EmptyList>
 
     <!-- List -->
     <div class="flex-grow overflow-y-auto">
@@ -32,7 +30,7 @@
             <p v-else>Load more</p>
           </Button>
         </div>
-        <div v-else-if="!conversationStore.conversations.hasMore">All conversations loaded!</div>
+        <div v-else-if="!conversationStore.conversations.hasMore && conversationStore.sortedConversations.length > 0">All conversations loaded!</div>
       </div>
     </div>
 
@@ -42,7 +40,7 @@
 <script setup>
 import { onMounted, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-import { MessageCircleWarning, MessageCircleQuestion } from 'lucide-vue-next'
+import { MessageCircleQuestion } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 import EmptyList from '@/components/conversation/list/ConversationEmptyList.vue'

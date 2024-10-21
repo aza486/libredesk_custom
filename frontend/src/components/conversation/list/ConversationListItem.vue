@@ -51,12 +51,11 @@ import { useRouter } from 'vue-router'
 import { formatTime } from '@/utils/datetime'
 import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { string } from 'zod'
 
 const router = useRouter()
 defineProps({
   conversation: Object,
   currentConversation: Object,
-  contactFullName: string
+  contactFullName: String
 })
 </script>

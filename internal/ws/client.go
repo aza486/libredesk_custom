@@ -36,7 +36,7 @@ func (b *SafeBool) Get() bool {
 	return b.flag
 }
 
-// Client is a middleman between the websocket connection and the hub.
+// Client is a single connected WS user.
 type Client struct {
 	// Client ID.
 	ID int
@@ -80,7 +80,7 @@ Loop:
 	c.Conn.Close()
 }
 
-// Listen listens for incoming messages from the client.
+// Listen is a block method that listens for incoming messages from the client.
 func (c *Client) Listen() {
 	for {
 		msgType, msg, err := c.Conn.ReadMessage()
@@ -156,6 +156,8 @@ func (c *Client) close() {
 
 // SubscribeConversations subscribes the client to the specified conversations.
 func (c *Client) SubscribeConversations(userID int, conversationUUIDs []string) {
+	c.Hub.subMutex.Lock()
+	defer c.Hub.subMutex.Unlock()
 	for _, conversationUUID := range conversationUUIDs {
 		// Initialize the slice if it doesn't exist
 		if c.Hub.conversationSubs[conversationUUID] == nil {
@@ -180,6 +182,8 @@ func (c *Client) SubscribeConversations(userID int, conversationUUIDs []string) 
 
 // RemoveAllUserConversationSubscriptions removes all conversation subscriptions for the user.
 func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
+	c.Hub.subMutex.Lock()
+	defer c.Hub.subMutex.Unlock()
 	for conversationUUID, userIDs := range c.Hub.conversationSubs {
 		for i, id := range userIDs {
 			if id == userID {
@@ -195,6 +199,8 @@ func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
 
 // UnsubscribeConversation unsubscribes the user from the specified conversation.
 func (c *Client) UnsubscribeConversation(userID int, conversationUUID string) {
+	c.Hub.subMutex.Lock()
+	defer c.Hub.subMutex.Unlock()
 	if userIDs, ok := c.Hub.conversationSubs[conversationUUID]; ok {
 		for i, id := range userIDs {
 			if id == userID {

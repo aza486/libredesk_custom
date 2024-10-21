@@ -119,7 +119,6 @@ onMounted(() => {
 })
 
 const addFilter = () => {
-  console.log(modelValue.value)
   modelValue.value.push(createFilter())
 }
 

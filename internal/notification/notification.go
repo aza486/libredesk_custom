@@ -61,8 +61,10 @@ type Service struct {
 	providers      map[string]Notifier
 	messageChannel chan NotificationMessage
 	concurrency    int
-	wg             sync.WaitGroup
 	lo             *logf.Logger
+	closed         bool
+	mu             sync.RWMutex
+	wg             sync.WaitGroup
 }
 
 // NewService initializes the Service with given concurrency, channel capacity, and logger.
@@ -77,6 +79,12 @@ func NewService(providers map[string]Notifier, concurrency, capacity int, logger
 
 // Send sends a message to the message channel.
 func (s *Service) Send(message NotificationMessage) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return fmt.Errorf("channel closed cannot send message")
+	}
+
 	select {
 	case s.messageChannel <- message:
 		return nil
@@ -86,39 +94,42 @@ func (s *Service) Send(message NotificationMessage) error {
 	}
 }
 
-// Run starts the worker pool to process messages with context for cancellation.
+// Run starts the worker pool to process messages.
 func (s *Service) Run(ctx context.Context) {
-	for i := 0; i < s.concurrency; i++ {
+	for range s.concurrency {
 		s.wg.Add(1)
-		go s.worker(ctx)
+		go func() {
+			defer s.wg.Done()
+			s.worker()
+		}()
 	}
-
-	s.wg.Wait()
+	<-ctx.Done()
 }
 
-// worker processes messages from the channel until context is canceled.
-func (s *Service) worker(ctx context.Context) {
-	defer s.wg.Done()
+// worker processes messages from the message channel and sends them using the set provider.
+func (s *Service) worker() {
+	for message := range s.messageChannel {
+		sender, exists := s.providers[message.Provider]
+		if !exists {
+			s.lo.Error("unsupported provider", "provider", message.Provider)
+			continue
+		}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case message := <-s.messageChannel:
-			sender, exists := s.providers[message.Provider]
-			if !exists {
-				s.lo.Error("unsupported provider", "provider", message.Provider)
-				continue
-			}
-
-			if err := sender.Send(message); err != nil {
-				s.lo.Error("error sending message", "error", err)
-			}
+		if err := sender.Send(message); err != nil {
+			s.lo.Error("error sending message", "error", err)
 		}
 	}
 }
 
-// Stop closes the message channel.
-func (s *Service) Stop() {
+// Close signals service to stop, closes the message channel and
+// waits for all goroutine workers to finish.
+func (s *Service) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
+	s.closed = true
 	close(s.messageChannel)
+	s.wg.Wait()
 }

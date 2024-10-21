@@ -25,12 +25,15 @@ var (
 type Engine struct {
 	roundRobinBalancer map[int]*balance.Balance
 	// Mutex to protect the balancer map
-	mu sync.Mutex
+	balanceMu sync.Mutex
 
 	systemUser          umodels.User
 	conversationManager *conversation.Manager
 	teamManager         *team.Manager
 	lo                  *logf.Logger
+	closed              bool
+	closedMu            sync.Mutex
+	wg                  sync.WaitGroup
 }
 
 // New initializes a new Engine instance, set up with the provided team manager,
@@ -41,7 +44,6 @@ func New(teamManager *team.Manager, conversationManager *conversation.Manager, s
 		teamManager:         teamManager,
 		systemUser:          systemUser,
 		lo:                  lo,
-		mu:                  sync.Mutex{},
 	}
 	balancer, err := e.populateTeamBalancer()
 	if err != nil {
@@ -56,22 +58,44 @@ func New(teamManager *team.Manager, conversationManager *conversation.Manager, s
 func (e *Engine) Run(ctx context.Context) {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
+
+	e.wg.Add(1)
+	defer e.wg.Done()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			e.closedMu.Lock()
+			closed := e.closed
+			e.closedMu.Unlock()
+			if closed {
+				return
+			}
 			if err := e.assignConversations(); err != nil {
-				e.lo.Error("Error assigning conversations", "error", err)
+				e.lo.Error("error assigning conversations", "error", err)
 			}
 		}
 	}
 }
 
+// Close signals the Engine to stop its auto-assignment process.
+// It sets the closed flag, which will cause the Run loop to exit.
+func (e *Engine) Close() {
+	e.closedMu.Lock()
+	defer e.closedMu.Unlock()
+	if e.closed {
+		return
+	}
+	e.closed = true
+	e.wg.Wait()
+}
+
 // RefreshBalancer updates the round-robin balancer with the latest user and team data.
 func (e *Engine) RefreshBalancer() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	e.balanceMu.Lock()
+	defer e.balanceMu.Unlock()
 
 	balancer, err := e.populateTeamBalancer()
 	if err != nil {
@@ -127,17 +151,18 @@ func (e *Engine) assignConversations() error {
 	}
 
 	for _, conversation := range unassigned {
-		// Get user.
-		uid, err := e.getUserFromPool(conversation)
+		// Get user from the pool.
+		userIDStr, err := e.getUserFromPool(conversation)
 		if err != nil {
 			e.lo.Error("error fetching user from balancer pool", "error", err)
 			continue
 		}
 
 		// Convert to int.
-		userID, err := strconv.Atoi(uid)
+		userID, err := strconv.Atoi(userIDStr)
 		if err != nil {
 			e.lo.Error("error converting user id from string to int", "error", err)
+			continue
 		}
 
 		// Assign conversation.
@@ -148,8 +173,8 @@ func (e *Engine) assignConversations() error {
 
 // getUserFromPool returns user ID from the team balancer pool.
 func (e *Engine) getUserFromPool(conversation models.Conversation) (string, error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	e.balanceMu.Lock()
+	defer e.balanceMu.Unlock()
 
 	pool, ok := e.roundRobinBalancer[conversation.AssignedTeamID.Int]
 	if !ok {

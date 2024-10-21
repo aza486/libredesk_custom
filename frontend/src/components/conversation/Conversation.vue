@@ -4,7 +4,7 @@
     <!-- Header -->
     <div class="px-4 border-b h-[47px] flex items-center justify-between shadow shadow-gray-100">
       <div class="flex items-center space-x-3 text-sm">
-        <div class="font-bold">
+        <div class="font-semibold">
           {{ conversationStore.current.subject }}
         </div>
       </div>

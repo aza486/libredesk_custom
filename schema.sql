@@ -5,8 +5,8 @@ DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM (
 DROP TABLE IF EXISTS automation_rules CASCADE;
 CREATE TABLE automation_rules (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	"name" VARCHAR(255) NOT NULL,
 	description TEXT NULL,
 	"type" varchar NOT NULL,
@@ -19,8 +19,8 @@ CREATE TABLE automation_rules (
 DROP TABLE IF EXISTS canned_responses CASCADE;
 CREATE TABLE canned_responses (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	title TEXT NOT NULL,
 	"content" TEXT NOT NULL,
 	CONSTRAINT constraint_canned_responses_on_title CHECK (length(title) <= 100),
@@ -30,9 +30,8 @@ CREATE TABLE canned_responses (
 DROP TABLE IF EXISTS contacts CASCADE;
 CREATE TABLE contacts (
 	id BIGSERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
-	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	first_name TEXT NULL,
 	last_name TEXT NULL,
 	email VARCHAR(254) NULL,
@@ -51,8 +50,8 @@ CREATE TABLE contacts (
 DROP TABLE IF EXISTS conversation_participants CASCADE;
 CREATE TABLE conversation_participants (
 	id BIGSERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	user_id BIGINT NULL,
 	conversation_id BIGINT NULL,
 	CONSTRAINT constraint_conversation_participants_conversation_id_and_user_id_unique UNIQUE (conversation_id, user_id)
@@ -61,8 +60,8 @@ CREATE TABLE conversation_participants (
 DROP TABLE IF EXISTS inboxes CASCADE;
 CREATE TABLE inboxes (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	channel "channels" NOT NULL,
 	disabled bool DEFAULT false NOT NULL,
 	config jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -75,7 +74,7 @@ CREATE TABLE inboxes (
 DROP TABLE IF EXISTS media CASCADE;
 CREATE TABLE media (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
 	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
 	store "media_store" NOT NULL,
 	filename TEXT NOT NULL,
@@ -97,8 +96,8 @@ CREATE TABLE oidc (
 	client_id TEXT NOT NULL,
 	client_secret TEXT NOT NULL,
 	disabled bool DEFAULT false NOT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	provider VARCHAR NULL,
 	"name" TEXT NULL
 );
@@ -107,7 +106,7 @@ DROP TABLE IF EXISTS priority CASCADE;
 CREATE TABLE priority (
 	id SERIAL PRIMARY KEY,
 	"name" TEXT NOT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT constraint_priority_on_name_unique UNIQUE ("name")
 );
 
@@ -117,7 +116,7 @@ CREATE TABLE roles (
 	permissions _text DEFAULT '{}'::text [] NOT NULL,
 	"name" TEXT NULL,
 	description TEXT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -133,7 +132,7 @@ DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
 	"key" TEXT NOT NULL,
 	value jsonb DEFAULT '{}'::jsonb NOT NULL,
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT settings_key_key UNIQUE ("key")
 );
 CREATE INDEX index_settings_on_key ON settings USING btree ("key");
@@ -142,7 +141,7 @@ DROP TABLE IF EXISTS status CASCADE;
 CREATE TABLE status (
 	id SERIAL PRIMARY KEY,
 	"name" TEXT NOT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT constraint_status_on_name_unique UNIQUE ("name")
 );
 
@@ -150,15 +149,15 @@ DROP TABLE IF EXISTS tags CASCADE;
 CREATE TABLE tags (
 	id BIGSERIAL PRIMARY KEY,
 	"name" TEXT NOT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT constraint_tags_on_name_unique UNIQUE ("name")
 );
 
 DROP TABLE IF EXISTS team_members CASCADE;
 CREATE TABLE team_members (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	team_id INT NOT NULL,
 	user_id INT NOT NULL,
 	CONSTRAINT constraint_team_members_on_team_id_and_user_id_unique UNIQUE (team_id, user_id)
@@ -167,8 +166,8 @@ CREATE TABLE team_members (
 DROP TABLE IF EXISTS teams CASCADE;
 CREATE TABLE teams (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	"name" VARCHAR(140) NOT NULL,
 	disabled bool DEFAULT false NOT NULL,
 	auto_assign_conversations bool DEFAULT false NOT NULL,
@@ -180,8 +179,8 @@ CREATE TABLE templates (
 	id SERIAL PRIMARY KEY,
 	body TEXT NOT NULL,
 	is_default bool DEFAULT false NOT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	"name" TEXT NULL
 );
 CREATE UNIQUE INDEX unique_index_templates_on_is_default_when_is_default_is_true ON templates USING btree (is_default)
@@ -190,10 +189,9 @@ WHERE (is_default = true);
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
 	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	email VARCHAR(254) NOT NULL,
-	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
 	first_name VARCHAR(100) NOT NULL,
 	last_name VARCHAR(100) NULL,
 	"password" VARCHAR(150) NULL,
@@ -210,24 +208,24 @@ CREATE TABLE contact_methods (
 	"source" TEXT NOT NULL,
 	source_id TEXT NOT NULL,
 	inbox_id INT NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT constraint_contact_methods_on_source_and_source_id_unique UNIQUE (contact_id, source_id)
 );
 
 DROP TABLE IF EXISTS conversations CASCADE;
 CREATE TABLE conversations (
 	id BIGSERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
-	reference_number TEXT NOT NULL,
+	reference_number TEXT UNIQUE NOT NULL,
 	contact_id BIGINT NOT NULL,
 	assigned_user_id BIGINT NULL,
 	assigned_team_id BIGINT NULL,
 	inbox_id INT NOT NULL,
 	meta jsonb DEFAULT '{}'::json NOT NULL,
-	assignee_last_seen_at TIMESTAMPTZ DEFAULT now(),
+	assignee_last_seen_at TIMESTAMPTZ DEFAULT NOW(),
 	first_reply_at TIMESTAMPTZ NULL,
 	closed_at TIMESTAMPTZ NULL,
 	resolved_at TIMESTAMPTZ NULL,
@@ -238,9 +236,9 @@ CREATE TABLE conversations (
 DROP TABLE IF EXISTS messages CASCADE;
 CREATE TABLE messages (
 	id BIGSERIAL PRIMARY KEY,
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
-	"type" TEXT NOT NULL,
+	"type" message_type NOT NULL,
 	status TEXT NULL,
 	conversation_id BIGSERIAL REFERENCES conversations(id),
 	"content" TEXT NULL,
@@ -251,7 +249,7 @@ CREATE TABLE messages (
 	meta jsonb DEFAULT '{}'::jsonb NULL,
 	inbox_id INT NULL,
 	sender_type varchar NULL,
-	created_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT constraint_messages_on_content_type CHECK (length(content_type) <= 50)
 );
 
@@ -260,8 +258,8 @@ CREATE TABLE conversation_tags (
 	id BIGSERIAL PRIMARY KEY,
 	tag_id BIGSERIAL REFERENCES tags(id),
 	conversation_id BIGSERIAL REFERENCES conversations(id),
-	created_at TIMESTAMPTZ DEFAULT now(),
-	updated_at TIMESTAMPTZ DEFAULT now(),
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	CONSTRAINT constraint_conversation_tags_on_conversation_id_and_tag_id_unique UNIQUE (conversation_id, tag_id)
 );
 

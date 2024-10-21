@@ -19,9 +19,7 @@
         <!-- Icons -->
         <div class="flex items-center space-x-2 mt-2">
           <Lock :size="10" v-if="isPrivateMessage" />
-
           <CheckCheck :size="14" v-if="showCheckCheck" />
-
           <RotateCcw size="10" @click="retryMessage(message)" class="cursor-pointer" v-if="showRetry"></RotateCcw>
         </div>
       </div>
@@ -78,7 +76,7 @@ const getFullName = computed(() => {
 })
 
 const getAvatar = computed(() => {
-  return participant.value?.avatar_url
+  return participant.value?.avatar_url || ""
 })
 
 const messageContent = computed(() => {

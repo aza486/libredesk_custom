@@ -1,5 +1,11 @@
 <template>
     <div class="flex flex-col gap-1 mb-5">
+        <p class="font-medium">Reference number</p>
+        <p>
+            #{{ conversation.reference_number }}
+        </p>
+    </div>
+    <div class="flex flex-col gap-1 mb-5">
         <p class="font-medium">Initiated at</p>
         <p>
             {{ format(conversation.created_at, 'PPpp') }}

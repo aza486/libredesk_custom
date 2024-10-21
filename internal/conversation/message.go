@@ -48,37 +48,44 @@ const (
 	maxMessagesPerPage = 30
 )
 
-// ListenAndDispatchMessages starts worker pool to process incoming and send pending outgoing messages.
-func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurrency int, readInterval time.Duration) {
-	// Spawn a worker goroutine pool to dispatch messages.
-	for range dispatchConcurrency {
-		go m.MessageDispatchWorker(ctx)
-	}
-
-	// Spawn a worker goroutine pool to process incoming messages.
-	for range 1 {
-		go m.IncomingMessageWorker(ctx)
-	}
-
-	// Scan pending messages from the DB on set interval.
-	dbScanner := time.NewTicker(readInterval)
+// ListenAndDispatchMessages starts a pool of worker goroutines to handle
+// message dispatching via inbox's channel and processes incoming messages. It scans for
+// pending outgoing messages at the specified read interval and pushes them to the outgoing queue.
+func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurrency int, scanInterval time.Duration) {
+	dbScanner := time.NewTicker(scanInterval)
 	defer dbScanner.Stop()
 
+	// Spawn a worker goroutine pool to dispatch messages.
+	for range dispatchConcurrency {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+			m.MessageDispatchWorker(ctx)
+		}()
+	}
+
+	// Spawn a goroutine to process incoming messages.
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		m.IncomingMessageWorker(ctx)
+	}()
+
+	// Scan pending outgoing messages and send them.
 	for {
 		select {
-
 		case <-ctx.Done():
 			return
-
 		case <-dbScanner.C:
 			var (
 				pendingMessages = []models.Message{}
 				messageIDs      = m.getOutgoingProcessingMessageIDs()
 			)
 
-			// Skip the currently processing msg ids.
+			// Get pending outgoing messages and skip the currently processing message ids.
 			if err := m.q.GetPendingMessages.Select(&pendingMessages, pq.Array(messageIDs)); err != nil {
 				m.lo.Error("error fetching pending messages from db", "error", err)
+				continue
 			}
 
 			// Prepare and push the message to the outgoing queue.
@@ -86,24 +93,13 @@ func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurr
 				// Get inbox.
 				inb, err := m.inboxStore.Get(message.InboxID)
 				if err != nil {
-					m.lo.Error("error fetching inbox", "error", err, "inbox_id", message.InboxID)
+					m.lo.Error("error fetching inbox", "message_id", message.ID, "inbox_id", message.InboxID, "error", err)
 					continue
 				}
 
-				switch inb.Channel() {
-				case inbox.ChannelEmail:
-					// Email channel requires the content to be rendered.
-					message.Content, err = m.template.RenderDefault(map[string]string{
-						"Content": message.Content,
-					})
-					if err != nil {
-						m.lo.Error("error rendering default template", "error", err)
-						m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
-						continue
-					}
-				default:
-					m.lo.Warn("unknown message channel", "channel", inb.Channel())
-					m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
+				// Render content in template.
+				if err := m.RenderContentInTemplate(inb, message); err != nil {
+					m.lo.Error("error rendering content", "message_id", message.ID, "error", err)
 					continue
 				}
 
@@ -112,6 +108,34 @@ func (m *Manager) ListenAndDispatchMessages(ctx context.Context, dispatchConcurr
 
 				// Push the message to the outgoing message queue.
 				m.outgoingMessageQueue <- message
+			}
+		}
+	}
+}
+
+// Close signals the Manager to stop processing messages, closes channels,
+// and waits for all worker goroutines to finish processing.
+func (m *Manager) Close() {
+	m.closedMu.Lock()
+	defer m.closedMu.Unlock()
+	m.closed = true
+	close(m.outgoingMessageQueue)
+	close(m.incomingMessageQueue)
+	m.wg.Wait()
+}
+
+// IncomingMessageWorker processes incoming messages from the incoming message queue.
+func (m *Manager) IncomingMessageWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-m.incomingMessageQueue:
+			if !ok {
+				return
+			}
+			if err := m.processIncomingMessage(msg); err != nil {
+				m.lo.Error("error processing incoming msg", "error", err)
 			}
 		}
 	}
@@ -170,6 +194,30 @@ func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 			m.outgoingProcessingMessages.Delete(message.ID)
 		}
 	}
+}
+
+// RenderContentInTemplate renders message content in the default template
+func (m *Manager) RenderContentInTemplate(inb inbox.Inbox, message models.Message) error {
+	var (
+		channel = inb.Channel()
+		err     error
+	)
+	switch channel {
+	case inbox.ChannelEmail:
+		message.Content, err = m.template.RenderDefault(map[string]string{
+			"Content": message.Content,
+		})
+		if err != nil {
+			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
+			m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
+			return fmt.Errorf("could not render email content using template: %w", err)
+		}
+	default:
+		m.lo.Warn("WARNING: unknown message channel", "channel", channel)
+		m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
+		return fmt.Errorf("unknown message channel: %s", channel)
+	}
+	return nil
 }
 
 // GetConversationMessages retrieves messages for a specific conversation.
@@ -261,26 +309,12 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Update conversation meta with the last message details.
-	message.TrimmedContent = stringutil.SanitizeAndTruncate(message.Content, 45)
-	m.UpdateConversationLastMessage(0, message.ConversationUUID, message.TrimmedContent, message.CreatedAt)
+	trimmedMessage := stringutil.SanitizeAndTruncate(message.Content, 45)
+	m.UpdateConversationLastMessage(0, message.ConversationUUID, trimmedMessage, message.CreatedAt)
 
 	// Broadcast new message to all conversation subscribers.
-	m.BroadcastNewConversationMessage(message.ConversationUUID, message.TrimmedContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
+	m.BroadcastNewConversationMessage(message.ConversationUUID, trimmedMessage, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
-}
-
-// IncomingMessageWorker processes incoming messages from the incoming message queue.
-func (m *Manager) IncomingMessageWorker(ctx context.Context) {
-	for msg := range m.incomingMessageQueue {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if err := m.processIncomingMessage(msg); err != nil {
-				m.lo.Error("error processing incoming msg", "error", err)
-			}
-		}
-	}
 }
 
 // RecordAssigneeUserChange records an activity for a user assignee change.
@@ -373,7 +407,11 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 	return content, nil
 }
 
-// processIncomingMessage processes an incoming message by upserting contact, conversation and message.
+// processIncomingMessage handles the insertion of an incoming message and
+// associated contact. It finds or creates the contact, checks for existing
+// conversations, and creates a new conversation if necessary. It also
+// inserts the message, uploads any attachments, and evaluates automation
+// rules for new conversations.
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var err error
 
@@ -384,7 +422,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return err
 	}
 
-	// Conversation already exists?
+	// This message already exists?
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
 	if err != nil && err != ErrConversationNotFound {
 		return err
@@ -431,11 +469,17 @@ func (m *Manager) MessageExists(messageID string) (bool, error) {
 
 // EnqueueIncoming enqueues an incoming message for inserting in db.
 func (m *Manager) EnqueueIncoming(message models.IncomingMessage) error {
+	m.closedMu.Lock()
+	defer m.closedMu.Unlock()
+	if m.closed {
+		return errors.New("incoming message queue is closed")
+	}
+
 	select {
 	case m.incomingMessageQueue <- message:
 		return nil
 	default:
-		m.lo.Error("incoming message queue is full")
+		m.lo.Warn("WARNING: incoming message queue is full")
 		return errors.New("incoming message queue is full")
 	}
 }

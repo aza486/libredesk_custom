@@ -421,6 +421,7 @@ func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
 	}
 }
 
+// initAuthz initializes authorization enforcer.
 func initAuthz() *authz.Enforcer {
 	enforcer, err := authz.NewEnforcer(initLogger("authz"))
 	if err != nil {
@@ -429,6 +430,7 @@ func initAuthz() *authz.Enforcer {
 	return enforcer
 }
 
+// initAuth initializes authentication manager.
 func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 	var lo = initLogger("auth")
 
@@ -461,6 +463,7 @@ func initAuth(o *oidc.Manager, rd *redis.Client) *auth.Auth {
 	return auth
 }
 
+// initOIDC initializes open id connect config manager.
 func initOIDC(db *sqlx.DB) *oidc.Manager {
 	lo := initLogger("oidc")
 	o, err := oidc.New(oidc.Opts{
@@ -474,6 +477,7 @@ func initOIDC(db *sqlx.DB) *oidc.Manager {
 	return o
 }
 
+// initI18n inits i18n.
 func initI18n(fs stuffbin.FileSystem) *i18n.I18n {
 	file, err := fs.Get("i18n/" + cmp.Or(ko.String("app.lang"), defLang) + ".json")
 	if err != nil {
@@ -486,6 +490,7 @@ func initI18n(fs stuffbin.FileSystem) *i18n.I18n {
 	return i18n
 }
 
+// initRedis inits redis DB.
 func initRedis() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:     ko.MustString("redis.address"),
@@ -494,6 +499,7 @@ func initRedis() *redis.Client {
 	})
 }
 
+// initRedis inits postgres DB.
 func initDB() *sqlx.DB {
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s %s",
@@ -518,6 +524,7 @@ func initDB() *sqlx.DB {
 	return db
 }
 
+// initRedis inits role manager.
 func initRole(db *sqlx.DB) *role.Manager {
 	var lo = initLogger("role_manager")
 	r, err := role.New(role.Opts{
@@ -530,6 +537,7 @@ func initRole(db *sqlx.DB) *role.Manager {
 	return r
 }
 
+// initRedis inits conversation status manager.
 func initStatus(db *sqlx.DB) *status.Manager {
 	manager, err := status.New(status.Opts{
 		DB: db,

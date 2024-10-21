@@ -98,7 +98,6 @@ import { formSchema } from './formSchema.js'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
-import { useRouter } from 'vue-router'
 import {
   Select,
   SelectContent,
@@ -119,7 +118,6 @@ import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 
 const isLoading = ref(false)
-const router = useRouter()
 const emitter = useEmitter()
 const rule = ref({
   id: 0,
@@ -242,7 +240,7 @@ const handleSave = async (values) => {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Invalid rules',
       variant: 'destructive',
-      description: "Make sure your rules have atleast one action and one rule."
+      description: "Make sure you have atleast one action and one rule."
     })
     return
   }
@@ -259,7 +257,6 @@ const handleSave = async (values) => {
       title: 'Saved',
       description: "Rule saved successfully"
     })
-    router.push("/admin/automations")
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Could not save rule',

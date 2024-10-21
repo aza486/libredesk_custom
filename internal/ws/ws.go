@@ -37,7 +37,6 @@ func NewHub() *Hub {
 	}
 }
 
-
 // SetConversationStore sets the conversation store for the hub.
 func (h *Hub) SetConversationStore(store ConversationStore) {
 	h.conversationStore = store

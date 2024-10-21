@@ -76,113 +76,113 @@ const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
-      { name: 'conversations:read_all', label: 'View all conversations' },
-      { name: 'conversations:read_unassigned', label: 'View unassigned conversations' },
-      { name: 'conversations:read_assigned', label: 'View assigned conversations' },
-      { name: 'conversations:read', label: 'View conversation' },
-      { name: 'conversations:update_user_assignee', label: 'Edit assigned user' },
-      { name: 'conversations:update_team_assignee', label: 'Edit assigned team' },
-      { name: 'conversations:update_priority', label: 'Edit priority' },
-      { name: 'conversations:update_status', label: 'Edit status' },
-      { name: 'conversations:update_tags', label: 'Edit tags' },
-      { name: 'messages:read', label: 'View messages within a conversation' },
-      { name: 'messages:write', label: 'Reply to conversation' }
+      { name: 'conversations:read_all', label: 'View All' },
+      { name: 'conversations:read_unassigned', label: 'View Unassigned' },
+      { name: 'conversations:read_assigned', label: 'View Assigned' },
+      { name: 'conversations:read', label: 'View' },
+      { name: 'conversations:update_user_assignee', label: 'Edit User' },
+      { name: 'conversations:update_team_assignee', label: 'Edit Team' },
+      { name: 'conversations:update_priority', label: 'Edit Priority' },
+      { name: 'conversations:update_status', label: 'Edit Status' },
+      { name: 'conversations:update_tags', label: 'Edit Tags' },
+      { name: 'messages:read', label: 'View Messages' },
+      { name: 'messages:write', label: 'Reply' }
     ]
   },
   {
     name: 'Conversation status',
     permissions: [
-      { name: 'status:read', label: 'View statuses available for conversations' },
-      { name: 'status:write', label: 'Update statuses available for conversations' },
-      { name: 'status:delete', label: 'Delete statuses available for conversations' }
+      { name: 'status:read', label: 'View' },
+      { name: 'status:write', label: 'Update' },
+      { name: 'status:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Admin',
     permissions: [
-      { name: 'admin:read', label: 'Has access to admin panel' },
+      { name: 'admin:read', label: 'Access' }
     ]
   },
   {
     name: 'Settings',
     permissions: [
-      { name: 'settings_general:write', label: 'Update general settings' },
-      { name: 'settings_notifications:write', label: 'Update notification settings' },
-      { name: 'settings_notifications:read', label: 'View notification settings' }
+      { name: 'settings_general:write', label: 'Update' },
+      { name: 'settings_notifications:write', label: 'Update' },
+      { name: 'settings_notifications:read', label: 'View' }
     ]
   },
   {
     name: 'OpenID Connect SSO',
     permissions: [
-      { name: 'oidc:read', label: 'View OpenID connect SSO configurations' },
-      { name: 'oidc:write', label: 'Update OpenID connect SSO providers' },
-      { name: 'oidc:delete', label: 'Delete OpenID connect SSO providers' }
+      { name: 'oidc:read', label: 'View' },
+      { name: 'oidc:write', label: 'Update' },
+      { name: 'oidc:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Tags',
     permissions: [
-      { name: 'tags:write', label: 'Create and update tags' },
-      { name: 'tags:delete', label: 'Delete tags' }
+      { name: 'tags:write', label: 'Create/Update' },
+      { name: 'tags:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Canned Responses',
     permissions: [
-      { name: 'canned_responses:write', label: 'Create and update canned responses' },
-      { name: 'canned_responses:delete', label: 'Delete canned responses' }
+      { name: 'canned_responses:write', label: 'Create/Update' },
+      { name: 'canned_responses:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Dashboard',
     permissions: [
-      { name: 'dashboard_global:read', label: 'Access global dashboard' }
+      { name: 'dashboard_global:read', label: 'Access' }
     ]
   },
   {
     name: 'Users',
     permissions: [
-      { name: 'users:read', label: 'View users' },
-      { name: 'users:write', label: 'Create and update users' }
+      { name: 'users:read', label: 'View' },
+      { name: 'users:write', label: 'Create/Update' }
     ]
   },
   {
     name: 'Teams',
     permissions: [
-      { name: 'teams:read', label: 'View teams' },
-      { name: 'teams:write', label: 'Create and update teams' }
+      { name: 'teams:read', label: 'View' },
+      { name: 'teams:write', label: 'Create/Update' }
     ]
   },
   {
     name: 'Automations',
     permissions: [
-      { name: 'automations:read', label: 'View automation rules' },
-      { name: 'automations:write', label: 'Create and update automation rules' },
-      { name: 'automations:delete', label: 'Delete automation rules' }
+      { name: 'automations:read', label: 'View' },
+      { name: 'automations:write', label: 'Create/Update' },
+      { name: 'automations:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Inboxes',
     permissions: [
-      { name: 'inboxes:read', label: 'View inboxes' },
-      { name: 'inboxes:write', label: 'Create and update inboxes' },
-      { name: 'inboxes:delete', label: 'Delete inboxes' }
+      { name: 'inboxes:read', label: 'View' },
+      { name: 'inboxes:write', label: 'Create/Update' },
+      { name: 'inboxes:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Roles',
     permissions: [
-      { name: 'roles:read', label: 'View roles' },
-      { name: 'roles:write', label: 'Create and update roles' },
-      { name: 'roles:delete', label: 'Delete roles' }
+      { name: 'roles:read', label: 'View' },
+      { name: 'roles:write', label: 'Create/Update' },
+      { name: 'roles:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Templates',
     permissions: [
-      { name: 'templates:read', label: 'View templates' },
-      { name: 'templates:write', label: 'Create and update templates' },
-      { name: 'templates:delete', label: 'Delete templates' }
+      { name: 'templates:read', label: 'View' },
+      { name: 'templates:write', label: 'Create/Update' },
+      { name: 'templates:delete', label: 'Delete' }
     ]
   }
 ])

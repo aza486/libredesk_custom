@@ -10,14 +10,14 @@
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <div class="flex items-center mr-2 relative">
-          <span class="absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75 right-0 bottom-5" v-if="conversationStore.conversations.filters.length > 0"></span>
+          <span class="absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75 right-0 bottom-5"
+            v-if="conversationStore.conversations.filters.length > 0"></span>
           <ListFilter size="27"
             class="mx-auto cursor-pointer transition-all transform hover:scale-110 hover:bg-secondary hover:bg-opacity-80 p-1 rounded-md" />
         </div>
       </PopoverTrigger>
       <PopoverContent class="w-[450px]">
-        <Filter v-model:modelValue="listFilters" :fields="fields" @apply="handleApply"
-          @clear="handleClear" />
+        <Filter v-model:modelValue="listFilters" :fields="fields" @apply="handleApply" @clear="handleClear" />
       </PopoverContent>
     </Popover>
   </div>
@@ -69,6 +69,12 @@ const fields = ref([
       { label: 'Medium', value: "2" },
       { label: 'High', value: "3" },
     ]
+  },
+  {
+    model: 'conversations',
+    label: 'Reference number',
+    value: 'reference_number',
+    type: 'text',
   }
 ])
 

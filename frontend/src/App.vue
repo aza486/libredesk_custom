@@ -1,21 +1,20 @@
 <template>
   <Toaster />
   <TooltipProvider :delay-duration="200">
-    <div>
+    <div class="font-poppins">
       <div v-if="$route.path !== '/'">
-        <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-          <ResizablePanel class="shadow shadow-gray-300" id="resize-panel-1" collapsible :default-size="10" :collapsed-size="1" :min-size="7"
-            :max-size="20" :class="cn(isCollapsed && 'min-w-[50px] transition-all duration-200 ease-in-out')"
-            @expand="toggleNav(false)" @collapse="toggleNav(true)">
-            <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks" />
-          </ResizablePanel>
-          <ResizableHandle id="resize-handle-1" />
-          <ResizablePanel id="resize-panel-2">
-            <div class="w-full h-screen">
-              <RouterView />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        <div class="flex">
+          <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks"
+            class="shadow shadow-gray-300 h-screen" />
+          <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
+            <ResizableHandle id="resize-handle-1" />
+            <ResizablePanel id="resize-panel-2">
+              <div class="w-full h-screen">
+                <RouterView />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
       </div>
       <div v-else>
         <RouterView />
@@ -25,9 +24,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
-import { cn } from '@/lib/utils'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
@@ -42,8 +40,8 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 const { t } = useI18n()
 const { toast } = useToast()
 const emitter = useEmitter()
-const isCollapsed = ref(false)
-const allNavLinks = ref([
+const isCollapsed = ref(true)
+const allNavLinks = reactive([
   {
     title: t('navbar.dashboard'),
     to: '/dashboard',
@@ -82,10 +80,6 @@ const bottomLinks = ref([
 const userStore = useUserStore()
 const router = useRouter()
 
-function toggleNav (v) {
-  isCollapsed.value = v
-}
-
 onMounted(() => {
   initToaster()
   getCurrentUser()
@@ -109,7 +103,7 @@ const initToaster = () => {
 }
 
 const navLinks = computed(() =>
-  allNavLinks.value.filter((link) =>
+  allNavLinks.filter((link) =>
     link.permission ? userStore.hasPermission(link.permission) : true
   )
 )

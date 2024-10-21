@@ -222,10 +222,11 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 		return r.SendEnvelope(true)
 	}
 
+	fileName := filepath.Base(user.AvatarURL.String)
+
 	// Delete file from the store.
-	if err := app.media.Delete(user.AvatarURL.String); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
-			"Error deleting avatar", nil, envelope.InputError)
+	if err := app.media.Delete(fileName); err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 	err = app.user.UpdateAvatar(user.ID, "")
 	if err != nil {

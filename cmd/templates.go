@@ -67,8 +67,7 @@ func handleUpdateTemplate(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, envelope.GeneralError)
 	}
 
-	err = app.tmpl.Update(id, req)
-	if err != nil {
+	if err = app.tmpl.Update(id, req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
