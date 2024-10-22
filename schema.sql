@@ -85,7 +85,7 @@ CREATE TABLE media (
 	content_id TEXT NULL,
 	"size" INT NULL,
 	meta jsonb DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT constraint_media_on_filename CHECK (length(filename) <= 1000)
+	CONSTRAINT constraint_media_on_filename CHECK (length(filename) <= 1000),
 	CONSTRAINT constraint_media_on_content_id CHECK (length(content_id) <= 100)
 );
 
