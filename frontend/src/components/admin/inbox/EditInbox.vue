@@ -32,13 +32,25 @@ const submitForm = (values) => {
     from: values.from,
     channel: channelName,
     config: {
-      imap: [values.imap],
-      smtp: values.smtp
+      imap: [{ ...values.imap }],
+      smtp: [...values.smtp]
     }
   }
+
+  // Set dummy IMAP password to empty string
+  if (payload.config.imap[0].password?.includes('•')) {
+    payload.config.imap[0].password = ''
+  }
+
+  // Set dummy SMTP passwords to empty strings
+  payload.config.smtp.forEach(smtp => {
+    if (smtp.password?.includes('•')) {
+      smtp.password = ''
+    }
+  })
+
   updateInbox(payload)
 }
-
 const updateInbox = async (payload) => {
   try {
     isLoading.value = true

@@ -21,7 +21,6 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator
 } from '@/components/ui/breadcrumb'
-import { defineProps } from 'vue'
 
 defineProps({
   links: {

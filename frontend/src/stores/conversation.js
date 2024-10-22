@@ -78,8 +78,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return [...messages.data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   })
 
-  // Marks a conversation as read.
-  function markAsRead (uuid) {
+  function markConversationAsRead (uuid) {
     const index = conversations.data.findIndex((conv) => conv.uuid === uuid)
     if (index !== -1) {
       conversations.data[index].unread_message_count = 0
@@ -109,7 +108,7 @@ export const useConversationStore = defineStore('conversation', () => {
       const resp = await api.getConversation(uuid)
       conversation.data = resp.data.data
       // Mark this conversation as read.
-      markAsRead(uuid)
+      markConversationAsRead(uuid)
       // Reset messages state.
       resetMessages()
     } catch (error) {

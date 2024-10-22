@@ -11,18 +11,18 @@ import (
 	"github.com/k3a/html2text"
 )
 
+const (
+	PasswordDummy = "•"
+)
+
 var (
 	regexpNonAlNum = regexp.MustCompile(`[^a-zA-Z0-9\-_\.]+`)
 	regexpSpaces   = regexp.MustCompile(`[\s]+`)
 )
 
-// SanitizeAndTruncate removes HTML tags, trims whitespace, makes the text human-readable, and shortens the content to a specified maximum length, appending "..." if truncated.
-func SanitizeAndTruncate(content string, maxLen int) string {
-	plain := strings.TrimSpace(html2text.HTML2Text(content))
-	if len(plain) > maxLen {
-		plain = plain[:maxLen] + "..."
-	}
-	return plain
+// HTML2Text converts HTML to text.
+func HTML2Text(html string) string {
+	return strings.TrimSpace(html2text.HTML2Text(html))
 }
 
 // SanitizeFilename sanitizes the provided filename.

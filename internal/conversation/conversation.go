@@ -163,8 +163,7 @@ type queries struct {
 	UpdateConversationMeta             *sqlx.Stmt `query:"update-conversation-meta"`
 	InsertConverstionParticipant       *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
-	AddConversationTag                 *sqlx.Stmt `query:"add-conversation-tag"`
-	DeleteConversationTags             *sqlx.Stmt `query:"delete-conversation-tags"`
+	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
 
 	// Message queries.
 	GetMessage                         *sqlx.Stmt `query:"get-message"`
@@ -544,17 +543,11 @@ func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error)
 	return stats, nil
 }
 
-// UpsertConversationTags updates the tags associated with a conversation.
+// UpsertConversationTags upserts the tags associated with a conversation.
 func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
-	if _, err := t.q.DeleteConversationTags.Exec(uuid, pq.Array(tagIDs)); err != nil {
-		t.lo.Error("error deleting conversation tags", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error adding tags", nil)
-	}
-	for _, tagID := range tagIDs {
-		if _, err := t.q.AddConversationTag.Exec(uuid, tagID); err != nil {
-			t.lo.Error("error adding tags to conversation", "error", err)
-			return envelope.NewError(envelope.GeneralError, "Error adding tags", nil)
-		}
+	if _, err := t.q.UpsertConversationTags.Exec(uuid, pq.Array(tagIDs)); err != nil {
+		t.lo.Error("error upserting conversation tags", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error upserting tags", nil)
 	}
 	return nil
 }

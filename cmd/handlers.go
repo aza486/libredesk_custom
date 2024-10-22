@@ -3,6 +3,7 @@ package main
 import (
 	"mime"
 	"net/http"
+	"path"
 	"path/filepath"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -132,7 +133,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/templates/{id}", authPerm(handleDeleteTemplate, "templates", "delete"))
 
 	// WebSocket.
-	g.GET("/api/ws", auth(func(r *fastglue.Request) error {
+	g.GET("/ws", auth(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
 	}))
 
@@ -157,14 +158,14 @@ func serveIndexPage(r *fastglue.Request) error {
 	r.RequestCtx.Response.Header.Add("Expires", "-1")
 
 	// Serve the index.html file from the embedded filesystem.
-	file, err := app.fs.Get("/frontend/dist/index.html")
+	file, err := app.fs.Get(path.Join(frontendDir, "index.html"))
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusNotFound, "Page not found", nil, "InputException")
+		return r.SendErrorEnvelope(http.StatusNotFound, "Page not found", nil, envelope.NotFoundError)
 	}
 	r.RequestCtx.Response.Header.Set("Content-Type", "text/html")
 	r.RequestCtx.SetBody(file.ReadBytes())
 
-	// Set csrf cookie if not already set.
+	// Set CSRF cookie if not already set.
 	if err := app.auth.SetCSRFCookie(r); err != nil {
 		app.lo.Error("error setting csrf cookie", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
@@ -180,10 +181,10 @@ func serveStaticFiles(r *fastglue.Request) error {
 	filePath := string(r.RequestCtx.Path())
 
 	// Fetch and serve the file from the embedded filesystem.
-	finalPath := filepath.Join("frontend/dist", filePath)
+	finalPath := filepath.Join(frontendDir, filePath)
 	file, err := app.fs.Get(finalPath)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusNotFound, "File not found", nil, "InputException")
+		return r.SendErrorEnvelope(http.StatusNotFound, "File not found", nil, envelope.NotFoundError)
 	}
 
 	// Set the appropriate Content-Type based on the file extension.

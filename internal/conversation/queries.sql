@@ -62,6 +62,7 @@ SELECT
     ct.email as email,
     ct.phone_number as phone_number,
     ct.avatar_url as avatar_url,
+    COALESCE(c.meta->>'last_message', '') as last_message,
     (SELECT COALESCE(
         (SELECT json_agg(t.name)
         FROM tags t
@@ -102,8 +103,6 @@ SELECT
     )) AS tags
 FROM conversations c
 JOIN contacts ct ON c.contact_id = ct.id
-LEFT JOIN users u ON u.id = c.assigned_user_id
-LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN status s ON c.status_id = s.id
 LEFT JOIN priority p ON c.priority_id = p.id
 WHERE c.created_at > $1;
@@ -249,24 +248,19 @@ UPDATE conversations
 SET first_reply_at = $2
 WHERE first_reply_at IS NULL AND id = $1;
 
--- name: add-conversation-tag
-INSERT INTO conversation_tags (conversation_id, tag_id)
-VALUES(
-    (
-        SELECT id
-        FROM conversations
-        WHERE uuid = $1
-    ),
-    $2
-) ON CONFLICT DO NOTHING;
-
--- name: delete-conversation-tags
+-- name: upsert-conversation-tags
+WITH conversation_id AS (
+    SELECT id FROM conversations WHERE uuid = $1
+),
+inserted AS (
+    INSERT INTO conversation_tags (conversation_id, tag_id)
+    SELECT conversation_id.id, unnest($2::int[])
+    FROM conversation_id
+    ON CONFLICT (conversation_id, tag_id) DO UPDATE SET tag_id = EXCLUDED.tag_id
+)
 DELETE FROM conversation_tags
-WHERE conversation_id = (
-    SELECT id
-    FROM conversations
-    WHERE uuid = $1
-) AND tag_id NOT IN (SELECT unnest($2::int[]));
+WHERE conversation_id = (SELECT id FROM conversation_id) 
+  AND tag_id NOT IN (SELECT unnest($2::int[]));
 
 -- name: get-to-address
 SELECT cm.source_id 

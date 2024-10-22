@@ -89,12 +89,11 @@ func (e *Engine) evaluateGroup(rules []models.RuleDetail, operator string, conve
 	return false
 }
 
-// evaluateRule evaluates a single rule against a given conversation.
 func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conversation) bool {
 	var (
-		valueToCompare  string
-		valuesToCompare []string
-		conditionMet    bool
+		valueToCompare string
+		ruleValues     []string
+		conditionMet   bool
 	)
 
 	// Extract the value from the conversation based on the rule's field
@@ -102,7 +101,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.ConversationFieldSubject:
 		valueToCompare = conversation.Subject
 	case models.ConversationFieldContent:
-		valueToCompare = conversation.FirstMessage
+		valueToCompare = conversation.LastMessage
 	case models.ConversationFieldStatus:
 		valueToCompare = conversation.Status.String
 	case models.ConversationFieldPriority:
@@ -120,30 +119,35 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		return false
 	}
 
+	// Case sensitivity handling
 	if !rule.CaseSensitiveMatch {
 		valueToCompare = strings.ToLower(valueToCompare)
 		rule.Value = strings.ToLower(rule.Value)
 	}
 
-	// RuleContains and NotContains have all values comma-separated.
+	// Split and trim values for Contains/NotContains operations
 	if rule.Operator == models.RuleContains || rule.Operator == models.RuleNotContains {
-		valuesToCompare = strings.Split(rule.Value, ",")
-		// Trim whitespace from each value
-		for i := range valuesToCompare {
-			valuesToCompare[i] = strings.TrimSpace(valuesToCompare[i])
+		ruleValues = strings.Split(rule.Value, ",")
+		for i := range ruleValues {
+			ruleValues[i] = strings.TrimSpace(ruleValues[i])
+			if !rule.CaseSensitiveMatch {
+				ruleValues[i] = strings.ToLower(ruleValues[i])
+			}
 		}
 	}
 
-	e.lo.Debug("evaluating rule", "rule_field", rule.Field, "rule_operator", rule.Operator, "rule_value", rule.Value, "values_to_compare", valuesToCompare, "value_to_compare", valueToCompare, "conversation_uuid", conversation.UUID)
+	e.lo.Debug("evaluating rule", "rule_field", rule.Field, "rule_operator", rule.Operator,
+		"rule_value", rule.Value, "rule_values", ruleValues, "value_to_compare",
+		valueToCompare, "conversation_uuid", conversation.UUID)
 
-	// Compare with set operator.
+	// Compare with set operator
 	switch rule.Operator {
 	case models.RuleEquals:
 		conditionMet = valueToCompare == rule.Value
 	case models.RuleNotEqual:
 		conditionMet = valueToCompare != rule.Value
 	case models.RuleContains:
-		for _, val := range valuesToCompare {
+		for _, val := range ruleValues {
 			if strings.Contains(valueToCompare, val) {
 				conditionMet = true
 				break
@@ -151,7 +155,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		}
 	case models.RuleNotContains:
 		conditionMet = true
-		for _, val := range valuesToCompare {
+		for _, val := range ruleValues {
 			if strings.Contains(valueToCompare, val) {
 				conditionMet = false
 				break
@@ -165,7 +169,8 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		e.lo.Error("unrecognized rule logical operator", "operator", rule.Operator)
 		return false
 	}
-	e.lo.Debug("rule conditions met status", "met", conditionMet, "conversation_uuid", conversation.UUID)
+	e.lo.Debug("rule conditions met status", "met", conditionMet,
+		"conversation_uuid", conversation.UUID)
 	return conditionMet
 }
 

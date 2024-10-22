@@ -12,9 +12,8 @@ import (
 func handleGetInboxes(r *fastglue.Request) error {
 	var app = r.Context.(*App)
 	inboxes, err := app.inbox.GetAll()
-	// TODO: Clear out passwords.
 	if err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not fetch inboxes", nil, envelope.GeneralError)
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(inboxes)
 }
@@ -25,9 +24,12 @@ func handleGetInbox(r *fastglue.Request) error {
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
 	inbox, err := app.inbox.GetByID(id)
-	// TODO: Clear out passwords.
 	if err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not fetch inboxes", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching inbox", nil, envelope.GeneralError)
+	}
+	if err := inbox.ClearPasswords(); err != nil {
+		app.lo.Error("error clearing out passwords", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error fetching inbox", nil)
 	}
 	return r.SendEnvelope(inbox)
 }

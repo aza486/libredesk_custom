@@ -2,10 +2,12 @@ package oidc
 
 import (
 	"embed"
+	"strings"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/oidc/models"
+	"github.com/abhinavxd/artemis/internal/stringutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -58,6 +60,9 @@ func (o *Manager) Get(id int) (models.OIDC, error) {
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
 	oidc.SetProviderLogo()
+	if oidc.ClientSecret != "" {
+		oidc.ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
+	}
 	return oidc, nil
 }
 
@@ -85,6 +90,13 @@ func (o *Manager) Create(oidc models.OIDC) error {
 
 // Create updates a oidc by id.
 func (o *Manager) Update(id int, oidc models.OIDC) error {
+	current, err := o.Get(id)
+	if err != nil {
+		return err
+	}
+	if oidc.ClientSecret == "" {
+		oidc.ClientSecret = current.ClientSecret
+	}
 	if _, err := o.q.UpdateOIDC.Exec(id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Disabled); err != nil {
 		o.lo.Error("error updating oidc", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating OIDC", nil)

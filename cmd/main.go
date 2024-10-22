@@ -33,7 +33,10 @@ import (
 	"github.com/zerodha/logf"
 )
 
-var ko = koanf.New(".")
+var (
+	ko          = koanf.New(".")
+	frontendDir = "frontend/dist"
+)
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
@@ -176,7 +179,7 @@ func main() {
 	initHandlers(g, wsHub)
 
 	s := &fasthttp.Server{
-		Name:                 ko.MustString("app.server.name"),
+		Name:                 "server",
 		ReadTimeout:          ko.MustDuration("app.server.read_timeout"),
 		WriteTimeout:         ko.MustDuration("app.server.write_timeout"),
 		MaxRequestBodySize:   ko.MustInt("app.server.max_body_size"),

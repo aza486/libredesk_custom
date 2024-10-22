@@ -4,6 +4,7 @@ package inbox
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"sync"
 
@@ -120,8 +121,8 @@ func (m *Manager) Get(id int) (Inbox, error) {
 func (m *Manager) GetByID(id int) (imodels.Inbox, error) {
 	var inbox imodels.Inbox
 	if err := m.queries.GetByID.Get(&inbox, id); err != nil {
-		m.lo.Error("fetching inbox by ID", "error", err)
-		return inbox, err
+		m.lo.Error("error fetching inbox", "error", err)
+		return inbox, envelope.NewError(envelope.GeneralError, "Error fetching inbox", nil)
 	}
 	return inbox, nil
 }
@@ -157,11 +158,65 @@ func (m *Manager) Create(inbox imodels.Inbox) error {
 
 // Update updates an inbox in the DB.
 func (m *Manager) Update(id int, inbox imodels.Inbox) error {
-	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
-		m.lo.Error("error updating inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error updating inbox", nil)
-	}
-	return nil
+    current, err := m.GetByID(id)
+    if err != nil {
+        return err
+    }
+
+    switch current.Channel {
+    case "email":
+        var currentCfg struct {
+            IMAP []map[string]interface{} `json:"imap"`
+            SMTP []map[string]interface{} `json:"smtp"`
+        }
+        var updateCfg struct {
+            IMAP []map[string]interface{} `json:"imap"`
+            SMTP []map[string]interface{} `json:"smtp"`
+        }
+
+        if err := json.Unmarshal(current.Config, &currentCfg); err != nil {
+            m.lo.Error("error unmarshalling current config", "id", id, "error", err)
+            return envelope.NewError(envelope.GeneralError, "Error unmarshalling config", nil)
+        }
+        if len(inbox.Config) == 0 {
+            return envelope.NewError(envelope.InputError, "Empty config provided", nil)
+        }
+        if err := json.Unmarshal(inbox.Config, &updateCfg); err != nil {
+            m.lo.Error("error unmarshalling update config", "id", id, "error", err)
+            return envelope.NewError(envelope.GeneralError, "Error unmarshalling config", nil)
+        }
+
+        if len(updateCfg.IMAP) == 0 || len(updateCfg.SMTP) == 0 {
+            return envelope.NewError(envelope.InputError, "Invalid email config", nil)
+        }
+	
+        // Preserve existing IMAP passwords if update has empty password
+        for i := range updateCfg.IMAP {
+            if updateCfg.IMAP[i]["password"] == "" && i < len(currentCfg.IMAP) {
+                updateCfg.IMAP[i]["password"] = currentCfg.IMAP[i]["password"]
+            }
+        }
+
+        // Preserve existing SMTP passwords if update has empty password
+        for i := range updateCfg.SMTP {
+            if updateCfg.SMTP[i]["password"] == "" && i < len(currentCfg.SMTP) {
+                updateCfg.SMTP[i]["password"] = currentCfg.SMTP[i]["password"]
+            }
+        }
+        updatedConfig, err := json.Marshal(updateCfg)
+        if err != nil {
+            m.lo.Error("error marshalling updated config", "id", id, "error", err)
+            return err
+        }
+        inbox.Config = updatedConfig
+    }
+
+    if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
+        m.lo.Error("error updating inbox", "error", err)
+        return envelope.NewError(envelope.GeneralError, "Error updating inbox", nil)
+    }
+
+    return nil
 }
 
 // Toggle toggles the status of an inbox in the DB.

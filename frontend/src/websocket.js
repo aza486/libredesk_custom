@@ -10,8 +10,7 @@ let manualClose = false;
 let convStore;
 
 function initializeWebSocket () {
-  // TODO: Update URL.
-  socket = new WebSocket('ws://localhost:9009/api/ws')
+  socket = new WebSocket('/ws');
   socket.addEventListener('open', handleOpen)
   socket.addEventListener('message', handleMessage)
   socket.addEventListener('error', handleError)

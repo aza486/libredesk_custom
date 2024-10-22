@@ -87,7 +87,8 @@ func handleMediaUpload(r *fastglue.Request) error {
 		}
 	}()
 
-	// Generate and upload thumbnail if it's an image.
+	// Generate and upload thumbnail and save it's dimensions if it's an image.
+	var meta = []byte("{}")
 	if slices.Contains(image.Exts, srcExt) {
 		file.Seek(0, 0)
 		thumbFile, err := image.CreateThumb(thumbnailSize, file)
@@ -100,20 +101,21 @@ func handleMediaUpload(r *fastglue.Request) error {
 			app.lo.Error("error uploading thumbnail", "error", err)
 			return sendErrorEnvelope(r, err)
 		}
-	}
 
-	// Store image dimensions in the media meta.
-	file.Seek(0, 0)
-	width, height, err := image.GetDimensions(file)
-	if err != nil {
-		cleanUp = true
-		app.lo.Error("error getting image dimensions", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
+		// Store image dimensions in the media meta.
+		file.Seek(0, 0)
+		width, height, err := image.GetDimensions(file)
+		if err != nil {
+			cleanUp = true
+			app.lo.Error("error getting image dimensions", "error", err)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
+		}
+		meta, _ = json.Marshal(map[string]interface{}{
+			"width":  width,
+			"height": height,
+		})
+
 	}
-	meta, _ := json.Marshal(map[string]interface{}{
-		"width":  width,
-		"height": height,
-	})
 
 	file.Seek(0, 0)
 	_, err = app.media.Upload(uuid.String(), srcContentType, file)

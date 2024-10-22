@@ -2,7 +2,10 @@ package models
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
+
+	"github.com/abhinavxd/artemis/internal/stringutil"
 )
 
 // Inbox represents a inbox record in DB.
@@ -15,4 +18,41 @@ type Inbox struct {
 	Disabled  bool            `db:"disabled" json:"disabled"`
 	From      string          `db:"from" json:"from"`
 	Config    json.RawMessage `db:"config" json:"config"`
+}
+
+// ClearPasswords masks all config passwords
+func (m *Inbox) ClearPasswords() error {
+    switch m.Channel {
+    case "email":
+        var cfg struct {
+            IMAP []map[string]interface{} `json:"imap"`
+            SMTP []map[string]interface{} `json:"smtp"`
+        }
+        
+        if err := json.Unmarshal(m.Config, &cfg); err != nil {
+            return err
+        }
+        
+        dummyPassword := strings.Repeat(stringutil.PasswordDummy, 10)
+        
+        for i := range cfg.IMAP {
+            cfg.IMAP[i]["password"] = dummyPassword
+        }
+        
+        for i := range cfg.SMTP {
+            cfg.SMTP[i]["password"] = dummyPassword
+        }
+        
+        clearedConfig, err := json.Marshal(cfg)
+        if err != nil {
+            return err
+        }
+        
+        m.Config = clearedConfig
+        
+    default:
+        return nil
+    }
+    
+    return nil
 }

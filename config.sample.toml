@@ -5,7 +5,6 @@ env = "dev"
 
 # HTTP server.
 [app.server]
-name = ""
 address = "0.0.0.0:9009"
 socket = ""
 read_timeout = "5s"

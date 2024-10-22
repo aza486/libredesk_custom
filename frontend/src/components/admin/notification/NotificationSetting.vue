@@ -35,7 +35,7 @@ const getNotificationSettings = async () => {
         )
     } catch (error) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-            title: 'Could not save',
+            title: 'Could not fetch',
             variant: 'destructive',
             description: handleHTTPError(error).message
         })
@@ -48,11 +48,16 @@ const submitForm = async (values) => {
     try {
         formLoading.value = true
         const updatedValues = Object.fromEntries(
-            Object.entries(values).map(([key, value]) => [`notification.email.${key}`, value])
+            Object.entries(values).map(([key, value]) => {
+                if (key === 'password' && value.includes('•')) {
+                    return [`notification.email.${key}`, '']
+                }
+                return [`notification.email.${key}`, value]
+            })
         );
         await api.updateEmailNotificationSettings(updatedValues)
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-            description: "Saved"
+            description: "Saved successfully"
         })
     } catch (error) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

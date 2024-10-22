@@ -308,11 +308,11 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Update conversation meta with the last message details.
-	trimmedMessage := stringutil.SanitizeAndTruncate(message.Content, 45)
-	m.UpdateConversationLastMessage(0, message.ConversationUUID, trimmedMessage, message.CreatedAt)
+	plainTextContent := stringutil.HTML2Text(message.Content)
+	m.UpdateConversationLastMessage(0, message.ConversationUUID, plainTextContent, message.CreatedAt)
 
 	// Broadcast new message to all conversation subscribers.
-	m.BroadcastNewConversationMessage(message.ConversationUUID, trimmedMessage, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
+	m.BroadcastNewConversationMessage(message.ConversationUUID, plainTextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
 }
 
@@ -555,9 +555,10 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		new = true
 
 		// Put subject & last message details in meta.
+		plainTextContent := stringutil.HTML2Text(in.Content)
 		conversationMeta, err := json.Marshal(map[string]string{
 			"subject":         in.Subject,
-			"last_message":    stringutil.SanitizeAndTruncate(in.Content, maxLastMessageLen),
+			"last_message":    plainTextContent,
 			"last_message_at": time.Now().Format(time.RFC3339),
 		})
 		if err != nil {

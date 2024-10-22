@@ -2,7 +2,7 @@
 SELECT * from inboxes where disabled is NOT TRUE and soft_delete is false;
 
 -- name: get-all-inboxes
-SELECT * from inboxes where soft_delete is false;
+SELECT id, name, channel, disabled, updated_at from inboxes where soft_delete is false;
 
 -- name: insert-inbox
 INSERT INTO inboxes

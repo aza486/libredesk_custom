@@ -35,6 +35,9 @@ const submitForm = async (values) => {
     formLoading.value = true
     let toastDescription = ''
     if (props.id) {
+      if (values.client_secret.includes('•')) {
+        values.client_secret = ''
+      }
       await api.updateOIDC(props.id, values)
       toastDescription = 'Updated successfully'
     } else {

@@ -45,7 +45,6 @@ type Conversation struct {
 	ContactAvatarURL   null.String `db:"contact_avatar_url" json:"contact_avatar_url"`
 	LastMessageAt      null.Time   `db:"last_message_at" json:"last_message_at"`
 	LastMessage        string      `db:"last_message" json:"last_message"`
-	FirstMessage       string      `json:"-"`
 }
 
 type ConversationParticipant struct {

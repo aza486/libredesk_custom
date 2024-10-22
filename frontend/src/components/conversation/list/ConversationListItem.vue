@@ -32,7 +32,7 @@
       <div class="pt-2 pr-3">
         <div class="flex justify-between">
           <p class="text-gray-800 max-w-xs text-sm dark:text-white text-ellipsis flex gap-1">
-            <CheckCheck :size="14" /> {{ conversation.last_message }}
+            <CheckCheck :size="14" /> {{ trimmedLastMessage }}
           </p>
           <div class="flex items-center justify-center bg-green-500 rounded-full w-[20px] h-[20px]"
             v-if="conversation.unread_message_count > 0">
@@ -47,15 +47,21 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { formatTime } from '@/utils/datetime'
 import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const router = useRouter()
-defineProps({
+const props = defineProps({
   conversation: Object,
   currentConversation: Object,
   contactFullName: String
+})
+
+const trimmedLastMessage = computed(() => {
+  const message = props.conversation.last_message || ''
+  return message.length > 45 ? message.slice(0, 45) + "..." : message
 })
 </script>

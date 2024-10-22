@@ -1,7 +1,7 @@
 <template>
   <AutoForm
-    class="w-11/12 space-y-6"
-    :schema="emailChannelFormSchema"
+    class="space-y-6"
+    :schema="formSchema"
     :form="form"
     :field-config="{
       name: {
@@ -68,7 +68,7 @@ import { watch } from 'vue'
 import { AutoForm } from '@/components/ui/auto-form'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { emailChannelFormSchema } from './emailChannelFormSchema.js'
+import { formSchema } from './formSchema.js'
 import { Button } from '@/components/ui/button'
 
 const props = defineProps({
@@ -92,7 +92,7 @@ const props = defineProps({
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(emailChannelFormSchema),
+  validationSchema: toTypedSchema(formSchema),
   initialValues: props.initialValues
 })
 

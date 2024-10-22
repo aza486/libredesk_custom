@@ -34,8 +34,7 @@
       <FormItem v-auto-animate>
         <FormLabel>Teams</FormLabel>
         <FormControl>
-          <SelectTag v-model="selectedTeams" :items="teamNames" :initialValue="initialTeamNames"
-            placeHolder="Select teams"></SelectTag>
+          <SelectTag v-model="selectedTeams" :items="teamNames" placeholder="Select teams"></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -45,8 +44,7 @@
       <FormItem v-auto-animate>
         <FormLabel>Roles</FormLabel>
         <FormControl>
-          <SelectTag v-model="selectedRoles" :items="roleNames" :initialValue="initialValues.roles"
-            placeHolder="Select roles"></SelectTag>
+          <SelectTag v-model="selectedRoles" :items="roleNames" placeholder="Select roles"></SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -92,12 +90,6 @@ import { SelectTag } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import api from '@/api'
 
-const teams = ref([])
-const roles = ref([])
-const selectedRoles = ref([])
-const selectedTeams = ref([])
-const initialTeamNames = computed(() => props.initialValues.teams?.map(team => team.name) || [])
-
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -122,6 +114,11 @@ const props = defineProps({
     required: false
   }
 })
+
+const teams = ref([])
+const roles = ref([])
+const selectedRoles = ref(props.initialValues.roles)
+const selectedTeams = ref(props.initialValues.teams?.map(team => team.name) || [])
 
 onMounted(async () => {
   try {

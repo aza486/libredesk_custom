@@ -10,7 +10,7 @@
         <div class="space-y-5">
 
           <FormField v-slot="{ field }" name="name">
-            <FormItem v-auto-animate>
+            <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
                 <Input type="text" placeholder="My new rule" v-bind="field" />
@@ -21,7 +21,7 @@
           </FormField>
 
           <FormField v-slot="{ field }" name="description">
-            <FormItem v-auto-animate>
+            <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Input type="text" placeholder="Description for new rule" v-bind="field" />
@@ -32,7 +32,7 @@
           </FormField>
 
           <FormField v-slot="{ componentField }" name="type">
-            <FormItem v-auto-animate>
+            <FormItem>
               <FormLabel>Type</FormLabel>
               <FormControl>
                 <Select v-bind="componentField">
@@ -57,9 +57,9 @@
         <p class="font-semibold">Match these rules</p>
 
         <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-          @remove-condition="handleRemoveCondition" :groupIndex="0" v-auto-animate />
+          @remove-condition="handleRemoveCondition" :groupIndex="0" />
 
-        <div class="flex justify-center" v-auto-animate>
+        <div class="flex justify-center">
           <div class="flex items-center space-x-2">
             <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
               @click.prevent="toggleGroupOperator('AND')">
@@ -73,11 +73,11 @@
         </div>
 
         <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-          @remove-condition="handleRemoveCondition" :groupIndex="1" v-auto-animate />
+          @remove-condition="handleRemoveCondition" :groupIndex="1" />
         <p class="font-semibold">Perform these actions</p>
 
         <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
-          @remove-action="handleRemoveAction" v-auto-animate />
+          @remove-action="handleRemoveAction" />
         <Button type="submit" :isLoading="isLoading" size="sm">Save</Button>
       </div>
     </form>
@@ -86,7 +86,6 @@
 
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import RuleBox from './RuleBox.vue'
@@ -307,14 +306,14 @@ onMounted(async () => {
   firstRuleGroup.value = getFirstGroup()
   // Convert multi tag select values separated by commas to an array
   firstRuleGroup.value.rules.forEach(rule => {
-    if (!Array.isArray(rule.value)) 
+    if (!Array.isArray(rule.value))
       if (["contains", "not contains"].includes(rule.operator)) {
         rule.value = rule.value ? rule.value.split(',') : []
       }
   })
   secondRuleGroup.value = getSecondGroup()
   secondRuleGroup.value?.rules?.forEach(rule => {
-    if (!Array.isArray(rule.value)) 
+    if (!Array.isArray(rule.value))
       if (["contains", "not contains"].includes(rule.operator)) {
         rule.value = rule.value ? rule.value.split(',') : []
       }

@@ -19,8 +19,7 @@
           <PriorityChange :priorities="priorities" :conversation="conversationStore.current"
             :selectPriority="selectPriority"></PriorityChange>
           <!-- Tags -->
-          <SelectTag :initialValue="conversationStore.current.tags" v-model="selectedTags" :items="tags"
-            placeHolder="Select tags"></SelectTag>
+          <SelectTag v-model="conversationStore.current.tags" :items="tags" placeHolder="Select tags"></SelectTag>
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="Information">
@@ -57,28 +56,42 @@ import { SelectTag } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { handleHTTPError } from '@/utils/http'
 
-const priorities = ref([])
 const { toast } = useToast()
 const conversationStore = useConversationStore()
+const priorities = ref([])
 const agents = ref([])
 const teams = ref([])
-const selectedTags = ref([])
 const tags = ref([])
 const tagIDMap = {}
-const filteredAgents = ref([])
 
-onMounted(() => {
-  fetchUsers()
-  fetchTeams()
-  fetchTags()
-  getPrioritites()
+onMounted(async () => {
+  await Promise.all([
+    fetchUsers(),
+    fetchTeams(),
+    fetchTags(),
+    getPrioritites()
+  ])
 })
+
+watch(() => conversationStore.current.tags, () => {
+  handleUpsertTags()
+}, { deep: true })
+
+const handleUpsertTags = () => {
+  let tagIDs = conversationStore.current.tags.map((tag) => {
+    if (tag in tagIDMap) {
+      return tagIDMap[tag]
+    }
+  })
+  conversationStore.upsertTags({
+    tag_ids: JSON.stringify(tagIDs)
+  })
+}
 
 const fetchUsers = async () => {
   try {
     const resp = await api.getUsersCompact()
     agents.value = resp.data.data
-    filteredAgents.value = resp.data.data
   } catch (error) {
     toast({
       title: 'Could not fetch users',
@@ -136,21 +149,6 @@ const handleAssignedTeamChange = (id) => {
 
 const handlePriorityChange = (priority) => {
   conversationStore.updatePriority(priority)
-}
-
-watch(selectedTags, () => {
-  handleUpsertTags()
-}, { deep: true })
-
-const handleUpsertTags = () => {
-  let tagIDs = selectedTags.value.map((tag) => {
-    if (tag in tagIDMap) {
-      return tagIDMap[tag]
-    }
-  })
-  conversationStore.upsertTags({
-    tag_ids: JSON.stringify(tagIDs)
-  })
 }
 
 const selectAgent = (id) => {
