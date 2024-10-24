@@ -142,18 +142,18 @@
 </template>
 
 <script setup>
-import { watch } from 'vue';
-import { Button } from '@/components/ui/button';
-import { useForm } from 'vee-validate';
-import { toTypedSchema } from '@vee-validate/zod';
-import { smtpConfigSchema } from './formSchema.js';
+import { watch } from 'vue'
+import { Button } from '@/components/ui/button'
+import { useForm } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { smtpConfigSchema } from './formSchema.js'
 import {
     FormControl,
     FormField,
     FormItem,
     FormLabel,
     FormMessage
-} from '@/components/ui/form';
+} from '@/components/ui/form'
 import {
     Select,
     SelectContent,
@@ -161,10 +161,10 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/input'
 
 const props = defineProps({
     initialValues: {
@@ -188,11 +188,11 @@ const props = defineProps({
 
 const smtpForm = useForm({
     validationSchema: toTypedSchema(smtpConfigSchema)
-});
+})
 
 const onSmtpSubmit = smtpForm.handleSubmit((values) => {
     props.submitForm(values);
-});
+})
 
 // Watch for changes in initialValues and update the form.
 watch(
@@ -201,5 +201,5 @@ watch(
         smtpForm.setValues(newValues);
     },
     { deep: true, immediate: true }
-);
+)
 </script>

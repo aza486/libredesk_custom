@@ -34,12 +34,12 @@ export const columns = [
     id: 'actions',
     enableHiding: false,
     cell: ({ row }) => {
-      const canned_response = row.original
+      const cannedResponse = row.original
       return h(
         'div',
         { class: 'relative' },
         h(dropdown, {
-          canned_response
+          cannedResponse
         })
       )
     }

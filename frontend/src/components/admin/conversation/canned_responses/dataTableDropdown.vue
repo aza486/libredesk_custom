@@ -17,33 +17,15 @@
     <DialogContent class="sm:max-w-[625px]">
       <DialogHeader>
         <DialogTitle>Edit canned response</DialogTitle>
-        <DialogDescription>Click save when you're done. </DialogDescription>
+        <DialogDescription>Edit title and content, click save when you're done. </DialogDescription>
       </DialogHeader>
-      <form @submit.prevent="onSubmit">
-        <FormField v-slot="{ componentField }" name="title">
-          <FormItem>
-            <FormLabel>Title</FormLabel>
-            <FormControl>
-              <Input type="text" placeholder="" v-bind="componentField" />
-            </FormControl>
-            <FormDescription></FormDescription>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <FormField v-slot="{ componentField }" name="content">
-          <FormItem>
-            <FormLabel>Content</FormLabel>
-            <FormControl>
-              <Textarea v-bind="componentField" class="h-52"></Textarea>
-            </FormControl>
-            <FormDescription></FormDescription>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <DialogFooter>
-          <Button type="submit" size="sm"> Save changes </Button>
-        </DialogFooter>
-      </form>
+      <CannedResponsesForm @submit="onSubmit">
+        <template #footer>
+          <DialogFooter class="mt-7">
+            <Button type="submit" size="sm">Save Changes</Button>
+          </DialogFooter>
+        </template>
+      </CannedResponsesForm>
     </DialogContent>
   </Dialog>
 </template>
@@ -60,15 +42,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
+import CannedResponsesForm from './CannedResponsesForm.vue'
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import { formSchema } from './formSchema.js'
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
 import {
   Dialog,
   DialogContent,
@@ -78,8 +54,6 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api/index.js'
@@ -88,13 +62,9 @@ const dialogOpen = ref(false)
 const emit = useEmitter()
 
 const props = defineProps({
-  canned_response: {
+  cannedResponse: {
     type: Object,
     required: true,
-    default: () => ({
-      id: '',
-      name: ''
-    })
   }
 })
 
@@ -103,13 +73,13 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
-  await api.updateCannedResponse(props.canned_response.id, values)
+  await api.updateCannedResponse(props.cannedResponse.id, values)
   dialogOpen.value = false
   emitRefreshCannedResponseList()
 })
 
 const deleteCannedResponse = async () => {
-  await api.deleteCannedResponse(props.canned_response.id)
+  await api.deleteCannedResponse(props.cannedResponse.id)
   dialogOpen.value = false
   emitRefreshCannedResponseList()
 }
@@ -122,7 +92,7 @@ const emitRefreshCannedResponseList = () => {
 
 // Watch for changes in initialValues and update the form.
 watch(
-  () => props.canned_response,
+  () => props.cannedResponse,
   (newValues) => {
     form.setValues(newValues)
   },

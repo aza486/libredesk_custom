@@ -1,40 +1,31 @@
 <template>
-    <div class="flex justify-between mb-5">
-      <PageHeader title="Tags" description="Manage conversation tags" />
-      <div class="flex justify-end mb-4">
-        <Dialog v-model:open="dialogOpen">
-          <DialogTrigger as-child>
-            <Button size="sm">New Tag</Button>
-          </DialogTrigger>
-          <DialogContent class="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add a Tag</DialogTitle>
-              <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
-            </DialogHeader>
-            <form @submit.prevent="onSubmit">
-              <FormField v-slot="{ field }" name="name">
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="billing, tech" v-bind="field" />
-                  </FormControl>
-                  <FormDescription></FormDescription>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-              <DialogFooter class="mt-7">
-                <Button type="submit" size="sm">Save Changes</Button>
+  <div class="flex justify-between mb-5">
+    <PageHeader title="Tags" description="Manage conversation tags" />
+    <div class="flex justify-end mb-4">
+      <Dialog v-model:open="dialogOpen">
+        <DialogTrigger as-child>
+          <Button size="sm">New Tag</Button>
+        </DialogTrigger>
+        <DialogContent class="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create new tag</DialogTitle>
+            <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
+          </DialogHeader>
+          <TagsForm @submit.prevent="onSubmit">
+            <template #footer>
+              <DialogFooter class="mt-10">
+                <Button type="submit" size="sm"> Save changes </Button>
               </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </template>
+          </TagsForm>
+        </DialogContent>
+      </Dialog>
     </div>
-  
-    <Spinner v-if="isLoading"></Spinner>
-    <div v-else>
-      <DataTable :columns="columns" :data="tags" />
-    </div>
+  </div>
+  <Spinner v-if="isLoading"></Spinner>
+  <div v-else>
+    <DataTable :columns="columns" :data="tags" />
+  </div>
 </template>
 
 <script setup>
@@ -44,15 +35,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { columns } from '@/components/admin/conversation/tags/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import TagsForm from './TagsForm.vue'
 import {
   Dialog,
   DialogContent,

@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="flex justify-between mb-5">
-      <PageHeader title="Templates" description="Manage email templates" />
+      <PageHeader title="Email Templates" description="Manage outgoing email templates" />
       <div class="flex justify-end mb-4">
         <Button @click="navigateToAddTemplate" size="sm"> New template </Button>
       </div>

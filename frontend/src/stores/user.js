@@ -61,12 +61,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // Check if user has a specific permission
-  const hasPermission = (permission) => {
-    if (!permission) return true
-    return userPermissions.value.includes(permission)
-  }
-
   const clearAvatar = () => {
     userAvatar.value = ''
   }
@@ -87,7 +81,6 @@ export const useUserStore = defineStore('user', () => {
     setFirstName,
     setLastName,
     getCurrentUser,
-    hasPermission,
     clearAvatar
   }
 })

@@ -129,8 +129,18 @@ WHERE uuid = $1;
 -- name: update-conversation-status
 UPDATE conversations
 SET status_id = (SELECT id FROM status WHERE name = $2),
-    resolved_at = CASE WHEN $2 = 'Resolved' THEN CURRENT_TIMESTAMP ELSE NULL END,
-    closed_at = CASE WHEN $2 = 'Closed' THEN CURRENT_TIMESTAMP ELSE NULL END,
+    resolved_at = CASE 
+                    WHEN $2 = 'Resolved' THEN 
+                        COALESCE(resolved_at, CURRENT_TIMESTAMP)
+                    WHEN $2 != 'Resolved' THEN 
+                        resolved_at
+                  END,
+    closed_at = CASE 
+                  WHEN $2 = 'Closed' THEN 
+                      COALESCE(closed_at, CURRENT_TIMESTAMP)
+                  ELSE 
+                      closed_at
+                END,
     updated_at = now()
 WHERE uuid = $1;
 

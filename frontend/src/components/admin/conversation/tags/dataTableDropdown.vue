@@ -19,23 +19,13 @@
         <DialogTitle>Edit tag</DialogTitle>
         <DialogDescription> Change the tag name. Click save when you're done. </DialogDescription>
       </DialogHeader>
-      <form @submit.prevent="onSubmit">
-        <FormField v-slot="{ componentField }" name="name">
-          <FormItem>
-            <FormLabel>Name</FormLabel>
-            <FormControl>
-              <Input type="text" placeholder="billing, tech" v-bind="componentField" />
-            </FormControl>
-            <FormDescription
-              >Renaming the tag will rename it across all conversations.</FormDescription
-            >
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <DialogFooter>
-          <Button type="submit" size="sm"> Save changes </Button>
-        </DialogFooter>
-      </form>
+      <TagsForm @submit.prevent="onSubmit">
+        <template #footer>
+          <DialogFooter class="mt-10">
+            <Button type="submit" size="sm"> Save changes </Button>
+          </DialogFooter>
+        </template>
+      </TagsForm>
     </DialogContent>
   </Dialog>
 </template>
@@ -54,14 +44,6 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
 import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -70,9 +52,9 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import TagsForm from './TagsForm.vue'
 import api from '@/api/index.js'
 
 const dialogOpen = ref(false)

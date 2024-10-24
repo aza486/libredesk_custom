@@ -44,9 +44,9 @@ const allNavItems = [
     permission: null,
   },
   {
-    title: 'Templates',
+    title: 'Email templates',
     href: '/admin/templates',
-    description: 'Manage email templates',
+    description: 'Manage outgoing email templates',
     permission: null,
   },
   {
@@ -58,7 +58,7 @@ const allNavItems = [
 ]
 
 const sidebarNavItems = computed(() =>
-  allNavItems.filter((item) => userStore.hasPermission(item.permission))
+  allNavItems.filter((item) => !item.permission || item.permission && userStore.userPermissions.includes(item.permission))
 )
 </script>
 

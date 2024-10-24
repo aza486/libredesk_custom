@@ -19,7 +19,7 @@
             <Label>Auto assign conversations</Label>
           </div>
         </FormControl>
-        <FormDescription>Auto assign new conversations to agents in this team.</FormDescription>
+        <FormDescription>Automatically assign new conversations to agents in this team in a round-robin fashion.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

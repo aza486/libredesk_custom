@@ -9,34 +9,16 @@
           </DialogTrigger>
           <DialogContent class="sm:max-w-[625px]">
             <DialogHeader>
-              <DialogTitle>Add a canned response</DialogTitle>
-              <DialogDescription> Set canned response name. Click save when you're done. </DialogDescription>
-            </DialogHeader>
-            <form @submit.prevent="onSubmit">
-              <FormField v-slot="{ field }" name="title">
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="" v-bind="field" />
-                  </FormControl>
-                  <FormDescription></FormDescription>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-              <FormField v-slot="{ componentField }" name="content">
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <Textarea v-bind="componentField" class="h-52"></Textarea>
-                  </FormControl>
-                  <FormDescription></FormDescription>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-              <DialogFooter class="mt-7">
-                <Button type="submit" size="sm">Save Changes</Button>
-              </DialogFooter>
-            </form>
+              <DialogTitle>New canned response</DialogTitle>
+              <DialogDescription>Set title and content, click save when you're done. </DialogDescription>
+            </DialogHeader>            
+            <CannedResponsesForm @submit="onSubmit">
+              <template #footer>
+                <DialogFooter class="mt-7">
+                  <Button type="submit" size="sm">Save Changes</Button>
+                </DialogFooter>
+              </template>
+            </CannedResponsesForm>
           </DialogContent>
         </Dialog>
       </div>
@@ -54,17 +36,7 @@ import DataTable from '@/components/admin/DataTable.vue'
 import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
-import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -74,6 +46,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
+import CannedResponsesForm from './CannedResponsesForm.vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
@@ -86,9 +59,17 @@ const cannedResponses = ref([])
 const emit = useEmitter()
 const dialogOpen = ref(false)
 
+const form = useForm({
+  validationSchema: toTypedSchema(formSchema)
+})
+
 onMounted(() => {
   getCannedResponses()
   emit.on(EMITTER_EVENTS.REFRESH_LIST, refreshList)
+  form.setValues({
+    title: "",
+    content: "",
+  })
 })
 
 onUnmounted(() => {
@@ -98,10 +79,6 @@ onUnmounted(() => {
 const refreshList = (data) => {
   if (data?.model === 'canned_responses') getCannedResponses()
 }
-
-const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
-})
 
 const getCannedResponses = async () => {
   try {

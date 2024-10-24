@@ -141,7 +141,7 @@ func (u *Manager) Create(user *models.User) error {
 	return nil
 }
 
-// Get retrieves a user by ID or UUID.
+// Get retrieves a user by ID.
 func (u *Manager) Get(id int) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUser.Get(&user, id); err != nil {

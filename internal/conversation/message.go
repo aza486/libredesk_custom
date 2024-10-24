@@ -97,7 +97,7 @@ func (m *Manager) Run(ctx context.Context, dispatchConcurrency int, scanInterval
 				}
 
 				// Render content in template.
-				if err := m.RenderContentInTemplate(inb, message); err != nil {
+				if err := m.RenderContentInTemplate(inb, &message); err != nil {
 					m.lo.Error("error rendering content", "message_id", message.ID, "error", err)
 					continue
 				}
@@ -196,7 +196,7 @@ func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 }
 
 // RenderContentInTemplate renders message content in the default template
-func (m *Manager) RenderContentInTemplate(inb inbox.Inbox, message models.Message) error {
+func (m *Manager) RenderContentInTemplate(inb inbox.Inbox, message *models.Message) error {
 	var (
 		channel = inb.Channel()
 		err     error

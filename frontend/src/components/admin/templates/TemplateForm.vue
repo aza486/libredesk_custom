@@ -1,5 +1,5 @@
 <template>
-  <form @submit="onSubmit" class="space-y-6">
+  <form @submit.prevent="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>
@@ -10,13 +10,13 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="body">
-      <FormItem v-auto-animate>
-        <FormLabel>HTML body</FormLabel>
+    <FormField v-slot="{ componentField, handleChange }" name="body">
+      <FormItem>
+        <FormLabel>Body</FormLabel>
         <FormControl>
-          <Textarea placeholder="HTML here.." v-bind="componentField" class="h-52" />
+          <CodeEditor v-model="componentField.modelValue" @update:modelValue="handleChange"></CodeEditor>
         </FormControl>
-        <FormDescription>{{ templateBodyDescription() }}</FormDescription>
+        <FormDescription>{{ `Make sure the template has \{\{ .Content \}\}` }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -54,10 +54,9 @@ import {
   FormDescription
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import CodeEditor from '@/components/common/CodeEditor.vue';
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -77,8 +76,6 @@ const props = defineProps({
     required: false,
   }
 })
-
-const templateBodyDescription = () => 'Make sure the template has {{ .Content }}'
 
 const form = useForm({
   validationSchema: toTypedSchema(formSchema)

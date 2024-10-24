@@ -12,26 +12,17 @@
               <DialogTitle>New status</DialogTitle>
               <DialogDescription> Set status name. Click save when you're done. </DialogDescription>
             </DialogHeader>
-            <form @submit.prevent="onSubmit">
-              <FormField v-slot="{ field }" name="name">
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="Processing" v-bind="field" />
-                  </FormControl>
-                  <FormDescription></FormDescription>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-              <DialogFooter class="mt-7">
-                <Button type="submit" size="sm">Save Changes</Button>
-              </DialogFooter>
-            </form>
+            <StatusForm @submit.prevent="onSubmit">
+              <template #footer>
+                <DialogFooter class="mt-10">
+                  <Button type="submit" size="sm"> Save changes </Button>
+                </DialogFooter>
+              </template>
+            </StatusForm>
           </DialogContent>
         </Dialog>
       </div>
     </div>
-
     <Spinner v-if="isLoading"></Spinner>
     <div>
       <DataTable :columns="columns" :data="statuses" />
@@ -46,15 +37,7 @@ import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import StatusForm from './StatusForm.vue'
 import {
   Dialog,
   DialogContent,

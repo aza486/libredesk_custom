@@ -31,7 +31,7 @@
         :messageType="messageType" :contentToSet="contentToSet" :cannedResponses="cannedResponses" />
 
       <!-- Attachments preview -->
-      <AttachmentsPreview :attachments="uploadedFiles" :onDelete="handleOnFileDelete"></AttachmentsPreview>
+      <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete"></AttachmentsPreview>
 
       <!-- Bottom menu bar -->
       <ReplyBoxBottomMenuBar :handleFileUpload="handleFileUpload" :handleInlineImageUpload="handleInlineImageUpload"
@@ -100,7 +100,11 @@ const toggleItalic = () => {
 }
 
 const editorPlaceholder = computed(() => {
-  return "Shift + Enter to add a new line; Press '/' to select a Canned Response."
+  return "Press enter to add a new line; Press '/' to select a Canned Response."
+})
+
+const attachments = computed(() => {
+  return uploadedFiles.value.filter(upload => upload.disposition === 'attachment')
 })
 
 const filterCannedResponses = (input) => {
@@ -187,8 +191,23 @@ const handleContentCleared = () => {
 
 const handleSend = async () => {
   try {
-    // Replace image source url with cid.
+    // Replace image url with cid.
     const message = transformImageSrcToCID(editorHTML.value)
+
+    // Check which images are still in editor before sending.
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(editorHTML.value, 'text/html')
+    const inlineImageUUIDs = Array.from(doc.querySelectorAll('img.inline-image'))
+      .map(img => img.getAttribute('title'))
+      .filter(Boolean)
+
+    uploadedFiles.value = uploadedFiles.value.filter(file => 
+      // Keep if:
+      // 1. Not an inline image OR
+      // 2. Is an inline image that exists in editor
+      file.disposition !== 'inline' || inlineImageUUIDs.includes(file.uuid)
+    )
+
     await api.sendMessage(conversationStore.current.uuid, {
       private: messageType.value === 'private_note',
       message: message,

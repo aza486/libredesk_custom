@@ -19,21 +19,13 @@
         <DialogTitle>Edit status</DialogTitle>
         <DialogDescription> Change the status name. Click save when you're done. </DialogDescription>
       </DialogHeader>
-      <form @submit.prevent="onSubmit">
-        <FormField v-slot="{ componentField }" name="name">
-          <FormItem>
-            <FormLabel>Name</FormLabel>
-            <FormControl>
-              <Input type="text" placeholder="billing, tech" v-bind="componentField" />
-            </FormControl>
-            <FormDescription>Renaming the status will rename it across all conversations.</FormDescription>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-        <DialogFooter>
-          <Button type="submit" size="sm"> Save changes </Button>
-        </DialogFooter>
-      </form>
+      <StatusForm @submit.prevent="onSubmit">
+        <template #footer>
+          <DialogFooter class="mt-10">
+            <Button type="submit" size="sm"> Save changes </Button>
+          </DialogFooter>
+        </template>
+      </StatusForm>
     </DialogContent>
   </Dialog>
 </template>
@@ -51,14 +43,7 @@ import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from '@/components/ui/form'
+import StatusForm from './StatusForm.vue'
 import {
   Dialog,
   DialogContent,
@@ -68,7 +53,6 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api/index.js'
@@ -80,10 +64,6 @@ const props = defineProps({
   status: {
     type: Object,
     required: true,
-    default: () => ({
-      id: '',
-      name: ''
-    })
   }
 })
 

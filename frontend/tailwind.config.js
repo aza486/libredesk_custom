@@ -23,7 +23,7 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        poppins: ['Inter', 'sans-serif'],
+        inter: ['Inter', 'Helvetica Neue', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

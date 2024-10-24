@@ -173,3 +173,35 @@ body {
 .admin-main-content {
   @apply p-0;
 }
+
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #888; 
+  border-radius: 4px;
+  border: 2px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #555; 
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+.code-editor {
+  @apply rounded-md border shadow h-[65vh] min-h-[250px] w-full relative
+}
+
+.ql-container {
+  margin-top: 0 !important;
+  height: 200px !important;
+}

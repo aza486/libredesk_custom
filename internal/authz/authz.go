@@ -48,7 +48,7 @@ func NewEnforcer(lo *logf.Logger) (*Enforcer, error) {
 	return &Enforcer{enforcer: e, lo: lo}, nil
 }
 
-// LoadPermissions adds the user's permissions to the Casbin enforcer if not already present
+// LoadPermissions adds the user's permissions to the Casbin enforcer if not already present.
 func (e *Enforcer) LoadPermissions(user umodels.User) error {
 	for _, perm := range user.Permissions {
 		parts := strings.Split(perm, ":")
@@ -57,11 +57,8 @@ func (e *Enforcer) LoadPermissions(user umodels.User) error {
 		}
 
 		userID, permObj, permAct := strconv.Itoa(user.ID), parts[0], parts[1]
-		ok, err := e.enforcer.HasPolicy(userID, permObj, permAct)
-		if err != nil || !ok {
-			if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
-				return fmt.Errorf("failed to add policy: %v", err)
-			}
+		if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
+			return fmt.Errorf("failed to add policy: %v", err)
 		}
 	}
 	return nil
@@ -105,8 +102,8 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 		return true, nil
 	}
 
-	// Check for `read_assigned` permission
-	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_assigned")
+	// Check for `read_unassigned` permission
+	allowed, err = e.enforcer.Enforce(strconv.Itoa(user.ID), "conversations", "read_unassigned")
 	if err != nil {
 		return false, envelope.NewError(envelope.GeneralError, "Error checking permissions", nil)
 	}
