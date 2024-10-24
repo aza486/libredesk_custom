@@ -6,11 +6,11 @@
 
 <script setup>
 import { ref, watch, watchEffect, onUnmounted } from 'vue'
-
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
 
 const emit = defineEmits([
   'send',
@@ -47,7 +47,8 @@ const editor = ref(
         placeholder: () => {
           return props.placeholder
         }
-      })
+      }),
+      Link,
     ],
     autofocus: true,
     editorProps: {
@@ -111,7 +112,7 @@ watch(
   () => props.contentToSet,
   (newContent) => {
     if (newContent) {
-      editor.value.commands.setContent(newContent, false, {
+      editor.value.commands.setContent(newContent, false,{
         preserveWhitespace: "full"
       })
       editor.value.commands.focus()
@@ -141,5 +142,16 @@ onUnmounted(() => {
   max-height: 100% !important;
   overflow-y: scroll !important;
   padding: 10px 10px;
+}
+
+.tiptap {
+  a {
+    color: #0066cc;
+    cursor: pointer;
+
+    &:hover {
+      color: #003d7a;
+    }
+  }
 }
 </style>

@@ -8,7 +8,6 @@ String.prototype.titleCase = function () {
     .join(' ')
 }
 
-
 /**
  * Replaces the `src` attribute of all <img> tags with the class `inline-image`
  * to use the value of the `title` attribute as a Content-ID (cid).
@@ -20,7 +19,6 @@ String.prototype.titleCase = function () {
 export function transformImageSrcToCID (htmlString) {
   return htmlString.replace(/(<img\s+class="inline-image"[^>]*?src=")[^"]*(".*?title=")([^"]*)("[^>]*?>)/g, '$1cid:$3$2$3$4');
 }
-
 
 /**
  * Reverts the `src` attribute of all <img> tags with the class `inline-image`
@@ -41,4 +39,12 @@ export function validateEmail (email) {
 export const isGoDuration = (value) => {
   const regex = /^[0-9]+[smh]$/
   return regex.test(value)
+}
+
+const template = document.createElement('template')
+export function getTextFromHTML(htmlString) {
+    template.innerHTML = htmlString
+    const text = template.content.textContent || template.content.innerText || ''
+    template.innerHTML = ''
+    return text;
 }

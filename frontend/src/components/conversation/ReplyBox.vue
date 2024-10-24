@@ -8,7 +8,7 @@
           'cursor-pointer rounded p-1 hover:bg-secondary',
           { 'bg-secondary': index === selectedResponseIndex }
         ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
-          <span class="font-semibold">{{ response.title }}</span> - {{ response.content.slice(0, 100) }}...
+          <span class="font-semibold">{{ response.title }}</span> - {{ getTextFromHTML(response.content).slice(0, 150) }}...
         </li>
       </ul>
     </div>
@@ -50,6 +50,7 @@ import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
+import { getTextFromHTML } from '@/utils/strings'
 import Editor from './ConversationTextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -201,7 +202,7 @@ const handleSend = async () => {
       .map(img => img.getAttribute('title'))
       .filter(Boolean)
 
-    uploadedFiles.value = uploadedFiles.value.filter(file => 
+    uploadedFiles.value = uploadedFiles.value.filter(file =>
       // Keep if:
       // 1. Not an inline image OR
       // 2. Is an inline image that exists in editor
