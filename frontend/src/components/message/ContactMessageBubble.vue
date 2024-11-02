@@ -66,7 +66,7 @@ const nonInlineAttachments = computed(() =>
 )
 
 const getFullName = computed(() => {
-  return convStore.current.contact.first_name + ' ' + convStore.current.last_name
+  return convStore.current.contact.first_name + ' ' + convStore.current.contact.last_name
 })
 
 const avatarFallback = computed(() => {

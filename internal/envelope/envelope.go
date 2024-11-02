@@ -32,6 +32,15 @@ func (e Error) Error() string {
 	return e.Message
 }
 
+// PageResults is a generic struct for paginated results.
+type PageResults struct {
+	Results    interface{} `json:"results"`
+	Total      int         `json:"total"`
+	PerPage    int         `json:"per_page"`
+	TotalPages int         `json:"total_pages"`
+	Page       int         `json:"page"`
+}
+
 // NewError creates and returns a new instance of Error with custom error metadata.
 func NewError(etype string, message string, data interface{}) error {
 	err := Error{

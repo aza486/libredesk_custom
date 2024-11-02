@@ -146,29 +146,19 @@ export const useConversationStore = defineStore('conversation', () => {
     messages.loading = true
     try {
       const response = await api.getConversationMessages(uuid, messages.page)
-      const fetchedMessages = response.data?.data || []
-
+      const result = response.data?.data || {}
+      const results = result.results || []
       // Filter out messages already seen.
-      const newMessages = fetchedMessages.filter((message) => {
+      const newMessages = results.filter((message) => {
         if (!seenMessageUUIDs.has(message.uuid)) {
           seenMessageUUIDs.add(message.uuid)
           return true
         }
         return false
       })
-
-      if (newMessages.length === 0 && messages.page === 1) {
-        messages.data = []
-        return
-      }
-
-      if (newMessages.length === 0 && messages.page > 1) {
-        messages.hasMore = false
-      }
-
-      // Add new messages to the messages state.
+      if (newMessages.length === 0 && messages.page === 1) messages.data = []
+      if (result.total_pages <= messages.page) messages.hasMore = false
       messages.data.unshift(...newMessages)
-
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Something went wrong',
@@ -250,22 +240,17 @@ export const useConversationStore = defineStore('conversation', () => {
         default:
           return
       }
-
-      if (response?.data?.data) {
-        const newConversations = response.data.data.filter((conversation) => {
-          if (!seenConversationUUIDs.has(conversation.uuid)) {
-            seenConversationUUIDs.set(conversation.uuid, true)
-            return true
-          }
-          return false
-        })
-
-        if (!conversations.data) conversations.data = []
-        if (newConversations.length === 0) conversations.hasMore = false
-        conversations.data.push(...newConversations)
-      } else {
-        conversations.hasMore = false
-      }
+      const apiResponse = response.data.data
+      const newConversations = apiResponse.results.filter((conversation) => {
+        if (!seenConversationUUIDs.has(conversation.uuid)) {
+          seenConversationUUIDs.set(conversation.uuid, true)
+          return true
+        }
+        return false
+      })
+      if (apiResponse.total_pages <= conversations.page) conversations.hasMore = false
+      if (!conversations.data) conversations.data = []
+      conversations.data.push(...newConversations)
     } catch (error) {
       conversations.errorMessage = handleHTTPError(error).message
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

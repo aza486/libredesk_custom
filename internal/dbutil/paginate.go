@@ -47,14 +47,6 @@ func PaginateAndFilterQuery(baseQuery string, existingArgs []interface{}, opts P
 		return "", nil, err
 	}
 
-	// Validate and set default values for pagination
-	if opts.Page <= 0 {
-		opts.Page = 1
-	}
-	if opts.PageSize <= 0 {
-		opts.PageSize = 10 // Default page size
-	}
-
 	// Calculate offset
 	offset := (opts.Page - 1) * opts.PageSize
 

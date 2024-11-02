@@ -212,32 +212,32 @@ func (m *Manager) RenderContentInTemplate(channel string, message *models.Messag
 }
 
 // GetConversationMessages retrieves messages for a specific conversation.
-func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSize int) ([]models.Message, error) {
+func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSize int) ([]models.Message, int, error) {
 	var (
 		messages = make([]models.Message, 0)
 		qArgs    []interface{}
 	)
 
 	qArgs = append(qArgs, conversationUUID)
-	query, qArgs, err := m.generateMessagesQuery(m.q.GetMessages, qArgs, page, pageSize)
+	query, pageSize, qArgs, err := m.generateMessagesQuery(m.q.GetMessages, qArgs, page, pageSize)
 	if err != nil {
 		m.lo.Error("error generating messages query", "error", err)
-		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
+		return messages, pageSize, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
 	}
 
 	tx, err := m.db.BeginTxx(context.Background(), nil)
 	defer tx.Rollback()
 	if err != nil {
 		m.lo.Error("error preparing get messages query", "error", err)
-		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
+		return messages, pageSize, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
 	}
 
 	if err := tx.Select(&messages, query, qArgs...); err != nil {
 		m.lo.Error("error fetching conversations", "error", err)
-		return messages, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
+		return messages, pageSize, envelope.NewError(envelope.GeneralError, "Error fetching messages", nil)
 	}
 
-	return messages, nil
+	return messages, pageSize, nil
 }
 
 // GetMessage retrieves a message by UUID.
@@ -489,13 +489,15 @@ func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error
 }
 
 // generateMessagesQuery generates the SQL query for fetching messages in a conversation.
-func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, page, pageSize int) (string, []interface{}, error) {
-	// Set default values for page and page size if they are invalid
+func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, page, pageSize int) (string, int, []interface{}, error) {
 	if page <= 0 {
 		page = 1
 	}
-	if pageSize <= 0 || pageSize > maxMessagesPerPage {
+	if pageSize > maxMessagesPerPage {
 		pageSize = maxMessagesPerPage
+	}
+	if pageSize <= 0 {
+		pageSize = 10
 	}
 
 	// Calculate the offset
@@ -506,7 +508,7 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 
 	// Include LIMIT and OFFSET in the SQL query
 	sqlQuery := fmt.Sprintf(baseQuery, fmt.Sprintf("LIMIT $%d OFFSET $%d", len(qArgs)-1, len(qArgs)))
-	return sqlQuery, qArgs, nil
+	return sqlQuery, pageSize, qArgs, nil
 }
 
 // uploadMessageAttachments uploads attachments for a message.

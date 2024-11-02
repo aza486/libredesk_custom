@@ -5,6 +5,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/conversation"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/artemis/internal/envelope"
 	medModels "github.com/abhinavxd/artemis/internal/media/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
@@ -24,6 +25,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		user        = r.RequestCtx.UserValue("user").(umodels.User)
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
+		total       = 0
 	)
 
 	// Check permission
@@ -32,17 +34,24 @@ func handleGetMessages(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	messages, err := app.conversation.GetConversationMessages(uuid, page, pageSize)
+	messages, pageSize, err := app.conversation.GetConversationMessages(uuid, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	for i := range messages {
+		total = messages[i].Total
 		for j := range messages[i].Attachments {
 			messages[i].Attachments[j].URL = app.media.GetURL(messages[i].Attachments[j].UUID)
 		}
 	}
-	return r.SendEnvelope(messages)
+	return r.SendEnvelope(envelope.PageResults{
+		Total:      total,
+		Results:    messages,
+		Page:       page,
+		PerPage:    pageSize,
+		TotalPages: total / pageSize,
+	})
 }
 
 func handleGetMessage(r *fastglue.Request) error {

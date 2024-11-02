@@ -9,6 +9,7 @@ RETURNING id, uuid;
 
 -- name: get-conversations
 SELECT
+    COUNT(*) OVER() AS total,
     conversations.updated_at,
     conversations.uuid,
     conversations.assignee_last_seen_at,
@@ -368,6 +369,7 @@ attachments AS (
     GROUP BY message_id
 )
 SELECT
+    COUNT(*) OVER() AS total,
     m.created_at,
     m.updated_at,
     m.status,

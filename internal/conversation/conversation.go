@@ -289,59 +289,48 @@ func (c *Manager) GetConversationUUID(id int) (string, error) {
 }
 
 // GetAllConversationsList retrieves all conversations with optional filtering, ordering, and pagination.
-func (c *Manager) GetAllConversationsList(order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+func (c *Manager) GetAllConversationsList(order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
 	return c.GetConversations(0, models.AllConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetAssignedConversationsList retrieves conversations assigned to a specific user with optional filtering, ordering, and pagination.
-func (c *Manager) GetAssignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+func (c *Manager) GetAssignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
 	return c.GetConversations(userID, models.AssignedConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetUnassignedConversationsList retrieves conversations assigned to a team the user is part of with optional filtering, ordering, and pagination.
-func (c *Manager) GetUnassignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+func (c *Manager) GetUnassignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
 	return c.GetConversations(userID, models.UnassignedConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetConversations retrieves conversations list based on user ID, type, and optional filtering, ordering, and pagination.
-func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
 	var conversations = make([]models.Conversation, 0)
 
-	if orderBy == "" {
-		orderBy = "last_message_at"
-	}
-	if order == "" {
-		order = "DESC"
-	}
-
-	if filters == "" {
-		filters = "[]"
-	}
-
-	query, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversations, listType, order, orderBy, page, pageSize, filters)
+	query, pageSize, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversations, listType, order, orderBy, page, pageSize, filters)
 	if err != nil {
-		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
+		return conversations, pageSize, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
 	tx, err := c.db.BeginTxx(context.Background(), nil)
 	defer tx.Rollback()
 	if err != nil {
 		c.lo.Error("error preparing get conversations query", "error", err)
-		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
+		return conversations, pageSize, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
 	if err := tx.Select(&conversations, query, qArgs...); err != nil {
 		c.lo.Error("error fetching conversations", "error", err)
-		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
+		return conversations, pageSize, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
-	return conversations, nil
+	return conversations, pageSize, nil
 }
 
 // GetConversationsListUUIDs retrieves the UUIDs of conversations list.
 func (c *Manager) GetConversationsListUUIDs(userID, page, pageSize int, typ string) ([]string, error) {
 	var ids = make([]string, 0)
 
-	query, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize, "")
+	query, _, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize, "")
 	if err != nil {
 		c.lo.Error("error generating conversations query", "error", err)
 		return ids, err
@@ -560,11 +549,26 @@ func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
 }
 
 // makeConversationsListQuery prepares a SQL query string for conversations list
-func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, order, orderBy string, page, pageSize int, filtersJSON string) (string, []interface{}, error) {
+func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, order, orderBy string, page, pageSize int, filtersJSON string) (string, int, []interface{}, error) {
 	var qArgs []interface{}
 
+	if orderBy == "" {
+		orderBy = "last_message_at"
+	}
+	if order == "" {
+		order = "DESC"
+	}
+	if filtersJSON == "" {
+		filtersJSON = "[]"
+	}
 	if pageSize > conversationsListMaxPageSize {
 		pageSize = conversationsListMaxPageSize
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if page < 1 {
+		page = 1
 	}
 
 	// Set condition based on the list type.
@@ -578,7 +582,7 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 	case models.AllConversations:
 		baseQuery = fmt.Sprintf(baseQuery, "")
 	default:
-		return "", nil, fmt.Errorf("invalid conversation type %s", listType)
+		return "", pageSize, nil, fmt.Errorf("invalid conversation type %s", listType)
 	}
 
 	query, qArgs, err := dbutil.PaginateAndFilterQuery(baseQuery, qArgs, dbutil.PaginationOptions{
@@ -591,10 +595,10 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 	})
 	if err != nil {
 		c.lo.Error("error preparing query", "error", err)
-		return "", nil, err
+		return "", pageSize, nil, err
 	}
 
-	return query, qArgs, err
+	return query, pageSize, qArgs, err
 }
 
 // GetToAddress retrieves the recipient addresses for a conversation.

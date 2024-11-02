@@ -44,6 +44,7 @@ type Conversation struct {
 	LastMessageAt      null.Time       `db:"last_message_at" json:"last_message_at"`
 	LastMessage        string          `db:"last_message" json:"last_message"`
 	Contact            cmodels.Contact `db:"contact" json:"contact"`
+	Total              int             `db:"total" json:"-"`
 }
 
 type ConversationParticipant struct {
@@ -93,6 +94,7 @@ type Message struct {
 	InReplyTo        string                 `json:"-"`
 	Headers          textproto.MIMEHeader   `json:"-"`
 	Media            []mmodels.Media        `db:"-" json:"-"`
+	Total            int                    `db:"total" json:"-"`
 }
 
 // IncomingMessage links a message with the contact information and inbox id.

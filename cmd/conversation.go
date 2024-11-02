@@ -11,7 +11,7 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-// handleGetAllConversations retrieves all conversations with pagination, sorting, and filtering.
+// handleGetAllConversations retrieves all conversations.
 func handleGetAllConversations(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
@@ -20,12 +20,22 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))
+		total       = 0
 	)
-	c, err := app.conversation.GetAllConversationsList(order, orderBy, filters, page, pageSize)
+	conversations, pageSize, err := app.conversation.GetAllConversationsList(order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(c)
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+	return r.SendEnvelope(envelope.PageResults{
+		Results:    conversations,
+		Total:      total,
+		PerPage:    pageSize,
+		TotalPages: total / pageSize,
+		Page:       page,
+	})
 }
 
 // handleGetAssignedConversations retrieves conversations assigned to the current user.
@@ -38,12 +48,22 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))
+		total       = 0
 	)
-	c, err := app.conversation.GetAssignedConversationsList(user.ID, order, orderBy, filters, page, pageSize)
+	conversations, pageSize, err := app.conversation.GetAssignedConversationsList(user.ID, order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
-	return r.SendEnvelope(c)
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+	return r.SendEnvelope(envelope.PageResults{
+		Results:    conversations,
+		Total:      total,
+		PerPage:    pageSize,
+		TotalPages: total / pageSize,
+		Page:       page,
+	})
 }
 
 // handleGetUnassignedConversations retrieves unassigned conversations.
@@ -56,12 +76,22 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))
+		total       = 0
 	)
-	c, err := app.conversation.GetUnassignedConversationsList(user.ID, order, orderBy, filters, page, pageSize)
+	conversations, pageSize, err := app.conversation.GetUnassignedConversationsList(user.ID, order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
 	}
-	return r.SendEnvelope(c)
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+	return r.SendEnvelope(envelope.PageResults{
+		Results:    conversations,
+		Total:      total,
+		PerPage:    pageSize,
+		TotalPages: total / pageSize,
+		Page:       page,
+	})
 }
 
 // handleGetConversation retrieves a single conversation by UUID with permission checks.
