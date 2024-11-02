@@ -6,15 +6,20 @@
     </div>
 
     <!-- Empty list -->
-    <EmptyList v-if="emptyConversations" title="No conversations found" message="Try adjusting filters."
-      :icon="MessageCircleQuestion"></EmptyList>
+    <EmptyList class="px-4" v-if="!hasConversations && !hasErrored" title="No conversations found"
+      message="Try adjusting filters." :icon="MessageCircleQuestion"></EmptyList>
+
 
     <!-- List -->
     <div class="flex-grow overflow-y-auto">
+      <EmptyList class="px-4" v-if="conversationStore.conversations.errorMessage" title="Could not fetch conversations"
+        :message="conversationStore.conversations.errorMessage" :icon="MessageCircleWarning"></EmptyList>
+
       <!-- Items -->
-      <div>
+      <div v-else>
         <ConversationListItem :conversation="conversation" :currentConversation="conversationStore.current"
-          v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid" :contactFullName="conversationStore.getContactFullName(conversation.uuid)" />
+          v-for="conversation in conversationStore.sortedConversations" :key="conversation.uuid"
+          :contactFullName="conversationStore.getContactFullName(conversation.uuid)" />
       </div>
 
       <!-- List skeleton -->
@@ -23,14 +28,15 @@
       </div>
 
       <!-- Load more -->
-      <div class="flex justify-center items-center p-5">
-        <div v-if="conversationStore.conversations.hasMore && !hasErrored && hasConversations">
+      <div class="flex justify-center items-center p-5 relative" v-if="!hasErrored">
+        <div v-if="conversationStore.conversations.hasMore">
           <Button variant="link" @click="loadNextPage">
-            <Spinner v-if="conversationStore.conversations.loading" />
-            <p v-else>Load more</p>
+            <p v-if="!conversationStore.conversations.loading">Load more</p>
           </Button>
         </div>
-        <div v-else-if="!conversationStore.conversations.hasMore && conversationStore.sortedConversations.length > 0">All conversations loaded!</div>
+        <div v-else-if="!conversationStore.conversations.hasMore && hasConversations">
+          All conversations loaded!
+        </div>
       </div>
     </div>
 
@@ -40,9 +46,8 @@
 <script setup>
 import { onMounted, computed, onUnmounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-import { MessageCircleQuestion } from 'lucide-vue-next'
+import { MessageCircleQuestion, MessageCircleWarning } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import Spinner from '@/components/ui/spinner/Spinner.vue'
 import EmptyList from '@/components/conversation/list/ConversationEmptyList.vue'
 import ConversationListItem from '@/components/conversation/list/ConversationListItem.vue'
 import ConversationListItemSkeleton from '@/components/conversation/list/ConversationListItemSkeleton.vue'
@@ -73,19 +78,7 @@ const handleUpdateFilters = (filters) => {
 }
 
 const hasConversations = computed(() => {
-  return (
-    conversationStore.sortedConversations.length !== 0 &&
-    !conversationStore.conversations.errorMessage &&
-    !conversationStore.conversations.loading
-  )
-})
-
-const emptyConversations = computed(() => {
-  return (
-    conversationStore.sortedConversations.length === 0 &&
-    !conversationStore.conversations.errorMessage &&
-    !conversationStore.conversations.loading
-  )
+  return conversationStore.sortedConversations.length !== 0
 })
 
 const hasErrored = computed(() => {

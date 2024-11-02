@@ -306,6 +306,9 @@ func (c *Manager) GetUnassignedConversationsList(userID int, order, orderBy, fil
 // GetConversations retrieves conversations list based on user ID, type, and optional filtering, ordering, and pagination.
 func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
 	var conversations = make([]models.Conversation, 0)
+	if orderBy == "" {
+		orderBy = "last_message_at"
+	}
 
 	query, pageSize, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversations, listType, order, orderBy, page, pageSize, filters)
 	if err != nil {
@@ -551,10 +554,6 @@ func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
 // makeConversationsListQuery prepares a SQL query string for conversations list
 func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, order, orderBy string, page, pageSize int, filtersJSON string) (string, int, []interface{}, error) {
 	var qArgs []interface{}
-
-	if orderBy == "" {
-		orderBy = "last_message_at"
-	}
 	if order == "" {
 		order = "DESC"
 	}

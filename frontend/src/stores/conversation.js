@@ -19,7 +19,7 @@ export const useConversationStore = defineStore('conversation', () => {
     type: conversationsListType,
     filters: conversationListFilters,
     page: 1,
-    hasMore: true,
+    hasMore: false,
     errorMessage: ''
   })
 
@@ -36,7 +36,7 @@ export const useConversationStore = defineStore('conversation', () => {
     data: [],
     loading: false,
     page: 1,
-    hasMore: true,
+    hasMore: false,
     errorMessage: ''
   })
 
@@ -157,7 +157,10 @@ export const useConversationStore = defineStore('conversation', () => {
         return false
       })
       if (newMessages.length === 0 && messages.page === 1) messages.data = []
-      if (result.total_pages <= messages.page) messages.hasMore = false
+      if (result.total_pages <= messages.page)
+        messages.hasMore = false
+      else
+        messages.hasMore = true
       messages.data.unshift(...newMessages)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -248,16 +251,14 @@ export const useConversationStore = defineStore('conversation', () => {
         }
         return false
       })
-      if (apiResponse.total_pages <= conversations.page) conversations.hasMore = false
+      if (apiResponse.total_pages <= conversations.page)
+        conversations.hasMore = false
+      else
+        conversations.hasMore = true
       if (!conversations.data) conversations.data = []
       conversations.data.push(...newConversations)
     } catch (error) {
       conversations.errorMessage = handleHTTPError(error).message
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not fetch conversations',
-        variant: 'destructive',
-        description: conversations.errorMessage
-      })
     } finally {
       conversations.loading = false
     }

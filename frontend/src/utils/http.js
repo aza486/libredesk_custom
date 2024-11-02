@@ -3,17 +3,19 @@
  * @param {any} error - Axios error
  * @returns Readable error object
  */
-function handleHTTPError(error) {
+function handleHTTPError (error) {
   let resp = {
     status: 'error',
     message: 'Unknown error',
+    error_type: 'GeneralException',
     data: null,
     status_code: null
   }
   // Response received from the server.
   if (error.response && error.response.data) {
-    // Message available in response, override.
-    if (error.response.data.message) {
+    if (error.response.data.error_type) {
+      resp = error.response.data
+    } else if (error.response.data.message) {
       resp.message = error.response.data.message
     }
     resp.status_code = error.response.status
