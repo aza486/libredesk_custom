@@ -6,22 +6,20 @@ const http = axios.create({
   responseType: 'json'
 })
 
-// Function to extract CSRF token from cookies
-function getCSRFToken() {
+function getCSRFToken () {
   const name = 'csrf_token=';
   const cookies = document.cookie.split(';');
   for (let i = 0; i < cookies.length; i++) {
-      let c = cookies[i].trim();
-      if (c.indexOf(name) === 0) {
-          return c.substring(name.length, c.length);
-      }
+    let c = cookies[i].trim();
+    if (c.indexOf(name) === 0) {
+      return c.substring(name.length, c.length);
+    }
   }
   return '';
 }
 
 // Request interceptor.
 http.interceptors.request.use((request) => {
-  // Add csrf token
   const token = getCSRFToken()
   if (token) {
     request.headers['X-CSRFTOKEN'] = token
@@ -35,6 +33,8 @@ http.interceptors.request.use((request) => {
   return request
 })
 
+const resetPassword = (data) => http.post('/api/users/reset-password', data)
+const setPassword = (data) => http.post('/api/users/set-password', data)
 const getEmailNotificationSettings = () => http.get('/api/settings/notifications/email')
 const updateEmailNotificationSettings = (data) => http.put('/api/settings/notifications/email', data)
 const getPriorities = () => http.get('/api/priorities')
@@ -206,6 +206,8 @@ const deleteInbox = (id) => http.delete(`/api/inboxes/${id}`)
 
 export default {
   login,
+  resetPassword,
+  setPassword,
   getTags,
   getTeam,
   getUser,

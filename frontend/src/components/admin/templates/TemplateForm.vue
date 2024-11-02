@@ -16,7 +16,7 @@
         <FormControl>
           <CodeEditor v-model="componentField.modelValue" @update:modelValue="handleChange"></CodeEditor>
         </FormControl>
-        <FormDescription>{{ `Make sure the template has \{\{ .Content \}\}` }}</FormDescription>
+        <FormDescription>{{ `Make sure the template has \{\{ template "content" . \}\}` }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

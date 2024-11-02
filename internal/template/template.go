@@ -1,10 +1,11 @@
-// Package template manages email templates including insertion and retrieval.
+// Package template manages templates including creation, retrieval and rendering.
 package template
 
 import (
 	"database/sql"
 	"embed"
 	"errors"
+	"html/template"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -22,8 +23,9 @@ var (
 
 // Manager handles template-related operations.
 type Manager struct {
-	q  queries
-	lo *logf.Logger
+	tpls *template.Template
+	q    queries
+	lo   *logf.Logger
 }
 
 // queries contains prepared SQL queries.
@@ -37,14 +39,12 @@ type queries struct {
 }
 
 // New creates and returns a new instance of the Manager.
-func New(lo *logf.Logger, db *sqlx.DB) (*Manager, error) {
+func New(lo *logf.Logger, db *sqlx.DB, tpls *template.Template) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
 		return nil, err
 	}
-
-	return &Manager{q, lo}, nil
+	return &Manager{tpls, q, lo}, nil
 }
 
 // Update updates a new template with the given name, and body.

@@ -400,8 +400,15 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
 
+	conversation, err := c.GetConversation(uuid)
+	if err != nil {
+		return err
+	}
+
 	// Send email to assignee.
-	c.SendAssignedConversationEmail([]int{assigneeID}, uuid)
+	if err := c.SendAssignedConversationEmail([]int{assigneeID}, conversation.Subject, uuid); err != nil {
+		c.lo.Error("error sending assigned conversation email", "error", err)
+	}
 
 	if err := c.RecordAssigneeUserChange(uuid, assigneeID, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
@@ -611,18 +618,25 @@ func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, 
 }
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
-func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversationUUID string) error {
-	// TODO: Remove hardcoded URL.
-	link := fmt.Sprintf("http://localhost:5173/conversations/%s", conversationUUID)
-	// TODO: Allow content to be editable.
-	content := fmt.Sprintf("A new conversation has been assigned to you. <br>Please review the details and take necessary action by following this link: %s", link)
-	notificationMessage := notifier.NotificationMessage{
+func (m *Manager) SendAssignedConversationEmail(userIDs []int, subject, conversationUUID string) error {
+	content, err := m.template.Render(template.TmplConversationAssigned,
+		map[string]interface{}{
+			"Conversation": map[string]string{
+				"Subject": subject,
+				"UUID":    conversationUUID,
+			},
+		})
+	if err != nil {
+		m.lo.Error("error rendering template", "template", template.TmplConversationAssigned, "error", err)
+		return err
+	}
+	nm := notifier.Message{
 		UserIDs:  userIDs,
-		Subject:  "A new conversation has been assigned to you",
+		Subject:  "Conversation Assigned",
 		Content:  content,
 		Provider: notifier.ProviderEmail,
 	}
-	if err := m.notifier.Send(notificationMessage); err != nil {
+	if err := m.notifier.Send(nm); err != nil {
 		m.lo.Error("error sending notification message", "error", err)
 		return err
 	}

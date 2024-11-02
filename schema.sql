@@ -198,6 +198,8 @@ CREATE TABLE users (
 	disabled bool DEFAULT false NOT NULL,
 	avatar_url TEXT NULL,
 	roles _text DEFAULT '{}'::text [] NOT NULL,
+	reset_password_token TEXT NULL,
+	reset_password_expires TIMESTAMPTZ NULL,
 	CONSTRAINT constraint_users_on_email_unique UNIQUE (email)
 );
 
@@ -269,6 +271,7 @@ INSERT INTO settings ("key", value)
 VALUES
     ('app.lang', '"en"'::jsonb),
     ('app.root_url', '"http://localhost:9009"'::jsonb),
+	('app.logo_url', ''::jsonb),
     ('app.site_name', '"Helpdesk"'::jsonb),
     ('app.favicon_url', '""'::jsonb),
     ('app.max_file_upload_size', '20'::jsonb),

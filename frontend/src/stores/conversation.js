@@ -86,13 +86,13 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   const currentContactName = computed(() => {
-    return conversation.data?.first_name + " " + conversation.data?.last_name
+    return conversation.data?.contact.first_name + " " + conversation.data?.contact.last_name
   })
 
   const getContactFullName = (uuid) => {
     if (conversations?.data) {
       const conv = conversations.data.find((conv) => conv.uuid === uuid)
-      return conv ? `${conv.first_name} ${conv.last_name}` : ''
+      return conv ? `${conv.contact.first_name} ${conv.contact.last_name}` : ''
     }
   }
 

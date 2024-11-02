@@ -1,26 +1,26 @@
 <template>
   <div class="relative h-screen" id="login-container">
     <div class="absolute left-1/2 top-20 transform -translate-x-1/2 w-96 h-1/2">
-      <form @submit.prevent="loginAction">
-        <Card>
-          <CardHeader class="space-y-1">
-            <CardTitle class="text-2xl text-center">Login</CardTitle>
-          </CardHeader>
-          <CardContent class="grid gap-4">
-            <div v-for="oidcProvider in enabledOIDCProviders" :key="oidcProvider.id" class="grid grid-cols-1 gap-6">
-              <Button variant="outline" @click.prevent="redirectToOIDC(oidcProvider)">
-                <img :src="oidcProvider.logo_url" width="15" class="mr-2" />
-                {{ oidcProvider.name }}
-              </Button>
+      <Card>
+        <CardHeader class="space-y-1">
+          <CardTitle class="text-2xl text-center">Login</CardTitle>
+        </CardHeader>
+        <CardContent class="grid gap-4">
+          <div v-for="oidcProvider in enabledOIDCProviders" :key="oidcProvider.id" class="grid grid-cols-1 gap-6">
+            <Button variant="outline" type="button" @click="redirectToOIDC(oidcProvider)">
+              <img :src="oidcProvider.logo_url" width="15" class="mr-2" />
+              {{ oidcProvider.name }}
+            </Button>
+          </div>
+          <div class="relative" v-if="enabledOIDCProviders.length">
+            <div class="absolute inset-0 flex items-center">
+              <span class="w-full border-t"></span>
             </div>
-            <div class="relative" v-if="enabledOIDCProviders.length">
-              <div class="absolute inset-0 flex items-center">
-                <span class="w-full border-t"></span>
-              </div>
-              <div class="relative flex justify-center text-xs uppercase">
-                <span class="bg-background px-2 text-muted-foreground">Or continue with</span>
-              </div>
+            <div class="relative flex justify-center text-xs uppercase">
+              <span class="bg-background px-2 text-muted-foreground">Or continue with</span>
             </div>
+          </div>
+          <form @submit.prevent="loginAction" class="space-y-4">
             <div class="grid gap-2">
               <Label for="email">Email</Label>
               <Input id="email" type="email" placeholder="Enter your email address" v-model.trim="loginForm.email"
@@ -31,19 +31,22 @@
               <Input id="password" type="password" placeholder="Password" v-model="loginForm.password"
                 :class="{ 'border-red-500': passwordHasError }" />
             </div>
-          </CardContent>
-          <CardFooter class="flex flex-col gap-5">
-            <Button class="w-full" @click.prevent="loginAction" :disabled="isLoading" :isLoading="isLoading"
-              type="submit">
-              Login
-            </Button>
-            <Error :errorMessage="errorMessage" :border="true"></Error>
             <div>
-              <a href="#" class="text-xs">Forgot Email or Password?</a>
+              <Button class="w-full" :disabled="isLoading" :isLoading="isLoading" type="submit">
+                Login
+              </Button>
             </div>
-          </CardFooter>
-        </Card>
-      </form>
+          </form>
+        </CardContent>
+        <CardFooter class="flex flex-col gap-5">
+          <Error :errorMessage="errorMessage" :border="true"></Error>
+          <div>
+            <router-link to="/reset-password" class="text-xs text-primary">
+              Forgot password?
+            </router-link>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   </div>
 </template>
@@ -96,7 +99,7 @@ const redirectToOIDC = (provider) => {
 }
 
 const validateForm = () => {
-  if (!validateEmail(loginForm.value.email)  && loginForm.value.email !== 'System') {
+  if (!validateEmail(loginForm.value.email) && loginForm.value.email !== 'System') {
     errorMessage.value = 'Invalid email address.'
     useTemporaryClass('login-container', 'animate-shake')
     return false
@@ -149,5 +152,4 @@ const emailHasError = computed(() => {
   return email !== 'System' && !validateEmail(email) && email !== '';
 })
 const passwordHasError = computed(() => !loginForm.value.password && loginForm.value.password !== '')
-
 </script>

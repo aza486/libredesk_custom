@@ -51,16 +51,18 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	CreateUser      *sqlx.Stmt `query:"create-user"`
-	GetUsers        *sqlx.Stmt `query:"get-users"`
-	GetUserCompact  *sqlx.Stmt `query:"get-users-compact"`
-	GetUser         *sqlx.Stmt `query:"get-user"`
-	GetEmail        *sqlx.Stmt `query:"get-email"`
-	GetPermissions  *sqlx.Stmt `query:"get-permissions"`
-	GetUserByEmail  *sqlx.Stmt `query:"get-user-by-email"`
-	UpdateUser      *sqlx.Stmt `query:"update-user"`
-	UpdateAvatar    *sqlx.Stmt `query:"update-avatar"`
-	SetUserPassword *sqlx.Stmt `query:"set-user-password"`
+	CreateUser            *sqlx.Stmt `query:"create-user"`
+	GetUsers              *sqlx.Stmt `query:"get-users"`
+	GetUserCompact        *sqlx.Stmt `query:"get-users-compact"`
+	GetUser               *sqlx.Stmt `query:"get-user"`
+	GetEmail              *sqlx.Stmt `query:"get-email"`
+	GetPermissions        *sqlx.Stmt `query:"get-permissions"`
+	GetUserByEmail        *sqlx.Stmt `query:"get-user-by-email"`
+	UpdateUser            *sqlx.Stmt `query:"update-user"`
+	UpdateAvatar          *sqlx.Stmt `query:"update-avatar"`
+	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
+	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
+	ResetPassword         *sqlx.Stmt `query:"reset-password"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -132,8 +134,7 @@ func (u *Manager) Create(user *models.User) error {
 		u.lo.Error("error generating password", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
 	}
-
-	user.Email = strings.ToLower(user.Email)
+	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
 	if err := u.q.CreateUser.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
 		u.lo.Error("error creating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
@@ -146,7 +147,7 @@ func (u *Manager) Get(id int) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUser.Get(&user, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			u.lo.Error("user not found","id", id,  "error", err)
+			u.lo.Error("user not found", "id", id, "error", err)
 			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
@@ -221,6 +222,38 @@ func (u *Manager) GetEmail(id int) (string, error) {
 	return email, nil
 }
 
+// SetResetPasswordToken sets a reset password token for a user and returns the token.
+func (u *Manager) SetResetPasswordToken(id int) (string, error) {
+	token, err := stringutil.RandomAlNumString(32)
+	if err != nil {
+		u.lo.Error("error generating reset password token", "error", err)
+		return "", envelope.NewError(envelope.GeneralError, "Error generating reset password token", nil)
+	}
+	if _, err := u.q.SetResetPasswordToken.Exec(id, token); err != nil {
+		u.lo.Error("error setting reset password token", "error", err)
+		return "", envelope.NewError(envelope.GeneralError, "Error setting reset password token", nil)
+	}
+	return token, nil
+}
+
+// ResetPassword sets a new password for a user.
+func (u *Manager) ResetPassword(token, password string) error {
+	if !u.isStrongPassword(password) {
+		return envelope.NewError(envelope.InputError, "Entered password is not strong please make sure the password has min 8, max 50 characters, at least 1 uppercase letter, 1 number", nil)
+	}
+	// Hash password.
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		u.lo.Error("error generating bcrypt password", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error setting new password", nil)
+	}
+	if _, err := u.q.ResetPassword.Exec(passwordHash, token); err != nil {
+		u.lo.Error("error setting new password", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error setting new password", nil)
+	}
+	return nil
+}
+
 // GetPermissions retrieves the permissions of a user by ID.
 func (u *Manager) GetPermissions(id int) ([]string, error) {
 	var permissions []string
@@ -250,6 +283,7 @@ func (u *Manager) generatePassword() ([]byte, error) {
 	return bytes, nil
 }
 
+// isStrongPassword checks if the password meets the required strength.
 func (u *Manager) isStrongPassword(password string) bool {
 	if len(password) < MinSystemUserPasswordLen || len(password) > MaxSystemUserPasswordLen {
 		return false

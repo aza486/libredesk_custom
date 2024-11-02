@@ -7,6 +7,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
+
+	"html/template"
 
 	auth_ "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
@@ -29,7 +32,7 @@ import (
 	"github.com/abhinavxd/artemis/internal/status"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
-	"github.com/abhinavxd/artemis/internal/template"
+	tmpl "github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
@@ -51,6 +54,8 @@ import (
 // constants holds the app constants.
 type constants struct {
 	AppBaseURL                  string
+	LogoURL                     string
+	SiteName                    string
 	Filestore                   string
 	AllowedUploadFileExtensions []string
 	MaxFileUploadSizeMB         float64
@@ -69,6 +74,7 @@ func initConfig(ko *koanf.Koanf) {
 	}
 }
 
+// initFlags initializes the commandline flags.
 func initFlags() {
 	f := flag.NewFlagSet("config", flag.ContinueOnError)
 
@@ -94,9 +100,12 @@ func initFlags() {
 	}
 }
 
+// initConstants initializes the app constants.
 func initConstants() constants {
 	return constants{
 		AppBaseURL:                  ko.String("app.root_url"),
+		LogoURL:                     ko.String("app.logo_url"),
+		SiteName:                    ko.String("app.site_name"),
 		Filestore:                   ko.MustString("upload.provider"),
 		AllowedUploadFileExtensions: ko.Strings("app.allowed_file_upload_extensions"),
 		MaxFileUploadSizeMB:         ko.Float64("app.max_file_upload_size"),
@@ -134,7 +143,7 @@ func initFS() stuffbin.FileSystem {
 	return fs
 }
 
-// loadSettings loads settings from the DB into the given Koanf map.
+// loadSettings loads settings from the DB into Koanf map.
 func loadSettings(m *setting.Manager) {
 	j, err := m.GetAllJSON()
 	if err != nil {
@@ -153,6 +162,7 @@ func loadSettings(m *setting.Manager) {
 	}
 }
 
+// initSettings inits setting manager.
 func initSettings(db *sqlx.DB) *setting.Manager {
 	s, err := setting.New(setting.Opts{
 		DB: db,
@@ -164,6 +174,7 @@ func initSettings(db *sqlx.DB) *setting.Manager {
 	return s
 }
 
+// initUser inits user manager.
 func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	mgr, err := user.New(i18n, user.Opts{
 		DB: DB,
@@ -175,9 +186,10 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 	return mgr
 }
 
+// initConversations inits conversation manager.
 func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sqlx.DB, contactStore *contact.Manager,
 	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager,
-	automation *automation.Engine, template *template.Manager) *conversation.Manager {
+	automation *automation.Engine, template *tmpl.Manager) *conversation.Manager {
 	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automation, template, conversation.Opts{
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
@@ -190,6 +202,7 @@ func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sq
 	return c
 }
 
+// initTags inits tag manager.
 func initTags(db *sqlx.DB) *tag.Manager {
 	var lo = initLogger("tag_manager")
 	mgr, err := tag.New(tag.Opts{
@@ -202,6 +215,7 @@ func initTags(db *sqlx.DB) *tag.Manager {
 	return mgr
 }
 
+// initCannedResponse inits canned response manager.
 func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
 	var lo = initLogger("canned-response")
 	c, err := cannedresp.New(cannedresp.Opts{
@@ -226,15 +240,42 @@ func initContact(db *sqlx.DB) *contact.Manager {
 	return m
 }
 
-func initTemplate(db *sqlx.DB) *template.Manager {
+// initTemplates inits template manager.
+func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.Manager {
 	lo := initLogger("template")
-	m, err := template.New(lo, db)
+	tpls, err := stuffbin.ParseTemplatesGlob(getTmplFuncs(consts), fs, "/static/email-templates/*.html")
+	if err != nil {
+		log.Fatalf("error parsing e-mail templates: %v", err)
+	}
+	m, err := tmpl.New(lo, db, tpls)
 	if err != nil {
 		log.Fatalf("error initializing template manager: %v", err)
 	}
 	return m
 }
 
+// getTmplFuncs returns the template functions.
+func getTmplFuncs(consts constants) template.FuncMap {
+	return template.FuncMap{
+		"RootURL": func() string {
+			return consts.AppBaseURL
+		},
+		"Date": func(layout string) string {
+			if layout == "" {
+				layout = time.ANSIC
+			}
+			return time.Now().Format(layout)
+		},
+		"LogoURL": func() string {
+			return consts.LogoURL
+		},
+		"SiteName": func() string {
+			return consts.SiteName
+		},
+	}
+}
+
+// initTeam inits team manager.
 func initTeam(db *sqlx.DB) *team.Manager {
 	var lo = initLogger("team-manager")
 	mgr, err := team.New(team.Opts{
@@ -247,6 +288,7 @@ func initTeam(db *sqlx.DB) *team.Manager {
 	return mgr
 }
 
+// initMedia inits media manager.
 func initMedia(db *sqlx.DB) *media.Manager {
 	var (
 		store      media.Store
@@ -304,6 +346,7 @@ func initInbox(db *sqlx.DB) *inbox.Manager {
 	return mgr
 }
 
+// initAutomationEngine initializes the automation engine.
 func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.Engine {
 	var lo = initLogger("automation-engine")
 
@@ -322,6 +365,7 @@ func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.En
 	return engine
 }
 
+// initAutoAssigner initializes the auto assigner.
 func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conversationManager *conversation.Manager) *autoassigner.Engine {
 	systemUser, err := userManager.GetSystemUser()
 	if err != nil {
@@ -335,13 +379,13 @@ func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conv
 }
 
 // initNotifier initializes the notifier service with available providers.
-func initNotifier(userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer) *notifier.Service {
+func initNotifier(userStore notifier.UserStore) *notifier.Service {
 	smtpCfg := email.SMTPConfig{}
 	if err := ko.UnmarshalWithConf("notification.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		log.Fatalf("error unmarshalling email notification provider config: %v", err)
 	}
 
-	emailNotifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, templateRenderer, emailnotifier.Opts{
+	emailNotifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, emailnotifier.Opts{
 		Lo:        initLogger("email-notifier"),
 		FromEmail: ko.String("notification.email.email_address"),
 	})
@@ -353,7 +397,7 @@ func initNotifier(userStore notifier.UserStore, templateRenderer notifier.Templa
 		emailNotifier.Name(): emailNotifier,
 	}
 
-	return notifier.NewService(notifierProviders, ko.MustInt("notification.concurrency"), ko.MustInt("notification.queue_size"), initLogger("notifier-service"))
+	return notifier.NewService(notifierProviders, ko.MustInt("notification.concurrency"), ko.MustInt("notification.queue_size"), initLogger("notifier"))
 }
 
 // initEmailInbox initializes the email inbox.

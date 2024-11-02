@@ -1,12 +1,12 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
-import App from './App.vue'
 import router from './router'
 import mitt from 'mitt'
 import api from './api'
 import './assets/styles/main.scss'
 import './utils/strings.js'
+import Root from './Root.vue'
 
 async function initApp () {
   const settings = (await api.getSettings('general')).data.data
@@ -23,8 +23,9 @@ async function initApp () {
       [lang]: langMessages.data
     }
   }
+
   const i18n = createI18n(i18nConfig)
-  const app = createApp(App)
+  const app = createApp(Root)
   const pinia = createPinia()
 
   // Add emitter to global properties.

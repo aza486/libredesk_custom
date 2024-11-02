@@ -8,11 +8,36 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+// tryAuth is a middleware that attempts to authenticate the user and add them to the context
+// but doesn't enforce authentication. Handlers can check if user exists in context optionally.
+func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
+	return func(r *fastglue.Request) error {
+		app := r.Context.(*App)
+
+		// Try to validate session without returning error.
+		userSession, err := app.auth.ValidateSession(r)
+		if err != nil || userSession.ID <= 0 {
+			return handler(r)
+		}
+
+		// Try to get user.
+		user, err := app.user.Get(userSession.ID)
+		if err != nil {
+			return handler(r)
+		}
+
+		// Set user in context if found.
+		r.RequestCtx.SetUserValue("user", user)
+
+		return handler(r)
+	}
+}
+
 // auth makes sure the user is logged in.
 func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (
-			app         = r.Context.(*App)
+			app = r.Context.(*App)
 		)
 
 		// Validate session and fetch user.

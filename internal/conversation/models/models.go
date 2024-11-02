@@ -22,28 +22,28 @@ var (
 )
 
 type Conversation struct {
-	ID                 int         `db:"id" json:"id"`
-	CreatedAt          time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt          time.Time   `db:"updated_at" json:"updated_at"`
-	UUID               string      `db:"uuid" json:"uuid"`
-	ClosedAt           null.Time   `db:"closed_at" json:"closed_at,omitempty"`
-	ResolvedAt         null.Time   `db:"resolved_at" json:"resolved_at,omitempty"`
-	ReferenceNumber    null.String `db:"reference_number" json:"reference_number,omitempty"`
-	Priority           null.String `db:"priority" json:"priority"`
-	Status             null.String `db:"status" json:"status"`
-	FirstReplyAt       null.Time   `db:"first_reply_at" json:"first_reply_at"`
-	AssignedUserID     null.Int    `db:"assigned_user_id" json:"assigned_user_id"`
-	AssignedTeamID     null.Int    `db:"assigned_team_id" json:"assigned_team_id"`
-	AssigneeLastSeenAt null.Time   `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
-	cmodels.Contact
-	Subject            string      `db:"subject" json:"subject"`
-	UnreadMessageCount int         `db:"unread_message_count" json:"unread_message_count"`
-	InboxName          string      `db:"inbox_name" json:"inbox_name"`
-	InboxChannel       string      `db:"inbox_channel" json:"inbox_channel"`
-	Tags               null.JSON   `db:"tags" json:"tags"`
-	ContactAvatarURL   null.String `db:"contact_avatar_url" json:"contact_avatar_url"`
-	LastMessageAt      null.Time   `db:"last_message_at" json:"last_message_at"`
-	LastMessage        string      `db:"last_message" json:"last_message"`
+	ID                 int             `db:"id" json:"id"`
+	CreatedAt          time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt          time.Time       `db:"updated_at" json:"updated_at"`
+	UUID               string          `db:"uuid" json:"uuid"`
+	ClosedAt           null.Time       `db:"closed_at" json:"closed_at,omitempty"`
+	ResolvedAt         null.Time       `db:"resolved_at" json:"resolved_at,omitempty"`
+	ReferenceNumber    null.String     `db:"reference_number" json:"reference_number,omitempty"`
+	Priority           null.String     `db:"priority" json:"priority"`
+	Status             null.String     `db:"status" json:"status"`
+	FirstReplyAt       null.Time       `db:"first_reply_at" json:"first_reply_at"`
+	ContactID          int             `db:"contact_id" json:"contact_id"`
+	AssignedUserID     null.Int        `db:"assigned_user_id" json:"assigned_user_id"`
+	AssignedTeamID     null.Int        `db:"assigned_team_id" json:"assigned_team_id"`
+	AssigneeLastSeenAt null.Time       `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
+	Subject            string          `db:"subject" json:"subject"`
+	UnreadMessageCount int             `db:"unread_message_count" json:"unread_message_count"`
+	InboxName          string          `db:"inbox_name" json:"inbox_name"`
+	InboxChannel       string          `db:"inbox_channel" json:"inbox_channel"`
+	Tags               null.JSON       `db:"tags" json:"tags"`
+	LastMessageAt      null.Time       `db:"last_message_at" json:"last_message_at"`
+	LastMessage        string          `db:"last_message" json:"last_message"`
+	Contact            cmodels.Contact `db:"contact" json:"contact"`
 }
 
 type ConversationParticipant struct {

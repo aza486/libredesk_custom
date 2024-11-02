@@ -112,9 +112,8 @@ watch(
   () => props.contentToSet,
   (newContent) => {
     if (newContent) {
-      editor.value.commands.setContent(newContent, false,{
-        preserveWhitespace: "full"
-      })
+      // Remove trailing break when setting content
+      editor.value.commands.setContent(newContent)
       editor.value.commands.focus()
       emit('contentSet')
     }
@@ -153,5 +152,8 @@ onUnmounted(() => {
       color: #003d7a;
     }
   }
+}
+br.ProseMirror-trailingBreak {
+  display: none;
 }
 </style>

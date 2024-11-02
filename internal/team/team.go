@@ -120,7 +120,7 @@ func (u *Manager) UpdateTeam(id int, t models.Team) error {
 func (u *Manager) GetTeamMembers(name string) ([]umodels.User, error) {
 	var users []umodels.User
 	if err := u.q.GetTeamMembers.Select(&users, name); err != nil {
-		if errors.Is(sql.ErrNoRows, err) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
 		}
 		u.lo.Error("error fetching team members from db", "team_name", name, "error", err)

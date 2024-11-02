@@ -13,8 +13,8 @@ const (
 	ProviderEmail = "email"
 )
 
-// NotificationMessage represents a message to be sent as a notification.
-type NotificationMessage struct {
+// Message represents a message to be sent as a notification.
+type Message struct {
 	// Recipients of the message
 	UserIDs []int
 	// Subject of the message
@@ -33,11 +33,6 @@ type NotificationMessage struct {
 	Headers map[string][]string
 }
 
-// TemplateRenderer defines the interface for rendering email templates.
-type TemplateRenderer interface {
-	RenderDefault(data map[string]string) (content string, err error)
-}
-
 // UserEmailFetcher defines the interface for fetching user email addresses.
 type UserEmailFetcher interface {
 	GetEmail(id int) (string, error)
@@ -51,7 +46,7 @@ type UserStore interface {
 // Notifier defines the interface for sending notifications through various providers.
 type Notifier interface {
 	// Sends the notification message using the specified provider
-	Send(message NotificationMessage) error
+	Send(message Message) error
 	// Returns the name of the provider
 	Name() string
 }
@@ -59,7 +54,7 @@ type Notifier interface {
 // Service manages message providers and a worker pool.
 type Service struct {
 	providers      map[string]Notifier
-	messageChannel chan NotificationMessage
+	messageChannel chan Message
 	concurrency    int
 	lo             *logf.Logger
 	closed         bool
@@ -71,14 +66,14 @@ type Service struct {
 func NewService(providers map[string]Notifier, concurrency, capacity int, logger *logf.Logger) *Service {
 	return &Service{
 		providers:      providers,
-		messageChannel: make(chan NotificationMessage, capacity),
+		messageChannel: make(chan Message, capacity),
 		concurrency:    concurrency,
 		lo:             logger,
 	}
 }
 
 // Send sends a message to the message channel.
-func (s *Service) Send(message NotificationMessage) error {
+func (s *Service) Send(message Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
@@ -109,13 +104,13 @@ func (s *Service) Run(ctx context.Context) {
 // worker processes messages from the message channel and sends them using the set provider.
 func (s *Service) worker() {
 	for message := range s.messageChannel {
-		sender, exists := s.providers[message.Provider]
+		provider, exists := s.providers[message.Provider]
 		if !exists {
 			s.lo.Error("unsupported provider", "provider", message.Provider)
 			continue
 		}
 
-		if err := sender.Send(message); err != nil {
+		if err := provider.Send(message); err != nil {
 			s.lo.Error("error sending message", "error", err)
 		}
 	}

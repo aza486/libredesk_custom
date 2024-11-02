@@ -1,7 +1,6 @@
 <template>
   <Spinner v-if="formLoading"></Spinner>
-  <form @submit="onSubmit" class="space-y-6"
-    :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
+  <form @submit="onSubmit" class="space-y-6" :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
         <FormLabel>Site Name</FormLabel>
@@ -51,6 +50,17 @@
           <Input type="text" placeholder="Favicon URL" v-bind="field" />
         </FormControl>
         <FormDescription>Favicon URL for the app.</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ field }" name="logo_url" :value="props.initialValues.logo_url">
+      <FormItem>
+        <FormLabel>Logo URL</FormLabel>
+        <FormControl>
+          <Input type="text" placeholder="Logo URL" v-bind="field" />
+        </FormControl>
+        <FormDescription>Logo URL for the app.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

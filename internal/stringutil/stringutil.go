@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/k3a/html2text"
 )
@@ -75,10 +76,26 @@ func RandomNumericString(n int) (string, error) {
 	return string(bytes), nil
 }
 
+// GetPathFromURL extracts the path from a URL.
 func GetPathFromURL(rawURL string) (string, error) {
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return "", err
 	}
 	return parsedURL.Path, nil
+}
+
+// TokenizeString splits a string into tokens/words, removing punctuation
+func TokenizeString(s string) []string {
+	// Remove common punctuation and split by whitespace
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsPunct(r) {
+			return ' '
+		}
+		return r
+	}, s)
+
+	// Split by whitespace and filter out empty strings
+	words := strings.Fields(s)
+	return words
 }

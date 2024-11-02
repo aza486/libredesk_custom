@@ -11,7 +11,9 @@ import (
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/image"
 	mmodels "github.com/abhinavxd/artemis/internal/media/models"
+	notifier "github.com/abhinavxd/artemis/internal/notification"
 	"github.com/abhinavxd/artemis/internal/stringutil"
+	tmpl "github.com/abhinavxd/artemis/internal/template"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -138,6 +140,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleCreateUser creates a new user.
 func handleCreateUser(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
@@ -161,9 +164,37 @@ func handleCreateUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	if user.SendWelcomeEmail {
+		// Generate reset token.
+		resetToken, err := app.user.SetResetPasswordToken(user.ID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+
+		// Render template and send email.
+		content, err := app.tmpl.Render(tmpl.TmplWelcome, map[string]interface{}{
+			"ResetToken": resetToken,
+			"Email":      user.Email,
+		})
+		if err != nil {
+			app.lo.Error("error rendering template", "error", err)
+			return r.SendEnvelope(true)
+		}
+
+		if err := app.notifier.Send(notifier.Message{
+			UserIDs:  []int{user.ID},
+			Subject:  "Welcome",
+			Content:  content,
+			Provider: notifier.ProviderEmail,
+		}); err != nil {
+			app.lo.Error("error sending notification message", "error", err)
+			return r.SendEnvelope(true)
+		}
+	}
 	return r.SendEnvelope(true)
 }
 
+// handleUpdateUser updates a user.
 func handleUpdateUser(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
@@ -193,6 +224,7 @@ func handleUpdateUser(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleGetCurrentUser returns the current logged in user.
 func handleGetCurrentUser(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
@@ -205,6 +237,7 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 	return r.SendEnvelope(u)
 }
 
+// handleDeleteAvatar deletes a user avatar.
 func handleDeleteAvatar(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
@@ -232,5 +265,80 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	return r.SendEnvelope(true)
+}
+
+// handleResetPassword generates a reset password token and sends an email to the user.
+func handleResetPassword(r *fastglue.Request) error {
+	var (
+		app      = r.Context.(*App)
+		p        = r.RequestCtx.PostArgs()
+		user, ok = r.RequestCtx.UserValue("user").(umodels.User)
+		email    = string(p.Peek("email"))
+	)
+
+	if ok && user.ID > 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "User is already logged in", nil, envelope.InputError)
+	}
+
+	if email == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
+	}
+
+	user, err := app.user.GetByEmail(email)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	token, err := app.user.SetResetPasswordToken(user.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Send email.
+	content, err := app.tmpl.Render(tmpl.TmplResetPassword,
+		map[string]string{
+			"ResetToken": token,
+		})
+	if err != nil {
+		app.lo.Error("error rendering template", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error rendering template", nil, envelope.GeneralError)
+	}
+
+	if err := app.notifier.Send(notifier.Message{
+		UserIDs:  []int{user.ID},
+		Subject:  "Reset Password",
+		Content:  content,
+		Provider: notifier.ProviderEmail,
+	}); err != nil {
+		app.lo.Error("error sending notification message", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending notification message", nil, envelope.GeneralError)
+	}
+
+	return r.SendEnvelope(true)
+}
+
+// handleSetPassword resets the password with the provided token.
+func handleSetPassword(r *fastglue.Request) error {
+	var (
+		app      = r.Context.(*App)
+		user, ok = r.RequestCtx.UserValue("user").(umodels.User)
+		p        = r.RequestCtx.PostArgs()
+		password = string(p.Peek("password"))
+		token    = string(p.Peek("token"))
+	)
+
+	if ok && user.ID > 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "User is already logged in", nil, envelope.InputError)
+	}
+
+	if password == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `password`", nil, envelope.InputError)
+	}
+
+	if err := app.user.ResetPassword(token, password); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	return r.SendEnvelope(true)
 }

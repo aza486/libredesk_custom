@@ -89,19 +89,6 @@ func (m *Manager) Run(ctx context.Context, dispatchConcurrency int, scanInterval
 
 			// Prepare and push the message to the outgoing queue.
 			for _, message := range pendingMessages {
-				// Get inbox.
-				inb, err := m.inboxStore.Get(message.InboxID)
-				if err != nil {
-					m.lo.Error("error fetching inbox", "message_id", message.ID, "inbox_id", message.InboxID, "error", err)
-					continue
-				}
-
-				// Render content in template.
-				if err := m.RenderContentInTemplate(inb, &message); err != nil {
-					m.lo.Error("error rendering content", "message_id", message.ID, "error", err)
-					continue
-				}
-
 				// Put the message ID in the processing map.
 				m.outgoingProcessingMessages.Store(message.ID, message.ID)
 
@@ -150,70 +137,75 @@ func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 			if !ok {
 				return
 			}
-
-			// Get inbox.
-			inbox, err := m.inboxStore.Get(message.InboxID)
-			if err != nil {
-				m.lo.Error("error fetching inbox", "error", err, "inbox_id", message.InboxID)
-				m.outgoingProcessingMessages.Delete(message.ID)
-				m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
-				continue
-			}
-
-			// Attach attachments to the message.
-			if err := m.attachAttachmentsToMessage(&message); err != nil {
-				m.lo.Error("error attaching attachments to message", "error", err, "id", message.ID)
-				m.outgoingProcessingMessages.Delete(message.ID)
-				m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
-				continue
-			}
-
-			// Get from, to addresses and inReplyTo.
-			message.From = inbox.FromAddress()
-			message.To, _ = m.GetToAddress(message.ConversationID, inbox.Channel())
-			message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
-
-			// Send.
-			err = inbox.Send(message)
-
-			// Update status.
-			var newStatus = MessageStatusSent
-			if err != nil {
-				newStatus = MessageStatusFailed
-				m.lo.Error("error sending message", "error", err, "inbox_id", message.InboxID)
-			}
-			m.UpdateMessageStatus(message.UUID, newStatus)
-
-			// Update first reply at.
-			if newStatus == MessageStatusSent {
-				m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, message.CreatedAt)
-			}
-
-			// Delete from processing map.
-			m.outgoingProcessingMessages.Delete(message.ID)
+			m.processOutgoingMessage(message)
 		}
 	}
 }
 
-// RenderContentInTemplate renders message content in the default template
-func (m *Manager) RenderContentInTemplate(inb inbox.Inbox, message *models.Message) error {
-	var (
-		channel = inb.Channel()
-		err     error
-	)
+// processOutgoingMessage handles the processing of a single outgoing message
+func (m *Manager) processOutgoingMessage(message models.Message) {
+	defer m.outgoingProcessingMessages.Delete(message.ID)
+
+	// Helper function to handle errors
+	handleError := func(err error, errorMsg string) bool {
+		if err != nil {
+			m.lo.Error(errorMsg, "error", err, "id", message.ID)
+			m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
+			return true
+		}
+		return false
+	}
+
+	// Get inbox
+	inbox, err := m.inboxStore.Get(message.InboxID)
+	if handleError(err, "error fetching inbox") {
+		return
+	}
+
+	// Render content in template
+	if err := m.RenderContentInTemplate(inbox.Channel(), &message); err != nil {
+		handleError(err, "error rendering content in template")
+		return
+	}
+
+	// Attach attachments to the message
+	if err := m.attachAttachmentsToMessage(&message); err != nil {
+		handleError(err, "error attaching attachments to message")
+		return
+	}
+
+	// Set message properties
+	message.From = inbox.FromAddress()
+	message.To, _ = m.GetToAddress(message.ConversationID, inbox.Channel())
+	message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
+
+	// Send message
+	err = inbox.Send(message)
+	if handleError(err, "error sending message") {
+		return
+	}
+
+	// Update status and first reply time
+	m.UpdateMessageStatus(message.UUID, MessageStatusSent)
+	m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, message.CreatedAt)
+}
+
+// RenderContentInTemplate renders message content in template.
+func (m *Manager) RenderContentInTemplate(channel string, message *models.Message) error {
 	switch channel {
 	case inbox.ChannelEmail:
-		message.Content, err = m.template.RenderDefault(map[string]string{
-			"Content": message.Content,
-		})
+		conversation, err := m.GetConversation(message.ConversationUUID)
+		if err != nil {
+			m.lo.Error("error fetching conversation", "uuid", message.ConversationUUID, "error", err)
+			return fmt.Errorf("fetching conversation: %w", err)
+		}
+		message.Content, err = m.template.RenderEmail(conversation, message.Content)
 		if err != nil {
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
-			m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 			return fmt.Errorf("could not render email content using template: %w", err)
 		}
 	default:
-		m.lo.Warn("WARNING: unknown message channel", "channel", channel)
-		m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
+		m.lo.Warn("unknown message channel", "channel", channel)
 		return fmt.Errorf("unknown message channel: %s", channel)
 	}
 	return nil

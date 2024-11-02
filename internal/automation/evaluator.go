@@ -7,6 +7,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/artemis/internal/stringutil"
 )
 
 // evalConversationRules evaluates a list of rules against a given conversation.
@@ -89,6 +90,7 @@ func (e *Engine) evaluateGroup(rules []models.RuleDetail, operator string, conve
 	return false
 }
 
+// evaluateRule determines if a conversation matches the specified rule's conditions.
 func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conversation) bool {
 	var (
 		valueToCompare string
@@ -147,16 +149,32 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.RuleNotEqual:
 		conditionMet = valueToCompare != rule.Value
 	case models.RuleContains:
+		// Split the value to compare into words
+		words := stringutil.TokenizeString(valueToCompare)
+		wordMap := make(map[string]struct{}, len(words))
+		for _, word := range words {
+			wordMap[word] = struct{}{}
+		}
+
+		// Check if any of the rule values exist as complete words
 		for _, val := range ruleValues {
-			if strings.Contains(valueToCompare, val) {
+			if _, exists := wordMap[val]; exists {
 				conditionMet = true
 				break
 			}
 		}
 	case models.RuleNotContains:
+		// Split the value to compare into words
+		words := stringutil.TokenizeString(valueToCompare)
+		wordMap := make(map[string]struct{}, len(words))
+		for _, word := range words {
+			wordMap[word] = struct{}{}
+		}
+
+		// Check if none of the rule values exist as complete words
 		conditionMet = true
 		for _, val := range ruleValues {
-			if strings.Contains(valueToCompare, val) {
+			if _, exists := wordMap[val]; exists {
 				conditionMet = false
 				break
 			}
@@ -169,6 +187,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		e.lo.Error("unrecognized rule logical operator", "operator", rule.Operator)
 		return false
 	}
+
 	e.lo.Debug("rule conditions met status", "met", conditionMet,
 		"conversation_uuid", conversation.UUID)
 	return conditionMet

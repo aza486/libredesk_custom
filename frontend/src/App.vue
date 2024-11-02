@@ -2,22 +2,17 @@
   <Toaster />
   <TooltipProvider :delay-duration="200">
     <div class="font-inter">
-      <div v-if="$route.path !== '/'">
-        <div class="flex">
-          <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks"
-            class="shadow shadow-gray-300 h-screen" />
-          <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-            <ResizableHandle id="resize-handle-1" />
-            <ResizablePanel id="resize-panel-2">
-              <div class="w-full h-screen">
-                <RouterView />
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-      </div>
-      <div v-else>
-        <RouterView />
+      <div class="flex">
+        <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks"
+          class="shadow shadow-gray-300 h-screen" />
+        <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
+          <ResizableHandle id="resize-handle-1" />
+          <ResizablePanel id="resize-panel-2">
+            <div class="w-full h-screen">
+              <RouterView />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   </TooltipProvider>

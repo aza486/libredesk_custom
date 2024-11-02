@@ -1,0 +1,23 @@
+{{ define "welcome" }}
+{{ template "header" . }}
+
+{{ if ne SiteName "" }}
+<p>Welcome to {{ SiteName }}!</p>
+{{ else }}
+<p>Welcome!</p>
+{{ end }}
+
+<p>A new account has been created for you.</p>
+
+<p>Your login email is <strong>{{ .Email }}</strong></p>
+
+<p>To set your password, click the link below:</p>
+
+<p>{{ RootURL }}/set-password?token={{ .ResetToken }}</p>
+
+<p>This link will expire in 24 hours.</p>
+
+<p>Once you've set your password, you can log in <a href="{{ RootURL }}">here.</a></p>
+
+{{ template "footer" . }}
+{{ end }}

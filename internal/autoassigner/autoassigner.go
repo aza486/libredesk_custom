@@ -146,9 +146,7 @@ func (e *Engine) assignConversations() error {
 		return err
 	}
 
-	if len(unassigned) > 0 {
-		e.lo.Debug("found unassigned conversations", "count", len(unassigned))
-	}
+	e.lo.Debug("found unassigned conversations", "count", len(unassigned))
 
 	for _, conversation := range unassigned {
 		// Get user from the pool.

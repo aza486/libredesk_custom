@@ -14,11 +14,10 @@ import (
 
 // Email implements the MessageSender interface for sending emails.
 type Email struct {
-	lo               *logf.Logger
-	from             string
-	smtpPools        []*smtppool.Pool
-	userStore        notifier.UserStore
-	templateRenderer notifier.TemplateRenderer
+	lo        *logf.Logger
+	from      string
+	smtpPools []*smtppool.Pool
+	userStore notifier.UserStore
 }
 
 // Opts contains options for creating a new Email sender.
@@ -28,36 +27,26 @@ type Opts struct {
 }
 
 // New initializes a new Email sender.
-func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, templateRenderer notifier.TemplateRenderer, opts Opts) (*Email, error) {
+func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, opts Opts) (*Email, error) {
 	pools, err := email.NewSmtpPool(smtpConfig)
 	if err != nil {
 		return nil, err
 	}
 	return &Email{
-		lo:               opts.Lo,
-		smtpPools:        pools,
-		from:             opts.FromEmail,
-		userStore:        userStore,
-		templateRenderer: templateRenderer,
+		lo:        opts.Lo,
+		smtpPools: pools,
+		from:      opts.FromEmail,
+		userStore: userStore,
 	}, nil
 }
 
 // Send sends a notification message via email.
-func (e *Email) Send(msg notifier.NotificationMessage) error {
+func (e *Email) Send(msg notifier.Message) error {
 	recipientEmails, err := e.getUserEmails(msg.UserIDs)
 	if err != nil {
 		return err
 	}
-
-	templateBody, err := e.templateRenderer.RenderDefault(map[string]string{
-		"Content": msg.Content,
-	})
-	if err != nil {
-		return err
-	}
-
-	emailMessage := e.prepareEmail(msg.Subject, templateBody, recipientEmails, msg)
-
+	emailMessage := e.prepareEmail(msg.Subject, msg.Content, recipientEmails, msg)
 	return e.send(emailMessage)
 }
 
@@ -72,7 +61,7 @@ func (e *Email) getUserEmails(userIDs []int) ([]string, error) {
 	for _, userID := range userIDs {
 		userEmail, err := e.userStore.GetEmail(userID)
 		if err != nil {
-			e.lo.Error("error fetching user email", "error", err)
+			e.lo.Error("error fetching user email", "user_id", userID, "error", err)
 			continue
 		}
 		recipientEmails = append(recipientEmails, userEmail)
@@ -95,7 +84,7 @@ func (e *Email) selectSmtpPool() *smtppool.Pool {
 }
 
 // prepareEmail prepares the email message with attachments and headers.
-func (e *Email) prepareEmail(subject, content string, recipients []string, msg notifier.NotificationMessage) smtppool.Email {
+func (e *Email) prepareEmail(subject, content string, recipients []string, msg notifier.Message) smtppool.Email {
 	var files []smtppool.Attachment
 	if len(msg.Attachments) > 0 {
 		files = e.prepareAttachments(msg.Attachments)

@@ -7,7 +7,7 @@
       <Avatar class="size-[45px]">
         <AvatarImage :src="conversation.avatar_url" v-if="conversation.avatar_url" />
         <AvatarFallback>
-          {{ conversation.first_name.substring(0, 2).toUpperCase() }}
+          {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
         </AvatarFallback>
       </Avatar>
     </div>

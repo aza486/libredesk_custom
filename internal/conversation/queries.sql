@@ -12,9 +12,9 @@ SELECT
     conversations.updated_at,
     conversations.uuid,
     conversations.assignee_last_seen_at,
-    contacts.first_name,
-    contacts.last_name,
-    contacts.avatar_url,
+    contacts.first_name as "contact.first_name",
+    contacts.last_name as "contact.last_name",
+    contacts.avatar_url as "contact.avatar_url",
     inboxes.channel as inbox_channel,
     inboxes.name as inbox_name,
     COALESCE(conversations.meta->>'subject', '') as subject,
@@ -56,12 +56,7 @@ SELECT
     c.assigned_user_id,
     c.assigned_team_id,
     c.meta->>'subject' as subject,
-    ct.id as contact_id,
-    ct.first_name as first_name,
-    ct.last_name as last_name,
-    ct.email as email,
-    ct.phone_number as phone_number,
-    ct.avatar_url as avatar_url,
+    c.contact_id,
     COALESCE(c.meta->>'last_message', '') as last_message,
     (SELECT COALESCE(
         (SELECT json_agg(t.name)
@@ -69,7 +64,12 @@ SELECT
         INNER JOIN conversation_tags ct ON ct.tag_id = t.id
         WHERE ct.conversation_id = c.id),
         '[]'::json
-    )) AS tags
+    )) AS tags,
+    ct.first_name as "contact.first_name",
+    ct.last_name as "contact.last_name",
+    ct.email as "contact.email",
+    ct.phone_number as "contact.phone_number",
+    ct.avatar_url as "contact.avatar_url"
 FROM conversations c
 JOIN contacts ct ON c.contact_id = ct.id
 LEFT JOIN users u ON u.id = c.assigned_user_id

@@ -9,6 +9,7 @@ import (
 
 	auth_ "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
+	notifier "github.com/abhinavxd/artemis/internal/notification"
 
 	"github.com/abhinavxd/artemis/internal/automation"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
@@ -60,6 +61,7 @@ type App struct {
 	cannedResp   *cannedresp.Manager
 	conversation *conversation.Manager
 	automation   *automation.Engine
+	notifier     *notifier.Service
 }
 
 func main() {
@@ -107,18 +109,19 @@ func main() {
 		messageDispatchScanInterval = ko.MustDuration("message.dispatch_scan_interval")
 		ctx, _                      = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 		wsHub                       = ws.NewHub()
+		constants                   = initConstants()
 		i18n                        = initI18n(fs)
 		lo                          = initLogger("artemis")
 		rdb                         = initRedis()
 		oidc                        = initOIDC(db)
 		auth                        = initAuth(oidc, rdb)
-		template                    = initTemplate(db)
+		template                    = initTemplate(db, fs, constants)
 		media                       = initMedia(db)
 		contact                     = initContact(db)
 		inbox                       = initInbox(db)
 		team                        = initTeam(db)
 		user                        = initUser(i18n, db)
-		notifier                    = initNotifier(user, template)
+		notifier                    = initNotifier(user)
 		automation                  = initAutomationEngine(db, user)
 		conversation                = initConversations(i18n, wsHub, notifier, db, contact, inbox, user, team, media, automation, template)
 		autoassigner                = initAutoAssigner(team, user, conversation)
@@ -162,8 +165,9 @@ func main() {
 		conversation: conversation,
 		automation:   automation,
 		oidc:         oidc,
+		constant:     constants,
+		notifier:     notifier,
 		authz:        initAuthz(),
-		constant:     initConstants(),
 		status:       initStatus(db),
 		role:         initRole(db),
 		tag:          initTags(db),

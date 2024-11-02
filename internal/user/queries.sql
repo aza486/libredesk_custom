@@ -75,3 +75,13 @@ SELECT unnest(r.permissions)
 FROM users u
 JOIN roles r ON r.name = ANY(u.roles)
 WHERE u.id = $1
+
+-- name: set-reset-password-token
+UPDATE users
+SET reset_password_token = $2, reset_password_expires = now() + interval '1 day'
+WHERE id = $1
+
+-- name: reset-password
+UPDATE users
+SET password = $1, reset_password_token = NULL, reset_password_expires = NULL
+WHERE reset_password_token = $2 AND reset_password_expires > now()

@@ -66,10 +66,10 @@ const nonInlineAttachments = computed(() =>
 )
 
 const getFullName = computed(() => {
-  return convStore.current.first_name + ' ' + convStore.current.last_name
+  return convStore.current.contact.first_name + ' ' + convStore.current.last_name
 })
 
 const avatarFallback = computed(() => {
-  return convStore.current.first_name.toUpperCase().substring(0, 2)
+  return convStore.current.contact.first_name.toUpperCase().substring(0, 2)
 })
 </script>

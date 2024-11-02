@@ -87,6 +87,8 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/users/{id}", authPerm(handleGetUser, "users", "read"))
 	g.POST("/api/users", authPerm(handleCreateUser, "users", "write"))
 	g.PUT("/api/users/{id}", authPerm(handleUpdateUser, "users", "write"))
+	g.POST("/api/users/reset-password", tryAuth(handleResetPassword))
+	g.POST("/api/users/set-password", tryAuth(handleSetPassword))
 
 	// Team.
 	g.GET("/api/teams/compact", auth(handleGetTeamsCompact))
@@ -144,6 +146,8 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/conversations/{all:*}", authPage(serveIndexPage))
 	g.GET("/account/profile", authPage(serveIndexPage))
 	g.GET("/admin/{all:*}", authPage(serveIndexPage))
+	g.GET("/reset-password", notAuthPage(serveIndexPage))
+	g.GET("/set-password", notAuthPage(serveIndexPage))
 	g.GET("/assets/{all:*}", serveStaticFiles)
 	g.GET("/images/{all:*}", serveStaticFiles)
 }
