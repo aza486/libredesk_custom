@@ -86,28 +86,16 @@ const emitter = useEmitter()
 const teams = ref([])
 const users = ref([])
 const statuses = ref([])
-const priorities = ref([
-  {
-    value: "Low",
-    name: "Low"
-  },
-  {
-    value: "Medium",
-    name: "Medium"
-  },
-  {
-    value: "High",
-    name: "High"
-  },
-])
+const priorities = ref([])
 const emit = defineEmits(['update-actions', 'add-action', 'remove-action'])
 
 onMounted(async () => {
   try {
-    const [teamsResp, usersResp, statusesResp] = await Promise.all([
+    const [teamsResp, usersResp, statusesResp, prioritiesResp] = await Promise.all([
       api.getTeamsCompact(),
       api.getUsersCompact(),
-      api.getStatuses()
+      api.getStatuses(),
+      api.getPriorities(),
     ])
 
     teams.value = teamsResp.data.data.map(team => ({
@@ -123,6 +111,11 @@ onMounted(async () => {
     statuses.value = statusesResp.data.data.map(status => ({
       value: status.name,
       name: status.name
+    }))
+
+    priorities.value = prioritiesResp.data.data.map(priority => ({
+      value: priority.name,
+      name: priority.name
     }))
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

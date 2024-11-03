@@ -91,8 +91,6 @@ const props = defineProps({
 
 const emit = defineEmits(['apply', 'clear'])
 const modelValue = defineModel('modelValue', { required: true })
-const createFilter = () => ({ model: '', field: '', operator: '', value: '' })
-
 const operatorsByType = {
   text: [
     { label: 'Equals', value: '=' },
@@ -111,6 +109,7 @@ const operatorsByType = {
     { label: 'Less Than or Equal', value: '<=' },
   ],
 }
+const createFilter = () => ({ model: '', field: '', operator: '', value: '' })
 
 onMounted(() => {
   if (modelValue.value.length === 0) {

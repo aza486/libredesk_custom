@@ -15,12 +15,13 @@ import (
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
+	"github.com/abhinavxd/artemis/internal/conversation/priority"
+	"github.com/abhinavxd/artemis/internal/conversation/status"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/media"
 	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
-	"github.com/abhinavxd/artemis/internal/status"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	"github.com/abhinavxd/artemis/internal/template"
@@ -55,6 +56,7 @@ type App struct {
 	user         *user.Manager
 	team         *team.Manager
 	status       *status.Manager
+	priority     *priority.Manager
 	tag          *tag.Manager
 	inbox        *inbox.Manager
 	tmpl         *template.Manager
@@ -109,10 +111,10 @@ func main() {
 		messageDispatchScanInterval = ko.MustDuration("message.dispatch_scan_interval")
 		ctx, _                      = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 		wsHub                       = ws.NewHub()
+		rdb                         = initRedis()
 		constants                   = initConstants()
 		i18n                        = initI18n(fs)
 		lo                          = initLogger("artemis")
-		rdb                         = initRedis()
 		oidc                        = initOIDC(db)
 		auth                        = initAuth(oidc, rdb)
 		template                    = initTemplate(db, fs, constants)
@@ -169,6 +171,7 @@ func main() {
 		notifier:     notifier,
 		authz:        initAuthz(),
 		status:       initStatus(db),
+		priority:     initPriority(db),
 		role:         initRole(db),
 		tag:          initTags(db),
 		cannedResp:   initCannedResponse(db),

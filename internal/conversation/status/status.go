@@ -4,9 +4,9 @@ package status
 import (
 	"embed"
 
+	"github.com/abhinavxd/artemis/internal/conversation/status/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/status/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )

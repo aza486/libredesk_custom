@@ -18,6 +18,8 @@ import (
 	"github.com/abhinavxd/artemis/internal/cannedresp"
 	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
+	"github.com/abhinavxd/artemis/internal/conversation/priority"
+	"github.com/abhinavxd/artemis/internal/conversation/status"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
@@ -29,7 +31,6 @@ import (
 	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
-	"github.com/abhinavxd/artemis/internal/status"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	tmpl "github.com/abhinavxd/artemis/internal/template"
@@ -581,7 +582,7 @@ func initRole(db *sqlx.DB) *role.Manager {
 	return r
 }
 
-// initRedis inits conversation status manager.
+// initStatus inits conversation status manager.
 func initStatus(db *sqlx.DB) *status.Manager {
 	manager, err := status.New(status.Opts{
 		DB: db,
@@ -589,6 +590,19 @@ func initStatus(db *sqlx.DB) *status.Manager {
 	})
 	if err != nil {
 		log.Fatalf("error initializing status manager: %v", err)
+	}
+	return manager
+}
+
+
+// initPriority inits conversation priority manager.
+func initPriority(db *sqlx.DB) *priority.Manager {
+	manager, err := priority.New(priority.Opts{
+		DB: db,
+		Lo: initLogger("priority-manager"),
+	})
+	if err != nil {
+		log.Fatalf("error initializing priority manager: %v", err)
 	}
 	return manager
 }

@@ -140,7 +140,7 @@ const props = defineProps({
 
 const emitter = useEmitter()
 const statuses = ref([])
-const priorities = ref(["Low", "Medium", "High"])
+const priorities = ref([])
 const { ruleGroup } = toRefs(props)
 
 const conversationFields = {
@@ -190,8 +190,9 @@ const conversationFields = {
 
 onMounted(async () => {
   try {
-    const [statusesResp] = await Promise.all([api.getStatuses()])
+    const [statusesResp, prioritiesResp] = await Promise.all([api.getStatuses(), api.getPriorities()])
     statuses.value = statusesResp.data.data.map(status => (status.name))
+    priorities.value = prioritiesResp.data.data.map(priority => (priority.name))
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Could not fetch statuses',

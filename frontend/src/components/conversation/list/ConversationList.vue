@@ -74,6 +74,7 @@ const loadNextPage = () => {
 }
 
 const handleUpdateFilters = (filters) => {
+  console.log("setting ", filters)
   conversationStore.setConversationListFilters(filters)
 }
 

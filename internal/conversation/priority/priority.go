@@ -1,0 +1,56 @@
+// Package priority handles the management of conversation priorities.
+package priority
+
+import (
+	"embed"
+
+	"github.com/abhinavxd/artemis/internal/conversation/priority/models"
+	"github.com/abhinavxd/artemis/internal/dbutil"
+	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/jmoiron/sqlx"
+	"github.com/zerodha/logf"
+)
+
+var (
+	//go:embed queries.sql
+	efs embed.FS
+)
+
+// Manager handles changes to priorities.
+type Manager struct {
+	q  queries
+	lo *logf.Logger
+}
+
+// Opts contains options for initializing the Manager.
+type Opts struct {
+	DB *sqlx.DB
+	Lo *logf.Logger
+}
+
+// queries contains prepared SQL queries.
+type queries struct {
+	GetAll *sqlx.Stmt `query:"get-all"`
+}
+
+// New creates and returns a new instance of the Manager.
+func New(opts Opts) (*Manager, error) {
+	var q queries
+	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
+		return nil, err
+	}
+	return &Manager{
+		q:  q,
+		lo: opts.Lo,
+	}, nil
+}
+
+// GetAll retrieves all priorities.
+func (m *Manager) GetAll() ([]models.Priority, error) {
+	var priorities = make([]models.Priority, 0)
+	if err := m.q.GetAll.Select(&priorities); err != nil {
+		m.lo.Error("error fetching priorities", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching priorities", nil)
+	}
+	return priorities, nil
+}

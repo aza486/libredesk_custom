@@ -1,6 +1,6 @@
 <template>
   <Spinner v-if="isLoading"></Spinner>
-  <div class="page-content w-10/12" :class="{ 'soft-fade': isLoading }">
+  <div class="page-content w-9/12" :class="{ 'soft-fade': isLoading }">
     <div>
       <DashboardGreet></DashboardGreet>
     </div>

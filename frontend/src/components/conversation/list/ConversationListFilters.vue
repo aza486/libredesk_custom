@@ -2,27 +2,26 @@
   <div class="flex justify-between px-2 py-2 border-b w-full">
     <Tabs v-model="conversationStore.conversations.type">
       <TabsList class="w-full flex justify-evenly">
-        <TabsTrigger value="assigned" class="w-full"> Assigned </TabsTrigger>
-        <TabsTrigger value="unassigned" class="w-full"> Unassigned </TabsTrigger>
-        <TabsTrigger value="all" class="w-full"> All </TabsTrigger>
+        <TabsTrigger value="assigned" class="w-full">Assigned</TabsTrigger>
+        <TabsTrigger value="unassigned" class="w-full">Unassigned</TabsTrigger>
+        <TabsTrigger value="all" class="w-full">All</TabsTrigger>
       </TabsList>
     </Tabs>
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <div class="flex items-center mr-2 relative">
-          <span class="absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75 right-0 bottom-5"
-            v-if="conversationStore.conversations.filters.length > 0"></span>
+          <span class="absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75 right-0 bottom-5 z-20"
+            v-if="conversationStore.conversations.filters.length > 0" />
           <ListFilter size="27"
-            class="mx-auto cursor-pointer transition-all transform hover:scale-110 hover:bg-secondary hover:bg-opacity-80 p-1 rounded-md" />
+            class="mx-auto cursor-pointer transition-all transform hover:scale-110 hover:bg-secondary hover:bg-opacity-80 p-1 rounded-md z-10"  />
         </div>
       </PopoverTrigger>
       <PopoverContent class="w-[450px]">
-        <Filter v-model:modelValue="listFilters" :fields="fields" @apply="handleApply" @clear="handleClear" />
+        <Filter v-model:modelValue="localFilters" :fields="fields" @apply="handleApply" @clear="handleClear" />
       </PopoverContent>
     </Popover>
   </div>
 </template>
-
 
 <script setup>
 import { ref, onMounted } from 'vue'
@@ -33,21 +32,32 @@ import { useConversationStore } from '@/stores/conversation'
 import Filter from '@/components/common/Filter.vue'
 import api from '@/api'
 
-onMounted(() => {
-  getStatuses()
-})
-
 const conversationStore = useConversationStore()
 const open = ref(false)
-const listFilters = ref(conversationStore.conversations.filters)
+const localFilters = ref([])
 const statuses = ref([])
-const emit = defineEmits(["updateFilters"])
+const priorities = ref([])
+const emit = defineEmits(['updateFilters'])
 
-const getStatuses = async () => {
-  const resp = await api.getStatuses()
-  statuses.value = resp.data.data.map(status => ({
+onMounted(() => {
+  fetchInitialData()
+  localFilters.value = [...conversationStore.conversations.filters]
+})
+
+const fetchInitialData = async () => {
+  const [statusesResp, prioritiesResp] = await Promise.all([
+    api.getStatuses(),
+    api.getPriorities()
+  ])
+
+  statuses.value = statusesResp.data.data.map(status => ({
     label: status.name,
     value: status.id.toString(),
+  }))
+
+  priorities.value = prioritiesResp.data.data.map(priority => ({
+    label: priority.name,
+    value: priority.id.toString(),
   }))
 }
 
@@ -57,18 +67,14 @@ const fields = ref([
     label: 'Status',
     value: 'status_id',
     type: 'select',
-    options: statuses
+    options: statuses,
   },
   {
     model: 'conversations',
     label: 'Priority',
     value: 'priority_id',
     type: 'select',
-    options: [
-      { label: 'Low', value: "1" },
-      { label: 'Medium', value: "2" },
-      { label: 'High', value: "3" },
-    ]
+    options: priorities,
   },
   {
     model: 'conversations',
@@ -79,12 +85,13 @@ const fields = ref([
 ])
 
 const handleApply = (filters) => {
-  open.value = false
   emit('updateFilters', filters)
+  open.value = false
 }
 
 const handleClear = () => {
-  open.value = false
+  localFilters.value = []
   emit('updateFilters', [])
+  open.value = false
 }
 </script>

@@ -8,13 +8,24 @@ import './assets/styles/main.scss'
 import './utils/strings.js'
 import Root from './Root.vue'
 
+const setFavicon = (url) => {
+  let link = document.createElement("link")
+  link.rel = "icon"
+  document.head.appendChild(link)
+  link.href = url
+}
+
 async function initApp () {
   const settings = (await api.getSettings('general')).data.data
   const emitter = mitt()
   const lang = settings['app.lang'] || 'en'
   const langMessages = await api.getLanguage(lang)
 
-  // Initialize i18n
+  // Set favicon.
+  if (settings['app.favicon_url'])
+    setFavicon(settings['app.favicon_url'])
+
+  // Initialize i18n.
   const i18nConfig = {
     legacy: false,
     locale: lang,

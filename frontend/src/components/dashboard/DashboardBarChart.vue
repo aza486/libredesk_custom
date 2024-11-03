@@ -1,11 +1,6 @@
 <template>
-  <BarChart
-    :data="data"
-    index="status"
-    :categories="['Low', 'Medium', 'High']"
-    :show-grid-line="true"
-    :margin="{ top: 0, bottom: 0, left: 0, right: 0 }"
-  />
+  <BarChart :data="data" index="status" :categories="priorities" :show-grid-line="true"
+    :margin="{ top: 0, bottom: 0, left: 0, right: 0 }" />
 </template>
 
 <script setup>
@@ -18,4 +13,5 @@ defineProps({
     default: () => []
   }
 })
+const priorities = ["Low", "Medium", "High"]
 </script>

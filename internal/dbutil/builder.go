@@ -78,7 +78,7 @@ func PaginateAndFilterQuery(baseQuery string, existingArgs []interface{}, opts P
 	return query, args, nil
 }
 
-// applyFilters applies passed filters to the based query
+// applyFilters applies passed filters to the based query.
 func applyFilters(baseQuery string, existingArgs []interface{}, filters []Filter, allowedFields AllowedFields) (string, []interface{}, error) {
 	var conditions []string
 	args := make([]interface{}, len(existingArgs))
@@ -93,22 +93,31 @@ func applyFilters(baseQuery string, existingArgs []interface{}, filters []Filter
 		"<=": "<=",
 	}
 
+	// Build the conditions
 	for _, filter := range filters {
 		modelFields, ok := allowedFields[filter.Model]
 		if !ok {
 			return "", nil, fmt.Errorf("invalid model in filter: %s", filter.Model)
 		}
-
 		if !slices.Contains(modelFields, filter.Field) {
 			return "", nil, fmt.Errorf("invalid field in filter: %s for model: %s", filter.Field, filter.Model)
 		}
-
 		op, ok := operatorMap[filter.Operator]
 		if !ok {
 			return "", nil, fmt.Errorf("invalid operator: %s", filter.Operator)
 		}
 
-		condition := fmt.Sprintf("%s.%s %s $%d", filter.Model, filter.Field, op, len(args)+1)
+		var condition string
+		if op == "!=" {
+			// For != operator, include NULL values using OR IS NULL
+			condition = fmt.Sprintf("(%s.%s %s $%d OR %s.%s IS NULL)",
+				filter.Model, filter.Field, op, len(args)+1,
+				filter.Model, filter.Field)
+		} else {
+			condition = fmt.Sprintf("%s.%s %s $%d",
+				filter.Model, filter.Field, op, len(args)+1)
+		}
+
 		conditions = append(conditions, condition)
 		args = append(args, filter.Value)
 	}
