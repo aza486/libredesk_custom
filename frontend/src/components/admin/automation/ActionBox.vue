@@ -5,10 +5,8 @@
         <div v-if="index > 0">
           <hr class="border-t-2 border-dotted border-gray-300" />
         </div>
-        <div class="flex space-x-5 justify-between">
-          <div class="flex space-x-5">
-
-            <!-- Field -->
+        <div class="space-y-3">
+          <div class="flex space-x-5 justify-between">
             <Select v-model="action.type" @update:modelValue="(value) => handleFieldChange(value, index)">
               <SelectTrigger class="w-56">
                 <SelectValue placeholder="Select action" />
@@ -23,24 +21,29 @@
               </SelectContent>
             </Select>
 
-            <!-- Value -->
-            <Select v-model="action.value" @update:modelValue="(value) => handleValueChange(value, index)">
-              <SelectTrigger class="w-56">
-                <SelectValue placeholder="Select value" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem v-for="(act, index) in getDropdownValues(action.type).value" :key="index"
-                    :value="act.value.toString()">
-                    {{ act.name }}
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <div v-if="action.type && conversationActions[action.type].inputType === 'select'" class="flex-1">
+              <Select v-model="action.value" @update:modelValue="(value) => handleValueChange(value, index)">
+                <SelectTrigger class="w-56">
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem v-for="(act, index) in getDropdownValues(action.type).value" :key="index"
+                      :value="act.value.toString()">
+                      {{ act.name }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
 
+            <div class="cursor-pointer" @click.prevent="removeAction(index)">
+              <CircleX size="21" />
+            </div>
           </div>
-          <div class="cursor-pointer" @click.prevent="removeAction(index)">
-            <CircleX size="21" />
+          <div v-if="action.type && conversationActions[action.type].inputType === 'richtext'" class="pl-0">
+            <QuillEditor theme="snow" v-model:content="action.value" contentType="html"
+              @update:content="(value) => handleValueChange(value, index)" class="h-32 mb-12" />
           </div>
         </div>
       </div>
@@ -64,6 +67,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { QuillEditor } from '@vueup/vue-quill'
+import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
@@ -153,16 +158,28 @@ const emitUpdate = (index) => {
 
 const conversationActions = {
   assign_team: {
-    label: 'Assign to team'
+    label: 'Assign to team',
+    inputType: 'select',
   },
   assign_user: {
-    label: 'Assign to user'
+    label: 'Assign to user',
+    inputType: 'select',
   },
   set_status: {
-    label: 'Set status'
+    label: 'Set status',
+    inputType: 'select',
   },
   set_priority: {
-    label: 'Set priority'
+    label: 'Set priority',
+    inputType: 'select',
+  },
+  send_private_note: {
+    label: 'Send private note',
+    inputType: 'richtext',
+  },
+  reply: {
+    label: 'Send reply',
+    inputType: 'richtext',
   }
 }
 

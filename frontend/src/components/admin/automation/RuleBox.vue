@@ -60,6 +60,10 @@
             <Input type="text" placeholder="Set value" v-if="inputType(index) === 'text'" v-model="rule.value"
               @update:modelValue="(value) => handleValueChange(value, index)" />
 
+            <!-- Number input -->
+            <Input type="number" placeholder="Set value" v-if="inputType(index) === 'number'" v-model="rule.value"
+              @update:modelValue="(value) => handleValueChange(value, index)" />
+
             <!-- Dropdown -->
             <Select v-model="rule.value" @update:modelValue="(value) => handleValueChange(value, index)"
               v-if="inputType(index) === 'select'">
@@ -76,7 +80,8 @@
             </Select>
 
             <!-- Tag -->
-            <TagsInput :defaultValue="fieldValueAsArray(rule.value)" v-if="inputType(index) === 'tag'" @update:modelValue="(value) => handleValueChange(value, index)">
+            <TagsInput :defaultValue="fieldValueAsArray(rule.value)" v-if="inputType(index) === 'tag'"
+              @update:modelValue="(value) => handleValueChange(value, index)">
               <TagsInputItem v-for="item in fieldValueAsArray(rule.value)" :key="item" :value="item">
                 <TagsInputItemText />
                 <TagsInputItemDelete />
@@ -135,10 +140,53 @@ const props = defineProps({
 
 const emitter = useEmitter()
 const statuses = ref([])
-const priorities = ref([
-  "Low", "Medium", "High"
-])
+const priorities = ref(["Low", "Medium", "High"])
 const { ruleGroup } = toRefs(props)
+
+const conversationFields = {
+  content: {
+    label: 'Content',
+    type: 'text',
+    operators: ["contains", "not contains", "equals", "not equals", "set", "not set"],
+  },
+  subject: {
+    label: 'Subject',
+    type: 'text',
+    operators: ["contains", "not contains", "equals", "not equals", "set", "not set"],
+  },
+  status: {
+    label: 'Status',
+    type: 'select',
+    operators: ["equals", "not equals", "set", "not set"],
+    options: statuses,
+  },
+  priority: {
+    label: 'Priority',
+    type: 'select',
+    operators: ["equals", "not equals", "set", "not set"],
+    options: priorities,
+  },
+  assigned_team: {
+    label: 'Assigned team',
+    type: 'text',
+    operators: ["set", "not set"],
+  },
+  assigned_user: {
+    label: 'Assigned user',
+    type: 'text',
+    operators: ["set", "not set"],
+  },
+  hours_since_created: {
+    label: 'Hours since created',
+    type: 'number',
+    operators: ["greater than"],
+  },
+  hours_since_resolved: {
+    label: 'Hours since resolved',
+    type: 'number',
+    operators: ["greater than"],
+  },
+}
 
 onMounted(async () => {
   try {
@@ -161,7 +209,6 @@ const handleGroupOperator = (value) => {
 }
 
 const handleFieldChange = (value, ruleIndex) => {
-  // Clear operator and value on field change
   ruleGroup.value.rules[ruleIndex].operator = ''
   ruleGroup.value.rules[ruleIndex].value = ''
   ruleGroup.value.rules[ruleIndex].field = value
@@ -179,9 +226,7 @@ const handleOperatorChange = (value, ruleIndex) => {
 }
 
 const handleValueChange = (value, ruleIndex) => {
-  console.log("value ", value)
   const operator = ruleGroup.value.rules[ruleIndex].operator
-  // For 'contains' and 'not contains', join array into a single string
   if (["contains", "not contains"].includes(operator)) {
     ruleGroup.value.rules[ruleIndex].value = Array.isArray(value) ? value.join(',') : value
   } else {
@@ -211,49 +256,26 @@ const emitUpdate = () => {
   emit('update-group', ruleGroup, props.groupIndex)
 }
 
-const conversationFields = {
-  content: { label: 'Content' },
-  subject: { label: 'Subject' },
-  status: { label: 'Status' },
-  priority: { label: 'Priority' },
-  assigned_team: { label: 'Assigned team' },
-  assigned_user: { label: 'Assigned user' }
-}
-
-const fieldOperators = {
-  content: ["contains", "not contains", "equals", "not equals", "set", "not set"],
-  subject: ["contains", "not contains", "equals", "not equals", "set", "not set"],
-  status: ["equals", "not equals", "set", "not set"],
-  priority: ["equals", "not equals", "set", "not set"],
-  assigned_team: ["set", "not set"],
-  assigned_user: ["set", "not set"]
-}
-
-const fieldOptions = {
-  status: statuses,
-  priority: priorities,
-}
-
 const getFieldOperators = (field) => {
-  return fieldOperators[field] || []
+  return conversationFields[field]?.operators || []
 }
 
 const getFieldOptions = (field) => {
-  return fieldOptions[field]?.value || []
+  return conversationFields[field]?.options?.value || []
 }
 
 const inputType = (index) => {
   const field = ruleGroup.value.rules[index]?.field
   const operator = ruleGroup.value.rules[index]?.operator
+
   if (["contains", "not contains"].includes(operator)) {
     return "tag"
   }
-  if (["status", "priority"].includes(field)) {
-    return "select"
+
+  if (field) {
+    return conversationFields[field].type
   }
-  if (["equals", "not equals"].includes(operator)) {
-    return "text"
-  }
+
   return ""
 }
 

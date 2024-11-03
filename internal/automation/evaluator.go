@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/stringutil"
+	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 )
 
 // evalConversationRules evaluates a list of rules against a given conversation.
@@ -31,8 +32,7 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 		}
 
 		if evaluateFinalResult(results, rule.GroupOperator) {
-			e.lo.Debug("rule evaluation successfull executing actions", "conversation_uuid", conversation.UUID)
-			// All group rule evaluations successful, execute the actions.
+			e.lo.Debug("rule evaluation successful executing actions", "conversation_uuid", conversation.UUID)
 			for _, action := range rule.Actions {
 				e.applyAction(action, conversation)
 			}
@@ -100,21 +100,27 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 
 	// Extract the value from the conversation based on the rule's field
 	switch rule.Field {
-	case models.ConversationFieldSubject:
+	case models.ConversationSubject:
 		valueToCompare = conversation.Subject
-	case models.ConversationFieldContent:
+	case models.ConversationContent:
 		valueToCompare = conversation.LastMessage
-	case models.ConversationFieldStatus:
+	case models.ConversationStatus:
 		valueToCompare = conversation.Status.String
-	case models.ConversationFieldPriority:
+	case models.ConversationPriority:
 		valueToCompare = conversation.Priority.String
-	case models.ConversationFieldAssignedTeam:
+	case models.ConversationAssignedTeam:
 		if conversation.AssignedTeamID.Valid {
 			valueToCompare = strconv.Itoa(conversation.AssignedTeamID.Int)
 		}
-	case models.ConversationFieldAssignedUser:
+	case models.ConversationAssignedUser:
 		if conversation.AssignedUserID.Valid {
 			valueToCompare = strconv.Itoa(conversation.AssignedUserID.Int)
+		}
+	case models.ConversationHoursSinceCreated:
+		valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.CreatedAt).Hours()))
+	case models.ConversationHoursSinceResolved:
+		if conversation.ResolvedAt.Valid {
+			valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.ResolvedAt.Time).Hours()))
 		}
 	default:
 		e.lo.Error("unrecognized rule field", "field", rule.Field)
@@ -128,7 +134,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	}
 
 	// Split and trim values for Contains/NotContains operations
-	if rule.Operator == models.RuleContains || rule.Operator == models.RuleNotContains {
+	if rule.Operator == models.RuleOperatorContains || rule.Operator == models.RuleOperatorNotContains {
 		ruleValues = strings.Split(rule.Value, ",")
 		for i := range ruleValues {
 			ruleValues[i] = strings.TrimSpace(ruleValues[i])
@@ -144,18 +150,17 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 
 	// Compare with set operator
 	switch rule.Operator {
-	case models.RuleEquals:
+	case models.RuleOperatorEquals:
 		conditionMet = valueToCompare == rule.Value
-	case models.RuleNotEqual:
+	case models.RuleOperatorNotEqual:
 		conditionMet = valueToCompare != rule.Value
-	case models.RuleContains:
+	case models.RuleOperatorContains:
 		// Split the value to compare into words
-		words := stringutil.TokenizeString(valueToCompare)
+		words := strings.Fields(valueToCompare)
 		wordMap := make(map[string]struct{}, len(words))
 		for _, word := range words {
 			wordMap[word] = struct{}{}
 		}
-
 		// Check if any of the rule values exist as complete words
 		for _, val := range ruleValues {
 			if _, exists := wordMap[val]; exists {
@@ -163,9 +168,9 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 				break
 			}
 		}
-	case models.RuleNotContains:
+	case models.RuleOperatorNotContains:
 		// Split the value to compare into words
-		words := stringutil.TokenizeString(valueToCompare)
+		words := strings.Fields(valueToCompare)
 		wordMap := make(map[string]struct{}, len(words))
 		for _, word := range words {
 			wordMap[word] = struct{}{}
@@ -179,16 +184,20 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 				break
 			}
 		}
-	case models.RuleSet:
+	case models.RuleOperatorSet:
 		conditionMet = len(valueToCompare) > 0
-	case models.RuleNotSet:
+	case models.RuleOperatorNotSet:
 		conditionMet = len(valueToCompare) == 0
+	case models.RuleOperatorGreaterThan:
+		value1, _ := strconv.Atoi(valueToCompare)
+		value2, _ := strconv.Atoi(rule.Value)
+		conditionMet = value1 > value2
 	default:
 		e.lo.Error("unrecognized rule logical operator", "operator", rule.Operator)
 		return false
 	}
 
-	e.lo.Debug("rule conditions met status", "met", conditionMet,
+	e.lo.Debug("rule conditions status", "met", conditionMet,
 		"conversation_uuid", conversation.UUID)
 	return conditionMet
 }
@@ -224,6 +233,16 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 	case models.ActionSetStatus:
 		e.lo.Debug("executing set status action", "value", action.Action, "conversation_uuid", conversation.UUID)
 		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
+			return err
+		}
+	case models.ActionSendPrivateNote:
+		e.lo.Debug("executing send private note action", "value", action.Action, "conversation_uuid", conversation.UUID)
+		if err := e.conversationStore.SendPrivateNote([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action); err != nil {
+			return err
+		}
+	case models.ActionReply:
+		e.lo.Debug("executing reply action", "value", action.Action, "conversation_uuid", conversation.UUID)
+		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action); err != nil {
 			return err
 		}
 	default:

@@ -6,31 +6,36 @@ import (
 )
 
 const (
-	ActionAssignTeam  = "assign_team"
-	ActionAssignUser  = "assign_user"
-	ActionSetStatus   = "set_status"
-	ActionSetPriority = "set_priority"
+	ActionAssignTeam      = "assign_team"
+	ActionAssignUser      = "assign_user"
+	ActionSetStatus       = "set_status"
+	ActionSetPriority     = "set_priority"
+	ActionSendPrivateNote = "send_private_note"
+	ActionReply           = "reply"
 
 	OperatorAnd = "AND"
 	OperatorOR  = "OR"
 
-	RuleContains    = "contains"
-	RuleNotContains = "not contains"
-	RuleEquals      = "equals"
-	RuleNotEqual    = "not equals"
-	RuleSet         = "set"
-	RuleNotSet      = "not set"
+	RuleOperatorContains    = "contains"
+	RuleOperatorNotContains = "not contains"
+	RuleOperatorEquals      = "equals"
+	RuleOperatorNotEqual    = "not equals"
+	RuleOperatorSet         = "set"
+	RuleOperatorNotSet      = "not set"
+	RuleOperatorGreaterThan = "greater than"
 
 	RuleTypeNewConversation    = "new_conversation"
 	RuleTypeConversationUpdate = "conversation_update"
 	RuleTypeTimeTrigger        = "time_trigger"
 
-	ConversationFieldSubject      = "subject"
-	ConversationFieldContent      = "content"
-	ConversationFieldStatus       = "status"
-	ConversationFieldPriority     = "priority"
-	ConversationFieldAssignedUser = "assigned_user"
-	ConversationFieldAssignedTeam = "assigned_team"
+	ConversationSubject            = "subject"
+	ConversationContent            = "content"
+	ConversationStatus             = "status"
+	ConversationPriority           = "priority"
+	ConversationAssignedUser       = "assigned_user"
+	ConversationAssignedTeam       = "assigned_team"
+	ConversationHoursSinceCreated  = "hours_since_created"
+	ConversationHoursSinceResolved = "hours_since_resolved"
 )
 
 // RuleRecord represents a rule record in the database

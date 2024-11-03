@@ -6,7 +6,7 @@
     </div>
 
     <!-- Empty list -->
-    <EmptyList class="px-4" v-if="!hasConversations && !hasErrored" title="No conversations found"
+    <EmptyList class="px-4" v-if="!hasConversations && !hasErrored && !isLoading" title="No conversations found"
       message="Try adjusting filters." :icon="MessageCircleQuestion"></EmptyList>
 
 
@@ -23,7 +23,7 @@
       </div>
 
       <!-- List skeleton -->
-      <div v-if="conversationsLoading">
+      <div v-if="isLoading">
         <ConversationListItemSkeleton v-for="index in 10" :key="index" />
       </div>
 
@@ -31,7 +31,7 @@
       <div class="flex justify-center items-center p-5 relative" v-if="!hasErrored">
         <div v-if="conversationStore.conversations.hasMore">
           <Button variant="link" @click="loadNextPage">
-            <p v-if="!conversationStore.conversations.loading">Load more</p>
+            <p v-if="!isLoading">Load more</p>
           </Button>
         </div>
         <div v-else-if="!conversationStore.conversations.hasMore && hasConversations">
@@ -85,7 +85,7 @@ const hasErrored = computed(() => {
   return conversationStore.conversations.errorMessage ? true : false
 })
 
-const conversationsLoading = computed(() => {
+const isLoading = computed(() => {
   return conversationStore.conversations.loading
 })
 </script>

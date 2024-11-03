@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/k3a/html2text"
 )
@@ -83,19 +82,4 @@ func GetPathFromURL(rawURL string) (string, error) {
 		return "", err
 	}
 	return parsedURL.Path, nil
-}
-
-// TokenizeString splits a string into tokens/words, removing punctuation
-func TokenizeString(s string) []string {
-	// Remove common punctuation and split by whitespace
-	s = strings.Map(func(r rune) rune {
-		if unicode.IsPunct(r) {
-			return ' '
-		}
-		return r
-	}, s)
-
-	// Split by whitespace and filter out empty strings
-	words := strings.Fields(s)
-	return words
 }

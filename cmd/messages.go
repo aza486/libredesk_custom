@@ -3,8 +3,6 @@ package main
 import (
 	"strconv"
 
-	"github.com/abhinavxd/artemis/internal/conversation"
-	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	medModels "github.com/abhinavxd/artemis/internal/media/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
@@ -18,6 +16,7 @@ type messageReq struct {
 	Private     bool   `json:"private"`
 }
 
+// handleGetMessages returns messages for a conversation.
 func handleGetMessages(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
@@ -54,6 +53,7 @@ func handleGetMessages(r *fastglue.Request) error {
 	})
 }
 
+// handleGetMessage fetches a single from DB using the uuid.
 func handleGetMessage(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -80,6 +80,7 @@ func handleGetMessage(r *fastglue.Request) error {
 	return r.SendEnvelope(messages)
 }
 
+// handleRetryMessage changes message status so it can be retried for sending.
 func handleRetryMessage(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -101,12 +102,14 @@ func handleRetryMessage(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleSendMessage sends a message in a conversation.
 func handleSendMessage(r *fastglue.Request) error {
 	var (
-		app   = r.Context.(*App)
-		user  = r.RequestCtx.UserValue("user").(umodels.User)
-		cuuid = r.RequestCtx.UserValue("cuuid").(string)
-		req   = messageReq{}
+		app    = r.Context.(*App)
+		user   = r.RequestCtx.UserValue("user").(umodels.User)
+		cuuid  = r.RequestCtx.UserValue("cuuid").(string)
+		req    = messageReq{}
+		medias = []medModels.Media{}
 	)
 
 	// Check permission
@@ -120,30 +123,27 @@ func handleSendMessage(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
 	}
 
-	var medias = []medModels.Media{}
 	for _, id := range req.Attachments {
 		media, err := app.media.Get(id)
 		if err != nil {
 			app.lo.Error("error fetching media", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending message.", nil, "")
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching media", nil, "")
 		}
 		medias = append(medias, media)
 	}
 
-	message := cmodels.Message{
-		ConversationUUID: cuuid,
-		SenderID:         user.ID,
-		Type:             conversation.MessageOutgoing,
-		SenderType:       conversation.SenderTypeUser,
-		Status:           conversation.MessageStatusPending,
-		Content:          req.Message,
-		ContentType:      conversation.ContentTypeHTML,
-		Private:          req.Private,
-		Media:            medias,
+	// Private note.
+	if req.Private {
+		if err := app.conversation.SendPrivateNote(medias, user.ID, cuuid, req.Message); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		return r.SendEnvelope(true)
 	}
 
-	if err := app.conversation.InsertMessage(&message); err != nil {
+	// Reply.
+	if err := app.conversation.SendReply(medias, user.ID, cuuid, req.Message); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
 	return r.SendEnvelope(true)
 }

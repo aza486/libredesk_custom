@@ -14,6 +14,7 @@ import (
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
+	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
@@ -68,6 +69,8 @@ type ConversationStore interface {
 	UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error
 	UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error
 	UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error
+	SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error
+	SendReply(media []mmodels.Media, senderID int, conversationUUID, content string) error
 }
 
 type queries struct {

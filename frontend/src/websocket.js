@@ -89,13 +89,15 @@ export function initWS () {
 }
 
 function waitForWebSocketOpen (callback) {
-  if (socket.readyState === WebSocket.OPEN) {
-    callback()
-  } else {
-    socket.addEventListener('open', function handler () {
-      socket.removeEventListener('open', handler)
+  if (socket) {
+    if (socket.readyState === WebSocket.OPEN) {
       callback()
-    })
+    } else {
+      socket.addEventListener('open', function handler () {
+        socket.removeEventListener('open', handler)
+        callback()
+      })
+    }
   }
 }
 

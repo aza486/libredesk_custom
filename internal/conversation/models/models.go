@@ -28,7 +28,7 @@ type Conversation struct {
 	UUID               string          `db:"uuid" json:"uuid"`
 	ClosedAt           null.Time       `db:"closed_at" json:"closed_at,omitempty"`
 	ResolvedAt         null.Time       `db:"resolved_at" json:"resolved_at,omitempty"`
-	ReferenceNumber    null.String     `db:"reference_number" json:"reference_number,omitempty"`
+	ReferenceNumber    string          `db:"reference_number" json:"reference_number,omitempty"`
 	Priority           null.String     `db:"priority" json:"priority"`
 	Status             null.String     `db:"status" json:"status"`
 	FirstReplyAt       null.Time       `db:"first_reply_at" json:"first_reply_at"`

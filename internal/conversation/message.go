@@ -271,7 +271,41 @@ func (m *Manager) MarkMessageAsPending(uuid string) error {
 	return nil
 }
 
-// InsertMessage inserts a message and attaches the attachments to the message.
+// SendPrivateNote inserts a private message in a conversation.
+func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error {
+	// Insert Message.
+	message := models.Message{
+		ConversationUUID: conversationUUID,
+		SenderID:         senderID,
+		Type:             MessageOutgoing,
+		SenderType:       SenderTypeUser,
+		Status:           MessageStatusSent,
+		Content:          content,
+		ContentType:      ContentTypeHTML,
+		Private:          true,
+		Media:            media,
+	}
+	return m.InsertMessage(&message)
+}
+
+// SendReply inserts a reply message in a conversation.
+func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string) error {
+	// Insert Message.
+	message := models.Message{
+		ConversationUUID: conversationUUID,
+		SenderID:         senderID,
+		Type:             MessageOutgoing,
+		SenderType:       SenderTypeUser,
+		Status:           MessageStatusPending,
+		Content:          content,
+		ContentType:      ContentTypeHTML,
+		Private:          false,
+		Media:            media,
+	}
+	return m.InsertMessage(&message)
+}
+
+// InsertMessage inserts a message and attaches the media to the message.
 func (m *Manager) InsertMessage(message *models.Message) error {
 	// Private message is always sent.
 	if message.Private {

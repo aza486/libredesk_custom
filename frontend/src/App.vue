@@ -74,11 +74,11 @@ const bottomLinks = [
 ]
 const userStore = useUserStore()
 const router = useRouter()
+initWS()
 
 onMounted(() => {
   initToaster()
   getCurrentUser()
-  initWS()
 })
 
 onUnmounted(() => {
