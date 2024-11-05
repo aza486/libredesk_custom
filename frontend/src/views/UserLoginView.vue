@@ -123,16 +123,8 @@ const loginAction = () => {
       email: loginForm.value.email,
       password: loginForm.value.password
     })
-    .then((resp) => {
-      const userData = resp.data.data
-      if (userData) {
-        userStore.$patch({
-          userAvatar: userData.avatar_url,
-          userFirstName: userData.first_name,
-          userLastName: userData.last_name
-        })
+    .then(() => {
         router.push({ name: 'dashboard' })
-      }
     })
     .catch((error) => {
       errorMessage.value = handleHTTPError(error).message

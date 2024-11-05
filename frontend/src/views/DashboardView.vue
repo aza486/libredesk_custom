@@ -1,18 +1,18 @@
 <template>
-  <Spinner v-if="isLoading"></Spinner>
-  <div class="page-content w-9/12" :class="{ 'soft-fade': isLoading }">
-    <div>
-      <DashboardGreet></DashboardGreet>
-    </div>
+  <div class="page-content">
+    <Spinner v-if="isLoading"></Spinner>
+    <DashboardGreet></DashboardGreet>
     <div class="mt-7" v-auto-animate>
       <Card :counts="cardCounts" :labels="agentCountCardsLabels" />
     </div>
-    <div class="flex my-7 justify-between items-center space-x-5">
-      <div class="dashboard-card p-5">
-        <LineChart :data="chartData.new_conversations"></LineChart>
-      </div>
-      <div class="dashboard-card p-5">
-        <BarChart :data="chartData.status_summary"></BarChart>
+    <div class="w-11/12" :class="{ 'soft-fade': isLoading }">
+      <div class="flex my-7 justify-between items-center space-x-5">
+        <div class="dashboard-card p-5">
+          <LineChart :data="chartData.new_conversations"></LineChart>
+        </div>
+        <div class="dashboard-card p-5">
+          <BarChart :data="chartData.status_summary"></BarChart>
+        </div>
       </div>
     </div>
   </div>

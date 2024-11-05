@@ -45,7 +45,7 @@ export const smtpConfigSchema = z.object({
         .enum(['plain', 'login', 'cram', 'none'])
         .describe('Authentication protocol')
         .default('plain'),
-    email_address: z.string().describe('Email address').email(),
+    email_address: z.string().describe('Email address'),
     max_msg_retries: z
         .number({
             invalid_type_error: 'Must be a number.'

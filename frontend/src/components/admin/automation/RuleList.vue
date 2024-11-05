@@ -1,13 +1,13 @@
 <template>
-  <div class="flex flex-col box px-5 py-6 rounded-lg justify-center">
-    <div class="flex justify-between space-y-3">
+  <div class="flex flex-col box px-5 rounded-lg justify-center py-3">
+    <div class="flex justify-between space-y-1">
       <div>
         <span class="sub-title space-x-3 flex justify-center items-center">
           <div class="text-base">
             {{ rule.name }}
           </div>
           <div class="mb-1">
-            <Badge v-if="!rule.disabled">Enabled</Badge>
+            <Badge v-if="!rule.disabled" class="text-[9px]">Enabled</Badge>
             <Badge v-else variant="secondary">Disabled</Badge>
           </div>
         </span>
@@ -16,7 +16,7 @@
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <button>
-              <EllipsisVertical size="21"></EllipsisVertical>
+              <EllipsisVertical size="18"></EllipsisVertical>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

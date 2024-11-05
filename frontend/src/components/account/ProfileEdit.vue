@@ -7,7 +7,7 @@
       </div>
       <div class="flex space-x-5">
         <Avatar class="size-28">
-          <AvatarImage :src="userStore.userAvatar" alt="Cropped Image" />
+          <AvatarImage :src="userStore.avatar" alt="Cropped Image" />
           <AvatarFallback>{{ userStore.getInitials }}</AvatarFallback>
         </Avatar>
 
@@ -98,7 +98,7 @@ const getResult = async () => {
   if (!cropper) return
   croppedBlob = await cropper.getBlob()
   if (!croppedBlob) return
-  userStore.userAvatar = URL.createObjectURL(croppedBlob)
+  userStore.setAvatar(URL.createObjectURL(croppedBlob))
   showCropper.value = false
 }
 

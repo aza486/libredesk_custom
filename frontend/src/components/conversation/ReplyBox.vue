@@ -8,7 +8,8 @@
           'cursor-pointer rounded p-1 hover:bg-secondary',
           { 'bg-secondary': index === selectedResponseIndex }
         ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
-          <span class="font-semibold">{{ response.title }}</span> - {{ getTextFromHTML(response.content).slice(0, 150) }}...
+          <span class="font-semibold">{{ response.title }}</span> - {{ getTextFromHTML(response.content).slice(0, 150)
+          }}...
         </li>
       </ul>
     </div>
@@ -24,11 +25,12 @@
         </Tabs>
       </div>
 
-      <!-- Editor -->
+      <!-- Main Editor -->
       <Editor @keydown="handleKeydown" @editorText="handleEditorText" :placeholder="editorPlaceholder" :isBold="isBold"
         :clearContent="clearContent" :isItalic="isItalic" @updateBold="updateBold" @updateItalic="updateItalic"
         @contentCleared="handleContentCleared" @contentSet="clearContentToSet" @editorReady="onEditorReady"
-        :messageType="messageType" :contentToSet="contentToSet" :cannedResponses="cannedResponses" />
+        :contentToSet="contentToSet" :cannedResponses="cannedResponses" />
+
 
       <!-- Attachments preview -->
       <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete"></AttachmentsPreview>
@@ -71,7 +73,7 @@ const uploadedFiles = ref([])
 const messageType = ref('reply')
 const selectedResponseIndex = ref(-1)
 const responsesList = ref(null)
-let editorInstance = null
+let editorInstance = ref(null)
 
 onMounted(async () => {
   try {
@@ -138,7 +140,7 @@ const hasText = computed(() => {
 })
 
 const onEditorReady = (editor) => {
-  editorInstance = editor
+  editorInstance.value = editor
 }
 
 const handleFileUpload = (event) => {
@@ -169,7 +171,7 @@ const handleInlineImageUpload = (event) => {
         inline: true,
       })
       .then((resp) => {
-        editorInstance.commands.setImage({
+        editorInstance.value.commands.setImage({
           src: resp.data.data.url,
           alt: resp.data.data.filename,
           title: resp.data.data.uuid,

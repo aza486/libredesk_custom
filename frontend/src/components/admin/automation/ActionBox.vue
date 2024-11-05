@@ -41,7 +41,7 @@
               <CircleX size="21" />
             </div>
           </div>
-          <div v-if="action.type && conversationActions[action.type].inputType === 'richtext'" class="pl-0">
+          <div v-if="action.type && conversationActions[action.type].inputType === 'richtext'" class="pl-0 shadow">
             <QuillEditor theme="snow" v-model:content="action.value" contentType="html"
               @update:content="(value) => handleValueChange(value, index)" class="h-32 mb-12" />
           </div>

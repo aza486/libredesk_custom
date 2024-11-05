@@ -1,10 +1,19 @@
 <script setup>
-import { VisAxis, VisGroupedBar, VisStackedBar, VisXYContainer } from '@unovis/vue'
-import { Axis, GroupedBar, StackedBar } from '@unovis/ts'
-import { computed, ref } from 'vue'
-import { useMounted } from '@vueuse/core'
-import { ChartCrosshair, ChartLegend, defaultColors } from '@/components/ui/chart'
-import { cn } from '@/lib/utils'
+import {
+  ChartCrosshair,
+  ChartLegend,
+  defaultColors,
+} from '@/components/ui/chart';
+import { cn } from '@/lib/utils';
+import { Axis, GroupedBar, StackedBar } from '@unovis/ts';
+import {
+  VisAxis,
+  VisGroupedBar,
+  VisStackedBar,
+  VisXYContainer,
+} from '@unovis/vue';
+import { useMounted } from '@vueuse/core';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   data: { type: Array, required: true },
@@ -12,9 +21,9 @@ const props = defineProps({
   index: { type: null, required: true },
   colors: { type: Array, required: false },
   margin: {
-    type: null,
+    type: Object,
     required: false,
-    default: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
+    default: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   },
   filterOpacity: { type: Number, required: false, default: 0.2 },
   xFormatter: { type: Function, required: false },
@@ -26,43 +35,53 @@ const props = defineProps({
   showGridLine: { type: Boolean, required: false, default: true },
   customTooltip: { type: null, required: false },
   type: { type: String, required: false, default: 'grouped' },
-  roundedCorners: { type: Number, required: false, default: 0 }
-})
-const emits = defineEmits(['legendItemClick'])
+  roundedCorners: { type: Number, required: false, default: 0 },
+});
+const emits = defineEmits(['legendItemClick']);
 
-const index = computed(() => props.index)
+const index = computed(() => props.index);
 const colors = computed(() =>
-  props.colors?.length ? props.colors : defaultColors(props.categories.length)
-)
+  props.colors?.length ? props.colors : defaultColors(props.categories.length),
+);
 const legendItems = ref(
   props.categories.map((category, i) => ({
     name: category,
     color: colors.value[i],
-    inactive: false
-  }))
-)
+    inactive: false,
+  })),
+);
 
-const isMounted = useMounted()
+const isMounted = useMounted();
 
 function handleLegendItemClick(d, i) {
-  emits('legendItemClick', d, i)
+  emits('legendItemClick', d, i);
 }
 
-const VisBarComponent = computed(() => (props.type === 'grouped' ? VisGroupedBar : VisStackedBar))
+const VisBarComponent = computed(() =>
+  props.type === 'grouped' ? VisGroupedBar : VisStackedBar,
+);
 const selectorsBar = computed(() =>
-  props.type === 'grouped' ? GroupedBar.selectors.bar : StackedBar.selectors.bar
-)
+  props.type === 'grouped'
+    ? GroupedBar.selectors.bar
+    : StackedBar.selectors.bar,
+);
 </script>
 
 <template>
-  <div :class="cn('w-full h-[400px] flex flex-col items-end', $attrs.class ?? '')">
+  <div
+    :class="cn('w-full h-[400px] flex flex-col items-end', $attrs.class ?? '')"
+  >
     <ChartLegend
       v-if="showLegend"
       v-model:items="legendItems"
       @legend-item-click="handleLegendItemClick"
     />
 
-    <VisXYContainer :data="data" :style="{ height: isMounted ? '100%' : 'auto' }" :margin="margin">
+    <VisXYContainer
+      :data="data"
+      :style="{ height: isMounted ? '100%' : 'auto' }"
+      :margin="margin"
+    >
       <ChartCrosshair
         v-if="showTooltip"
         :colors="colors"
@@ -80,10 +99,10 @@ const selectorsBar = computed(() =>
         :attributes="{
           [selectorsBar]: {
             opacity: (d, i) => {
-              const pos = i % categories.length
-              return legendItems[pos]?.inactive ? filterOpacity : 1
-            }
-          }
+              const pos = i % categories.length;
+              return legendItems[pos]?.inactive ? filterOpacity : 1;
+            },
+          },
         }"
       />
 
@@ -104,8 +123,8 @@ const selectorsBar = computed(() =>
         :grid-line="showGridLine"
         :attributes="{
           [Axis.selectors.grid]: {
-            class: 'text-muted'
-          }
+            class: 'text-muted',
+          },
         }"
         tick-text-color="hsl(var(--vis-text-color))"
       />

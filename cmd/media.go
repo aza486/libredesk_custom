@@ -63,17 +63,17 @@ func handleMediaUpload(r *fastglue.Request) error {
 	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
 
 	// Check file size
-	if bytesToMegabytes(srcFileSize) > app.constant.MaxFileUploadSizeMB {
-		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", app.constant.MaxFileUploadSizeMB)
+	if bytesToMegabytes(srcFileSize) > app.consts.MaxFileUploadSizeMB {
+		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", app.consts.MaxFileUploadSizeMB)
 		return r.SendErrorEnvelope(
 			http.StatusRequestEntityTooLarge,
-			fmt.Sprintf("File size is too large. Please upload file lesser than %f MB", app.constant.MaxFileUploadSizeMB),
+			fmt.Sprintf("File size is too large. Please upload file lesser than %f MB", app.consts.MaxFileUploadSizeMB),
 			nil,
 			envelope.GeneralError,
 		)
 	}
 
-	if !slices.Contains(app.constant.AllowedUploadFileExtensions, "*") && !slices.Contains(app.constant.AllowedUploadFileExtensions, srcExt) {
+	if !slices.Contains(app.consts.AllowedUploadFileExtensions, "*") && !slices.Contains(app.consts.AllowedUploadFileExtensions, srcExt) {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Unsupported file type", nil, envelope.InputError)
 	}
 
@@ -151,7 +151,7 @@ func handleServeMedia(r *fastglue.Request) error {
 
 	// Check if the user has permission to access the linked model.
 	allowed, err := app.authz.EnforceMediaAccess(user, media.Model.String)
-	if err != nil  {
+	if err != nil {
 		app.lo.Error("error checking media permission", "error", err, "model", media.Model.String, "model_id", media.ModelID)
 		return sendErrorEnvelope(r, err)
 	}
@@ -172,7 +172,7 @@ func handleServeMedia(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
 	}
 
-	switch ko.String("upload.provider") {
+	switch app.consts.UploadProvider {
 	case "fs":
 		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), uuid))
 	case "s3":

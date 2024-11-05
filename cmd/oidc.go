@@ -40,7 +40,7 @@ func handleGetOIDC(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	o.RedirectURI = fmt.Sprintf("%s%s", app.constant.AppBaseURL, fmt.Sprintf(redirectURI, o.ID))
+	o.RedirectURI = fmt.Sprintf("%s%s", app.consts.AppBaseURL, fmt.Sprintf(redirectURI, o.ID))
 
 	return r.SendEnvelope(o)
 }

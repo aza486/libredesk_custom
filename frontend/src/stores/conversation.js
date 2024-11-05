@@ -186,10 +186,11 @@ export const useConversationStore = defineStore('conversation', () => {
     try {
       const response = await api.getConversationMessage(cuuid, uuid)
       if (response?.data?.data) {
-        const message = response.data.data
-        if (!messages.data.some((m) => m.uuid === message.uuid)) {
-          messages.data.push(message)
+        const newMsg = response.data.data
+        if (!messages.data.some((m) => m.uuid === newMsg.uuid)) {
+          messages.data.push(newMsg)
         }
+        return newMsg
       }
     } catch (error) {
       messages.errorMessage = handleHTTPError(error).message
@@ -354,23 +355,16 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   // Adds a new message to conversation.
-  function updateConversationMessageList (message) {
+  async function updateConversationMessageList (message) {
     // Fetch entire message only if the convesation is open and the message is not present in the list.
     if (conversation?.data?.uuid === message.conversation_uuid) {
       if (!messages.data.some((msg) => msg.uuid === message.uuid)) {
         fetchParticipants(message.conversation_uuid)
-        fetchMessage(message.conversation_uuid, message.uuid)
+        const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
         updateAssigneeLastSeen(message.conversation_uuid)
-        if (message.type === 'outgoing') {
-          setTimeout(() => {
-            emitter.emit(EMITTER_EVENTS.NEW_OUTGOING_MESSAGE, { conversation_uuid: message.conversation_uuid })
-          }, 50)
-        }
-        if (message.type === 'incoming') {
-          setTimeout(() => {
-            emitter.emit(EMITTER_EVENTS.NEW_INCOMING_MESSAGE, { conversation_uuid: message.conversation_uuid })
-          }, 50)
-        }
+        setTimeout(() => {
+          emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, { conversation_uuid: message.conversation_uuid, message: fetchedMessage })
+        }, 50)
       }
     }
   }

@@ -1,21 +1,16 @@
 <template>
-  <Toaster />
-  <TooltipProvider :delay-duration="200">
-    <div class="font-inter">
-      <div class="flex">
-        <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks"
-          class="shadow shadow-gray-300 h-screen" />
-        <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-          <ResizableHandle id="resize-handle-1" />
-          <ResizablePanel id="resize-panel-2">
-            <div class="w-full h-screen">
-              <RouterView />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    </div>
-  </TooltipProvider>
+  <div class="flex">
+    <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks"
+      class="shadow shadow-gray-300 h-screen" />
+    <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
+      <ResizableHandle id="resize-handle-1" />
+      <ResizablePanel id="resize-panel-2">
+        <div class="w-full h-screen">
+          <RouterView />
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  </div>
 </template>
 
 <script setup>
@@ -25,10 +20,8 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
 import { useEmitter } from '@/composables/useEmitter'
-import { Toaster } from '@/components/ui/toast'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import NavBar from '@/components/NavBar.vue'
 
@@ -99,7 +92,7 @@ const initToaster = () => {
 
 const navLinks = computed(() =>
   allNavLinks.filter((link) =>
-    !link.permission || (userStore.userPermissions.includes(link.permission) && link.permission)
+    !link.permission || (userStore.permissions.includes(link.permission) && link.permission)
   )
 )
 </script>

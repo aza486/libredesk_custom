@@ -120,9 +120,10 @@
             <FormItem>
                 <FormLabel>From Email Address</FormLabel>
                 <FormControl>
-                    <Input type="text" placeholder="admin@yourcompany.com" v-bind="componentField" />
+                    <Input type="text" placeholder="From email address. e.g. My Support <mysupport@example.com>" v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
+                <FormDescription>From email address. e.g. My Support &lt;mysupport@example.com&gt;</FormDescription>
             </FormItem>
         </FormField>
 
@@ -152,7 +153,8 @@ import {
     FormField,
     FormItem,
     FormLabel,
-    FormMessage
+    FormMessage,
+    FormDescription,
 } from '@/components/ui/form'
 import {
     Select,

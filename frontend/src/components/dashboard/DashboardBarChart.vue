@@ -1,17 +1,26 @@
 <template>
-  <BarChart :data="data" index="status" :categories="priorities" :show-grid-line="true"
-    :margin="{ top: 0, bottom: 0, left: 0, right: 0 }" />
+  <BarChart :data="data" index="status" :categories="priorities" :show-grid-line="true" :show-x-axis="true"
+    :show-y-axis="true" type="grouped" :x-formatter="xFormatter" :y-formatter="yFormatter" />
 </template>
 
 <script setup>
 import { BarChart } from '@/components/ui/chart-bar'
 
-defineProps({
+const props = defineProps({
   data: {
     type: Array,
     required: true,
     default: () => []
   }
 })
+
+const xFormatter = (tick) => {
+  return props.data[tick]?.status ?? ''
+}
+
+const yFormatter = (tick) => {  
+  return Number.isInteger(tick) ? tick : ''
+}
+
 const priorities = ["Low", "Medium", "High"]
 </script>

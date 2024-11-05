@@ -7,7 +7,7 @@
                     <CardHeader class="space-y-1">
                         <CardTitle class="text-2xl text-center">Reset Password</CardTitle>
                         <p class="text-sm text-muted-foreground text-center">
-                            Enter your email address and we'll send you a link to reset your password.
+                            Enter your email to receive a password reset link.
                         </p>
                     </CardHeader>
                     <CardContent class="grid gap-4">

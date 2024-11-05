@@ -49,7 +49,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		Results:    messages,
 		Page:       page,
 		PerPage:    pageSize,
-		TotalPages: total / pageSize,
+		TotalPages: (total + pageSize - 1) / pageSize,
 	})
 }
 

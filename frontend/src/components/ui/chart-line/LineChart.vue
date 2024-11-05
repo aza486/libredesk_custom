@@ -1,11 +1,15 @@
 <script setup>
-import { CurveType } from '@unovis/ts'
-import { VisAxis, VisLine, VisXYContainer } from '@unovis/vue'
-import { Axis, Line } from '@unovis/ts'
-import { computed, ref } from 'vue'
-import { useMounted } from '@vueuse/core'
-import { ChartCrosshair, ChartLegend, defaultColors } from '@/components/ui/chart'
-import { cn } from '@/lib/utils'
+import {
+  ChartCrosshair,
+  ChartLegend,
+  defaultColors,
+} from '@/components/ui/chart';
+import { cn } from '@/lib/utils';
+import { CurveType } from '@unovis/ts';
+import { Axis, Line } from '@unovis/ts';
+import { VisAxis, VisLine, VisXYContainer } from '@unovis/vue';
+import { useMounted } from '@vueuse/core';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   data: { type: Array, required: true },
@@ -13,9 +17,9 @@ const props = defineProps({
   index: { type: null, required: true },
   colors: { type: Array, required: false },
   margin: {
-    type: null,
+    type: Object,
     required: false,
-    default: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
+    default: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   },
   filterOpacity: { type: Number, required: false, default: 0.2 },
   xFormatter: { type: Function, required: false },
@@ -26,33 +30,35 @@ const props = defineProps({
   showLegend: { type: Boolean, required: false, default: true },
   showGridLine: { type: Boolean, required: false, default: true },
   customTooltip: { type: null, required: false },
-  curveType: { type: String, required: false, default: CurveType.MonotoneX }
-})
+  curveType: { type: String, required: false, default: CurveType.MonotoneX },
+});
 
-const emits = defineEmits(['legendItemClick'])
+const emits = defineEmits(['legendItemClick']);
 
-const index = computed(() => props.index)
+const index = computed(() => props.index);
 const colors = computed(() =>
-  props.colors?.length ? props.colors : defaultColors(props.categories.length)
-)
+  props.colors?.length ? props.colors : defaultColors(props.categories.length),
+);
 
 const legendItems = ref(
   props.categories.map((category, i) => ({
     name: category,
     color: colors.value[i],
-    inactive: false
-  }))
-)
+    inactive: false,
+  })),
+);
 
-const isMounted = useMounted()
+const isMounted = useMounted();
 
 function handleLegendItemClick(d, i) {
-  emits('legendItemClick', d, i)
+  emits('legendItemClick', d, i);
 }
 </script>
 
 <template>
-  <div :class="cn('w-full h-[400px] flex flex-col items-end', $attrs.class ?? '')">
+  <div
+    :class="cn('w-full h-[400px] flex flex-col items-end', $attrs.class ?? '')"
+  >
     <ChartLegend
       v-if="showLegend"
       v-model:items="legendItems"
@@ -80,10 +86,11 @@ function handleLegendItemClick(d, i) {
           :color="colors[i]"
           :attributes="{
             [Line.selectors.line]: {
-              opacity: legendItems.find((item) => item.name === category)?.inactive
+              opacity: legendItems.find((item) => item.name === category)
+                ?.inactive
                 ? filterOpacity
-                : 1
-            }
+                : 1,
+            },
           }"
         />
       </template>
@@ -105,8 +112,8 @@ function handleLegendItemClick(d, i) {
         :grid-line="showGridLine"
         :attributes="{
           [Axis.selectors.grid]: {
-            class: 'text-muted'
-          }
+            class: 'text-muted',
+          },
         }"
         tick-text-color="hsl(var(--vis-text-color))"
       />

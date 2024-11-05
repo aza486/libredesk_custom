@@ -58,7 +58,7 @@ const allNavItems = [
 ]
 
 const sidebarNavItems = computed(() =>
-  allNavItems.filter((item) => !item.permission || item.permission && userStore.userPermissions.includes(item.permission))
+  allNavItems.filter((item) => !item.permission || item.permission && userStore.permissions.includes(item.permission))
 )
 </script>
 

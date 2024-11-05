@@ -14,7 +14,6 @@ import Link from '@tiptap/extension-link'
 
 const emit = defineEmits([
   'send',
-  'input',
   'editorText',
   'updateBold',
   'updateItalic',
@@ -25,7 +24,6 @@ const emit = defineEmits([
 
 const props = defineProps({
   placeholder: String,
-  messageType: String,
   isBold: Boolean,
   isItalic: Boolean,
   clearContent: Boolean,
@@ -56,10 +54,6 @@ const editor = ref(
         // No outline for the editor.
         class: 'outline-none'
       },
-      // Emit new input text.
-      handleTextInput: (view, from, to, text) => {
-        emit('input', text)
-      }
     }
   })
 )
@@ -153,6 +147,7 @@ onUnmounted(() => {
     }
   }
 }
+
 br.ProseMirror-trailingBreak {
   display: none;
 }

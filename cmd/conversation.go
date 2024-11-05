@@ -33,7 +33,7 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		Results:    conversations,
 		Total:      total,
 		PerPage:    pageSize,
-		TotalPages: total / pageSize,
+		TotalPages: (total + pageSize - 1) / pageSize,
 		Page:       page,
 	})
 }
@@ -61,7 +61,7 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		Results:    conversations,
 		Total:      total,
 		PerPage:    pageSize,
-		TotalPages: total / pageSize,
+		TotalPages: (total + pageSize - 1) / pageSize,
 		Page:       page,
 	})
 }
@@ -89,7 +89,7 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 		Results:    conversations,
 		Total:      total,
 		PerPage:    pageSize,
-		TotalPages: total / pageSize,
+		TotalPages: (total + pageSize - 1) / pageSize,
 		Page:       page,
 	})
 }

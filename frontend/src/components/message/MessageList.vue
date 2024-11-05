@@ -34,12 +34,14 @@ import ActivityMessageBubble from './ActivityMessageBubble.vue'
 import AgentMessageBubble from './AgentMessageBubble.vue'
 import MessagesSkeleton from './MessagesSkeleton.vue'
 import { useConversationStore } from '@/stores/conversation'
+import { useUserStore } from '@/stores/user'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-vue-next'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 
 const conversationStore = useConversationStore()
+const userStore = useUserStore()
 const threadEl = ref(null)
 const emitter = useEmitter()
 
@@ -55,9 +57,9 @@ const scrollToBottom = () => {
 
 onMounted(() => {
   scrollToBottom()
-  // On new outgoing message to the current conversation, scroll to the bottom.
-  emitter.on(EMITTER_EVENTS.NEW_OUTGOING_MESSAGE, (data) => {
-    if (data.conversation_uuid === conversationStore.current.uuid) {
+  // Scroll to bottom on new message from logged in user
+  emitter.on(EMITTER_EVENTS.NEW_MESSAGE, (data) => {
+    if (data.conversation_uuid === conversationStore.current.uuid && data.message.sender_id === userStore.userID) {
       scrollToBottom()
     }
   })

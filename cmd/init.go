@@ -57,7 +57,7 @@ type constants struct {
 	AppBaseURL                  string
 	LogoURL                     string
 	SiteName                    string
-	Filestore                   string
+	UploadProvider              string
 	AllowedUploadFileExtensions []string
 	MaxFileUploadSizeMB         float64
 }
@@ -107,7 +107,7 @@ func initConstants() constants {
 		AppBaseURL:                  ko.String("app.root_url"),
 		LogoURL:                     ko.String("app.logo_url"),
 		SiteName:                    ko.String("app.site_name"),
-		Filestore:                   ko.MustString("upload.provider"),
+		UploadProvider:              ko.MustString("upload.provider"),
 		AllowedUploadFileExtensions: ko.Strings("app.allowed_file_upload_extensions"),
 		MaxFileUploadSizeMB:         ko.Float64("app.max_file_upload_size"),
 	}
@@ -593,7 +593,6 @@ func initStatus(db *sqlx.DB) *status.Manager {
 	}
 	return manager
 }
-
 
 // initPriority inits conversation priority manager.
 func initPriority(db *sqlx.DB) *priority.Manager {

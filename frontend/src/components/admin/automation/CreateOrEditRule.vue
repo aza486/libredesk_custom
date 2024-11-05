@@ -115,8 +115,10 @@ import {
 } from '@/components/ui/form'
 import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { useRouter } from 'vue-router'
 
 const isLoading = ref(false)
+const router = useRouter()
 const emitter = useEmitter()
 const rule = ref({
   id: 0,
@@ -250,8 +252,12 @@ const handleSave = async (values) => {
     // Delete fields not required.
     delete updatedRule.created_at
     delete updatedRule.updated_at
-    if (props.id > 0) await api.updateAutomationRule(props.id, updatedRule)
-    else await api.createAutomationRule(updatedRule)
+    if (props.id > 0) {
+      await api.updateAutomationRule(props.id, updatedRule)
+    } else {
+      await api.createAutomationRule(updatedRule)
+      router.push('/admin/automations')
+    }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Saved',
       description: "Rule saved successfully"
@@ -304,20 +310,7 @@ onMounted(async () => {
     }
   }
   firstRuleGroup.value = getFirstGroup()
-  // Convert multi tag select values separated by commas to an array
-  firstRuleGroup.value.rules.forEach(rule => {
-    if (!Array.isArray(rule.value))
-      if (["contains", "not contains"].includes(rule.operator)) {
-        rule.value = rule.value ? rule.value.split(',') : []
-      }
-  })
   secondRuleGroup.value = getSecondGroup()
-  secondRuleGroup.value?.rules?.forEach(rule => {
-    if (!Array.isArray(rule.value))
-      if (["contains", "not contains"].includes(rule.operator)) {
-        rule.value = rule.value ? rule.value.split(',') : []
-      }
-  })
   groupOperator.value = getGroupOperator()
 })
 

@@ -12,7 +12,7 @@ import (
 )
 
 func ErrHandler(ctx *fasthttp.RequestCtx, status int, reason error) {
-	fmt.Printf("error status %d - error %d", status, reason)
+	fmt.Printf("error status %d: %s", status, reason)
 }
 
 var upgrader = websocket.FastHTTPUpgrader{

@@ -42,7 +42,7 @@ var (
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
-	constant     constants
+	consts       constants
 	fs           stuffbin.FileSystem
 	auth         *auth_.Auth
 	authz        *authz.Enforcer
@@ -167,7 +167,7 @@ func main() {
 		conversation: conversation,
 		automation:   automation,
 		oidc:         oidc,
-		constant:     constants,
+		consts:       constants,
 		notifier:     notifier,
 		authz:        initAuthz(),
 		status:       initStatus(db),
