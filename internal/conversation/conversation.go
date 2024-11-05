@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
 	"time"
 
@@ -429,7 +428,7 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 		}
 
 		// Broadcast update to all subscribers.
-		c.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", strconv.Itoa(assigneeID))
+		c.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", assigneeID)
 	case models.AssigneeTypeTeam:
 		if _, err := c.q.UpdateConversationAssignedTeam.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
@@ -437,7 +436,7 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 		}
 
 		// Broadcast update to all subscribers.
-		c.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", strconv.Itoa(assigneeID))
+		c.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", assigneeID)
 	default:
 		return errors.New("invalid assignee type")
 	}

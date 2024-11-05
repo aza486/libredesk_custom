@@ -7,6 +7,7 @@ import (
 	wsmodels "github.com/abhinavxd/artemis/internal/ws/models"
 )
 
+// BroadcastNewMessage broadcasts a new message to the conversation subscribers.
 func (m *Manager) BroadcastNewConversationMessage(conversationUUID, content, messageUUID, lastMessageAt, typ string, private bool) {
 	message := wsmodels.Message{
 		Type: wsmodels.MessageTypeNewMessage,
@@ -22,7 +23,8 @@ func (m *Manager) BroadcastNewConversationMessage(conversationUUID, content, mes
 	m.broadcastToConversation(conversationUUID, message)
 }
 
-func (m *Manager) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop, value string) {
+// BroadcastMessagePropUpdate broadcasts a message property update to the conversation subscribers.
+func (m *Manager) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop string, value any) {
 	message := wsmodels.Message{
 		Type: wsmodels.MessageTypeMessagePropUpdate,
 		Data: map[string]interface{}{
@@ -34,6 +36,7 @@ func (m *Manager) BroadcastMessagePropUpdate(conversationUUID, messageUUID, prop
 	m.broadcastToConversation(conversationUUID, message)
 }
 
+// BroadcastNewConversation broadcasts a new conversation to the user.
 func (m *Manager) BroadcastNewConversation(userID int, conversationUUID, avatarURL, firstName, lastName, lastMessage, inboxName string, lastMessageAt time.Time, unreadMessageCount int) {
 	message := wsmodels.Message{
 		Type: wsmodels.MessageTypeNewConversation,
@@ -51,7 +54,8 @@ func (m *Manager) BroadcastNewConversation(userID int, conversationUUID, avatarU
 	m.broadcastToUsers([]int{userID}, message)
 }
 
-func (m *Manager) BroadcastConversationPropertyUpdate(conversationUUID, prop, value string) {
+// BroadcastConversationPropertyUpdate broadcasts a conversation property update to the conversation subscribers.
+func (m *Manager) BroadcastConversationPropertyUpdate(conversationUUID, prop string, value any) {
 	message := wsmodels.Message{
 		Type: wsmodels.MessageTypeConversationPropertyUpdate,
 		Data: map[string]interface{}{
@@ -63,12 +67,14 @@ func (m *Manager) BroadcastConversationPropertyUpdate(conversationUUID, prop, va
 	m.broadcastToConversation(conversationUUID, message)
 }
 
+// broadcastToConversation broadcasts a message to the conversation subscribers.
 func (m *Manager) broadcastToConversation(conversationUUID string, message wsmodels.Message) {
 	userIDs := m.wsHub.GetConversationSubscribers(conversationUUID)
 	m.lo.Debug("broadcasting new message to conversation subscribers", "user_ids", userIDs, "conversation_uuid", conversationUUID, "message", message)
 	m.broadcastToUsers(userIDs, message)
 }
 
+// broadcastToUsers broadcasts a websocket message to the passed user IDs.
 func (m *Manager) broadcastToUsers(userIDs []int, message wsmodels.Message) {
 	messageBytes, err := json.Marshal(message)
 	if err != nil {
