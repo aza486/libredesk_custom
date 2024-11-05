@@ -50,7 +50,7 @@
               </Select>
             </div>
             <div class="cursor-pointer" @click.prevent="removeCondition(index)">
-              <CircleX size="21" />
+              <X size="16" />
             </div>
           </div>
 
@@ -119,7 +119,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
-import { CircleX } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

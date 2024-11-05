@@ -1,5 +1,5 @@
 <template>
-  <div class="box border p-5 space-y-5 rounded">
+  <div class="box border p-5 space-y-5 rounded-lg">
     <div class="space-y-5">
       <div v-for="(action, index) in actions" :key="index" class="space-y-5">
         <div v-if="index > 0">
@@ -38,7 +38,7 @@
             </div>
 
             <div class="cursor-pointer" @click.prevent="removeAction(index)">
-              <CircleX size="21" />
+              <X size="16" />
             </div>
           </div>
           <div v-if="action.type && conversationActions[action.type].inputType === 'richtext'" class="pl-0 shadow">
@@ -57,7 +57,7 @@
 <script setup>
 import { toRefs, ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
-import { CircleX } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 import {
   Select,
   SelectContent,
