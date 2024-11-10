@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 
+	"github.com/abhinavxd/artemis/internal/automation/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	medModels "github.com/abhinavxd/artemis/internal/media/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
@@ -144,6 +145,9 @@ func handleSendMessage(r *fastglue.Request) error {
 	if err := app.conversation.SendReply(medias, user.ID, cuuid, req.Message); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// Evaluate automation rules.
+	app.automation.EvaluateConversationUpdateRules(cuuid, models.EventConversationMessageOutgoing)
 
 	return r.SendEnvelope(true)
 }

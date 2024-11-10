@@ -39,3 +39,12 @@ SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_ty
 FROM media
 WHERE model_type = $1
     AND model_id = $2;
+
+-- name: get-unlinked-message-media
+SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", COALESCE(disposition, '') AS disposition
+FROM media
+WHERE model_type = 'messages'
+    AND model_id IS NULL or model_id = 0 AND created_at < NOW() - INTERVAL '1 day';
+
+-- name: content-id-exists
+SELECT EXISTS(SELECT 1 FROM media WHERE content_id = $1);

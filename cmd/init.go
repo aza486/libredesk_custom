@@ -189,9 +189,8 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 
 // initConversations inits conversation manager.
 func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sqlx.DB, contactStore *contact.Manager,
-	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager,
-	automation *automation.Engine, template *tmpl.Manager) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automation, template, conversation.Opts{
+	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager, automationEngine *automation.Engine, template *tmpl.Manager) *conversation.Manager {
+	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
 		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),
@@ -349,7 +348,7 @@ func initInbox(db *sqlx.DB) *inbox.Manager {
 
 // initAutomationEngine initializes the automation engine.
 func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.Engine {
-	var lo = initLogger("automation-engine")
+	var lo = initLogger("automation_engine")
 
 	systemUser, err := userManager.GetSystemUser()
 	if err != nil {

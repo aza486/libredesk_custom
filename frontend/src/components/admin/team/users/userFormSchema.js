@@ -21,6 +21,10 @@ export const userFormSchema = z.object({
 
   send_welcome_email: z.boolean().optional(),
 
+  teams: z.array(z.string()).optional(),
+
+  roles: z.array(z.string()).min(1, 'Please select at least one role.'),
+
   new_password: z
     .string()
     .regex(/^$|^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,50}$/, {

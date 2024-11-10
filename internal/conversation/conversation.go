@@ -81,6 +81,7 @@ type mediaStore interface {
 	GetBlob(name string) ([]byte, error)
 	Attach(id int, model string, modelID int) error
 	GetByModel(id int, model string) ([]mmodels.Media, error)
+	ContentIDExists(contentID string) (bool, error)
 	UploadAndInsert(fileName, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition string, meta []byte) (mmodels.Media, error)
 }
 
@@ -139,20 +140,16 @@ func New(
 
 type queries struct {
 	// Conversation queries.
-	GetLatestReceivedMessageSourceID *sqlx.Stmt `query:"get-latest-received-message-source-id"`
-	GetToAddress                     *sqlx.Stmt `query:"get-to-address"`
-	GetConversationID                *sqlx.Stmt `query:"get-conversation-id"`
-	GetConversationUUID              *sqlx.Stmt `query:"get-conversation-uuid"`
-	GetConversation                  *sqlx.Stmt `query:"get-conversation"`
-	GetConversationsCreatedAfter     *sqlx.Stmt `query:"get-conversations-created-after"`
-	GetUnassignedConversations       *sqlx.Stmt `query:"get-unassigned-conversations"`
-	GetConversations                 string     `query:"get-conversations"`
-	GetConversationsListUUIDs        string     `query:"get-conversations-list-uuids"`
-	GetConversationParticipants      *sqlx.Stmt `query:"get-conversation-participants"`
-
-	GetDashboardCharts string `query:"get-dashboard-charts"`
-	GetDashboardCounts string `query:"get-dashboard-counts"`
-
+	GetLatestReceivedMessageSourceID   *sqlx.Stmt `query:"get-latest-received-message-source-id"`
+	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
+	GetConversationID                  *sqlx.Stmt `query:"get-conversation-id"`
+	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
+	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
+	GetConversationsCreatedAfter       *sqlx.Stmt `query:"get-conversations-created-after"`
+	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
+	GetConversations                   string     `query:"get-conversations"`
+	GetConversationsListUUIDs          string     `query:"get-conversations-list-uuids"`
+	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
@@ -163,6 +160,10 @@ type queries struct {
 	InsertConverstionParticipant       *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
 	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
+
+	// Dashboard queries.
+	GetDashboardCharts string `query:"get-dashboard-charts"`
+	GetDashboardCounts string `query:"get-dashboard-counts"`
 
 	// Message queries.
 	GetMessage                         *sqlx.Stmt `query:"get-message"`

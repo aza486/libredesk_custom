@@ -151,6 +151,9 @@ func main() {
 	// Start notification service.
 	go notifier.Run(ctx)
 
+	// Delete media not linked to any message.
+	go media.DeleteUnlinkedMessageMedia(ctx)
+
 	// Init the app
 	var app = &App{
 		lo:           lo,

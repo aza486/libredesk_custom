@@ -3,6 +3,8 @@ package models
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const (
@@ -36,6 +38,13 @@ const (
 	ConversationAssignedTeam       = "assigned_team"
 	ConversationHoursSinceCreated  = "hours_since_created"
 	ConversationHoursSinceResolved = "hours_since_resolved"
+
+	EventConversationUserAssigned    = "conversation.user.assigned"
+	EventConversationTeamAssigned    = "conversation.team.assigned"
+	EventConversationStatusChange    = "conversation.status.change"
+	EventConversationPriorityChange  = "conversation.priority.change"
+	EventConversationMessageOutgoing = "conversation.message.outgoing"
+	EventConversationMessageIncoming = "conversation.message.incoming"
 )
 
 // RuleRecord represents a rule record in the database
@@ -46,12 +55,14 @@ type RuleRecord struct {
 	Name        string          `db:"name" json:"name"`
 	Description string          `db:"description" json:"description"`
 	Type        string          `db:"type" json:"type"`
+	Events      pq.StringArray  `db:"events" json:"events"`
 	Disabled    bool            `db:"disabled" json:"disabled"`
 	Rules       json.RawMessage `db:"rules" json:"rules"`
 }
 
 type Rule struct {
 	Type          string       `json:"type" db:"type"`
+	Events        []string     `json:"event" db:"event"`
 	GroupOperator string       `json:"group_operator" db:"group_operator"`
 	Groups        []RuleGroup  `json:"groups" db:"groups"`
 	Actions       []RuleAction `json:"actions" db:"actions"`

@@ -16,7 +16,7 @@
       <div class="space-y-5">
         <div v-for="(rule, index) in ruleGroup.rules" :key="rule" class="space-y-5">
           <div v-if="index > 0">
-            <hr class="border-t-2 border-dotted border-gray-300" />
+            <hr class="border-t-2 border-dotted border-gray-200" />
           </div>
           <div class="flex justify-between">
             <div class="flex space-x-5">

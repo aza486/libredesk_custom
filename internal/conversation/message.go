@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
+	amodels "github.com/abhinavxd/artemis/internal/automation/models"
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/inbox"
@@ -435,8 +436,7 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 // processIncomingMessage handles the insertion of an incoming message and
 // associated contact. It finds or creates the contact, checks for existing
 // conversations, and creates a new conversation if necessary. It also
-// inserts the message, uploads any attachments, and evaluates automation
-// rules for new conversations.
+// inserts the message, uploads any attachments, and evaluates automation rules.
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var err error
 
@@ -475,6 +475,8 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	// Evaluate automation rules for this conversation.
 	if isNewConversation {
 		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
+	} else {
+		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)
 	}
 	return nil
 }
@@ -547,16 +549,46 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 
 // uploadMessageAttachments uploads attachments for a message.
 func (m *Manager) uploadMessageAttachments(message *models.Message) error {
+	if len(message.Attachments) == 0 {
+		return nil
+	}
+
+	var uploadErr error
 	for _, attachment := range message.Attachments {
-		m.lo.Debug("uploading message attachment", "name", attachment.Name)
-		reader := bytes.NewReader(attachment.Content)
-		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
-		_, err := m.mediaStore.UploadAndInsert(attachment.Name, attachment.ContentType, attachment.ContentID, mmodels.ModelMessages, message.ID, reader, attachment.Size, attachment.Disposition, []byte("{}"))
+		// Check if this attachment already exists by content ID.
+		exists, err := m.mediaStore.ContentIDExists(attachment.ContentID)
 		if err != nil {
+			m.lo.Error("error checking media existence", "error", err)
 			continue
 		}
+
+		if exists {
+			m.lo.Debug("attachment already exists", "content_id", attachment.ContentID)
+			continue
+		}
+
+		m.lo.Debug("uploading message attachment", "name", attachment.Name)
+		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
+
+		reader := bytes.NewReader(attachment.Content)
+		_, err = m.mediaStore.UploadAndInsert(
+			attachment.Name,
+			attachment.ContentType,
+			attachment.ContentID,
+			mmodels.ModelMessages,
+			message.ID,
+			reader,
+			attachment.Size,
+			attachment.Disposition,
+			[]byte("{}"),
+		)
+
+		if err != nil {
+			uploadErr = err
+			m.lo.Error("failed to upload attachment", "name", attachment.Name, "error", err)
+		}
 	}
-	return nil
+	return uploadErr
 }
 
 // findOrCreateConversation finds or creates a conversation for the given message.

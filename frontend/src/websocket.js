@@ -1,5 +1,5 @@
 import { useConversationStore } from './stores/conversation';
-import { CONVERSTION_WS_ACTIONS } from './constants/conversation';
+import { CONVERSATION_WS_ACTIONS } from './constants/conversation';
 
 let socket;
 let reconnectInterval = 1000;
@@ -109,7 +109,7 @@ export function sendMessage (message) {
 
 export function subscribeConversationsList (type) {
   const message = {
-    action: CONVERSTION_WS_ACTIONS.SUB_LIST,
+    action: CONVERSATION_WS_ACTIONS.SUB_LIST,
     type: type,
   }
   waitForWebSocketOpen(() => {
@@ -119,7 +119,7 @@ export function subscribeConversationsList (type) {
 
 export function setCurrentConversation (uuid) {
   const message = {
-    action: CONVERSTION_WS_ACTIONS.SET_CURRENT,
+    action: CONVERSATION_WS_ACTIONS.SET_CURRENT,
     uuid: uuid,
   }
   waitForWebSocketOpen(() => {
@@ -129,7 +129,7 @@ export function setCurrentConversation (uuid) {
 
 export function unsetCurrentConversation () {
   const message = {
-    action: CONVERSTION_WS_ACTIONS.UNSET_CURRENT
+    action: CONVERSATION_WS_ACTIONS.UNSET_CURRENT
   }
   waitForWebSocketOpen(() => {
     socket.send(JSON.stringify(message))

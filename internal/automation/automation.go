@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"slices"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/zerodha/logf"
 )
 
@@ -40,21 +42,21 @@ const (
 // ConversationTask represents a unit of work for processing conversations.
 type ConversationTask struct {
 	taskType         TaskType
+	eventType        string
 	conversationUUID string
 }
 
 type Engine struct {
-	rules               []models.Rule
-	rulesMu             sync.RWMutex
-	q                   queries
-	lo                  *logf.Logger
-	conversationStore   ConversationStore
-	systemUser          umodels.User
-	newConversationQ    chan string
-	updateConversationQ chan string
-	closed              bool
-	closedMu            sync.RWMutex
-	wg                  sync.WaitGroup
+	rules             []models.Rule
+	rulesMu           sync.RWMutex
+	q                 queries
+	lo                *logf.Logger
+	conversationStore ConversationStore
+	systemUser        umodels.User
+	taskQueue         chan ConversationTask
+	closed            bool
+	closedMu          sync.RWMutex
+	wg                sync.WaitGroup
 }
 
 type Opts struct {
@@ -88,10 +90,9 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 	var (
 		q queries
 		e = &Engine{
-			systemUser:          systemUser,
-			lo:                  opt.Lo,
-			newConversationQ:    make(chan string, MaxQueueSize),
-			updateConversationQ: make(chan string, MaxQueueSize),
+			systemUser: systemUser,
+			lo:         opt.Lo,
+			taskQueue:  make(chan ConversationTask, MaxQueueSize),
 		}
 	)
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
@@ -117,53 +118,37 @@ func (e *Engine) ReloadRules() {
 
 // Run starts the Engine with a worker pool to evaluate rules based on events.
 func (e *Engine) Run(ctx context.Context, workerCount int) {
-	e.wg.Add(workerCount)
-
-	taskQueue := make(chan ConversationTask, MaxQueueSize)
-
 	// Start the worker pool
 	for i := 0; i < workerCount; i++ {
-		go e.worker(ctx, taskQueue)
+		e.wg.Add(1)
+		go e.worker(ctx)
 	}
 
 	// Ticker for timed triggers.
 	ticker := time.NewTicker(1 * time.Hour)
 	defer func() {
 		ticker.Stop()
-		close(taskQueue)
 	}()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case conversationUUID, ok := <-e.newConversationQ:
-			if !ok {
-				return
-			}
-			e.lo.Info("queuing new conversation to evaluate rules", "uuid", conversationUUID)
-			taskQueue <- ConversationTask{taskType: NewConversation, conversationUUID: conversationUUID}
-		case conversationUUID, ok := <-e.updateConversationQ:
-			if !ok {
-				return
-			}
-			e.lo.Info("queuing conversation to evaluate rules on update", "uuid", conversationUUID)
-			taskQueue <- ConversationTask{taskType: UpdateConversation, conversationUUID: conversationUUID}
 		case <-ticker.C:
 			e.lo.Info("queuing time triggers")
-			taskQueue <- ConversationTask{taskType: TimeTrigger}
+			e.taskQueue <- ConversationTask{taskType: TimeTrigger}
 		}
 	}
 }
 
 // worker processes tasks from the taskQueue until it's closed or context is done.
-func (e *Engine) worker(ctx context.Context, taskQueue <-chan ConversationTask) {
+func (e *Engine) worker(ctx context.Context) {
 	defer e.wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case task, ok := <-taskQueue:
+		case task, ok := <-e.taskQueue:
 			if !ok {
 				return
 			}
@@ -171,7 +156,7 @@ func (e *Engine) worker(ctx context.Context, taskQueue <-chan ConversationTask) 
 			case NewConversation:
 				e.handleNewConversation(task.conversationUUID)
 			case UpdateConversation:
-				e.handleUpdateConversation(task.conversationUUID)
+				e.handleUpdateConversation(task.conversationUUID, task.eventType)
 			case TimeTrigger:
 				e.handleTimeTrigger()
 			}
@@ -187,9 +172,7 @@ func (e *Engine) Close() {
 		return
 	}
 	e.closed = true
-	close(e.newConversationQ)
-	close(e.updateConversationQ)
-
+	close(e.taskQueue)
 	// Wait for all workers.
 	e.wg.Wait()
 }
@@ -230,7 +213,7 @@ func (e *Engine) ToggleRule(id int) error {
 
 // UpdateRule updates an existing rule.
 func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
-	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, rule.Rules); err != nil {
+	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, pq.Array(rule.Events), rule.Rules); err != nil {
 		e.lo.Error("error updating rule", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating automation rule.", nil)
 	}
@@ -241,7 +224,7 @@ func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
 
 // CreateRule creates a new rule.
 func (e *Engine) CreateRule(rule models.RuleRecord) error {
-	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, rule.Rules); err != nil {
+	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, pq.Array(rule.Events), rule.Rules); err != nil {
 		e.lo.Error("error creating rule", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating automation rule.", nil)
 	}
@@ -268,18 +251,18 @@ func (e *Engine) handleNewConversation(conversationUUID string) {
 		e.lo.Error("error fetching conversation for new event", "uuid", conversationUUID, "error", err)
 		return
 	}
-	rules := e.filterRulesByType(string(models.RuleTypeNewConversation))
+	rules := e.filterRulesByType(models.RuleTypeNewConversation, "")
 	e.evalConversationRules(rules, conversation)
 }
 
-// handleUpdateConversation handles update conversation events.
-func (e *Engine) handleUpdateConversation(conversationUUID string) {
+// handleUpdateConversation handles update conversation events with specific eventType.
+func (e *Engine) handleUpdateConversation(conversationUUID, eventType string) {
 	conversation, err := e.conversationStore.GetConversation(conversationUUID)
 	if err != nil {
 		e.lo.Error("error fetching conversation for update event", "uuid", conversationUUID, "error", err)
 		return
 	}
-	rules := e.filterRulesByType(string(models.RuleTypeConversationUpdate))
+	rules := e.filterRulesByType(models.RuleTypeConversationUpdate, eventType)
 	e.evalConversationRules(rules, conversation)
 }
 
@@ -291,7 +274,7 @@ func (e *Engine) handleTimeTrigger() {
 		e.lo.Error("error fetching conversations for time trigger", "error", err)
 		return
 	}
-	rules := e.filterRulesByType(string(models.RuleTypeTimeTrigger))
+	rules := e.filterRulesByType(models.RuleTypeTimeTrigger, "")
 	e.lo.Debug("fetched conversations for evaluating time triggers", "conversations_count", len(conversations), "rules_count", len(rules))
 	for _, conversation := range conversations {
 		e.evalConversationRules(rules, conversation)
@@ -306,7 +289,10 @@ func (e *Engine) EvaluateNewConversationRules(conversationUUID string) {
 		return
 	}
 	select {
-	case e.newConversationQ <- conversationUUID:
+	case e.taskQueue <- ConversationTask{
+		taskType:         NewConversation,
+		conversationUUID: conversationUUID,
+	}:
 	default:
 		// Queue is full.
 		e.lo.Warn("EvaluateNewConversationRules: newConversationQ is full, unable to enqueue conversation")
@@ -314,14 +300,22 @@ func (e *Engine) EvaluateNewConversationRules(conversationUUID string) {
 }
 
 // EvaluateConversationUpdateRules enqueues an updated conversation for rule evaluation.
-func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string) {
+func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string, eventType string) {
+	if eventType == "" {
+		e.lo.Error("error evaluating conversation update rules: eventType is empty")
+		return
+	}
 	e.closedMu.RLock()
 	defer e.closedMu.RUnlock()
 	if e.closed {
 		return
 	}
 	select {
-	case e.updateConversationQ <- conversationUUID:
+	case e.taskQueue <- ConversationTask{
+		taskType:         UpdateConversation,
+		conversationUUID: conversationUUID,
+		eventType:        eventType,
+	}:
 	default:
 		// Queue is full.
 		e.lo.Warn("EvaluateConversationUpdateRules: updateConversationQ is full, unable to enqueue conversation")
@@ -331,10 +325,7 @@ func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string) {
 // queryRules fetches automation rules from the database.
 func (e *Engine) queryRules() []models.Rule {
 	var (
-		rules []struct {
-			Type  string `db:"type"`
-			Rules string `db:"rules"`
-		}
+		rules         []models.RuleRecord
 		filteredRules []models.Rule
 	)
 	err := e.q.GetEnabledRules.Select(&rules)
@@ -349,23 +340,24 @@ func (e *Engine) queryRules() []models.Rule {
 			e.lo.Error("error unmarshalling rule JSON", "error", err)
 			continue
 		}
-		// Set the Type for each rule in rulesBatch
+		// Set the Type and event for each rule in the batch.
 		for i := range rulesBatch {
 			rulesBatch[i].Type = rule.Type
+			rulesBatch[i].Events = rule.Events
 		}
 		filteredRules = append(filteredRules, rulesBatch...)
 	}
 	return filteredRules
 }
 
-// filterRulesByType filters rules by type.
-func (e *Engine) filterRulesByType(ruleType string) []models.Rule {
+// filterRulesByType filters rules by type and event.
+func (e *Engine) filterRulesByType(ruleType, eventType string) []models.Rule {
 	e.rulesMu.RLock()
 	defer e.rulesMu.RUnlock()
 
 	var filteredRules []models.Rule
 	for _, rule := range e.rules {
-		if rule.Type == ruleType {
+		if rule.Type == ruleType && (eventType == "" || slices.Contains(rule.Events, eventType)) {
 			filteredRules = append(filteredRules, rule)
 		}
 	}

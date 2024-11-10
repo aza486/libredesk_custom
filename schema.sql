@@ -11,6 +11,7 @@ CREATE TABLE automation_rules (
 	description TEXT NULL,
 	"type" varchar NOT NULL,
 	rules jsonb NULL,
+	events []TEXT NULL,
 	disabled bool DEFAULT false NOT NULL,
 	CONSTRAINT constraint_automation_rules_on_name CHECK (length("name") <= 100),
 	CONSTRAINT constraint_automation_rules_on_description CHECK (length(description) <= 300)

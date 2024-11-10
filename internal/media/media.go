@@ -2,10 +2,13 @@
 package media
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
+	"fmt"
 	"io"
+	"time"
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -31,16 +34,16 @@ type Store interface {
 
 // Manager manages media files, including their upload and retrieval.
 type Manager struct {
-	store      Store
-	lo         *logf.Logger
-	queries    queries
+	store   Store
+	lo      *logf.Logger
+	queries queries
 }
 
 // Opts provides options for configuring the Manager.
 type Opts struct {
-	Store      Store
-	Lo         *logf.Logger
-	DB         *sqlx.DB
+	Store Store
+	Lo    *logf.Logger
+	DB    *sqlx.DB
 }
 
 // New initializes and returns a new Manager instance for handling media operations.
@@ -50,20 +53,22 @@ func New(opt Opts) (*Manager, error) {
 		return nil, err
 	}
 	return &Manager{
-		store:      opt.Store,
-		lo:         opt.Lo,
-		queries:    q,
+		store:   opt.Store,
+		lo:      opt.Lo,
+		queries: q,
 	}, nil
 }
 
 // queries holds the prepared SQL statements.
 type queries struct {
-	Insert     *sqlx.Stmt `query:"insert-media"`
-	Get        *sqlx.Stmt `query:"get-media"`
-	GetByUUID  *sqlx.Stmt `query:"get-media-by-uuid"`
-	Delete     *sqlx.Stmt `query:"delete-media"`
-	Attach     *sqlx.Stmt `query:"attach-to-model"`
-	GetByModel *sqlx.Stmt `query:"get-model-media"`
+	Insert                  *sqlx.Stmt `query:"insert-media"`
+	Get                     *sqlx.Stmt `query:"get-media"`
+	GetByUUID               *sqlx.Stmt `query:"get-media-by-uuid"`
+	Delete                  *sqlx.Stmt `query:"delete-media"`
+	Attach                  *sqlx.Stmt `query:"attach-to-model"`
+	GetByModel              *sqlx.Stmt `query:"get-model-media"`
+	GetUnlinkedMessageMedia *sqlx.Stmt `query:"get-unlinked-message-media"`
+	ContentIDExists         *sqlx.Stmt `query:"content-id-exists"`
 }
 
 // UploadAndInsert uploads file on storage and inserts an entry in db.
@@ -126,6 +131,16 @@ func (m *Manager) GetByUUID(uuid string) (models.Media, error) {
 	return media, nil
 }
 
+// ContentIDExists returns true if a media file with the given content ID exists.
+func (m *Manager) ContentIDExists(contentID string) (bool, error) {
+	var exists bool
+	if err := m.queries.ContentIDExists.Get(&exists, contentID); err != nil {
+		m.lo.Error("error checking media existence", "error", err)
+		return false, fmt.Errorf("checking media existence: %w", err)
+	}
+	return exists, nil
+}
+
 // GetBlob retrieves the raw binary content of a media file by its name.
 func (m *Manager) GetBlob(name string) ([]byte, error) {
 	return m.store.GetBlob(name)
@@ -165,6 +180,50 @@ func (m *Manager) Delete(name string) error {
 	if _, err := m.queries.Delete.Exec(name); err != nil {
 		m.lo.Error("error deleting media from db", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting media from DB", nil)
+	}
+	return nil
+}
+
+// Delete deletes a media file from both the storage backend and the database.
+func (m *Manager) DeleteByUUID(uuid string) error {
+	if err := m.store.Delete(uuid); err != nil {
+		m.lo.Error("error deleting media from store", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting media from store", nil)
+	}
+	if _, err := m.queries.Delete.Exec(uuid); err != nil {
+		m.lo.Error("error deleting media from db", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting media from DB", nil)
+	}
+	return nil
+}
+
+// DeleteUnlinkedMessageMedia is a blocking function that periodically deletes media files that are not linked to any conversation message.
+func (m *Manager) DeleteUnlinkedMessageMedia(ctx context.Context) {
+	m.deleteUnlinkedMessageMedia()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(24 * time.Hour):
+			m.lo.Info("deleting unlinked message media")
+			if err := m.deleteUnlinkedMessageMedia(); err != nil {
+				m.lo.Error("error deleting unlinked media", "error", err)
+			}
+		}
+	}
+}
+
+// deleteUnlinkedMessageMedia fetches all media files that are not linked to any message and deletes them from the storage backend and the database.
+func (m *Manager) deleteUnlinkedMessageMedia() error {
+	var media []models.Media
+	if err := m.queries.GetUnlinkedMessageMedia.Select(&media); err != nil {
+		m.lo.Error("error fetching unlinked media", "error", err)
+		return err
+	}
+	for _, mm := range media {
+		if err := m.DeleteByUUID(mm.UUID); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -29,22 +29,23 @@
       </FormItem>
     </FormField>
 
-
-    <FormField name="teams">
+    <FormField v-slot="{ componentField }" name="teams">
       <FormItem v-auto-animate>
         <FormLabel>Teams</FormLabel>
         <FormControl>
-          <SelectTag v-model="selectedTeams" :items="teamNames" placeholder="Select teams"></SelectTag>
+          <SelectTag :items="teamNames" placeholder="Select teams" v-bind="componentField">
+          </SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField name="roles">
+    <FormField v-slot="{ componentField }" name="roles">
       <FormItem v-auto-animate>
         <FormLabel>Roles</FormLabel>
         <FormControl>
-          <SelectTag v-model="selectedRoles" :items="roleNames" placeholder="Select roles"></SelectTag>
+          <SelectTag :items="roleNames" placeholder="Select roles" v-bind="componentField">
+          </SelectTag>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -117,8 +118,6 @@ const props = defineProps({
 
 const teams = ref([])
 const roles = ref([])
-const selectedRoles = ref(props.initialValues.roles)
-const selectedTeams = ref(props.initialValues.teams?.map(team => team.name) || [])
 
 onMounted(async () => {
   try {
@@ -138,8 +137,7 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
-  values.teams = selectedTeams.value.map(team => ({ name: team }))
-  values.roles = selectedRoles.value
+  values.teams = values.teams.map(team => ({ name: team }))
   props.submitForm(values)
 })
 
@@ -147,10 +145,15 @@ watch(
   () => props.initialValues,
   (newValues) => {
     // Hack.
-    if (Object.keys(newValues).length)
-      setTimeout(() => form.setValues(newValues), 0)
+    if (Object.keys(newValues).length) {
+      setTimeout(() => {
+        form.setValues(newValues)
+        form.setFieldValue('teams', newValues.teams.map(team => team.name))
+      }, 0)
+    }
   },
   { deep: true, immediate: true }
 )
+
 
 </script>

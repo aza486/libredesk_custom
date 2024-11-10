@@ -149,6 +149,7 @@ const handleFileUpload = (event) => {
       .uploadMedia({
         files: file,
         inline: false,
+        linked_model: "messages",
       })
       .then((resp) => {
         uploadedFiles.value.push(resp.data.data)
@@ -169,6 +170,7 @@ const handleInlineImageUpload = (event) => {
       .uploadMedia({
         files: file,
         inline: true,
+        linked_model: "messages",
       })
       .then((resp) => {
         editorInstance.value.commands.setImage({
@@ -194,7 +196,7 @@ const handleContentCleared = () => {
 
 const handleSend = async () => {
   try {
-    // Replace image url with cid.
+    // Replace inline image url with cid.
     const message = transformImageSrcToCID(editorHTML.value)
 
     // Check which images are still in editor before sending.

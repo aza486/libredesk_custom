@@ -31,11 +31,11 @@
             </FormItem>
           </FormField>
 
-          <FormField v-slot="{ componentField }" name="type">
+          <FormField v-slot="{ componentField, handleInput }" name="type">
             <FormItem>
               <FormLabel>Type</FormLabel>
               <FormControl>
-                <Select v-bind="componentField">
+                <Select v-bind="componentField" @update:modelValue="handleInput">
                   <SelectTrigger>
                     <SelectValue placeholder="Select a type" />
                   </SelectTrigger>
@@ -52,6 +52,18 @@
               <FormMessage />
             </FormItem>
           </FormField>
+
+          <FormField v-slot="{ componentField }" name="events" v-if="form.values.type === 'conversation_update'">
+            <FormItem>
+              <FormLabel>Events</FormLabel>
+              <FormControl>
+                <SelectTag v-bind="componentField" :items="conversationEvents" placeholder="Select events"></SelectTag>
+              </FormControl>
+              <FormDescription>Evaluate rule on these events.</FormDescription>
+              <FormMessage></FormMessage>
+            </FormItem>
+          </FormField>
+
         </div>
 
         <p class="font-semibold">Match these rules</p>
@@ -97,6 +109,7 @@ import { formSchema } from './formSchema.js'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { SelectTag } from '@/components/ui/select'
 import {
   Select,
   SelectContent,
@@ -115,9 +128,11 @@ import {
 } from '@/components/ui/form'
 import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 
 const isLoading = ref(false)
+const route = useRoute()
 const router = useRouter()
 const emitter = useEmitter()
 const rule = ref({
@@ -142,6 +157,15 @@ const rule = ref({
     }
   ]
 })
+
+const conversationEvents = [
+  "conversation.user.assigned",
+  "conversation.team.assigned",
+  "conversation.priority.change",
+  "conversation.status.change",
+  "conversation.message.outgoing",
+  "conversation.message.incoming",
+]
 
 const props = defineProps({
   id: {
@@ -273,7 +297,7 @@ const handleSave = async (values) => {
   }
 }
 
-// TODO: Figure out how to validate with vee-validate.
+// TODO: Add some vee-validate validations.
 const areRulesValid = () => {
   // Must have atleast one action.
   if (rule.value.rules[0].actions.length == 0) {
@@ -308,6 +332,9 @@ onMounted(async () => {
     } finally {
       isLoading.value = false
     }
+  }
+  if (route.query.type) {
+    form.setFieldValue('type', route.query.type)
   }
   firstRuleGroup.value = getFirstGroup()
   secondRuleGroup.value = getSecondGroup()

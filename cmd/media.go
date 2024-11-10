@@ -56,6 +56,13 @@ func handleMediaUpload(r *fastglue.Request) error {
 		disposition = attachment.DispositionInline
 	}
 
+	// Linked model?
+	var linkedModel string
+	model, ok := form.Value["linked_model"]
+	if ok && len(model) > 0 {
+		linkedModel = model[0]
+	}
+
 	// Sanitize filename.
 	srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
 	srcContentType := fileHeader.Header.Get("Content-Type")
@@ -74,7 +81,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	if !slices.Contains(app.consts.AllowedUploadFileExtensions, "*") && !slices.Contains(app.consts.AllowedUploadFileExtensions, srcExt) {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Unsupported file type", nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File type not allowed", nil, envelope.InputError)
 	}
 
 	// Delete files on any error.
@@ -126,7 +133,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Insert in DB.
-	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, "" /**model_type**/, disposition, uuid.String(), 0, int(srcFileSize), meta)
+	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, linkedModel, disposition, uuid.String(), 0, int(srcFileSize), meta)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error inserting metadata into database", "error", err)

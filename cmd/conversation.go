@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
@@ -151,6 +152,7 @@ func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 		uuid = r.RequestCtx.UserValue("uuid").(string)
 		user = r.RequestCtx.UserValue("user").(umodels.User)
 	)
+
 	assigneeID, err := r.RequestCtx.PostArgs().GetUint("assignee_id")
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid assignee `id`.", nil, envelope.InputError)
@@ -165,7 +167,9 @@ func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	app.automation.EvaluateConversationUpdateRules(uuid)
+	// Evaluate automation rules.
+	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationUserAssigned)
+
 	return r.SendEnvelope(true)
 }
 
@@ -188,7 +192,8 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	app.automation.EvaluateConversationUpdateRules(uuid)
+	// Evaluate automation rules.
+	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationTeamAssigned)
 	return r.SendEnvelope(true)
 }
 
@@ -209,7 +214,9 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	app.automation.EvaluateConversationUpdateRules(uuid)
+	// Evaluate automation rules.
+	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationPriorityChange)
+
 	return r.SendEnvelope(true)
 }
 
@@ -230,7 +237,9 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	app.automation.EvaluateConversationUpdateRules(uuid)
+	// Evaluate automation rules.
+	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationStatusChange)
+
 	return r.SendEnvelope(true)
 }
 
@@ -260,7 +269,6 @@ func handleAddConversationTags(r *fastglue.Request) error {
 	if err := app.conversation.UpsertConversationTags(uuid, tagIDs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	app.automation.EvaluateConversationUpdateRules(uuid)
 	return r.SendEnvelope(true)
 }
 
