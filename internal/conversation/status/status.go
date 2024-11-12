@@ -3,6 +3,7 @@ package status
 
 import (
 	"embed"
+	"slices"
 
 	"github.com/abhinavxd/artemis/internal/conversation/status/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
@@ -30,6 +31,7 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
+	GetStatus      *sqlx.Stmt `query:"get-status"`
 	GetAllStatuses *sqlx.Stmt `query:"get-all-statuses"`
 	InsertStatus   *sqlx.Stmt `query:"insert-status"`
 	DeleteStatus   *sqlx.Stmt `query:"delete-status"`
@@ -71,7 +73,21 @@ func (m *Manager) Create(name string) error {
 
 // Delete deletes a status by ID.
 func (m *Manager) Delete(id int) error {
+	// Disallow deletion of default statuses.
+	status, err := m.get(id)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
+	}
+
+	if slices.Contains(models.DefaultStatuses, status.Name) {
+		return envelope.NewError(envelope.InputError, "Cannot delete default status", nil)
+	}
+
 	if _, err := m.q.DeleteStatus.Exec(id); err != nil {
+		// Check if the error is a foreign key error.
+		if dbutil.IsForeignKeyError(err) {
+			return envelope.NewError(envelope.InputError, "Cannot delete status as it is in use, Please remove this status from all conversations before deleting", nil)
+		}
 		m.lo.Error("error deleting status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting status", nil)
 	}
@@ -85,4 +101,14 @@ func (m *Manager) Update(id int, name string) error {
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)
 	}
 	return nil
+}
+
+// get retrieves a status by ID.
+func (m *Manager) get(id int) (models.Status, error) {
+	var status models.Status
+	if err := m.q.GetStatus.Get(&status, id); err != nil {
+		m.lo.Error("error fetching status", "error", err)
+		return status, err
+	}
+	return status, nil
 }

@@ -23,7 +23,7 @@
           <form @submit.prevent="loginAction" class="space-y-4">
             <div class="grid gap-2">
               <Label for="email">Email</Label>
-              <Input id="email" type="email" placeholder="Enter your email address" v-model.trim="loginForm.email"
+              <Input id="email" type="text" placeholder="Enter your email address" v-model.trim="loginForm.email"
                 :class="{ 'border-red-500': emailHasError }" />
             </div>
             <div class="grid gap-2">
@@ -55,7 +55,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { handleHTTPError } from '@/utils/http'
-import { useUserStore } from '@/stores/user'
 import api from '@/api'
 import { validateEmail } from '@/utils/strings'
 import { useToast } from '@/components/ui/toast/use-toast'
@@ -74,7 +73,6 @@ const loginForm = ref({
   email: '',
   password: ''
 })
-const userStore = useUserStore()
 const oidcProviders = ref([])
 
 onMounted(async () => {

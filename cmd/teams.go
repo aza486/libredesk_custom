@@ -86,3 +86,20 @@ func handleUpdateTeam(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(true)
 }
+
+// handleDeleteTeam deletes a team
+func handleDeleteTeam(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	if err != nil || id == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+			"Invalid team `id`.", nil, envelope.InputError)
+	}
+	err = app.team.DeleteTeam(id)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}

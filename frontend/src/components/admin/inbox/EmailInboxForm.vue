@@ -41,9 +41,9 @@
         wait_timeout: {
           label: 'Wait timeout',
           description: `PoolWaitTimeout is the maximum time to wait to obtain a connection from
-      a pool before timing out. This may happen when all open connections are
-      busy sending e-mails and they're not returning to the pool fast enough.
-      This is also the timeout used when creating new SMTP connections.
+          a pool before timing out. This may happen when all open connections are
+          busy sending e-mails and they're not returning to the pool fast enough.
+          This is also the timeout used when creating new SMTP connections.
       `
         },
         auth_protocol: {

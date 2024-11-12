@@ -23,8 +23,11 @@ import api from '@/api'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 const { toast } = useToast()
 
+const emit = useEmitter()
 const router = useRouter()
 const roles = ref([])
 const isLoading = ref(false)
@@ -51,6 +54,9 @@ const getRoles = async () => {
 
 onMounted(async () => {
   getRoles()
+  emit.on(EMITTER_EVENTS.REFRESH_LIST, (data) => {
+    if (data?.model === 'team') getRoles()
+  })
 })
 
 const navigateToAddRole = () => {

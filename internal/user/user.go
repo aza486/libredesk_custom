@@ -60,6 +60,7 @@ type queries struct {
 	GetUserByEmail        *sqlx.Stmt `query:"get-user-by-email"`
 	UpdateUser            *sqlx.Stmt `query:"update-user"`
 	UpdateAvatar          *sqlx.Stmt `query:"update-avatar"`
+	SoftDeleteUser        *sqlx.Stmt `query:"soft-delete-user"`
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
 	ResetPassword         *sqlx.Stmt `query:"reset-password"`
@@ -101,7 +102,7 @@ func (u *Manager) Login(email string, password []byte) (models.User, error) {
 
 // GetAll retrieves all users.
 func (u *Manager) GetAll() ([]models.User, error) {
-	var users []models.User
+	var users = make([]models.User, 0)
 	if err := u.q.GetUsers.Select(&users); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
@@ -115,7 +116,7 @@ func (u *Manager) GetAll() ([]models.User, error) {
 
 // GetAllCompact returns a compact list of users with limited fields.
 func (u *Manager) GetAllCompact() ([]models.User, error) {
-	var users []models.User
+	var users = make([]models.User, 0)
 	if err := u.q.GetUserCompact.Select(&users); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
@@ -183,8 +184,8 @@ func (u *Manager) UpdateAvatar(id int, avatar string) error {
 	return nil
 }
 
-// UpdateUser updates a user.
-func (u *Manager) UpdateUser(id int, user models.User) error {
+// Update updates a user.
+func (u *Manager) Update(id int, user models.User) error {
 	var (
 		hashedPassword interface{}
 		err            error
@@ -205,6 +206,24 @@ func (u *Manager) UpdateUser(id int, user models.User) error {
 	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating user", nil)
+	}
+	return nil
+}
+
+// Delete deletes a user by ID.
+func (u *Manager) SoftDelete(id int) error {
+	// Disallow if user is system user.
+	systemUser, err := u.GetSystemUser()
+	if err != nil {
+		return err
+	}
+	if id == systemUser.ID {
+		return envelope.NewError(envelope.InputError, "Cannot delete system user", nil)
+	}
+
+	if _, err := u.q.SoftDeleteUser.Exec(id); err != nil {
+		u.lo.Error("error deleting user", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting user", nil)
 	}
 	return nil
 }

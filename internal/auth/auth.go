@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
@@ -20,10 +21,6 @@ import (
 	"github.com/zerodha/simplesessions/v3"
 
 	"golang.org/x/oauth2"
-)
-
-const (
-	csrfTokenLength = 20
 )
 
 type OIDCclaim struct {
@@ -47,11 +44,13 @@ type Config struct {
 }
 
 type Auth struct {
+	mu        sync.RWMutex
 	cfg       Config
 	oauthCfgs map[int]oauth2.Config
 	verifiers map[int]*oidc.IDTokenVerifier
 	sess      *simplesessions.Manager
 	logger    *logf.Logger
+	rd        *redis.Client
 }
 
 // New initializes an OIDC configuration for multiple providers.
@@ -100,11 +99,51 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 		verifiers: verifiers,
 		sess:      sess,
 		logger:    logger,
+		rd:        rd,
 	}, nil
 }
 
-// LoginURL generates a login URL for a specific provider using its ID.
+// Reload reloads the auth configuration.
+func (a *Auth) Reload(cfg Config) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	oauthCfgs := make(map[int]oauth2.Config)
+	verifiers := make(map[int]*oidc.IDTokenVerifier)
+
+	for _, provider := range cfg.Providers {
+		oidcProv, err := oidc.NewProvider(context.Background(), provider.ProviderURL)
+		if err != nil {
+			a.logger.Error("error initializing oidc provider", "error", err, "provider", provider.Provider)
+			continue
+		}
+
+		oauthCfg := oauth2.Config{
+			ClientID:     provider.ClientID,
+			ClientSecret: provider.ClientSecret,
+			Endpoint:     oidcProv.Endpoint(),
+			RedirectURL:  provider.RedirectURL,
+			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		}
+
+		verifier := oidcProv.Verifier(&oidc.Config{ClientID: provider.ClientID})
+
+		oauthCfgs[provider.ID] = oauthCfg
+		verifiers[provider.ID] = verifier
+	}
+
+	a.cfg = cfg
+	a.oauthCfgs = oauthCfgs
+	a.verifiers = verifiers
+
+	return nil
+}
+
+// LoginURL returns the login URL for the given provider.
 func (a *Auth) LoginURL(providerID int, state string) (string, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	oauthCfg, ok := a.oauthCfgs[providerID]
 	if !ok {
 		return "", envelope.NewError(envelope.InputError, "Provider not found", nil)
@@ -114,6 +153,9 @@ func (a *Auth) LoginURL(providerID int, state string) (string, error) {
 
 // ExchangeOIDCToken takes an OIDC authorization code, validates it, and returns an OIDC token for subsequent auth.
 func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonce string) (string, OIDCclaim, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	oauthCfg, ok := a.oauthCfgs[providerID]
 	if !ok {
 		return "", OIDCclaim{}, fmt.Errorf("invalid provider ID: %d", providerID)
@@ -132,7 +174,7 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonc
 	// Extract the ID Token from OAuth2 token.
 	rawIDTk, ok := tk.Extra("id_token").(string)
 	if !ok {
-		return "", OIDCclaim{}, errors.New("`id_token` missing")
+		return "", OIDCclaim{}, errors.New("id_token missing")
 	}
 
 	// Parse and verify ID Token payload.
@@ -154,6 +196,9 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonc
 
 // SaveSession creates and sets a session (post successful login/auth).
 func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	sess, err := a.sess.NewSession(r, r)
 	if err != nil {
 		a.logger.Error("error creating login session", "error", err)
@@ -174,6 +219,9 @@ func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 
 // SetCSRFCookie sets the CSRF token in the response cookie if not already set.
 func (a *Auth) SetCSRFCookie(r *fastglue.Request) error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	cookie := r.RequestCtx.Request.Header.Cookie("csrf_token")
 	if cookie == nil {
 		token, err := generateCSRFToken()
@@ -192,15 +240,16 @@ func (a *Auth) SetCSRFCookie(r *fastglue.Request) error {
 	return nil
 }
 
-// ValidateSession validates session and returns the user.
 func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		a.logger.Error("error acquiring session", "error", err)
 		return models.User{}, err
 	}
 
-	// Get the session variables
 	sessVals, err := sess.GetMulti("id", "email", "first_name", "last_name")
 	if err != nil {
 		a.logger.Error("error fetching session variables", "error", err)
@@ -224,6 +273,9 @@ func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 
 // DestroySession destroys session
 func (a *Auth) DestroySession(r *fastglue.Request) error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
 	if err != nil {
 		a.logger.Error("error acquiring session", "error", err)
@@ -247,7 +299,6 @@ func generateCSRFToken() (string, error) {
 
 // getRequestCookie returns fashttp.Cookie for the given name.
 func getRequestCookie(name string, r *fastglue.Request) (*fasthttp.Cookie, error) {
-	// Cookie value.
 	val := r.RequestCtx.Request.Header.Cookie(name)
 	if len(val) == 0 {
 		return nil, nil
@@ -277,6 +328,7 @@ func simpleSessGetCookieCB(name string, r interface{}) (*http.Cookie, error) {
 		} else {
 			return nil, err
 		}
+
 	}
 
 	// Convert fasthttp cookie to net http cookie.

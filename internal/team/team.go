@@ -40,6 +40,7 @@ type queries struct {
 	GetTeam         *sqlx.Stmt `query:"get-team"`
 	InsertTeam      *sqlx.Stmt `query:"insert-team"`
 	UpdateTeam      *sqlx.Stmt `query:"update-team"`
+	DeleteTeam      *sqlx.Stmt `query:"delete-team"`
 	GetTeamMembers  *sqlx.Stmt `query:"get-team-members"`
 	UpsertUserTeams *sqlx.Stmt `query:"upsert-user-teams"`
 }
@@ -112,6 +113,15 @@ func (u *Manager) UpdateTeam(id int, t models.Team) error {
 	if _, err := u.q.UpdateTeam.Exec(id, t.Name, t.AutoAssignConversations); err != nil {
 		u.lo.Error("error updating team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating team", nil)
+	}
+	return nil
+}
+
+// DeleteTeam deletes a team by ID also deletes all the team members and unassigns all the conversations belonging to the team.
+func (u *Manager) DeleteTeam(id int) error {
+	if _, err := u.q.DeleteTeam.Exec(id); err != nil {
+		u.lo.Error("error deleting team", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting team", nil)
 	}
 	return nil
 }

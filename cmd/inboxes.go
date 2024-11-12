@@ -36,16 +36,21 @@ func handleGetInbox(r *fastglue.Request) error {
 
 func handleCreateInbox(r *fastglue.Request) error {
 	var (
-		app   = r.Context.(*App)
-		inbox = imodels.Inbox{}
+		app = r.Context.(*App)
+		inb = imodels.Inbox{}
 	)
-	if err := r.Decode(&inbox, "json"); err != nil {
+	if err := r.Decode(&inb, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
-	err := app.inbox.Create(inbox)
+	err := app.inbox.Create(inb)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	if err := reloadInboxes(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes", nil, envelope.GeneralError)
+	}
+
 	return r.SendEnvelope(true)
 }
 
@@ -67,6 +72,11 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
 	}
+
+	if err := reloadInboxes(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes", nil, envelope.GeneralError)
+	}
+
 	return r.SendEnvelope(inbox)
 }
 
@@ -83,6 +93,11 @@ func handleToggleInbox(r *fastglue.Request) error {
 	if err = app.inbox.Toggle(id); err != nil {
 		return err
 	}
+
+	if err := reloadInboxes(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes", nil, envelope.GeneralError)
+	}
+
 	return r.SendEnvelope(true)
 }
 
@@ -91,9 +106,14 @@ func handleDeleteInbox(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	err := app.inbox.Delete(id)
+	err := app.inbox.SoftDelete(id)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
 	}
+
+	if err := reloadInboxes(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes", nil, envelope.GeneralError)
+	}
+
 	return r.SendEnvelope(true)
 }

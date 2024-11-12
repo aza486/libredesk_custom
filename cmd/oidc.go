@@ -17,7 +17,6 @@ const (
 // handleGetAllOIDC returns all OIDC records
 func handleGetAllOIDC(r *fastglue.Request) error {
 	app := r.Context.(*App)
-
 	out, err := app.oidc.GetAll()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -57,6 +56,11 @@ func handleCreateOIDC(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// Reload the auth manager to update the OIDC providers.
+	if err := reloadAuth(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
+	}
 	return r.SendEnvelope(true)
 }
 
@@ -79,6 +83,11 @@ func handleUpdateOIDC(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// Reload the auth manager to update the OIDC providers.
+	if err := reloadAuth(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
+	}
 	return r.SendEnvelope(true)
 }
 
@@ -94,6 +103,11 @@ func handleDeleteOIDC(r *fastglue.Request) error {
 	err = app.oidc.Delete(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	// Reload the auth manager to update the OIDC providers.
+	if err := reloadAuth(app); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(true)
 }

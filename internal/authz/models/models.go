@@ -44,12 +44,14 @@ const (
 	PermDashboardGlobalRead = "dashboard_global:read"
 
 	// Users
-	PermUsersRead  = "users:read"
-	PermUsersWrite = "users:write"
+	PermUsersRead   = "users:read"
+	PermUsersWrite  = "users:write"
+	PermUsersDelete = "users:delete"
 
 	// Teams
-	PermTeamsRead  = "teams:read"
-	PermTeamsWrite = "teams:write"
+	PermTeamsRead   = "teams:read"
+	PermTeamsWrite  = "teams:write"
+	PermTeamsDelete = "teams:delete"
 
 	// Automations
 	PermAutomationsRead   = "automations:read"

@@ -34,3 +34,6 @@ insert_new_teams AS (
     ON CONFLICT DO NOTHING
 )
 SELECT 1;
+
+-- name: delete-team
+DELETE FROM teams where id = $1;

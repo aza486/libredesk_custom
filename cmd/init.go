@@ -2,6 +2,7 @@ package main
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -443,25 +444,32 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 	return inbox, nil
 }
 
-// registerInboxes registers the active inboxes with the inbox manager.
-func registerInboxes(mgr *inbox.Manager, store inbox.MessageStore) {
-	inboxRecords, err := mgr.GetActive()
-	if err != nil {
-		log.Fatalf("error fetching active inboxes %v", err)
+// initializeInboxes handles inbox initialization.
+func initializeInboxes(inboxR imodels.Inbox, store inbox.MessageStore) (inbox.Inbox, error) {
+	switch inboxR.Channel {
+	case "email":
+		return initEmailInbox(inboxR, store)
+	default:
+		return nil, fmt.Errorf("unknown inbox channel: %s", inboxR.Channel)
+	}
+}
+
+// reloadInboxes reloads all inboxes.
+func reloadInboxes(app *App) error {
+	app.lo.Info("reloading inboxes")
+	return app.inbox.Reload(ctx, initializeInboxes)
+}
+
+// startInboxes registers the active inboxes and starts receiver for each.
+func startInboxes(ctx context.Context, mgr *inbox.Manager, store inbox.MessageStore) {
+	mgr.SetMessageStore(store)
+
+	if err := mgr.InitInboxes(initializeInboxes); err != nil {
+		log.Fatalf("error initializing inboxes: %v", err)
 	}
 
-	for _, inboxR := range inboxRecords {
-		switch inboxR.Channel {
-		case "email":
-			log.Printf("initializing `Email` inbox: %s", inboxR.Name)
-			inbox, err := initEmailInbox(inboxR, store)
-			if err != nil {
-				log.Fatalf("error initializing email inbox: %v", err)
-			}
-			mgr.Register(inbox)
-		default:
-			log.Printf("WARNING: Unknown inbox channel: %s", inboxR.Name)
-		}
+	if err := mgr.Start(ctx); err != nil {
+		log.Fatalf("error starting inboxes: %v", err)
 	}
 }
 
@@ -474,37 +482,62 @@ func initAuthz() *authz.Enforcer {
 	return enforcer
 }
 
-// initAuth initializes authentication manager.
+// initAuth initializes the authentication manager.
 func initAuth(o *oidc.Manager, rd *redis.Client) *auth_.Auth {
-	var lo = initLogger("auth")
+	lo := initLogger("auth")
 
-	oidc, err := o.GetAll()
+	providers, err := buildProviders(o)
 	if err != nil {
 		log.Fatalf("error initializing auth: %v", err)
 	}
 
-	var providers = make([]auth_.Provider, 0, len(oidc))
-	for _, o := range oidc {
-		if o.Disabled {
+	auth, err := auth_.New(auth_.Config{Providers: providers}, rd, lo)
+	if err != nil {
+		log.Fatalf("error initializing auth: %v", err)
+	}
+
+	return auth
+}
+
+// reloadAuth reloads the auth providers.
+func reloadAuth(app *App) error {
+	app.lo.Info("reloading auth manager")
+
+	providers, err := buildProviders(app.oidc)
+	if err != nil {
+		log.Fatalf("error reloading auth: %v", err)
+	}
+
+	if err := app.auth.Reload(auth_.Config{Providers: providers}); err != nil {
+		app.lo.Error("error reloading auth", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+// buildProviders creates a list of auth providers from the OIDC manager.
+func buildProviders(o *oidc.Manager) ([]auth_.Provider, error) {
+	oidcConfigs, err := o.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	providers := make([]auth_.Provider, 0, len(oidcConfigs))
+	for _, config := range oidcConfigs {
+		if config.Disabled {
 			continue
 		}
 		providers = append(providers, auth_.Provider{
-			ID:           o.ID,
-			Provider:     o.Provider,
-			ProviderURL:  o.ProviderURL,
-			RedirectURL:  o.RedirectURI,
-			ClientID:     o.ClientID,
-			ClientSecret: o.ClientSecret,
+			ID:           config.ID,
+			Provider:     config.Provider,
+			ProviderURL:  config.ProviderURL,
+			RedirectURL:  config.RedirectURI,
+			ClientID:     config.ClientID,
+			ClientSecret: config.ClientSecret,
 		})
 	}
-
-	auth, err := auth_.New(auth_.Config{
-		Providers: providers,
-	}, rd, lo)
-	if err != nil {
-		log.Fatalf("error initializing auth: %v", err)
-	}
-	return auth
+	return providers, nil
 }
 
 // initOIDC initializes open id connect config manager.

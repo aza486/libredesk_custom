@@ -110,7 +110,7 @@ func handleSendMessage(r *fastglue.Request) error {
 		user   = r.RequestCtx.UserValue("user").(umodels.User)
 		cuuid  = r.RequestCtx.UserValue("cuuid").(string)
 		req    = messageReq{}
-		medias = []medModels.Media{}
+		media = []medModels.Media{}
 	)
 
 	// Check permission
@@ -125,24 +125,24 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	for _, id := range req.Attachments {
-		media, err := app.media.Get(id)
+		m, err := app.media.Get(id)
 		if err != nil {
 			app.lo.Error("error fetching media", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching media", nil, "")
 		}
-		medias = append(medias, media)
+		media = append(media, m)
 	}
 
 	// Private note.
 	if req.Private {
-		if err := app.conversation.SendPrivateNote(medias, user.ID, cuuid, req.Message); err != nil {
+		if err := app.conversation.SendPrivateNote(media, user.ID, cuuid, req.Message); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 		return r.SendEnvelope(true)
 	}
 
 	// Reply.
-	if err := app.conversation.SendReply(medias, user.ID, cuuid, req.Message); err != nil {
+	if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

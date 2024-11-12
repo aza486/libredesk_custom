@@ -75,6 +75,17 @@ func (t *Manager) Get(id int) (models.Role, error) {
 
 // Delete deletes a role by ID.
 func (t *Manager) Delete(id int) error {
+	// Disallow deletion of predefined roles.
+	role, err := t.Get(id)
+	if err != nil {
+		return err
+	}
+	for _, r := range models.Roles {
+		if role.Name == r {
+			return envelope.NewError(envelope.InputError, "Cannot delete default roles", nil)
+		}
+	}
+
 	if _, err := t.q.Delete.Exec(id); err != nil {
 		t.lo.Error("error deleting role", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting role", nil)

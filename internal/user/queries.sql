@@ -1,21 +1,24 @@
 -- name: get-users
 SELECT u.id, u.updated_at, u.first_name, u.last_name, u.email, u.disabled
-FROM users u where u.email != 'System'
+FROM users u where u.email != 'System' and u.deleted_at is null
 ORDER BY u.updated_at DESC;
+
+-- name: soft-delete-user
+UPDATE users SET deleted_at = now() WHERE id = $1;
 
 -- name: get-users-compact
 SELECT u.id, u.first_name, u.last_name, u.disabled
-FROM users u where u.email != 'System'
+FROM users u where u.email != 'System' and u.deleted_at is null
 ORDER BY u.updated_at DESC;
 
 -- name: get-email
-SELECT email from users where id = $1;
+SELECT email from users where id = $1 and deleted_at is null;
 
 -- name: get-user-by-email
 SELECT u.id, u.email, u.password, u.avatar_url, u.first_name, u.last_name, r.permissions
 FROM users u
 JOIN roles r ON r.name = ANY(u.roles)
-WHERE u.email = $1;
+WHERE u.email = $1 and u.deleted_at is null;
 
 -- name: get-user
 SELECT
@@ -43,8 +46,7 @@ SELECT
 FROM
     users u
 WHERE
-    u.id = $1;
-
+    u.id = $1 and u.deleted_at is null;
 
 -- name: set-user-password
 update users set password = $1, updated_at = now() where id = $2;
@@ -78,10 +80,10 @@ WHERE u.id = $1
 
 -- name: set-reset-password-token
 UPDATE users
-SET reset_password_token = $2, reset_password_expires = now() + interval '1 day'
+SET reset_password_token = $2, reset_password_token_expiry = now() + interval '1 day'
 WHERE id = $1
 
 -- name: reset-password
 UPDATE users
-SET password = $1, reset_password_token = NULL, reset_password_expires = NULL
-WHERE reset_password_token = $2 AND reset_password_expires > now()
+SET password = $1, reset_password_token = NULL, reset_password_token_expiry = NULL
+WHERE reset_password_token = $2 AND reset_password_token_expiry > now()

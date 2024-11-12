@@ -76,17 +76,17 @@ const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
+      { name: 'conversations:read', label: 'View' },
       { name: 'conversations:read_all', label: 'View All' },
       { name: 'conversations:read_unassigned', label: 'View Unassigned' },
       { name: 'conversations:read_assigned', label: 'View Assigned' },
-      { name: 'conversations:read', label: 'View' },
-      { name: 'conversations:update_user_assignee', label: 'Edit User' },
-      { name: 'conversations:update_team_assignee', label: 'Edit Team' },
-      { name: 'conversations:update_priority', label: 'Edit Priority' },
-      { name: 'conversations:update_status', label: 'Edit Status' },
-      { name: 'conversations:update_tags', label: 'Edit Tags' },
+      { name: 'conversations:update_user_assignee', label: 'Set assignee' },
+      { name: 'conversations:update_team_assignee', label: 'Set team' },
+      { name: 'conversations:update_priority', label: 'Set priority' },
+      { name: 'conversations:update_status', label: 'Set status' },
+      { name: 'conversations:update_tags', label: 'Add Tags' },
       { name: 'messages:read', label: 'View Messages' },
-      { name: 'messages:write', label: 'Reply' }
+      { name: 'messages:write', label: 'Reply' },
     ]
   },
   {
@@ -122,14 +122,14 @@ const permissions = ref([
   {
     name: 'Tags',
     permissions: [
-      { name: 'tags:write', label: 'Create/Update' },
+      { name: 'tags:write', label: 'Write' },
       { name: 'tags:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Canned Responses',
     permissions: [
-      { name: 'canned_responses:write', label: 'Create/Update' },
+      { name: 'canned_responses:write', label: 'Write' },
       { name: 'canned_responses:delete', label: 'Delete' }
     ]
   },
@@ -143,21 +143,23 @@ const permissions = ref([
     name: 'Users',
     permissions: [
       { name: 'users:read', label: 'View' },
-      { name: 'users:write', label: 'Create/Update' }
+      { name: 'users:write', label: 'Write' },
+      { name: 'users:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Teams',
     permissions: [
       { name: 'teams:read', label: 'View' },
-      { name: 'teams:write', label: 'Create/Update' }
+      { name: 'teams:write', label: 'Write' },
+      { name: 'teams:delete', label: 'Delete' }
     ]
   },
   {
     name: 'Automations',
     permissions: [
       { name: 'automations:read', label: 'View' },
-      { name: 'automations:write', label: 'Create/Update' },
+      { name: 'automations:write', label: 'Write' },
       { name: 'automations:delete', label: 'Delete' }
     ]
   },
@@ -165,7 +167,7 @@ const permissions = ref([
     name: 'Inboxes',
     permissions: [
       { name: 'inboxes:read', label: 'View' },
-      { name: 'inboxes:write', label: 'Create/Update' },
+      { name: 'inboxes:write', label: 'Write' },
       { name: 'inboxes:delete', label: 'Delete' }
     ]
   },
@@ -173,7 +175,7 @@ const permissions = ref([
     name: 'Roles',
     permissions: [
       { name: 'roles:read', label: 'View' },
-      { name: 'roles:write', label: 'Create/Update' },
+      { name: 'roles:write', label: 'Write' },
       { name: 'roles:delete', label: 'Delete' }
     ]
   },
@@ -181,7 +183,7 @@ const permissions = ref([
     name: 'Templates',
     permissions: [
       { name: 'templates:read', label: 'View' },
-      { name: 'templates:write', label: 'Create/Update' },
+      { name: 'templates:write', label: 'Write' },
       { name: 'templates:delete', label: 'Delete' }
     ]
   }

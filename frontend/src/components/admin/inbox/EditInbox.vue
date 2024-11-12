@@ -26,14 +26,13 @@ const breadcrumbLinks = [
 ]
 
 const submitForm = (values) => {
-  const channelName = inbox.value.channel
   const payload = {
     name: values.name,
     from: values.from,
-    channel: channelName,
+    channel: inbox.value.channel,
     config: {
       imap: [{ ...values.imap }],
-      smtp: [...values.smtp]
+      smtp: [{ ...values.smtp }]
     }
   }
 
@@ -81,9 +80,8 @@ onMounted(async () => {
       inboxData.imap = inboxData?.config?.imap[0]
     }
     if (inboxData?.config?.smtp) {
-      inboxData.smtp = inboxData?.config?.smtp
+      inboxData.smtp = inboxData?.config?.smtp[0]
     }
-
     inbox.value = inboxData
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

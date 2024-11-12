@@ -87,15 +87,17 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/users/{id}", authPerm(handleGetUser, "users", "read"))
 	g.POST("/api/users", authPerm(handleCreateUser, "users", "write"))
 	g.PUT("/api/users/{id}", authPerm(handleUpdateUser, "users", "write"))
+	g.DELETE("/api/users/{id}", authPerm(handleDeleteUser, "users", "delete"))
 	g.POST("/api/users/reset-password", tryAuth(handleResetPassword))
 	g.POST("/api/users/set-password", tryAuth(handleSetPassword))
 
 	// Team.
 	g.GET("/api/teams/compact", auth(handleGetTeamsCompact))
 	g.GET("/api/teams", authPerm(handleGetTeams, "teams", "read"))
+	g.POST("/api/teams", authPerm(handleCreateTeam, "teams", "write"))
 	g.GET("/api/teams/{id}", authPerm(handleGetTeam, "teams", "read"))
 	g.PUT("/api/teams/{id}", authPerm(handleUpdateTeam, "teams", "write"))
-	g.POST("/api/teams", authPerm(handleCreateTeam, "teams", "write"))
+	g.DELETE("/api/teams/{id}", authPerm(handleDeleteTeam, "teams", "delete"))
 
 	// i18n.
 	g.GET("/api/lang/{lang}", handleGetI18nLang)

@@ -30,8 +30,6 @@ const (
 
 	MessageStatusPending   = "pending"
 	MessageStatusSent      = "sent"
-	MessageStatusDelivered = "delivered"
-	MessageStatusRead      = "read"
 	MessageStatusFailed    = "failed"
 	MessageStatusReceived  = "received"
 
@@ -319,7 +317,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 
 	// Insert Message.
 	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.SenderID, message.SenderType,
-		message.Private, message.ContentType, message.SourceID, message.InboxID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
+		message.Private, message.ContentType, message.SourceID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
 		m.lo.Error("error inserting message in db", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
 	}

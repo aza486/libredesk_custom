@@ -211,13 +211,38 @@ func handleUpdateUser(r *fastglue.Request) error {
 	}
 
 	// Update user.
-	err = app.user.UpdateUser(id, user)
+	err = app.user.Update(id, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Upsert user teams.
 	if err := app.team.UpsertUserTeams(id, user.Teams.Names()); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(true)
+}
+
+// handleDeleteUser deletes a user.
+func handleDeleteUser(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+	)
+	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	if err != nil || id == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
+			"Invalid user `id`.", nil, envelope.InputError)
+	}
+
+	// Soft delete user.
+	err = app.user.SoftDelete(id)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Unassign all open conversations assigned to the user.
+	if err := app.conversation.UnassignOpen(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

@@ -19,15 +19,18 @@ import { Button } from '@/components/ui/button'
 import DataTable from '@/components/admin/DataTable.vue'
 import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
-import api from '@/api'
 import { useRouter } from 'vue-router'
+import { useEmitter } from '@/composables/useEmitter'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import api from '@/api'
 const { toast } = useToast()
 
 const router = useRouter()
 const isLoading = ref(false)
 const data = ref([])
+const emit = useEmitter()
 const breadcrumbLinks = [
   { path: '/admin/teams', label: 'Teams' },
   { path: '#', label: 'Users' }
@@ -35,6 +38,9 @@ const breadcrumbLinks = [
 
 onMounted(async () => {
   getData()
+  emit.on(EMITTER_EVENTS.REFRESH_LIST, (data) => {
+    if (data?.model === 'user') getData()
+  })
 })
 
 const getData = async () => {

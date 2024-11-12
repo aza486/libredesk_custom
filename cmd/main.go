@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -38,6 +39,8 @@ import (
 var (
 	ko          = koanf.New(".")
 	frontendDir = "frontend/dist"
+	ctx         = context.Background()
+	buildString string
 )
 
 // App is the global app context which is passed and injected in the http handlers.
@@ -67,6 +70,9 @@ type App struct {
 }
 
 func main() {
+	// Set up signal handler.
+	ctx, _ = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
 	// Load command line flags into Koanf.
 	initFlags()
 
@@ -78,6 +84,14 @@ func main() {
 
 	// Init DB.
 	db := initDB()
+
+	// Version flag.
+	if ko.Bool("version") {
+		fmt.Println(buildString)
+		os.Exit(0)
+	}
+
+	log.Printf("Build: %s", buildString)
 
 	// Installer.
 	if ko.Bool("install") {
@@ -109,12 +123,11 @@ func main() {
 		automationWrk               = ko.MustInt("automation.worker_count")
 		messageDispatchWrk          = ko.MustInt("message.dispatch_workers")
 		messageDispatchScanInterval = ko.MustDuration("message.dispatch_scan_interval")
-		ctx, _                      = signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		lo                          = initLogger("artemis")
 		wsHub                       = ws.NewHub()
 		rdb                         = initRedis()
 		constants                   = initConstants()
 		i18n                        = initI18n(fs)
-		lo                          = initLogger("artemis")
 		oidc                        = initOIDC(db)
 		auth                        = initAuth(oidc, rdb)
 		template                    = initTemplate(db, fs, constants)
@@ -129,15 +142,12 @@ func main() {
 		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
 
-	// Register all active inboxes with inbox manager.
-	registerInboxes(inbox, conversation)
-
 	// Set stores.
 	wsHub.SetConversationStore(conversation)
 	automation.SetConversationStore(conversation)
 
-	// Start receivers for each inbox.
-	go inbox.Start(ctx)
+	// Start inbox receivers.
+	startInboxes(ctx, inbox, conversation)
 
 	// Start evaluating automation rules.
 	go automation.Run(ctx, automationWrk)
@@ -145,10 +155,10 @@ func main() {
 	// Start conversation auto assigner.
 	go autoassigner.Run(ctx)
 
-	// Start listening and dispatching messages.
+	// Start processing incoming and outgoing messages.
 	go conversation.Run(ctx, messageDispatchWrk, messageDispatchScanInterval)
 
-	// Start notification service.
+	// Start notifier.
 	go notifier.Run(ctx)
 
 	// Delete media not linked to any message.

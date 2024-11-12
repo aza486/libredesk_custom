@@ -59,7 +59,6 @@
 <script setup>
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/toast/use-toast'
 import { useRouter } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb/index.js'
 import { Check, Mail } from 'lucide-vue-next'
@@ -136,7 +135,7 @@ const submitForm = (values) => {
     channel: channelName,
     config: {
       imap: [values.imap],
-      smtp: values.smtp
+      smtp: [values.smtp],
     }
   }
   createInbox(payload)

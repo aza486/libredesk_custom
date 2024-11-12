@@ -35,6 +35,7 @@ http.interceptors.request.use((request) => {
 
 const resetPassword = (data) => http.post('/api/users/reset-password', data)
 const setPassword = (data) => http.post('/api/users/set-password', data)
+const deleteUser = (id) => http.delete(`/api/users/${id}`)
 const getEmailNotificationSettings = () => http.get('/api/settings/notifications/email')
 const updateEmailNotificationSettings = (data) => http.put('/api/settings/notifications/email', data)
 const getPriorities = () => http.get('/api/priorities')
@@ -206,6 +207,7 @@ const deleteInbox = (id) => http.delete(`/api/inboxes/${id}`)
 
 export default {
   login,
+  deleteUser,
   resetPassword,
   setPassword,
   getTags,

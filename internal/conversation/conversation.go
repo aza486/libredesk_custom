@@ -160,6 +160,7 @@ type queries struct {
 	InsertConverstionParticipant       *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
 	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
+	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
 
 	// Dashboard queries.
 	GetDashboardCharts string `query:"get-dashboard-charts"`
@@ -377,12 +378,16 @@ func (c *Manager) UpdateConversationLastMessage(conversationID int, conversation
 
 // UpdateConversationFirstReplyAt updates the first reply timestamp for a conversation.
 func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conversationID int, at time.Time) error {
-	if _, err := c.q.UpdateConversationFirstReplyAt.Exec(conversationID, at); err != nil {
+	res, err := c.q.UpdateConversationFirstReplyAt.Exec(conversationID, at)
+	if err != nil {
 		c.lo.Error("error updating conversation first reply at", "error", err)
 		return err
 	}
-	// Broadcast update to all subscribers.
-	c.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
+
+	rows, _ := res.RowsAffected()
+	if rows > 0 {
+		c.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
+	}
 	return nil
 }
 
@@ -642,6 +647,16 @@ func (m *Manager) SendAssignedConversationEmail(userIDs []int, subject, conversa
 	if err := m.notifier.Send(nm); err != nil {
 		m.lo.Error("error sending notification message", "error", err)
 		return err
+	}
+	return nil
+}
+
+// UnassignOpen unassigns all open conversations belonging to a user.
+// i.e conversations without status `Closed` and `Resolved`.
+func (m *Manager) UnassignOpen(userID int) error {
+	if _, err := m.q.UnassignOpenConversations.Exec(userID); err != nil {
+		m.lo.Error("error unassigning open conversations", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error unassigning open conversations", nil)
 	}
 	return nil
 }

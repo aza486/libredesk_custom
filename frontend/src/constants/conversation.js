@@ -9,3 +9,10 @@ export const CONVERSATION_WS_ACTIONS = {
   SET_CURRENT: 'conversation_set_current',
   UNSET_CURRENT: 'conversation_unset_current'
 }
+
+export const CONVERSATION_DEFAULT_STATUSES = [
+  'Open',
+  'Pending',
+  'Resolved',
+  'Closed'
+]
