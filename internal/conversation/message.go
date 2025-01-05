@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -28,10 +27,10 @@ const (
 	SenderTypeUser    = "user"
 	SenderTypeContact = "contact"
 
-	MessageStatusPending   = "pending"
-	MessageStatusSent      = "sent"
-	MessageStatusFailed    = "failed"
-	MessageStatusReceived  = "received"
+	MessageStatusPending  = "pending"
+	MessageStatusSent     = "sent"
+	MessageStatusFailed   = "failed"
+	MessageStatusReceived = "received"
 
 	ActivityStatusChange       = "status_change"
 	ActivityPriorityChange     = "priority_change"
@@ -39,6 +38,7 @@ const (
 	ActivityAssignedTeamChange = "assigned_team_change"
 	ActivitySelfAssign         = "self_assign"
 	ActivityTagChange          = "tag_change"
+	ActivitySLASet             = "sla_set"
 
 	ContentTypeText = "text"
 	ContentTypeHTML = "html"
@@ -175,7 +175,7 @@ func (m *Manager) processOutgoingMessage(message models.Message) {
 
 	// Set message properties
 	message.From = inbox.FromAddress()
-	message.To, _ = m.GetToAddress(message.ConversationID, inbox.Channel())
+	message.To, _ = m.GetToAddress(message.ConversationID)
 	message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
 
 	// Send message
@@ -193,12 +193,12 @@ func (m *Manager) processOutgoingMessage(message models.Message) {
 func (m *Manager) RenderContentInTemplate(channel string, message *models.Message) error {
 	switch channel {
 	case inbox.ChannelEmail:
-		conversation, err := m.GetConversation(message.ConversationUUID)
+		conversation, err := m.GetConversation(0, message.ConversationUUID)
 		if err != nil {
 			m.lo.Error("error fetching conversation", "uuid", message.ConversationUUID, "error", err)
 			return fmt.Errorf("fetching conversation: %w", err)
 		}
-		message.Content, err = m.template.RenderEmail(conversation, message.Content)
+		message.Content, err = m.template.RenderWithBaseTemplate(conversation, message.Content)
 		if err != nil {
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
 			return fmt.Errorf("could not render email content using template: %w", err)
@@ -332,12 +332,12 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
 	}
 
-	// Update conversation meta with the last message details.
-	plainTextContent := stringutil.HTML2Text(message.Content)
-	m.UpdateConversationLastMessage(0, message.ConversationUUID, plainTextContent, message.CreatedAt)
+	// Update conversation last message details.
+	lastMessage := stringutil.HTML2Text(message.Content)
+	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, lastMessage, message.CreatedAt)
 
 	// Broadcast new message to all conversation subscribers.
-	m.BroadcastNewConversationMessage(message.ConversationUUID, plainTextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
+	m.BroadcastNewConversationMessage(message.ConversationUUID, lastMessage, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
 }
 
@@ -358,7 +358,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 
 // RecordAssigneeTeamChange records an activity for a team assignee change.
 func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error {
-	team, err := m.teamStore.GetTeam(teamID)
+	team, err := m.teamStore.Get(teamID)
 	if err != nil {
 		return err
 	}
@@ -373,6 +373,11 @@ func (m *Manager) RecordPriorityChange(priority, conversationUUID string, actor 
 // RecordStatusChange records an activity for a status change.
 func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umodels.User) error {
 	return m.InsertConversationActivity(ActivityStatusChange, conversationUUID, status, actor)
+}
+
+// RecordSLASet records an activity for an SLA set.
+func (m *Manager) RecordSLASet(conversationUUID string, actor umodels.User) error {
+	return m.InsertConversationActivity(ActivitySLASet, conversationUUID, "", actor)
 }
 
 // InsertConversationActivity inserts an activity message.
@@ -425,6 +430,8 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
 	case ActivityTagChange:
 		content = fmt.Sprintf("%s added tags %s", actorName, newValue)
+	case ActivitySLASet:
+		content = fmt.Sprintf("%s set an SLA to this conversation", actorName)
 	default:
 		return "", fmt.Errorf("invalid activity type %s", activityType)
 	}
@@ -434,16 +441,16 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 // processIncomingMessage handles the insertion of an incoming message and
 // associated contact. It finds or creates the contact, checks for existing
 // conversations, and creates a new conversation if necessary. It also
-// inserts the message, uploads any attachments, and evaluates automation rules.
+// inserts the message, uploads any attachments, and queues the conversation evaluation of automation rules.
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	var err error
 
-	// Find or create contact.
-	in.Message.SenderID, err = m.contactStore.Upsert(in.Contact)
-	if err != nil {
+	// Find or create contact and set sender ID.
+	if err = m.userStore.CreateContact(&in.Contact); err != nil {
 		m.lo.Error("error upserting contact", "error", err)
 		return err
 	}
+	in.Message.SenderID = in.Contact.ID
 
 	// This message already exists?
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
@@ -455,7 +462,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	}
 
 	// Find or create new conversation.
-	isNewConversation, err := m.findOrCreateConversation(&in.Message, in.InboxID, in.Message.SenderID)
+	isNewConversation, err := m.findOrCreateConversation(&in.Message, in.InboxID, in.Contact.ContactChannelID, in.Contact.ID)
 	if err != nil {
 		return err
 	}
@@ -525,13 +532,13 @@ func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error
 // generateMessagesQuery generates the SQL query for fetching messages in a conversation.
 func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, page, pageSize int) (string, int, []interface{}, error) {
 	if page <= 0 {
-		page = 1
+		return "", 0, nil, errors.New("page must be greater than 0")
 	}
 	if pageSize > maxMessagesPerPage {
 		pageSize = maxMessagesPerPage
 	}
 	if pageSize <= 0 {
-		pageSize = 10
+		return "", 0, nil, errors.New("page size must be greater than 0")
 	}
 
 	// Calculate the offset
@@ -590,7 +597,7 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 }
 
 // findOrCreateConversation finds or creates a conversation for the given message.
-func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int) (bool, error) {
+func (m *Manager) findOrCreateConversation(in *models.Message, inboxID, contactChannelID, contactID int) (bool, error) {
 	var (
 		new              bool
 		err              error
@@ -611,18 +618,9 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 	// Conversation not found, create one.
 	if conversationID == 0 {
 		new = true
-
-		// Put subject & last message details in meta.
-		plainTextContent := stringutil.HTML2Text(in.Content)
-		conversationMeta, err := json.Marshal(map[string]string{
-			"subject":         in.Subject,
-			"last_message":    plainTextContent,
-			"last_message_at": time.Now().Format(time.RFC3339),
-		})
-		if err != nil {
-			return false, err
-		}
-		conversationID, conversationUUID, err = m.CreateConversation(contactID, inboxID, conversationMeta)
+		lastMessage := stringutil.HTML2Text(in.Content)
+		lastMessageAt := time.Now()
+		conversationID, conversationUUID, err = m.CreateConversation(contactID, contactChannelID, inboxID, lastMessage, lastMessageAt, in.Subject)
 		if err != nil || conversationID == 0 {
 			return new, err
 		}
@@ -630,7 +628,6 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		in.ConversationUUID = conversationUUID
 		return new, nil
 	}
-
 	// Get UUID.
 	if conversationUUID == "" {
 		conversationUUID, err = m.GetConversationUUID(conversationID)

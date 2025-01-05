@@ -12,129 +12,158 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+var (
+	slaReqFields = map[string][2]int{"name": {1, 255}, "description": {1, 255}, "first_response_time": {1, 255}, "resolution_time": {1, 255}}
+)
+
 // initHandlers initializes the HTTP routes and handlers for the application.
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Authentication.
-	g.POST("/api/login", handleLogin)
+	g.POST("/api/v1/login", handleLogin)
 	g.GET("/logout", handleLogout)
-	g.GET("/api/oidc/{id}/login", handleOIDCLogin)
-	g.GET("/api/oidc/finish", handleOIDCCallback)
-
-	// Health check.
-	g.GET("/health", handleHealthCheck)
+	g.GET("/api/v1/oidc/{id}/login", handleOIDCLogin)
+	g.GET("/api/v1/oidc/finish", handleOIDCCallback)
 
 	// Serve media files.
 	g.GET("/uploads/{uuid}", auth(handleServeMedia))
 
 	// Settings.
-	g.GET("/api/settings/general", handleGetGeneralSettings)
-	g.PUT("/api/settings/general", authPerm(handleUpdateGeneralSettings, "settings_general", "write"))
-	g.GET("/api/settings/notifications/email", authPerm(handleGetEmailNotificationSettings, "settings_notifications", "read"))
-	g.PUT("/api/settings/notifications/email", authPerm(handleUpdateEmailNotificationSettings, "settings_notifications", "write"))
+	g.GET("/api/v1/settings/general", handleGetGeneralSettings)
+	g.PUT("/api/v1/settings/general", perm(handleUpdateGeneralSettings, "settings_general", "write"))
+	g.GET("/api/v1/settings/notifications/email", perm(handleGetEmailNotificationSettings, "settings_notifications", "read"))
+	g.PUT("/api/v1/settings/notifications/email", perm(handleUpdateEmailNotificationSettings, "settings_notifications", "write"))
 
-	// OpenID SSO.
-	g.GET("/api/oidc", handleGetAllOIDC)
-	g.GET("/api/oidc/{id}", authPerm(handleGetOIDC, "oidc", "read"))
-	g.POST("/api/oidc", authPerm(handleCreateOIDC, "oidc", "write"))
-	g.PUT("/api/oidc/{id}", authPerm(handleUpdateOIDC, "oidc", "write"))
-	g.DELETE("/api/oidc/{id}", authPerm(handleDeleteOIDC, "oidc", "delete"))
+	// OpenID connect single sign-on.
+	g.GET("/api/v1/oidc", handleGetAllOIDC)
+	g.GET("/api/v1/oidc/{id}", perm(handleGetOIDC, "oidc", "read"))
+	g.POST("/api/v1/oidc", perm(handleCreateOIDC, "oidc", "write"))
+	g.PUT("/api/v1/oidc/{id}", perm(handleUpdateOIDC, "oidc", "write"))
+	g.DELETE("/api/v1/oidc/{id}", perm(handleDeleteOIDC, "oidc", "delete"))
 
-	// Conversation and message.
-	g.GET("/api/conversations/all", authPerm(handleGetAllConversations, "conversations", "read_all"))
-	g.GET("/api/conversations/unassigned", authPerm(handleGetUnassignedConversations, "conversations", "read_unassigned"))
-	g.GET("/api/conversations/assigned", authPerm(handleGetAssignedConversations, "conversations", "read_assigned"))
-	g.GET("/api/conversations/{uuid}", authPerm(handleGetConversation, "conversations", "read"))
-	g.GET("/api/conversations/{uuid}/participants", authPerm(handleGetConversationParticipants, "conversations", "read"))
-	g.PUT("/api/conversations/{uuid}/assignee/user", authPerm(handleUpdateConversationUserAssignee, "conversations", "update_user_assignee"))
-	g.PUT("/api/conversations/{uuid}/assignee/team", authPerm(handleUpdateTeamAssignee, "conversations", "update_team_assignee"))
-	g.PUT("/api/conversations/{uuid}/priority", authPerm(handleUpdateConversationPriority, "conversations", "update_priority"))
-	g.PUT("/api/conversations/{uuid}/status", authPerm(handleUpdateConversationStatus, "conversations", "update_status"))
-	g.PUT("/api/conversations/{uuid}/last-seen", authPerm(handleUpdateConversationAssigneeLastSeen, "conversations", "read"))
-	g.POST("/api/conversations/{uuid}/tags", authPerm(handleAddConversationTags, "conversations", "update_tags"))
-	g.POST("/api/conversations/{cuuid}/messages", authPerm(handleSendMessage, "messages", "write"))
-	g.GET("/api/conversations/{uuid}/messages", authPerm(handleGetMessages, "messages", "read"))
-	g.PUT("/api/conversations/{cuuid}/messages/{uuid}/retry", authPerm(handleRetryMessage, "messages", "write"))
-	g.GET("/api/conversations/{cuuid}/messages/{uuid}", authPerm(handleGetMessage, "messages", "read"))
+	// All.
+	g.GET("/api/v1/conversations/all", perm(handleGetAllConversations, "conversations", "read_all"))
+	// Not assigned to any user or team.
+	g.GET("/api/v1/conversations/unassigned", perm(handleGetUnassignedConversations, "conversations", "read_unassigned"))
+	// Assigned to logged in user.
+	g.GET("/api/v1/conversations/assigned", perm(handleGetAssignedConversations, "conversations", "read_assigned"))
+	// Unassigned conversations assigned to a team.
+	g.GET("/api/v1/teams/{team_id}/conversations/unassigned", perm(handleGetTeamUnassignedConversations, "conversations", "read_assigned"))
+	// Filtered by view.
+	g.GET("/api/v1/views/{view_id}/conversations", perm(handleGetViewConversations, "conversations", "read"))
+
+	g.GET("/api/v1/conversations/{uuid}", perm(handleGetConversation, "conversations", "read"))
+	g.GET("/api/v1/conversations/{uuid}/participants", perm(handleGetConversationParticipants, "conversations", "read"))
+	g.PUT("/api/v1/conversations/{uuid}/assignee/user", perm(handleUpdateConversationUserAssignee, "conversations", "update_user_assignee"))
+	g.PUT("/api/v1/conversations/{uuid}/assignee/team", perm(handleUpdateTeamAssignee, "conversations", "update_team_assignee"))
+	g.PUT("/api/v1/conversations/{uuid}/priority", perm(handleUpdateConversationPriority, "conversations", "update_priority"))
+	g.PUT("/api/v1/conversations/{uuid}/status", perm(handleUpdateConversationStatus, "conversations", "update_status"))
+	g.PUT("/api/v1/conversations/{uuid}/last-seen", perm(handleUpdateConversationAssigneeLastSeen, "conversations", "read"))
+	g.POST("/api/v1/conversations/{uuid}/tags", perm(handleAddConversationTags, "conversations", "update_tags"))
+	g.POST("/api/v1/conversations/{cuuid}/messages", perm(handleSendMessage, "messages", "write"))
+	g.GET("/api/v1/conversations/{uuid}/messages", perm(handleGetMessages, "messages", "read"))
+	g.PUT("/api/v1/conversations/{cuuid}/messages/{uuid}/retry", perm(handleRetryMessage, "messages", "write"))
+	g.GET("/api/v1/conversations/{cuuid}/messages/{uuid}", perm(handleGetMessage, "messages", "read"))
+
+	// Views.
+	g.GET("/api/v1/views/me", auth(handleGetUserViews))
+	g.POST("/api/v1/views/me", auth(handleCreateUserView))
+	g.PUT("/api/v1/views/me/{id}", auth(handleUpdateUserView))
+	g.DELETE("/api/v1/views/me/{id}", auth(handleDeleteUserView))
 
 	// Status and priority.
-	g.GET("/api/statuses", auth(handleGetStatuses))
-	g.POST("/api/statuses", authPerm(handleCreateStatus, "status", "write"))
-	g.PUT("/api/statuses/{id}", authPerm(handleUpdateStatus, "status", "write"))
-	g.DELETE("/api/statuses/{id}", authPerm(handleDeleteStatus, "status", "delete"))
-	g.GET("/api/priorities", auth(handleGetPriorities))
+	g.GET("/api/v1/statuses", auth(handleGetStatuses))
+	g.POST("/api/v1/statuses", perm(handleCreateStatus, "status", "write"))
+	g.PUT("/api/v1/statuses/{id}", perm(handleUpdateStatus, "status", "write"))
+	g.DELETE("/api/v1/statuses/{id}", perm(handleDeleteStatus, "status", "delete"))
+	g.GET("/api/v1/priorities", auth(handleGetPriorities))
 
 	// Tag.
-	g.GET("/api/tags", auth(handleGetTags))
-	g.POST("/api/tags", authPerm(handleCreateTag, "tags", "write"))
-	g.PUT("/api/tags/{id}", authPerm(handleUpdateTag, "tags", "write"))
-	g.DELETE("/api/tags/{id}", authPerm(handleDeleteTag, "tags", "delete"))
+	g.GET("/api/v1/tags", auth(handleGetTags))
+	g.POST("/api/v1/tags", perm(handleCreateTag, "tags", "write"))
+	g.PUT("/api/v1/tags/{id}", perm(handleUpdateTag, "tags", "write"))
+	g.DELETE("/api/v1/tags/{id}", perm(handleDeleteTag, "tags", "delete"))
 
 	// Media.
-	g.POST("/api/media", auth(handleMediaUpload))
+	g.POST("/api/v1/media", auth(handleMediaUpload))
 
 	// Canned response.
-	g.GET("/api/canned-responses", auth(handleGetCannedResponses))
-	g.POST("/api/canned-responses", authPerm(handleCreateCannedResponse, "canned_responses", "write"))
-	g.PUT("/api/canned-responses/{id}", authPerm(handleUpdateCannedResponse, "canned_responses", "write"))
-	g.DELETE("/api/canned-responses/{id}", authPerm(handleDeleteCannedResponse, "canned_responses", "delete"))
+	g.GET("/api/v1/canned-responses", auth(handleGetCannedResponses))
+	g.POST("/api/v1/canned-responses", perm(handleCreateCannedResponse, "canned_responses", "write"))
+	g.PUT("/api/v1/canned-responses/{id}", perm(handleUpdateCannedResponse, "canned_responses", "write"))
+	g.DELETE("/api/v1/canned-responses/{id}", perm(handleDeleteCannedResponse, "canned_responses", "delete"))
 
 	// User.
-	g.GET("/api/users/me", auth(handleGetCurrentUser))
-	g.PUT("/api/users/me", auth(handleUpdateCurrentUser))
-	g.DELETE("/api/users/me/avatar", auth(handleDeleteAvatar))
-	g.GET("/api/users/compact", auth(handleGetUsersCompact))
-	g.GET("/api/users", authPerm(handleGetUsers, "users", "read"))
-	g.GET("/api/users/{id}", authPerm(handleGetUser, "users", "read"))
-	g.POST("/api/users", authPerm(handleCreateUser, "users", "write"))
-	g.PUT("/api/users/{id}", authPerm(handleUpdateUser, "users", "write"))
-	g.DELETE("/api/users/{id}", authPerm(handleDeleteUser, "users", "delete"))
-	g.POST("/api/users/reset-password", tryAuth(handleResetPassword))
-	g.POST("/api/users/set-password", tryAuth(handleSetPassword))
+	g.GET("/api/v1/users/me", auth(handleGetCurrentUser))
+	g.PUT("/api/v1/users/me", auth(handleUpdateCurrentUser))
+	g.GET("/api/v1/users/me/teams", auth(handleGetCurrentUserTeams))
+	g.DELETE("/api/v1/users/me/avatar", auth(handleDeleteAvatar))
+	g.GET("/api/v1/users/compact", auth(handleGetUsersCompact))
+	g.GET("/api/v1/users", perm(handleGetUsers, "users", "read"))
+	g.GET("/api/v1/users/{id}", perm(handleGetUser, "users", "read"))
+	g.POST("/api/v1/users", perm(handleCreateUser, "users", "write"))
+	g.PUT("/api/v1/users/{id}", perm(handleUpdateUser, "users", "write"))
+	g.DELETE("/api/v1/users/{id}", perm(handleDeleteUser, "users", "delete"))
+	g.POST("/api/v1/users/reset-password", tryAuth(handleResetPassword))
+	g.POST("/api/v1/users/set-password", tryAuth(handleSetPassword))
 
 	// Team.
-	g.GET("/api/teams/compact", auth(handleGetTeamsCompact))
-	g.GET("/api/teams", authPerm(handleGetTeams, "teams", "read"))
-	g.POST("/api/teams", authPerm(handleCreateTeam, "teams", "write"))
-	g.GET("/api/teams/{id}", authPerm(handleGetTeam, "teams", "read"))
-	g.PUT("/api/teams/{id}", authPerm(handleUpdateTeam, "teams", "write"))
-	g.DELETE("/api/teams/{id}", authPerm(handleDeleteTeam, "teams", "delete"))
+	g.GET("/api/v1/teams/compact", auth(handleGetTeamsCompact))
+	g.GET("/api/v1/teams", perm(handleGetTeams, "teams", "read"))
+	g.GET("/api/v1/teams/{id}", perm(handleGetTeam, "teams", "read"))
+	g.POST("/api/v1/teams", perm(handleCreateTeam, "teams", "write"))
+	g.PUT("/api/v1/teams/{id}", perm(handleUpdateTeam, "teams", "write"))
+	g.DELETE("/api/v1/teams/{id}", perm(handleDeleteTeam, "teams", "delete"))
 
 	// i18n.
-	g.GET("/api/lang/{lang}", handleGetI18nLang)
+	g.GET("/api/v1/lang/{lang}", handleGetI18nLang)
 
 	// Automation.
-	g.GET("/api/automation/rules", authPerm(handleGetAutomationRules, "automations", "read"))
-	g.GET("/api/automation/rules/{id}", authPerm(handleGetAutomationRule, "automations", "read"))
-	g.POST("/api/automation/rules", authPerm(handleCreateAutomationRule, "automations", "write"))
-	g.PUT("/api/automation/rules/{id}/toggle", authPerm(handleToggleAutomationRule, "automations", "write"))
-	g.PUT("/api/automation/rules/{id}", authPerm(handleUpdateAutomationRule, "automations", "write"))
-	g.DELETE("/api/automation/rules/{id}", authPerm(handleDeleteAutomationRule, "automations", "delete"))
+	g.GET("/api/v1/automation/rules", perm(handleGetAutomationRules, "automations", "read"))
+	g.GET("/api/v1/automation/rules/{id}", perm(handleGetAutomationRule, "automations", "read"))
+	g.POST("/api/v1/automation/rules", perm(handleCreateAutomationRule, "automations", "write"))
+	g.PUT("/api/v1/automation/rules/{id}/toggle", perm(handleToggleAutomationRule, "automations", "write"))
+	g.PUT("/api/v1/automation/rules/{id}", perm(handleUpdateAutomationRule, "automations", "write"))
+	g.DELETE("/api/v1/automation/rules/{id}", perm(handleDeleteAutomationRule, "automations", "delete"))
 
 	// Inbox.
-	g.GET("/api/inboxes", authPerm(handleGetInboxes, "inboxes", "read"))
-	g.GET("/api/inboxes/{id}", authPerm(handleGetInbox, "inboxes", "read"))
-	g.POST("/api/inboxes", authPerm(handleCreateInbox, "inboxes", "write"))
-	g.PUT("/api/inboxes/{id}/toggle", authPerm(handleToggleInbox, "inboxes", "write"))
-	g.PUT("/api/inboxes/{id}", authPerm(handleUpdateInbox, "inboxes", "write"))
-	g.DELETE("/api/inboxes/{id}", authPerm(handleDeleteInbox, "inboxes", "delete"))
+	g.GET("/api/v1/inboxes", perm(handleGetInboxes, "inboxes", "read"))
+	g.GET("/api/v1/inboxes/{id}", perm(handleGetInbox, "inboxes", "read"))
+	g.POST("/api/v1/inboxes", perm(handleCreateInbox, "inboxes", "write"))
+	g.PUT("/api/v1/inboxes/{id}/toggle", perm(handleToggleInbox, "inboxes", "write"))
+	g.PUT("/api/v1/inboxes/{id}", perm(handleUpdateInbox, "inboxes", "write"))
+	g.DELETE("/api/v1/inboxes/{id}", perm(handleDeleteInbox, "inboxes", "delete"))
 
 	// Role.
-	g.GET("/api/roles", authPerm(handleGetRoles, "roles", "read"))
-	g.GET("/api/roles/{id}", authPerm(handleGetRole, "roles", "read"))
-	g.POST("/api/roles", authPerm(handleCreateRole, "roles", "write"))
-	g.PUT("/api/roles/{id}", authPerm(handleUpdateRole, "roles", "write"))
-	g.DELETE("/api/roles/{id}", authPerm(handleDeleteRole, "roles", "delete"))
+	g.GET("/api/v1/roles", perm(handleGetRoles, "roles", "read"))
+	g.GET("/api/v1/roles/{id}", perm(handleGetRole, "roles", "read"))
+	g.POST("/api/v1/roles", perm(handleCreateRole, "roles", "write"))
+	g.PUT("/api/v1/roles/{id}", perm(handleUpdateRole, "roles", "write"))
+	g.DELETE("/api/v1/roles/{id}", perm(handleDeleteRole, "roles", "delete"))
 
 	// Dashboard.
-	g.GET("/api/dashboard/global/counts", authPerm(handleDashboardCounts, "dashboard_global", "read"))
-	g.GET("/api/dashboard/global/charts", authPerm(handleDashboardCharts, "dashboard_global", "read"))
+	g.GET("/api/v1/dashboard/global/counts", perm(handleDashboardCounts, "dashboard_global", "read"))
+	g.GET("/api/v1/dashboard/global/charts", perm(handleDashboardCharts, "dashboard_global", "read"))
 
 	// Template.
-	g.GET("/api/templates", authPerm(handleGetTemplates, "templates", "read"))
-	g.GET("/api/templates/{id}", authPerm(handleGetTemplate, "templates", "read"))
-	g.POST("/api/templates", authPerm(handleCreateTemplate, "templates", "write"))
-	g.PUT("/api/templates/{id}", authPerm(handleUpdateTemplate, "templates", "write"))
-	g.DELETE("/api/templates/{id}", authPerm(handleDeleteTemplate, "templates", "delete"))
+	g.GET("/api/v1/templates", perm(handleGetTemplates, "templates", "read"))
+	g.GET("/api/v1/templates/{id}", perm(handleGetTemplate, "templates", "read"))
+	g.POST("/api/v1/templates", perm(handleCreateTemplate, "templates", "write"))
+	g.PUT("/api/v1/templates/{id}", perm(handleUpdateTemplate, "templates", "write"))
+	g.DELETE("/api/v1/templates/{id}", perm(handleDeleteTemplate, "templates", "delete"))
+
+	// Business hours.
+	g.GET("/api/v1/business-hours", auth(handleGetBusinessHours))
+	g.GET("/api/v1/business-hours/{id}", auth(handleGetBusinessHour))
+	g.POST("/api/v1/business-hours", auth(handleCreateBusinessHours))
+	g.PUT("/api/v1/business-hours/{id}", auth(handleUpdateBusinessHours))
+	g.DELETE("/api/v1/business-hours/{id}", auth(handleDeleteBusinessHour))
+
+	// SLA.
+	g.GET("/api/v1/sla", auth(handleGetSLAs))
+	g.GET("/api/v1/sla/{id}", auth(handleGetSLA))
+	g.POST("/api/v1/sla", auth(fastglue.ReqLenRangeParams(handleCreateSLA, slaReqFields)))
+	g.PUT("/api/v1/sla/{id}", auth(fastglue.ReqLenRangeParams(handleUpdateSLA, slaReqFields)))
+	g.DELETE("/api/v1/sla/{id}", auth(handleDeleteSLA))
 
 	// WebSocket.
 	g.GET("/ws", auth(func(r *fastglue.Request) error {
@@ -150,8 +179,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/admin/{all:*}", authPage(serveIndexPage))
 	g.GET("/reset-password", notAuthPage(serveIndexPage))
 	g.GET("/set-password", notAuthPage(serveIndexPage))
-	g.GET("/assets/{all:*}", serveStaticFiles)
-	g.GET("/images/{all:*}", serveStaticFiles)
+	g.GET("/assets/{all:*}", serveFrontendStaticFiles)
+	g.GET("/images/{all:*}", serveFrontendStaticFiles)
+	g.GET("/static/public/{all:*}", serveStaticFiles)
+
+	// Public pages.
+	g.GET("/csat/{uuid}", handleShowCSAT)
+	g.POST("/csat/{uuid}", fastglue.ReqLenRangeParams(handleUpdateCSATResponse, map[string][2]int{"feedback": {1, 1000}}))
+
+	// Health check.
+	g.GET("/health", handleHealthCheck)
 }
 
 // serveIndexPage serves the main index page of the application.
@@ -181,6 +218,29 @@ func serveIndexPage(r *fastglue.Request) error {
 
 // serveStaticFiles serves static assets from the embedded filesystem.
 func serveStaticFiles(r *fastglue.Request) error {
+	app := r.Context.(*App)
+
+	// Get the requested file path.
+	filePath := string(r.RequestCtx.Path())
+
+	file, err := app.fs.Get(filePath)
+	if err != nil {
+		return r.SendErrorEnvelope(http.StatusNotFound, "File not found", nil, envelope.NotFoundError)
+	}
+
+	// Set the appropriate Content-Type based on the file extension.
+	ext := filepath.Ext(filePath)
+	contentType := mime.TypeByExtension(ext)
+	if contentType == "" {
+		contentType = http.DetectContentType(file.ReadBytes())
+	}
+	r.RequestCtx.Response.Header.Set("Content-Type", contentType)
+	r.RequestCtx.SetBody(file.ReadBytes())
+	return nil
+}
+
+// serveFrontendStaticFiles serves static assets from the embedded filesystem.
+func serveFrontendStaticFiles(r *fastglue.Request) error {
 	app := r.Context.(*App)
 
 	// Get the requested file path.

@@ -3,10 +3,10 @@ package main
 import (
 	"strconv"
 
+	amodels "github.com/abhinavxd/artemis/internal/auth/models"
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	medModels "github.com/abhinavxd/artemis/internal/media/models"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -22,14 +22,19 @@ func handleGetMessages(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
 		uuid        = r.RequestCtx.UserValue("uuid").(string)
-		user        = r.RequestCtx.UserValue("user").(umodels.User)
+		auser       = r.RequestCtx.UserValue("user").(amodels.User)
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
 		pageSize, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page_size")))
 		total       = 0
 	)
 
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	// Check permission
-	_, err := enforceConversationAccess(app, uuid, user)
+	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -60,11 +65,15 @@ func handleGetMessage(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		uuid  = r.RequestCtx.UserValue("uuid").(string)
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
-		user  = r.RequestCtx.UserValue("user").(umodels.User)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	// Check permission
-	_, err := enforceConversationAccess(app, cuuid, user)
+	_, err = enforceConversationAccess(app, cuuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -87,11 +96,16 @@ func handleRetryMessage(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		uuid  = r.RequestCtx.UserValue("uuid").(string)
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
-		user  = r.RequestCtx.UserValue("user").(umodels.User)
+		auser  = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	// Check permission
-	_, err := enforceConversationAccess(app, cuuid, user)
+	_, err = enforceConversationAccess(app, cuuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -106,15 +120,20 @@ func handleRetryMessage(r *fastglue.Request) error {
 // handleSendMessage sends a message in a conversation.
 func handleSendMessage(r *fastglue.Request) error {
 	var (
-		app    = r.Context.(*App)
-		user   = r.RequestCtx.UserValue("user").(umodels.User)
-		cuuid  = r.RequestCtx.UserValue("cuuid").(string)
-		req    = messageReq{}
+		app   = r.Context.(*App)
+		auser  = r.RequestCtx.UserValue("user").(amodels.User)
+		cuuid = r.RequestCtx.UserValue("cuuid").(string)
+		req   = messageReq{}
 		media = []medModels.Media{}
 	)
 
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	// Check permission
-	_, err := enforceConversationAccess(app, cuuid, user)
+	_, err = enforceConversationAccess(app, cuuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

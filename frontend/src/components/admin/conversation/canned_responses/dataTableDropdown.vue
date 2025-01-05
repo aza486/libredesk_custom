@@ -22,7 +22,7 @@
       <CannedResponsesForm @submit="onSubmit">
         <template #footer>
           <DialogFooter class="mt-7">
-            <Button type="submit" size="sm">Save Changes</Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </template>
       </CannedResponsesForm>

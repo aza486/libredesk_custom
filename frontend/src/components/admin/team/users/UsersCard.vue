@@ -1,15 +1,19 @@
 <template>
-  <div class="mb-5">
-    <CustomBreadcrumb :links="breadcrumbLinks" />
+  <PageHeader title="Users" description="Manage users" />
+  <div class="w-8/12">
+    <div v-if="router.currentRoute.value.path === '/admin/teams/users'">
+      <div class="flex justify-end mb-5">
+        <Button @click="navigateToAddUser"> New user </Button>
+      </div>
+      <div>
+        <Spinner v-if="isLoading"></Spinner>
+        <DataTable :columns="columns" :data="data" v-else />
+      </div>
+    </div>
+    <template v-else>
+      <router-view></router-view>
+    </template>
   </div>
-  <div class="flex justify-end mb-5">
-    <Button @click="navigateToAddUser" size="sm"> New user </Button>
-  </div>
-  <div>
-    <Spinner v-if="isLoading"></Spinner>
-    <DataTable :columns="columns" :data="data" v-else />
-  </div>
-  <router-view></router-view>
 </template>
 
 <script setup>
@@ -22,6 +26,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import PageHeader from '@/components/admin/common/PageHeader.vue'
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
@@ -32,7 +37,7 @@ const isLoading = ref(false)
 const data = ref([])
 const emit = useEmitter()
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+  
   { path: '#', label: 'Users' }
 ]
 

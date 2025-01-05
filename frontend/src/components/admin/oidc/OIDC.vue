@@ -1,13 +1,21 @@
 <template>
-  <div class="flex justify-between mb-5">
-    <PageHeader title="OpenID Connect SSO" description="Manage OpenID SSO configurations" />
-    <div>
-      <Button size="sm" @click="navigateToAddOIDC">New OIDC</Button>
-    </div>
-  </div>
-  <div>
-    <Spinner v-if="isLoading"></Spinner>
-    <DataTable :columns="columns" :data="oidc" v-else />
+  <PageHeader title="OpenID Connect" description="Manage OpenID Connect configurations" />
+  <div class="w-8/12">
+    <template v-if="router.currentRoute.value.path === '/admin/oidc'">
+      <div class="flex justify-between mb-5">
+        <div></div>
+        <div>
+          <Button @click="navigateToAddOIDC">New OIDC</Button>
+        </div>
+      </div>
+      <div>
+        <Spinner v-if="isLoading"></Spinner>
+        <DataTable :columns="columns" :data="oidc" v-else />
+      </div>
+    </template>
+    <template v-else>
+      <router-view/>
+    </template>
   </div>
 </template>
 

@@ -9,17 +9,23 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+// handleGetTemplates returns all templates.
 func handleGetTemplates(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
+		typ = string(r.RequestCtx.QueryArgs().Peek("type"))
 	)
-	t, err := app.tmpl.GetAll()
+	if typ == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `type`.", nil, envelope.InputError)
+	}
+	t, err := app.tmpl.GetAll(typ)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(t)
 }
 
+// handleGetTemplate returns a template by id.
 func handleGetTemplate(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -36,6 +42,7 @@ func handleGetTemplate(r *fastglue.Request) error {
 	return r.SendEnvelope(t)
 }
 
+// handleCreateTemplate creates a new template.
 func handleCreateTemplate(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -44,14 +51,13 @@ func handleCreateTemplate(r *fastglue.Request) error {
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, envelope.GeneralError)
 	}
-
-	err := app.tmpl.Create(req)
-	if err != nil {
+	if err := app.tmpl.Create(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
 }
 
+// handleUpdateTemplate updates a template.
 func handleUpdateTemplate(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -62,17 +68,16 @@ func handleUpdateTemplate(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid template `id`.", nil, envelope.InputError)
 	}
-
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, envelope.GeneralError)
 	}
-
 	if err = app.tmpl.Update(id, req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
 }
 
+// handleDeleteTemplate deletes a template.
 func handleDeleteTemplate(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -83,11 +88,9 @@ func handleDeleteTemplate(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid template `id`.", nil, envelope.InputError)
 	}
-
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, envelope.GeneralError)
 	}
-
 	if err = app.tmpl.Delete(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}

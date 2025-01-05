@@ -9,12 +9,14 @@ import (
 	"sync"
 	"time"
 
+	amodels "github.com/abhinavxd/artemis/internal/auth/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/redis/go-redis/v9"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
 	sessredisstore "github.com/zerodha/simplesessions/stores/redis/v3"
@@ -195,7 +197,7 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonc
 }
 
 // SaveSession creates and sets a session (post successful login/auth).
-func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
+func (a *Auth) SaveSession(user amodels.User, r *fastglue.Request) error {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -265,7 +267,7 @@ func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 
 	return models.User{
 		ID:        userID,
-		Email:     email,
+		Email:     null.NewString(email, email != ""),
 		FirstName: firstName,
 		LastName:  lastName,
 	}, nil

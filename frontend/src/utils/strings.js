@@ -41,6 +41,11 @@ export const isGoDuration = (value) => {
   return regex.test(value)
 }
 
+export const isGoHourMinuteDuration = (value) => {
+  const regex = /^([0-9]+h|[0-9]+m)$/
+  return regex.test(value)
+}
+
 const template = document.createElement('template')
 export function getTextFromHTML(htmlString) {
     template.innerHTML = htmlString

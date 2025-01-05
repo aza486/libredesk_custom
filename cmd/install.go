@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -12,13 +13,13 @@ import (
 )
 
 // install checks if the schema is already installed, prompts for confirmation, and installs the schema if needed.
-func install(db *sqlx.DB, fs stuffbin.FileSystem) error {
+func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem) error {
 	installed, err := checkSchema(db)
 	if err != nil {
 		log.Fatalf("error checking db schema: %v", err)
 	}
 	if installed {
-		fmt.Printf("\033[31m** WARNING: This will wipe your entire DB - '%s' **\033[0m\n", ko.String("db.database"))
+		fmt.Printf("\033[31m** WARNING: This will wipe your entire database - '%s' **\033[0m\n", ko.String("db.database"))
 		fmt.Print("Continue (y/n)? ")
 		var ok string
 		fmt.Scanf("%s", &ok)
@@ -35,15 +36,15 @@ func install(db *sqlx.DB, fs stuffbin.FileSystem) error {
 	log.Println("Schema installed successfully")
 
 	// Create system user.
-	if err := user.CreateSystemUser(db); err != nil {
+	if err := user.CreateSystemUser(ctx, db); err != nil {
 		log.Fatalf("error creating system user: %v", err)
 	}
 	return nil
 }
 
 // setSystemUserPass prompts for pass and sets system user password.
-func setSystemUserPass(db *sqlx.DB) {
-	user.ChangeSystemUserPassword(db)
+func setSystemUserPass(ctx context.Context, db *sqlx.DB) {
+	user.ChangeSystemUserPassword(ctx, db)
 }
 
 // checkSchema verifies if the DB schema is already installed by querying a table.

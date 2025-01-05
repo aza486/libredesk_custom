@@ -22,7 +22,7 @@
       <TagsForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit" size="sm"> Save changes </Button>
+            <Button type="submit"> Save changes </Button>
           </DialogFooter>
         </template>
       </TagsForm>

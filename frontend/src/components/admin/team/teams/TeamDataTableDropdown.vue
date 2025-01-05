@@ -8,9 +8,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { handleHTTPError } from '@/utils/http'
+import api from '@/api'
 
 const router = useRouter()
-
+const emit = useEmitter()
 const props = defineProps({
   team: {
     type: Object,
@@ -21,8 +25,27 @@ const props = defineProps({
   }
 })
 
-function editTeam(id) {
+function editTeam (id) {
   router.push({ path: `/admin/teams/teams/${id}/edit` })
+}
+
+async function deleteTeam (id) {
+  try {
+    await api.deleteTeam(id)
+    emitRefreshTeamList()
+  } catch (error) {
+    emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
+}
+
+const emitRefreshTeamList = () => {
+  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+    model: 'team'
+  })
 }
 </script>
 
@@ -36,6 +59,7 @@ function editTeam(id) {
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editTeam(props.team.id)"> Edit </DropdownMenuItem>
+      <DropdownMenuItem @click="deleteTeam(props.team.id)"> Delete </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

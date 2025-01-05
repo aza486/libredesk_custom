@@ -1,8 +1,10 @@
 <template>
   <div>
-    <PageHeader title="General" description="General app settings" />
+    <PageHeader title="General" description="Manage general app settings"  />
   </div>
-  <GeneralSettingForm :submitForm="submitForm" :initial-values="initialValues" submitLabel="Save" />
+  <div class="flex justify-center items-center flex-col w-8/12">
+    <GeneralSettingForm :submitForm="submitForm" :initial-values="initialValues" submitLabel="Save" />
+  </div>
 </template>
 
 <script setup>

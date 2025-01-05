@@ -52,6 +52,7 @@ type Engine struct {
 	q                 queries
 	lo                *logf.Logger
 	conversationStore ConversationStore
+	slaStore          SLAStore
 	systemUser        umodels.User
 	taskQueue         chan ConversationTask
 	closed            bool
@@ -65,14 +66,19 @@ type Opts struct {
 }
 
 type ConversationStore interface {
-	GetConversation(uuid string) (cmodels.Conversation, error)
+	GetConversation(id int, uuid string) (cmodels.Conversation, error)
 	GetConversationsCreatedAfter(t time.Time) ([]cmodels.Conversation, error)
 	UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error
 	UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error
-	UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error
+	UpdateConversationStatus(uuid string, status, snoozeDur []byte, actor umodels.User) error
 	UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error
 	SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error
 	SendReply(media []mmodels.Media, senderID int, conversationUUID, content string) error
+	RecordSLASet(conversationUUID string, actor umodels.User) error
+}
+
+type SLAStore interface {
+	ApplySLA(conversationID, slaID int) error
 }
 
 type queries struct {
@@ -104,8 +110,9 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 }
 
 // SetConversationStore sets conversations store.
-func (e *Engine) SetConversationStore(store ConversationStore) {
+func (e *Engine) SetConversationStore(store ConversationStore, slaStore SLAStore) {
 	e.conversationStore = store
+	e.slaStore = slaStore
 }
 
 // ReloadRules reloads automation rules from DB.
@@ -246,7 +253,7 @@ func (e *Engine) DeleteRule(id int) error {
 
 // handleNewConversation handles new conversation events.
 func (e *Engine) handleNewConversation(conversationUUID string) {
-	conversation, err := e.conversationStore.GetConversation(conversationUUID)
+	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
 	if err != nil {
 		e.lo.Error("error fetching conversation for new event", "uuid", conversationUUID, "error", err)
 		return
@@ -257,7 +264,7 @@ func (e *Engine) handleNewConversation(conversationUUID string) {
 
 // handleUpdateConversation handles update conversation events with specific eventType.
 func (e *Engine) handleUpdateConversation(conversationUUID, eventType string) {
-	conversation, err := e.conversationStore.GetConversation(conversationUUID)
+	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
 	if err != nil {
 		e.lo.Error("error fetching conversation for update event", "uuid", conversationUUID, "error", err)
 		return

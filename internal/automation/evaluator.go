@@ -16,7 +16,7 @@ import (
 // the corresponding actions are executed.
 func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
 	for _, rule := range rules {
-		e.lo.Debug("evaluating rule for conversation", "rule", rule, "conversation_uuid", conversation.UUID)
+		e.lo.Debug("evaluating rule for conversation", "rule", rule, "conversation_id", conversation.ID)
 
 		// At max there can be only 2 groups.
 		if len(rule.Groups) > 2 {
@@ -101,9 +101,9 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	// Extract the value from the conversation based on the rule's field
 	switch rule.Field {
 	case models.ConversationSubject:
-		valueToCompare = conversation.Subject
+		valueToCompare = conversation.Subject.String
 	case models.ConversationContent:
-		valueToCompare = conversation.LastMessage
+		valueToCompare = conversation.LastMessage.String
 	case models.ConversationStatus:
 		valueToCompare = conversation.Status.String
 	case models.ConversationPriority:
@@ -232,7 +232,7 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 		}
 	case models.ActionSetStatus:
 		e.lo.Debug("executing set status action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
+		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, []byte(action.Action), []byte(""), e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSendPrivateNote:
@@ -243,6 +243,19 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 	case models.ActionReply:
 		e.lo.Debug("executing reply action", "value", action.Action, "conversation_uuid", conversation.UUID)
 		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action); err != nil {
+			return err
+		}
+	case models.ActionSetSLA:
+		e.lo.Debug("executing set SLA action", "value", action.Action, "conversation_uuid", conversation.UUID)
+		slaID, err := strconv.Atoi(action.Action)
+		if err != nil {
+			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
+			return err
+		}
+		if err := e.slaStore.ApplySLA(conversation.ID, slaID); err != nil {
+			return err
+		}
+		if err := e.conversationStore.RecordSLASet(conversation.UUID, e.systemUser); err != nil {
 			return err
 		}
 	default:

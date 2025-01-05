@@ -18,7 +18,6 @@ const { toast } = useToast()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
   { path: '/admin/teams/users', label: 'Users' },
   { path: '#', label: 'Add user' }
 ]

@@ -1,12 +1,12 @@
 <template>
-  <div>
+  <PageHeader title="Status" description="Manage conversation statuses" />
+  <div class="w-8/12">
     <div class="flex justify-between mb-5">
-      <PageHeader title="Status" description="Manage conversation statuses" />
-      <div class="flex justify-end mb-4">
-        <Dialog v-model:open="dialogOpen">
-          <DialogTrigger as-child>
-            <Button size="sm">New Status</Button>
-          </DialogTrigger>
+      <div class="flex justify-end mb-4 w-full">
+      <Dialog v-model:open="dialogOpen">
+        <DialogTrigger as-child>
+        <Button class="ml-auto">New Status</Button>
+        </DialogTrigger>
           <DialogContent class="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>New status</DialogTitle>
@@ -15,7 +15,7 @@
             <StatusForm @submit.prevent="onSubmit">
               <template #footer>
                 <DialogFooter class="mt-10">
-                  <Button type="submit" size="sm"> Save changes </Button>
+                  <Button type="submit"> Save changes </Button>
                 </DialogFooter>
               </template>
             </StatusForm>

@@ -1,30 +1,32 @@
 <template>
-  <div class="flex justify-between mb-5">
-    <PageHeader title="Tags" description="Manage conversation tags" />
-    <div class="flex justify-end mb-4">
-      <Dialog v-model:open="dialogOpen">
-        <DialogTrigger as-child>
-          <Button size="sm">New Tag</Button>
-        </DialogTrigger>
-        <DialogContent class="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Create new tag</DialogTitle>
-            <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
-          </DialogHeader>
-          <TagsForm @submit.prevent="onSubmit">
-            <template #footer>
-              <DialogFooter class="mt-10">
-                <Button type="submit" size="sm"> Save changes </Button>
-              </DialogFooter>
-            </template>
-          </TagsForm>
-        </DialogContent>
-      </Dialog>
+  <PageHeader title="Tags" description="Manage conversation tags" />
+  <div class="w-8/12">
+    <div class="flex justify-between mb-5">
+      <div class="flex justify-end mb-4 w-full">
+        <Dialog v-model:open="dialogOpen">
+          <DialogTrigger as-child>
+            <Button class="ml-auto">New Tag</Button>
+          </DialogTrigger>
+          <DialogContent class="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create new tag</DialogTitle>
+              <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
+            </DialogHeader>
+            <TagsForm @submit.prevent="onSubmit">
+              <template #footer>
+                <DialogFooter class="mt-10">
+                  <Button type="submit"> Save changes </Button>
+                </DialogFooter>
+              </template>
+            </TagsForm>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
-  </div>
-  <Spinner v-if="isLoading"></Spinner>
-  <div v-else>
-    <DataTable :columns="columns" :data="tags" />
+    <Spinner v-if="isLoading"></Spinner>
+    <div v-else>
+      <DataTable :columns="columns" :data="tags" />
+    </div>
   </div>
 </template>
 

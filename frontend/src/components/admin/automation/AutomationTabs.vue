@@ -21,7 +21,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import RuleTab from './RuleTab.vue'
 
-const selectedTab = defineModel('selectedTab', {
-  default: 'new_conversation'
+const selectedTab = defineModel('automationsTab', {
+  default: 'new_conversation',
+  type: String,
+  required: true
 })
 </script>

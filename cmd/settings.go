@@ -11,6 +11,7 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+// handleGetGeneralSettings fetches general settings.
 func handleGetGeneralSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -22,6 +23,7 @@ func handleGetGeneralSettings(r *fastglue.Request) error {
 	return r.SendEnvelope(out)
 }
 
+// handleUpdateGeneralSettings updates general settings.
 func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -35,9 +37,10 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Settings updated successfully")
 }
 
+// handleGetEmailNotificationSettings fetches email notification settings.
 func handleGetEmailNotificationSettings(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -59,6 +62,7 @@ func handleGetEmailNotificationSettings(r *fastglue.Request) error {
 	return r.SendEnvelope(notif)
 }
 
+// handleUpdateEmailNotificationSettings updates email notification settings.
 func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -86,5 +90,5 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Settings updated successfully")
 }

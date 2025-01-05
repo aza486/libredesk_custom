@@ -3,7 +3,7 @@
     <div class="absolute left-1/2 top-20 transform -translate-x-1/2 w-96 h-1/2">
       <Card>
         <CardHeader class="space-y-1">
-          <CardTitle class="text-2xl text-center">Login</CardTitle>
+          <CardTitle class="text-2xl text-center">LibreDesk</CardTitle>
         </CardHeader>
         <CardContent class="grid gap-4">
           <div v-for="oidcProvider in enabledOIDCProviders" :key="oidcProvider.id" class="grid grid-cols-1 gap-6">
@@ -122,7 +122,7 @@ const loginAction = () => {
       password: loginForm.value.password
     })
     .then(() => {
-        router.push({ name: 'dashboard' })
+        router.push({ name: 'conversations' })
     })
     .catch((error) => {
       errorMessage.value = handleHTTPError(error).message

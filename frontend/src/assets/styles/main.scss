@@ -5,12 +5,10 @@
 // App default font-size.
 // Default: 16px, 15px looks wide.
 :root {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 body {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   overflow-y: hidden;
 }
@@ -176,27 +174,28 @@ body {
   @apply p-0;
 }
 
+// Scrollbar
 ::-webkit-scrollbar {
-  width: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  width: 8px; /* Adjust width */
+  height: 8px; /* Adjust height */
 }
 
 ::-webkit-scrollbar-thumb {
   background-color: #888;
-  border-radius: 4px;
+  border-radius: 10px;
   border: 2px solid transparent;
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #555;
+  background-color: #555; /* Hover effect */
 }
 
-* {
-  scrollbar-width: thin;
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 10px;
 }
+// End Scrollbar
 
 .code-editor {
   @apply rounded-md border shadow h-[65vh] min-h-[250px] w-full relative;
@@ -211,4 +210,47 @@ body {
 
 .ql-toolbar {
   @apply rounded-t-lg;
+}
+
+@layer base {
+  :root {
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+.blinking-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: red;
+  border-radius: 50%;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }

@@ -1,10 +1,10 @@
 <template>
-    <div>
-        <PageHeader title="Notification" description="Manage notification settings" />
-    </div>
-    <div>
-        <Spinner v-if="formLoading"></Spinner>
-        <NotificationsForm :initial-values="initialValues" :submit-form="submitForm" :isLoading="formLoading" />
+    <PageHeader title="Notifications" description="Manage your email notification settings" />
+    <div class="w-8/12">
+        <div>
+            <Spinner v-if="formLoading"></Spinner>
+            <NotificationsForm :initial-values="initialValues" :submit-form="submitForm" :isLoading="formLoading" />
+        </div>
     </div>
 </template>
 

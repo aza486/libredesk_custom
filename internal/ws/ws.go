@@ -24,7 +24,7 @@ type Hub struct {
 
 // ConversationStore defines the interface for retrieving conversation UUIDs.
 type ConversationStore interface {
-	GetConversationsListUUIDs(userID, page, pageSize int, typ string) ([]string, error)
+	GetConversationsListUUIDs(userID, teamID, page, pageSize int, typ string) ([]string, error)
 }
 
 // NewHub creates a new Hub.

@@ -1,21 +1,21 @@
 <template>
-  <div>
+  <PageHeader title="Canned responses" description="Manage canned responses" />
+  <div class="w-8/12">
     <div class="flex justify-between mb-5">
-      <PageHeader title="Canned responses" description="Manage canned responses" />
-      <div class="flex justify-end mb-4">
+      <div class="flex justify-end mb-4 w-full">
         <Dialog v-model:open="dialogOpen">
           <DialogTrigger as-child>
-            <Button size="sm">New canned response</Button>
+            <Button class="ml-auto">New canned response</Button>
           </DialogTrigger>
           <DialogContent class="sm:max-w-[625px]">
             <DialogHeader>
               <DialogTitle>New canned response</DialogTitle>
               <DialogDescription>Set title and content, click save when you're done. </DialogDescription>
-            </DialogHeader>            
+            </DialogHeader>
             <CannedResponsesForm @submit="onSubmit">
               <template #footer>
                 <DialogFooter class="mt-7">
-                  <Button type="submit" size="sm">Save Changes</Button>
+                  <Button type="submit">Save Changes</Button>
                 </DialogFooter>
               </template>
             </CannedResponsesForm>

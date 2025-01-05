@@ -4,11 +4,23 @@
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Template name" v-bind="componentField" />
+          <Input type="text" placeholder="Template name" v-bind="componentField" :disabled="!isOutgoingTemplate" />
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
+
+    <div v-if="!isOutgoingTemplate">
+      <FormField v-slot="{ componentField }" name="subject">
+        <FormItem>
+          <FormLabel>Subject</FormLabel>
+          <FormControl>
+            <Input type="text" placeholder="Subject for email" v-bind="componentField" />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+    </div>
 
     <FormField v-slot="{ componentField, handleChange }" name="body">
       <FormItem>
@@ -16,12 +28,13 @@
         <FormControl>
           <CodeEditor v-model="componentField.modelValue" @update:modelValue="handleChange"></CodeEditor>
         </FormControl>
-        <FormDescription>{{ `Make sure the template has \{\{ template "content" . \}\}` }}</FormDescription>
+        <FormDescription v-if="isOutgoingTemplate">{{ `Make sure the template has \{\{ template "content" . \}\}` }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField name="is_default" v-slot="{ value, handleChange }">
+    <FormField name="is_default" v-slot="{ value, handleChange }" v-if="isOutgoingTemplate">
       <FormItem>
         <FormControl>
           <div class="flex items-center space-x-2">
@@ -34,12 +47,12 @@
       </FormItem>
     </FormField>
 
-    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
+    <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -83,6 +96,10 @@ const form = useForm({
 
 const onSubmit = form.handleSubmit((values) => {
   props.submitForm(values)
+})
+
+const isOutgoingTemplate = computed(() => {
+  return props.initialValues?.type === 'email_outgoing'
 })
 
 // Watch for changes in initialValues and update the form.

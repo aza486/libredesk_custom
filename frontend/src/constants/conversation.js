@@ -1,7 +1,15 @@
 export const CONVERSATION_LIST_TYPE = {
   ASSIGNED: 'assigned',
   UNASSIGNED: 'unassigned',
+  TEAM_UNASSIGNED: 'team_unassigned',
+  VIEW: 'view',
   ALL: 'all'
+}
+
+export const CONVERSATION_VIEWS_INBOXES = {
+  'assigned': 'My inbox',
+  'unassigned': 'Unassigned',
+  'all': 'All',
 }
 
 export const CONVERSATION_WS_ACTIONS = {

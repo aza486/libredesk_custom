@@ -3,96 +3,101 @@
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
   <Spinner v-if="isLoading"></Spinner>
-  <span>{{ formTitle }}</span>
-  <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
-    <form @submit="onSubmit">
-      <div class="space-y-5">
+  <div class="space-y-4">
+    <p>{{ formTitle }}</p>
+    <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
+      <form @submit="onSubmit">
         <div class="space-y-5">
+          <div class="space-y-5">
 
-          <FormField v-slot="{ field }" name="name">
-            <FormItem>
-              <FormLabel>Name</FormLabel>
-              <FormControl>
-                <Input type="text" placeholder="My new rule" v-bind="field" />
-              </FormControl>
-              <FormDescription>Name for the rule.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          </FormField>
+            <FormField v-slot="{ field }" name="name">
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input type="text" placeholder="My new rule" v-bind="field" />
+                </FormControl>
+                <FormDescription>Name for the rule.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            </FormField>
 
-          <FormField v-slot="{ field }" name="description">
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Input type="text" placeholder="Description for new rule" v-bind="field" />
-              </FormControl>
-              <FormDescription>Description for the rule.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          </FormField>
+            <FormField v-slot="{ field }" name="description">
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Input type="text" placeholder="Description for new rule" v-bind="field" />
+                </FormControl>
+                <FormDescription>Description for the rule.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            </FormField>
 
-          <FormField v-slot="{ componentField, handleInput }" name="type">
-            <FormItem>
-              <FormLabel>Type</FormLabel>
-              <FormControl>
-                <Select v-bind="componentField" @update:modelValue="handleInput">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="new_conversation"> New conversation </SelectItem>
-                      <SelectItem value="conversation_update"> Conversation update </SelectItem>
-                      <SelectItem value="time_trigger"> Time trigger </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormDescription>Type of rule.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          </FormField>
+            <FormField v-slot="{ componentField, handleInput }" name="type">
+              <FormItem>
+                <FormLabel>Type</FormLabel>
+                <FormControl>
+                  <Select v-bind="componentField" @update:modelValue="handleInput">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="new_conversation"> New conversation </SelectItem>
+                        <SelectItem value="conversation_update"> Conversation update </SelectItem>
+                        <SelectItem value="time_trigger"> Time trigger </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormDescription>Type of rule.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            </FormField>
 
-          <FormField v-slot="{ componentField }" name="events" v-if="form.values.type === 'conversation_update'">
-            <FormItem>
-              <FormLabel>Events</FormLabel>
-              <FormControl>
-                <SelectTag v-bind="componentField" :items="conversationEvents" placeholder="Select events"></SelectTag>
-              </FormControl>
-              <FormDescription>Evaluate rule on these events.</FormDescription>
-              <FormMessage></FormMessage>
-            </FormItem>
-          </FormField>
+            <div :class="{ 'hidden': form.values.type !== 'conversation_update' }">
+              <FormField v-slot="{ componentField }" name="events">
+                <FormItem>
+                  <FormLabel>Events</FormLabel>
+                  <FormControl>
+                    <SelectTag v-bind="componentField" :items="conversationEvents || []" placeholder="Select events">
+                    </SelectTag>
+                  </FormControl>
+                  <FormDescription>Evaluate rule on these events.</FormDescription>
+                  <FormMessage></FormMessage>
+                </FormItem>
+              </FormField>
+            </div>
 
-        </div>
-
-        <p class="font-semibold">Match these rules</p>
-
-        <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-          @remove-condition="handleRemoveCondition" :groupIndex="0" />
-
-        <div class="flex justify-center">
-          <div class="flex items-center space-x-2">
-            <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
-              @click.prevent="toggleGroupOperator('AND')">
-              AND
-            </Button>
-            <Button :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
-              @click.prevent="toggleGroupOperator('OR')">
-              OR
-            </Button>
           </div>
+
+          <p class="font-semibold">Match these rules</p>
+
+          <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
+            @remove-condition="handleRemoveCondition" :groupIndex="0" />
+
+          <div class="flex justify-center">
+            <div class="flex items-center space-x-2">
+              <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
+                @click.prevent="toggleGroupOperator('AND')">
+                AND
+              </Button>
+              <Button :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
+                @click.prevent="toggleGroupOperator('OR')">
+                OR
+              </Button>
+            </div>
+          </div>
+
+          <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
+            @remove-condition="handleRemoveCondition" :groupIndex="1" />
+          <p class="font-semibold">Perform these actions</p>
+
+          <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
+            @remove-action="handleRemoveAction" />
+          <Button type="submit" :isLoading="isLoading">Save</Button>
         </div>
-
-        <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-          @remove-condition="handleRemoveCondition" :groupIndex="1" />
-        <p class="font-semibold">Perform these actions</p>
-
-        <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
-          @remove-action="handleRemoveAction" />
-        <Button type="submit" :isLoading="isLoading" size="sm">Save</Button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -322,6 +327,9 @@ onMounted(async () => {
       isLoading.value = true
       let resp = await api.getAutomationRule(props.id)
       rule.value = resp.data.data
+      if (resp.data.data.type === 'conversation_update') {
+        rule.value.rules.events = []
+      }
       form.setValues(resp.data.data)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

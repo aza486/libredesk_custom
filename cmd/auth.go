@@ -3,8 +3,8 @@ package main
 import (
 	"strconv"
 
+	amodels "github.com/abhinavxd/artemis/internal/auth/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
-
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -55,7 +55,12 @@ func handleOIDCCallback(r *fastglue.Request) error {
 	}
 
 	// Set the session.
-	if err := app.auth.SaveSession(user, r); err != nil {
+	if err := app.auth.SaveSession(amodels.User{
+		ID:        user.ID,
+		Email:     user.Email.String,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+	}, r); err != nil {
 		return err
 	}
 

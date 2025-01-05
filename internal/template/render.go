@@ -6,65 +6,147 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/valyala/fasthttp"
 )
 
 const (
-	TmplConversationAssigned = "conversation-assigned"
-	TmplResetPassword        = "reset-password"
-	TmplWelcome              = "welcome"
-	TmplBase                 = "base"
-	TmplContent              = "content"
+	// Built-in templates names stored in the database.
+	TmplConversationAssigned = "Conversation assigned"
+
+	// Built-in templates in fetched from memory stored in `static` directory.
+	TmplResetPassword = "reset-password"
+	TmplWelcome       = "welcome"
+
+	// Template names for rendering.
+	TmplBase    = "base"
+	TmplContent = "content"
 )
 
-// RenderEmail renders a message into the base email template. It combines the base template
-// with message content and conversation data to produce the final email HTML.
-// The base template must contain a {{ template "content" . }} block where the message
-// will be inserted.
-func (m *Manager) RenderEmail(conversation models.Conversation, messageContent string) (string, error) {
-	tmpl, err := m.GetDefault()
+// RenderWithBaseTemplate merges the given content with the default outgoing email template, if available.
+func (m *Manager) RenderWithBaseTemplate(data any, content string) (string, error) {
+	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
 		if err == ErrTemplateNotFound {
-			m.lo.Warn("default email template not found, using message content as is")
-			return messageContent, nil
+			m.lo.Warn("default outgoing email template not found, rendering content without base")
+			return content, nil
 		}
 		return "", err
 	}
 
-	// Parse base template first
-	baseTmpl, err := template.New(TmplBase).Parse(tmpl.Body)
+	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(defaultTmpl.Body)
 	if err != nil {
 		return "", fmt.Errorf("parsing base template: %w", err)
 	}
 
-	// Parse message template
-	msgTmpl, err := template.New(TmplContent).Parse(messageContent)
+	contentTemplate, err := template.New(TmplContent).Funcs(m.funcMap).Parse(content)
 	if err != nil {
-		return "", fmt.Errorf("parsing message template: %w", err)
+		return "", fmt.Errorf("parsing content template: %w", err)
 	}
 
-	// Add message template to base
-	baseTmpl, err = baseTmpl.AddParseTree(TmplContent, msgTmpl.Tree)
+	baseTemplate, err = baseTemplate.AddParseTree(TmplContent, contentTemplate.Tree)
 	if err != nil {
-		return "", fmt.Errorf("adding content template to base: %w", err)
+		return "", fmt.Errorf("adding content template: %w", err)
 	}
 
-	var out strings.Builder
-	if err := baseTmpl.ExecuteTemplate(&out, TmplBase, conversation); err != nil {
-		return "", fmt.Errorf("executing template: %w", err)
-	}
-
-	return out.String(), nil
-}
-
-// Render executes a named template with the provided data.
-func (m *Manager) Render(name string, data interface{}) (string, error) {
-	var rendered bytes.Buffer
-
-	err := m.tpls.ExecuteTemplate(&rendered, name, data)
-	if err != nil {
-		return "", fmt.Errorf("executing template %s: %w", name, err)
+	var rendered strings.Builder
+	if err := baseTemplate.ExecuteTemplate(&rendered, TmplBase, data); err != nil {
+		return "", fmt.Errorf("executing base template: %w", err)
 	}
 
 	return rendered.String(), nil
+}
+
+// RenderNamedTemplate fetches a named template from DB and merges it with the default base template, if available.
+func (m *Manager) RenderNamedTemplate(name string, data any) (string, string, error) {
+	tmpl, err := m.getByName(name)
+	if err != nil {
+		if err == ErrTemplateNotFound {
+			return "", "", fmt.Errorf("template %s not found", name)
+		}
+		return "", "", err
+	}
+
+	executeContentTemplate := func(tmplBody string) (string, error) {
+		var sb strings.Builder
+		t, err := template.New(name).Funcs(m.funcMap).Parse(tmplBody)
+		if err != nil {
+			return "", fmt.Errorf("parsing content template: %w", err)
+		}
+		if err := t.Execute(&sb, data); err != nil {
+			return "", fmt.Errorf("executing content template: %w", err)
+		}
+		return sb.String(), nil
+	}
+
+	executeSubjectTemplate := func(subject string) (string, error) {
+		var sb strings.Builder
+		subjectTmpl, err := template.New("subject").Funcs(m.funcMap).Parse(subject)
+		if err != nil {
+			return "", fmt.Errorf("parsing subject template: %w", err)
+		}
+		if err := subjectTmpl.Execute(&sb, data); err != nil {
+			return "", fmt.Errorf("executing subject template: %w", err)
+		}
+		return sb.String(), nil
+	}
+
+	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
+	if err != nil {
+		if err == ErrTemplateNotFound {
+			m.lo.Warn("default outgoing email template not found, rendering content without base")
+			content, err := executeContentTemplate(tmpl.Body)
+			if err != nil {
+				return "", "", err
+			}
+			subject, err := executeSubjectTemplate(tmpl.Subject.String)
+			if err != nil {
+				return "", "", err
+			}
+			return content, subject, nil
+		}
+		return "", "", err
+	}
+
+	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(defaultTmpl.Body)
+	if err != nil {
+		return "", "", fmt.Errorf("parsing base template: %w", err)
+	}
+
+	contentTemplate, err := template.New(TmplContent).Funcs(m.funcMap).Parse(tmpl.Body)
+	if err != nil {
+		return "", "", fmt.Errorf("parsing content template: %w", err)
+	}
+
+	baseTemplate, err = baseTemplate.AddParseTree(TmplContent, contentTemplate.Tree)
+	if err != nil {
+		return "", "", fmt.Errorf("adding content template: %w", err)
+	}
+
+	var rendered strings.Builder
+	if err := baseTemplate.ExecuteTemplate(&rendered, TmplBase, data); err != nil {
+		return "", "", fmt.Errorf("executing base template: %w", err)
+	}
+
+	subject, err := executeSubjectTemplate(tmpl.Subject.String)
+	if err != nil {
+		return "", "", err
+	}
+
+	return rendered.String(), subject, nil
+}
+
+// RenderTemplate executes a named in-memory template with the provided data.
+func (m *Manager) RenderTemplate(name string, data interface{}) (string, error) {
+	var buf bytes.Buffer
+	if err := m.tpls.ExecuteTemplate(&buf, name, data); err != nil {
+		return "", fmt.Errorf("executing in-memory template %q: %w", name, err)
+	}
+	return buf.String(), nil
+}
+
+// RenderWebPage renders a template to the http.ResponseWriter with data.
+func (t *Manager) RenderWebPage(ctx *fasthttp.RequestCtx, tmplFile string, data map[string]interface{}) error {
+	ctx.SetContentType("text/html; charset=utf-8")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	return t.webTpls.ExecuteTemplate(ctx, tmplFile, data)
 }

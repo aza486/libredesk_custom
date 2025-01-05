@@ -10,10 +10,10 @@ import (
 	"slices"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
+	amodels "github.com/abhinavxd/artemis/internal/auth/models"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/image"
 	"github.com/abhinavxd/artemis/internal/stringutil"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -145,10 +145,15 @@ func handleMediaUpload(r *fastglue.Request) error {
 // handleServeMedia serves uploaded media.
 func handleServeMedia(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
-		uuid = r.RequestCtx.UserValue("uuid").(string)
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
 	)
+
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	// Fetch media from DB.
 	media, err := app.media.GetByUUID(strings.TrimPrefix(uuid, thumbPrefix))

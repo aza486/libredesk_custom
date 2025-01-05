@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/attachment"
-	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/artemis/internal/user"
+	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/jhillyerd/enmime"
@@ -60,6 +61,7 @@ func (e *Email) processMailbox(cfg IMAPConfig) error {
 		return fmt.Errorf("error selecting mailbox: %w", err)
 	}
 
+	// TODO: Set value from config.
 	since := time.Now().Add(-12 * time.Hour)
 
 	searchData, err := e.searchMessages(client, since)
@@ -135,13 +137,17 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 
 	e.lo.Debug("message does not exist", "message_id", env.MessageID)
 
-	var contact = cmodels.Contact{
-		Source:   e.Channel(),
-		SourceID: env.From[0].Addr(),
-		Email:    env.From[0].Addr(),
-		InboxID:  inboxID,
+	// Make contact.
+	firstName, lastName := getContactName(env.From[0])
+	var contact = umodels.User{
+		InboxID:         inboxID,
+		FirstName:       firstName,
+		LastName:        lastName,
+		SourceChannel:   null.NewString(e.Channel(), true),
+		SourceChannelID: null.NewString(env.From[0].Addr(), true),
+		Email:           null.NewString(env.From[0].Addr(), true),
+		Type:            user.UserTypeContact,
 	}
-	contact.FirstName, contact.LastName = getContactName(env.From[0])
 
 	incomingMsg := models.IncomingMessage{
 		Message: models.Message{
@@ -223,7 +229,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Disposition: attachment.DispositionInline,
 		})
 	}
-	e.lo.Debug("enqueuing message", "message_id", incomingMsg.Message.SourceID, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
+	e.lo.Debug("enqueuing prepared incoming message for inserting in DB", "message_id", incomingMsg.Message.SourceID.String, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
 	if err := e.messageStore.EnqueueIncoming(incomingMsg); err != nil {
 		return err
 	}

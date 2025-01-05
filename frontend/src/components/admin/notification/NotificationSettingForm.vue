@@ -1,19 +1,5 @@
 <template>
-    <form @submit="onSmtpSubmit" class="space-y-6"
-        :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
-
-        <!-- Enabled Field -->
-        <FormField name="enabled" v-slot="{ value, handleChange }">
-            <FormItem>
-                <FormControl>
-                    <div class="flex items-center space-x-2">
-                        <Checkbox :checked="value" @update:checked="handleChange" />
-                        <Label>Enabled</Label>
-                    </div>
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-        </FormField>
+    <form @submit="onSmtpSubmit" class="space-y-6" :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
 
         <!-- SMTP Host Field -->
         <FormField v-slot="{ componentField }" name="host">
@@ -120,7 +106,8 @@
             <FormItem>
                 <FormLabel>From Email Address</FormLabel>
                 <FormControl>
-                    <Input type="text" placeholder="From email address. e.g. My Support <mysupport@example.com>" v-bind="componentField" />
+                    <Input type="text" placeholder="From email address. e.g. My Support <mysupport@example.com>"
+                        v-bind="componentField" />
                 </FormControl>
                 <FormMessage />
                 <FormDescription>From email address. e.g. My Support &lt;mysupport@example.com&gt;</FormDescription>
@@ -138,7 +125,20 @@
             </FormItem>
         </FormField>
 
-        <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
+        <!-- Enabled Field -->
+        <FormField name="enabled" v-slot="{ value, handleChange }">
+            <FormItem>
+                <FormControl>
+                    <div class="flex items-center space-x-2">
+                        <Checkbox :checked="value" @update:checked="handleChange" />
+                        <Label>Enabled</Label>
+                    </div>
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+        </FormField>
+
+        <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
     </form>
 </template>
 

@@ -73,7 +73,7 @@
       </FormItem>
     </FormField>
 
-    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
+    <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 

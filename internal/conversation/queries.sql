@@ -1,26 +1,27 @@
 -- name: insert-conversation
 INSERT INTO conversations
-(reference_number, contact_id, status_id, inbox_id, meta)
-VALUES($1, $2, 
-    (SELECT id FROM conversation_statuses WHERE name = $3),  
-    $4,
-    $5)
+(contact_id, contact_channel_id, status_id, inbox_id, last_message, last_message_at, subject)
+VALUES($1, $2, (SELECT id FROM conversation_statuses WHERE name = $3), $4, $5, $6, $7)
 RETURNING id, uuid;
 
 -- name: get-conversations
 SELECT
     COUNT(*) OVER() AS total,
+    conversations.created_at,
     conversations.updated_at,
     conversations.uuid,
     conversations.assignee_last_seen_at,
-    contacts.first_name as "contact.first_name",
-    contacts.last_name as "contact.last_name",
-    contacts.avatar_url as "contact.avatar_url",
+    users.first_name as "contact.first_name",
+    users.last_name as "contact.last_name",
+    users.avatar_url as "contact.avatar_url",
     inboxes.channel as inbox_channel,
     inboxes.name as inbox_name,
-    COALESCE(conversations.meta->>'subject', '') as subject,
-    COALESCE(conversations.meta->>'last_message', '') as last_message,
-    COALESCE((conversations.meta->>'last_message_at')::timestamp, '1970-01-01 00:00:00'::timestamp) as last_message_at,
+    conversations.sla_policy_id,
+    conversations.first_reply_at,
+    conversations.resolved_at,
+    conversations.subject,
+    conversations.last_message,
+    conversations.last_message_at,
     (
         SELECT COUNT(*)
         FROM conversation_messages m
@@ -29,7 +30,7 @@ SELECT
     conversation_statuses.name as status,
     conversation_priorities.name as priority
 FROM conversations
-    JOIN contacts ON conversations.contact_id = contacts.id
+    JOIN users ON conversations.contact_id = users.id
     JOIN inboxes ON conversations.inbox_id = inboxes.id
     LEFT JOIN conversation_statuses ON conversations.status_id = conversation_statuses.id
     LEFT JOIN conversation_priorities ON conversations.priority_id = conversation_priorities.id
@@ -45,6 +46,7 @@ WHERE 1=1 %s
 
 -- name: get-conversation
 SELECT
+    c.id,
     c.created_at,
     c.updated_at,
     c.closed_at,
@@ -56,9 +58,11 @@ SELECT
     c.first_reply_at,
     c.assigned_user_id,
     c.assigned_team_id,
-    c.meta->>'subject' as subject,
+    c.subject,
     c.contact_id,
-    COALESCE(c.meta->>'last_message', '') as last_message,
+    c.sla_policy_id,
+    c.last_message,
+    sla.name as sla_policy_name,
     (SELECT COALESCE(
         (SELECT json_agg(t.name)
         FROM tags t
@@ -69,18 +73,19 @@ SELECT
     ct.first_name as "contact.first_name",
     ct.last_name as "contact.last_name",
     ct.email as "contact.email",
-    ct.phone_number as "contact.phone_number",
     ct.avatar_url as "contact.avatar_url"
 FROM conversations c
-JOIN contacts ct ON c.contact_id = ct.id
-LEFT JOIN users u ON u.id = c.assigned_user_id
+JOIN users ct ON c.contact_id = ct.id
+LEFT JOIN sla_policies sla ON c.sla_policy_id = sla.id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
-WHERE c.uuid = $1;
+WHERE ($1 > 0 AND c.id = $1)
+   OR ($2 != '' AND c.uuid = $2::uuid);
 
 -- name: get-conversations-created-after
 SELECT
+    c.id,
     c.created_at,
     c.updated_at,
     c.closed_at,
@@ -90,11 +95,10 @@ SELECT
     c.uuid,
     c.reference_number,
     c.first_reply_at,
-    ct.first_name as first_name,
-    ct.last_name as last_name,
-    ct.email as email,
-    ct.phone_number as phone_number,
-    ct.avatar_url as avatar_url,
+    u.first_name as first_name,
+    u.last_name as last_name,
+    u.email as email,
+    u.avatar_url as avatar_url,
     (SELECT COALESCE(
         (SELECT json_agg(t.name)
         FROM tags t
@@ -103,7 +107,7 @@ SELECT
         '[]'::json
     )) AS tags
 FROM conversations c
-JOIN contacts ct ON c.contact_id = ct.id
+JOIN users u ON c.contact_id = u.id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
 WHERE c.created_at > $1;
@@ -142,6 +146,12 @@ SET status_id = (SELECT id FROM conversation_statuses WHERE name = $2),
                   ELSE 
                       closed_at
                 END,
+    snoozed_until = CASE 
+                      WHEN $2 = 'Snoozed' THEN 
+                          COALESCE(snoozed_until, $3)
+                      ELSE 
+                          snoozed_until
+                    END,
     updated_at = now()
 WHERE uuid = $1;
 
@@ -171,6 +181,12 @@ WHERE conversation_id =
     SELECT id FROM conversations WHERE uuid = $1
 );
 
+-- name: update-conversation-last-message
+UPDATE conversations SET last_message = $3, last_message_at = $4 WHERE CASE 
+    WHEN $1 > 0 THEN id = $1
+    ELSE uuid = $2
+END
+
 -- name: insert-conversation-participant
 INSERT INTO conversation_participants
 (user_id, conversation_id)
@@ -187,9 +203,9 @@ SELECT
     ct.first_name,
     ct.last_name,
     ct.avatar_url,
-    COALESCE(c.meta->>'subject', '') as subject,
-    COALESCE(c.meta->>'last_message', '') as last_message,
-    COALESCE((c.meta->>'last_message_at')::timestamp, '1970-01-01 00:00:00'::timestamp) as last_message_at,
+    c.subject,
+    c.last_message,
+    c.last_message_at,
     (
         SELECT COUNT(*)
         FROM conversation_messages m
@@ -198,7 +214,7 @@ SELECT
     s.name as status,
     p.name as priority
 FROM conversations c
-    JOIN contacts ct ON c.contact_id = ct.id
+    JOIN users ct ON c.contact_id = ct.id
     JOIN inboxes inb ON c.inbox_id = inb.id 
     LEFT JOIN conversation_statuses s ON c.status_id = s.id
     LEFT JOIN conversation_priorities p ON c.priority_id = p.id
@@ -274,10 +290,10 @@ WHERE conversation_id = (SELECT id FROM conversation_id)
   AND tag_id NOT IN (SELECT unnest($2::int[]));
 
 -- name: get-to-address
-SELECT cm.source_id 
+SELECT cc.identifier 
 FROM conversations c 
-INNER JOIN contact_methods cm ON cm.contact_id = c.contact_id 
-WHERE c.id = $1 AND cm.source = $2;
+INNER JOIN contact_channels cc ON cc.id = c.contact_channel_id 
+WHERE c.id = $1;
 
 -- name: get-conversation-uuid-from-message-uuid
 SELECT c.uuid AS conversation_uuid
@@ -313,7 +329,7 @@ SELECT
     m.source_id,
     c.inbox_id,
     c.uuid as conversation_uuid,
-    COALESCE(c.meta->>'subject', '') as subject
+    c.subject
 FROM conversation_messages m
 INNER JOIN conversations c ON c.id = m.conversation_id
 WHERE m.status = 'pending'

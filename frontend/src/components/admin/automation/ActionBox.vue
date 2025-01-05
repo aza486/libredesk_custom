@@ -49,7 +49,7 @@
       </div>
     </div>
     <div>
-      <Button variant="outline" @click.prevent="addAction" size="sm">Add action</Button>
+      <Button variant="outline" @click.prevent="addAction">Add action</Button>
     </div>
   </div>
 </template>
@@ -83,6 +83,7 @@ const props = defineProps({
 
 const { actions } = toRefs(props)
 const emitter = useEmitter()
+const slas = ref([])
 const teams = ref([])
 const users = ref([])
 const statuses = ref([])
@@ -91,7 +92,8 @@ const emit = defineEmits(['update-actions', 'add-action', 'remove-action'])
 
 onMounted(async () => {
   try {
-    const [teamsResp, usersResp, statusesResp, prioritiesResp] = await Promise.all([
+    const [slasResp, teamsResp, usersResp, statusesResp, prioritiesResp] = await Promise.all([
+      api.getAllSLAs(),
       api.getTeamsCompact(),
       api.getUsersCompact(),
       api.getStatuses(),
@@ -117,9 +119,14 @@ onMounted(async () => {
       value: priority.name,
       name: priority.name
     }))
+
+    slas.value = slasResp.data.data.map(sla => ({
+      value: sla.id,
+      name: sla.name
+    }))
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Something went wrong',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -173,6 +180,10 @@ const conversationActions = {
   reply: {
     label: 'Send reply',
     inputType: 'richtext',
+  },
+  set_sla: {
+    label: 'Set SLA',
+    inputType: 'select',
   }
 }
 
@@ -181,6 +192,7 @@ const actionDropdownValues = {
   assign_user: users,
   set_status: statuses,
   set_priority: priorities,
+  set_sla: slas,
 }
 
 const getDropdownValues = (field) => {

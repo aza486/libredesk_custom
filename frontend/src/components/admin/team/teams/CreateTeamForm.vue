@@ -19,7 +19,6 @@ const formLoading = ref(false)
 const router = useRouter()
 const emitter = useEmitter()
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
   { path: '/admin/teams/teams', label: 'Teams' },
   { path: '/admin/teams/teams/new', label: 'New team' }
 ]
@@ -39,7 +38,7 @@ const createTeam = async (values) => {
     router.push('/admin/teams/teams')
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Something went wrong',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

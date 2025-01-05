@@ -38,7 +38,7 @@ export const columns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Modified at')
+      return h('div', { class: 'text-center' }, 'Updated at')
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

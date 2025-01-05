@@ -14,8 +14,8 @@
         <div class="flex flex-col space-y-5 justify-center">
           <input ref="uploadInput" type="file" hidden accept="image/jpg, image/jpeg, image/png, image/gif"
             @change="selectFile" />
-          <Button class="w-28" @click="selectAvatar" size="sm"> Choose a file... </Button>
-          <Button class="w-28" @click="removeAvatar" variant="destructive" size="sm">Remove
+          <Button class="w-28" @click="selectAvatar"> Choose a file... </Button>
+          <Button class="w-28" @click="removeAvatar" variant="destructive">Remove
             avatar</Button>
         </div>
       </div>

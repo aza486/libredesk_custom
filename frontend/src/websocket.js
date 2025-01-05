@@ -107,10 +107,11 @@ export function sendMessage (message) {
   })
 }
 
-export function subscribeConversationsList (type) {
+export function subscribeConversationsList (type, teamID) {
   const message = {
     action: CONVERSATION_WS_ACTIONS.SUB_LIST,
     type: type,
+    team_id: parseInt(teamID, 10),
   }
   waitForWebSocketOpen(() => {
     socket.send(JSON.stringify(message))

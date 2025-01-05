@@ -1,15 +1,17 @@
 <template>
-  <div class="mb-5">
-    <CustomBreadcrumb :links="breadcrumbLinks" />
+  <PageHeader title="Roles" description="Manage roles" />
+  <div class="w-8/12">
+    <div v-if="router.currentRoute.value.path === '/admin/teams/roles'">
+      <div class="flex justify-end mb-5">
+        <Button @click="navigateToAddRole"> New role </Button>
+      </div>
+      <div>
+        <Spinner v-if="isLoading"></Spinner>
+        <DataTable :columns="columns" :data="roles" v-else />
+      </div>
+    </div>
+    <router-view></router-view>
   </div>
-  <div class="flex justify-end mb-5">
-    <Button @click="navigateToAddRole" size="sm"> New role </Button>
-  </div>
-  <div>
-    <Spinner v-if="isLoading"></Spinner>
-    <DataTable :columns="columns" :data="roles" v-else />
-  </div>
-  <router-view></router-view>
 </template>
 
 <script setup>
@@ -25,6 +27,7 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import PageHeader from '@/components/admin/common/PageHeader.vue'
 const { toast } = useToast()
 
 const emit = useEmitter()
@@ -32,7 +35,7 @@ const router = useRouter()
 const roles = ref([])
 const isLoading = ref(false)
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+
   { path: '#', label: 'Roles' }
 ]
 

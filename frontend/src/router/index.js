@@ -39,17 +39,53 @@ const routes = [
     component: App,
     children: [
       {
-        path: '/dashboard',
-        name: 'dashboard',
-        component: DashboardView,
-        meta: { title: 'Dashboard' }
+        path: '/reports',
+        name: 'reports',
+        meta: { title: 'Conversations' },
+        children: [
+          {
+            path: 'dashboard',
+            name: 'dashboard',
+            component: DashboardView,
+            meta: { title: 'Dashboard' }
+          },
+        ]
       },
       {
-        path: '/conversations/:uuid?',
+        path: '/conversations',
         name: 'conversations',
-        component: ConversationsView,
-        props: true,
-        meta: { title: 'Conversations' }
+        redirect: '/conversations/list/assigned',
+        meta: { title: 'Conversations' },
+        children: [
+          {
+            path: 'list/:type',
+            name: 'conversations-list',
+            component: ConversationsView,
+            props: true,
+            meta: { title: 'Conversations' }
+          },
+          {
+            path: 'teams/:teamID',
+            name: 'conversations-team-list',
+            component: ConversationsView,
+            props: true,
+            meta: { title: 'Conversations' }
+          },
+          {
+            path: 'view/:viewID',
+            name: 'conversations-view-list',
+            component: ConversationsView,
+            props: true,
+            meta: { title: 'Conversations' }
+          },
+          {
+            path: ':uuid',
+            name: 'conversations-uuid',
+            component: ConversationsView,
+            props: true,
+            meta: { title: 'Conversations' }
+          }
+        ]
       },
       {
         path: '/account/:page?',
@@ -68,24 +104,64 @@ const routes = [
       {
         path: '/admin',
         name: 'admin',
+        redirect: '/admin/general',
         component: AdminView,
         meta: { title: 'Admin' },
         children: [
           {
+            path: 'business-hours',
+            component: () => import('@/components/admin/business_hours/BusinessHours.vue'),
+            meta: { title: 'Admin - Business Hours' },
+            children: [
+              {
+                path: 'new',
+                component: () => import('@/components/admin/business_hours/CreateOrEditBusinessHours.vue'),
+                meta: { title: 'Admin - Add Business Hours' }
+              },
+              {
+                path: ':id/edit',
+                name: 'edit-business-hours',
+                props: true,
+                component: () => import('@/components/admin/business_hours/CreateOrEditBusinessHours.vue'),
+                meta: { title: 'Admin - Edit Business Hours' }
+              },
+            ]
+          },
+          {
+            path: 'sla',
+            component: () => import('@/components/admin/sla/SLA.vue'),
+            meta: { title: 'Admin - SLA' },
+            children: [
+              {
+                path: 'new',
+                component: () => import('@/components/admin/sla/CreateEditSLA.vue'),
+                meta: { title: 'Admin - Add SLA' }
+              },
+              {
+                path: ':id/edit',
+                props: true,
+                component: () => import('@/components/admin/sla/CreateEditSLA.vue'),
+                meta: { title: 'Admin - Edit SLA' }
+              },
+            ]
+          },
+          {
             path: 'inboxes',
             component: () => import('@/components/admin/inbox/Inbox.vue'),
-            meta: { title: 'Admin - Inboxes' }
-          },
-          {
-            path: 'inboxes/new',
-            component: () => import('@/components/admin/inbox/NewInbox.vue'),
-            meta: { title: 'Admin - New Inbox' }
-          },
-          {
-            path: 'inboxes/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/inbox/EditInbox.vue'),
-            meta: { title: 'Admin - Edit Inbox' }
+            meta: { title: 'Admin - Inboxes' },
+            children: [
+              {
+                path: 'new',
+                component: () => import('@/components/admin/inbox/NewInbox.vue'),
+                meta: { title: 'Admin - New Inbox' }
+              },
+              {
+                path: ':id/edit',
+                props: true,
+                component: () => import('@/components/admin/inbox/EditInbox.vue'),
+                meta: { title: 'Admin - Edit Inbox' }
+              },
+            ],
           },
           {
             path: 'notification',
@@ -94,73 +170,83 @@ const routes = [
           },
           {
             path: 'teams',
-            component: () => import('@/components/admin/team/Team.vue'),
-            meta: { title: 'Admin - Teams' }
-          },
-          {
-            path: 'teams/users',
-            component: () => import('@/components/admin/team/users/UsersCard.vue'),
-            meta: { title: 'Admin - Users' }
-          },
-          {
-            path: 'teams/users/new',
-            component: () => import('@/components/admin/team/users/AddUserForm.vue'),
-            meta: { title: 'Admin - Add User' }
-          },
-          {
-            path: 'teams/users/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/team/users/EditUserForm.vue'),
-            meta: { title: 'Admin - Edit User' }
-          },
-          {
-            path: 'teams/teams',
-            component: () => import('@/components/admin/team/teams/Teams.vue'),
-            meta: { title: 'Admin - Teams Management' }
-          },
-          {
-            path: 'teams/teams/new',
-            component: () => import('@/components/admin/team/teams/AddTeamForm.vue'),
-            meta: { title: 'Admin - Add Team' }
-          },
-          {
-            path: 'teams/teams/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/team/teams/EditTeamForm.vue'),
-            meta: { title: 'Admin - Edit Team' }
-          },
-          {
-            path: 'teams/roles',
-            component: () => import('@/components/admin/team/roles/Roles.vue'),
-            meta: { title: 'Admin - Roles' }
-          },
-          {
-            path: 'teams/roles/new',
-            component: () => import('@/components/admin/team/roles/NewRole.vue'),
-            meta: { title: 'Admin - Add Role' }
-          },
-          {
-            path: 'teams/roles/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/team/roles/EditRole.vue'),
-            meta: { title: 'Admin - Edit Role' }
+            meta: { title: 'Admin - Teams' },
+            children: [
+              {
+                path: 'users',
+                component: () => import('@/components/admin/team/users/UsersCard.vue'),
+                meta: { title: 'Admin - Users' },
+                children: [
+                  {
+                    path: 'new',
+                    component: () => import('@/components/admin/team/users/AddUserForm.vue'),
+                    meta: { title: 'Admin - Create User' }
+                  },
+                  {
+                    path: ':id/edit',
+                    props: true,
+                    component: () => import('@/components/admin/team/users/EditUserForm.vue'),
+                    meta: { title: 'Admin - Edit User' }
+                  },
+                ]
+              },
+              {
+                path: 'teams',
+                component: () => import('@/components/admin/team/teams/Teams.vue'),
+                meta: { title: 'Admin - Teams Management' },
+                children: [
+
+                  {
+                    path: 'new',
+                    component: () => import('@/components/admin/team/teams/CreateTeamForm.vue'),
+                    meta: { title: 'Admin - Create Team' }
+                  },
+                  {
+                    path: ':id/edit',
+                    props: true,
+                    component: () => import('@/components/admin/team/teams/EditTeamForm.vue'),
+                    meta: { title: 'Admin - Edit Team' }
+                  },
+                ]
+              },
+              {
+                path: 'roles',
+                component: () => import('@/components/admin/team/roles/Roles.vue'),
+                meta: { title: 'Admin - Roles' },
+                children: [
+                  {
+                    path: 'new',
+                    component: () => import('@/components/admin/team/roles/NewRole.vue'),
+                    meta: { title: 'Admin - Create Role' }
+                  },
+                  {
+                    path: ':id/edit',
+                    props: true,
+                    component: () => import('@/components/admin/team/roles/EditRole.vue'),
+                    meta: { title: 'Admin - Edit Role' }
+                  }
+                ]
+              },
+            ]
           },
           {
             path: 'automations',
             component: () => import('@/components/admin/automation/Automation.vue'),
-            meta: { title: 'Admin - Automations' }
-          },
-          {
-            path: 'automations/new',
-            props: true,
-            component: () => import('@/components/admin/automation/CreateOrEditRule.vue'),
-            meta: { title: 'Admin - Create Automation' }
-          },
-          {
-            path: 'automations/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/automation/CreateOrEditRule.vue'),
-            meta: { title: 'Admin - Edit Automation' }
+            meta: { title: 'Admin - Automations' },
+            children: [
+              {
+                path: 'new',
+                props: true,
+                component: () => import('@/components/admin/automation/CreateOrEditRule.vue'),
+                meta: { title: 'Admin - Create Automation' }
+              },
+              {
+                path: ':id/edit',
+                props: true,
+                component: () => import('@/components/admin/automation/CreateOrEditRule.vue'),
+                meta: { title: 'Admin - Edit Automation' }
+              }
+            ]
           },
           {
             path: 'general',
@@ -170,54 +256,59 @@ const routes = [
           {
             path: 'templates',
             component: () => import('@/components/admin/templates/Templates.vue'),
-            meta: { title: 'Admin - Templates' }
-          },
-          {
-            path: 'templates/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
-            meta: { title: 'Admin - Edit Template' }
-          },
-          {
-            path: 'templates/new',
-            component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
-            meta: { title: 'Admin - Add Template' }
+            meta: { title: 'Admin - Templates' },
+            children: [
+              {
+                path: ':id/edit',
+                props: true,
+                component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
+                meta: { title: 'Admin - Edit Template' }
+              },
+              {
+                path: 'new',
+                component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
+                meta: { title: 'Admin - Add Template' }
+              }
+            ]
           },
           {
             path: 'oidc',
             component: () => import('@/components/admin/oidc/OIDC.vue'),
-            meta: { title: 'Admin - OIDC' }
-          },
-          {
-            path: 'oidc/:id/edit',
-            props: true,
-            component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
-            meta: { title: 'Admin - Edit OIDC' }
-          },
-          {
-            path: 'oidc/new',
-            component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
-            meta: { title: 'Admin - Add OIDC' }
+            meta: { title: 'Admin - OIDC' },
+            children: [
+              {
+                path: ':id/edit',
+                props: true,
+                component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
+                meta: { title: 'Admin - Edit OIDC' }
+              },
+              {
+                path: 'new',
+                component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
+                meta: { title: 'Admin - Add OIDC' }
+              }
+            ]
           },
           {
             path: 'conversations',
-            component: () => import('@/components/admin/conversation/Conversation.vue'),
-            meta: { title: 'Admin - Conversations' }
-          },
-          {
-            path: 'conversations/tags',
-            component: () => import('@/components/admin/conversation/tags/Tags.vue'),
-            meta: { title: 'Admin - Conversation Tags' }
-          },
-          {
-            path: 'conversations/statuses',
-            component: () => import('@/components/admin/conversation/status/Status.vue'),
-            meta: { title: 'Admin - Conversation Statuses' }
-          },
-          {
-            path: 'conversations/canned-responses',
-            component: () => import('@/components/admin/conversation/canned_responses/CannedResponses.vue'),
-            meta: { title: 'Admin - Canned Responses' }
+            meta: { title: 'Admin - Conversations' },
+            children: [
+              {
+                path: 'tags',
+                component: () => import('@/components/admin/conversation/tags/Tags.vue'),
+                meta: { title: 'Admin - Conversation Tags' }
+              },
+              {
+                path: 'statuses',
+                component: () => import('@/components/admin/conversation/status/Status.vue'),
+                meta: { title: 'Admin - Conversation Statuses' }
+              },
+              {
+                path: 'canned-responses',
+                component: () => import('@/components/admin/conversation/canned_responses/CannedResponses.vue'),
+                meta: { title: 'Admin - Canned Responses' }
+              }
+            ]
           }
         ]
       }
@@ -228,7 +319,7 @@ const routes = [
     redirect: (to) => {
       // TODO: Remove this alert and redirect to 404 page
       alert(`Redirecting to dashboard from: ${to.fullPath}`)
-      return '/dashboard'
+      return '/reports/dashboard'
     }
   }
 ]

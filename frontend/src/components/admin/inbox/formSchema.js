@@ -42,13 +42,13 @@ export const formSchema = z.object({
     }),
   smtp: z
     .object({
-      host: z.string().describe('Host').default('smtp.yourmailserver.com'),
+      host: z.string().describe('Host').default('smtp.google.com'),
       port: z
         .number({ invalid_type_error: 'Port must be a number.' })
         .min(1, { message: 'Port must be at least 1.' })
         .max(65535, { message: 'Port must be at most 65535.' })
         .describe('Port')
-        .default(25),
+        .default(587),
       username: z.string().describe('Username'),
       password: z.string().describe('Password'),
       max_conns: z

@@ -1,19 +1,12 @@
 <template>
-  <div class="flex justify-between px-2 py-2 border-b w-full">
-    <Tabs v-model="conversationStore.conversations.type">
-      <TabsList class="w-full flex justify-evenly">
-        <TabsTrigger value="assigned" class="w-full">Assigned</TabsTrigger>
-        <TabsTrigger value="unassigned" class="w-full">Unassigned</TabsTrigger>
-        <TabsTrigger value="all" class="w-full">All</TabsTrigger>
-      </TabsList>
-    </Tabs>
+  <div class="flex justify-end px-2 py-2 border-b w-full">
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <div class="flex items-center mr-2 relative">
           <span class="absolute inline-flex h-2 w-2 rounded-full bg-primary opacity-75 right-0 bottom-5 z-20"
             v-if="conversationStore.conversations.filters.length > 0" />
           <ListFilter size="27"
-            class="mx-auto cursor-pointer transition-all transform hover:scale-110 hover:bg-secondary hover:bg-opacity-80 p-1 rounded-md z-10"  />
+            class="mx-auto cursor-pointer transition-all transform hover:scale-110 hover:bg-secondary hover:bg-opacity-80 p-1 rounded-md z-10" />
         </div>
       </PopoverTrigger>
       <PopoverContent class="w-[450px]">
@@ -25,10 +18,25 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ListFilter } from 'lucide-vue-next'
+import { ListFilter, ChevronDown } from 'lucide-vue-next'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useConversationStore } from '@/stores/conversation'
+import { Button } from '@/components/ui/button'
 import Filter from '@/components/common/Filter.vue'
 import api from '@/api'
 
@@ -43,6 +51,14 @@ onMounted(() => {
   fetchInitialData()
   localFilters.value = [...conversationStore.conversations.filters]
 })
+
+const handleStatusChange = (status) => {
+  console.log('status', status)
+}
+
+const handleSortChange = (order) => {
+  console.log('order', order)
+}
 
 const fetchInitialData = async () => {
   const [statusesResp, prioritiesResp] = await Promise.all([

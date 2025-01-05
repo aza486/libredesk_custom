@@ -1,6 +1,6 @@
 <template>
   <Spinner v-if="formLoading"></Spinner>
-  <form @submit="onSubmit" class="space-y-6" :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
+  <form @submit="onSubmit" class="space-y-6 w-full" :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
         <FormLabel>Site Name</FormLabel>
@@ -12,11 +12,11 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ field }" name="lang">
+    <FormField v-slot="{ componentField }" name="lang">
       <FormItem>
         <FormLabel>Language</FormLabel>
         <FormControl>
-          <Select v-bind="field" :modelValue="field.value">
+          <Select v-bind="componentField" :modelValue="componentField.modelValue">
             <SelectTrigger>
               <SelectValue placeholder="Select a language" />
             </SelectTrigger>
@@ -28,6 +28,50 @@
           </Select>
         </FormControl>
         <FormDescription>Select language for the app.</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+    
+    <FormField v-slot="{ componentField }" name="timezone">
+      <FormItem>
+        <FormLabel>Timezone</FormLabel>
+        <FormControl>
+          <Select v-bind="componentField">
+            <SelectTrigger>
+              <SelectValue placeholder="Select a timezone" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem v-for="timezone in timezones" :key="timezone" :value="timezone">
+                  {{ timezone }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </FormControl>
+        <FormDescription>Default timezone.</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="business_hours_id">
+      <FormItem>
+        <FormLabel>Business hours</FormLabel>
+        <FormControl>
+          <Select v-bind="componentField">
+            <SelectTrigger>
+              <SelectValue placeholder="Select business hours" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem v-for="bh in businessHours" :key="bh.id" :value="bh.id">
+                  {{ bh.name }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </FormControl>
+        <FormDescription>Default business hours.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -92,12 +136,12 @@
         <FormMessage />
       </FormItem>
     </FormField>
-    <Button type="submit" size="sm" :isLoading="isLoading"> {{ submitLabel }} </Button>
+    <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
 <script setup>
-import { watch, ref } from 'vue'
+import { watch, ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -130,10 +174,13 @@ import { Input } from '@/components/ui/input'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import api from '@/api'
 
 const emitter = useEmitter()
+const timezones = Intl.supportedValuesOf('timeZone')
 const isLoading = ref(false)
 const formLoading = ref(true)
+const businessHours = ref({})
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -153,6 +200,36 @@ const props = defineProps({
 const form = useForm({
   validationSchema: toTypedSchema(formSchema)
 })
+
+onMounted(() => {
+  fetchBusinessHours()
+})
+
+const fetchBusinessHours = async () => {
+  try {
+    const response = await api.getAllBusinessHours()
+    // Convert business hours id to string
+    response.data.data.forEach(bh => {
+      bh.id = bh.id.toString()
+    })
+    businessHours.value = response.data.data
+  } catch (error) {
+    // If unauthorized (no permission), show a toast message.
+    if (error.response.status === 403) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Unauthorized',
+        variant: 'destructive',
+        description: 'You do not have permission to view business hours.'
+      })
+    } else {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Could not fetch business hours',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  }
+}
 
 const onSubmit = form.handleSubmit(async (values) => {
   try {
@@ -176,9 +253,15 @@ const onSubmit = form.handleSubmit(async (values) => {
 watch(
   () => props.initialValues,
   (newValues) => {
+    if (Object.keys(newValues).length === 0) {
+      return
+    }
+    // Convert business hours id to string
+    if (newValues.business_hours_id)
+      newValues.business_hours_id = newValues.business_hours_id.toString()
     form.setValues(newValues)
     formLoading.value = false
   },
-  { deep: true }
+  { deep: true, immediate: true }
 )
 </script>

@@ -57,8 +57,15 @@ func (e *Enforcer) LoadPermissions(user umodels.User) error {
 		}
 
 		userID, permObj, permAct := strconv.Itoa(user.ID), parts[0], parts[1]
-		if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
-			return fmt.Errorf("failed to add policy: %v", err)
+
+		has, err := e.enforcer.HasPolicy(userID, permObj, permAct)
+		if err != nil {
+			return fmt.Errorf("failed to check policy: %v", err)
+		}
+		if !has {
+			if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
+				return fmt.Errorf("failed to add policy: %v", err)
+			}
 		}
 	}
 	return nil

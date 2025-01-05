@@ -33,177 +33,214 @@ http.interceptors.request.use((request) => {
   return request
 })
 
-const resetPassword = (data) => http.post('/api/users/reset-password', data)
-const setPassword = (data) => http.post('/api/users/set-password', data)
-const deleteUser = (id) => http.delete(`/api/users/${id}`)
-const getEmailNotificationSettings = () => http.get('/api/settings/notifications/email')
-const updateEmailNotificationSettings = (data) => http.put('/api/settings/notifications/email', data)
-const getPriorities = () => http.get('/api/priorities')
-const getStatuses = () => http.get('/api/statuses')
-const createStatus = (data) => http.post('/api/statuses', data)
-const updateStatus = (id, data) => http.put(`/api/statuses/${id}`, data)
-const deleteStatus = (id) => http.delete(`/api/statuses/${id}`)
-const createTag = (data) => http.post('/api/tags', data)
-const updateTag = (id, data) => http.put(`/api/tags/${id}`, data)
-const deleteTag = (id) => http.delete(`/api/tags/${id}`)
-const getTemplate = (id) => http.get(`/api/templates/${id}`)
-const getTemplates = () => http.get('/api/templates')
+const resetPassword = (data) => http.post('/api/v1/users/reset-password', data)
+const setPassword = (data) => http.post('/api/v1/users/set-password', data)
+const deleteUser = (id) => http.delete(`/api/v1/users/${id}`)
+const getEmailNotificationSettings = () => http.get('/api/v1/settings/notifications/email')
+const updateEmailNotificationSettings = (data) => http.put('/api/v1/settings/notifications/email', data)
+const getPriorities = () => http.get('/api/v1/priorities')
+const getStatuses = () => http.get('/api/v1/statuses')
+const createStatus = (data) => http.post('/api/v1/statuses', data)
+const updateStatus = (id, data) => http.put(`/api/v1/statuses/${id}`, data)
+const deleteStatus = (id) => http.delete(`/api/v1/statuses/${id}`)
+const createTag = (data) => http.post('/api/v1/tags', data)
+const updateTag = (id, data) => http.put(`/api/v1/tags/${id}`, data)
+const deleteTag = (id) => http.delete(`/api/v1/tags/${id}`)
+const getTemplate = (id) => http.get(`/api/v1/templates/${id}`)
+const getTemplates = (type) => http.get('/api/v1/templates', { params: { type: type } })
 const createTemplate = (data) =>
-  http.post('/api/templates', data, {
+  http.post('/api/v1/templates', data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const deleteTemplate = (id) => http.delete(`/api/templates/${id}`)
+const deleteTemplate = (id) => http.delete(`/api/v1/templates/${id}`)
 const updateTemplate = (id, data) =>
-  http.put(`/api/templates/${id}`, data, {
+  http.put(`/api/v1/templates/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
+
+const getAllBusinessHours = () => http.get('/api/v1/business-hours')
+const getBusinessHours = (id) => http.get(`/api/v1/business-hours/${id}`)
+const createBusinessHours = (data) => http.post('/api/v1/business-hours', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const updateBusinessHours = (id, data) =>
+  http.put(`/api/v1/business-hours/${id}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const deleteBusinessHours = (id) => http.delete(`/api/v1/business-hours/${id}`)
+
+const getAllSLAs = () => http.get('/api/v1/sla')
+const getSLA = (id) => http.get(`/api/v1/sla/${id}`)
+const createSLA = (data) => http.post('/api/v1/sla', data)
+const updateSLA = (id, data) => http.put(`/api/v1/sla/${id}`, data)
+const deleteSLA = (id) => http.delete(`/api/v1/sla/${id}`)
+
 const createOIDC = (data) =>
-  http.post('/api/oidc', data, {
+  http.post('/api/v1/oidc', data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const getAllOIDC = () => http.get('/api/oidc')
-const getOIDC = (id) => http.get(`/api/oidc/${id}`)
+const getAllOIDC = () => http.get('/api/v1/oidc')
+const getOIDC = (id) => http.get(`/api/v1/oidc/${id}`)
 const updateOIDC = (id, data) =>
-  http.put(`/api/oidc/${id}`, data, {
+  http.put(`/api/v1/oidc/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const deleteOIDC = (id) => http.delete(`/api/oidc/${id}`)
+const deleteOIDC = (id) => http.delete(`/api/v1/oidc/${id}`)
 const updateSettings = (key, data) =>
-  http.put(`/api/settings/${key}`, data, {
+  http.put(`/api/v1/settings/${key}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const getSettings = (key) => http.get(`/api/settings/${key}`)
-const login = (data) => http.post(`/api/login`, data)
+const getSettings = (key) => http.get(`/api/v1/settings/${key}`)
+const login = (data) => http.post(`/api/v1/login`, data)
 const getAutomationRules = (type) =>
-  http.get(`/api/automation/rules`, {
+  http.get(`/api/v1/automation/rules`, {
     params: { type: type }
   })
-const toggleAutomationRule = (id) => http.put(`/api/automation/rules/${id}/toggle`)
-const getAutomationRule = (id) => http.get(`/api/automation/rules/${id}`)
+const toggleAutomationRule = (id) => http.put(`/api/v1/automation/rules/${id}/toggle`)
+const getAutomationRule = (id) => http.get(`/api/v1/automation/rules/${id}`)
 const updateAutomationRule = (id, data) =>
-  http.put(`/api/automation/rules/${id}`, data, {
+  http.put(`/api/v1/automation/rules/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
 const createAutomationRule = (data) =>
-  http.post(`/api/automation/rules`, data, {
+  http.post(`/api/v1/automation/rules`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const getRoles = () => http.get('/api/roles')
-const getRole = (id) => http.get(`/api/roles/${id}`)
+const getRoles = () => http.get('/api/v1/roles')
+const getRole = (id) => http.get(`/api/v1/roles/${id}`)
 const createRole = (data) =>
-  http.post('/api/roles', data, {
+  http.post('/api/v1/roles', data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
 const updateRole = (id, data) =>
-  http.put(`/api/roles/${id}`, data, {
+  http.put(`/api/v1/roles/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const deleteRole = (id) => http.delete(`/api/roles/${id}`)
-const deleteAutomationRule = (id) => http.delete(`/api/automation/rules/${id}`)
-const getUser = (id) => http.get(`/api/users/${id}`)
-const getTeam = (id) => http.get(`/api/teams/${id}`)
-const getTeams = () => http.get('/api/teams')
-const getTeamsCompact = () => http.get('/api/teams/compact')
-const getUsers = () => http.get('/api/users')
-const getUsersCompact = () => http.get('/api/users/compact')
+const deleteRole = (id) => http.delete(`/api/v1/roles/${id}`)
+const deleteAutomationRule = (id) => http.delete(`/api/v1/automation/rules/${id}`)
+const getUser = (id) => http.get(`/api/v1/users/${id}`)
+
+const getTeam = (id) => http.get(`/api/v1/teams/${id}`)
+const getTeams = () => http.get('/api/v1/teams')
+const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data)
+const createTeam = (data) => http.post('/api/v1/teams', data)
+const getTeamsCompact = () => http.get('/api/v1/teams/compact')
+const deleteTeam = (id) => http.delete(`/api/v1/teams/${id}`)
+
+const getUsers = () => http.get('/api/v1/users')
+const getUsersCompact = () => http.get('/api/v1/users/compact')
 const updateCurrentUser = (data) =>
-  http.put('/api/users/me', data, {
+  http.put('/api/v1/users/me', data, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   })
-const deleteUserAvatar = () => http.delete('/api/users/me/avatar')
-const getCurrentUser = () => http.get('/api/users/me')
-const getTags = () => http.get('/api/tags')
-const upsertTags = (uuid, data) => http.post(`/api/conversations/${uuid}/tags`, data)
+const deleteUserAvatar = () => http.delete('/api/v1/users/me/avatar')
+const getCurrentUser = () => http.get('/api/v1/users/me')
+const getCurrentUserTeams = () => http.get('/api/v1/users/me/teams')
+const getTags = () => http.get('/api/v1/tags')
+const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) =>
-  http.put(`/api/conversations/${uuid}/assignee/${assignee_type}`, data)
-const updateConversationStatus = (uuid, data) => http.put(`/api/conversations/${uuid}/status`, data)
-const updateConversationPriority = (uuid, data) => http.put(`/api/conversations/${uuid}/priority`, data)
-const updateAssigneeLastSeen = (uuid) => http.put(`/api/conversations/${uuid}/last-seen`)
-const getConversationMessage = (cuuid, uuid) => http.get(`/api/conversations/${cuuid}/messages/${uuid}`)
-const retryMessage = (cuuid, uuid) => http.put(`/api/conversations/${cuuid}/messages/${uuid}/retry`)
-const getConversationMessages = (uuid, page) =>
-  http.get(`/api/conversations/${uuid}/messages`, {
-    params: { page: page }
-  })
+  http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
+const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
+const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
+const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)
+const getConversationMessage = (cuuid, uuid) => http.get(`/api/v1/conversations/${cuuid}/messages/${uuid}`)
+const retryMessage = (cuuid, uuid) => http.put(`/api/v1/conversations/${cuuid}/messages/${uuid}/retry`)
+const getConversationMessages = (uuid, params) => http.get(`/api/v1/conversations/${uuid}/messages`, { params })
 const sendMessage = (uuid, data) =>
-  http.post(`/api/conversations/${uuid}/messages`, data, {
+  http.post(`/api/v1/conversations/${uuid}/messages`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const getConversation = (uuid) => http.get(`/api/conversations/${uuid}`)
-const getConversationParticipants = (uuid) => http.get(`/api/conversations/${uuid}/participants`)
-const getCannedResponses = () => http.get('/api/canned-responses')
-const createCannedResponse = (data) => http.post('/api/canned-responses', data)
-const updateCannedResponse = (id, data) => http.put(`/api/canned-responses/${id}`, data)
-const deleteCannedResponse = (id) => http.delete(`/api/canned-responses/${id}`)
-const getAssignedConversations = (params) =>
-  http.get('/api/conversations/assigned', { params })
-const getUnassignedConversations = (params) =>
-  http.get('/api/conversations/unassigned', { params })
-const getAllConversations = (params) =>
-  http.get('/api/conversations/all', { params })
+const getConversation = (uuid) => http.get(`/api/v1/conversations/${uuid}`)
+const getConversationParticipants = (uuid) => http.get(`/api/v1/conversations/${uuid}/participants`)
+const getCannedResponses = () => http.get('/api/v1/canned-responses')
+const createCannedResponse = (data) => http.post('/api/v1/canned-responses', data)
+const updateCannedResponse = (id, data) => http.put(`/api/v1/canned-responses/${id}`, data)
+const deleteCannedResponse = (id) => http.delete(`/api/v1/canned-responses/${id}`)
+const getTeamUnassignedConversations = (teamID, params) =>
+  http.get(`/api/v1/teams/${teamID}/conversations/unassigned`, { params })
+const getAssignedConversations = (params) => http.get('/api/v1/conversations/assigned', { params })
+const getUnassignedConversations = (params) => http.get('/api/v1/conversations/unassigned', { params })
+const getAllConversations = (params) => http.get('/api/v1/conversations/all', { params })
+const getViewConversations = (id, params) => http.get(`/api/v1/views/${id}/conversations`, { params })
 const uploadMedia = (data) =>
-  http.post('/api/media', data, {
+  http.post('/api/v1/media', data, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   })
-const getGlobalDashboardCounts = () => http.get('/api/dashboard/global/counts')
-const getGlobalDashboardCharts = () => http.get('/api/dashboard/global/charts')
-const getUserDashboardCounts = () => http.get(`/api/dashboard/me/counts`)
-const getUserDashboardCharts = () => http.get(`/api/dashboard/me/charts`)
-const getLanguage = (lang) => http.get(`/api/lang/${lang}`)
+const getGlobalDashboardCounts = () => http.get('/api/v1/dashboard/global/counts')
+const getGlobalDashboardCharts = () => http.get('/api/v1/dashboard/global/charts')
+const getUserDashboardCounts = () => http.get(`/api/v1/dashboard/me/counts`)
+const getUserDashboardCharts = () => http.get(`/api/v1/dashboard/me/charts`)
+const getLanguage = (lang) => http.get(`/api/v1/lang/${lang}`)
 const createUser = (data) =>
-  http.post('/api/users', data, {
+  http.post('/api/v1/users', data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
 const updateUser = (id, data) =>
-  http.put(`/api/users/${id}`, data, {
+  http.put(`/api/v1/users/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const updateTeam = (id, data) => http.put(`/api/teams/${id}`, data)
-const createTeam = (data) => http.post('/api/teams', data)
 const createInbox = (data) =>
-  http.post('/api/inboxes', data, {
+  http.post('/api/v1/inboxes', data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const getInboxes = () => http.get('/api/inboxes')
-const getInbox = (id) => http.get(`/api/inboxes/${id}`)
-const toggleInbox = (id) => http.put(`/api/inboxes/${id}/toggle`)
+const getInboxes = () => http.get('/api/v1/inboxes')
+const getInbox = (id) => http.get(`/api/v1/inboxes/${id}`)
+const toggleInbox = (id) => http.put(`/api/v1/inboxes/${id}/toggle`)
 const updateInbox = (id, data) =>
-  http.put(`/api/inboxes/${id}`, data, {
+  http.put(`/api/v1/inboxes/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const deleteInbox = (id) => http.delete(`/api/inboxes/${id}`)
+const deleteInbox = (id) => http.delete(`/api/v1/inboxes/${id}`)
+const getCurrentUserViews = () => http.get('/api/v1/views/me')
+const createView = (data) =>
+  http.post('/api/v1/views/me', data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const updateView = (id, data) =>
+  http.put(`/api/v1/views/me/${id}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const deleteView = (id) => http.delete(`/api/v1/views/me/${id}`)
 
 export default {
   login,
@@ -219,6 +256,7 @@ export default {
   deleteRole,
   updateRole,
   getTeams,
+  deleteTeam,
   getUsers,
   getInbox,
   getInboxes,
@@ -226,9 +264,21 @@ export default {
   getConversation,
   getAutomationRule,
   getAutomationRules,
+  getAllBusinessHours,
+  getBusinessHours,
+  createBusinessHours,
+  updateBusinessHours,
+  deleteBusinessHours,
+  getAllSLAs,
+  getSLA,
+  createSLA,
+  updateSLA,
+  deleteSLA,
   getAssignedConversations,
   getUnassignedConversations,
   getAllConversations,
+  getTeamUnassignedConversations,
+  getViewConversations,
   getGlobalDashboardCharts,
   getGlobalDashboardCounts,
   getUserDashboardCounts,
@@ -237,6 +287,7 @@ export default {
   getConversationMessage,
   getConversationMessages,
   getCurrentUser,
+  getCurrentUserTeams,
   getCannedResponses,
   createCannedResponse,
   updateCannedResponse,
@@ -287,4 +338,8 @@ export default {
   getUsersCompact,
   getEmailNotificationSettings,
   updateEmailNotificationSettings,
+  getCurrentUserViews,
+  createView,
+  updateView,
+  deleteView
 }

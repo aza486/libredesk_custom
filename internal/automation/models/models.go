@@ -14,6 +14,7 @@ const (
 	ActionSetPriority     = "set_priority"
 	ActionSendPrivateNote = "send_private_note"
 	ActionReply           = "reply"
+	ActionSetSLA          = "set_sla"
 
 	OperatorAnd = "AND"
 	OperatorOR  = "OR"
@@ -59,6 +60,7 @@ type RuleRecord struct {
 	Disabled    bool            `db:"disabled" json:"disabled"`
 	Rules       json.RawMessage `db:"rules" json:"rules"`
 }
+
 
 type Rule struct {
 	Type          string       `json:"type" db:"type"`

@@ -35,14 +35,16 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetTeams        *sqlx.Stmt `query:"get-teams"`
-	GetTeamsCompact *sqlx.Stmt `query:"get-teams-compact"`
-	GetTeam         *sqlx.Stmt `query:"get-team"`
-	InsertTeam      *sqlx.Stmt `query:"insert-team"`
-	UpdateTeam      *sqlx.Stmt `query:"update-team"`
-	DeleteTeam      *sqlx.Stmt `query:"delete-team"`
-	GetTeamMembers  *sqlx.Stmt `query:"get-team-members"`
-	UpsertUserTeams *sqlx.Stmt `query:"upsert-user-teams"`
+	GetTeams          *sqlx.Stmt `query:"get-teams"`
+	GetUserTeams      *sqlx.Stmt `query:"get-user-teams"`
+	GetTeamsCompact   *sqlx.Stmt `query:"get-teams-compact"`
+	GetTeam           *sqlx.Stmt `query:"get-team"`
+	InsertTeam        *sqlx.Stmt `query:"insert-team"`
+	UpdateTeam        *sqlx.Stmt `query:"update-team"`
+	DeleteTeam        *sqlx.Stmt `query:"delete-team"`
+	GetTeamMembers    *sqlx.Stmt `query:"get-team-members"`
+	UpsertUserTeams   *sqlx.Stmt `query:"upsert-user-teams"`
+	UserBelongsToTeam *sqlx.Stmt `query:"user-belongs-to-team"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -66,7 +68,7 @@ func (u *Manager) GetAll() ([]models.Team, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return teams, nil
 		}
-		u.lo.Error("error fetching teams from db", "error", err)
+		u.lo.Error("error fetching teams", "error", err)
 		return teams, envelope.NewError(envelope.GeneralError, "Error fetching teams", nil)
 	}
 	return teams, nil
@@ -79,14 +81,14 @@ func (u *Manager) GetAllCompact() ([]models.Team, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return teams, nil
 		}
-		u.lo.Error("error fetching teams from db", "error", err)
+		u.lo.Error("error fetching teams", "error", err)
 		return teams, envelope.NewError(envelope.GeneralError, "Error fetching teams", nil)
 	}
 	return teams, nil
 }
 
-// GetTeam retrieves a team by ID.
-func (u *Manager) GetTeam(id int) (models.Team, error) {
+// Get retrieves a team by ID.
+func (u *Manager) Get(id int) (models.Team, error) {
 	var team models.Team
 	if err := u.q.GetTeam.Get(&team, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -99,26 +101,26 @@ func (u *Manager) GetTeam(id int) (models.Team, error) {
 	return team, nil
 }
 
-// CreateTeam creates a new team.
-func (u *Manager) CreateTeam(t models.Team) error {
-	if _, err := u.q.InsertTeam.Exec(t.Name); err != nil {
+// Create creates a new team.
+func (u *Manager) Create(name, timezone, conversationAssignmentType string, businessHrsID int) error {
+	if _, err := u.q.InsertTeam.Exec(name, timezone, conversationAssignmentType, businessHrsID); err != nil {
 		u.lo.Error("error inserting team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating team", nil)
 	}
 	return nil
 }
 
-// UpdateTeam updates an existing team.
-func (u *Manager) UpdateTeam(id int, t models.Team) error {
-	if _, err := u.q.UpdateTeam.Exec(id, t.Name, t.AutoAssignConversations); err != nil {
+// Update updates an existing team.
+func (u *Manager) Update(id int, name, timezone, conversationAssignmentType string, businessHrsID int) error {
+	if _, err := u.q.UpdateTeam.Exec(id, name, timezone, conversationAssignmentType, businessHrsID); err != nil {
 		u.lo.Error("error updating team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating team", nil)
 	}
 	return nil
 }
 
-// DeleteTeam deletes a team by ID also deletes all the team members and unassigns all the conversations belonging to the team.
-func (u *Manager) DeleteTeam(id int) error {
+// Delete deletes a team by ID also deletes all the team members and unassigns all the conversations belonging to the team.
+func (u *Manager) Delete(id int) error {
 	if _, err := u.q.DeleteTeam.Exec(id); err != nil {
 		u.lo.Error("error deleting team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting team", nil)
@@ -126,17 +128,17 @@ func (u *Manager) DeleteTeam(id int) error {
 	return nil
 }
 
-// GetTeamMembers retrieves members of a team by team name.
-func (u *Manager) GetTeamMembers(name string) ([]umodels.User, error) {
-	var users []umodels.User
-	if err := u.q.GetTeamMembers.Select(&users, name); err != nil {
+// GetUserTeams retrieves teams of a user by user ID.
+func (u *Manager) GetUserTeams(userID int) ([]models.Team, error) {
+	var teams = make([]models.Team, 0)
+	if err := u.q.GetUserTeams.Select(&teams, userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return users, nil
+			return teams, nil
 		}
-		u.lo.Error("error fetching team members from db", "team_name", name, "error", err)
-		return users, fmt.Errorf("fetching team members: %w", err)
+		u.lo.Error("error fetching teams", "user_id", userID, "error", err)
+		return teams, envelope.NewError(envelope.GeneralError, "Error fetching teams", nil)
 	}
-	return users, nil
+	return teams, nil
 }
 
 // UpsertUserTeams updates/inserts exists user teams
@@ -146,4 +148,27 @@ func (u *Manager) UpsertUserTeams(id int, teamNames []string) error {
 		return envelope.NewError(envelope.GeneralError, "Error updating user team", nil)
 	}
 	return nil
+}
+
+// UserBelongsToTeam returns true if the user belongs to the team.
+func (u *Manager) UserBelongsToTeam(teamID, userID int) (bool, error) {
+	var exists bool
+	if err := u.q.UserBelongsToTeam.Get(&exists, teamID, userID); err != nil {
+		u.lo.Error("error checking if user belongs to team", "team_id", teamID, "user_id", userID, "error", err)
+		return false, envelope.NewError(envelope.GeneralError, "Error checking if user belongs to team", nil)
+	}
+	return exists, nil
+}
+
+// GetMembers retrieves members of a team by team ID.
+func (u *Manager) GetMembers(id int) ([]umodels.User, error) {
+	var users []umodels.User
+	if err := u.q.GetTeamMembers.Select(&users, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return users, nil
+		}
+		u.lo.Error("error fetching team members", "team_id", id, "error", err)
+		return users, fmt.Errorf("fetching team members: %w", err)
+	}
+	return users, nil
 }

@@ -1,9 +1,10 @@
 <template>
   <div class="page-content">
+    <PageHeader title="Overview" />
     <Spinner v-if="isLoading"></Spinner>
-    <DashboardGreet></DashboardGreet>
-    <div class="mt-7" v-auto-animate>
-      <Card :counts="cardCounts" :labels="agentCountCardsLabels" />
+    <div class="mt-7 flex w-full space-x-4" v-auto-animate>
+      <Card class="flex-1" title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
+      <Card class="flex-1" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
     </div>
     <div class="w-11/12" :class="{ 'soft-fade': isLoading }">
       <div class="flex my-7 justify-between items-center space-x-5">
@@ -27,7 +28,7 @@ import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import Card from '@/components/dashboard/DashboardCard.vue'
 import LineChart from '@/components/dashboard/DashboardLineChart.vue'
 import BarChart from '@/components/dashboard/DashboardBarChart.vue'
-import DashboardGreet from '@/components/dashboard/DashboardGreet.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 
 const { toast } = useToast()
@@ -39,6 +40,17 @@ const agentCountCardsLabels = {
   resolved_count: 'Resolved',
   unresolved_count: 'Unresolved',
   awaiting_response_count: 'Awaiting Response'
+}
+const sampleAgentStatusLabels = {
+  online: 'Online',
+  offline: 'Offline',
+  away: 'Away',
+}
+
+const sampleAgentStatusCounts = {
+  online: 5,
+  offline: 2,
+  away: 1,
 }
 
 onMounted(() => {

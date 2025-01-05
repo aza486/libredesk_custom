@@ -101,7 +101,7 @@ func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 	var b types.JSONText
 	if err := m.q.GetByPrefix.Get(&b, prefix+"%"); err != nil {
 		m.lo.Error("error fetching settings", "prefix", prefix, "error", err)
-		return b, err
+		return b, envelope.NewError(envelope.GeneralError, "Error fetching settings", nil)
 	}
 	return b, nil
 }

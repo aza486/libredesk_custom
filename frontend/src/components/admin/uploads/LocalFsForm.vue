@@ -34,7 +34,7 @@
         <FormMessage />
       </FormItem>
     </FormField>
-    <Button type="submit" size="sm"> {{ submitLabel }} </Button>
+    <Button type="submit"> {{ submitLabel }} </Button>
   </form>
 </template>
 

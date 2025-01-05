@@ -45,7 +45,7 @@ onMounted(async () => {
 })
 
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+  
   { path: '/admin/teams/roles', label: 'Roles' },
   { path: '#', label: 'Edit role' }
 ]

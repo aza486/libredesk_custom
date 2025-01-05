@@ -22,7 +22,7 @@ const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+  
   { path: '/admin/teams/users', label: 'Users' },
   { path: '#', label: 'Edit user' }
 ]

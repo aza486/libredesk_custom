@@ -1,0 +1,11 @@
+{{ define "info" }}
+{{ template "header" . }}
+
+<section class="center">
+    {{ if .message }}
+    <p class="green">{{ .message }}</p>
+    {{ end }}
+</section>
+
+{{ template "footer" . }}
+{{ end }}

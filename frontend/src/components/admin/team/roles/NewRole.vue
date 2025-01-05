@@ -19,7 +19,7 @@ const emitter = useEmitter()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+  
   { path: '/admin/teams/roles', label: 'Roles' },
   { path: '#', label: 'Add role' }
 ]

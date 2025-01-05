@@ -16,11 +16,12 @@ import (
 	"github.com/abhinavxd/artemis/internal/authz"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
 	"github.com/abhinavxd/artemis/internal/automation"
+	businesshours "github.com/abhinavxd/artemis/internal/business_hours"
 	"github.com/abhinavxd/artemis/internal/cannedresp"
-	"github.com/abhinavxd/artemis/internal/contact"
 	"github.com/abhinavxd/artemis/internal/conversation"
 	"github.com/abhinavxd/artemis/internal/conversation/priority"
 	"github.com/abhinavxd/artemis/internal/conversation/status"
+	"github.com/abhinavxd/artemis/internal/csat"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
@@ -32,10 +33,13 @@ import (
 	"github.com/abhinavxd/artemis/internal/oidc"
 	"github.com/abhinavxd/artemis/internal/role"
 	"github.com/abhinavxd/artemis/internal/setting"
+	"github.com/abhinavxd/artemis/internal/sla"
 	"github.com/abhinavxd/artemis/internal/tag"
 	"github.com/abhinavxd/artemis/internal/team"
 	tmpl "github.com/abhinavxd/artemis/internal/template"
 	"github.com/abhinavxd/artemis/internal/user"
+	"github.com/abhinavxd/artemis/internal/view"
+	"github.com/abhinavxd/artemis/internal/workerpool"
 	"github.com/abhinavxd/artemis/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
@@ -189,9 +193,19 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 }
 
 // initConversations inits conversation manager.
-func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sqlx.DB, contactStore *contact.Manager,
-	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager, automationEngine *automation.Engine, template *tmpl.Manager) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
+func initConversations(
+	i18n *i18n.I18n,
+	hub *ws.Hub,
+	n *notifier.Service,
+	db *sqlx.DB,
+	inboxStore *inbox.Manager,
+	userStore *user.Manager,
+	teamStore *team.Manager,
+	mediaStore *media.Manager,
+	automationEngine *automation.Engine,
+	template *tmpl.Manager,
+) *conversation.Manager {
+	c, err := conversation.New(hub, i18n, n, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
 		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),
@@ -203,8 +217,8 @@ func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sq
 	return c
 }
 
-// initTags inits tag manager.
-func initTags(db *sqlx.DB) *tag.Manager {
+// initTag inits tag manager.
+func initTag(db *sqlx.DB) *tag.Manager {
 	var lo = initLogger("tag_manager")
 	mgr, err := tag.New(tag.Opts{
 		DB: db,
@@ -214,6 +228,19 @@ func initTags(db *sqlx.DB) *tag.Manager {
 		log.Fatalf("error initializing tags: %v", err)
 	}
 	return mgr
+}
+
+// initViews inits view manager.
+func initView(db *sqlx.DB) *view.Manager {
+	var lo = initLogger("view_manager")
+	m, err := view.New(view.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing view manager: %v", err)
+	}
+	return m
 }
 
 // initCannedResponse inits canned response manager.
@@ -229,26 +256,62 @@ func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
 	return c
 }
 
-func initContact(db *sqlx.DB) *contact.Manager {
-	var lo = initLogger("contact-manager")
-	m, err := contact.New(contact.Opts{
+// initBusinessHours inits business hours manager.
+func initBusinessHours(db *sqlx.DB) *businesshours.Manager {
+	var lo = initLogger("business-hours")
+	m, err := businesshours.New(businesshours.Opts{
 		DB: db,
 		Lo: lo,
 	})
 	if err != nil {
-		log.Fatalf("error initializing contact manager: %v", err)
+		log.Fatalf("error initializing business hours manager: %v", err)
+	}
+	return m
+}
+
+// initSLA inits SLA manager.
+func initSLA(db *sqlx.DB, teamManager *team.Manager, settings *setting.Manager, businessHours *businesshours.Manager) *sla.Manager {
+	var lo = initLogger("sla")
+	m, err := sla.New(sla.Opts{
+		DB:              db,
+		Lo:              lo,
+		ScannerInterval: ko.MustDuration("sla.scanner_interval"),
+	}, workerpool.New(ko.MustInt("sla.worker_count"), ko.MustInt("sla.queue_size")), teamManager, settings, businessHours)
+	if err != nil {
+		log.Fatalf("error initializing SLA manager: %v", err)
+	}
+	return m
+}
+
+// initCSAT inits CSAT manager.
+func initCSAT(db *sqlx.DB) *csat.Manager {
+	var lo = initLogger("csat")
+	m, err := csat.New(csat.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing CSAT manager: %v", err)
 	}
 	return m
 }
 
 // initTemplates inits template manager.
 func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.Manager {
-	lo := initLogger("template")
-	tpls, err := stuffbin.ParseTemplatesGlob(getTmplFuncs(consts), fs, "/static/email-templates/*.html")
+	var (
+		lo      = initLogger("template")
+		funcMap = getTmplFuncs(consts)
+	)
+	tpls, err := stuffbin.ParseTemplatesGlob(funcMap, fs, "/static/email-templates/*.html")
 	if err != nil {
 		log.Fatalf("error parsing e-mail templates: %v", err)
 	}
-	m, err := tmpl.New(lo, db, tpls)
+
+	webTpls, err := stuffbin.ParseTemplatesGlob(funcMap, fs, "/static/public/web-templates/*.html")
+	if err != nil {
+		log.Fatalf("error parsing web templates: %v", err)
+	}
+	m, err := tmpl.New(lo, db, webTpls, tpls, funcMap)
 	if err != nil {
 		log.Fatalf("error initializing template manager: %v", err)
 	}

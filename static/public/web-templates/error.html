@@ -1,0 +1,11 @@
+{{ define "error" }}
+{{ template "header" . }}
+
+<section class="center">
+    {{ if .error_message }}
+    <p class="error">{{ .error_message }}</p>
+    {{ end }}
+</section>
+
+{{ template "footer" . }}
+{{ end }}

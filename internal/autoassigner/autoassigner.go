@@ -20,6 +20,10 @@ var (
 	ErrTeamNotFound = errors.New("team not found")
 )
 
+const (
+	AssignmentTypeRoundRobin = "Round robin"
+)
+
 // Engine represents a manager for assigning unassigned conversations
 // to team agents in a round-robin pattern.
 type Engine struct {
@@ -118,11 +122,11 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 	}
 
 	for _, team := range teams {
-		if !team.AutoAssignConversations {
+		if team.ConversationAssignmentType != AssignmentTypeRoundRobin {
 			continue
 		}
 
-		users, err := e.teamManager.GetTeamMembers(team.Name)
+		users, err := e.teamManager.GetMembers(team.ID)
 		if err != nil {
 			return nil, err
 		}

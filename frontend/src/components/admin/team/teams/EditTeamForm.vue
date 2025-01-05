@@ -22,10 +22,17 @@ const formLoading = ref(false)
 const isLoading = ref(false)
 
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+
   { path: '/admin/teams/teams', label: 'Teams' },
   { path: '#', label: 'Edit team' }
 ]
+
+const props = defineProps({
+  id: {
+    type: String,
+    required: true
+  }
+})
 
 const submitForm = (values) => {
   updateTeam(values)
@@ -41,7 +48,7 @@ const updateTeam = async (payload) => {
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not update team',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -57,19 +64,12 @@ onMounted(async () => {
     team.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not fetch team',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
   } finally {
     isLoading.value = false
-  }
-})
-
-const props = defineProps({
-  id: {
-    type: String,
-    required: true
   }
 })
 </script>

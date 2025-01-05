@@ -37,7 +37,7 @@ const deleteTemplate = async (id) => {
     })
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not delete template',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

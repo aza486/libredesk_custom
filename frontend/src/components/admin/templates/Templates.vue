@@ -1,30 +1,55 @@
 <template>
-  <div>
-    <div class="flex justify-between mb-5">
-      <PageHeader title="Email Templates" description="Manage outgoing email templates" />
-      <div class="flex justify-end mb-4">
-        <Button @click="navigateToAddTemplate" size="sm"> New template </Button>
+  <PageHeader title="Email templates" description="Manage email templates" />
+  <div class="w-8/12">
+    <template v-if="router.currentRoute.value.path === '/admin/templates'">
+      <div class="flex justify-between mb-5">
+        <div></div>
+        <div class="flex justify-end mb-4">
+          <Button @click="navigateToAddTemplate"> New template </Button>
+        </div>
       </div>
-    </div>
-    <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="templates" />
-    </div>
+      <div>
+        <Spinner v-if="isLoading"></Spinner>
+        <Tabs default-value="email_outgoing" v-model="templateType">
+          <TabsList class="grid w-full grid-cols-2 mb-5">
+            <TabsTrigger value="email_outgoing">Outgoing email templates</TabsTrigger>
+            <TabsTrigger value="email_notification">Email notification templates</TabsTrigger>
+          </TabsList>
+          <TabsContent value="email_outgoing">
+            <DataTable :columns="outgoingEmailTemplatesColumns" :data="templates" />
+          </TabsContent>
+          <TabsContent value="email_notification">
+            <DataTable :columns="emailNotificationTemplates" :data="templates" />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </template>
+    <template v-else>
+      <router-view/>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import DataTable from '@/components/admin/DataTable.vue'
-import { columns } from '@/components/admin/templates/dataTableColumns.js'
+import { emailNotificationTemplates, outgoingEmailTemplatesColumns } from '@/components/admin/templates/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/admin/common/PageHeader.vue'
 import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import { useStorage } from '@vueuse/core'
 import api from '@/api'
 
+const templateType = useStorage('templateType', 'email_outgoing')
 const templates = ref([])
 const isLoading = ref(false)
 const router = useRouter()
@@ -42,7 +67,7 @@ onUnmounted(() => {
 const fetchAll = async () => {
   try {
     isLoading.value = true
-    const resp = await api.getTemplates()
+    const resp = await api.getTemplates(templateType.value)
     templates.value = resp.data.data
   } finally {
     isLoading.value = false
@@ -56,4 +81,8 @@ const refreshList = (data) => {
 const navigateToAddTemplate = () => {
   router.push('/admin/templates/new')
 }
+
+watch(templateType, () => {
+  fetchAll()
+})
 </script>

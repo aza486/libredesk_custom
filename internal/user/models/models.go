@@ -14,15 +14,22 @@ type User struct {
 	UpdatedAt        time.Time      `db:"updated_at" json:"updated_at"`
 	FirstName        string         `db:"first_name" json:"first_name"`
 	LastName         string         `db:"last_name" json:"last_name"`
-	Email            string         `db:"email" json:"email,omitempty"`
+	Email            null.String    `db:"email" json:"email,omitempty"`
+	Type             string         `db:"type" json:"type"`
 	AvatarURL        null.String    `db:"avatar_url" json:"avatar_url"`
 	Disabled         bool           `db:"disabled" json:"disabled"`
 	Password         string         `db:"password" json:"-"`
-	NewPassword      string         `db:"-" json:"new_password,omitempty"`
-	SendWelcomeEmail bool           `db:"-" json:"send_welcome_email,omitempty"`
 	Roles            pq.StringArray `db:"roles" json:"roles"`
 	Permissions      pq.StringArray `db:"permissions" json:"permissions"`
+	Meta             pq.StringArray `db:"meta" json:"meta"`
+	CustomAttributes pq.StringArray `db:"custom_attributes" json:"custom_attributes"`
 	Teams            tmodels.Teams  `db:"teams" json:"teams"`
+	ContactChannelID int            `db:"contact_channel_id"`
+	NewPassword      string         `db:"-" json:"new_password,omitempty"`
+	SendWelcomeEmail bool           `db:"-" json:"send_welcome_email,omitempty"`
+	InboxID          int
+	SourceChannel    null.String
+	SourceChannelID  null.String
 }
 
 func (u *User) FullName() string {

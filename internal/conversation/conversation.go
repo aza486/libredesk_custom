@@ -13,14 +13,12 @@ import (
 	"time"
 
 	"github.com/abhinavxd/artemis/internal/automation"
-	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
 	"github.com/abhinavxd/artemis/internal/conversation/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	"github.com/abhinavxd/artemis/internal/inbox"
 	mmodels "github.com/abhinavxd/artemis/internal/media/models"
 	notifier "github.com/abhinavxd/artemis/internal/notification"
-	"github.com/abhinavxd/artemis/internal/stringutil"
 	tmodels "github.com/abhinavxd/artemis/internal/team/models"
 	"github.com/abhinavxd/artemis/internal/template"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
@@ -33,9 +31,10 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs                             embed.FS
-	ErrConversationNotFound         = errors.New("conversation not found")
-	ConversationsListAllowedFilters = []string{"status_id", "priority_id", "reference_number"}
+	efs                                  embed.FS
+	ErrConversationNotFound              = errors.New("conversation not found")
+	ConversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id"}
+	ConversationStatusesFilterFields     = []string{"id", "name"}
 )
 
 const (
@@ -45,7 +44,6 @@ const (
 // Manager handles the operations related to conversations
 type Manager struct {
 	q                          queries
-	contactStore               contactStore
 	inboxStore                 inboxStore
 	userStore                  userStore
 	teamStore                  teamStore
@@ -66,15 +64,13 @@ type Manager struct {
 }
 
 type teamStore interface {
-	GetTeam(int) (tmodels.Team, error)
+	Get(int) (tmodels.Team, error)
+	UserBelongsToTeam(userID, teamID int) (bool, error)
 }
 
 type userStore interface {
 	Get(int) (umodels.User, error)
-}
-
-type contactStore interface {
-	Upsert(cmodels.Contact) (int, error)
+	CreateContact(user *umodels.User) error
 }
 
 type mediaStore interface {
@@ -102,7 +98,6 @@ func New(
 	wsHub *ws.Hub,
 	i18n *i18n.I18n,
 	notifier *notifier.Service,
-	contactStore contactStore,
 	inboxStore inboxStore,
 	userStore userStore,
 	teamStore teamStore,
@@ -121,7 +116,6 @@ func New(
 		wsHub:                      wsHub,
 		i18n:                       i18n,
 		notifier:                   notifier,
-		contactStore:               contactStore,
 		inboxStore:                 inboxStore,
 		userStore:                  userStore,
 		teamStore:                  teamStore,
@@ -156,6 +150,7 @@ type queries struct {
 	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
 	UpdateConversationPriority         *sqlx.Stmt `query:"update-conversation-priority"`
 	UpdateConversationStatus           *sqlx.Stmt `query:"update-conversation-status"`
+	UpdateConversationLastMessage      *sqlx.Stmt `query:"update-conversation-last-message"`
 	UpdateConversationMeta             *sqlx.Stmt `query:"update-conversation-meta"`
 	InsertConverstionParticipant       *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
@@ -178,13 +173,12 @@ type queries struct {
 }
 
 // CreateConversation creates a new conversation and returns its ID and UUID.
-func (c *Manager) CreateConversation(contactID int, inboxID int, meta []byte) (int, string, error) {
+func (c *Manager) CreateConversation(contactID, contactChannelID, inboxID int, lastMessage string, lastMessageAt time.Time, subject string) (int, string, error) {
 	var (
-		id        int
-		uuid      string
-		refNum, _ = stringutil.RandomNumericString(20)
+		id   int
+		uuid string
 	)
-	if err := c.q.InsertConversation.QueryRow(refNum, contactID, models.StatusOpen, inboxID, meta).Scan(&id, &uuid); err != nil {
+	if err := c.q.InsertConversation.QueryRow(contactID, contactChannelID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject).Scan(&id, &uuid); err != nil {
 		c.lo.Error("error inserting new conversation into the DB", "error", err)
 		return id, uuid, err
 	}
@@ -192,14 +186,14 @@ func (c *Manager) CreateConversation(contactID int, inboxID int, meta []byte) (i
 }
 
 // GetConversation retrieves a conversation by its UUID.
-func (c *Manager) GetConversation(uuid string) (models.Conversation, error) {
+func (c *Manager) GetConversation(id int, uuid string) (models.Conversation, error) {
 	var conversation models.Conversation
-	if err := c.q.GetConversation.Get(&conversation, uuid); err != nil {
+	if err := c.q.GetConversation.Get(&conversation, id, uuid); err != nil {
 		if err == sql.ErrNoRows {
-			return conversation, envelope.NewError(envelope.InputError, "Conversation not found.", nil)
+			return conversation, envelope.NewError(envelope.InputError, "Conversation not found", nil)
 		}
 		c.lo.Error("error fetching conversation", "error", err)
-		return conversation, envelope.NewError(envelope.InputError, "Error fetching conversation.", nil)
+		return conversation, envelope.NewError(envelope.GeneralError, "Error fetching conversation", nil)
 	}
 	return conversation, nil
 }
@@ -208,10 +202,6 @@ func (c *Manager) GetConversation(uuid string) (models.Conversation, error) {
 func (c *Manager) GetConversationsCreatedAfter(time time.Time) ([]models.Conversation, error) {
 	var conversations = make([]models.Conversation, 0)
 	if err := c.q.GetConversationsCreatedAfter.Select(&conversations, time); err != nil {
-		if err == sql.ErrNoRows {
-			c.lo.Error("conversations not found", "created_after", time)
-			return conversations, err
-		}
 		c.lo.Error("error fetching conversation", "error", err)
 		return conversations, err
 	}
@@ -222,7 +212,7 @@ func (c *Manager) GetConversationsCreatedAfter(time time.Time) ([]models.Convers
 func (c *Manager) UpdateConversationAssigneeLastSeen(uuid string) error {
 	if _, err := c.q.UpdateConversationAssigneeLastSeen.Exec(uuid); err != nil {
 		c.lo.Error("error updating conversation", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error updating assignee last seen.", nil)
+		return envelope.NewError(envelope.GeneralError, "Error updating assignee last seen", nil)
 	}
 
 	// Broadcast the property update to all subscribers.
@@ -290,51 +280,86 @@ func (c *Manager) GetConversationUUID(id int) (string, error) {
 }
 
 // GetAllConversationsList retrieves all conversations with optional filtering, ordering, and pagination.
-func (c *Manager) GetAllConversationsList(order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
+func (c *Manager) GetAllConversationsList(order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
 	return c.GetConversations(0, models.AllConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetAssignedConversationsList retrieves conversations assigned to a specific user with optional filtering, ordering, and pagination.
-func (c *Manager) GetAssignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
+func (c *Manager) GetAssignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
 	return c.GetConversations(userID, models.AssignedConversations, order, orderBy, filters, page, pageSize)
 }
 
 // GetUnassignedConversationsList retrieves conversations assigned to a team the user is part of with optional filtering, ordering, and pagination.
-func (c *Manager) GetUnassignedConversationsList(userID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
-	return c.GetConversations(userID, models.UnassignedConversations, order, orderBy, filters, page, pageSize)
+func (c *Manager) GetUnassignedConversationsList(order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(0, models.UnassignedConversations, order, orderBy, filters, page, pageSize)
+}
+
+// GetTeamUnassignedConversationsList retrieves conversations assigned to a team with optional filtering, ordering, and pagination.
+func (c *Manager) GetTeamUnassignedConversationsList(teamID int, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+	return c.GetConversations(teamID, models.TeamUnassignedConversations, order, orderBy, filters, page, pageSize)
+}
+
+func (c *Manager) GetViewConversationsList(userID int, typ, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
+	fmt.Println("Applying view filters", filters)
+	switch typ {
+	case models.AssignedConversations:
+		return c.GetAssignedConversationsList(userID, order, orderBy, filters, page, pageSize)
+	case models.UnassignedConversations:
+		return c.GetUnassignedConversationsList(order, orderBy, filters, page, pageSize)
+	case models.AllConversations:
+		return c.GetAllConversationsList(order, orderBy, filters, page, pageSize)
+	default:
+		return nil, envelope.NewError(envelope.InputError, fmt.Sprintf("Invalid conversation type: %s", typ), nil)
+	}
 }
 
 // GetConversations retrieves conversations list based on user ID, type, and optional filtering, ordering, and pagination.
-func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, int, error) {
+func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
 	var conversations = make([]models.Conversation, 0)
-	if orderBy == "" {
-		orderBy = "last_message_at"
-	}
 
-	query, pageSize, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversations, listType, order, orderBy, page, pageSize, filters)
+	// Make the query.
+	query, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversations, listType, order, orderBy, page, pageSize, filters)
 	if err != nil {
-		return conversations, pageSize, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
+		c.lo.Error("error making conversations query", "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
 	tx, err := c.db.BeginTxx(context.Background(), nil)
 	defer tx.Rollback()
 	if err != nil {
 		c.lo.Error("error preparing get conversations query", "error", err)
-		return conversations, pageSize, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 
 	if err := tx.Select(&conversations, query, qArgs...); err != nil {
 		c.lo.Error("error fetching conversations", "error", err)
-		return conversations, pageSize, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
-	return conversations, pageSize, nil
+	return conversations, nil
 }
 
-// GetConversationsListUUIDs retrieves the UUIDs of conversations list.
-func (c *Manager) GetConversationsListUUIDs(userID, page, pageSize int, typ string) ([]string, error) {
-	var ids = make([]string, 0)
+// GetConversationsListUUIDs retrieves the UUIDs of conversations list, used to subscribe to conversations.
+func (c *Manager) GetConversationsListUUIDs(userID, teamID, page, pageSize int, typ string) ([]string, error) {
+	var (
+		ids = make([]string, 0)
+		id  = userID
+	)
 
-	query, _, qArgs, err := c.makeConversationsListQuery(userID, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize, "")
+	if typ == models.TeamUnassignedConversations {
+		id = teamID
+		if teamID == 0 {
+			return ids, fmt.Errorf("team ID is required for team unassigned conversations")
+		}
+		exists, err := c.teamStore.UserBelongsToTeam(userID, teamID)
+		if err != nil {
+			return ids, fmt.Errorf("fetching team members: %w", err)
+		}
+		if !exists {
+			return ids, fmt.Errorf("user does not belong to team")
+		}
+	}
+
+	query, qArgs, err := c.makeConversationsListQuery(id, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize, "")
 	if err != nil {
 		c.lo.Error("error generating conversations query", "error", err)
 		return ids, err
@@ -368,12 +393,13 @@ func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID st
 	return nil
 }
 
-// UpdateConversationLastMessage updates the last message details in the conversation meta.
-func (c *Manager) UpdateConversationLastMessage(conversationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
-	return c.UpdateConversationMeta(conversationID, conversationUUID, map[string]string{
-		"last_message":    lastMessage,
-		"last_message_at": lastMessageAt.Format(time.RFC3339),
-	})
+// UpdateConversationLastMessage updates the last message details for a conversation.
+func (c *Manager) UpdateConversationLastMessage(convesationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
+	if _, err := c.q.UpdateConversationLastMessage.Exec(convesationID, conversationUUID, lastMessage, lastMessageAt); err != nil {
+		c.lo.Error("error updating conversation last message", "error", err)
+		return err
+	}
+	return nil
 }
 
 // UpdateConversationFirstReplyAt updates the first reply timestamp for a conversation.
@@ -397,13 +423,13 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
 
-	conversation, err := c.GetConversation(uuid)
+	conversation, err := c.GetConversation(0, uuid)
 	if err != nil {
 		return err
 	}
 
 	// Send email to assignee.
-	if err := c.SendAssignedConversationEmail([]int{assigneeID}, conversation.Subject, uuid); err != nil {
+	if err := c.SendAssignedConversationEmail([]int{assigneeID}, conversation.Subject.String, uuid); err != nil {
 		c.lo.Error("error sending assigned conversation email", "error", err)
 	}
 
@@ -463,9 +489,26 @@ func (c *Manager) UpdateConversationPriority(uuid string, priority []byte, actor
 }
 
 // UpdateConversationStatus updates the status of a conversation.
-func (c *Manager) UpdateConversationStatus(uuid string, status []byte, actor umodels.User) error {
-	var statusStr = string(status)
-	if _, err := c.q.UpdateConversationStatus.Exec(uuid, status); err != nil {
+func (c *Manager) UpdateConversationStatus(uuid string, status []byte, snoozeDur []byte, actor umodels.User) error {
+	var (
+		statusStr = string(status)
+		snoozeDurS = string(snoozeDur)
+	)
+
+	if statusStr == models.StatusSnoozed && snoozeDurS == "" {
+		return envelope.NewError(envelope.InputError, "Snooze duration is required", nil)
+	}
+
+	snoozeUntil := time.Time{}
+	if statusStr == models.StatusSnoozed {
+		duration, err := time.ParseDuration(snoozeDurS)
+		if err != nil {
+			return envelope.NewError(envelope.InputError, "Invalid snooze duration format", nil)
+		}
+		snoozeUntil = time.Now().Add(duration)
+	}
+
+	if _, err := c.q.UpdateConversationStatus.Exec(uuid, status, snoozeUntil); err != nil {
 		c.lo.Error("error updating conversation status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)
 	}
@@ -528,7 +571,7 @@ func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error)
 		qArgs []interface{}
 	)
 
-	// TODO: Add date range filter on the UI.
+	// TODO: Add date range filter support.
 	if userID > 0 {
 		cond = " AND assigned_user_id = $1"
 		qArgs = append(qArgs, userID)
@@ -557,8 +600,11 @@ func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
 }
 
 // makeConversationsListQuery prepares a SQL query string for conversations list
-func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, order, orderBy string, page, pageSize int, filtersJSON string) (string, int, []interface{}, error) {
+func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, order, orderBy string, page, pageSize int, filtersJSON string) (string, []interface{}, error) {
 	var qArgs []interface{}
+	if orderBy == "" {
+		orderBy = "last_message_at"
+	}
 	if order == "" {
 		order = "DESC"
 	}
@@ -566,49 +612,55 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 		filtersJSON = "[]"
 	}
 	if pageSize > conversationsListMaxPageSize {
-		pageSize = conversationsListMaxPageSize
+		return "", nil, fmt.Errorf("page size exceeds maximum limit of %d", conversationsListMaxPageSize)
 	}
 	if pageSize < 1 {
-		pageSize = 10
+		return "", nil, fmt.Errorf("page size must be greater than 0")
 	}
 	if page < 1 {
-		page = 1
+		return "", nil, fmt.Errorf("page must be greater than 0")
 	}
-
-	// Set condition based on the list type.
+	// Apply filters based on the type of conversation list.
 	switch listType {
+	// Conversations assigned to the current user.
 	case models.AssignedConversations:
 		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_user_id = $1")
 		qArgs = append(qArgs, userID)
+	// Conversations that are unassigned.
 	case models.UnassignedConversations:
-		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_user_id IS NULL AND conversations.assigned_team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)")
-		qArgs = append(qArgs, userID)
+		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_user_id IS NULL AND conversations.assigned_team_id IS NULL")
+	// All conversations without any specific filter.
 	case models.AllConversations:
 		baseQuery = fmt.Sprintf(baseQuery, "")
+	// Conversations assigned to a team but not to a specific user.
+	case models.TeamUnassignedConversations:
+		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_team_id = $1 AND conversations.assigned_user_id IS NULL")
+		qArgs = append(qArgs, userID)
 	default:
-		return "", pageSize, nil, fmt.Errorf("invalid conversation type %s", listType)
+		return "", nil, fmt.Errorf("unknown conversation type: %s", listType)
 	}
 
-	query, qArgs, err := dbutil.PaginateAndFilterQuery(baseQuery, qArgs, dbutil.PaginationOptions{
+	// Build the paginated query.
+	query, qArgs, err := dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
 		Order:    order,
 		OrderBy:  orderBy,
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
-		"conversations": ConversationsListAllowedFilters,
+		"conversations":         ConversationsListAllowedFilterFields,
+		"conversation_statuses": ConversationStatusesFilterFields,
 	})
 	if err != nil {
 		c.lo.Error("error preparing query", "error", err)
-		return "", pageSize, nil, err
+		return "", nil, err
 	}
-
-	return query, pageSize, qArgs, err
+	return query, qArgs, err
 }
 
-// GetToAddress retrieves the recipient addresses for a conversation.
-func (m *Manager) GetToAddress(conversationID int, channel string) ([]string, error) {
+// GetToAddress retrieves the recipient addresses for a conversation and channel.
+func (m *Manager) GetToAddress(conversationID int) ([]string, error) {
 	var addr []string
-	if err := m.q.GetToAddress.Select(&addr, conversationID, channel); err != nil {
+	if err := m.q.GetToAddress.Select(&addr, conversationID); err != nil {
 		m.lo.Error("error fetching `to` address for message", "error", err, "conversation_id", conversationID)
 		return addr, err
 	}
@@ -627,26 +679,26 @@ func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, 
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
 func (m *Manager) SendAssignedConversationEmail(userIDs []int, subject, conversationUUID string) error {
-	content, err := m.template.Render(template.TmplConversationAssigned,
+	content, subject, err := m.template.RenderNamedTemplate(template.TmplConversationAssigned,
 		map[string]interface{}{
-			"Conversation": map[string]string{
-				"Subject": subject,
-				"UUID":    conversationUUID,
+			"conversation": map[string]string{
+				"subject": subject,
+				"uuid":    conversationUUID,
 			},
 		})
 	if err != nil {
-		m.lo.Error("error rendering template", "template", template.TmplConversationAssigned, "error", err)
-		return err
+		m.lo.Error("error rendering template", "template", template.TmplConversationAssigned, "conversation_uuid", conversationUUID, "error", err)
+		return fmt.Errorf("rendering template: %w", err)
 	}
 	nm := notifier.Message{
 		UserIDs:  userIDs,
-		Subject:  "Conversation Assigned",
+		Subject:  subject,
 		Content:  content,
 		Provider: notifier.ProviderEmail,
 	}
 	if err := m.notifier.Send(nm); err != nil {
 		m.lo.Error("error sending notification message", "error", err)
-		return err
+		return fmt.Errorf("sending notification message: %w", err)
 	}
 	return nil
 }

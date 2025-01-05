@@ -1,23 +1,25 @@
 <template>
-  <div class="mb-5">
-    <CustomBreadcrumb :links="breadcrumbLinks" />
-  </div>
-  <div class="flex justify-end mb-5">
-    <Button @click="navigateToAddTeam" size="sm"> New team </Button>
-  </div>
-  <div>
-    <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="data" v-else />
+  <PageHeader title="Teams" description="Manage teams" />
+  <div class="w-8/12">
+    <div v-if="router.currentRoute.value.path === '/admin/teams/teams'">
+      <div class="flex justify-end mb-5">
+        <Button @click="navigateToAddTeam"> New team </Button>
+      </div>
+      <div>
+        <div>
+          <Spinner v-if="isLoading"></Spinner>
+          <DataTable :columns="columns" :data="data" v-else />
+        </div>
+      </div>
     </div>
-  </div>
-  <div>
-    <router-view></router-view>
+    <template v-else>
+        <router-view></router-view>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { handleHTTPError } from '@/utils/http'
 import { columns } from '@/components/admin/team/teams/TeamsDataTableColumns.js'
 import { useToast } from '@/components/ui/toast/use-toast'
@@ -25,14 +27,18 @@ import { Button } from '@/components/ui/button'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import DataTable from '@/components/admin/DataTable.vue'
 import api from '@/api'
+import PageHeader from '@/components/admin/common/PageHeader.vue'
 import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const breadcrumbLinks = [
-  { path: '/admin/teams', label: 'Teams' },
+  
   { path: '/admin/teams/', label: 'Teams' }
 ]
 
+const emit = useEmitter()
 const router = useRouter()
 const data = ref([])
 const isLoading = ref(false)
@@ -45,7 +51,7 @@ const getData = async () => {
     data.value = response.data.data
   } catch (error) {
     toast({
-      title: 'Could not fetch teams.',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -58,7 +64,24 @@ const navigateToAddTeam = () => {
   router.push('/admin/teams/teams/new')
 }
 
+const listenForRefresh = () => {
+  emit.on(EMITTER_EVENTS.REFRESH_LIST, (event) => {
+    if (event.model === 'team') {
+      getData()
+    }
+  })
+}
+
+const removeListeners = () => {
+  emit.off(EMITTER_EVENTS.REFRESH_LIST)
+}
+
 onMounted(async () => {
   getData()
+  listenForRefresh()
+})
+
+onUnmounted(() => {
+  removeListeners()
 })
 </script>

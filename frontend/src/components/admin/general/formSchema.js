@@ -9,20 +9,25 @@ export const formSchema = z.object({
       message: 'Site name must be at least 1 characters.'
     }),
   lang: z.string().optional(),
+  timezone: z.string().optional(),
+  business_hours_id: z.string().optional(),
+  logo_url: z.string().url({
+    message: 'Logo URL must be a valid URL.'
+  }).url().optional(),
   root_url: z
     .string({
       required_error: 'Root URL is required.'
     })
     .url({
       message: 'Root URL must be a valid URL.'
-    }),
+    }).url(),
   favicon_url: z
     .string({
       required_error: 'Favicon URL is required.'
     })
     .url({
       message: 'Favicon URL must be a valid URL.'
-    }),
+    }).url(),
   max_file_upload_size: z
     .number({
       required_error: 'Max upload file size is required.'

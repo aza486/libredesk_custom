@@ -1,18 +1,20 @@
 <template>
-  <div>
-    <div class="flex justify-between mb-5">
-      <PageHeader title="Inboxes" description="Manage your inboxes" />
-      <div class="flex justify-end mb-4">
-        <Button @click="navigateToAddInbox" size="sm"> New inbox </Button>
+  <PageHeader title="Inboxes" description="Manage your inboxes" />
+  <div class="w-8/12">
+    <template v-if="router.currentRoute.value.path === '/admin/inboxes'">
+      <div class="flex justify-between mb-5">
+        <div class="flex justify-end w-full mb-4">
+          <Button @click="navigateToAddInbox"> New inbox </Button>
+        </div>
       </div>
-    </div>
-    <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="data" v-else />
-    </div>
-  </div>
-  <div>
-    <router-view></router-view>
+      <div>
+        <Spinner v-if="isLoading"></Spinner>
+        <DataTable :columns="columns" :data="data" v-else />
+      </div>
+    </template>
+    <template v-else>
+      <router-view/>
+    </template>
   </div>
 </template>
 
@@ -99,7 +101,7 @@ const columns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Modified at')
+      return h('div', { class: 'text-center' }, 'Updated at')
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

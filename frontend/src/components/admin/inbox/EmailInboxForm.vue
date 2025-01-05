@@ -59,7 +59,7 @@
     }"
     @submit="submitForm"
   >
-    <Button type="submit" size="sm" :is-loading="isLoading"> {{ props.submitLabel }} </Button>
+    <Button type="submit" :is-loading="isLoading"> {{ props.submitLabel }} </Button>
   </AutoForm>
 </template>
 

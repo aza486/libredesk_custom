@@ -7,7 +7,7 @@
           Load more
         </Button>
       </div>
-      <div v-for="message in conversationStore.sortedMessages" :key="message.uuid"
+      <div v-for="message in conversationStore.conversationMessages" :key="message.uuid"
         :class="message.type === 'activity' ? 'm-4' : 'm-6'">
         <div v-if="conversationStore.messages.loading">
           <MessagesSkeleton></MessagesSkeleton>
@@ -23,11 +23,11 @@
           <div v-else-if="message.type === 'activity'">
             <ActivityMessageBubble :message="message" />
           </div>
-        </div>
+        </div> 
       </div>
     </div>
 
-    <!-- Sticky container for the scroll button -->
+    <!-- Sticky container for the scroll arrow -->
     <div v-show="!isAtBottom" class="sticky bottom-6 flex justify-end px-6">
       <div class="relative">
         <button @click="handleScrollToBottom" class="w-11 h-11 rounded-full flex items-center justify-center shadow">

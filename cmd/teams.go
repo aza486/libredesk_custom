@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/team/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
+// handleGetTeams returns a list of all teams.
 func handleGetTeams(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -21,6 +20,7 @@ func handleGetTeams(r *fastglue.Request) error {
 	return r.SendEnvelope(teams)
 }
 
+// handleGetTeamsCompact returns a list of all teams in a compact format.
 func handleGetTeamsCompact(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -32,6 +32,7 @@ func handleGetTeamsCompact(r *fastglue.Request) error {
 	return r.SendEnvelope(teams)
 }
 
+// handleGetTeam returns a single team.
 func handleGetTeam(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -41,35 +42,38 @@ func handleGetTeam(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid team `id`.", nil, envelope.InputError)
 	}
-	team, err := app.team.GetTeam(id)
+	team, err := app.team.Get(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(team)
 }
 
+// handleCreateTeam creates a new team.
 func handleCreateTeam(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
-		req = models.Team{}
+		app                        = r.Context.(*App)
+		name                       = string(r.RequestCtx.PostArgs().Peek("name"))
+		timezone                   = string(r.RequestCtx.PostArgs().Peek("timezone"))
+		conversationAssignmentType = string(r.RequestCtx.PostArgs().Peek("conversation_assignment_type"))
 	)
-
-	if _, err := fastglue.ScanArgs(r.RequestCtx.PostArgs(), &req, `json`); err != nil {
-		app.lo.Error("error scanning args", "error", err)
-		return envelope.NewError(envelope.InputError,
-			fmt.Sprintf("Invalid request (%s)", err.Error()), nil)
+	businessHrsID, err := strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
+	if err != nil || businessHrsID == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `business_hours_id`.", nil, envelope.InputError)
 	}
-	err := app.team.CreateTeam(req)
-	if err != nil {
+	if err := app.team.Create(name, timezone, conversationAssignmentType, businessHrsID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Team created successfully.")
 }
 
+// handleUpdateTeam updates an existing team.
 func handleUpdateTeam(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
-		req = models.Team{}
+		app                        = r.Context.(*App)
+		name                       = string(r.RequestCtx.PostArgs().Peek("name"))
+		timezone                   = string(r.RequestCtx.PostArgs().Peek("timezone"))
+		conversationAssignmentType = string(r.RequestCtx.PostArgs().Peek("conversation_assignment_type"))
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
@@ -77,11 +81,12 @@ func handleUpdateTeam(r *fastglue.Request) error {
 			"Invalid team `id`.", nil, envelope.InputError)
 	}
 
-	if err := r.Decode(&req, "json"); err != nil {
-		return envelope.NewError(envelope.InputError, "Bad request", nil)
+	businessHrsID, err := strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
+	if err != nil || businessHrsID == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `business_hours_id`.", nil, envelope.InputError)
 	}
-	err = app.team.UpdateTeam(id, req)
-	if err != nil {
+
+	if err = app.team.Update(id, name, timezone, conversationAssignmentType, businessHrsID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -97,9 +102,9 @@ func handleDeleteTeam(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid team `id`.", nil, envelope.InputError)
 	}
-	err = app.team.DeleteTeam(id)
+	err = app.team.Delete(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Team deleted successfully.")
 }
