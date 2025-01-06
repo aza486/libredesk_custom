@@ -194,10 +194,8 @@ const uploadMedia = (data) =>
       'Content-Type': 'multipart/form-data'
     }
   })
-const getGlobalDashboardCounts = () => http.get('/api/v1/dashboard/global/counts')
-const getGlobalDashboardCharts = () => http.get('/api/v1/dashboard/global/charts')
-const getUserDashboardCounts = () => http.get(`/api/v1/dashboard/me/counts`)
-const getUserDashboardCharts = () => http.get(`/api/v1/dashboard/me/charts`)
+const getOverviewCounts = () => http.get('/api/v1/reports/overview/counts')
+const getOverviewCharts = () => http.get('/api/v1/reports/overview/charts')
 const getLanguage = (lang) => http.get(`/api/v1/lang/${lang}`)
 const createUser = (data) =>
   http.post('/api/v1/users', data, {
@@ -279,10 +277,8 @@ export default {
   getAllConversations,
   getTeamUnassignedConversations,
   getViewConversations,
-  getGlobalDashboardCharts,
-  getGlobalDashboardCounts,
-  getUserDashboardCounts,
-  getUserDashboardCharts,
+  getOverviewCharts,
+  getOverviewCounts,
   getConversationParticipants,
   getConversationMessage,
   getConversationMessages,

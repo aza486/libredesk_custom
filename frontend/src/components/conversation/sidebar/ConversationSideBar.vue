@@ -1,14 +1,12 @@
 <template>
-  <div class="p-3">
-    <ConversationSideBarContact :conversation="conversationStore.current"></ConversationSideBarContact>
-    <Accordion type="multiple" collapsible class="border-t mt-4" :default-value="['Actions', 'Information']">
+  <div v-if="conversationStore.current">
+    <ConversationSideBarContact :conversation="conversationStore.current" class="p-3"/>
+    <Accordion type="multiple" collapsible class="border-t mt-4" :default-value="[]">
       <AccordionItem value="Actions">
-        <AccordionTrigger>
-          <h4 class="scroll-m-20 text-base font-medium tracking-tight">
+        <AccordionTrigger class="bg-muted p-3">
             Actions
-          </h4>
         </AccordionTrigger>
-        <AccordionContent class="space-y-5">
+        <AccordionContent class="space-y-5 p-3">
           <!-- Agent -->
           <AssignAgent :agents="agents" :conversation="conversationStore.current" :selectAgent="selectAgent">
           </AssignAgent>
@@ -19,16 +17,14 @@
           <PriorityChange :priorities="priorities" :conversation="conversationStore.current"
             :selectPriority="selectPriority"></PriorityChange>
           <!-- Tags -->
-          <SelectTag v-model="conversationStore.current.tags" :items="tags" placeHolder="Select tags"></SelectTag>
+          <SelectTag v-model="conversationStore.current.tags" :items="tags" placeHolder="Select tags"/>
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="Information">
-        <AccordionTrigger>
-          <span class="scroll-m-20 text-base font-medium tracking-tight">
-            Information
-          </span>
+        <AccordionTrigger class="bg-muted p-3">
+          Information
         </AccordionTrigger>
-        <AccordionContent>
+        <AccordionContent class="space-y-5 p-3">
           <ConversationInfo :conversation="conversationStore.current"></ConversationInfo>
         </AccordionContent>
       </AccordionItem>
@@ -73,7 +69,7 @@ onMounted(async () => {
   ])
 })
 
-watch(() => conversationStore.current.tags, () => {
+watch(() => conversationStore.current && conversationStore.current.tags, () => {
   handleUpsertTags()
 }, { deep: true })
 

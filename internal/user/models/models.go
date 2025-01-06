@@ -27,9 +27,9 @@ type User struct {
 	ContactChannelID int            `db:"contact_channel_id"`
 	NewPassword      string         `db:"-" json:"new_password,omitempty"`
 	SendWelcomeEmail bool           `db:"-" json:"send_welcome_email,omitempty"`
-	InboxID          int
-	SourceChannel    null.String
-	SourceChannelID  null.String
+	InboxID          int            `json:"-"`
+	SourceChannel    null.String    `json:"-"`
+	SourceChannelID  null.String    `json:"-"`
 }
 
 func (u *User) FullName() string {

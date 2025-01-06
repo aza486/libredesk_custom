@@ -95,7 +95,7 @@ func (t *Manager) Delete(id int) error {
 
 // Create creates a new role.
 func (u *Manager) Create(r models.Role) error {
-	if !u.areValidPerms(r.Permissions) {
+	if !u.validatePermissions(r.Permissions) {
 		return envelope.NewError(envelope.InputError, "Invalid permissions", nil)
 	}
 	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
@@ -107,8 +107,8 @@ func (u *Manager) Create(r models.Role) error {
 
 // Update updates an existing role.
 func (u *Manager) Update(id int, r models.Role) error {
-	if !u.areValidPerms(r.Permissions) {
-		return envelope.NewError(envelope.InputError, "Invalid permissions", nil)
+	if !u.validatePermissions(r.Permissions) {
+		return envelope.NewError(envelope.InputError, "Unknown permission", nil)
 	}
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
@@ -117,11 +117,11 @@ func (u *Manager) Update(id int, r models.Role) error {
 	return nil
 }
 
-// areValidPerms returns true if the permissions are one of the valid permissions
-func (u *Manager) areValidPerms(permissions []string) bool {
+// validatePermissions returns true if all given permissions are valid
+func (u *Manager) validatePermissions(permissions []string) bool {
 	for _, perm := range permissions {
 		if !amodels.IsValidPermission(perm) {
-			u.lo.Error("invalid permission", "permission", perm)
+			u.lo.Error("error unknown permission", "permission", perm)
 			return false
 		}
 	}

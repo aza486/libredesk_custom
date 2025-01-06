@@ -156,6 +156,7 @@ type queries struct {
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
 	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
 	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
+	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
 
 	// Dashboard queries.
 	GetDashboardCharts string `query:"get-dashboard-charts"`
@@ -491,7 +492,7 @@ func (c *Manager) UpdateConversationPriority(uuid string, priority []byte, actor
 // UpdateConversationStatus updates the status of a conversation.
 func (c *Manager) UpdateConversationStatus(uuid string, status []byte, snoozeDur []byte, actor umodels.User) error {
 	var (
-		statusStr = string(status)
+		statusStr  = string(status)
 		snoozeDurS = string(snoozeDur)
 	)
 

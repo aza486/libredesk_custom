@@ -94,15 +94,13 @@ WHERE reset_password_token = $2 AND reset_password_token_expiry > now() AND type
 -- name: insert-agent
 INSERT INTO users (email, type, first_name, last_name, "password", avatar_url, roles)
 VALUES ($1, 'agent', $2, $3, $4, $5, $6)
-ON CONFLICT (email) WHERE email IS NOT NULL 
-DO UPDATE SET updated_at = now()
 RETURNING id;
 
 -- name: insert-contact
 WITH contact AS (
     INSERT INTO users (email, type, first_name, last_name, "password", avatar_url, roles)
     VALUES ($1, 'contact', $2, $3, $4, $5, $6)
-    ON CONFLICT (email)
+    ON CONFLICT (email, type)
     DO UPDATE SET updated_at = now()
     RETURNING id
 )

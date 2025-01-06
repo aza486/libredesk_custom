@@ -1,6 +1,5 @@
 <template>
   <div class="h-screen flex flex-col">
-
     <div class="flex justify-between px-2 py-2 w-full">
       <DropdownMenu>
         <DropdownMenuTrigger class="cursor-pointer">

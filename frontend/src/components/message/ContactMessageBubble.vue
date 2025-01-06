@@ -12,7 +12,7 @@
           {{ avatarFallback }}
         </AvatarFallback>
       </Avatar>
-      <div class="flex flex-col justify-end message-bubble !rounded-tl-none">
+      <div class="flex flex-col justify-end message-bubble !rounded-tl-none contact-message-bubble">
         <Letter :html="messageContent" :allowedSchemas="['cid', 'https', 'http']" class="mb-1"
           :class="{ 'mb-3': message.attachments.length > 0 }" />
         <MessageAttachmentPreview :attachments="nonInlineAttachments" />

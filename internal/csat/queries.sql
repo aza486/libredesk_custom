@@ -3,7 +3,8 @@ INSERT INTO csat_responses (
         conversation_id,
         assigned_agent_id
     )
-VALUES ($1, $2);
+VALUES ($1, $2)
+RETURNING uuid;
 
 -- name: get
 SELECT id,

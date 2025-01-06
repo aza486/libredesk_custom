@@ -1,3 +1,8 @@
+-- name: unsnooze-all
+UPDATE conversations
+SET snoozed_until = NULL
+WHERE snoozed_until <= now();
+
 -- name: insert-conversation
 INSERT INTO conversations
 (contact_id, contact_channel_id, status_id, inbox_id, last_message, last_message_at, subject)
@@ -51,6 +56,7 @@ SELECT
     c.updated_at,
     c.closed_at,
     c.resolved_at,
+    c.inbox_id,
     p.name as priority,
     s.name as status,
     c.uuid,

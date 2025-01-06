@@ -5,12 +5,10 @@
     </ResizablePanel>
     <ResizableHandle />
     <ResizablePanel>
-      <Conversation v-if="conversationStore.current"></Conversation>
-      <ConversationPlaceholder v-else></ConversationPlaceholder>
-    </ResizablePanel>
-    <ResizableHandle />
-    <ResizablePanel :min-size="10" :default-size="16" :max-size="30" v-if="conversationStore.current">
-      <ConversationSideBar />
+      <div class="border-r">
+        <Conversation v-if="conversationStore.current"></Conversation>
+        <ConversationPlaceholder v-else></ConversationPlaceholder>
+      </div>
     </ResizablePanel>
   </ResizablePanelGroup>
 </template>
@@ -20,7 +18,6 @@ import { watch, onUnmounted, onMounted } from 'vue'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import ConversationList from '@/components/conversation/list/ConversationList.vue'
 import Conversation from '@/components/conversation/Conversation.vue'
-import ConversationSideBar from '@/components/conversation/sidebar/ConversationSideBar.vue'
 import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'

@@ -48,23 +48,23 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     type user_type NOT NULL,
     deleted_at TIMESTAMPTZ NULL,
-    disabled bool DEFAULT false NOT NULL,
+    disabled BOOL DEFAULT FALSE NOT NULL,
     email TEXT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NULL,
-	phone_number TEXT NULL,
-	country TEXT NULL,
+    phone_number TEXT NULL,
+    country TEXT NULL,
     "password" VARCHAR(150) NULL,
     avatar_url TEXT NULL,
     roles TEXT[] DEFAULT '{}'::TEXT[] NULL,
     reset_password_token TEXT NULL,
     reset_password_token_expiry TIMESTAMPTZ NULL,
-	CONSTRAINT constraint_users_on_email_unique UNIQUE (email),
-	CONSTRAINT constraint_users_on_country CHECK (length(country) <= 140),
-	CONSTRAINT constraint_users_on_phone_number CHECK (length(phone_number) <= 20),
-    CONSTRAINT constraint_users_on_email_length CHECK (length(email) <= 320),
-    CONSTRAINT constraint_users_on_first_name CHECK (length(first_name) <= 140),
-    CONSTRAINT constraint_users_on_last_name CHECK (length(last_name) <= 140)
+    CONSTRAINT constraint_users_on_email_and_type_unique UNIQUE (email, type),
+    CONSTRAINT constraint_users_on_country CHECK (LENGTH(country) <= 140),
+    CONSTRAINT constraint_users_on_phone_number CHECK (LENGTH(phone_number) <= 20),
+    CONSTRAINT constraint_users_on_email_length CHECK (LENGTH(email) <= 320),
+    CONSTRAINT constraint_users_on_first_name CHECK (LENGTH(first_name) <= 140),
+    CONSTRAINT constraint_users_on_last_name CHECK (LENGTH(last_name) <= 140)
 );
 
 DROP TABLE IF EXISTS contact_channels CASCADE;
@@ -187,9 +187,10 @@ CREATE TABLE inboxes (
 	deleted_at TIMESTAMPTZ NULL,
 	channel "channels" NOT NULL,
 	disabled bool DEFAULT false NOT NULL,
+	csat_enabled bool DEFAULT false NOT NULL,
 	config jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"name" VARCHAR(140) NOT NULL,
-	"from" VARCHAR(300) NULL
+	"from" VARCHAR(500) NULL,
 );
 
 DROP TABLE IF EXISTS media CASCADE;
@@ -351,14 +352,14 @@ VALUES
     ('app.lang', '"en"'::jsonb),
     ('app.root_url', '"http://localhost:9000"'::jsonb),
     ('app.logo_url', '"http://localhost:9000/logo.png"'::jsonb),
-    ('app.site_name', '"Helpdesk"'::jsonb),
+    ('app.site_name', '"My helpdesk"'::jsonb),
     ('app.favicon_url', '"http://localhost:9000/favicon.ico"'::jsonb),
     ('app.max_file_upload_size', '20'::jsonb),
     ('app.allowed_file_upload_extensions', '["*"]'::jsonb),
 	('app.timezone', '"Asia/Calcutta"'::jsonb),
 	('app.business_hours_id', '""'::jsonb),
     ('notification.email.username', '"admin@yourcompany.com"'::jsonb),
-    ('notification.email.host', '"smtp.google.com"'::jsonb),
+    ('notification.email.host', '"smtp.gmail.com"'::jsonb),
     ('notification.email.port', '587'::jsonb),
     ('notification.email.password', '""'::jsonb),
     ('notification.email.max_conns', '1'::jsonb),
@@ -399,10 +400,20 @@ INSERT INTO conversation_statuses
 VALUES('Snoozed');
 
 -- Default roles
-INSERT INTO roles
-(permissions, "name", description)
-VALUES('{conversations:read,conversations:read_unassigned,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write}', 'Agent', 'Role for all agents with limited access to conversations.');
+INSERT INTO
+	roles ("name", description, permissions)
+VALUES
+	(
+		'Agent',
+		'Role for all agents with limited access to conversations.',
+		'{conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage}'
+	);
 
-INSERT INTO roles
-(permissions, "name", description)
-VALUES('{conversations:read_unassigned,teams:delete,users:delete,conversations:read_all,conversations:read,conversations:read_assigned,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,templates:write,templates:read,roles:delete,roles:write,roles:read,inboxes:delete,inboxes:write,inboxes:read,automations:write,automations:delete,automations:read,teams:write,teams:read,users:write,users:read,dashboard_global:read,canned_responses:delete,tags:delete,canned_responses:write,tags:write,status:delete,status:write,status:read,oidc:delete,oidc:read,oidc:write,settings_notifications:read,settings_notifications:write,settings_general:write,templates:delete,admin:read}', 'Admin', 'Role for users who have complete access to everything.');
+INSERT INTO
+	roles ("name", description, permissions)
+VALUES
+	(
+		'Admin',
+		'Role for users who have complete access to everything.',
+		'{general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,canned_responses:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
+	);

@@ -178,6 +178,14 @@ func handleCreateUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
 
+	if user.Roles == nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Please select at least one role", nil, envelope.InputError)
+	}
+
+	if user.FirstName == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `first_name`", nil, envelope.InputError)
+	}
+
 	err := app.user.CreateAgent(&user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)

@@ -28,7 +28,7 @@ import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import Card from '@/components/dashboard/DashboardCard.vue'
 import LineChart from '@/components/dashboard/DashboardLineChart.vue'
 import BarChart from '@/components/dashboard/DashboardBarChart.vue'
-import PageHeader from '@/components/common/PageHeader.vue'
+import PageHeader from '@/components/admin/common/PageHeader.vue'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 
 const { toast } = useToast()
@@ -66,13 +66,13 @@ const getDashboardData = () => {
 }
 
 const getCardStats = () => {
-  return api.getGlobalDashboardCounts()
+  return api.getOverviewCounts()
     .then((resp) => {
       cardCounts.value = resp.data.data
     })
     .catch((err) => {
       toast({
-        title: 'Something went wrong',
+        title: 'Error',
         description: err.response.data.message,
         variant: 'destructive'
       })
@@ -80,14 +80,14 @@ const getCardStats = () => {
 }
 
 const getDashboardCharts = () => {
-  return api.getGlobalDashboardCharts()
+  return api.getOverviewCharts()
     .then((resp) => {
       chartData.value.new_conversations = resp.data.data.new_conversations || []
       chartData.value.status_summary = resp.data.data.status_summary || []
     })
     .catch((err) => {
       toast({
-        title: 'Something went wrong',
+        title: 'Error',
         description: err.response.data.message,
         variant: 'destructive'
       })

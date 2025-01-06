@@ -451,9 +451,25 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	if err := app.conversation.UpdateConversationStatus(uuid, status, snoozedUntil, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
 	// Evaluate automation rules.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationStatusChange)
-	return r.SendEnvelope(true)
+
+	// If status is `Resolved`, send CSAT survey if enabled on inbox.
+	if string(status) == cmodels.StatusResolved {
+		inbox, err := app.inbox.GetByID(conversation.InboxID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if inbox.CSATEnabled {
+			csat, err := app.csat.Create(conversation.ID, conversation.AssignedUserID.Int)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+		}
+	}
+
+	return r.SendEnvelope("Status updated successfully")
 }
 
 // handleAddConversationTags adds tags to a conversation.

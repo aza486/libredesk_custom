@@ -82,7 +82,7 @@ const requestResetAction = async () => {
         router.push({ name: 'login' })
     } catch (err) {
         toast({
-            title: 'Something went wrong',
+            title: 'Error',
             description: err.response.data.message,
             variant: 'destructive'
         })

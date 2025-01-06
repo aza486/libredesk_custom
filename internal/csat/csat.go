@@ -49,13 +49,21 @@ func New(opts Opts) (*Manager, error) {
 }
 
 // Create creates a new CSAT for the given conversation ID.
-func (m *Manager) Create(conversationID, assignedAgentID int) error {
-	_, err := m.q.Insert.Exec(conversationID, assignedAgentID)
-	if err != nil && dbutil.IsUniqueViolationError(err) {
+func (m *Manager) Create(conversationID, assignedAgentID int) (models.CSATResponse, error) {
+	var (
+		uuid string
+		rsp  models.CSATResponse
+	)
+	err := m.q.Insert.QueryRow(conversationID, assignedAgentID).Scan(&uuid)
+	if err != nil {
+		if dbutil.IsUniqueViolationError(err) {
+			m.lo.Error("error creating CSAT", "err", err)
+			return rsp, envelope.NewError(envelope.InputError, "CSAT already exists", nil)
+		}
 		m.lo.Error("error creating CSAT", "err", err)
-		return err
+		return rsp, envelope.NewError(envelope.GeneralError, "Error creating CSAT", nil)
 	}
-	return nil
+	return m.Get(uuid)
 }
 
 // Get retrieves the CSAT for the given UUID.

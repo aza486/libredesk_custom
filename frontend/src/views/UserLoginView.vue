@@ -122,7 +122,7 @@ const loginAction = () => {
       password: loginForm.value.password
     })
     .then(() => {
-        router.push({ name: 'conversations' })
+        router.push({ name: 'inboxes' })
     })
     .catch((error) => {
       errorMessage.value = handleHTTPError(error).message

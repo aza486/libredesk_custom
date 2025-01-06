@@ -176,6 +176,9 @@ func main() {
 	// Purge unlinked message media.
 	go media.DeleteUnlinkedMessageMedia(ctx)
 
+	// Run the unsnoozer.
+	go conversation.RunUnsnoozer(ctx)
+
 	// Init the app
 	var app = &App{
 		lo:            lo,

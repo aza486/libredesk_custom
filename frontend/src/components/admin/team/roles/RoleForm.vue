@@ -72,121 +72,46 @@ const props = defineProps({
     required: false,
   }
 })
+
 const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
-      { name: 'conversations:read', label: 'View' },
-      { name: 'conversations:read_all', label: 'View All' },
-      { name: 'conversations:read_unassigned', label: 'View Unassigned' },
-      { name: 'conversations:read_assigned', label: 'View Assigned' },
-      { name: 'conversations:update_user_assignee', label: 'Set assignee' },
-      { name: 'conversations:update_team_assignee', label: 'Set team' },
-      { name: 'conversations:update_priority', label: 'Set priority' },
-      { name: 'conversations:update_status', label: 'Set status' },
-      { name: 'conversations:update_tags', label: 'Add Tags' },
-      { name: 'messages:read', label: 'View Messages' },
-      { name: 'messages:write', label: 'Reply' },
+      { name: 'conversations:read', label: 'View conversations' },
+      { name: 'conversations:read_assigned', label: 'View conversations assigned to me' },
+      { name: 'conversations:read_all', label: 'View all conversations' },
+      { name: 'conversations:read_unassigned', label: 'View all unassigned conversations' },
+      { name: 'conversations:read_team_inbox', label: 'View conversations in team inbox' },
+      { name: 'conversations:update_user_assignee', label: 'Assign conversations to users' },
+      { name: 'conversations:update_team_assignee', label: 'Assign conversations to teams' },
+      { name: 'conversations:update_priority', label: 'Change conversation priority' },
+      { name: 'conversations:update_status', label: 'Change conversation status' },
+      { name: 'conversations:update_tags', label: 'Add or remove conversation tags' },
+      { name: 'messages:read', label: 'View conversation messages' },
+      { name: 'messages:write', label: 'Send messages in conversations' },
+      { name: 'view:manage', label: 'Create and manage conversation views' },
     ]
   },
   {
-    name: 'Conversation status',
+    name: 'Admin settings',
     permissions: [
-      { name: 'status:read', label: 'View' },
-      { name: 'status:write', label: 'Update' },
-      { name: 'status:delete', label: 'Delete' }
+      { name: 'general_settings:manage', label: 'Manage General Settings' },
+      { name: 'notification_settings:manage', label: 'Manage Notification Settings' },
+      { name: 'status:manage', label: 'Manage Conversation Statuses' },
+      { name: 'oidc:manage', label: 'Manage SSO Configuration' },
+      { name: 'tags:manage', label: 'Manage Tags' },
+      { name: 'canned_responses:manage', label: 'Manage Canned Responses' },
+      { name: 'users:manage', label: 'Manage Users' },
+      { name: 'teams:manage', label: 'Manage Teams' },
+      { name: 'automations:manage', label: 'Manage Automations' },
+      { name: 'inboxes:manage', label: 'Manage Inboxes' },
+      { name: 'roles:manage', label: 'Manage Roles' },
+      { name: 'templates:manage', label: 'Manage Templates' },
+      { name: 'reports:manage', label: 'Manage Reports' },
+      { name: 'business_hours:manage', label: 'Manage Business Hours' },
+      { name: 'sla:manage', label: 'Manage SLA Policies' },
     ]
   },
-  {
-    name: 'Admin',
-    permissions: [
-      { name: 'admin:read', label: 'Access' }
-    ]
-  },
-  {
-    name: 'Settings',
-    permissions: [
-      { name: 'settings_general:write', label: 'Update' },
-      { name: 'settings_notifications:write', label: 'Update' },
-      { name: 'settings_notifications:read', label: 'View' }
-    ]
-  },
-  {
-    name: 'OpenID Connect SSO',
-    permissions: [
-      { name: 'oidc:read', label: 'View' },
-      { name: 'oidc:write', label: 'Update' },
-      { name: 'oidc:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Tags',
-    permissions: [
-      { name: 'tags:write', label: 'Write' },
-      { name: 'tags:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Canned Responses',
-    permissions: [
-      { name: 'canned_responses:write', label: 'Write' },
-      { name: 'canned_responses:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Dashboard',
-    permissions: [
-      { name: 'dashboard_global:read', label: 'Access' }
-    ]
-  },
-  {
-    name: 'Users',
-    permissions: [
-      { name: 'users:read', label: 'View' },
-      { name: 'users:write', label: 'Write' },
-      { name: 'users:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Teams',
-    permissions: [
-      { name: 'teams:read', label: 'View' },
-      { name: 'teams:write', label: 'Write' },
-      { name: 'teams:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Automations',
-    permissions: [
-      { name: 'automations:read', label: 'View' },
-      { name: 'automations:write', label: 'Write' },
-      { name: 'automations:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Inboxes',
-    permissions: [
-      { name: 'inboxes:read', label: 'View' },
-      { name: 'inboxes:write', label: 'Write' },
-      { name: 'inboxes:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Roles',
-    permissions: [
-      { name: 'roles:read', label: 'View' },
-      { name: 'roles:write', label: 'Write' },
-      { name: 'roles:delete', label: 'Delete' }
-    ]
-  },
-  {
-    name: 'Templates',
-    permissions: [
-      { name: 'templates:read', label: 'View' },
-      { name: 'templates:write', label: 'Write' },
-      { name: 'templates:delete', label: 'Delete' }
-    ]
-  }
 ])
 
 const selectedPermissions = ref([])

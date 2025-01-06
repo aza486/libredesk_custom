@@ -32,6 +32,7 @@ type Conversation struct {
 	CreatedAt          time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time      `db:"updated_at" json:"updated_at"`
 	UUID               string         `db:"uuid" json:"uuid"`
+	InboxID            int            `db:"inbox_id" json:"inbox_id"`
 	ClosedAt           null.Time      `db:"closed_at" json:"closed_at,omitempty"`
 	ResolvedAt         null.Time      `db:"resolved_at" json:"resolved_at,omitempty"`
 	ReferenceNumber    string         `db:"reference_number" json:"reference_number,omitempty"`

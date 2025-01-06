@@ -1,7 +1,6 @@
 package user
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
@@ -20,14 +19,6 @@ func (u *Manager) CreateContact(user *models.User) error {
 
 	// Normalize email address.
 	user.Email = null.NewString(strings.ToLower(user.Email.String), user.Email.Valid)
-
-	// Check if user already exists.
-	if err := u.q.GetUserByEmail.QueryRow(user.Email).Scan(&user.ID); err == nil {
-		return nil
-	} else if err != sql.ErrNoRows {
-		u.lo.Error("checking if user exists", "error", err)
-		return fmt.Errorf("checking if user exists: %w", err)
-	}
 
 	if err := u.q.InsertContact.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles), user.InboxID, user.SourceChannelID).Scan(&user.ID, &user.ContactChannelID); err != nil {
 		u.lo.Error("creating user", "error", err)

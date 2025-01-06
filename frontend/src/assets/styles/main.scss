@@ -254,3 +254,18 @@ body {
     opacity: 0;
   }
 }
+
+// Sidebar
+a[data-active="true"] {
+  background-color: hsl(var(--sidebar-accent)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+a[data-active="false"]:hover {
+  background-color: hsl(var(--sidebar-accent)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+}

@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center cursor-pointer flex-row hover:bg-gray-100 hover:rounded-lg hover:box"
     :class="{ 'bg-white rounded-lg box': conversation.uuid === currentConversation?.uuid }"
-    @click="router.push('/conversations/' + conversation.uuid)">
+    @click="navigateToConversation(conversation.uuid)">
 
     <div class="pl-3">
       <Avatar class="size-[45px]">
@@ -43,8 +43,10 @@
         </div>
       </div>
       <div class="flex space-x-2 mt-2">
-        <SlaDisplay :dueAt="conversation.first_reply_due_at" :actualAt="conversation.first_reply_at" :label="'FRD'" :showSLAHit="false" />
-        <SlaDisplay :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" :label="'RD'" :showSLAHit="false" />
+        <SlaDisplay :dueAt="conversation.first_reply_due_at" :actualAt="conversation.first_reply_at" :label="'FRD'"
+          :showSLAHit="false" />
+        <SlaDisplay :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" :label="'RD'"
+          :showSLAHit="false" />
       </div>
     </div>
   </div>
@@ -52,18 +54,37 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { formatTime } from '@/utils/datetime'
 import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import SlaDisplay from '@/components/sla/SlaDisplay.vue'
 
 const router = useRouter()
+const route = useRoute()
+
 const props = defineProps({
   conversation: Object,
   currentConversation: Object,
   contactFullName: String
 })
+
+const navigateToConversation = (uuid) => {
+  const baseRoute = route.name.includes('team')
+    ? 'team-inbox-conversation'
+    : route.name.includes('view')
+      ? 'view-inbox-conversation'
+      : 'inbox-conversation'
+
+  router.push({
+    name: baseRoute,
+    params: {
+      uuid,
+      ...(baseRoute === 'team-inbox-conversation' && { teamID: route.params.teamID }),
+      ...(baseRoute === 'view-inbox-conversation' && { viewID: route.params.viewID }),
+    },
+  })
+}
 
 const trimmedLastMessage = computed(() => {
   const message = props.conversation.last_message || ''

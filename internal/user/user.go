@@ -13,6 +13,7 @@ import (
 
 	"github.com/abhinavxd/artemis/internal/dbutil"
 	"github.com/abhinavxd/artemis/internal/envelope"
+	rmodels "github.com/abhinavxd/artemis/internal/role/models"
 	"github.com/abhinavxd/artemis/internal/stringutil"
 	"github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/jmoiron/sqlx"
@@ -137,8 +138,8 @@ func (u *Manager) CreateAgent(user *models.User) error {
 	if err != nil {
 		u.lo.Error("error generating password", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
-	}
-	user.Email = null.NewString(strings.ToLower(user.Email.String), user.Email.Valid)
+	}	
+	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
 	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
 		u.lo.Error("error creating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
@@ -342,7 +343,7 @@ func CreateSystemUser(ctx context.Context, db *sqlx.DB) error {
 	_, err = db.Exec(`
 		INSERT INTO users (email, type, first_name, last_name, password, roles) 
 		VALUES ($1, $2, $3, $4, $5, $6)`,
-		SystemUserEmail, UserTypeAgent, "System", "", hashedPassword, pq.StringArray{"Admin"})
+		SystemUserEmail, UserTypeAgent, "System", "", hashedPassword, pq.StringArray{rmodels.RoleAdmin})
 	if err != nil {
 		return fmt.Errorf("failed to create system user: %v", err)
 	}

@@ -69,6 +69,10 @@ export const useUserStore = defineStore('user', () => {
     user.value.avatar_url = ''
   }
 
+  const can = (permission) => {
+    return user.value.permissions.includes(permission)
+  }
+
   return {
     user,
     userID,
@@ -82,6 +86,7 @@ export const useUserStore = defineStore('user', () => {
     getInitials,
     getCurrentUser,
     clearAvatar,
-    setAvatar
+    setAvatar,
+    can
   }
 })

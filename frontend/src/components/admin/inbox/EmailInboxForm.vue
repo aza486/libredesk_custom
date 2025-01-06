@@ -11,6 +11,10 @@
         label: 'Email address',
         description: 'From email address. e.g. My Support <mysupport@example.com>'
       },
+      csat_enabled: {
+        label: 'CSAT',
+        description: 'Enable Customer Satisfaction Survey after resolving conversation.'
+      },
       imap: {
         label: 'IMAP',
         password: {

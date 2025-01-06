@@ -42,7 +42,7 @@
             <DropdownMenuSeparator /> -->
             <DropdownMenuGroup>
                 <DropdownMenuItem>
-                    <router-link to="/account" class="flex items-center gap-2">
+                    <router-link to="/account" class="flex items-center">
                         <CircleUserRound size="18" class="mr-2" />
                         Account
                     </router-link>

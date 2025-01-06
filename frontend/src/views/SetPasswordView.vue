@@ -65,7 +65,7 @@ onMounted(() => {
     if (!passwordForm.value.token) {
         router.push({ name: 'login' })
         toast({
-            title: 'Something went wrong',
+            title: 'Error',
             description: 'Invalid reset link. Please request a new password reset link.',
             variant: 'destructive'
         })
@@ -109,7 +109,7 @@ const setPasswordAction = async () => {
         router.push({ name: 'login' })
     } catch (err) {
         toast({
-            title: 'Something went wrong',
+            title: 'Error',
             description: err.response.data.message,
             variant: 'destructive'
         })

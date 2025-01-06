@@ -41,49 +41,86 @@ const routes = [
       {
         path: '/reports',
         name: 'reports',
-        meta: { title: 'Conversations' },
+        redirect: '/reports/overview',
         children: [
           {
-            path: 'dashboard',
-            name: 'dashboard',
+            path: 'overview',
+            name: 'overview',
             component: DashboardView,
-            meta: { title: 'Dashboard' }
+            meta: { title: 'Overview' }
           },
         ]
       },
       {
-        path: '/conversations',
-        name: 'conversations',
-        redirect: '/conversations/list/assigned',
-        meta: { title: 'Conversations' },
+        path: '/inboxes',
+        name: 'inboxes',
+        redirect: '/inboxes/assigned',
+        meta: { title: 'Inboxes' },
         children: [
           {
-            path: 'list/:type',
-            name: 'conversations-list',
+            path: ':type(assigned|unassigned|all)',
+            name: 'inbox',
             component: ConversationsView,
-            props: true,
-            meta: { title: 'Conversations' }
-          },
+            props: route => ({ type: route.params.type, uuid: route.params.uuid }),
+            meta: route => ({ title: `${route.params.type.charAt(0).toUpperCase()}${route.params.type.slice(1)} inbox` }),
+            children: [
+              {
+                path: 'conversation/:uuid',
+                name: 'inbox-conversation',
+                component: ConversationsView,
+                props: true,
+                meta: { title: 'Conversation' }
+              }
+            ]
+          }
+          
+        ]
+      },
+      {
+        path: '/teams',
+        name: 'teams',
+        redirect: '/teams/:teamID',
+        meta: { title: 'Teams' },
+        children: [
           {
-            path: 'teams/:teamID',
-            name: 'conversations-team-list',
-            component: ConversationsView,
+            path: ':teamID',
+            name: 'team-inbox',
             props: true,
-            meta: { title: 'Conversations' }
-          },
+            component: ConversationsView,
+            meta: route => ({ title: `Team ${route.params.teamID} inbox` }),
+            children: [
+              {
+                path: 'conversation/:uuid',
+                name: 'team-inbox-conversation',
+                component: ConversationsView,
+                props: true,
+                meta: { title: 'Conversation' }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        path: '/views',
+        name: 'views',
+        redirect: '/views/:viewID',
+        meta: { title: 'Views' },
+        children: [
           {
-            path: 'view/:viewID',
-            name: 'conversations-view-list',
-            component: ConversationsView,
+            path: ':viewID',
+            name: 'view-inbox',
             props: true,
-            meta: { title: 'Conversations' }
-          },
-          {
-            path: ':uuid',
-            name: 'conversations-uuid',
             component: ConversationsView,
-            props: true,
-            meta: { title: 'Conversations' }
+            meta: route => ({ title: `View ${route.params.viewID} inbox` }),
+            children: [
+              {
+                path: 'conversation/:uuid',
+                name: 'view-inbox-conversation',
+                component: ConversationsView,
+                props: true,
+                meta: { title: 'Conversation' }
+              }
+            ]
           }
         ]
       },
@@ -318,8 +355,8 @@ const routes = [
     path: '/:pathMatch(.*)*',
     redirect: (to) => {
       // TODO: Remove this alert and redirect to 404 page
-      alert(`Redirecting to dashboard from: ${to.fullPath}`)
-      return '/reports/dashboard'
+      alert(`Redirecting to overview from: ${to.fullPath}`)
+      return '/reports/overview'
     }
   }
 ]
