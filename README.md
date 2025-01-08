@@ -9,6 +9,7 @@ Self-hosted 100% open-source support desk. Single binary with minimal dependenci
 | Feature                                    | Description                                                                                  |
 |--------------------------------------------|----------------------------------------------------------------------------------------------|
 | **Granular Permissions**                   |Fine-grained control over conversations, allowing you to define both the actions agents can perform—such as changing priority, status, or adding tags—and the conversations they can access, including those assigned to them or their team.           |
+| **AI-Powered Reply Enhancements**          | Transform agent replies with AI capabilities to make them friendly, concise, empathetic, professional, actionable, positive, or neutral. |
 | **Roles for Agents**                       | Define agent roles with specific permissions.                                                |
 | **Tags for Conversations**                 | Organize and categorize conversations with tags.                                             |
 | **Private Notes**                          | Add internal notes visible only to agents.                                                   |
