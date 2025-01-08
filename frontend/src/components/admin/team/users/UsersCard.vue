@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Users" description="Manage users" />
+  
   <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/teams/users'">
       <div class="flex justify-end mb-5">
@@ -26,7 +26,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'

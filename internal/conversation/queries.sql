@@ -227,14 +227,14 @@ WHERE assigned_user_id IS NULL AND assigned_team_id IS NOT NULL;
 
 -- name: get-dashboard-counts
 SELECT json_build_object(
-    'resolved_count', COUNT(CASE WHEN s.name = 'Resolved' THEN 1 END),
-    'unresolved_count', COUNT(CASE WHEN s.name NOT IN ('Resolved', 'Closed') THEN 1 END),
-    'awaiting_response_count', COUNT(CASE WHEN first_reply_at IS NULL THEN 1 END),
-    'total_count', COUNT(*)
+    'open', COUNT(*),
+    'awaiting_response', COUNT(CASE WHEN c.first_reply_at IS NULL THEN 1 END),
+    'unassigned', COUNT(CASE WHEN c.assigned_user_id IS NULL THEN 1 END),
+    'pending', COUNT(CASE WHEN c.first_reply_at IS NOT NULL THEN 1 END)
 )
 FROM conversations c
-LEFT JOIN conversation_statuses s ON c.status_id = s.id
-WHERE 1=1 %s
+INNER JOIN conversation_statuses s ON c.status_id = s.id
+WHERE s.name = 'Open' AND 1=1 %s;
 
 -- name: get-dashboard-charts
 WITH new_conversations AS (
@@ -242,10 +242,25 @@ WITH new_conversations AS (
     FROM (
         SELECT
             TO_CHAR(created_at::date, 'YYYY-MM-DD') AS date,
-            COUNT(*) AS new_conversations
+            COUNT(*) AS count
         FROM
             conversations c
         WHERE 1=1 %s
+        GROUP BY
+            date
+        ORDER BY
+            date
+    ) agg
+),
+resolved_conversations AS (
+    SELECT json_agg(row_to_json(agg)) AS data
+    FROM (
+        SELECT
+            TO_CHAR(resolved_at::date, 'YYYY-MM-DD') AS date,
+            COUNT(*) AS count
+        FROM
+            conversations c
+        WHERE c.resolved_at IS NOT NULL AND 1=1 %s
         GROUP BY
             date
         ORDER BY
@@ -264,13 +279,30 @@ status_summary AS (
             conversations c
         LEFT join conversation_statuses s on s.id = c.status_id
         LEFT join conversation_priorities p on p.id = c.priority_id
-        WHERE 1=1 %s
+        WHERE 1=1 AND s.name > '' %s
         GROUP BY 
             s.name
+    ) agg
+),
+messages_sent as (
+    SELECT json_agg(row_to_json(agg)) AS data
+    FROM (
+        SELECT
+            TO_CHAR(created_at::date, 'YYYY-MM-DD') AS date,
+            COUNT(*) AS count
+        FROM
+            conversation_messages c
+        WHERE status = 'sent' AND 1=1 %s
+        GROUP BY
+            date
+        ORDER BY
+            date
     ) agg
 )
 SELECT json_build_object(
     'new_conversations', (SELECT data FROM new_conversations),
+    'resolved_conversations', (SELECT data FROM resolved_conversations),
+    'messages_sent', (SELECT data FROM messages_sent),
     'status_summary', (SELECT data FROM status_summary)
 ) AS result;
 

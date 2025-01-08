@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Teams" description="Manage teams" />
+  
   <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/teams/teams'">
       <div class="flex justify-end mb-5">
@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import DataTable from '@/components/admin/DataTable.vue'
 import api from '@/api'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'

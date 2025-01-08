@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Inboxes" description="Manage your inboxes" />
+  
   <div class="w-8/12">
     <template v-if="router.currentRoute.value.path === '/admin/inboxes'">
       <div class="flex justify-between mb-5">
@@ -27,7 +27,7 @@ import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
 import DataTable from '@/components/admin/DataTable.vue'
 import { useRouter } from 'vue-router'
-import PageHeader from '../common/PageHeader.vue'
+
 import { format } from 'date-fns'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/api'

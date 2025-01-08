@@ -582,10 +582,10 @@ func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error)
 		cond = " AND assigned_team_id = $1"
 		qArgs = append(qArgs, teamID)
 	}
-	cond += " AND c.created_at >= NOW() - INTERVAL '30 days'"
+	cond += " AND c.created_at >= NOW() - INTERVAL '90 days'"
 
 	// Apply the same condition across queries.
-	query := fmt.Sprintf(c.q.GetDashboardCharts, cond, cond)
+	query := fmt.Sprintf(c.q.GetDashboardCharts, cond, cond, cond, cond)
 	if err := tx.Get(&stats, query, qArgs...); err != nil {
 		c.lo.Error("error fetching dashboard charts", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, "Error fetching dashboard charts", nil)

@@ -55,46 +55,46 @@ const routes = [
         path: '/inboxes',
         name: 'inboxes',
         redirect: '/inboxes/assigned',
-        meta: { title: 'Inboxes' },
+        meta: { title: 'Inbox', hidePageHeader: true },
         children: [
           {
             path: ':type(assigned|unassigned|all)',
             name: 'inbox',
             component: ConversationsView,
             props: route => ({ type: route.params.type, uuid: route.params.uuid }),
-            meta: route => ({ title: `${route.params.type.charAt(0).toUpperCase()}${route.params.type.slice(1)} inbox` }),
+            meta: { title: 'Inbox' },
             children: [
               {
                 path: 'conversation/:uuid',
                 name: 'inbox-conversation',
                 component: ConversationsView,
                 props: true,
-                meta: { title: 'Conversation' }
+                meta: { title: 'Inbox', hidePageHeader: true }
               }
             ]
           }
-          
+
         ]
       },
       {
         path: '/teams',
         name: 'teams',
         redirect: '/teams/:teamID',
-        meta: { title: 'Teams' },
+        meta: { title: 'Team inbox', hidePageHeader: true },
         children: [
           {
             path: ':teamID',
             name: 'team-inbox',
             props: true,
             component: ConversationsView,
-            meta: route => ({ title: `Team ${route.params.teamID} inbox` }),
+            meta: { title: `Team inbox` },
             children: [
               {
                 path: 'conversation/:uuid',
                 name: 'team-inbox-conversation',
                 component: ConversationsView,
                 props: true,
-                meta: { title: 'Conversation' }
+                meta: { title: 'Team inbox', hidePageHeader: true }
               }
             ]
           }
@@ -104,21 +104,21 @@ const routes = [
         path: '/views',
         name: 'views',
         redirect: '/views/:viewID',
-        meta: { title: 'Views' },
+        meta: { title: 'View', hidePageHeader: true },
         children: [
           {
             path: ':viewID',
             name: 'view-inbox',
             props: true,
             component: ConversationsView,
-            meta: route => ({ title: `View ${route.params.viewID} inbox` }),
+            meta: { title: `View` },
             children: [
               {
                 path: 'conversation/:uuid',
                 name: 'view-inbox-conversation',
                 component: ConversationsView,
                 props: true,
-                meta: { title: 'Conversation' }
+                meta: { title: 'View', hidePageHeader: true }
               }
             ]
           }
@@ -148,119 +148,119 @@ const routes = [
           {
             path: 'business-hours',
             component: () => import('@/components/admin/business_hours/BusinessHours.vue'),
-            meta: { title: 'Admin - Business Hours' },
+            meta: { title: 'Business Hours' },
             children: [
               {
                 path: 'new',
                 component: () => import('@/components/admin/business_hours/CreateOrEditBusinessHours.vue'),
-                meta: { title: 'Admin - Add Business Hours' }
+                meta: { title: 'Add Business Hours' }
               },
               {
                 path: ':id/edit',
                 name: 'edit-business-hours',
                 props: true,
                 component: () => import('@/components/admin/business_hours/CreateOrEditBusinessHours.vue'),
-                meta: { title: 'Admin - Edit Business Hours' }
+                meta: { title: 'Edit Business Hours' }
               },
             ]
           },
           {
             path: 'sla',
             component: () => import('@/components/admin/sla/SLA.vue'),
-            meta: { title: 'Admin - SLA' },
+            meta: { title: 'SLA' },
             children: [
               {
                 path: 'new',
                 component: () => import('@/components/admin/sla/CreateEditSLA.vue'),
-                meta: { title: 'Admin - Add SLA' }
+                meta: { title: 'Add SLA' }
               },
               {
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/components/admin/sla/CreateEditSLA.vue'),
-                meta: { title: 'Admin - Edit SLA' }
+                meta: { title: 'Edit SLA' }
               },
             ]
           },
           {
             path: 'inboxes',
             component: () => import('@/components/admin/inbox/Inbox.vue'),
-            meta: { title: 'Admin - Inboxes' },
+            meta: { title: 'Inboxes' },
             children: [
               {
                 path: 'new',
                 component: () => import('@/components/admin/inbox/NewInbox.vue'),
-                meta: { title: 'Admin - New Inbox' }
+                meta: { title: 'New Inbox' }
               },
               {
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/components/admin/inbox/EditInbox.vue'),
-                meta: { title: 'Admin - Edit Inbox' }
+                meta: { title: 'Edit Inbox' }
               },
             ],
           },
           {
             path: 'notification',
             component: () => import('@/components/admin/notification/NotificationSetting.vue'),
-            meta: { title: 'Admin - Notification Settings' }
+            meta: { title: 'Notification Settings' }
           },
           {
             path: 'teams',
-            meta: { title: 'Admin - Teams' },
+            meta: { title: 'Teams' },
             children: [
               {
                 path: 'users',
                 component: () => import('@/components/admin/team/users/UsersCard.vue'),
-                meta: { title: 'Admin - Users' },
+                meta: { title: 'Users' },
                 children: [
                   {
                     path: 'new',
                     component: () => import('@/components/admin/team/users/AddUserForm.vue'),
-                    meta: { title: 'Admin - Create User' }
+                    meta: { title: 'Create User' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
                     component: () => import('@/components/admin/team/users/EditUserForm.vue'),
-                    meta: { title: 'Admin - Edit User' }
+                    meta: { title: 'Edit User' }
                   },
                 ]
               },
               {
                 path: 'teams',
                 component: () => import('@/components/admin/team/teams/Teams.vue'),
-                meta: { title: 'Admin - Teams Management' },
+                meta: { title: 'Teams Management' },
                 children: [
 
                   {
                     path: 'new',
                     component: () => import('@/components/admin/team/teams/CreateTeamForm.vue'),
-                    meta: { title: 'Admin - Create Team' }
+                    meta: { title: 'Create Team' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
                     component: () => import('@/components/admin/team/teams/EditTeamForm.vue'),
-                    meta: { title: 'Admin - Edit Team' }
+                    meta: { title: 'Edit Team' }
                   },
                 ]
               },
               {
                 path: 'roles',
                 component: () => import('@/components/admin/team/roles/Roles.vue'),
-                meta: { title: 'Admin - Roles' },
+                meta: { title: 'Roles' },
                 children: [
                   {
                     path: 'new',
                     component: () => import('@/components/admin/team/roles/NewRole.vue'),
-                    meta: { title: 'Admin - Create Role' }
+                    meta: { title: 'Create Role' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
                     component: () => import('@/components/admin/team/roles/EditRole.vue'),
-                    meta: { title: 'Admin - Edit Role' }
+                    meta: { title: 'Edit Role' }
                   }
                 ]
               },
@@ -269,81 +269,81 @@ const routes = [
           {
             path: 'automations',
             component: () => import('@/components/admin/automation/Automation.vue'),
-            meta: { title: 'Admin - Automations' },
+            meta: { title: 'Automations' },
             children: [
               {
                 path: 'new',
                 props: true,
                 component: () => import('@/components/admin/automation/CreateOrEditRule.vue'),
-                meta: { title: 'Admin - Create Automation' }
+                meta: { title: 'Create Automation' }
               },
               {
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/components/admin/automation/CreateOrEditRule.vue'),
-                meta: { title: 'Admin - Edit Automation' }
+                meta: { title: 'Edit Automation' }
               }
             ]
           },
           {
             path: 'general',
             component: () => import('@/components/admin/general/General.vue'),
-            meta: { title: 'Admin - General Settings' }
+            meta: { title: 'General Settings' }
           },
           {
             path: 'templates',
             component: () => import('@/components/admin/templates/Templates.vue'),
-            meta: { title: 'Admin - Templates' },
+            meta: { title: 'Templates' },
             children: [
               {
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
-                meta: { title: 'Admin - Edit Template' }
+                meta: { title: 'Edit Template' }
               },
               {
                 path: 'new',
                 component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
-                meta: { title: 'Admin - Add Template' }
+                meta: { title: 'Add Template' }
               }
             ]
           },
           {
             path: 'oidc',
             component: () => import('@/components/admin/oidc/OIDC.vue'),
-            meta: { title: 'Admin - OIDC' },
+            meta: { title: 'OIDC' },
             children: [
               {
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
-                meta: { title: 'Admin - Edit OIDC' }
+                meta: { title: 'Edit OIDC' }
               },
               {
                 path: 'new',
                 component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
-                meta: { title: 'Admin - Add OIDC' }
+                meta: { title: 'Add OIDC' }
               }
             ]
           },
           {
             path: 'conversations',
-            meta: { title: 'Admin - Conversations' },
+            meta: { title: 'Conversations' },
             children: [
               {
                 path: 'tags',
                 component: () => import('@/components/admin/conversation/tags/Tags.vue'),
-                meta: { title: 'Admin - Conversation Tags' }
+                meta: { title: 'Conversation Tags' }
               },
               {
                 path: 'statuses',
                 component: () => import('@/components/admin/conversation/status/Status.vue'),
-                meta: { title: 'Admin - Conversation Statuses' }
+                meta: { title: 'Conversation Statuses' }
               },
               {
                 path: 'canned-responses',
                 component: () => import('@/components/admin/conversation/canned_responses/CannedResponses.vue'),
-                meta: { title: 'Admin - Canned Responses' }
+                meta: { title: 'Canned Responses' }
               }
             ]
           }

@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Email templates" description="Manage email templates" />
+  
   <div class="w-8/12">
     <template v-if="router.currentRoute.value.path === '/admin/templates'">
       <div class="flex justify-between mb-5">
@@ -35,7 +35,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import { emailNotificationTemplates, outgoingEmailTemplatesColumns } from '@/components/admin/templates/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'

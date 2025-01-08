@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/abhinavxd/artemis/internal/ai"
 	auth_ "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
 	businesshours "github.com/abhinavxd/artemis/internal/business_hours"
@@ -73,6 +74,7 @@ type App struct {
 	sla           *sla.Manager
 	csat          *csat.Manager
 	view          *view.Manager
+	ai            *ai.Manager
 	notifier      *notifier.Service
 }
 
@@ -205,6 +207,7 @@ func main() {
 		priority:      initPriority(db),
 		role:          initRole(db),
 		tag:           initTag(db),
+		ai:            initAI(db),
 		cannedResp:    initCannedResponse(db),
 	}
 

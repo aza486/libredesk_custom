@@ -22,11 +22,13 @@ func NewOpenAIClient(apiKey string) *OpenAIClient {
 }
 
 func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
-	apiURL := "https://api.openai.com/v1/completions"
-
+	apiURL := "https://api.openai.com/v1/chat/completions"
 	requestBody := map[string]interface{}{
-		"model":       "text-davinci-003",
-		"prompt":      fmt.Sprintf("%s\n\n%s", payload.SystemPrompt, payload.UserPrompt),
+		"model":       "gpt-4o-mini",
+		"messages": []map[string]string{
+			{"role": "system", "content": payload.SystemPrompt},
+			{"role": "user", "content": payload.UserPrompt},
+		},
 		"max_tokens":  200,
 		"temperature": 0.7,
 	}
@@ -57,7 +59,9 @@ func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
 
 	var responseBody struct {
 		Choices []struct {
-			Text string `json:"text"`
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
 		} `json:"choices"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
@@ -65,7 +69,7 @@ func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
 	}
 
 	if len(responseBody.Choices) > 0 {
-		return responseBody.Choices[0].Text, nil
+		return responseBody.Choices[0].Message.Content, nil
 	}
 	return "", fmt.Errorf("no response text found")
 }

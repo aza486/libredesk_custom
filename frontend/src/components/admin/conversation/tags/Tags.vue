@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Tags" description="Manage conversation tags" />
+  
   <div class="w-8/12">
     <div class="flex justify-between mb-5">
       <div class="flex justify-end mb-4 w-full">
@@ -36,7 +36,7 @@ import DataTable from '@/components/admin/DataTable.vue'
 import { Spinner } from '@/components/ui/spinner'
 import { columns } from '@/components/admin/conversation/tags/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 import TagsForm from './TagsForm.vue'
 import {
   Dialog,

@@ -165,6 +165,10 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/sla/{id}", perm(fastglue.ReqLenRangeParams(handleUpdateSLA, slaReqFields), "sla:manage"))
 	g.DELETE("/api/v1/sla/{id}", perm(handleDeleteSLA, "sla:manage"))
 
+	// AI.
+	g.GET("/api/v1/ai/prompts", auth(handleGetAIPrompts))
+	g.POST("/api/v1/ai/completion", auth(handleAICompletion))
+
 	// WebSocket.
 	g.GET("/ws", auth(func(r *fastglue.Request) error {
 		return handleWS(r, hub)

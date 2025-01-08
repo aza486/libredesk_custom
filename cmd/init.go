@@ -12,6 +12,7 @@ import (
 
 	"html/template"
 
+	"github.com/abhinavxd/artemis/internal/ai"
 	auth_ "github.com/abhinavxd/artemis/internal/auth"
 	"github.com/abhinavxd/artemis/internal/authz"
 	"github.com/abhinavxd/artemis/internal/autoassigner"
@@ -699,6 +700,19 @@ func initPriority(db *sqlx.DB) *priority.Manager {
 		log.Fatalf("error initializing priority manager: %v", err)
 	}
 	return manager
+}
+
+// initAI inits AI manager.
+func initAI(db *sqlx.DB) *ai.Manager {
+	lo := initLogger("ai")
+	m, err := ai.New(ai.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing AI manager: %v", err)
+	}
+	return m
 }
 
 // initLogger initializes a logf logger.

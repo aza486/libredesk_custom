@@ -1,5 +1,5 @@
 <template>
-    <PageHeader title="SLA" description="Manage service level agreements" />
+    
     <div class="w-8/12">
         <template v-if="router.currentRoute.value.path === '/admin/sla'">
             <div class="flex justify-between mb-5">
@@ -26,7 +26,7 @@ import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
-import PageHeader from '../common/PageHeader.vue'
+
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'

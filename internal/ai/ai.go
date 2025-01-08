@@ -2,6 +2,7 @@
 package ai
 
 import (
+	"database/sql"
 	"embed"
 	"encoding/json"
 
@@ -14,18 +15,7 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs           embed.FS
-	systemPrompts = map[string]string{
-		"make_friendly":             "Modify the text to make it more friendly and approachable.",
-		"make_professional":         "Rephrase the text to make it sound more formal and professional.",
-		"make_concise":              "Simplify the text to make it more concise and to the point.",
-		"add_empathy":               "Add empathy to the text while retaining the original meaning.",
-		"adjust_positive_tone":      "Adjust the tone of the text to make it sound more positive and reassuring.",
-		"provide_clear_explanation": "Rewrite the text to provide a clearer explanation of the issue or solution.",
-		"add_urgency":               "Modify the text to convey a sense of urgency without being rude.",
-		"make_actionable":           "Rephrase the text to clearly specify the next steps for the customer.",
-		"adjust_neutral_tone":       "Adjust the tone to make it neutral and unbiased.",
-	}
+	efs embed.FS
 )
 
 // Manager manages LLM providers.
@@ -42,7 +32,9 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetProvider     *sqlx.Stmt `query:"get-provider"`
+	GetDefaultProvider *sqlx.Stmt `query:"get-default-provider"`
+	GetPrompt          *sqlx.Stmt `query:"get-prompt"`
+	GetPrompts         *sqlx.Stmt `query:"get-prompts"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -57,19 +49,17 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
-// SendPromptToProvider sends a prompt to the specified provider and returns the response.
-func (m *Manager) SendPromptToProvider(provider, k string, prompt string) (string, error) {
-
-	// Fetch the system prompt.
-	systemPrompt, ok := systemPrompts[k]
-	if !ok {
-		m.lo.Error("invalid system prompt key", "key", k)
-		return "", envelope.NewError(envelope.InputError, "Invalid system prompt key", nil)
+// SendPrompt sends a prompt to the default provider and returns the response.
+func (m *Manager) SendPrompt(k string, prompt string) (string, error) {
+	// return "Hello Abhinav,\n\nI wanted to let you know that we have successfully added a top-up of Rs 20,000 to your account. You can expect to receive the funds by the end of the day.\n\nIf you have any concerns or questions, please don't hesitate to update this ticket. We are always happy to assist you in any way we can.\n\nPlease keep in mind that if we do not hear back from you within 24 hours, the ticket will be marked as <i>closed</i>. However, you can easily reopen it if you need further assistance. Additionally, you can always reach out to us through our support portal for any help you may need.\n\nThank you for choosing our services. We are here to make your experience as smooth and hassle-free as possible.\n\nBest regards, \n[Your Name]", nil
+	systemPrompt, err := m.getPrompt(k)
+	if err != nil {
+		return "", err
 	}
 
-	client, err := m.getProviderClient(provider)
+	client, err := m.getDefaultProviderClient()
 	if err != nil {
-		m.lo.Error("error getting provider client", "provider", provider, "error", err)
+		m.lo.Error("error getting provider client", "error", err)
 		return "", envelope.NewError(envelope.GeneralError, "Error getting provider client", nil)
 	}
 
@@ -80,19 +70,43 @@ func (m *Manager) SendPromptToProvider(provider, k string, prompt string) (strin
 
 	response, err := client.SendPrompt(payload)
 	if err != nil {
-		m.lo.Error("error sending prompt to provider", "provider", provider, "error", err)
+		m.lo.Error("error sending prompt to provider", "error", err)
 		return "", envelope.NewError(envelope.GeneralError, "Error sending prompt to provider", nil)
 	}
 
 	return response, nil
 }
 
-// getProviderClient retrieves a ProviderClient for the specified provider.
-func (m *Manager) getProviderClient(providerName string) (ProviderClient, error) {
+// GetPrompts returns a list of prompts from the database.
+func (m *Manager) GetPrompts() ([]models.Prompt, error) {
+	var prompts = make([]models.Prompt, 0)
+	if err := m.q.GetPrompts.Select(&prompts); err != nil {
+		m.lo.Error("error fetching prompts", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error fetching prompts", nil)
+	}
+	return prompts, nil
+}
+
+// getPrompt returns a prompt from the database.
+func (m *Manager) getPrompt(k string) (string, error) {
+	var p models.Prompt
+	if err := m.q.GetPrompt.Get(&p, k); err != nil {
+		if err == sql.ErrNoRows {
+			m.lo.Error("error prompt not found", "key", k)
+			return "", envelope.NewError(envelope.InputError, "Prompt not found", nil)
+		}
+		m.lo.Error("error fetching prompt", "error", err)
+		return "", envelope.NewError(envelope.GeneralError, "Error fetching prompt", nil)
+	}
+	return p.Content, nil
+}
+
+// getDefaultProviderClient returns a ProviderClient for the default provider.
+func (m *Manager) getDefaultProviderClient() (ProviderClient, error) {
 	var p models.Provider
 
-	if err := m.q.GetProvider.Get(&p, providerName); err != nil {
-		m.lo.Error("error fetching provider details", "provider", providerName, "error", err)
+	if err := m.q.GetDefaultProvider.Get(&p); err != nil {
+		m.lo.Error("error fetching provider details", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, "Error fetching provider details", nil)
 	}
 
@@ -102,7 +116,7 @@ func (m *Manager) getProviderClient(providerName string) (ProviderClient, error)
 			APIKey string `json:"api_key"`
 		}{}
 		if err := json.Unmarshal([]byte(p.Config), &config); err != nil {
-			m.lo.Error("error parsing provider config", "provider", providerName, "error", err)
+			m.lo.Error("error parsing provider config", "error", err)
 			return nil, envelope.NewError(envelope.GeneralError, "Error parsing provider config", nil)
 		}
 		return NewOpenAIClient(config.APIKey), nil

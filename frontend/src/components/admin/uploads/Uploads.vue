@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="Uploads" description="Manage file upload settings" />
+    
   </div>
   <div>
     <component
@@ -18,7 +18,7 @@ import { ref, onMounted, computed } from 'vue'
 import S3Form from './S3Form.vue'
 import LocalFsForm from './LocalFsForm.vue'
 import api from '@/api'
-import PageHeader from '../common/PageHeader.vue'
+
 
 const initialValues = ref({})
 

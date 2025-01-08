@@ -1,8 +1,7 @@
 <template>
-  <div class="relative" v-if="conversationStore.messages.data">
-
+  <div v-if="conversationStore.messages.data">
     <!-- Header -->
-    <div class="px-4 border-b h-[44px] flex items-center justify-between">
+    <div class="p-3 border-b flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
         <div class="font-medium">
           {{ conversationStore.current.subject }}
@@ -27,16 +26,16 @@
     </div>
 
     <!-- Messages & reply box -->
-    <div class="flex flex-col h-screen" v-auto-animate>
-      <MessageList class="flex-1" />
-      <ReplyBox class="h-max mb-12" />
+    <div class="flex flex-col h-[calc(100vh-theme(spacing.10))]">
+      <MessageList class="flex-1 overflow-y-auto" />
+      <div class="sticky bottom-0 bg-white">
+        <ReplyBox class="h-max" />
+      </div>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { useConversationStore } from '@/stores/conversation'
 import {
   DropdownMenu,

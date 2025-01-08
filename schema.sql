@@ -348,15 +348,48 @@ CREATE TABLE views (
 
 DROP TABLE IF EXISTS ai_providers CASCADE;
 CREATE TABLE ai_providers (
-  id SERIAL PRIMARY KEY,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  name TEXT NOT NULL,
-  provider ai_provider NOT NULL,
-  config JSONB NOT NULL DEFAULT '{}',
-  is_default BOOLEAN NOT NULL DEFAULT FALSE,
-  CONSTRAINT constraint_ai_providers_on_name CHECK (length(name) <= 140)
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	name TEXT NOT NULL,
+	provider ai_provider NOT NULL,
+	config JSONB NOT NULL DEFAULT '{}',
+	is_default BOOLEAN NOT NULL DEFAULT FALSE,
+	CONSTRAINT constraint_ai_providers_on_name CHECK (length(name) <= 140)
 );
+CREATE UNIQUE INDEX unique_index_ai_providers_on_is_default_when_is_default_is_true ON ai_providers USING btree (is_default)
+WHERE (is_default = true);
+CREATE INDEX index_ai_providers_on_name ON ai_providers USING btree (name);
+
+CREATE TABLE ai_prompts (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	title TEXT NOT NULL,
+    key TEXT NOT NULL UNIQUE,
+    content TEXT NOT NULL,
+	CONSTRAINT constraint_prompts_on_title CHECK (length(title) <= 140),
+    CONSTRAINT constraint_prompts_on_key CHECK (length(key) <= 140)
+);
+CREATE INDEX index_ai_prompts_on_key ON ai_prompts USING btree (key);
+
+INSERT INTO ai_providers
+("name", provider, config, is_default)
+VALUES('openai', 'openai', '{"api_key": ""}'::jsonb, true);
+
+-- Default AI prompts
+-- TODO: Narrow down the list of prompts.
+INSERT INTO public.ai_prompts ("key", "content", title)
+VALUES
+('make_friendly', 'Modify the text to make it more friendly and approachable.', 'Make Friendly'),
+('make_concise', 'Simplify the text to make it more concise and to the point.', 'Make Concise'),
+('add_empathy', 'Add empathy to the text while retaining the original meaning.', 'Add Empathy'),
+('adjust_positive_tone', 'Adjust the tone of the text to make it sound more positive and reassuring.', 'Adjust Positive Tone'),
+('provide_clear_explanation', 'Rewrite the text to provide a clearer explanation of the issue or solution.', 'Provide Clear Explanation'),
+('add_urgency', 'Modify the text to convey a sense of urgency without being rude.', 'Add Urgency'),
+('make_actionable', 'Rephrase the text to clearly specify the next steps for the customer.', 'Make Actionable'),
+('adjust_neutral_tone', 'Adjust the tone to make it neutral and unbiased.', 'Adjust Neutral Tone'),
+('make_professional', 'Rephrase the text to make it sound more formal and professional and to the point.', 'Make Professional');
 
 -- Default settings
 INSERT INTO settings ("key", value)

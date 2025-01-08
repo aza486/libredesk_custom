@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Status" description="Manage conversation statuses" />
+  
   <div class="w-8/12">
     <div class="flex justify-between mb-5">
       <div class="flex justify-end mb-4 w-full">
@@ -35,7 +35,7 @@ import { ref, onMounted } from 'vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import { columns } from './dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 import { Spinner } from '@/components/ui/spinner'
 import StatusForm from './StatusForm.vue'
 import {

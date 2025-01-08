@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="Roles" description="Manage roles" />
+  
   <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/teams/roles'">
       <div class="flex justify-end mb-5">
@@ -27,7 +27,7 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 const { toast } = useToast()
 
 const emit = useEmitter()

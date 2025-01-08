@@ -1,5 +1,10 @@
 <template>
   <div class="h-screen flex flex-col">
+    <div class="flex justify-start items-center p-3 w-full space-x-4 border-b">
+      <SidebarTrigger class="cursor-pointer w-5 h-5" />
+      <span class="text-xl font-semibold">{{title}}</span>
+    </div>
+
     <div class="flex justify-between px-2 py-2 w-full">
       <DropdownMenu>
         <DropdownMenuTrigger class="cursor-pointer">
@@ -84,10 +89,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import EmptyList from '@/components/conversation/list/ConversationEmptyList.vue'
 import ConversationListItem from '@/components/conversation/list/ConversationListItem.vue'
+import { useRoute } from 'vue-router'
 import ConversationListItemSkeleton from '@/components/conversation/list/ConversationListItemSkeleton.vue'
-
 
 const conversationStore = useConversationStore()
 let reFetchInterval = null
@@ -99,6 +105,9 @@ onMounted(() => {
     conversationStore.reFetchConversationsList(false)
   }, 30000)
 })
+
+const route = useRoute()
+const title = computed(() => route.meta.title || '')
 
 onUnmounted(() => {
   clearInterval(reFetchInterval)

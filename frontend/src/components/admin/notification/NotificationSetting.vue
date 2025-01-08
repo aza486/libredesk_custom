@@ -1,5 +1,5 @@
 <template>
-    <PageHeader title="Notifications" description="Manage your email notification settings" />
+    
     <div class="w-8/12">
         <div>
             <Spinner v-if="formLoading"></Spinner>
@@ -11,7 +11,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '@/api'
-import PageHeader from '../common/PageHeader.vue'
+
 import NotificationsForm from './NotificationSettingForm.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'

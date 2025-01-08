@@ -1,5 +1,5 @@
 <template>
-  <PageHeader title="OpenID Connect" description="Manage OpenID Connect configurations" />
+  
   <div class="w-8/12">
     <template v-if="router.currentRoute.value.path === '/admin/oidc'">
       <div class="flex justify-between mb-5">
@@ -26,7 +26,7 @@ import { columns } from '@/components/admin/oidc/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
-import PageHeader from '../common/PageHeader.vue'
+
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'

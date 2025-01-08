@@ -1,19 +1,16 @@
 <template>
   <div class="page-content">
-    <PageHeader title="Overview" />
     <Spinner v-if="isLoading"></Spinner>
-    <div class="mt-7 flex w-full space-x-4" v-auto-animate>
-      <Card class="flex-1" title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
-      <Card class="flex-1" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
-    </div>
-    <div class="w-11/12" :class="{ 'soft-fade': isLoading }">
-      <div class="flex my-7 justify-between items-center space-x-5">
-        <div class="dashboard-card p-5">
-          <LineChart :data="chartData.new_conversations"></LineChart>
-        </div>
-        <div class="dashboard-card p-5">
-          <BarChart :data="chartData.status_summary"></BarChart>
-        </div>
+    <div class="space-y-4">
+      <div class="mt-7 flex w-full space-x-4" v-auto-animate>
+        <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
+        <Card class="w-8/12" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
+      </div>
+      <div class="dashboard-card p-5">
+        <LineChart :data="chartData.processedData"></LineChart>
+      </div>
+      <div class="dashboard-card p-5">
+        <BarChart :data="chartData.status_summary"></BarChart>
       </div>
     </div>
   </div>
@@ -28,7 +25,7 @@ import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import Card from '@/components/dashboard/DashboardCard.vue'
 import LineChart from '@/components/dashboard/DashboardLineChart.vue'
 import BarChart from '@/components/dashboard/DashboardBarChart.vue'
-import PageHeader from '@/components/admin/common/PageHeader.vue'
+
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 
 const { toast } = useToast()
@@ -36,10 +33,10 @@ const isLoading = ref(false)
 const cardCounts = ref({})
 const chartData = ref({})
 const agentCountCardsLabels = {
-  total_count: 'Total',
-  resolved_count: 'Resolved',
-  unresolved_count: 'Unresolved',
-  awaiting_response_count: 'Awaiting Response'
+  open: 'Total',
+  awaiting_response: 'Awaiting Response',
+  unassigned: 'Unassigned',
+  pending: 'Pending'
 }
 const sampleAgentStatusLabels = {
   online: 'Online',
@@ -65,7 +62,7 @@ const getDashboardData = () => {
     })
 }
 
-const getCardStats = () => {
+const getCardStats = async () => {
   return api.getOverviewCounts()
     .then((resp) => {
       cardCounts.value = resp.data.data
@@ -79,10 +76,18 @@ const getCardStats = () => {
     })
 }
 
-const getDashboardCharts = () => {
+const getDashboardCharts = async () => {
   return api.getOverviewCharts()
     .then((resp) => {
       chartData.value.new_conversations = resp.data.data.new_conversations || []
+      chartData.value.resolved_conversations = resp.data.data.resolved_conversations || []
+      chartData.value.messages_sent = resp.data.data.messages_sent || []
+      chartData.value.processedData = resp.data.data.new_conversations.map(item => ({
+        date: item.date,
+        'New conversations': item.count,
+        'Resolved conversations': resp.data.data.resolved_conversations.find(r => r.date === item.date)?.count || 0,
+        'Messages sent': resp.data.data.messages_sent.find(r => r.date === item.date)?.count || 0
+      }))
       chartData.value.status_summary = resp.data.data.status_summary || []
     })
     .catch((err) => {

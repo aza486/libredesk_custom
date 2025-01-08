@@ -457,6 +457,9 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	if !allowed {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
+	if string(status) == cmodels.StatusResolved && conversation.AssignedUserID.Int == 0 {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Cannot resolve the conversation without an assigned user. Please assign a user before attempting to resolve.", nil))
+	}
 
 	if err := app.conversation.UpdateConversationStatus(uuid, status, snoozedUntil, user); err != nil {
 		return sendErrorEnvelope(r, err)

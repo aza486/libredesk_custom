@@ -1,9 +1,34 @@
 <template>
   <div>
+    <!-- Fullscreen editor -->
+    <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = $event">
+      <DialogContent class="max-w-[70%] max-h-[70%] h-[70%] m-0 p-6">
+        <div v-if="isEditorFullscreen">
+          <div v-if="filteredCannedResponses.length > 0" class="w-full overflow-hidden p-2 border-t backdrop-blur">
+            <ul ref="cannedResponsesRef" class="space-y-2 max-h-96 overflow-y-auto">
+              <li v-for="(response, index) in filteredCannedResponses" :key="response.id" :class="[
+                'cursor-pointer rounded p-1 hover:bg-secondary',
+                { 'bg-secondary': index === selectedResponseIndex }
+              ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
+                <span class="font-semibold">{{ response.title }}</span> - {{ getTextFromHTML(response.content).slice(0,
+                  150)
+                }}...
+              </li>
+            </ul>
+          </div>
+          <Editor v-model:selectedText="selectedText" v-model:isBold="isBold" v-model:isItalic="isItalic"
+            v-model:htmlContent="htmlContent" v-model:textContent="textContent" :placeholder="editorPlaceholder"
+            :aiPrompts="aiPrompts" @keydown="handleKeydown" @aiPromptSelected="handleAiPromptSelected"
+            @editorReady="onEditorReady" @clearContent="clearContent" :contentToSet="contentToSet"
+            v-model:cursorPosition="cursorPosition" />
+        </div>
+      </DialogContent>
+    </Dialog>
 
-    <!-- Canned responses -->
-    <div v-if="filteredCannedResponses.length > 0" class="w-full overflow-hidden p-2 border-t backdrop-blur">
-      <ul ref="responsesList" class="space-y-2 max-h-96 overflow-y-auto">
+    <!-- Canned responses on non-fullscreen editor -->
+    <div v-if="filteredCannedResponses.length > 0 && !isEditorFullscreen"
+      class="w-full overflow-hidden p-2 border-t backdrop-blur">
+      <ul ref="cannedResponsesRef" class="space-y-2 max-h-96 overflow-y-auto">
         <li v-for="(response, index) in filteredCannedResponses" :key="response.id" :class="[
           'cursor-pointer rounded p-1 hover:bg-secondary',
           { 'bg-secondary': index === selectedResponseIndex }
@@ -13,24 +38,28 @@
         </li>
       </ul>
     </div>
-    <div class="border-t">
 
+    <!-- Main Editor non-fullscreen -->
+    <div class="border-t" v-if="!isEditorFullscreen">
       <!-- Message type toggle -->
       <div class="flex justify-between px-2 border-b py-2">
-        <Tabs v-model:model-value="messageType">
+        <Tabs v-model="messageType">
           <TabsList>
             <TabsTrigger value="reply"> Reply </TabsTrigger>
             <TabsTrigger value="private_note"> Private note </TabsTrigger>
           </TabsList>
         </Tabs>
+        <div class="flex items-center mr-2 cursor-pointer" @click="isEditorFullscreen = !isEditorFullscreen">
+          <Fullscreen size="20" />
+        </div>
       </div>
 
       <!-- Main Editor -->
-      <Editor @keydown="handleKeydown" @editorText="handleEditorText" :placeholder="editorPlaceholder" :isBold="isBold"
-        :clearContent="clearContent" :isItalic="isItalic" @updateBold="updateBold" @updateItalic="updateItalic"
-        @contentCleared="handleContentCleared" @contentSet="clearContentToSet" @editorReady="onEditorReady"
-        :contentToSet="contentToSet" :cannedResponses="cannedResponses" />
-
+      <Editor v-model:selectedText="selectedText" v-model:isBold="isBold" v-model:isItalic="isItalic"
+        v-model:htmlContent="htmlContent" v-model:textContent="textContent" :placeholder="editorPlaceholder"
+        :aiPrompts="aiPrompts" @keydown="handleKeydown" @aiPromptSelected="handleAiPromptSelected"
+        @editorReady="onEditorReady" @clearContent="clearContent" :contentToSet="contentToSet"
+        v-model:cursorPosition="cursorPosition" />
 
       <!-- Attachments preview -->
       <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete"></AttachmentsPreview>
@@ -40,58 +69,97 @@
         :isBold="isBold" :isItalic="isItalic" @toggleBold="toggleBold" @toggleItalic="toggleItalic" :hasText="hasText"
         :handleSend="handleSend">
       </ReplyBoxBottomMenuBar>
-
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { Fullscreen } from 'lucide-vue-next';
 import api from '@/api'
 
 import { getTextFromHTML } from '@/utils/strings'
 import Editor from './ConversationTextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEmitter } from '@/composables/useEmitter'
 import AttachmentsPreview from '@/components/attachment/AttachmentsPreview.vue'
 import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxMenuBar.vue'
 
+const conversationStore = useConversationStore()
+
 const emitter = useEmitter()
+
+let editorInstance = ref(null)
+const isEditorFullscreen = ref(false)
+const cursorPosition = ref(0)
+const selectedText = ref('')
+const htmlContent = ref('')
+const textContent = ref('')
 const clearContent = ref(false)
+const contentToSet = ref('')
 const isBold = ref(false)
 const isItalic = ref(false)
-const editorText = ref('')
-const editorHTML = ref('')
-const contentToSet = ref('')
-const conversationStore = useConversationStore()
-const filteredCannedResponses = ref([])
+
 const uploadedFiles = ref([])
 const messageType = ref('reply')
+
+const filteredCannedResponses = ref([])
 const selectedResponseIndex = ref(-1)
-const responsesList = ref(null)
-let editorInstance = ref(null)
+const cannedResponsesRef = ref(null)
+const cannedResponses = ref([])
+
+const aiPrompts = ref([])
 
 onMounted(async () => {
+  await Promise.all([fetchCannedResponses(), fetchAiPrompts()])
+})
+
+const fetchAiPrompts = async () => {
+  try {
+    const resp = await api.getAiPrompts()
+    aiPrompts.value = resp.data.data
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
+}
+
+const fetchCannedResponses = async () => {
   try {
     const resp = await api.getCannedResponses()
     cannedResponses.value = resp.data.data
   } catch (error) {
-    console.error(error)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   }
-})
-
-const cannedResponses = ref([])
-
-const updateBold = (newState) => {
-  isBold.value = newState
 }
 
-const updateItalic = (newState) => {
-  isItalic.value = newState
+const handleAiPromptSelected = async (key) => {
+  try {
+    const resp = await api.aiCompletion({
+      prompt_key: key,
+      content: selectedText.value,
+    })
+    contentToSet.value = resp.data.data.replace(/\n/g, '<br>')
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
 }
 
 const toggleBold = () => {
@@ -108,6 +176,11 @@ const editorPlaceholder = computed(() => {
 
 const attachments = computed(() => {
   return uploadedFiles.value.filter(upload => upload.disposition === 'attachment')
+})
+
+// Watch for text content changes and filter canned responses
+watch(textContent, (newVal) => {
+  filterCannedResponses(newVal)
 })
 
 const filterCannedResponses = (input) => {
@@ -129,14 +202,8 @@ const filterCannedResponses = (input) => {
   }
 }
 
-const handleEditorText = (text) => {
-  editorText.value = text.text
-  editorHTML.value = text.html
-  filterCannedResponses(text.text)
-}
-
 const hasText = computed(() => {
-  return editorText.value.length > 0 ? true : false
+  return textContent.value.trim().length > 0 ? true : false
 })
 
 const onEditorReady = (editor) => {
@@ -156,7 +223,7 @@ const handleFileUpload = (event) => {
       })
       .catch((error) => {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          title: 'Error uploading file',
+          title: 'Error',
           variant: 'destructive',
           description: handleHTTPError(error).message
         })
@@ -182,7 +249,7 @@ const handleInlineImageUpload = (event) => {
       })
       .catch((error) => {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          title: 'Error uploading file',
+          title: 'Error',
           variant: 'destructive',
           description: handleHTTPError(error).message
         })
@@ -190,18 +257,14 @@ const handleInlineImageUpload = (event) => {
   }
 }
 
-const handleContentCleared = () => {
-  clearContent.value = false
-}
-
 const handleSend = async () => {
   try {
     // Replace inline image url with cid.
-    const message = transformImageSrcToCID(editorHTML.value)
+    const message = transformImageSrcToCID(htmlContent.value)
 
     // Check which images are still in editor before sending.
     const parser = new DOMParser()
-    const doc = parser.parseFromString(editorHTML.value, 'text/html')
+    const doc = parser.parseFromString(htmlContent.value, 'text/html')
     const inlineImageUUIDs = Array.from(doc.querySelectorAll('img.inline-image'))
       .map(img => img.getAttribute('title'))
       .filter(Boolean)
@@ -220,7 +283,7 @@ const handleSend = async () => {
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error sending message',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -256,7 +319,7 @@ const handleKeydown = (event) => {
 }
 
 const scrollToSelectedItem = () => {
-  const list = responsesList.value
+  const list = cannedResponsesRef.value
   const selectedItem = list.children[selectedResponseIndex.value]
   if (selectedItem) {
     selectedItem.scrollIntoView({
@@ -270,9 +333,5 @@ const selectCannedResponse = (content) => {
   contentToSet.value = content
   filteredCannedResponses.value = []
   selectedResponseIndex.value = -1
-}
-
-const clearContentToSet = () => {
-  contentToSet.value = null
 }
 </script>

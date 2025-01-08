@@ -1,5 +1,4 @@
 <template>
-  <PageHeader title="Automation" description="Manage automation rules" />
   <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/automations'">
       <div class="flex justify-between mb-5">
@@ -19,7 +18,6 @@
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import AutomationTabs from '@/components/admin/automation/AutomationTabs.vue'
-import PageHeader from '../common/PageHeader.vue'
 import { useStorage } from '@vueuse/core'
 
 const router = useRouter()

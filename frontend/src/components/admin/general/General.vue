@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="General" description="Manage general app settings"  />
+    
   </div>
   <div class="flex justify-center items-center flex-col w-8/12">
     <GeneralSettingForm :submitForm="submitForm" :initial-values="initialValues" submitLabel="Save" />
@@ -10,7 +10,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import GeneralSettingForm from './GeneralSettingForm.vue'
-import PageHeader from '../common/PageHeader.vue'
+
 import api from '@/api'
 
 const initialValues = ref({})

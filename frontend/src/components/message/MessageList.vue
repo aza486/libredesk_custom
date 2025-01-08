@@ -30,7 +30,7 @@
     <!-- Sticky container for the scroll arrow -->
     <div v-show="!isAtBottom" class="sticky bottom-6 flex justify-end px-6">
       <div class="relative">
-        <button @click="handleScrollToBottom" class="w-11 h-11 rounded-full flex items-center justify-center shadow">
+        <button @click="handleScrollToBottom" class="w-8 h-8 rounded-full flex items-center justify-center shadow">
           <ArrowDown size="20" />
         </button>
         <span v-if="unReadMessages > 0"

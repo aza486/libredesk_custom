@@ -1,14 +1,10 @@
 <template>
-  <LineChart :data="chartData" index="date" :categories="['New conversations']" :y-formatter="(tick) => {
-    return tick
-  }
-    " />
+  <LineChart :data="data" index="date" :categories="['New conversations', 'Resolved conversations', 'Messages sent']"
+    :x-formatter="xFormatter" :y-formatter="yFormatter" />
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { LineChart } from '@/components/ui/chart-line'
-
 const props = defineProps({
   data: {
     type: Array,
@@ -16,10 +12,12 @@ const props = defineProps({
   }
 })
 
-const chartData = computed(() =>
-  props.data.map(item => ({
-    date: item.date,
-    "New conversations": item.new_conversations
-  }))
-)
+const xFormatter = (tick) => {
+  return props.data[tick]?.date ?? ''
+}
+
+const yFormatter = (tick) => {
+  return Number.isInteger(tick) ? tick : ''
+}
+
 </script>

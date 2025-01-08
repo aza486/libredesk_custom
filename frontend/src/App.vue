@@ -7,6 +7,7 @@
       <ResizableHandle id="resize-handle-1" />
       <ResizablePanel id="resize-panel-2">
         <div class="w-full h-screen">
+          <PageHeader />
           <RouterView />
         </div>
       </ResizablePanel>
@@ -28,6 +29,7 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { useConversationStore } from './stores/conversation'
+import PageHeader from './components/common/PageHeader.vue'
 import ViewForm from '@/components/ViewForm.vue'
 import api from '@/api'
 import Sidebar from '@/components/sidebar/Sidebar.vue'

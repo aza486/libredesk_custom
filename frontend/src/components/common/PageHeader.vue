@@ -1,25 +1,22 @@
 <template>
-  <div>
-    <span class="text-2xl">
-      {{ title }}
-    </span>
-    <p class="text-sm-muted">
-      {{ subTitle }}
-    </p>
+  <div v-if="!isHidden">
+    <div class="flex items-center space-x-4 p-4">
+      <SidebarTrigger class="cursor-pointer w-5 h-5" />
+      <span class="text-2xl font-semibold">
+        {{ title }}
+      </span>
+    </div>
+    <Separator />
   </div>
-  <Separator class="my-3" />
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Separator } from '@/components/ui/separator'
-defineProps({
-  title: {
-    type: String,
-    required: true
-  },
-  subTitle: {
-    type: String,
-    required: true
-  }
-})
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const title = computed(() => route.meta.title || '')
+const isHidden = computed(() => route.meta.hidePageHeader === true)
 </script>

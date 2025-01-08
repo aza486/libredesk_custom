@@ -1,20 +1,30 @@
 <template>
   <div class="max-h-[600px] overflow-y-auto">
-    <BubbleMenu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor">
-      <div class="BubbleMenu">
+    <BubbleMenu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor" class="bg-white p-1 box rounded-lg">
+      <div class="flex space-x-1 items-center">
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <Button size="sm" variant="outline">
-              AI
-              <ChevronDown class="w-4 h-4 ml-2" />
+            <Button size="sm" variant="ghost" class="flex items-center justify-center">
+              <span class="flex items-center">
+                <span class="text-medium">AI</span>
+                <Bot size="14" class="ml-1" />
+                <ChevronDown class="w-4 h-4 ml-2" />
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem>Make friendly</DropdownMenuItem>
-            <DropdownMenuItem>Make formal</DropdownMenuItem>
-            <DropdownMenuItem>Make casual</DropdownMenuItem>
+            <DropdownMenuItem v-for="prompt in aiPrompts" :key="prompt.key" @select="emitPrompt(prompt.key)">
+              {{ prompt.title }}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button size="sm" variant="ghost" @click="isBold = !isBold" :active="isBold" :class="{ 'bg-gray-200': isBold }">
+          <Bold size="14" />
+        </Button>
+        <Button size="sm" variant="ghost" @click="isItalic = !isItalic" :active="isItalic"
+          :class="{ 'bg-gray-200': isItalic }">
+          <Italic size="14" />
+        </Button>
       </div>
     </BubbleMenu>
     <EditorContent :editor="editor" />
@@ -24,7 +34,7 @@
 <script setup>
 import { ref, watch, watchEffect, onUnmounted } from 'vue'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
-import { ChevronDown } from 'lucide-vue-next';
+import { ChevronDown, Bold, Italic, Bot } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -37,93 +47,87 @@ import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 
-const emit = defineEmits([
-  'send',
-  'editorText',
-  'updateBold',
-  'updateItalic',
-  'contentCleared',
-  'contentSet',
-  'editorReady'
-])
+const selectedText = defineModel('selectedText', { default: '' })
+const textContent = defineModel('textContent')
+const htmlContent = defineModel('htmlContent')
+const isBold = defineModel('isBold')
+const isItalic = defineModel('isItalic')
+const cursorPosition = defineModel('cursorPosition', {
+  default: 0
+})
 
 const props = defineProps({
   placeholder: String,
-  isBold: Boolean,
-  isItalic: Boolean,
   clearContent: Boolean,
-  contentToSet: String
+  contentToSet: String,
+  aiPrompts: {
+    type: Array,
+    default: () => []
+  }
 })
+
+const emit = defineEmits([
+  'send',
+  'editorReady',
+  'aiPromptSelected'
+])
+
+function emitPrompt (key) {
+  emit('aiPromptSelected', key)
+}
 
 const editor = ref(
   useEditor({
-    content: '',
+    content: textContent.value,
     extensions: [
       StarterKit,
       Image.configure({
-        HTMLAttributes: {
-          // Common class for all inline images.
-          class: 'inline-image',
-        },
+        HTMLAttributes: { class: 'inline-image' }
       }),
       Placeholder.configure({
-        placeholder: () => {
-          return props.placeholder
-        }
+        placeholder: () => props.placeholder
       }),
-      Link,
+      Link
     ],
     autofocus: true,
-    editorProps: {
-      attributes: {
-        // No outline for the editor.
-        class: 'outline-none'
-      },
-    }
+    editorProps: { attributes: { class: 'outline-none' } },
+    onSelectionUpdate: ({ editor }) => {
+      selectedText.value = editor.state.doc.textBetween(
+        editor.state.selection.from,
+        editor.state.selection.to
+      )
+    },
+    onUpdate: ({ editor }) => {
+      htmlContent.value = editor.getHTML()
+      textContent.value = editor.getText()
+      cursorPosition.value = editor.state.selection.from
+    },
+    onCreate: ({ editor }) => {
+      if (cursorPosition.value) {
+        editor.commands.setTextSelection(cursorPosition.value)
+      }
+    },
   })
 )
 
 watchEffect(() => {
   if (editor.value) {
-    // Emit the editor instance when it's ready
-    if (editor.value) {
-      emit('editorReady', editor.value)
-    }
-
-    emit('editorText', {
-      text: editor.value.getText(),
-      html: editor.value.getHTML()
-    })
-
-    // Emit bold and italic state changes
-    emit('updateBold', editor.value.isActive('bold'))
-    emit('updateItalic', editor.value.isActive('italic'))
+    emit('editorReady', editor.value)
+    isBold.value = editor.value.isActive('bold')
+    isItalic.value = editor.value.isActive('italic')
   }
 })
 
-// Watcher for bold and italic changes
 watchEffect(() => {
-  if (props.isBold !== editor.value?.isActive('bold')) {
-    if (props.isBold) {
-      editor.value?.chain().focus().setBold().run()
-    } else {
-      editor.value?.chain().focus().unsetBold().run()
-    }
+  if (isBold.value !== editor.value?.isActive('bold')) {
+    isBold.value
+      ? editor.value?.chain().focus().setBold().run()
+      : editor.value?.chain().focus().unsetBold().run()
   }
-  if (props.isItalic !== editor.value?.isActive('italic')) {
-    if (props.isItalic) {
-      editor.value?.chain().focus().setItalic().run()
-    } else {
-      editor.value?.chain().focus().unsetItalic().run()
-    }
-  }
-})
-
-// Watcher for clearContent prop
-watchEffect(() => {
-  if (props.clearContent) {
-    editor.value?.commands.clearContent()
-    emit('contentCleared')
+  if (isItalic.value !== editor.value?.isActive('italic')) {
+    isItalic.value
+      ? editor.value?.chain().focus().setItalic().run()
+      : editor.value?.chain().focus().unsetItalic().run()
   }
 })
 
@@ -131,13 +135,18 @@ watch(
   () => props.contentToSet,
   (newContent) => {
     if (newContent) {
-      // Remove trailing break when setting content
+      console.log('Setting content to -:', newContent)
       editor.value.commands.setContent(newContent)
       editor.value.commands.focus()
-      emit('contentSet')
     }
   }
 )
+
+watch(cursorPosition, (newPos, oldPos) => {
+  if (editor.value && newPos !== oldPos && newPos !== editor.value.state.selection.from) {
+    editor.value.commands.setTextSelection(newPos)
+  }
+})
 
 onUnmounted(() => {
   editor.value.destroy()
