@@ -8,10 +8,10 @@ Self-hosted 100% open-source support desk. Single binary with minimal dependenci
 
 | Feature                                    | Description                                                                                  |
 |--------------------------------------------|----------------------------------------------------------------------------------------------|
-| **Granular Permissions**                   | Fine-grained access control for conversations, such as allowing agents to change priority, status, add tags, view specific inboxes, or access only assigned or team conversations.            |
+| **Granular Permissions**                   |Fine-grained control over conversations, allowing you to define both the actions agents can perform—such as changing priority, status, or adding tags—and the conversations they can access, including those assigned to them or their team.           |
+| **Roles for Agents**                       | Define agent roles with specific permissions.                                                |
 | **Tags for Conversations**                 | Organize and categorize conversations with tags.                                             |
 | **Private Notes**                          | Add internal notes visible only to agents.                                                   |
-| **Roles for Agents**                       | Define agent roles with specific permissions.                                                |
 | **SLA**                                    | Configure and manage service level agreements.                                               |
 | **CSAT**                                   | Measure customer satisfaction with post-interaction surveys.                                 |
 | **Reports**                                | Gain insights and analyze support performance, with complete freedom to integrate analytics tools like Metabase for generating custom reports. |
