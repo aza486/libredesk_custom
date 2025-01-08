@@ -14,7 +14,7 @@ Self-hosted 100% open-source support desk. Single binary with minimal dependenci
 | **Roles for Agents**                       | Define agent roles with specific permissions.                                                |
 | **SLA**                                    | Configure and manage service level agreements.                                               |
 | **CSAT**                                   | Measure customer satisfaction with post-interaction surveys.                                 |
-| **Reports**                                | Generate insights and analytics on support performance.                                      |
+| **Reports**                                | Gain insights and analyze support performance, with complete freedom to integrate analytics tools like Metabase for generating custom reports. |
 | **Canned Responses**                       | Save and reuse common replies for efficiency.                                                |
 | **Auto Assignment**                        | Automatically assign tickets to agents based on defined rules.                               |
 | **Snooze Conversations**                   | Temporarily pause conversations and set reminders to revisit them later.                     |
