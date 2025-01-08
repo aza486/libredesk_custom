@@ -288,8 +288,7 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 }
 
 // SendReply inserts a reply message in a conversation.
-func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string) error {
-	// Insert Message.
+func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content, meta string) error {
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
@@ -300,6 +299,7 @@ func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUI
 		ContentType:      ContentTypeHTML,
 		Private:          false,
 		Media:            media,
+		Meta:             meta,
 	}
 	return m.InsertMessage(&message)
 }

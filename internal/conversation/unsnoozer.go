@@ -2,10 +2,11 @@ package conversation
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
-// RunUnsnoozer runs the unsnoozer.
+// RunUnsnoozer runs the conversation unsnoozer.
 func (c *Manager) RunUnsnoozer(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -21,7 +22,13 @@ func (c *Manager) RunUnsnoozer(ctx context.Context) {
 
 // unsnoozeAll unsnoozes all snoozed conversations.
 func (c *Manager) unsnoozeAll(ctx context.Context) {
-	if _, err := c.q.UnsnoozeAll.ExecContext(ctx); err != nil {
+	res, err := c.q.UnsnoozeAll.ExecContext(ctx)
+	if err != nil {
 		c.lo.Error("error unsnoozing all conversations", err)
+		return
+	}
+	rows, _ := res.RowsAffected()
+	if rows > 0 {
+		c.lo.Info(fmt.Sprintf("unsnoozed %d conversations", rows))
 	}
 }

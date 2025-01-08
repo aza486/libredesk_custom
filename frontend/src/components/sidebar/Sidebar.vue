@@ -635,7 +635,7 @@ const hasConversationOpen = computed(() => {
                                     <EllipsisVertical />
                                   </SidebarMenuAction>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent side="right" align="start">
+                                <DropdownMenuContent side="right">
                                   <DropdownMenuItem @click="() => editView(view)">
                                     <span>Edit</span>
                                   </DropdownMenuItem>

@@ -20,7 +20,7 @@ import ConversationList from '@/components/conversation/list/ConversationList.vu
 import Conversation from '@/components/conversation/Conversation.vue'
 import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'
 import { useConversationStore } from '@/stores/conversation'
-import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
+import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { unsetCurrentConversation, setCurrentConversation } from '@/websocket'
 
 const props = defineProps({
@@ -36,6 +36,7 @@ onMounted(() => {
     fetchConversation(props.uuid)
   }
   if (props.type) {
+    conversationStore.setListStatus(CONVERSATION_DEFAULT_STATUSES.OPEN, false)
     conversationStore.fetchConversationsList(true, props.type)
   }
   if (props.teamID) {

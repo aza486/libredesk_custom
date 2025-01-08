@@ -4,6 +4,7 @@ package csat
 import (
 	"database/sql"
 	"embed"
+	"errors"
 
 	"github.com/abhinavxd/artemis/internal/csat/models"
 	"github.com/abhinavxd/artemis/internal/dbutil"
@@ -15,6 +16,7 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
+	ErrCSATAlreadyExists = errors.New("CSAT already exists")
 )
 
 // Manager manages CSAT.
@@ -57,10 +59,10 @@ func (m *Manager) Create(conversationID, assignedAgentID int) (models.CSATRespon
 	err := m.q.Insert.QueryRow(conversationID, assignedAgentID).Scan(&uuid)
 	if err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			m.lo.Error("error creating CSAT", "err", err)
-			return rsp, envelope.NewError(envelope.InputError, "CSAT already exists", nil)
+			m.lo.Warn("CSAT already exists", "conversation_id", conversationID, "error", err)
+			return rsp, ErrCSATAlreadyExists
 		}
-		m.lo.Error("error creating CSAT", "err", err)
+		m.lo.Error("error creating CSAT", "error", err)
 		return rsp, envelope.NewError(envelope.GeneralError, "Error creating CSAT", nil)
 	}
 	return m.Get(uuid)
@@ -74,7 +76,7 @@ func (m *Manager) Get(uuid string) (models.CSATResponse, error) {
 		if err == sql.ErrNoRows {
 			return csat, envelope.NewError(envelope.InputError, "CSAT not found", nil)
 		}
-		m.lo.Error("error getting CSAT", "err", err)
+		m.lo.Error("error getting CSAT", "error", err)
 		return csat, err
 	}
 	return csat, nil
@@ -93,7 +95,7 @@ func (m *Manager) UpdateResponse(uuid string, score int, feedback string) error 
 
 	_, err = m.q.Update.Exec(uuid, score, feedback)
 	if err != nil {
-		m.lo.Error("error updating CSAT", "err", err)
+		m.lo.Error("error updating CSAT", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating CSAT", nil)
 	}
 	return nil

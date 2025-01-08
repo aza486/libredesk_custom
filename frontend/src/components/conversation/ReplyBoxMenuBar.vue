@@ -14,9 +14,9 @@
       <Toggle class="px-2 py-2 border-0" variant="outline" @click="triggerFileUpload" :pressed="false">
         <Paperclip class="h-4 w-4" />
       </Toggle>
-      <Toggle class="px-2 py-2 border-0" variant="outline" @click="triggerInlineImage" :pressed="false">
+      <!-- <Toggle class="px-2 py-2 border-0" variant="outline" @click="triggerInlineImage" :pressed="false">
         <Image class="h-4 w-4" />
-      </Toggle>
+      </Toggle> -->
     </div>
     <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!hasText">Send</Button>
   </div>
@@ -26,7 +26,7 @@
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Toggle } from '@/components/ui/toggle'
-import { Paperclip, Bold, Italic, Image } from 'lucide-vue-next'
+import { Paperclip, Bold, Italic } from 'lucide-vue-next'
 
 const attachmentInput = ref(null)
 const inlineImageInput = ref(null)
@@ -52,7 +52,7 @@ const triggerFileUpload = () => {
   attachmentInput.value.click()
 }
 
-const triggerInlineImage = () => {
-  inlineImageInput.value.click()
-}
+// const triggerInlineImage = () => {
+//   inlineImageInput.value.click()
+// }
 </script>

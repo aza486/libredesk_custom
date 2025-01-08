@@ -49,6 +49,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		for j := range messages[i].Attachments {
 			messages[i].Attachments[j].URL = app.media.GetURL(messages[i].Attachments[j].UUID)
 		}
+		messages[i].HideCSAT()
 	}
 	return r.SendEnvelope(envelope.PageResults{
 		Total:      total,
@@ -78,16 +79,18 @@ func handleGetMessage(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	messages, err := app.conversation.GetMessage(uuid)
+	message, err := app.conversation.GetMessage(uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	for j := range messages.Attachments {
-		messages.Attachments[j].URL = app.media.GetURL(messages.Attachments[j].UUID)
+	message.HideCSAT()
+
+	for j := range message.Attachments {
+		message.Attachments[j].URL = app.media.GetURL(message.Attachments[j].UUID)
 	}
 
-	return r.SendEnvelope(messages)
+	return r.SendEnvelope(message)
 }
 
 // handleRetryMessage changes message status so it can be retried for sending.
@@ -161,7 +164,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	// Reply.
-	if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message); err != nil {
+	if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message, ""); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

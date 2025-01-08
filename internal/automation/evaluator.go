@@ -242,7 +242,7 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 		}
 	case models.ActionReply:
 		e.lo.Debug("executing reply action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action); err != nil {
+		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action, "" /**meta json**/); err != nil {
 			return err
 		}
 	case models.ActionSetSLA:

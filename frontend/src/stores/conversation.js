@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
+import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
@@ -101,19 +101,13 @@ export const useConversationStore = defineStore('conversation', () => {
     clearInterval(reRenderInterval)
   }
 
-  function setListStatus (status) {
+  function setListStatus (status, fetch = true) {
     if (conversations.status === status) return
     conversations.status = status
-    const filter = {
-      model: 'conversation_statuses',
-      field: 'name',
-      operator: 'equals',
-      value: status
+    if (fetch) {
+      resetConversations()
+      reFetchConversationsList()
     }
-    conversations.listFilters = conversations.listFilters.filter(f => f.model !== 'conversation_statuses')
-    conversations.listFilters.push(filter)
-    resetConversations()
-    reFetchConversationsList()
   }
 
   function setListSortField (field) {
@@ -298,11 +292,19 @@ export const useConversationStore = defineStore('conversation', () => {
     }
     if (listType) conversations.listType = listType
     if (teamID) conversations.teamID = teamID
-    if (filters) conversations.listFilters = filters
     if (viewID) conversations.viewID = viewID
+    if (conversations.status) {
+      filters = filters.filter(f => f.model !== 'conversation_statuses')
+      filters.push({
+        model: 'conversation_statuses',
+        field: 'name',
+        operator: 'equals',
+        value: conversations.status
+      })
+    }
+    if (filters) conversations.listFilters = filters
     subscribeConversationsList(listType, teamID)
     if (showLoader) conversations.loading = true
-
     try {
       conversations.errorMessage = ''
       const response = await makeConversationListRequest(listType, teamID, viewID, filters)
@@ -398,6 +400,19 @@ export const useConversationStore = defineStore('conversation', () => {
       })
     }
   }
+
+  async function snoozeConversation (snoozeDuration) {
+    try {
+      await api.updateConversationStatus(conversation.data.uuid, { status: CONVERSATION_DEFAULT_STATUSES.SNOOZED, snoozed_until: snoozeDuration })
+    } catch (error) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  }
+
 
   async function upsertTags (v) {
     try {
@@ -537,6 +552,7 @@ export const useConversationStore = defineStore('conversation', () => {
     updateMessageProp,
     updateAssigneeLastSeen,
     updateConversationMessageList,
+    snoozeConversation,
     fetchConversation,
     fetchConversationsList,
     fetchMessages,

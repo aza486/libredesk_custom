@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"net/textproto"
 	"time"
 
@@ -108,6 +109,17 @@ type Message struct {
 	Headers          textproto.MIMEHeader   `json:"-"`
 	Media            []mmodels.Media        `db:"-" json:"-"`
 	Total            int                    `db:"total" json:"-"`
+}
+
+// HideCSAT hides the CSAT message.
+func (m *Message) HideCSAT() {
+	var meta map[string]interface{}
+	if err := json.Unmarshal([]byte(m.Meta), &meta); err != nil {
+		return
+	}
+	if isCsat, _ := meta["is_csat"].(bool); isCsat {
+		m.Content = "Please rate your experience with us"
+	}
 }
 
 // IncomingMessage links a message with the contact information and inbox id.

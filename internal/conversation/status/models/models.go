@@ -7,6 +7,7 @@ var DefaultStatuses = []string{
 	"Replied",
 	"Resolved",
 	"Closed",
+	"Snoozed",
 }
 
 type Status struct {

@@ -2,7 +2,7 @@ import * as z from 'zod'
 import { isGoDuration } from '@/utils/strings'
 
 export const formSchema = z.object({
-  name: z.string().describe('Name').default(''),
+  name2: z.string().describe('Name').default(''),
   from: z.string().describe('From address').default(''),
   csat_enabled: z.boolean().describe('Enable CSAT').default(false),
   imap: z
@@ -56,7 +56,7 @@ export const formSchema = z.object({
         .number({ invalid_type_error: 'Must be a number.' })
         .min(1, { message: 'Must be at least 1.' })
         .describe('Maximum concurrent connections to the server.')
-        .default(10),
+        .default(2),
       max_msg_retries: z
         .number({ invalid_type_error: 'Must be a number.' })
         .min(0, { message: 'Must be at least 0.' })

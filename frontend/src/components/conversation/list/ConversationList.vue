@@ -47,9 +47,8 @@
       <div v-else>
         <div class="space-y-5 px-2">
           <ConversationListItem class="mt-2" :conversation="conversation"
-            :currentConversation="conversationStore.current"
-            v-for="conversation in conversationStore.conversationsList" :key="conversation.uuid"
-            :contactFullName="conversationStore.getContactFullName(conversation.uuid)" />
+            :currentConversation="conversationStore.current" v-for="conversation in conversationStore.conversationsList"
+            :key="conversation.uuid" :contactFullName="conversationStore.getContactFullName(conversation.uuid)" />
         </div>
       </div>
 
@@ -89,10 +88,12 @@ import EmptyList from '@/components/conversation/list/ConversationEmptyList.vue'
 import ConversationListItem from '@/components/conversation/list/ConversationListItem.vue'
 import ConversationListItemSkeleton from '@/components/conversation/list/ConversationListItemSkeleton.vue'
 
+
 const conversationStore = useConversationStore()
 let reFetchInterval = null
 
 // Re-fetch conversations list every 30 seconds for any missed updates.
+// FIXME: Figure out a better way to handle this.
 onMounted(() => {
   reFetchInterval = setInterval(() => {
     conversationStore.reFetchConversationsList(false)

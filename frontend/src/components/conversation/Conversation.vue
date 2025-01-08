@@ -13,12 +13,13 @@
           <DropdownMenuTrigger>
             <div class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm">
               <GalleryVerticalEnd size="14" class="text-secondary" />
-                <span class="text-secondary font-medium">{{ conversationStore.current.status }}</span>
+              <span class="text-secondary font-medium">{{ conversationStore.current.status }}</span>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem v-for="status in statuses" :key="status.name" @click="handleUpdateStatus(status.name)">
-              {{ status.name }}
+            <DropdownMenuItem v-for="status in conversationStore.statusesForSelect" :key="status.value"
+              @click="handleUpdateStatus(status.label)">
+              {{ status.label }}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -35,10 +36,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { useConversationStore } from '@/stores/conversation'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,21 +49,18 @@ import {
 } from 'lucide-vue-next'
 import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
-import api from '@/api'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
+import { useEmitter } from '@/composables/useEmitter'
 
 const conversationStore = useConversationStore()
-const statuses = ref([])
-
-onMounted(() => {
-  getStatuses()
-})
-
-const getStatuses = async () => {
-  const resp = await api.getStatuses()
-  statuses.value = resp.data.data
-}
+const emitter = useEmitter()
 
 const handleUpdateStatus = (status) => {
+  if (status === CONVERSATION_DEFAULT_STATUSES.SNOOZED) {
+    emitter.emit(EMITTER_EVENTS.SET_NESTED_COMMAND, 'snooze')
+    return
+  }
   conversationStore.updateStatus(status)
 }
 </script>

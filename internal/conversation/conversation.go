@@ -521,6 +521,7 @@ func (c *Manager) UpdateConversationStatus(uuid string, status []byte, snoozeDur
 }
 
 // GetDashboardCounts returns dashboard counts
+// TODO: Rename to overview [reports/overview].
 func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error) {
 	var counts = json.RawMessage{}
 	tx, err := c.db.BeginTxx(context.Background(), nil)
@@ -541,6 +542,7 @@ func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error
 		cond = " AND assigned_team_id = $1"
 		qArgs = append(qArgs, teamID)
 	}
+	// TODO: Add date range filter support.
 	cond += " AND c.created_at >= NOW() - INTERVAL '30 days'"
 
 	query := fmt.Sprintf(c.q.GetDashboardCounts, cond)

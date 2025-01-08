@@ -167,6 +167,9 @@ func main() {
 	// Start processing incoming and outgoing messages.
 	go conversation.Run(ctx, messageDispatchWrk, messageDispatchScanInterval)
 
+	// Run the unsnoozer.
+	go conversation.RunUnsnoozer(ctx)
+
 	// Start notifier.
 	go notifier.Run(ctx)
 
@@ -175,9 +178,6 @@ func main() {
 
 	// Purge unlinked message media.
 	go media.DeleteUnlinkedMessageMedia(ctx)
-
-	// Run the unsnoozer.
-	go conversation.RunUnsnoozer(ctx)
 
 	// Init the app
 	var app = &App{

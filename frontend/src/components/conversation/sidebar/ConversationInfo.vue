@@ -20,10 +20,11 @@
             {{ format(conversation.created_at, 'PPpp') }}
         </p>
     </div>
-
     <div class="flex flex-col gap-1 mb-5">
-        <p class="font-medium">First reply at</p>
-        <SlaDisplay :dueAt="conversation.first_reply_due_at" :actualAt="conversation.first_reply_at" />
+        <div class="flex justify-start items-center space-x-2">
+            <p class="font-medium">First reply at</p>
+            <SlaDisplay :dueAt="conversation.first_reply_due_at" :actualAt="conversation.first_reply_at" />
+        </div>
         <p v-if="conversation.first_reply_at">
             {{ format(conversation.first_reply_at, 'PPpp') }}
         </p>
@@ -31,8 +32,10 @@
     </div>
 
     <div class="flex flex-col gap-1 mb-5">
-        <p class="font-medium">Resolved at</p>
-        <SlaDisplay :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" />
+        <div class="flex justify-start items-center space-x-2">
+            <p class="font-medium">Resolved at</p>
+            <SlaDisplay :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" />
+        </div>
         <p v-if="conversation.resolved_at">
             {{ format(conversation.resolved_at, 'PPpp') }}
         </p>

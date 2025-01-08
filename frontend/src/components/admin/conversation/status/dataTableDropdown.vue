@@ -12,7 +12,7 @@
           <DropdownMenuItem> Edit </DropdownMenuItem>
         </DialogTrigger>
         <DropdownMenuItem @click="deleteStatus"
-          v-if="CONVERSATION_DEFAULT_STATUSES.includes(props.status.name) === false"> Delete </DropdownMenuItem>
+          v-if="CONVERSATION_DEFAULT_STATUSES_LIST.includes(props.status.name) === false"> Delete </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
@@ -54,7 +54,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
-import { CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation.js'
+import { CONVERSATION_DEFAULT_STATUSES_LIST } from '@/constants/conversation.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

@@ -1,6 +1,6 @@
 -- name: unsnooze-all
 UPDATE conversations
-SET snoozed_until = NULL
+SET snoozed_until = NULL, status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open')
 WHERE snoozed_until <= now();
 
 -- name: insert-conversation
@@ -133,7 +133,6 @@ WHERE uuid = $1;
 -- name: update-conversation-assigned-team
 UPDATE conversations
 SET assigned_team_id = $2,
-assigned_user_id = NULL,
 updated_at = now()
 WHERE uuid = $1;
 
@@ -154,9 +153,9 @@ SET status_id = (SELECT id FROM conversation_statuses WHERE name = $2),
                 END,
     snoozed_until = CASE 
                       WHEN $2 = 'Snoozed' THEN 
-                          COALESCE(snoozed_until, $3)
+                          $3::timestamptz
                       ELSE 
-                          snoozed_until
+                          NULL
                     END,
     updated_at = now()
 WHERE uuid = $1;
@@ -352,6 +351,7 @@ SELECT
     m.private,
     m.sender_type,
     m.sender_id,
+    m.meta,
     COALESCE(
         json_agg(
             json_build_object(
@@ -407,6 +407,7 @@ SELECT
     m.private,
     m.sender_id,
     m.sender_type,
+    m.meta,
     COALESCE(a.attachment_details, '[]'::json) AS attachments
 FROM conversation_messages m
 LEFT JOIN attachments a ON a.message_id = m.id

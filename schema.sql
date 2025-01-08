@@ -9,6 +9,7 @@ DROP TYPE IF EXISTS "conversation_assignment_type" CASCADE; CREATE TYPE "convers
 DROP TYPE IF EXISTS "sla_type" CASCADE; CREATE TYPE "sla_type" AS ENUM ('first_response','resolution');
 DROP TYPE IF EXISTS "template_type" CASCADE; CREATE TYPE "template_type" AS ENUM ('email_outgoing', 'email_notification');
 DROP TYPE IF EXISTS "user_type" CASCADE; CREATE TYPE "user_type" AS ENUM ('agent', 'contact');
+DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('openai');
 
 DROP TABLE IF EXISTS conversation_slas CASCADE;
 CREATE TABLE conversation_slas (
@@ -305,7 +306,6 @@ CREATE TABLE csat_responses (
     response_timestamp TIMESTAMPTZ NULL,
     CONSTRAINT constraint_csat_responses_on_rating CHECK (rating >= 0 AND rating <= 5),
     CONSTRAINT constraint_csat_responses_on_feedback CHECK (length(feedback) <= 1000),
-	CONSTRAINT constraint_csat_responses_conversation_and_assigned_agent_unique UNIQUE (conversation_id, assigned_agent_id)
 );
 
 DROP TABLE IF EXISTS business_hours CASCADE;
@@ -344,6 +344,18 @@ CREATE TABLE views (
     user_id INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
 	CONSTRAINT constraint_views_on_name CHECK (length(name) <= 140),
 	CONSTRAINT constraint_views_on_inbox_type CHECK (length(inbox_type) <= 140)
+);
+
+DROP TABLE IF EXISTS ai_providers CASCADE;
+CREATE TABLE ai_providers (
+  id SERIAL PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  name TEXT NOT NULL,
+  provider ai_provider NOT NULL,
+  config JSONB NOT NULL DEFAULT '{}',
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT constraint_ai_providers_on_name CHECK (length(name) <= 140)
 );
 
 -- Default settings

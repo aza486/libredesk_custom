@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
 	amodels "github.com/abhinavxd/artemis/internal/auth/models"
 	"github.com/abhinavxd/artemis/internal/automation/models"
 	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/artemis/internal/csat"
 	"github.com/abhinavxd/artemis/internal/envelope"
 	umodels "github.com/abhinavxd/artemis/internal/user/models"
 	"github.com/valyala/fasthttp"
@@ -177,7 +179,7 @@ func handleGetViewConversations(r *fastglue.Request) error {
 func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
-		user        = r.RequestCtx.UserValue("user").(amodels.User)
+		auser       = r.RequestCtx.UserValue("user").(amodels.User)
 		teamIDStr   = r.RequestCtx.UserValue("team_id").(string)
 		order       = string(r.RequestCtx.QueryArgs().Peek("order"))
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
@@ -189,6 +191,11 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 	teamID, _ := strconv.Atoi(teamIDStr)
 	if teamID < 1 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `team_id`", nil, envelope.InputError)
+	}
+
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 
 	// Check if user belongs to the team.
@@ -427,20 +434,22 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 func handleUpdateConversationStatus(r *fastglue.Request) error {
 	var (
 		app          = r.Context.(*App)
-		p            = r.RequestCtx.PostArgs()
-		status       = p.Peek("status")
-		snoozedUntil = p.Peek("snoozed_until")
+		status       = r.RequestCtx.PostArgs().Peek("status")
+		snoozedUntil = r.RequestCtx.PostArgs().Peek("snoozed_until")
 		uuid         = r.RequestCtx.UserValue("uuid").(string)
 		auser        = r.RequestCtx.UserValue("user").(amodels.User)
 	)
+
 	conversation, err := app.conversation.GetConversation(0, uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
 	user, err := app.user.Get(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
 	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -448,6 +457,7 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	if !allowed {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
+
 	if err := app.conversation.UpdateConversationStatus(uuid, status, snoozedUntil, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -457,18 +467,10 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 
 	// If status is `Resolved`, send CSAT survey if enabled on inbox.
 	if string(status) == cmodels.StatusResolved {
-		inbox, err := app.inbox.GetByID(conversation.InboxID)
-		if err != nil {
+		if err := sendCSATSurvey(app, conversation, user); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-		if inbox.CSATEnabled {
-			csat, err := app.csat.Create(conversation.ID, conversation.AssignedUserID.Int)
-			if err != nil {
-				return sendErrorEnvelope(r, err)
-			}
-		}
 	}
-
 	return r.SendEnvelope("Status updated successfully")
 }
 
@@ -476,9 +478,8 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 func handleAddConversationTags(r *fastglue.Request) error {
 	var (
 		app     = r.Context.(*App)
-		p       = r.RequestCtx.PostArgs()
 		tagIDs  = []int{}
-		tagJSON = p.Peek("tag_ids")
+		tagJSON = r.RequestCtx.PostArgs().Peek("tag_ids")
 		auser   = r.RequestCtx.UserValue("user").(amodels.User)
 		uuid    = r.RequestCtx.UserValue("uuid").(string)
 	)
@@ -564,4 +565,33 @@ func calculateSLA(app *App, conversation *cmodels.Conversation) error {
 	conversation.FirstReplyDueAt = null.NewTime(firstRespAt, firstRespAt != time.Time{})
 	conversation.ResolutionDueAt = null.NewTime(resolutionDueAt, resolutionDueAt != time.Time{})
 	return nil
+}
+
+// sendCSATSurvey sends a CSAT survey if enabled on the inbox.
+func sendCSATSurvey(app *App, conversation cmodels.Conversation, user umodels.User) error {
+	inbox, err := app.inbox.GetByID(conversation.InboxID)
+	if err != nil {
+		return err
+	}
+
+	if !inbox.CSATEnabled {
+		return nil
+	}
+
+	csatR, err := app.csat.Create(conversation.ID, conversation.AssignedUserID.Int)
+	if err != nil && err != csat.ErrCSATAlreadyExists {
+		return err
+	}
+
+	csatURL := fmt.Sprintf("%s/csat/%s", app.consts.AppBaseURL, csatR.UUID)
+	messageContent := fmt.Sprintf("Please rate your experience with us: <a href=\"%s\">Rate now</a>", csatURL)
+	meta := map[string]interface{}{
+		"is_csat": true,
+	}
+	metaJSON, err := json.Marshal(meta)
+	if err != nil {
+		app.lo.Error("error marshalling meta JSON for csat message", "error", err)
+		return err
+	}
+	return app.conversation.SendReply(nil, user.ID, conversation.UUID, messageContent, string(metaJSON))
 }

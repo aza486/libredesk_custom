@@ -73,7 +73,7 @@ type ConversationStore interface {
 	UpdateConversationStatus(uuid string, status, snoozeDur []byte, actor umodels.User) error
 	UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error
 	SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error
-	SendReply(media []mmodels.Media, senderID int, conversationUUID, content string) error
+	SendReply(media []mmodels.Media, senderID int, conversationUUID, content, meta string) error
 	RecordSLASet(conversationUUID string, actor umodels.User) error
 }
 

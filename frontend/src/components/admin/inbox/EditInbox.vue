@@ -85,7 +85,7 @@ onMounted(async () => {
     inbox.value = inboxData
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not fetch inbox',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

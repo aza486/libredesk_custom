@@ -1,12 +1,37 @@
 <template>
   <div class="max-h-[600px] overflow-y-auto">
+    <BubbleMenu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor">
+      <div class="BubbleMenu">
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button size="sm" variant="outline">
+              AI
+              <ChevronDown class="w-4 h-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem>Make friendly</DropdownMenuItem>
+            <DropdownMenuItem>Make formal</DropdownMenuItem>
+            <DropdownMenuItem>Make casual</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </BubbleMenu>
     <EditorContent :editor="editor" />
   </div>
 </template>
 
 <script setup>
 import { ref, watch, watchEffect, onUnmounted } from 'vue'
-import { useEditor, EditorContent } from '@tiptap/vue-3'
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
+import { ChevronDown } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit'

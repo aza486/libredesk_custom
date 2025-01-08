@@ -1,7 +1,8 @@
 <template>
   <Toaster />
-  <Sidebar :isLoading="false" :open="sidebarOpen" :userTeams="userStore.teams" :userViews="userViews" @update:open="sidebarOpen = $event"
-    @create-view="openCreateViewForm = true" @edit-view="editView" @delete-view="deleteView">
+  <Sidebar :isLoading="false" :open="sidebarOpen" :userTeams="userStore.teams" :userViews="userViews"
+    @update:open="sidebarOpen = $event" @create-view="openCreateViewForm = true" @edit-view="editView"
+    @delete-view="deleteView">
     <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
       <ResizableHandle id="resize-handle-1" />
       <ResizablePanel id="resize-panel-2">
@@ -12,6 +13,7 @@
       <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
     </ResizablePanelGroup>
   </Sidebar>
+  <Command/>
 </template>
 
 <script setup>
@@ -29,6 +31,7 @@ import { useConversationStore } from './stores/conversation'
 import ViewForm from '@/components/ViewForm.vue'
 import api from '@/api'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
+import Command from '@/components/command/command.vue'
 
 const { toast } = useToast()
 const emitter = useEmitter()
@@ -48,6 +51,7 @@ onMounted(() => {
   getUserViews()
   intiStores()
 })
+
 
 onUnmounted(() => {
   emitter.off(EMITTER_EVENTS.SHOW_TOAST, toast)

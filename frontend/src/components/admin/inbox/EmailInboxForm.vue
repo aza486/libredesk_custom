@@ -8,12 +8,12 @@
         description: 'Name for your inbox.'
       },
       from: {
-        label: 'Email address',
+        label: 'From email address',
         description: 'From email address. e.g. My Support <mysupport@example.com>'
       },
       csat_enabled: {
         label: 'CSAT',
-        description: 'Enable Customer Satisfaction Survey after resolving conversation.'
+        description: 'Send a CSAT survey after a conversation is marked as resolved.'
       },
       imap: {
         label: 'IMAP',
