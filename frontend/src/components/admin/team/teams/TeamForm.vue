@@ -1,7 +1,22 @@
 <template>
   <form @submit="onSubmit" class="space-y-6">
+
+    <FormField name="emoji" v-slot="{ componentField }">
+      <FormItem ref="emojiPickerContainer" class="relative">
+        <FormLabel>Emoji</FormLabel>
+        <FormControl>
+          <Input type="text" v-bind="componentField" @click="toggleEmojiPicker" />
+          <div v-if="isEmojiPickerVisible" class="absolute z-10 mt-2">
+            <EmojiPicker :native="true" @select="onSelectEmoji" class="w-[300px]" />
+          </div>
+        </FormControl>
+        <FormDescription>Select an emoji.</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
     <FormField v-slot="{ componentField }" name="name">
-      <FormItem v-auto-animate>
+      <FormItem>
         <FormLabel>Name</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Name" v-bind="componentField" />
@@ -29,7 +44,7 @@
         </FormControl>
         <FormDescription>
           Round robin: Conversations are assigned to team members in a round-robin fashion. <br>
-          Manual: Conversations are manually assigned to team members.
+          Manual: Conversations are to be picked by team members.
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -84,12 +99,12 @@
 </template>
 
 <script setup>
-import { watch, computed, ref, onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
+import { onClickOutside } from '@vueuse/core'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { teamFormSchema } from './teamFormSchema.js'
-import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import {
   Select,
   SelectContent,
@@ -109,41 +124,35 @@ import {
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { Input } from '@/components/ui/input'
+import EmojiPicker from 'vue3-emoji-picker'
+import 'vue3-emoji-picker/css'
 import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 
 const emitter = useEmitter()
-const timezones = computed(() => {
-  return Intl.supportedValuesOf('timeZone')
-})
+const timezones = computed(() => Intl.supportedValuesOf('timeZone'))
 const assignmentTypes = ['Round robin', 'Manual']
 const businessHours = ref([])
+
 const props = defineProps({
-  initialValues: {
-    type: Object,
-    required: false
-  },
-  submitForm: {
-    type: Function,
-    required: true
-  },
-  submitLabel: {
-    type: String,
-    required: false,
-    default: () => 'Submit'
-  },
-  isLoading: {
-    type: Boolean,
-    required: false,
-  }
+  initialValues: { type: Object, required: false },
+  submitForm: { type: Function, required: true },
+  submitLabel: { type: String, default: 'Submit' },
+  isLoading: { type: Boolean }
 })
 
 const form = useForm({
   validationSchema: toTypedSchema(teamFormSchema)
 })
 
+const isEmojiPickerVisible = ref(false)
+const emojiPickerContainer = ref(null)
+
 onMounted(() => {
   fetchBusinessHours()
+  onClickOutside(emojiPickerContainer, () => {
+    isEmojiPickerVisible.value = false
+  })
 })
 
 const fetchBusinessHours = async () => {
@@ -152,33 +161,39 @@ const fetchBusinessHours = async () => {
     businessHours.value = response.data.data
   } catch (error) {
     // If unauthorized (no permission), show a toast message.
-    if (error.response.status === 403) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+    const toastPayload = error.response.status === 403
+      ? {
         title: 'Unauthorized',
         variant: 'destructive',
         description: 'You do not have permission to view business hours.'
-      })
-    } else {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      }
+      : {
         title: 'Could not fetch business hours',
         variant: 'destructive',
         description: handleHTTPError(error).message
-      })
-    }
+      }
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, toastPayload)
   }
 }
 
-const onSubmit = form.handleSubmit((values) => {
+const onSubmit = form.handleSubmit(values => {
   props.submitForm(values)
 })
 
-// Watch for changes in initialValues and update the form.
 watch(
   () => props.initialValues,
-  (newValues) => {
+  newValues => {
     if (Object.keys(newValues).length === 0) return
     form.setValues(newValues)
   },
   { immediate: true }
 )
+
+function toggleEmojiPicker () {
+  isEmojiPickerVisible.value = !isEmojiPickerVisible.value
+}
+
+function onSelectEmoji (emoji) {
+  form.setFieldValue('emoji', emoji.i || emoji)
+}
 </script>

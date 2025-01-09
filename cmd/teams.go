@@ -55,13 +55,14 @@ func handleCreateTeam(r *fastglue.Request) error {
 		app                        = r.Context.(*App)
 		name                       = string(r.RequestCtx.PostArgs().Peek("name"))
 		timezone                   = string(r.RequestCtx.PostArgs().Peek("timezone"))
+		emoji                      = string(r.RequestCtx.PostArgs().Peek("emoji"))
 		conversationAssignmentType = string(r.RequestCtx.PostArgs().Peek("conversation_assignment_type"))
 	)
 	businessHrsID, err := strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
 	if err != nil || businessHrsID == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `business_hours_id`.", nil, envelope.InputError)
 	}
-	if err := app.team.Create(name, timezone, conversationAssignmentType, businessHrsID); err != nil {
+	if err := app.team.Create(name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Team created successfully.")
@@ -73,6 +74,7 @@ func handleUpdateTeam(r *fastglue.Request) error {
 		app                        = r.Context.(*App)
 		name                       = string(r.RequestCtx.PostArgs().Peek("name"))
 		timezone                   = string(r.RequestCtx.PostArgs().Peek("timezone"))
+		emoji                      = string(r.RequestCtx.PostArgs().Peek("emoji"))
 		conversationAssignmentType = string(r.RequestCtx.PostArgs().Peek("conversation_assignment_type"))
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
@@ -86,7 +88,7 @@ func handleUpdateTeam(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `business_hours_id`.", nil, envelope.InputError)
 	}
 
-	if err = app.team.Update(id, name, timezone, conversationAssignmentType, businessHrsID); err != nil {
+	if err = app.team.Update(id, name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

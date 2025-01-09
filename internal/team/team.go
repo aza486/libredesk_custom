@@ -102,8 +102,8 @@ func (u *Manager) Get(id int) (models.Team, error) {
 }
 
 // Create creates a new team.
-func (u *Manager) Create(name, timezone, conversationAssignmentType string, businessHrsID int) error {
-	if _, err := u.q.InsertTeam.Exec(name, timezone, conversationAssignmentType, businessHrsID); err != nil {
+func (u *Manager) Create(name, timezone, conversationAssignmentType string, businessHrsID int, emoji string) error {
+	if _, err := u.q.InsertTeam.Exec(name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
 		u.lo.Error("error inserting team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating team", nil)
 	}
@@ -111,8 +111,8 @@ func (u *Manager) Create(name, timezone, conversationAssignmentType string, busi
 }
 
 // Update updates an existing team.
-func (u *Manager) Update(id int, name, timezone, conversationAssignmentType string, businessHrsID int) error {
-	if _, err := u.q.UpdateTeam.Exec(id, name, timezone, conversationAssignmentType, businessHrsID); err != nil {
+func (u *Manager) Update(id int, name, timezone, conversationAssignmentType string, businessHrsID int, emoji string) error {
+	if _, err := u.q.UpdateTeam.Exec(id, name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
 		u.lo.Error("error updating team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating team", nil)
 	}

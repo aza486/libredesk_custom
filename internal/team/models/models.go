@@ -15,8 +15,8 @@ type Team struct {
 	UpdatedAt                  time.Time   `db:"updated_at" json:"updated_at"`
 	Emoji                      null.String `db:"emoji" json:"emoji"`
 	Name                       string      `db:"name" json:"name"`
-	ConversationAssignmentType string      `db:"conversation_assignment_type" json:"conversation_assignment_type"`
-	Timezone                   string      `db:"timezone" json:"timezone"`
+	ConversationAssignmentType string      `db:"conversation_assignment_type" json:"conversation_assignment_type,omitempty"`
+	Timezone                   string      `db:"timezone" json:"timezone,omitempty"`
 	BusinessHoursID            int         `db:"business_hours_id" json:"business_hours_id,omitempty"`
 }
 

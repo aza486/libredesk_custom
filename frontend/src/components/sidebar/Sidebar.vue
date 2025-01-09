@@ -590,7 +590,7 @@ const hasConversationOpen = computed(() => {
                             <SidebarMenuSubItem v-for="team in userTeams" :key="team.id">
                               <SidebarMenuButton :isActive="isActiveParent(`/teams/${team.id}`)" asChild>
                                 <router-link :to="{ name: 'team-inbox', params: { teamID: team.id } }">
-                                  <span>{{ team.name }}</span>
+                                  {{ team.emoji }}<span>{{ team.name }}</span>
                                 </router-link>
                               </SidebarMenuButton>
                             </SidebarMenuSubItem>

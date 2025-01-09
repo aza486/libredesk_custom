@@ -18,10 +18,10 @@ JOIN teams t ON t.id = tm.team_id
 WHERE t.id = $1;
 
 -- name: insert-team
-INSERT INTO teams (name, timezone, conversation_assignment_type, business_hours_id) VALUES ($1, $2, $3, $4) RETURNING id;
+INSERT INTO teams (name, timezone, conversation_assignment_type, business_hours_id, emoji) VALUES ($1, $2, $3, $4, $5) RETURNING id;
 
 -- name: update-team
-UPDATE teams set name = $2, timezone = $3, conversation_assignment_type = $4, business_hours_id = $5 where id = $1;
+UPDATE teams set name = $2, timezone = $3, conversation_assignment_type = $4, business_hours_id = $5, emoji = $6 where id = $1;
 
 -- name: upsert-user-teams
 WITH delete_old_teams AS (

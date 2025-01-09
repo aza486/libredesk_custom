@@ -35,7 +35,7 @@ SELECT
     u.last_name,
     u.roles,
     COALESCE(
-        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name))
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
          FROM team_members tm
          JOIN teams t ON tm.team_id = t.id
          WHERE tm.user_id = u.id),

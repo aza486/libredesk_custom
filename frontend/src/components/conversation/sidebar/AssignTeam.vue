@@ -13,8 +13,9 @@
                 <CommandEmpty>No team found.</CommandEmpty>
                 <CommandList>
                     <CommandGroup>
-                        <CommandItem v-for="team in filteredTeams" :key="team.id" :value="team.id" @select="handleSelectTeam(team.id)">
-                            {{ team.name }}
+                        <CommandItem v-for="team in filteredTeams" :key="team.id" :value="team.id"
+                            @select="handleSelectTeam(team.id)">
+                            {{ team.emoji }} {{ team.name }}
                             <CheckIcon :class="cn(
                                 'ml-auto h-4 w-4',
                                 conversation.assigned_team_id === team.id ? 'opacity-100' : 'opacity-0'
