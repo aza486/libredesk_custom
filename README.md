@@ -2,6 +2,10 @@
 
 Self-hosted 100% open-source support desk. Single binary with minimal dependencies.
 
+> **⚠️ WARNING:** This program is currently in **alpha**. Features and APIs may change and are not yet fully tested.
+
+
+
 ![LibreDesk Screenshot](https://github.com/user-attachments/assets/4d0a3cfc-4342-42bf-b567-c50482306d36)
 
 ## Features
