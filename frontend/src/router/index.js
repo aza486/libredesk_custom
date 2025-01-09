@@ -230,7 +230,7 @@ const routes = [
               {
                 path: 'teams',
                 component: () => import('@/components/admin/team/teams/Teams.vue'),
-                meta: { title: 'Teams Management' },
+                meta: { title: 'Teams' },
                 children: [
 
                   {
@@ -288,7 +288,7 @@ const routes = [
           {
             path: 'general',
             component: () => import('@/components/admin/general/General.vue'),
-            meta: { title: 'General Settings' }
+            meta: { title: 'General' }
           },
           {
             path: 'templates',

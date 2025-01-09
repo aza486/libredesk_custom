@@ -567,7 +567,7 @@ func calculateSLA(app *App, conversation *cmodels.Conversation) error {
 
 // sendCSATSurvey sends a CSAT survey if enabled on the inbox.
 func sendCSATSurvey(app *App, conversation cmodels.Conversation, user umodels.User) error {
-	inbox, err := app.inbox.GetByID(conversation.InboxID)
+	inbox, err := app.inbox.GetDBRecord(conversation.InboxID)
 	if err != nil {
 		return err
 	}

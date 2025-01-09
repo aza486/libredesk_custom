@@ -9,7 +9,7 @@ INSERT INTO inboxes
 (channel, config, "name", "from")
 VALUES($1, $2, $3, $4);
 
--- name: get-by-id
+-- name: get-inbox
 SELECT * from inboxes where id = $1 and deleted_at is NULL;
 
 -- name: update

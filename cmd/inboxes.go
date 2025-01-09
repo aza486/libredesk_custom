@@ -23,7 +23,7 @@ func handleGetInbox(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	inbox, err := app.inbox.GetByID(id)
+	inbox, err := app.inbox.GetDBRecord(id)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching inbox", nil, envelope.GeneralError)
 	}
@@ -74,7 +74,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	}
 
 	if err := reloadInboxes(app); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes, Please restart the app if the issue persists", nil, envelope.GeneralError)
 	}
 
 	return r.SendEnvelope(inbox)

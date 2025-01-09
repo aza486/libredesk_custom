@@ -64,10 +64,11 @@
       <!-- Attachments preview -->
       <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete"></AttachmentsPreview>
 
+
       <!-- Bottom menu bar -->
       <ReplyBoxBottomMenuBar :handleFileUpload="handleFileUpload" :handleInlineImageUpload="handleInlineImageUpload"
         :isBold="isBold" :isItalic="isItalic" @toggleBold="toggleBold" @toggleItalic="toggleItalic" :hasText="hasText"
-        :handleSend="handleSend">
+        :handleSend="handleSend" @emojiSelect="handleEmojiSelect">
       </ReplyBoxBottomMenuBar>
     </div>
 
@@ -92,9 +93,7 @@ import AttachmentsPreview from '@/components/attachment/AttachmentsPreview.vue'
 import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxMenuBar.vue'
 
 const conversationStore = useConversationStore()
-
 const emitter = useEmitter()
-
 let editorInstance = ref(null)
 const isEditorFullscreen = ref(false)
 const cursorPosition = ref(0)
@@ -329,5 +328,9 @@ const selectCannedResponse = (content) => {
   contentToSet.value = content
   filteredCannedResponses.value = []
   selectedResponseIndex.value = -1
+}
+
+const handleEmojiSelect = (emoji) => {
+  editorInstance.value.chain().focus().insertContent(emoji).run()
 }
 </script>

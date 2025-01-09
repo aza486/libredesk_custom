@@ -338,7 +338,7 @@ const hasConversationOpen = computed(() => {
 <template>
   <div class="flex flex-row justify-between h-full">
     <div class="flex-1">
-      <SidebarProvider :open="open" @update:open="($event) => emit('update:open', $event)">
+      <SidebarProvider :open="open" @update:open="($event) => emit('update:open', $event)" style="--sidebar-width: 17rem;">
         <!-- Flex Container that holds all the sidebar components -->
         <Sidebar collapsible="icon" class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0">
 

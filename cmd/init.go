@@ -471,11 +471,11 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 
 	// Load JSON data into Koanf.
 	if err := ko.Load(rawbytes.Provider([]byte(inboxRecord.Config)), kjson.Parser()); err != nil {
-		log.Fatalf("error loading config: %v", err)
+		return nil, fmt.Errorf("loading config: %w", err)
 	}
 
 	if err := ko.UnmarshalWithConf("", &config, koanf.UnmarshalConf{Tag: "json"}); err != nil {
-		log.Fatalf("error unmarshalling `%s` %s config: %v", inboxRecord.Channel, inboxRecord.Name, err)
+		return nil, fmt.Errorf("unmarshalling `%s` %s config: %w", inboxRecord.Channel, inboxRecord.Name, err)
 	}
 
 	if len(config.SMTP) == 0 {
@@ -499,11 +499,10 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 	})
 
 	if err != nil {
-		log.Fatalf("ERROR: initalizing `%s` inbox: `%s` error : %v", inboxRecord.Channel, inboxRecord.Name, err)
-		return nil, err
+		return nil, fmt.Errorf("initializing `%s` inbox: `%s` error : %w", inboxRecord.Channel, inboxRecord.Name, err)
 	}
 
-	log.Printf("`%s` inbox successfully initalized. %d smtp servers. %d imap clients.", inboxRecord.Name, len(config.SMTP), len(config.IMAP))
+	log.Printf("`%s` inbox successfully initialized. %d SMTP servers. %d IMAP clients.", inboxRecord.Name, len(config.SMTP), len(config.IMAP))
 
 	return inbox, nil
 }

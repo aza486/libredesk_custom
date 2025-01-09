@@ -82,7 +82,7 @@ type Manager struct {
 
 // Prepared queries.
 type queries struct {
-	GetByID     *sqlx.Stmt `query:"get-by-id"`
+	GetInbox    *sqlx.Stmt `query:"get-inbox"`
 	GetActive   *sqlx.Stmt `query:"get-active-inboxes"`
 	GetAll      *sqlx.Stmt `query:"get-all-inboxes"`
 	Update      *sqlx.Stmt `query:"update"`
@@ -119,11 +119,10 @@ func (m *Manager) Register(i Inbox) {
 	m.inboxes[i.Identifier()] = i
 }
 
-// Get returns the inbox with the given ID.
+// Get retrieves the initialized inbox instance with the specified ID from memory.
 func (m *Manager) Get(id int) (Inbox, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
 	i, ok := m.inboxes[id]
 	if !ok {
 		return nil, ErrInboxNotFound
@@ -131,10 +130,10 @@ func (m *Manager) Get(id int) (Inbox, error) {
 	return i, nil
 }
 
-// GetByID returns an inbox from the DB by the given ID.
-func (m *Manager) GetByID(id int) (imodels.Inbox, error) {
+// GetDBRecord returns the inbox record from the DB.
+func (m *Manager) GetDBRecord(id int) (imodels.Inbox, error) {
 	var inbox imodels.Inbox
-	if err := m.queries.GetByID.Get(&inbox, id); err != nil {
+	if err := m.queries.GetInbox.Get(&inbox, id); err != nil {
 		m.lo.Error("error fetching inbox", "error", err)
 		return inbox, envelope.NewError(envelope.GeneralError, "Error fetching inbox", nil)
 	}
@@ -195,7 +194,7 @@ func (m *Manager) InitInboxes(initFn initFn) error {
 	return nil
 }
 
-// Reload reloads inboxes with the provided initialization function.
+// Reload hot reloads the inboxes with the given init function.
 func (m *Manager) Reload(ctx context.Context, initFn initFn) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -248,7 +247,7 @@ func (m *Manager) Reload(ctx context.Context, initFn initFn) error {
 
 // Update updates an inbox in the DB.
 func (m *Manager) Update(id int, inbox imodels.Inbox) error {
-	current, err := m.GetByID(id)
+	current, err := m.GetDBRecord(id)
 	if err != nil {
 		return err
 	}
