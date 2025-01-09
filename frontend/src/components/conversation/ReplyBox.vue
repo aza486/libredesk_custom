@@ -1,6 +1,7 @@
 <template>
   <div>
     <!-- Fullscreen editor -->
+    <!-- TODO: Has to be a better way to do this than creating two separate editor components -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = $event">
       <DialogContent class="max-w-[70%] max-h-[70%] h-[70%] m-0 p-6">
         <div v-if="isEditorFullscreen">
@@ -19,8 +20,7 @@
           <Editor v-model:selectedText="selectedText" v-model:isBold="isBold" v-model:isItalic="isItalic"
             v-model:htmlContent="htmlContent" v-model:textContent="textContent" :placeholder="editorPlaceholder"
             :aiPrompts="aiPrompts" @keydown="handleKeydown" @aiPromptSelected="handleAiPromptSelected"
-            @editorReady="onEditorReady" @clearContent="clearContent" :contentToSet="contentToSet"
-            v-model:cursorPosition="cursorPosition" />
+            @editorReady="onEditorReady" :contentToSet="contentToSet" v-model:cursorPosition="cursorPosition" />
         </div>
       </DialogContent>
     </Dialog>
@@ -58,7 +58,7 @@
       <Editor v-model:selectedText="selectedText" v-model:isBold="isBold" v-model:isItalic="isItalic"
         v-model:htmlContent="htmlContent" v-model:textContent="textContent" :placeholder="editorPlaceholder"
         :aiPrompts="aiPrompts" @keydown="handleKeydown" @aiPromptSelected="handleAiPromptSelected"
-        @editorReady="onEditorReady" @clearContent="clearContent" :contentToSet="contentToSet"
+        @editorReady="onEditorReady" :contentToSet="contentToSet" @send="handleSend"
         v-model:cursorPosition="cursorPosition" />
 
       <!-- Attachments preview -->
@@ -101,7 +101,6 @@ const cursorPosition = ref(0)
 const selectedText = ref('')
 const htmlContent = ref('')
 const textContent = ref('')
-const clearContent = ref(false)
 const contentToSet = ref('')
 const isBold = ref(false)
 const isItalic = ref(false)
@@ -115,6 +114,8 @@ const cannedResponsesRef = ref(null)
 const cannedResponses = ref([])
 
 const aiPrompts = ref([])
+
+const editorPlaceholder = "Press Enter to add a new line; Press '/' to select a Canned Response; Press Ctrl + Enter to send."
 
 onMounted(async () => {
   await Promise.all([fetchCannedResponses(), fetchAiPrompts()])
@@ -169,10 +170,6 @@ const toggleBold = () => {
 const toggleItalic = () => {
   isItalic.value = !isItalic.value
 }
-
-const editorPlaceholder = computed(() => {
-  return "Press enter to add a new line; Press '/' to select a Canned Response."
-})
 
 const attachments = computed(() => {
   return uploadedFiles.value.filter(upload => upload.disposition === 'attachment')
@@ -287,10 +284,9 @@ const handleSend = async () => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
-  } finally {
-    clearContent.value = true
-    uploadedFiles.value = []
   }
+  editorInstance.value.commands.clearContent()
+  uploadedFiles.value = []
   api.updateAssigneeLastSeen(conversationStore.current.uuid)
 }
 

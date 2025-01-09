@@ -1,4 +1,4 @@
-// Package ai handles management of LLM providers.
+// Package ai manages AI prompts and integrates with LLM providers.
 package ai
 
 import (
@@ -51,7 +51,6 @@ func New(opts Opts) (*Manager, error) {
 
 // SendPrompt sends a prompt to the default provider and returns the response.
 func (m *Manager) SendPrompt(k string, prompt string) (string, error) {
-	// return "Hello Abhinav,\n\nI wanted to let you know that we have successfully added a top-up of Rs 20,000 to your account. You can expect to receive the funds by the end of the day.\n\nIf you have any concerns or questions, please don't hesitate to update this ticket. We are always happy to assist you in any way we can.\n\nPlease keep in mind that if we do not hear back from you within 24 hours, the ticket will be marked as <i>closed</i>. However, you can easily reopen it if you need further assistance. Additionally, you can always reach out to us through our support portal for any help you may need.\n\nThank you for choosing our services. We are here to make your experience as smooth and hassle-free as possible.\n\nBest regards, \n[Your Name]", nil
 	systemPrompt, err := m.getPrompt(k)
 	if err != nil {
 		return "", err

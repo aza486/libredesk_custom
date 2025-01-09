@@ -1380,6 +1380,11 @@
   resolved "https://registry.yarnpkg.com/@tiptap/extension-gapcursor/-/extension-gapcursor-2.4.0.tgz#2a738509d40f5f856492c11e32b10e4462f71216"
   integrity sha512-F4y/0J2lseohkFUw9P2OpKhrJ6dHz69ZScABUvcHxjznJLd6+0Zt7014Lw5PA8/m2d/w0fX8LZQ88pZr4quZPQ==
 
+"@tiptap/extension-hard-break@^2.11.0":
+  version "2.11.0"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-hard-break/-/extension-hard-break-2.11.0.tgz#0e199a1c58171fe1879e730b87666e759fe55c04"
+  integrity sha512-7pMgPNk2FnPT0LcWaWNNxOLK3LQnRSYFgrdBGMXec3sy+y3Lit3hM+EZhbZcHpTIQTbWWs+eskh1waRMIt0ZaQ==
+
 "@tiptap/extension-hard-break@^2.4.0":
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/@tiptap/extension-hard-break/-/extension-hard-break-2.4.0.tgz#b5bf5b065827280e450fba8f53d137654509d836"

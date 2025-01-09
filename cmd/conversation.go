@@ -193,13 +193,8 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `team_id`", nil, envelope.InputError)
 	}
 
-	user, err := app.user.Get(auser.ID)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-
 	// Check if user belongs to the team.
-	exists, err := app.team.UserBelongsToTeam(teamID, user.ID)
+	exists, err := app.team.UserBelongsToTeam(teamID, auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

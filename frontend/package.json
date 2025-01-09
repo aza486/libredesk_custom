@@ -20,6 +20,7 @@
     "@radix-icons/vue": "^1.0.0",
     "@tailwindcss/typography": "^0.5.10",
     "@tanstack/vue-table": "^8.19.2",
+    "@tiptap/extension-hard-break": "^2.11.0",
     "@tiptap/extension-image": "^2.5.9",
     "@tiptap/extension-link": "^2.9.1",
     "@tiptap/extension-list-item": "^2.4.0",

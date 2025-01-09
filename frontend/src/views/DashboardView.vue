@@ -2,6 +2,9 @@
   <div class="page-content">
     <Spinner v-if="isLoading"></Spinner>
     <div class="space-y-4">
+      <div class="text-sm text-gray-500 text-right">
+        Last updated: {{ new Date(lastUpdate).toLocaleTimeString() }}
+      </div>
       <div class="mt-7 flex w-full space-x-4" v-auto-animate>
         <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
         <Card class="w-8/12" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
@@ -17,42 +20,60 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useToast } from '@/components/ui/toast/use-toast'
 import api from '@/api'
-
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import Card from '@/components/dashboard/DashboardCard.vue'
 import LineChart from '@/components/dashboard/DashboardLineChart.vue'
 import BarChart from '@/components/dashboard/DashboardBarChart.vue'
-
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 
 const { toast } = useToast()
 const isLoading = ref(false)
 const cardCounts = ref({})
 const chartData = ref({})
+const lastUpdate = ref(new Date())
+let updateInterval
+
 const agentCountCardsLabels = {
   open: 'Total',
   awaiting_response: 'Awaiting Response',
   unassigned: 'Unassigned',
   pending: 'Pending'
 }
+
+// TODO: Build agent status feature.
 const sampleAgentStatusLabels = {
   online: 'Online',
   offline: 'Offline',
-  away: 'Away',
+  away: 'Away'
 }
-
 const sampleAgentStatusCounts = {
   online: 5,
   offline: 2,
-  away: 1,
+  away: 1
 }
 
 onMounted(() => {
   getDashboardData()
+  startRealtimeUpdates()
 })
+
+onUnmounted(() => {
+  stopRealtimeUpdates()
+})
+
+const startRealtimeUpdates = () => {
+  updateInterval = setInterval(() => {
+    getDashboardData()
+    lastUpdate.value = new Date()
+  }, 60000)
+}
+
+const stopRealtimeUpdates = () => {
+  clearInterval(updateInterval)
+}
 
 const getDashboardData = () => {
   isLoading.value = true

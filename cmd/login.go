@@ -50,5 +50,5 @@ func handleLogout(r *fastglue.Request) error {
 		"no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
 	r.RequestCtx.Response.Header.Add("Pragma", "no-cache")
 	r.RequestCtx.Response.Header.Add("Expires", "-1")
-	return r.RedirectURI("dashboard", fasthttp.StatusFound, nil, "")
+	return r.RedirectURI("/", fasthttp.StatusFound, nil, "")
 }

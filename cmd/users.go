@@ -287,11 +287,7 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.Get(auser.ID)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	u, err := app.user.Get(user.ID)
+	u, err := app.user.Get(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

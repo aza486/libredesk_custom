@@ -12,11 +12,14 @@
   padding: 1rem 1rem;
   height: 100%;
   overflow-y: scroll;
-  padding-bottom: 50px;
+  padding-bottom: 100px;
+}
+
+body {
+  overflow: hidden;
 }
 
 // Theme.
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -145,7 +148,6 @@
   border
   rounded-xl;
   box-shadow: 1px 1px 1px 0px rgba(0, 0, 0, 0.1);
-  // To make email tables fit.
   table {
     width: 100% !important;
   }
@@ -265,4 +267,16 @@ a[data-active="false"]:hover {
   color: hsl(var(--sidebar-accent-foreground)) !important;
   font-weight: 500;
   transition: background-color 0.2s, color 0.2s;
+}
+
+.show-quoted-text {
+  blockquote {
+    @apply block;
+  }
+}
+
+.hide-quoted-text {
+  blockquote {
+    @apply hidden;
+  }
 }

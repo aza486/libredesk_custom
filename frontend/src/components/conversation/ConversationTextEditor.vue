@@ -1,6 +1,7 @@
 <template>
   <div class="max-h-[600px] overflow-y-auto">
-    <BubbleMenu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor" class="bg-white p-1 box rounded-lg">
+    <BubbleMenu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor"
+      class="bg-white p-1 box rounded-lg will-change-transform">
       <div class="flex space-x-1 items-center">
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -44,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
+import HardBreak from '@tiptap/extension-hard-break'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 
@@ -52,9 +54,7 @@ const textContent = defineModel('textContent')
 const htmlContent = defineModel('htmlContent')
 const isBold = defineModel('isBold')
 const isItalic = defineModel('isItalic')
-const cursorPosition = defineModel('cursorPosition', {
-  default: 0
-})
+const cursorPosition = defineModel('cursorPosition', { default: 0 })
 
 const props = defineProps({
   placeholder: String,
@@ -66,36 +66,52 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits([
-  'send',
-  'editorReady',
-  'aiPromptSelected'
-])
+const emit = defineEmits(['send', 'editorReady', 'aiPromptSelected'])
 
-function emitPrompt (key) {
-  emit('aiPromptSelected', key)
+const emitPrompt = (key) => emit('aiPromptSelected', key)
+
+const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
+
+const editorConfig = {
+  extensions: [
+    StarterKit.configure({
+      hardBreak: false,
+    }),
+    HardBreak.extend({
+      addKeyboardShortcuts () {
+        return {
+          Enter: () => {
+            if (this.editor.isActive('orderedList') || this.editor.isActive('bulletList')) {
+              return this.editor.chain().createParagraphNear().run();
+            }
+            return this.editor.commands.setHardBreak();
+          },
+        }
+      }
+    }),
+    Image.configure({ HTMLAttributes: { class: 'inline-image' } }),
+    Placeholder.configure({ placeholder: () => props.placeholder }),
+    Link
+  ],
+  autofocus: true,
+  editorProps: {
+    attributes: { class: 'outline-none' },
+    handleKeyDown: (view, event) => {
+      if (event.ctrlKey && event.key === 'Enter') {
+        emit('send')
+        return true
+      }
+    }
+  }
 }
 
 const editor = ref(
   useEditor({
+    ...editorConfig,
     content: textContent.value,
-    extensions: [
-      StarterKit,
-      Image.configure({
-        HTMLAttributes: { class: 'inline-image' }
-      }),
-      Placeholder.configure({
-        placeholder: () => props.placeholder
-      }),
-      Link
-    ],
-    autofocus: true,
-    editorProps: { attributes: { class: 'outline-none' } },
     onSelectionUpdate: ({ editor }) => {
-      selectedText.value = editor.state.doc.textBetween(
-        editor.state.selection.from,
-        editor.state.selection.to
-      )
+      const { from, to } = editor.state.selection
+      selectedText.value = getSelectionText(from, to, editor.state.doc)
     },
     onUpdate: ({ editor }) => {
       htmlContent.value = editor.getHTML()
@@ -106,41 +122,44 @@ const editor = ref(
       if (cursorPosition.value) {
         editor.commands.setTextSelection(cursorPosition.value)
       }
-    },
+    }
   })
 )
 
 watchEffect(() => {
-  if (editor.value) {
-    emit('editorReady', editor.value)
-    isBold.value = editor.value.isActive('bold')
-    isItalic.value = editor.value.isActive('italic')
-  }
+  const editorInstance = editor.value
+  if (!editorInstance) return
+
+  emit('editorReady', editorInstance)
+  isBold.value = editorInstance.isActive('bold')
+  isItalic.value = editorInstance.isActive('italic')
 })
 
 watchEffect(() => {
-  if (isBold.value !== editor.value?.isActive('bold')) {
+  const editorInstance = editor.value
+  if (!editorInstance) return
+
+  if (isBold.value !== editorInstance.isActive('bold')) {
     isBold.value
-      ? editor.value?.chain().focus().setBold().run()
-      : editor.value?.chain().focus().unsetBold().run()
+      ? editorInstance.chain().focus().setBold().run()
+      : editorInstance.chain().focus().unsetBold().run()
   }
-  if (isItalic.value !== editor.value?.isActive('italic')) {
+  if (isItalic.value !== editorInstance.isActive('italic')) {
     isItalic.value
-      ? editor.value?.chain().focus().setItalic().run()
-      : editor.value?.chain().focus().unsetItalic().run()
+      ? editorInstance.chain().focus().setItalic().run()
+      : editorInstance.chain().focus().unsetItalic().run()
   }
 })
 
-watch(
-  () => props.contentToSet,
-  (newContent) => {
-    if (newContent) {
-      console.log('Setting content to -:', newContent)
-      editor.value.commands.setContent(newContent)
-      editor.value.commands.focus()
-    }
+watch(() => props.contentToSet, (newContent) => {
+  console.log('newContent', newContent)
+  if (newContent === '') {
+    editor.value?.commands.clearContent()
+  } else {
+    editor.value?.commands.setContent(newContent, true)
   }
-)
+  editor.value?.commands.focus()
+})
 
 watch(cursorPosition, (newPos, oldPos) => {
   if (editor.value && newPos !== oldPos && newPos !== editor.value.state.selection.from) {
@@ -149,7 +168,7 @@ watch(cursorPosition, (newPos, oldPos) => {
 })
 
 onUnmounted(() => {
-  editor.value.destroy()
+  editor.value?.destroy()
 })
 </script>
 

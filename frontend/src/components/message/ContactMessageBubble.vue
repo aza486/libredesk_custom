@@ -12,9 +12,17 @@
           {{ avatarFallback }}
         </AvatarFallback>
       </Avatar>
-      <div class="flex flex-col justify-end message-bubble !rounded-tl-none contact-message-bubble">
-        <Letter :html="messageContent" :allowedSchemas="['cid', 'https', 'http']" class="mb-1"
+      <div class="flex flex-col justify-end message-bubble !rounded-tl-none" :class="{
+        'show-quoted-text': showQuotedText,
+        'hide-quoted-text': !showQuotedText
+      }">
+        <Letter :html="sanitizedMessageContent" :allowedSchemas="['cid', 'https', 'http']" class="mb-1"
           :class="{ 'mb-3': message.attachments.length > 0 }" />
+        <div v-if="hasQuotedContent" @click="toggleQuote"
+          class="text-xs cursor-pointer text-muted-foreground px-2 py-1 w-max hover:bg-muted hover:text-primary rounded-md transition-all">
+          {{ showQuotedText ? 'Hide quoted text' : 'Show quoted text' }}
+        </div>
+
         <MessageAttachmentPreview :attachments="nonInlineAttachments" />
       </div>
     </div>
@@ -36,10 +44,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
-
+import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Letter } from 'vue-letter'
@@ -48,28 +56,39 @@ import MessageAttachmentPreview from '@/components/attachment/MessageAttachmentP
 const props = defineProps({
   message: Object
 })
+
 const convStore = useConversationStore()
+const showQuotedText = ref(false)
 
 const getAvatar = computed(() => {
-  return convStore.current.avatar_url ? convStore.conversation.avatar_url : ''
+  return convStore.current.avatar_url || ''
 })
 
-const messageContent = computed(() => 
-  props.message.attachments.reduce((content, { content_id, url }) => 
-    content.replace(new RegExp(`cid:${content_id}`, 'g'), url), 
-    props.message.content
+const sanitizedMessageContent = computed(() => {
+  const content = props.message.content || ''
+  return props.message.attachments.reduce((acc, { content_id, url }) =>
+    acc.replace(new RegExp(`cid:${content_id}`, 'g'), url),
+    content
   )
-)
+})
 
-const nonInlineAttachments = computed(() => 
+const hasQuotedContent = computed(() => sanitizedMessageContent.value.includes('<blockquote'))
+
+const toggleQuote = () => {
+  showQuotedText.value = !showQuotedText.value
+}
+
+const nonInlineAttachments = computed(() =>
   props.message.attachments.filter(attachment => attachment.disposition !== 'inline')
 )
 
 const getFullName = computed(() => {
-  return convStore.current.contact.first_name + ' ' + convStore.current.contact.last_name
+  const contact = convStore.current.contact || {}
+  return `${contact.first_name || ''} ${contact.last_name || ''}`.trim()
 })
 
 const avatarFallback = computed(() => {
-  return convStore.current.contact.first_name.toUpperCase().substring(0, 2)
+  const contact = convStore.current.contact || {}
+  return (contact.first_name || '').toUpperCase().substring(0, 2)
 })
 </script>
