@@ -5,7 +5,7 @@ VERSION := $(shell git describe --tags)
 BUILDSTR := ${VERSION} (Commit: ${LAST_COMMIT_DATE} (${LAST_COMMIT}), Build: $(shell date +"%Y-%m-%d %H:%M:%S %z"))
 
 # Binary names and paths
-BIN_ARTEMIS := artemis.bin
+BIN_LIBRE_DESK := libredesk.bin
 FRONTEND_DIR := frontend
 FRONTEND_DIST := ${FRONTEND_DIR}/dist
 STATIC := ${FRONTEND_DIST} i18n schema.sql static
@@ -36,7 +36,7 @@ backend-build: $(STUFFBIN)
 	@echo "→ Building backend..."
 	@CGO_ENABLED=0 go build \
 		-ldflags="-X 'main.buildString=${BUILDSTR}' -X 'main.buildDate=${LAST_COMMIT_DATE}' -s -w" \
-		-o ${BIN_ARTEMIS} cmd/*.go
+		-o ${BIN_LIBRE_DESK} cmd/*.go
 
 # Main build targets
 .PHONY: build
@@ -46,4 +46,4 @@ build: frontend-build backend-build stuff
 .PHONY: stuff
 stuff: $(STUFFBIN)
 	@echo "→ Stuffing static assets into binary..."
-	@$(STUFFBIN) -a stuff -in ${BIN_ARTEMIS} -out ${BIN_ARTEMIS} ${STATIC}
+	@$(STUFFBIN) -a stuff -in ${BIN_LIBRE_DESK} -out ${BIN_LIBRE_DESK} ${STATIC}

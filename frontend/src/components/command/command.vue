@@ -2,8 +2,13 @@
     <CommandDialog :open="open" @update:open="handleOpenChange">
         <CommandInput placeholder="Type a command or search..." @keydown="onInputKeydown" />
         <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Conversations" value="conversations" v-if="nestedCommand === null">
+            <CommandEmpty>
+                <p class="text-muted-foreground">No command available</p>
+            </CommandEmpty>
+
+            <!-- Commands requiring a conversation to be open -->
+            <CommandGroup heading="Conversations" value="conversations"
+                v-if="nestedCommand === null && conversationStore.current">
                 <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
                     Snooze
                 </CommandItem>
