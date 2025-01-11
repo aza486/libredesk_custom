@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/stringutil"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 )
 
 // Inbox represents a inbox record in DB.

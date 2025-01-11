@@ -7,7 +7,7 @@ import (
 	"net/smtp"
 	"net/textproto"
 
-	"github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/knadh/smtppool"
 )
 

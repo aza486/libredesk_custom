@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/business_hours/models"
+	"github.com/abhinavxd/libredesk/internal/business_hours/models"
 )
 
 // CalculateDeadline computes the SLA deadline from a start time and SLA duration in minutes

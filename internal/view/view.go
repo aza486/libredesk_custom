@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"embed"
 
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/view/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/view/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )

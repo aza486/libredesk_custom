@@ -4,9 +4,9 @@ package businesshours
 import (
 	"embed"
 
-	"github.com/abhinavxd/artemis/internal/business_hours/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/business_hours/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/volatiletech/null/v9"

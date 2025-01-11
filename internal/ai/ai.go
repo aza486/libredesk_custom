@@ -6,9 +6,9 @@ import (
 	"embed"
 	"encoding/json"
 
-	"github.com/abhinavxd/artemis/internal/ai/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/ai/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )

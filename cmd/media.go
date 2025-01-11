@@ -9,11 +9,11 @@ import (
 
 	"slices"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	amodels "github.com/abhinavxd/artemis/internal/auth/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/image"
-	"github.com/abhinavxd/artemis/internal/stringutil"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/image"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"

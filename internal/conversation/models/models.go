@@ -5,9 +5,9 @@ import (
 	"net/textproto"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	mmodels "github.com/abhinavxd/artemis/internal/media/models"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )

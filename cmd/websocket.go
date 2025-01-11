@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	amodels "github.com/abhinavxd/artemis/internal/auth/models"
-	"github.com/abhinavxd/artemis/internal/ws"
-	wsmodels "github.com/abhinavxd/artemis/internal/ws/models"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/ws"
+	wsmodels "github.com/abhinavxd/libredesk/internal/ws/models"
 	"github.com/fasthttp/websocket"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"

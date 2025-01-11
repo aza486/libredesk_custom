@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/abhinavxd/artemis/internal/inbox"
+	"github.com/abhinavxd/libredesk/internal/inbox"
 	"github.com/knadh/smtppool"
 	"github.com/zerodha/logf"
 )

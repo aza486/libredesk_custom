@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/ws/models"
+	"github.com/abhinavxd/libredesk/internal/ws/models"
 	"github.com/fasthttp/websocket"
 )
 

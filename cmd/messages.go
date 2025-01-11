@@ -3,10 +3,10 @@ package main
 import (
 	"strconv"
 
-	amodels "github.com/abhinavxd/artemis/internal/auth/models"
-	"github.com/abhinavxd/artemis/internal/automation/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	medModels "github.com/abhinavxd/artemis/internal/media/models"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/automation/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	medModels "github.com/abhinavxd/libredesk/internal/media/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

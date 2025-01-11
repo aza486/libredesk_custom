@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/automation/models"
-	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
-	mmodels "github.com/abhinavxd/artemis/internal/media/models"
+	"github.com/abhinavxd/libredesk/internal/automation/models"
+	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 )
 
 // evalConversationRules evaluates a list of rules against a given conversation.

@@ -3,8 +3,8 @@ package main
 import (
 	"strconv"
 
-	"github.com/abhinavxd/artemis/internal/envelope"
-	tmodels "github.com/abhinavxd/artemis/internal/tag/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	tmodels "github.com/abhinavxd/libredesk/internal/tag/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )

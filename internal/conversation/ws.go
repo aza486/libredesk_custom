@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	wsmodels "github.com/abhinavxd/artemis/internal/ws/models"
+	wsmodels "github.com/abhinavxd/libredesk/internal/ws/models"
 )
 
 // BroadcastNewMessage broadcasts a new message to the conversation subscribers.

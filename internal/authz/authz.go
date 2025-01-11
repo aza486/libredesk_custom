@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	cmodels "github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 	"github.com/zerodha/logf"

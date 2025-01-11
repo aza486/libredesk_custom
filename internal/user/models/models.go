@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	tmodels "github.com/abhinavxd/artemis/internal/team/models"
+	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )

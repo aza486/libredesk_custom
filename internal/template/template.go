@@ -7,9 +7,9 @@ import (
 	"errors"
 	"html/template"
 
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/template/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/template/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )

@@ -1,8 +1,8 @@
 package businesshours
 
 import (
-	"github.com/abhinavxd/artemis/internal/business_hours/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/business_hours/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 )
 
 // GetAllHolidays retrieves all holidays.

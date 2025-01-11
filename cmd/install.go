@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/abhinavxd/artemis/internal/user"
+	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/stuffbin"
 	"github.com/lib/pq"

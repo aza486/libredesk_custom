@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )

@@ -4,10 +4,10 @@ package role
 import (
 	"embed"
 
-	amodels "github.com/abhinavxd/artemis/internal/authz/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/role/models"
+	amodels "github.com/abhinavxd/libredesk/internal/authz/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/role/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/zerodha/logf"

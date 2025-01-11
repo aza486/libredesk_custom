@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/conversation"
-	"github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/team"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/conversation"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/team"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/mr-karan/balance"
 	"github.com/zerodha/logf"
 )

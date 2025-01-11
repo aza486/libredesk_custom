@@ -10,9 +10,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/media/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/media/models"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"

@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	amodels "github.com/abhinavxd/artemis/internal/automation/models"
-	"github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/inbox"
-	mmodels "github.com/abhinavxd/artemis/internal/media/models"
-	"github.com/abhinavxd/artemis/internal/stringutil"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	amodels "github.com/abhinavxd/libredesk/internal/automation/models"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/inbox"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/lib/pq"
 )
 
