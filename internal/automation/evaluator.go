@@ -24,18 +24,19 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 			continue
 		}
 
-		var results []bool
-		for _, group := range rule.Groups {
+		var groupEvalResults []bool
+		for idx, group := range rule.Groups {
 			if len(group.Rules) == 0 {
-				results = append(results, true)
+				e.lo.Debug("no rules found in group, skipping rule group evaluation", "group_num", idx+1, "conversation_uuid", conversation.UUID)
+				groupEvalResults = append(groupEvalResults, true)
 				continue
 			}
 			result := e.evaluateGroup(group.Rules, group.LogicalOp, conversation)
-			e.lo.Debug("evaluating group rules", "logical_op", group.LogicalOp, "result", result, "conversation_uuid", conversation.UUID)
-			results = append(results, result)
+			e.lo.Debug("group rule evaluation complete", "logical_op", group.LogicalOp, "result", result, "conversation_uuid", conversation.UUID)
+			groupEvalResults = append(groupEvalResults, result)
 		}
 
-		if evaluateFinalResult(results, rule.GroupOperator) {
+		if evaluateFinalResult(groupEvalResults, rule.GroupOperator) {
 			e.lo.Debug("rule evaluation successful executing actions", "conversation_uuid", conversation.UUID)
 			for _, action := range rule.Actions {
 				e.applyAction(action, conversation)
@@ -44,6 +45,8 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 				e.lo.Debug("first match rule execution mode, breaking out of rule evaluation", "conversation_uuid", conversation.UUID)
 				break
 			}
+		} else {
+			e.lo.Debug("rule evaluation failed, skipping actions", "group_eval_results", groupEvalResults, "conversation_uuid", conversation.UUID)
 		}
 	}
 }
