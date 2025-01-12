@@ -25,8 +25,6 @@ module.exports = {
     extend: {
       fontFamily: {
         inter: ['Inter', 'Helvetica Neue', 'sans-serif'],
-        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
-        poppins: ['Poppins', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
