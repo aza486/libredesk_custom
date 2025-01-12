@@ -20,10 +20,9 @@ func handleGetStatuses(r *fastglue.Request) error {
 	return r.SendEnvelope(out)
 }
 
-
 func handleCreateStatus(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
+		app    = r.Context.(*App)
 		status = cmodels.Status{}
 	)
 	if err := r.Decode(&status, "json"); err != nil {
@@ -66,7 +65,7 @@ func handleDeleteStatus(r *fastglue.Request) error {
 
 func handleUpdateStatus(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
+		app    = r.Context.(*App)
 		status = cmodels.Status{}
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))

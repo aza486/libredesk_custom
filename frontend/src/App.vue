@@ -1,8 +1,15 @@
 <template>
   <Toaster />
-  <Sidebar :isLoading="false" :open="sidebarOpen" :userTeams="userStore.teams" :userViews="userViews"
-    @update:open="sidebarOpen = $event" @create-view="openCreateViewForm = true" @edit-view="editView"
-    @delete-view="deleteView">
+  <Sidebar
+    :isLoading="false"
+    :open="sidebarOpen"
+    :userTeams="userStore.teams"
+    :userViews="userViews"
+    @update:open="sidebarOpen = $event"
+    @create-view="openCreateViewForm = true"
+    @edit-view="editView"
+    @delete-view="deleteView"
+  >
     <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
       <ResizableHandle id="resize-handle-1" />
       <ResizablePanel id="resize-panel-2">
@@ -14,7 +21,9 @@
       <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
     </ResizablePanelGroup>
   </Sidebar>
-  <Command/>
+  <div class="font-jakarta">
+    <Command />
+  </div>
 </template>
 
 <script setup>
@@ -29,6 +38,10 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { useConversationStore } from './stores/conversation'
+import { useInboxStore } from '@/stores/inbox'
+import { useUsersStore } from '@/stores/users'
+import { useTeamStore } from '@/stores/team'
+import { useSlaStore } from '@/stores/sla'
 import PageHeader from './components/common/PageHeader.vue'
 import ViewForm from '@/components/ViewForm.vue'
 import api from '@/api'
@@ -40,6 +53,10 @@ const emitter = useEmitter()
 const sidebarOpen = ref(true)
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
+const usersStore = useUsersStore()
+const teamStore = useTeamStore()
+const inboxStore = useInboxStore()
+const slaStore = useSlaStore()
 const router = useRouter()
 const userViews = ref([])
 const view = ref({})
@@ -51,19 +68,22 @@ onMounted(() => {
   listenViewRefresh()
   getCurrentUser()
   getUserViews()
-  intiStores()
+  initStores()
 })
-
 
 onUnmounted(() => {
   emitter.off(EMITTER_EVENTS.SHOW_TOAST, toast)
   emitter.off(EMITTER_EVENTS.REFRESH_LIST, refreshViews)
 })
 
-const intiStores = () => {
-  Promise.all([
+const initStores = async () => {
+  await Promise.all([
     conversationStore.fetchStatuses(),
-    conversationStore.fetchPriorities()
+    conversationStore.fetchPriorities(),
+    usersStore.fetchUsers(),
+    teamStore.fetchTeams(),
+    inboxStore.fetchInboxes(),
+    slaStore.fetchSlas()
   ])
 }
 
@@ -121,6 +141,7 @@ const listenViewRefresh = () => {
 
 const refreshViews = (data) => {
   openCreateViewForm.value = false
+  // TODO: move model to constants.
   if (data?.model === 'view') {
     getUserViews()
   }

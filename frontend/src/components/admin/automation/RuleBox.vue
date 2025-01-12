@@ -1,99 +1,142 @@
 <template>
   <div>
     <div class="mb-5">
-      <RadioGroup class="flex" :modelValue="ruleGroup.logical_op" @update:modelValue="handleGroupOperator">
+      <RadioGroup
+        class="flex"
+        :modelValue="ruleGroup.logical_op"
+        @update:modelValue="handleGroupOperator"
+      >
         <div class="flex items-center space-x-2">
           <RadioGroupItem value="OR" />
-          <Label for="r1">Match <b>ANY</b> of below.</Label>
+          <Label>Match <b>ANY</b> of below.</Label>
         </div>
         <div class="flex items-center space-x-2">
           <RadioGroupItem value="AND" />
-          <Label for="r1">Match <b>ALL</b> of below.</Label>
+          <Label>Match <b>ALL</b> of below.</Label>
         </div>
       </RadioGroup>
     </div>
-    <div class="box border p-5 space-y-5 rounded-lg">
+
+    <div class="space-y-5 rounded-lg" :class="{'box border p-5': ruleGroup.rules?.length > 0}">
       <div class="space-y-5">
         <div v-for="(rule, index) in ruleGroup.rules" :key="rule" class="space-y-5">
           <div v-if="index > 0">
             <hr class="border-t-2 border-dotted border-gray-200" />
           </div>
-          <div class="flex justify-between">
-            <div class="flex space-x-5">
-              <!-- Field selection -->
-              <Select v-model="rule.field" @update:modelValue="(value) => handleFieldChange(value, index)">
-                <SelectTrigger class="w-56">
-                  <SelectValue placeholder="Select field" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Conversation</SelectLabel>
-                    <SelectItem v-for="(field, key) in conversationFields" :key="key" :value="key">
-                      {{ field.label }}
-                    </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
 
-              <!-- Operator selection -->
-              <Select v-model="rule.operator" @update:modelValue="(value) => handleOperatorChange(value, index)">
-                <SelectTrigger class="w-56">
-                  <SelectValue placeholder="Select operator" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem v-for="(op, key) in getFieldOperators(rule.field)" :key="key" :value="op">
-                      {{ op }}
-                    </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            <div class="cursor-pointer" @click.prevent="removeCondition(index)">
-              <X size="16" />
-            </div>
-          </div>
-
-          <!-- Value input based on field type -->
-          <div v-if="showInput(index)">
-            <!-- Text input -->
-            <Input type="text" placeholder="Set value" v-if="inputType(index) === 'text'" v-model="rule.value"
-              @update:modelValue="(value) => handleValueChange(value, index)" />
-
-            <!-- Number input -->
-            <Input type="number" placeholder="Set value" v-if="inputType(index) === 'number'" v-model="rule.value"
-              @update:modelValue="(value) => handleValueChange(value, index)" />
-
-            <!-- Dropdown -->
-            <Select v-model="rule.value" @update:modelValue="(value) => handleValueChange(value, index)"
-              v-if="inputType(index) === 'select'">
+          <!-- Field -->
+          <div class="flex space-x-5 items-start">
+            <Select
+              v-model="rule.field"
+              @update:modelValue="(value) => handleFieldChange(value, index)"
+            >
               <SelectTrigger class="w-56">
-                <SelectValue placeholder="Select value" />
+                <SelectValue placeholder="Select field" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem v-for="(op, key) in getFieldOptions(rule.field)" :key="key" :value="op">
+                  <SelectLabel>Conversation</SelectLabel>
+                  <SelectItem v-for="(field, key) in conversationFilters" :key="key" :value="key">
+                    {{ field.label }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <!-- Operator -->
+            <Select
+              v-model="rule.operator"
+              @update:modelValue="(value) => handleOperatorChange(value, index)"
+            >
+              <SelectTrigger class="w-56">
+                <SelectValue placeholder="Select operator" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    v-for="(op, key) in getFieldOperators(rule.field)"
+                    :key="key"
+                    :value="op"
+                  >
                     {{ op }}
                   </SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
 
-            <!-- Tag -->
-            <TagsInput :defaultValue="fieldValueAsArray(rule.value)" v-if="inputType(index) === 'tag'"
-              @update:modelValue="(value) => handleValueChange(value, index)">
-              <TagsInputItem v-for="item in fieldValueAsArray(rule.value)" :key="item" :value="item">
-                <TagsInputItemText />
-                <TagsInputItemDelete />
-              </TagsInputItem>
-              <TagsInputInput placeholder="Select values" />
-            </TagsInput>
+            <!-- Value -->
+            <div v-if="showInput(index)" class="flex-1">
+              <!-- Plain text input -->
+              <Input
+                type="text"
+                placeholder="Set value"
+                v-if="inputType(index) === 'text'"
+                v-model="rule.value"
+                @update:modelValue="(value) => handleValueChange(value, index)"
+              />
+
+              <!-- Number input -->
+              <Input
+                type="number"
+                placeholder="Set value"
+                v-if="inputType(index) === 'number'"
+                v-model="rule.value"
+                @update:modelValue="(value) => handleValueChange(value, index)"
+              />
+
+              <!-- Select input -->
+              <Select
+                v-model="rule.value"
+                @update:modelValue="(value) => handleValueChange(value, index)"
+                v-if="inputType(index) === 'select'"
+              >
+                <SelectTrigger class="w-56">
+                  <SelectValue placeholder="Select value" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem
+                      v-for="op in getFieldOptions(rule.field)"
+                      :key="op.value"
+                      :value="op.value"
+                    >
+                      {{ op.label }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+
+              <!-- Tag input -->
+              <TagsInput
+                :defaultValue="fieldValueAsArray(rule.value)"
+                v-if="inputType(index) === 'tag'"
+                @update:modelValue="(value) => handleValueChange(value, index)"
+              >
+                <TagsInputItem
+                  v-for="item in fieldValueAsArray(rule.value)"
+                  :key="item"
+                  :value="item"
+                >
+                  <TagsInputItemText />
+                  <TagsInputItemDelete />
+                </TagsInputItem>
+                <TagsInputInput placeholder="Select values" />
+              </TagsInput>
+            </div>
+
+            <!-- Remove condition -->
+            <div class="cursor-pointer mt-2" @click.prevent="removeCondition(index)">
+              <X size="16" />
+            </div>
           </div>
 
           <div class="flex items-center space-x-2">
-            <Checkbox id="terms" :defaultChecked="rule.case_sensitive_match"
-              @update:checked="(value) => handleCaseSensitiveCheck(value, index)" />
-            <label for="terms"> Case sensitive match </label>
+            <Checkbox
+              id="terms"
+              :defaultChecked="rule.case_sensitive_match"
+              @update:checked="(value) => handleCaseSensitiveCheck(value, index)"
+            />
+            <label> Case sensitive match </label>
           </div>
         </div>
       </div>
@@ -105,7 +148,7 @@
 </template>
 
 <script setup>
-import { toRefs, ref, onMounted } from 'vue'
+import { toRefs } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
@@ -118,14 +161,17 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { TagsInput, TagsInputInput, TagsInputItem, TagsInputItemDelete, TagsInputItemText } from '@/components/ui/tags-input'
+import {
+  TagsInput,
+  TagsInputInput,
+  TagsInputItem,
+  TagsInputItemDelete,
+  TagsInputItemText
+} from '@/components/ui/tags-input'
 import { X } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { useEmitter } from '@/composables/useEmitter'
-import { handleHTTPError } from '@/utils/http'
-import api from '@/api'
+import { useConversationFilters } from '@/composables/useConversationFilters'
 
 const props = defineProps({
   ruleGroup: {
@@ -138,70 +184,8 @@ const props = defineProps({
   }
 })
 
-const emitter = useEmitter()
-const statuses = ref([])
-const priorities = ref([])
+const { conversationFilters } = useConversationFilters()
 const { ruleGroup } = toRefs(props)
-
-const conversationFields = {
-  content: {
-    label: 'Content',
-    type: 'text',
-    operators: ["contains", "not contains", "equals", "not equals", "set", "not set"],
-  },
-  subject: {
-    label: 'Subject',
-    type: 'text',
-    operators: ["contains", "not contains", "equals", "not equals", "set", "not set"],
-  },
-  status: {
-    label: 'Status',
-    type: 'select',
-    operators: ["equals", "not equals", "set", "not set"],
-    options: statuses,
-  },
-  priority: {
-    label: 'Priority',
-    type: 'select',
-    operators: ["equals", "not equals", "set", "not set"],
-    options: priorities,
-  },
-  assigned_team: {
-    label: 'Assigned team',
-    type: 'text',
-    operators: ["set", "not set"],
-  },
-  assigned_user: {
-    label: 'Assigned user',
-    type: 'text',
-    operators: ["set", "not set"],
-  },
-  hours_since_created: {
-    label: 'Hours since created',
-    type: 'number',
-    operators: ["greater than"],
-  },
-  hours_since_resolved: {
-    label: 'Hours since resolved',
-    type: 'number',
-    operators: ["greater than"],
-  },
-}
-
-onMounted(async () => {
-  try {
-    const [statusesResp, prioritiesResp] = await Promise.all([api.getStatuses(), api.getPriorities()])
-    statuses.value = statusesResp.data.data.map(status => (status.name))
-    priorities.value = prioritiesResp.data.data.map(priority => (priority.name))
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not fetch statuses',
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  }
-})
-
 const emit = defineEmits(['update-group', 'add-condition', 'remove-condition'])
 
 const handleGroupOperator = (value) => {
@@ -217,18 +201,18 @@ const handleFieldChange = (value, ruleIndex) => {
 }
 
 const handleOperatorChange = (value, ruleIndex) => {
-  // Set initial value based on operator.
-  if (["contains", "not contains"].includes(value))
+  if (['contains', 'not contains'].includes(value)) {
     ruleGroup.value.rules[ruleIndex].value = []
-  else
+  } else {
     ruleGroup.value.rules[ruleIndex].value = ''
+  }
   ruleGroup.value.rules[ruleIndex].operator = value
   emitUpdate()
 }
 
 const handleValueChange = (value, ruleIndex) => {
   const operator = ruleGroup.value.rules[ruleIndex].operator
-  if (["contains", "not contains"].includes(operator)) {
+  if (['contains', 'not contains'].includes(operator)) {
     ruleGroup.value.rules[ruleIndex].value = Array.isArray(value) ? value.join(',') : value
   } else {
     ruleGroup.value.rules[ruleIndex].value = String(value)
@@ -237,7 +221,7 @@ const handleValueChange = (value, ruleIndex) => {
 }
 
 const fieldValueAsArray = (value) => {
-  return Array.isArray(value) ? value : (value ? value.split(',') : [])
+  return Array.isArray(value) ? value : value ? value.split(',') : []
 }
 
 const handleCaseSensitiveCheck = (value, ruleIndex) => {
@@ -258,30 +242,23 @@ const emitUpdate = () => {
 }
 
 const getFieldOperators = (field) => {
-  return conversationFields[field]?.operators || []
+  return conversationFilters.value[field]?.operators || []
 }
 
 const getFieldOptions = (field) => {
-  return conversationFields[field]?.options?.value || []
+  return conversationFilters.value[field]?.options || []
 }
 
 const inputType = (index) => {
   const field = ruleGroup.value.rules[index]?.field
   const operator = ruleGroup.value.rules[index]?.operator
-
-  if (["contains", "not contains"].includes(operator)) {
-    return "tag"
-  }
-
-  if (field) {
-    return conversationFields[field].type
-  }
-
-  return ""
+  if (['contains', 'not contains'].includes(operator)) return 'tag'
+  if (field) return conversationFilters.value[field].type
+  return ''
 }
 
 const showInput = (index) => {
   const operator = ruleGroup.value.rules[index]?.operator
-  return !["set", "not set"].includes(operator)
+  return !['set', 'not set'].includes(operator)
 }
 </script>

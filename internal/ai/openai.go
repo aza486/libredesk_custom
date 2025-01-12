@@ -21,6 +21,7 @@ func NewOpenAIClient(apiKey string) *OpenAIClient {
 	}
 }
 
+// SendPrompt sends a prompt to the OpenAI API and returns the response text.
 func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
 	apiURL := "https://api.openai.com/v1/chat/completions"
 	requestBody := map[string]interface{}{

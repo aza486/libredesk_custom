@@ -5,18 +5,19 @@ import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import api from '@/api'
 
-export const useAgentStore = defineStore('agent', () => {
-    const agents = ref([])
+export const useUsersStore = defineStore('users', () => {
+    const users = ref([])
     const emitter = useEmitter()
-    const forSelect = computed(() => agents.value.map(agent => ({
-        label: agent.first_name + ' ' + agent.last_name,
-        value: agent.id
+    const forSelect = computed(() => users.value.map(user => ({
+        label: user.first_name + ' ' + user.last_name,
+        value: String(user.id),
+        avatar_url: user.avatar_url,
     })))
-    const fetchAgents = async () => {
-        if (agents.value.length) return
+    const fetchUsers = async () => {
+        if (users.value.length) return
         try {
             const response = await api.getUsersCompact()
-            agents.value = response?.data?.data || []
+            users.value = response?.data?.data || []
         } catch (error) {
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
                 title: 'Error',
@@ -26,8 +27,8 @@ export const useAgentStore = defineStore('agent', () => {
         }
     }
     return {
-        agents,
+        users,
         forSelect,
-        fetchAgents,
+        fetchUsers,
     }
 })

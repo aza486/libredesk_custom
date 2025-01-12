@@ -57,6 +57,8 @@ SELECT
     c.closed_at,
     c.resolved_at,
     c.inbox_id,
+    c.status_id,
+    c.priority_id,
     p.name as priority,
     s.name as status,
     c.uuid,

@@ -350,7 +350,7 @@ const hasConversationOpen = computed(() => {
                   <SidebarMenuButton :isActive="isActiveParent('#')" size="sm" asChild class="md:h-8 md:p-0">
                     <a href="#">
                       <div class="flex items-center justify-center w-full h-full">
-                        <MessageCircleHeart class="w-6 h-6" />
+                        <MessageCircle size="25" />
                       </div>
                     </a>
                   </SidebarMenuButton>
@@ -533,7 +533,7 @@ const hasConversationOpen = computed(() => {
                 <SidebarGroup>
                   <SidebarMenu>
                     <!-- Inboxes Collapsible -->
-                    <Collapsible class="group/collapsible" :default-open="isActiveParent('/inboxes')">
+                    <Collapsible class="group/collapsible" defaultOpen>
                       <SidebarMenuItem>
                         <CollapsibleTrigger as-child>
                           <SidebarMenuButton>
@@ -572,8 +572,7 @@ const hasConversationOpen = computed(() => {
                     </Collapsible>
 
                     <!-- Team Inboxes -->
-                    <Collapsible defaultOpen class="group/collapsible" v-if="userTeams.length"
-                      :default-open="isActiveParent('/teams')">
+                    <Collapsible defaultOpen class="group/collapsible" v-if="userTeams.length">
                       <SidebarMenuItem>
                         <CollapsibleTrigger as-child>
                           <SidebarMenuButton asChild>
@@ -600,7 +599,7 @@ const hasConversationOpen = computed(() => {
                     </Collapsible>
 
                     <!-- Views -->
-                    <Collapsible class="group/collapsible" :default-open="isActiveParent('/views')">
+                    <Collapsible class="group/collapsible" defaultOpen>
                       <SidebarMenuItem>
                         <CollapsibleTrigger as-child>
                           <SidebarMenuButton asChild>

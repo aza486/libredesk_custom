@@ -139,6 +139,8 @@ func main() {
 		constants                   = initConstants()
 		i18n                        = initI18n(fs)
 		oidc                        = initOIDC(db)
+		status                      = initStatus(db)
+		priority                    = initPriority(db)
 		auth                        = initAuth(oidc, rdb)
 		template                    = initTemplate(db, fs, constants)
 		media                       = initMedia(db)
@@ -149,7 +151,7 @@ func main() {
 		notifier                    = initNotifier(user)
 		automation                  = initAutomationEngine(db, user)
 		sla                         = initSLA(db, team, settings, businessHours)
-		conversation                = initConversations(i18n, wsHub, notifier, db, inbox, user, team, media, automation, template)
+		conversation                = initConversations(i18n, status, priority, wsHub, notifier, db, inbox, user, team, media, automation, template)
 		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
 
@@ -194,6 +196,8 @@ func main() {
 		inbox:         inbox,
 		user:          user,
 		team:          team,
+		status:        status,
+		priority:      priority,
 		tmpl:          template,
 		notifier:      notifier,
 		consts:        constants,
@@ -203,8 +207,6 @@ func main() {
 		view:          initView(db),
 		csat:          initCSAT(db),
 		authz:         initAuthz(),
-		status:        initStatus(db),
-		priority:      initPriority(db),
 		role:          initRole(db),
 		tag:           initTag(db),
 		ai:            initAI(db),

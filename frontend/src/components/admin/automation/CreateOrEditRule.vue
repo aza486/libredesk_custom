@@ -185,8 +185,9 @@ const breadcrumbPageLabel = () => {
 }
 
 const formTitle = computed(() => {
-  if (props.id > 0) return 'Edit existing rule'
-  return 'Create new rule'
+  return ''
+  // if (props.id > 0) return 'Edit existing rule'
+  // return 'Create new rule'
 })
 
 const breadcrumbLinks = [

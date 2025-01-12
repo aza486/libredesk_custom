@@ -26,6 +26,10 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 
 		var results []bool
 		for _, group := range rule.Groups {
+			if len(group.Rules) == 0 {
+				results = append(results, true)
+				continue
+			}
 			result := e.evaluateGroup(group.Rules, group.LogicalOp, conversation)
 			e.lo.Debug("evaluating group rules", "logical_op", group.LogicalOp, "result", result, "conversation_uuid", conversation.UUID)
 			results = append(results, result)
@@ -36,8 +40,10 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 			for _, action := range rule.Actions {
 				e.applyAction(action, conversation)
 			}
-		} else {
-			e.lo.Debug("rule evaluation failed", "conversation_uuid", conversation.UUID)
+			if rule.ExecutionMode == models.ExecutionModeFirstMatch {
+				e.lo.Debug("first match rule execution mode, breaking out of rule evaluation", "conversation_uuid", conversation.UUID)
+				break
+			}
 		}
 	}
 }
@@ -105,9 +111,9 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.ConversationContent:
 		valueToCompare = conversation.LastMessage.String
 	case models.ConversationStatus:
-		valueToCompare = conversation.Status.String
+		valueToCompare = strconv.Itoa(conversation.StatusID.Int)
 	case models.ConversationPriority:
-		valueToCompare = conversation.Priority.String
+		valueToCompare = strconv.Itoa(conversation.PriorityID.Int)
 	case models.ConversationAssignedTeam:
 		if conversation.AssignedTeamID.Valid {
 			valueToCompare = strconv.Itoa(conversation.AssignedTeamID.Int)
@@ -119,9 +125,11 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.ConversationHoursSinceCreated:
 		valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.CreatedAt).Hours()))
 	case models.ConversationHoursSinceResolved:
-		if conversation.ResolvedAt.Valid {
+		if !conversation.ResolvedAt.IsZero() {
 			valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.ResolvedAt.Time).Hours()))
 		}
+	case models.ConversationInbox:
+		valueToCompare = strconv.Itoa(conversation.InboxID)
 	default:
 		e.lo.Error("unrecognized rule field", "field", rule.Field)
 		return false
@@ -193,12 +201,10 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		value2, _ := strconv.Atoi(rule.Value)
 		conditionMet = value1 > value2
 	default:
-		e.lo.Error("unrecognized rule logical operator", "operator", rule.Operator)
+		e.lo.Error("error unrecognized rule logical operator", "operator", rule.Operator)
 		return false
 	}
-
-	e.lo.Debug("rule conditions status", "met", conditionMet,
-		"conversation_uuid", conversation.UUID)
+	e.lo.Debug("conversation automation rule status", "has_met", conditionMet, "conversation_uuid", conversation.UUID)
 	return conditionMet
 }
 
@@ -207,32 +213,26 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 	switch action.Type {
 	case models.ActionAssignTeam:
 		e.lo.Debug("executing assign team action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		teamID, err := strconv.Atoi(action.Action)
-		if err != nil {
-			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
-			return err
-		}
+		teamID, _ := strconv.Atoi(action.Action)
 		if err := e.conversationStore.UpdateConversationTeamAssignee(conversation.UUID, teamID, e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionAssignUser:
 		e.lo.Debug("executing assign user action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		agentID, err := strconv.Atoi(action.Action)
-		if err != nil {
-			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
-			return err
-		}
+		agentID, _ := strconv.Atoi(action.Action)
 		if err := e.conversationStore.UpdateConversationUserAssignee(conversation.UUID, agentID, e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetPriority:
 		e.lo.Debug("executing set priority action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.UpdateConversationPriority(conversation.UUID, []byte(action.Action), e.systemUser); err != nil {
+		priorityID, _ := strconv.Atoi(action.Action)
+		if err := e.conversationStore.UpdateConversationPriority(conversation.UUID, priorityID, "", e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSetStatus:
 		e.lo.Debug("executing set status action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, []byte(action.Action), []byte(""), e.systemUser); err != nil {
+		statusID, _ := strconv.Atoi(action.Action)
+		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, statusID, "", "", e.systemUser); err != nil {
 			return err
 		}
 	case models.ActionSendPrivateNote:
@@ -242,16 +242,12 @@ func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conv
 		}
 	case models.ActionReply:
 		e.lo.Debug("executing reply action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action, "" /**meta json**/); err != nil {
+		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action, "" /**meta**/); err != nil {
 			return err
 		}
 	case models.ActionSetSLA:
-		e.lo.Debug("executing set SLA action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		slaID, err := strconv.Atoi(action.Action)
-		if err != nil {
-			e.lo.Error("error converting string to int", "string", action.Action, "error", err)
-			return err
-		}
+		e.lo.Debug("executing SLA action", "value", action.Action, "conversation_uuid", conversation.UUID)
+		slaID, _ := strconv.Atoi(action.Action)
 		if err := e.slaStore.ApplySLA(conversation.ID, slaID); err != nil {
 			return err
 		}

@@ -62,18 +62,24 @@ const routes = [
             name: 'inbox',
             component: ConversationsView,
             props: route => ({ type: route.params.type, uuid: route.params.uuid }),
-            meta: { title: 'Inbox' },
+            meta: {
+              title: 'Inbox',
+              type: route => route.params.type === 'assigned' ? 'My inbox' : route.params.type
+            },
             children: [
               {
                 path: 'conversation/:uuid',
                 name: 'inbox-conversation',
                 component: ConversationsView,
                 props: true,
-                meta: { title: 'Inbox', hidePageHeader: true }
+                meta: {
+                  title: 'Inbox',
+                  type: route => route.params.type === 'assigned' ? 'My inbox' : route.params.type,
+                  hidePageHeader: true
+                }
               }
             ]
           }
-
         ]
       },
       {
@@ -111,14 +117,14 @@ const routes = [
             name: 'view-inbox',
             props: true,
             component: ConversationsView,
-            meta: { title: `View` },
+            meta: { title: `Views` },
             children: [
               {
                 path: 'conversation/:uuid',
                 name: 'view-inbox-conversation',
                 component: ConversationsView,
                 props: true,
-                meta: { title: 'View', hidePageHeader: true }
+                meta: { title: 'Views', hidePageHeader: true }
               }
             ]
           }

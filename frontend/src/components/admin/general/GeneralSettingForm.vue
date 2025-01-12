@@ -236,7 +236,9 @@ const onSubmit = form.handleSubmit(async (values) => {
     isLoading.value = true
     await props.submitForm(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: "Saved"
+      title: "Success",
+      variant: 'success',
+      description: 'Settings updated successfully'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

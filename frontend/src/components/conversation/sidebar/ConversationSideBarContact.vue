@@ -25,5 +25,5 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Mail, Phone } from 'lucide-vue-next'
 defineProps({
     conversation: Object
-});
+})
 </script>

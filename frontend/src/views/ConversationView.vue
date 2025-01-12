@@ -1,5 +1,5 @@
 <template>
-  <ResizablePanelGroup direction="horizontal" auto-save-id="conversation.vue.resizable.panel">
+  <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
     <ResizablePanel :min-size="23" :default-size="23" :max-size="40">
       <ConversationList />
     </ResizablePanel>

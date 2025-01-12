@@ -27,6 +27,7 @@ const (
 // Engine represents a manager for assigning unassigned conversations
 // to team agents in a round-robin pattern.
 type Engine struct {
+	// TODO: Implement a persistent store for the balancer.
 	roundRobinBalancer map[int]*balance.Balance
 	// Mutex to protect the balancer map
 	balanceMu sync.Mutex

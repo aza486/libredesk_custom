@@ -123,6 +123,8 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/automation/rules", perm(handleCreateAutomationRule, "automations:manage"))
 	g.PUT("/api/v1/automation/rules/{id}/toggle", perm(handleToggleAutomationRule, "automations:manage"))
 	g.PUT("/api/v1/automation/rules/{id}", perm(handleUpdateAutomationRule, "automations:manage"))
+	g.PUT("/api/v1/automation/rules/weights", perm(handleUpdateAutomationRuleWeights, "automations:manage"))
+	g.PUT("/api/v1/automation/rules/execution-mode", perm(handleUpdateAutomationRuleExecutionMode, "automations:manage"))
 	g.DELETE("/api/v1/automation/rules/{id}", perm(handleDeleteAutomationRule, "automations:manage"))
 
 	// Inbox.
@@ -174,22 +176,24 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 		return handleWS(r, hub)
 	}))
 
+	// Public pages.
+	g.GET("/csat/{uuid}", handleShowCSAT)
+	g.POST("/csat/{uuid}", fastglue.ReqLenRangeParams(handleUpdateCSATResponse, map[string][2]int{"feedback": {1, 1000}}))
+
 	// Frontend pages.
 	g.GET("/", notAuthPage(serveIndexPage))
 	g.GET("/inboxes/{all:*}", authPage(serveIndexPage))
+	g.GET("/teams/{all:*}", authPage(serveIndexPage))
+	g.GET("/views/{all:*}", authPage(serveIndexPage))
 	g.GET("/admin/{all:*}", authPage(serveIndexPage))
 	g.GET("/reports/{all:*}", authPage(serveIndexPage))
 	g.GET("/account/{all:*}", authPage(serveIndexPage))
 	g.GET("/reset-password", notAuthPage(serveIndexPage))
 	g.GET("/set-password", notAuthPage(serveIndexPage))
-	// TODO: Don't need three separate routes for the same thing.
+	// FIXME: Don't need three separate routes for the same thing.
 	g.GET("/assets/{all:*}", serveFrontendStaticFiles)
 	g.GET("/images/{all:*}", serveFrontendStaticFiles)
 	g.GET("/static/public/{all:*}", serveStaticFiles)
-
-	// Public pages.
-	g.GET("/csat/{uuid}", handleShowCSAT)
-	g.POST("/csat/{uuid}", fastglue.ReqLenRangeParams(handleUpdateCSATResponse, map[string][2]int{"feedback": {1, 1000}}))
 
 	// Health check.
 	g.GET("/health", handleHealthCheck)

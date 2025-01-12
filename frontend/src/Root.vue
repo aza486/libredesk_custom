@@ -1,9 +1,15 @@
 <template>
     <Toaster />
     <TooltipProvider :delay-duration="200">
-        <div class="font-inter">
+        <div class="font-jakarta">
             <RouterView />
         </div>
+        <!-- <div class="font-inter">
+            <RouterView />
+        </div>  -->
+        <!-- <div class="font-poppins">
+            <RouterView />
+        </div> -->
     </TooltipProvider>
 </template>
 

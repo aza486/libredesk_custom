@@ -10,7 +10,7 @@ SET deleted_at = now()
 WHERE id = $1 AND type = 'agent';
 
 -- name: get-users-compact
-SELECT u.id, u.first_name, u.last_name, u.disabled
+SELECT u.id, u.first_name, u.last_name, u.disabled, u.avatar_url
 FROM users u
 WHERE u.email != 'System' AND u.deleted_at IS NULL AND u.type = 'agent'
 ORDER BY u.updated_at DESC;

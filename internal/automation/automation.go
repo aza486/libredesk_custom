@@ -70,8 +70,8 @@ type ConversationStore interface {
 	GetConversationsCreatedAfter(t time.Time) ([]cmodels.Conversation, error)
 	UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error
 	UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error
-	UpdateConversationStatus(uuid string, status, snoozeDur []byte, actor umodels.User) error
-	UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error
+	UpdateConversationStatus(uuid string, statusID int, status, snoozeDur string, actor umodels.User) error
+	UpdateConversationPriority(uuid string, priorityID int, priority string, actor umodels.User) error
 	SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error
 	SendReply(media []mmodels.Media, senderID int, conversationUUID, content, meta string) error
 	RecordSLASet(conversationUUID string, actor umodels.User) error
@@ -82,13 +82,15 @@ type SLAStore interface {
 }
 
 type queries struct {
-	GetAll          *sqlx.Stmt `query:"get-all"`
-	GetRule         *sqlx.Stmt `query:"get-rule"`
-	InsertRule      *sqlx.Stmt `query:"insert-rule"`
-	UpdateRule      *sqlx.Stmt `query:"update-rule"`
-	DeleteRule      *sqlx.Stmt `query:"delete-rule"`
-	ToggleRule      *sqlx.Stmt `query:"toggle-rule"`
-	GetEnabledRules *sqlx.Stmt `query:"get-enabled-rules"`
+	GetAll                  *sqlx.Stmt `query:"get-all"`
+	GetRule                 *sqlx.Stmt `query:"get-rule"`
+	InsertRule              *sqlx.Stmt `query:"insert-rule"`
+	UpdateRule              *sqlx.Stmt `query:"update-rule"`
+	DeleteRule              *sqlx.Stmt `query:"delete-rule"`
+	ToggleRule              *sqlx.Stmt `query:"toggle-rule"`
+	GetEnabledRules         *sqlx.Stmt `query:"get-enabled-rules"`
+	UpdateRuleWeight        *sqlx.Stmt `query:"update-rule-weight"`
+	UpdateRuleExecutionMode *sqlx.Stmt `query:"update-rule-execution-mode"`
 }
 
 // New initializes a new Engine.
@@ -251,6 +253,30 @@ func (e *Engine) DeleteRule(id int) error {
 	return nil
 }
 
+// UpdateRuleWeights updates the weights of the automation rules.
+func (e *Engine) UpdateRuleWeights(weights map[int]int) error {
+	for id, weight := range weights {
+		if _, err := e.q.UpdateRuleWeight.Exec(id, weight); err != nil {
+			e.lo.Error("error updating rule weight", "error", err)
+			return envelope.NewError(envelope.GeneralError, "Error updating weight", nil)
+		}
+	}
+	// Reload rules.
+	e.ReloadRules()
+	return nil
+}
+
+// UpdateRuleExecutionMode updates the execution mode for a type of rule.
+func (e *Engine) UpdateRuleExecutionMode(ruleType, mode string) error {
+	if _, err := e.q.UpdateRuleExecutionMode.Exec(ruleType, mode); err != nil {
+		e.lo.Error("error updating rule execution mode", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating rule execution mode", nil)
+	}
+	// Reload rules.
+	e.ReloadRules()
+	return nil
+}
+
 // handleNewConversation handles new conversation events.
 func (e *Engine) handleNewConversation(conversationUUID string) {
 	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
@@ -347,10 +373,11 @@ func (e *Engine) queryRules() []models.Rule {
 			e.lo.Error("error unmarshalling rule JSON", "error", err)
 			continue
 		}
-		// Set the Type and event for each rule in the batch.
+		// Set values from DB.
 		for i := range rulesBatch {
 			rulesBatch[i].Type = rule.Type
 			rulesBatch[i].Events = rule.Events
+			rulesBatch[i].ExecutionMode = rule.ExecutionMode
 		}
 		filteredRules = append(filteredRules, rulesBatch...)
 	}

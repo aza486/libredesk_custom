@@ -82,7 +82,6 @@ const getSLA = (id) => http.get(`/api/v1/sla/${id}`)
 const createSLA = (data) => http.post('/api/v1/sla', data)
 const updateSLA = (id, data) => http.put(`/api/v1/sla/${id}`, data)
 const deleteSLA = (id) => http.delete(`/api/v1/sla/${id}`)
-
 const createOIDC = (data) =>
   http.post('/api/v1/oidc', data, {
     headers: {
@@ -124,6 +123,14 @@ const createAutomationRule = (data) =>
       'Content-Type': 'application/json'
     }
   })
+const deleteAutomationRule = (id) => http.delete(`/api/v1/automation/rules/${id}`)
+const updateAutomationRuleWeights = (data) =>
+  http.put(`/api/v1/automation/rules/weights`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const updateAutomationRulesExecutionMode = (data) => http.put(`/api/v1/automation/rules/execution-mode`, data)
 const getRoles = () => http.get('/api/v1/roles')
 const getRole = (id) => http.get(`/api/v1/roles/${id}`)
 const createRole = (data) =>
@@ -139,9 +146,7 @@ const updateRole = (id, data) =>
     }
   })
 const deleteRole = (id) => http.delete(`/api/v1/roles/${id}`)
-const deleteAutomationRule = (id) => http.delete(`/api/v1/automation/rules/${id}`)
 const getUser = (id) => http.get(`/api/v1/users/${id}`)
-
 const getTeam = (id) => http.get(`/api/v1/teams/${id}`)
 const getTeams = () => http.get('/api/v1/teams')
 const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data)
@@ -162,8 +167,7 @@ const getCurrentUser = () => http.get('/api/v1/users/me')
 const getCurrentUserTeams = () => http.get('/api/v1/users/me/teams')
 const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
-const updateAssignee = (uuid, assignee_type, data) =>
-  http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
+const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
 const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)
@@ -296,9 +300,11 @@ export default {
   updateConversationPriority,
   upsertTags,
   uploadMedia,
-  updateAutomationRule,
   updateAssigneeLastSeen,
   updateUser,
+  updateAutomationRule,
+  updateAutomationRuleWeights,
+  updateAutomationRulesExecutionMode,
   createAutomationRule,
   toggleAutomationRule,
   deleteAutomationRule,

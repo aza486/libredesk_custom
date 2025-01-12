@@ -235,25 +235,9 @@ body {
 }
 
 // Sidebar start
-a[data-active='true'] {
-  background-color: hsl(var(--sidebar-accent)) !important;
-  color: hsl(var(--sidebar-accent-foreground)) !important;
-  font-weight: 500;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
-a[data-active='false']:hover {
-  background-color: hsl(var(--sidebar-accent)) !important;
-  color: hsl(var(--sidebar-accent-foreground)) !important;
-  font-weight: 500;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
 @layer base {
   :root {
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0 0% 97%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
@@ -274,7 +258,22 @@ a[data-active='false']:hover {
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
-
+a[data-active='true'] {
+  background-color: hsl(var(--sidebar-background)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+  font-weight: 500;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+a[data-active='false']:hover {
+  background-color: hsl(var(--sidebar-accent)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+  font-weight: 500;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
 // Sidebar end
 
 .show-quoted-text {

@@ -8,8 +8,8 @@ import { subscribeConversationsList } from '@/websocket'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
-  const MAX_CONV_LIST_PAGE_SIZE = 20
-  const MAX_MESSAGE_LIST_PAGE_SIZE = 20
+  const MAX_CONV_LIST_PAGE_SIZE = 30
+  const MAX_MESSAGE_LIST_PAGE_SIZE = 30
   const priorities = ref([])
   const statuses = ref([])
 
@@ -129,7 +129,10 @@ export const useConversationStore = defineStore('conversation', () => {
     if (statuses.value.length > 0) return
     try {
       const response = await api.getStatuses()
-      statuses.value = response.data.data
+      statuses.value = response.data.data.map(status => ({
+        ...status,
+        id: status.id.toString()
+      }))
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',
@@ -143,7 +146,10 @@ export const useConversationStore = defineStore('conversation', () => {
     if (priorities.value.length > 0) return
     try {
       const response = await api.getPriorities()
-      priorities.value = response.data.data
+      priorities.value = response.data.data.map(priority => ({
+        ...priority,
+        id: priority.id.toString()
+      }))
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',

@@ -5,19 +5,18 @@ import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import api from '@/api'
 
-export const useTeamStore = defineStore('team', () => {
-    const teams = ref([])
+export const useSlaStore = defineStore('sla', () => {
+    const slas = ref([])
     const emitter = useEmitter()
-    const forSelect = computed(() => teams.value.map(team => ({
-        label: team.name,
-        value: String(team.id),
-        emoji: team.emoji,
+    const forSelect = computed(() => slas.value.map(sla => ({
+        label: sla.name,
+        value: String(sla.id)
     })))
-    const fetchTeams = async () => {
-        if (teams.value.length) return
+    const fetchSlas = async () => {
+        if (slas.value.length) return
         try {
-            const response = await api.getTeamsCompact()
-            teams.value = response?.data?.data || []
+            const response = await api.getAllSLAs()
+            slas.value = response?.data?.data || []
         } catch (error) {
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
                 title: 'Error',
@@ -27,8 +26,8 @@ export const useTeamStore = defineStore('team', () => {
         }
     }
     return {
-        teams,
+        slas,
         forSelect,
-        fetchTeams,
+        fetchSlas
     }
 })

@@ -1,49 +1,107 @@
 <template>
-  <div class="box border p-5 space-y-5 rounded-lg">
+  <div class="space-y-5 rounded-lg" :class="{'box border p-5': actions.length > 0}">
     <div class="space-y-5">
       <div v-for="(action, index) in actions" :key="index" class="space-y-5">
         <div v-if="index > 0">
           <hr class="border-t-2 border-dotted border-gray-300" />
         </div>
-        <div class="space-y-3">
-          <div class="flex space-x-5 justify-between">
-            <Select v-model="action.type" @update:modelValue="(value) => handleFieldChange(value, index)">
-              <SelectTrigger class="w-56">
-                <SelectValue placeholder="Select action" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Conversation</SelectLabel>
-                  <SelectItem v-for="(actionItem, key) in conversationActions" :key="key" :value="key">
-                    {{ actionItem.label }}
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
 
-            <div v-if="action.type && conversationActions[action.type].inputType === 'select'" class="flex-1">
-              <Select v-model="action.value" @update:modelValue="(value) => handleValueChange(value, index)">
-                <SelectTrigger class="w-56">
-                  <SelectValue placeholder="Select value" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem v-for="(act, index) in getDropdownValues(action.type).value" :key="index"
-                      :value="act.value.toString()">
-                      {{ act.name }}
-                    </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div  class="flex gap-5">
+              <div class="w-48">
+                <Select
+                  v-model="action.type"
+                  @update:modelValue="(value) => handleFieldChange(value, index)"
+                >
+                  <SelectTrigger class="m-auto">
+                    <SelectValue placeholder="Select action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem
+                        v-for="(actionConfig, key) in conversationActions"
+                        :key="key"
+                        :value="key"
+                      >
+                        {{ actionConfig.label }}
+                      </SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div
+                class="w-48"
+                v-if="action.type && conversationActions[action.type]?.type === 'select'"
+              >
+                <ComboBox
+                  v-model="action.value"
+                  :items="conversationActions[action.type]?.options"
+                  placeholder="Select"
+                  @select="handleValueChange($event, index)"
+                >
+                  <template #item="{ item }">
+                    <div class="flex items-center gap-2 ml-2">
+                      <Avatar v-if="action.type === 'assign_user'" class="w-7 h-7">
+                        <AvatarImage :src="item.avatar_url ?? ''" :alt="item.label.slice(0, 2)" />
+                        <AvatarFallback>
+                          {{ item.label.slice(0, 2).toUpperCase() }}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span v-if="action.type === 'assign_team'">
+                        {{ item.emoji }}
+                      </span>
+                      <span>{{ item.label }}</span>
+                    </div>
+                  </template>
+
+                  <template #selected="{ selected }">
+                    <div v-if="action.type === 'assign_team'">
+                      <div v-if="selected" class="flex items-center gap-2">
+                        {{ selected.emoji }}
+                        <span>{{ selected.label }}</span>
+                      </div>
+                      <span v-else>Select team</span>
+                    </div>
+
+                    <div v-if="action.type === 'assign_user'" class="flex items-center gap-2">
+                      <div v-if="selected" class="flex items-center gap-2">
+                        <Avatar class="w-7 h-7">
+                          <AvatarImage
+                            :src="selected.avatar_url ?? ''"
+                            :alt="selected.label.slice(0, 2)"
+                          />
+                          <AvatarFallback>
+                            {{ selected.label.slice(0, 2).toUpperCase() }}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{{ selected.label }}</span>
+                      </div>
+                      <span v-else>Select user</span>
+                    </div>
+                    <span v-if="!selected"> Select </span>
+                  </template>
+                </ComboBox>
+              </div>
             </div>
 
             <div class="cursor-pointer" @click.prevent="removeAction(index)">
               <X size="16" />
             </div>
           </div>
-          <div v-if="action.type && conversationActions[action.type].inputType === 'richtext'" class="pl-0 shadow">
-            <QuillEditor theme="snow" v-model:content="action.value" contentType="html"
-              @update:content="(value) => handleValueChange(value, index)" class="h-32 mb-12" />
+
+          <div
+            v-if="action.type && conversationActions[action.type]?.type === 'richtext'"
+            class="pl-0 shadow"
+          >
+            <QuillEditor
+              theme="snow"
+              v-model:content="action.value"
+              contentType="html"
+              @update:content="(value) => handleValueChange(value, index)"
+              class="h-32 mb-12"
+            />
           </div>
         </div>
       </div>
@@ -55,7 +113,7 @@
 </template>
 
 <script setup>
-import { toRefs, ref, onMounted } from 'vue'
+import { toRefs } from 'vue'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-vue-next'
 import {
@@ -63,75 +121,25 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
 import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
-import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { useEmitter } from '@/composables/useEmitter'
-import { handleHTTPError } from '@/utils/http'
-import api from '@/api'
+import ComboBox from '@/components/ui/combobox/ComboBox.vue'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useConversationFilters } from '@/composables/useConversationFilters'
 
 const props = defineProps({
   actions: {
-    type: Object,
+    type: Array,
     required: true
   }
 })
 
 const { actions } = toRefs(props)
-const emitter = useEmitter()
-const slas = ref([])
-const teams = ref([])
-const users = ref([])
-const statuses = ref([])
-const priorities = ref([])
 const emit = defineEmits(['update-actions', 'add-action', 'remove-action'])
-
-onMounted(async () => {
-  try {
-    const [slasResp, teamsResp, usersResp, statusesResp, prioritiesResp] = await Promise.all([
-      api.getAllSLAs(),
-      api.getTeamsCompact(),
-      api.getUsersCompact(),
-      api.getStatuses(),
-      api.getPriorities(),
-    ])
-
-    teams.value = teamsResp.data.data.map(team => ({
-      value: team.id,
-      name: team.name
-    }))
-
-    users.value = usersResp.data.data.map(user => ({
-      value: user.id,
-      name: user.first_name + ' ' + user.last_name
-    }))
-
-    statuses.value = statusesResp.data.data.map(status => ({
-      value: status.name,
-      name: status.name
-    }))
-
-    priorities.value = prioritiesResp.data.data.map(priority => ({
-      value: priority.name,
-      name: priority.name
-    }))
-
-    slas.value = slasResp.data.data.map(sla => ({
-      value: sla.id,
-      name: sla.name
-    }))
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  }
-})
+const { conversationActions } = useConversationFilters()
 
 const handleFieldChange = (value, index) => {
   actions.value[index].value = ''
@@ -140,6 +148,9 @@ const handleFieldChange = (value, index) => {
 }
 
 const handleValueChange = (value, index) => {
+  if (typeof value === 'object') {
+    value = value.value
+  }
   actions.value[index].value = value
   emitUpdate(index)
 }
@@ -148,54 +159,11 @@ const removeAction = (index) => {
   emit('remove-action', index)
 }
 
-const addAction = (index) => {
-  emit('add-action', index)
+const addAction = () => {
+  emit('add-action')
 }
 
 const emitUpdate = (index) => {
   emit('update-actions', actions, index)
-}
-
-const conversationActions = {
-  assign_team: {
-    label: 'Assign to team',
-    inputType: 'select',
-  },
-  assign_user: {
-    label: 'Assign to user',
-    inputType: 'select',
-  },
-  set_status: {
-    label: 'Set status',
-    inputType: 'select',
-  },
-  set_priority: {
-    label: 'Set priority',
-    inputType: 'select',
-  },
-  send_private_note: {
-    label: 'Send private note',
-    inputType: 'richtext',
-  },
-  reply: {
-    label: 'Send reply',
-    inputType: 'richtext',
-  },
-  set_sla: {
-    label: 'Set SLA',
-    inputType: 'select',
-  }
-}
-
-const actionDropdownValues = {
-  assign_team: teams,
-  assign_user: users,
-  set_status: statuses,
-  set_priority: priorities,
-  set_sla: slas,
-}
-
-const getDropdownValues = (field) => {
-  return actionDropdownValues[field] || []
 }
 </script>

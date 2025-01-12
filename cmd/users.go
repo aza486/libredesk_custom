@@ -256,7 +256,7 @@ func handleUpdateUser(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleDeleteUser deletes a user.
+// handleDeleteUser soft deletes a user.
 func handleDeleteUser(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)

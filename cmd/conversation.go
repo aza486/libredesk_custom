@@ -395,11 +395,13 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 func handleUpdateConversationPriority(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
-		p        = r.RequestCtx.PostArgs()
-		priority = p.Peek("priority")
 		uuid     = r.RequestCtx.UserValue("uuid").(string)
 		auser    = r.RequestCtx.UserValue("user").(amodels.User)
+		priority = string(r.RequestCtx.PostArgs().Peek("priority"))
 	)
+	if priority == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `priority`", nil, envelope.InputError)
+	}
 	conversation, err := app.conversation.GetConversation(0, uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -415,29 +417,39 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 	if !allowed {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
-	if err := app.conversation.UpdateConversationPriority(uuid, priority, user); err != nil {
+	if err := app.conversation.UpdateConversationPriority(uuid, 0 /**priority_id**/, priority, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Evaluate automation rules.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationPriorityChange)
-
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Priority updated successfully")
 }
 
 // handleUpdateConversationStatus updates the status of a conversation.
 func handleUpdateConversationStatus(r *fastglue.Request) error {
 	var (
 		app          = r.Context.(*App)
-		status       = r.RequestCtx.PostArgs().Peek("status")
-		snoozedUntil = r.RequestCtx.PostArgs().Peek("snoozed_until")
+		status       = string(r.RequestCtx.PostArgs().Peek("status"))
+		snoozedUntil = string(r.RequestCtx.PostArgs().Peek("snoozed_until"))
 		uuid         = r.RequestCtx.UserValue("uuid").(string)
 		auser        = r.RequestCtx.UserValue("user").(amodels.User)
 	)
+	if status == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `status`", nil, envelope.InputError)
+	}
+
+	if snoozedUntil == "" && status == cmodels.StatusSnoozed {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `snoozed_until`", nil, envelope.InputError)
+	}
 
 	conversation, err := app.conversation.GetConversation(0, uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	if status == cmodels.StatusResolved && conversation.AssignedUserID.Int == 0 {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Cannot resolve the conversation without an assigned user, Please assign a user before attempting to resolve.", nil))
 	}
 
 	user, err := app.user.Get(auser.ID)
@@ -452,11 +464,8 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	if !allowed {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
-	if string(status) == cmodels.StatusResolved && conversation.AssignedUserID.Int == 0 {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Cannot resolve the conversation without an assigned user. Please assign a user before attempting to resolve.", nil))
-	}
 
-	if err := app.conversation.UpdateConversationStatus(uuid, status, snoozedUntil, user); err != nil {
+	if err := app.conversation.UpdateConversationStatus(uuid, 0 /**status_id**/, status, snoozedUntil, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -464,7 +473,7 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationStatusChange)
 
 	// If status is `Resolved`, send CSAT survey if enabled on inbox.
-	if string(status) == cmodels.StatusResolved {
+	if status == cmodels.StatusResolved {
 		if err := sendCSATSurvey(app, conversation, user); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
@@ -510,7 +519,7 @@ func handleAddConversationTags(r *fastglue.Request) error {
 	if err := app.conversation.UpsertConversationTags(uuid, tagIDs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Tags added successfully")
 }
 
 // handleDashboardCounts retrieves general dashboard counts for all users.

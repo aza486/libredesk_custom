@@ -41,11 +41,9 @@ type queries struct {
 // New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
 		q:  q,
 		lo: opts.Lo,
@@ -74,7 +72,7 @@ func (m *Manager) Create(name string) error {
 // Delete deletes a status by ID.
 func (m *Manager) Delete(id int) error {
 	// Disallow deletion of default statuses.
-	status, err := m.get(id)
+	status, err := m.Get(id)
 	if err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
 	}
@@ -103,12 +101,12 @@ func (m *Manager) Update(id int, name string) error {
 	return nil
 }
 
-// get retrieves a status by ID.
-func (m *Manager) get(id int) (models.Status, error) {
+// Get retrieves a status by ID.
+func (m *Manager) Get(id int) (models.Status, error) {
 	var status models.Status
 	if err := m.q.GetStatus.Get(&status, id); err != nil {
 		m.lo.Error("error fetching status", "error", err)
-		return status, err
+		return status, envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
 	}
 	return status, nil
 }

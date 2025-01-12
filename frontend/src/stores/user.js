@@ -15,7 +15,6 @@ export const useUserStore = defineStore('user', () => {
     teams: [],
     permissions: []
   })
-
   const emitter = useEmitter()
 
   const userID = computed(() => user.value.id)

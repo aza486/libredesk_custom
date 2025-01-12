@@ -10,6 +10,8 @@ DROP TYPE IF EXISTS "sla_type" CASCADE; CREATE TYPE "sla_type" AS ENUM ('first_r
 DROP TYPE IF EXISTS "template_type" CASCADE; CREATE TYPE "template_type" AS ENUM ('email_outgoing', 'email_notification');
 DROP TYPE IF EXISTS "user_type" CASCADE; CREATE TYPE "user_type" AS ENUM ('agent', 'contact');
 DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('openai');
+DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation_execution_mode" AS ENUM ('all', 'first_match');
+
 
 DROP TABLE IF EXISTS conversation_slas CASCADE;
 CREATE TABLE conversation_slas (
@@ -155,6 +157,8 @@ CREATE TABLE automation_rules (
     rules JSONB NULL,
     events TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
     disabled BOOL DEFAULT false NOT NULL,
+	weight INT DEFAULT 0 NOT NULL,
+	execution_mode automation_execution_mode DEFAULT 'all' NOT NULL,
     CONSTRAINT constraint_automation_rules_on_name CHECK (length("name") <= 140),
     CONSTRAINT constraint_automation_rules_on_description CHECK (length(description) <= 300)
 );

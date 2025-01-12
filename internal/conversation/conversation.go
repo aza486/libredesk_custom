@@ -14,6 +14,8 @@ import (
 
 	"github.com/abhinavxd/libredesk/internal/automation"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	pmodels "github.com/abhinavxd/libredesk/internal/conversation/priority/models"
+	smodels "github.com/abhinavxd/libredesk/internal/conversation/status/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/inbox"
@@ -33,7 +35,7 @@ var (
 	//go:embed queries.sql
 	efs                                  embed.FS
 	ErrConversationNotFound              = errors.New("conversation not found")
-	ConversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id"}
+	ConversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id"}
 	ConversationStatusesFilterFields     = []string{"id", "name"}
 )
 
@@ -48,6 +50,8 @@ type Manager struct {
 	userStore                  userStore
 	teamStore                  teamStore
 	mediaStore                 mediaStore
+	statusStore                statusStore
+	priorityStore              priorityStore
 	notifier                   *notifier.Service
 	lo                         *logf.Logger
 	db                         *sqlx.DB
@@ -61,6 +65,14 @@ type Manager struct {
 	closed                     bool
 	closedMu                   sync.RWMutex
 	wg                         sync.WaitGroup
+}
+
+type statusStore interface {
+	Get(int) (smodels.Status, error)
+}
+
+type priorityStore interface {
+	Get(int) (pmodels.Priority, error)
 }
 
 type teamStore interface {
@@ -98,6 +110,8 @@ func New(
 	wsHub *ws.Hub,
 	i18n *i18n.I18n,
 	notifier *notifier.Service,
+	status statusStore,
+	priority priorityStore,
 	inboxStore inboxStore,
 	userStore userStore,
 	teamStore teamStore,
@@ -120,6 +134,8 @@ func New(
 		userStore:                  userStore,
 		teamStore:                  teamStore,
 		mediaStore:                 mediaStore,
+		statusStore:                status,
+		priorityStore:              priority,
 		automation:                 automation,
 		template:                   template,
 		db:                         opts.DB,
@@ -301,7 +317,6 @@ func (c *Manager) GetTeamUnassignedConversationsList(teamID int, order, orderBy,
 }
 
 func (c *Manager) GetViewConversationsList(userID int, typ, order, orderBy, filters string, page, pageSize int) ([]models.Conversation, error) {
-	fmt.Println("Applying view filters", filters)
 	switch typ {
 	case models.AssignedConversations:
 		return c.GetAssignedConversationsList(userID, order, orderBy, filters, page, pageSize)
@@ -453,70 +468,87 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 
 // UpdateAssignee updates the assignee of a conversation.
 func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType string) error {
+	var prop string
 	switch assigneeType {
 	case models.AssigneeTypeUser:
+		prop = "assigned_user_id"
 		if _, err := c.q.UpdateConversationAssignedUser.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
-			return fmt.Errorf("error updating assignee")
+			return fmt.Errorf("updating assignee: %w", err)
 		}
-
-		// Broadcast update to all subscribers.
-		c.BroadcastConversationPropertyUpdate(uuid, "assigned_user_id", assigneeID)
 	case models.AssigneeTypeTeam:
+		prop = "assigned_team_id"
 		if _, err := c.q.UpdateConversationAssignedTeam.Exec(uuid, assigneeID); err != nil {
 			c.lo.Error("error updating conversation assignee", "error", err)
-			return fmt.Errorf("error updating assignee")
+			return fmt.Errorf("updating assignee: %w", err)
 		}
-
-		// Broadcast update to all subscribers.
-		c.BroadcastConversationPropertyUpdate(uuid, "assigned_team_id", assigneeID)
 	default:
-		return errors.New("invalid assignee type")
+		return fmt.Errorf("invalid assignee type: %s", assigneeType)
 	}
+	// Broadcast update to all subscribers.
+	c.BroadcastConversationPropertyUpdate(uuid, prop, assigneeID)
 	return nil
 }
 
 // UpdateConversationPriority updates the priority of a conversation.
-func (c *Manager) UpdateConversationPriority(uuid string, priority []byte, actor umodels.User) error {
-	var priorityStr = string(priority)
+func (c *Manager) UpdateConversationPriority(uuid string, priorityID int, priority string, actor umodels.User) error {
+	// Fetch the priority name if priority ID is provided.
+	if priorityID > 0 {
+		p, err := c.priorityStore.Get(priorityID)
+		if err != nil {
+			return envelope.NewError(envelope.InputError, err.Error(), nil)
+		}
+		priority = p.Name
+	}
 	if _, err := c.q.UpdateConversationPriority.Exec(uuid, priority); err != nil {
 		c.lo.Error("error updating conversation priority", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating priority", nil)
 	}
-	if err := c.RecordPriorityChange(priorityStr, uuid, actor); err != nil {
+	if err := c.RecordPriorityChange(priority, uuid, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording priority change", nil)
 	}
 	return nil
 }
 
 // UpdateConversationStatus updates the status of a conversation.
-func (c *Manager) UpdateConversationStatus(uuid string, status []byte, snoozeDur []byte, actor umodels.User) error {
-	var (
-		statusStr  = string(status)
-		snoozeDurS = string(snoozeDur)
-	)
+func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, snoozeDur string, actor umodels.User) error {
+	// Fetch the status name if status ID is provided.
+	if statusID > 0 {
+		s, err := c.statusStore.Get(statusID)
+		if err != nil {
+			return envelope.NewError(envelope.InputError, err.Error(), nil)
+		}
+		status = s.Name
+	}
 
-	if statusStr == models.StatusSnoozed && snoozeDurS == "" {
+	if status == models.StatusSnoozed && snoozeDur == "" {
 		return envelope.NewError(envelope.InputError, "Snooze duration is required", nil)
 	}
 
+	// Parse the snooze duration if status is snoozed.
 	snoozeUntil := time.Time{}
-	if statusStr == models.StatusSnoozed {
-		duration, err := time.ParseDuration(snoozeDurS)
+	if status == models.StatusSnoozed {
+		duration, err := time.ParseDuration(snoozeDur)
 		if err != nil {
+			c.lo.Error("error parsing snooze duration", "error", err)
 			return envelope.NewError(envelope.InputError, "Invalid snooze duration format", nil)
 		}
 		snoozeUntil = time.Now().Add(duration)
 	}
 
+	// Update the conversation status.
 	if _, err := c.q.UpdateConversationStatus.Exec(uuid, status, snoozeUntil); err != nil {
 		c.lo.Error("error updating conversation status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)
 	}
-	if err := c.RecordStatusChange(statusStr, uuid, actor); err != nil {
+
+	// Record the status change as an activity.
+	if err := c.RecordStatusChange(status, uuid, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
 	}
-	c.BroadcastConversationPropertyUpdate(uuid, "status", string(status))
+	
+	// Send WS update to all subscribers.
+	c.BroadcastConversationPropertyUpdate(uuid, "status", status)
 	return nil
 }
 

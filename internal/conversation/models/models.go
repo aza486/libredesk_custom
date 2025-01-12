@@ -38,7 +38,9 @@ type Conversation struct {
 	ResolvedAt         null.Time      `db:"resolved_at" json:"resolved_at,omitempty"`
 	ReferenceNumber    string         `db:"reference_number" json:"reference_number,omitempty"`
 	Priority           null.String    `db:"priority" json:"priority"`
+	PriorityID         null.Int       `db:"priority_id" json:"priority_id"`
 	Status             null.String    `db:"status" json:"status"`
+	StatusID           null.Int       `db:"status_id" json:"status_id"`
 	FirstReplyAt       null.Time      `db:"first_reply_at" json:"first_reply_at"`
 	ContactID          int            `db:"contact_id" json:"contact_id"`
 	AssignedUserID     null.Int       `db:"assigned_user_id" json:"assigned_user_id"`

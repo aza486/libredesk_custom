@@ -27,6 +27,7 @@
             </CommandGroup>
         </CommandList>
 
+        <!-- Navigation -->
         <div class="mt-2 px-4 py-2 text-xs text-gray-500 flex space-x-4">
             <span><kbd>Enter</kbd> select</span>
             <span><kbd>↑</kbd>/<kbd>↓</kbd> navigate</span>
@@ -151,7 +152,6 @@ function handleCustomSnooze () {
         alert('Select a future time')
         return
     }
-
     handleSnooze(diffMinutes)
     closeDatePicker()
     handleOpenChange()

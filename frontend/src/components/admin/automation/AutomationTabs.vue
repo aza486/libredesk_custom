@@ -6,7 +6,7 @@
       <TabsTrigger value="time_trigger">Time triggers</TabsTrigger>
     </TabsList>
     <TabsContent value="new_conversation">
-      <RuleTab type="new_conversation" helptext="Rules that run when a new conversation is created." />
+      <RuleTab type="new_conversation" helptext="Rules that run when a new conversation is created, drag and drop to reorder rules." />
     </TabsContent>
     <TabsContent value="conversation_update">
       <RuleTab type="conversation_update" helptext="Rules that run when a conversation is updated." />
