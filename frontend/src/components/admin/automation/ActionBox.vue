@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-5 rounded-lg" :class="{'box border p-5': actions.length > 0}">
+  <div class="space-y-5 rounded-lg" :class="{ 'box border p-5': actions.length > 0 }">
     <div class="space-y-5">
       <div v-for="(action, index) in actions" :key="index" class="space-y-5">
         <div v-if="index > 0">
@@ -8,7 +8,7 @@
 
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <div  class="flex gap-5">
+            <div class="flex gap-5">
               <div class="w-48">
                 <Select
                   v-model="action.type"
@@ -65,7 +65,7 @@
                       <span v-else>Select team</span>
                     </div>
 
-                    <div v-if="action.type === 'assign_user'" class="flex items-center gap-2">
+                    <div v-else-if="action.type === 'assign_user'" class="flex items-center gap-2">
                       <div v-if="selected" class="flex items-center gap-2">
                         <Avatar class="w-7 h-7">
                           <AvatarImage
@@ -80,7 +80,10 @@
                       </div>
                       <span v-else>Select user</span>
                     </div>
-                    <span v-if="!selected"> Select </span>
+                    <span v-else>
+                      <span v-if="!selected"> Select</span>
+                      <span v-else>{{ selected.label }} </span>
+                    </span>
                   </template>
                 </ComboBox>
               </div>

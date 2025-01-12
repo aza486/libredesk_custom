@@ -6,7 +6,7 @@
           <Button @click="newRule">New rule</Button>
         </div>
       </div>
-      <div>
+      <div v-if="selectedTab">
         <AutomationTabs v-model="selectedTab" />
       </div>
     </div>
@@ -17,8 +17,8 @@
 <script setup>
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
-import AutomationTabs from '@/components/admin/automation/AutomationTabs.vue'
 import { useStorage } from '@vueuse/core'
+import AutomationTabs from '@/components/admin/automation/AutomationTabs.vue'
 
 const router = useRouter()
 const selectedTab = useStorage('automationsTab', 'new_conversation')
