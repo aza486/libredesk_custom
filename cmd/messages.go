@@ -160,7 +160,7 @@ func handleSendMessage(r *fastglue.Request) error {
 		if err := app.conversation.SendPrivateNote(media, user.ID, cuuid, req.Message); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-		return r.SendEnvelope(true)
+		return r.SendEnvelope("Private note sent successfully")
 	}
 
 	// Reply.
@@ -171,5 +171,5 @@ func handleSendMessage(r *fastglue.Request) error {
 	// Evaluate automation rules.
 	app.automation.EvaluateConversationUpdateRules(cuuid, models.EventConversationMessageOutgoing)
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Message sent successfully")
 }
