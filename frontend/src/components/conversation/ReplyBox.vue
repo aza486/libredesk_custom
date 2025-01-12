@@ -5,36 +5,64 @@
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = $event">
       <DialogContent class="max-w-[70%] max-h-[70%] h-[70%] m-0 p-6">
         <div v-if="isEditorFullscreen">
-          <div v-if="filteredCannedResponses.length > 0" class="w-full overflow-hidden p-2 border-t backdrop-blur">
+          <div
+            v-if="filteredCannedResponses.length > 0"
+            class="w-full overflow-hidden p-2 border-t backdrop-blur"
+          >
             <ul ref="cannedResponsesRef" class="space-y-2 max-h-96 overflow-y-auto">
-              <li v-for="(response, index) in filteredCannedResponses" :key="response.id" :class="[
-                'cursor-pointer rounded p-1 hover:bg-secondary',
-                { 'bg-secondary': index === selectedResponseIndex }
-              ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
-                <span class="font-semibold">{{ response.title }}</span> - {{ getTextFromHTML(response.content).slice(0,
-                  150)
-                }}...
+              <li
+                v-for="(response, index) in filteredCannedResponses"
+                :key="response.id"
+                :class="[
+                  'cursor-pointer rounded p-1 hover:bg-secondary',
+                  { 'bg-secondary': index === selectedResponseIndex }
+                ]"
+                @click="selectCannedResponse(response.content)"
+                @mouseenter="selectedResponseIndex = index"
+              >
+                <span class="font-semibold">{{ response.title }}</span> -
+                {{ getTextFromHTML(response.content).slice(0, 150) }}...
               </li>
             </ul>
           </div>
-          <Editor v-model:selectedText="selectedText" v-model:isBold="isBold" v-model:isItalic="isItalic"
-            v-model:htmlContent="htmlContent" v-model:textContent="textContent" :placeholder="editorPlaceholder"
-            :aiPrompts="aiPrompts" @keydown="handleKeydown" @aiPromptSelected="handleAiPromptSelected"
-            @editorReady="onEditorReady" :contentToSet="contentToSet" v-model:cursorPosition="cursorPosition" />
+          <Editor
+            v-model:selectedText="selectedText"
+            v-model:isBold="isBold"
+            v-model:isItalic="isItalic"
+            v-model:htmlContent="htmlContent"
+            v-model:textContent="textContent"
+            :placeholder="editorPlaceholder"
+            :aiPrompts="aiPrompts"
+            @keydown="handleKeydown"
+            @aiPromptSelected="handleAiPromptSelected"
+            :contentToSet="contentToSet"
+            v-model:cursorPosition="cursorPosition"
+            :clearContent="clearEditorContent"
+            :setInlineImage="setInlineImage"
+            :insertContent="insertContent"
+          />
         </div>
       </DialogContent>
     </Dialog>
 
     <!-- Canned responses on non-fullscreen editor -->
-    <div v-if="filteredCannedResponses.length > 0 && !isEditorFullscreen"
-      class="w-full overflow-hidden p-2 border-t backdrop-blur">
+    <div
+      v-if="filteredCannedResponses.length > 0 && !isEditorFullscreen"
+      class="w-full overflow-hidden p-2 border-t backdrop-blur"
+    >
       <ul ref="cannedResponsesRef" class="space-y-2 max-h-96 overflow-y-auto">
-        <li v-for="(response, index) in filteredCannedResponses" :key="response.id" :class="[
-          'cursor-pointer rounded p-1 hover:bg-secondary',
-          { 'bg-secondary': index === selectedResponseIndex }
-        ]" @click="selectCannedResponse(response.content)" @mouseenter="selectedResponseIndex = index">
-          <span class="font-semibold">{{ response.title }}</span> - {{ getTextFromHTML(response.content).slice(0, 150)
-          }}...
+        <li
+          v-for="(response, index) in filteredCannedResponses"
+          :key="response.id"
+          :class="[
+            'cursor-pointer rounded p-1 hover:bg-secondary',
+            { 'bg-secondary': index === selectedResponseIndex }
+          ]"
+          @click="selectCannedResponse(response.content)"
+          @mouseenter="selectedResponseIndex = index"
+        >
+          <span class="font-semibold">{{ response.title }}</span> -
+          {{ getTextFromHTML(response.content).slice(0, 150) }}...
         </li>
       </ul>
     </div>
@@ -49,38 +77,59 @@
             <TabsTrigger value="private_note"> Private note </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div class="flex items-center mr-2 cursor-pointer" @click="isEditorFullscreen = !isEditorFullscreen">
+        <div
+          class="flex items-center mr-2 cursor-pointer"
+          @click="isEditorFullscreen = !isEditorFullscreen"
+        >
           <Fullscreen size="20" />
         </div>
       </div>
 
       <!-- Main Editor -->
-      <Editor v-model:selectedText="selectedText" v-model:isBold="isBold" v-model:isItalic="isItalic"
-        v-model:htmlContent="htmlContent" v-model:textContent="textContent" :placeholder="editorPlaceholder"
-        :aiPrompts="aiPrompts" @keydown="handleKeydown" @aiPromptSelected="handleAiPromptSelected"
-        @editorReady="onEditorReady" :contentToSet="contentToSet" @send="handleSend"
-        v-model:cursorPosition="cursorPosition" />
+      <Editor
+        v-model:selectedText="selectedText"
+        v-model:isBold="isBold"
+        v-model:isItalic="isItalic"
+        v-model:htmlContent="htmlContent"
+        v-model:textContent="textContent"
+        :placeholder="editorPlaceholder"
+        :aiPrompts="aiPrompts"
+        @keydown="handleKeydown"
+        @aiPromptSelected="handleAiPromptSelected"
+        :contentToSet="contentToSet"
+        @send="handleSend"
+        v-model:cursorPosition="cursorPosition"
+        :clearContent="clearEditorContent"
+        :setInlineImage="setInlineImage"
+        :insertContent="insertContent"
+      />
 
       <!-- Attachments preview -->
-      <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete"></AttachmentsPreview>
-
+      <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete" />
 
       <!-- Bottom menu bar -->
-      <ReplyBoxBottomMenuBar :handleFileUpload="handleFileUpload" :handleInlineImageUpload="handleInlineImageUpload"
-        :isBold="isBold" :isItalic="isItalic" @toggleBold="toggleBold" @toggleItalic="toggleItalic" :hasText="hasText"
-        :handleSend="handleSend" @emojiSelect="handleEmojiSelect">
+      <ReplyBoxBottomMenuBar
+        :handleFileUpload="handleFileUpload"
+        :handleInlineImageUpload="handleInlineImageUpload"
+        :isBold="isBold"
+        :isItalic="isItalic"
+        @toggleBold="toggleBold"
+        @toggleItalic="toggleItalic"
+        :hasText="hasText"
+        :handleSend="handleSend"
+        @emojiSelect="handleEmojiSelect"
+      >
       </ReplyBoxBottomMenuBar>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { Fullscreen } from 'lucide-vue-next';
+import { Fullscreen } from 'lucide-vue-next'
 import api from '@/api'
 
 import { getTextFromHTML } from '@/utils/strings'
@@ -94,7 +143,10 @@ import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxMenuBar.vue
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
-let editorInstance = ref(null)
+
+const insertContent = ref(null)
+const setInlineImage = ref(null)
+const clearEditorContent = ref(false)
 const isEditorFullscreen = ref(false)
 const cursorPosition = ref(0)
 const selectedText = ref('')
@@ -114,7 +166,8 @@ const cannedResponses = ref([])
 
 const aiPrompts = ref([])
 
-const editorPlaceholder = "Press Enter to add a new line; Press '/' to select a Canned Response; Press Ctrl + Enter to send."
+const editorPlaceholder =
+  "Press Enter to add a new line; Press '/' to select a Canned Response; Press Ctrl + Enter to send."
 
 onMounted(async () => {
   await Promise.all([fetchCannedResponses(), fetchAiPrompts()])
@@ -150,7 +203,7 @@ const handleAiPromptSelected = async (key) => {
   try {
     const resp = await api.aiCompletion({
       prompt_key: key,
-      content: selectedText.value,
+      content: selectedText.value
     })
     contentToSet.value = resp.data.data.replace(/\n/g, '<br>')
   } catch (error) {
@@ -171,7 +224,7 @@ const toggleItalic = () => {
 }
 
 const attachments = computed(() => {
-  return uploadedFiles.value.filter(upload => upload.disposition === 'attachment')
+  return uploadedFiles.value.filter((upload) => upload.disposition === 'attachment')
 })
 
 // Watch for text content changes and filter canned responses
@@ -202,17 +255,13 @@ const hasText = computed(() => {
   return textContent.value.trim().length > 0 ? true : false
 })
 
-const onEditorReady = (editor) => {
-  editorInstance.value = editor
-}
-
 const handleFileUpload = (event) => {
   for (const file of event.target.files) {
     api
       .uploadMedia({
         files: file,
         inline: false,
-        linked_model: "messages",
+        linked_model: 'messages'
       })
       .then((resp) => {
         uploadedFiles.value.push(resp.data.data)
@@ -233,14 +282,14 @@ const handleInlineImageUpload = (event) => {
       .uploadMedia({
         files: file,
         inline: true,
-        linked_model: "messages",
+        linked_model: 'messages'
       })
       .then((resp) => {
-        editorInstance.value.commands.setImage({
+        setInlineImage.value = {
           src: resp.data.data.url,
           alt: resp.data.data.filename,
-          title: resp.data.data.uuid,
-        })
+          title: resp.data.data.uuid
+        }
         uploadedFiles.value.push(resp.data.data)
       })
       .catch((error) => {
@@ -262,14 +311,15 @@ const handleSend = async () => {
     const parser = new DOMParser()
     const doc = parser.parseFromString(htmlContent.value, 'text/html')
     const inlineImageUUIDs = Array.from(doc.querySelectorAll('img.inline-image'))
-      .map(img => img.getAttribute('title'))
+      .map((img) => img.getAttribute('title'))
       .filter(Boolean)
 
-    uploadedFiles.value = uploadedFiles.value.filter(file =>
-      // Keep if:
-      // 1. Not an inline image OR
-      // 2. Is an inline image that exists in editor
-      file.disposition !== 'inline' || inlineImageUUIDs.includes(file.uuid)
+    uploadedFiles.value = uploadedFiles.value.filter(
+      (file) =>
+        // Keep if:
+        // 1. Not an inline image OR
+        // 2. Is an inline image that exists in editor
+        file.disposition !== 'inline' || inlineImageUUIDs.includes(file.uuid)
     )
 
     await api.sendMessage(conversationStore.current.uuid, {
@@ -283,9 +333,12 @@ const handleSend = async () => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    clearEditorContent.value = true
+    nextTick(() => {
+      clearEditorContent.value = false
+    })
   }
-  editorInstance.value.commands.clearContent()
-  uploadedFiles.value = []
   api.updateAssigneeLastSeen(conversationStore.current.uuid)
 }
 
@@ -331,6 +384,8 @@ const selectCannedResponse = (content) => {
 }
 
 const handleEmojiSelect = (emoji) => {
-  editorInstance.value.chain().focus().insertContent(emoji).run()
+  insertContent.value = undefined
+  // Force reactivity so the user can select the same emoji multiple times
+  nextTick(() => insertContent.value = emoji)
 }
 </script>

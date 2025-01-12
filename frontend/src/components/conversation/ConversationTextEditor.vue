@@ -1,7 +1,11 @@
 <template>
   <div class="max-h-[600px] overflow-y-auto">
-    <BubbleMenu :editor="editor" :tippy-options="{ duration: 100 }" v-if="editor"
-      class="bg-white p-1 box rounded-lg will-change-transform">
+    <BubbleMenu
+      :editor="editor"
+      :tippy-options="{ duration: 100 }"
+      v-if="editor"
+      class="bg-white p-1 box rounded-lg will-change-transform"
+    >
       <div class="flex space-x-1 items-center">
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -14,16 +18,31 @@
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem v-for="prompt in aiPrompts" :key="prompt.key" @select="emitPrompt(prompt.key)">
+            <DropdownMenuItem
+              v-for="prompt in aiPrompts"
+              :key="prompt.key"
+              @select="emitPrompt(prompt.key)"
+            >
               {{ prompt.title }}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button size="sm" variant="ghost" @click="isBold = !isBold" :active="isBold" :class="{ 'bg-gray-200': isBold }">
+        <Button
+          size="sm"
+          variant="ghost"
+          @click="isBold = !isBold"
+          :active="isBold"
+          :class="{ 'bg-gray-200': isBold }"
+        >
           <Bold size="14" />
         </Button>
-        <Button size="sm" variant="ghost" @click="isItalic = !isItalic" :active="isItalic"
-          :class="{ 'bg-gray-200': isItalic }">
+        <Button
+          size="sm"
+          variant="ghost"
+          @click="isItalic = !isItalic"
+          :active="isItalic"
+          :class="{ 'bg-gray-200': isItalic }"
+        >
           <Italic size="14" />
         </Button>
       </div>
@@ -41,7 +60,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
@@ -58,15 +77,17 @@ const cursorPosition = defineModel('cursorPosition', { default: 0 })
 
 const props = defineProps({
   placeholder: String,
-  clearContent: Boolean,
   contentToSet: String,
+  setInlineImage: Object,
+  insertContent: String,
+  clearContent: Boolean,
   aiPrompts: {
     type: Array,
     default: () => []
   }
 })
 
-const emit = defineEmits(['send', 'editorReady', 'aiPromptSelected'])
+const emit = defineEmits(['send', 'aiPromptSelected'])
 
 const emitPrompt = (key) => emit('aiPromptSelected', key)
 
@@ -75,17 +96,17 @@ const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
 const editorConfig = {
   extensions: [
     StarterKit.configure({
-      hardBreak: false,
+      hardBreak: false
     }),
     HardBreak.extend({
-      addKeyboardShortcuts () {
+      addKeyboardShortcuts() {
         return {
           Enter: () => {
             if (this.editor.isActive('orderedList') || this.editor.isActive('bulletList')) {
-              return this.editor.chain().createParagraphNear().run();
+              return this.editor.chain().createParagraphNear().run()
             }
-            return this.editor.commands.setHardBreak();
-          },
+            return this.editor.commands.setHardBreak()
+          }
         }
       }
     }),
@@ -129,8 +150,6 @@ const editor = ref(
 watchEffect(() => {
   const editorInstance = editor.value
   if (!editorInstance) return
-
-  emit('editorReady', editorInstance)
   isBold.value = editorInstance.isActive('bold')
   isItalic.value = editorInstance.isActive('italic')
 })
@@ -151,21 +170,56 @@ watchEffect(() => {
   }
 })
 
-watch(() => props.contentToSet, (newContent) => {
-  console.log('newContent', newContent)
-  if (newContent === '') {
-    editor.value?.commands.clearContent()
-  } else {
-    editor.value?.commands.setContent(newContent, true)
+watch(
+  () => props.contentToSet,
+  (newContent) => {
+    if (newContent === '') {
+      editor.value?.commands.clearContent()
+    } else {
+      editor.value?.commands.setContent(newContent, true)
+    }
+    editor.value?.commands.focus()
   }
-  editor.value?.commands.focus()
-})
+)
 
 watch(cursorPosition, (newPos, oldPos) => {
   if (editor.value && newPos !== oldPos && newPos !== editor.value.state.selection.from) {
     editor.value.commands.setTextSelection(newPos)
   }
 })
+
+watch(
+  () => props.clearContent,
+  () => {
+    if (!props.clearContent) return
+    editor.value?.commands.clearContent()
+    editor.value?.commands.focus()
+    // `onUpdate` is not called when clearing content, so we need to manually reset the values.
+    htmlContent.value = ''
+    textContent.value = ''
+    cursorPosition.value = 0
+  }
+)
+
+watch(
+  () => props.setInlineImage,
+  (val) => {
+    if (val) {
+      editor.value?.commands.setImage({
+        src: val.src,
+        alt: val.alt,
+        title: val.title
+      })
+    }
+  }
+)
+
+watch(
+  () => props.insertContent,
+  (val) => {
+    if (val) editor.value?.commands.insertContent(val)
+  }
+)
 
 onUnmounted(() => {
   editor.value?.destroy()
