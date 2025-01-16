@@ -339,17 +339,30 @@ const routes = [
               {
                 path: 'tags',
                 component: () => import('@/components/admin/conversation/tags/Tags.vue'),
-                meta: { title: 'Conversation Tags' }
+                meta: { title: 'Tags' }
               },
               {
                 path: 'statuses',
                 component: () => import('@/components/admin/conversation/status/Status.vue'),
-                meta: { title: 'Conversation Statuses' }
+                meta: { title: 'Statuses' }
               },
               {
-                path: 'canned-responses',
-                component: () => import('@/components/admin/conversation/canned_responses/CannedResponses.vue'),
-                meta: { title: 'Canned Responses' }
+                path: 'Macros',
+                component: () => import('@/components/admin/conversation/macros/Macros.vue'),
+                meta: { title: 'Macros' },
+                children: [
+                  {
+                    path: 'new',
+                    component: () => import('@/components/admin/conversation/macros/CreateMacro.vue'),
+                    meta: { title: 'Create Macro' }
+                  },
+                  {
+                    path: ':id/edit',
+                    props: true,
+                    component: () => import('@/components/admin/conversation/macros/EditMacro.vue'),
+                    meta: { title: 'Edit Macro' }
+                  },
+                ]
               }
             ]
           }

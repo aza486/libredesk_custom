@@ -64,7 +64,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
-import HardBreak from '@tiptap/extension-hard-break'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 
@@ -95,18 +94,26 @@ const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
 
 const editorConfig = {
   extensions: [
+    // Lists are unstyled in tailwind, so we need to add classes to them.
     StarterKit.configure({
-      hardBreak: false
-    }),
-    HardBreak.extend({
-      addKeyboardShortcuts() {
-        return {
-          Enter: () => {
-            if (this.editor.isActive('orderedList') || this.editor.isActive('bulletList')) {
-              return this.editor.chain().createParagraphNear().run()
-            }
-            return this.editor.commands.setHardBreak()
-          }
+      bulletList: {
+        HTMLAttributes: {
+          class: 'list-disc ml-6 my-2'
+        }
+      },
+      orderedList: {
+        HTMLAttributes: {
+          class: 'list-decimal ml-6 my-2'
+        }
+      },
+      listItem: {
+        HTMLAttributes: {
+          class: 'pl-1'
+        }
+      },
+      heading: {
+        HTMLAttributes: {
+          class: 'text-xl font-bold mt-4 mb-2'
         }
       }
     }),
@@ -194,7 +201,7 @@ watch(
     if (!props.clearContent) return
     editor.value?.commands.clearContent()
     editor.value?.commands.focus()
-    // `onUpdate` is not called when clearing content, so we need to manually reset the values.
+    // `onUpdate` is not called when clearing content, so need to reset the content here.
     htmlContent.value = ''
     textContent.value = ''
     cursorPosition.value = 0
@@ -238,10 +245,10 @@ onUnmounted(() => {
 
 // Editor height
 .ProseMirror {
-  min-height: 150px !important;
-  max-height: 100% !important;
+  min-height: 200px !important;
+  max-height: 60% !important;
   overflow-y: scroll !important;
-  padding: 10px 10px;
+  padding: 10px;
 }
 
 .tiptap {
@@ -253,9 +260,5 @@ onUnmounted(() => {
       color: #003d7a;
     }
   }
-}
-
-br.ProseMirror-trailingBreak {
-  display: none;
 }
 </style>

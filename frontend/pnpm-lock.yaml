@@ -23,18 +23,12 @@ importers:
       '@tanstack/vue-table':
         specifier: ^8.19.2
         version: 8.20.5(vue@3.5.13(typescript@5.7.3))
-      '@tiptap/extension-hard-break':
-        specifier: ^2.11.0
-        version: 2.11.2(@tiptap/core@2.11.2(@tiptap/pm@2.11.2))
       '@tiptap/extension-image':
         specifier: ^2.5.9
         version: 2.11.2(@tiptap/core@2.11.2(@tiptap/pm@2.11.2))
       '@tiptap/extension-link':
         specifier: ^2.9.1
         version: 2.11.2(@tiptap/core@2.11.2(@tiptap/pm@2.11.2))(@tiptap/pm@2.11.2)
-      '@tiptap/extension-list-item':
-        specifier: ^2.4.0
-        version: 2.11.2(@tiptap/core@2.11.2(@tiptap/pm@2.11.2))
       '@tiptap/extension-ordered-list':
         specifier: ^2.4.0
         version: 2.11.2(@tiptap/core@2.11.2(@tiptap/pm@2.11.2))

@@ -10,6 +10,8 @@
           <div class="flex items-center justify-between">
             <div class="flex gap-5">
               <div class="w-48">
+
+                <!-- Type -->
                 <Select
                   v-model="action.type"
                   @update:modelValue="(value) => handleFieldChange(value, index)"
@@ -31,12 +33,24 @@
                 </Select>
               </div>
 
+              <!-- Value -->
+              <div
+                v-if="action.type && conversationActions[action.type]?.type === 'tag'"
+                class="w-full"
+              >
+                <SelectTag
+                  v-model="action.value"
+                  :items="tagsStore.tagNames"
+                  placeholder="Select tag"
+                />
+              </div>
+
               <div
                 class="w-48"
                 v-if="action.type && conversationActions[action.type]?.type === 'select'"
               >
                 <ComboBox
-                  v-model="action.value"
+                  v-model="action.value[0]"
                   :items="conversationActions[action.type]?.options"
                   placeholder="Select"
                   @select="handleValueChange($event, index)"
@@ -100,7 +114,7 @@
           >
             <QuillEditor
               theme="snow"
-              v-model:content="action.value"
+              v-model:content="action.value[0]"
               contentType="html"
               @update:content="(value) => handleValueChange(value, index)"
               class="h-32 mb-12"
@@ -119,6 +133,7 @@
 import { toRefs } from 'vue'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-vue-next'
+import { useTagStore } from '@/stores/tag'
 import {
   Select,
   SelectContent,
@@ -131,6 +146,7 @@ import { QuillEditor } from '@vueup/vue-quill'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { SelectTag } from '@/components/ui/select'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 
 const props = defineProps({
@@ -142,10 +158,11 @@ const props = defineProps({
 
 const { actions } = toRefs(props)
 const emit = defineEmits(['update-actions', 'add-action', 'remove-action'])
+const tagsStore = useTagStore()
 const { conversationActions } = useConversationFilters()
 
 const handleFieldChange = (value, index) => {
-  actions.value[index].value = ''
+  actions.value[index].value = []
   actions.value[index].type = value
   emitUpdate(index)
 }
@@ -154,7 +171,7 @@ const handleValueChange = (value, index) => {
   if (typeof value === 'object') {
     value = value.value
   }
-  actions.value[index].value = value
+  actions.value[index].value = [value]
   emitUpdate(index)
 }
 

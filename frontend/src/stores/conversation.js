@@ -13,12 +13,19 @@ export const useConversationStore = defineStore('conversation', () => {
   const priorities = ref([])
   const statuses = ref([])
 
-  const prioritiesForSelect = computed(() => {
+  // Options for select fields
+  const priorityOptions = computed(() => {
     return priorities.value.map(p => ({ label: p.name, value: p.id }))
   })
-  const statusesForSelect = computed(() => {
+  const statusOptions = computed(() => {
     return statuses.value.map(s => ({ label: s.name, value: s.id }))
   })
+  const statusOptionsNoSnooze = computed(() =>
+    statuses.value.filter(s => s.name !== 'Snoozed').map(s => ({
+      label: s.name,
+      value: s.id
+    }))
+  )
 
   const sortFieldMap = {
     oldest: {
@@ -78,6 +85,8 @@ export const useConversationStore = defineStore('conversation', () => {
   const conversation = reactive({
     data: null,
     participants: {},
+    mediaFiles: [],
+    macro: {},
     loading: false,
     errorMessage: ''
   })
@@ -99,6 +108,22 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function clearListReRenderInterval () {
     clearInterval(reRenderInterval)
+  }
+
+  function setMacro (macros) {
+    conversation.macro = macros
+  }
+
+  function removeMacroAction (action) {
+    conversation.macro.actions = conversation.macro.actions.filter(a => a.type !== action.type)
+  }
+
+  function resetMacro () {
+    conversation.macro = {}
+  }
+
+  function resetMediaFiles () {
+    conversation.mediaFiles = []
   }
 
   function setListStatus (status, fetch = true) {
@@ -193,6 +218,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   async function fetchConversation (uuid) {
     conversation.loading = true
+    resetCurrentConversation()
     try {
       const resp = await api.getConversation(uuid)
       conversation.data = resp.data.data
@@ -419,7 +445,6 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-
   async function upsertTags (v) {
     try {
       await api.upsertTags(conversation.data.uuid, v)
@@ -517,6 +542,8 @@ export const useConversationStore = defineStore('conversation', () => {
     Object.assign(conversation, {
       data: null,
       participants: {},
+      macro: {},
+      mediaFiles: [],
       loading: false,
       errorMessage: ''
     })
@@ -574,11 +601,16 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchPriorities,
     setListSortField,
     setListStatus,
+    removeMacroAction,
+    setMacro,
+    resetMacro,
+    resetMediaFiles,
     getListSortField,
     getListStatus,
     statuses,
     priorities,
-    prioritiesForSelect,
-    statusesForSelect
+    priorityOptions,
+    statusOptionsNoSnooze,
+    statusOptions
   }
 })

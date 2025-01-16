@@ -18,26 +18,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ListFilter, ChevronDown } from 'lucide-vue-next'
-import { SidebarTrigger } from '@/components/ui/sidebar'
+import { ListFilter } from 'lucide-vue-next'
 import { useConversationStore } from '@/stores/conversation'
-import { Button } from '@/components/ui/button'
-import Filter from '@/components/common/Filter.vue'
+import Filter from '@/components/common/FilterBuilder.vue'
 import api from '@/api'
 
 const conversationStore = useConversationStore()
@@ -51,14 +36,6 @@ onMounted(() => {
   fetchInitialData()
   localFilters.value = [...conversationStore.conversations.filters]
 })
-
-const handleStatusChange = (status) => {
-  console.log('status', status)
-}
-
-const handleSortChange = (order) => {
-  console.log('order', order)
-}
 
 const fetchInitialData = async () => {
   const [statusesResp, prioritiesResp] = await Promise.all([

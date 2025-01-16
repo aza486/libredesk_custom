@@ -24,8 +24,8 @@ const (
 	// Tags
 	PermTagsManage = "tags:manage"
 
-	// Canned Responses
-	PermCannedResponsesManage = "canned_responses:manage"
+	// Macros
+	PermMacrosManage = "macros:manage"
 
 	// Users
 	PermUsersManage = "users:manage"
@@ -80,7 +80,7 @@ var validPermissions = map[string]struct{}{
 	PermViewManage:                      {},
 	PermStatusManage:                    {},
 	PermTagsManage:                      {},
-	PermCannedResponsesManage:           {},
+	PermMacrosManage:                    {},
 	PermUsersManage:                     {},
 	PermTeamsManage:                     {},
 	PermAutomationsManage:               {},

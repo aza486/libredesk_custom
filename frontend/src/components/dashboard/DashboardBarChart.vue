@@ -1,6 +1,6 @@
 <template>
   <BarChart :data="data" index="status" :categories="priorities" :show-grid-line="true" :show-x-axis="true"
-    :show-y-axis="true" type="grouped" :x-formatter="xFormatter" :y-formatter="yFormatter" />
+    :show-y-axis="true" type="grouped" :x-formatter="xFormatter" :y-formatter="yFormatter"   :rounded-corners="4"/>
 </template>
 
 <script setup>

@@ -8,7 +8,7 @@ import api from '@/api'
 export const useTeamStore = defineStore('team', () => {
     const teams = ref([])
     const emitter = useEmitter()
-    const forSelect = computed(() => teams.value.map(team => ({
+    const options = computed(() => teams.value.map(team => ({
         label: team.name,
         value: String(team.id),
         emoji: team.emoji,
@@ -28,7 +28,7 @@ export const useTeamStore = defineStore('team', () => {
     }
     return {
         teams,
-        forSelect,
+        options,
         fetchTeams,
     }
 })

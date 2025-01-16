@@ -1,21 +1,17 @@
 <template>
-  <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-    <ResizablePanel :min-size="23" :default-size="23" :max-size="40">
+  <div class="flex">
+    <div class="border-r w-[380px]">
       <ConversationList />
-    </ResizablePanel>
-    <ResizableHandle />
-    <ResizablePanel>
-      <div class="border-r">
-        <Conversation v-if="conversationStore.current"></Conversation>
-        <ConversationPlaceholder v-else></ConversationPlaceholder>
-      </div>
-    </ResizablePanel>
-  </ResizablePanelGroup>
+    </div>
+    <div class="border-r flex-1">
+      <Conversation v-if="conversationStore.current"></Conversation>
+      <ConversationPlaceholder v-else></ConversationPlaceholder>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { watch, onUnmounted, onMounted } from 'vue'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import ConversationList from '@/components/conversation/list/ConversationList.vue'
 import Conversation from '@/components/conversation/Conversation.vue'
 import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'

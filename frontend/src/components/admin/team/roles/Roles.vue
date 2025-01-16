@@ -1,6 +1,4 @@
 <template>
-  
-  <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/teams/roles'">
       <div class="flex justify-end mb-5">
         <Button @click="navigateToAddRole"> New role </Button>
@@ -11,7 +9,6 @@
       </div>
     </div>
     <router-view></router-view>
-  </div>
 </template>
 
 <script setup>
@@ -23,21 +20,15 @@ import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
 import api from '@/api'
 import { useRouter } from 'vue-router'
-import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const { toast } = useToast()
-
 const emit = useEmitter()
 const router = useRouter()
 const roles = ref([])
 const isLoading = ref(false)
-const breadcrumbLinks = [
-
-  { path: '#', label: 'Roles' }
-]
 
 const getRoles = async () => {
   try {

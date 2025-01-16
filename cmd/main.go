@@ -14,12 +14,12 @@ import (
 	businesshours "github.com/abhinavxd/libredesk/internal/business_hours"
 	"github.com/abhinavxd/libredesk/internal/colorlog"
 	"github.com/abhinavxd/libredesk/internal/csat"
+	"github.com/abhinavxd/libredesk/internal/macro"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	"github.com/abhinavxd/libredesk/internal/sla"
 	"github.com/abhinavxd/libredesk/internal/view"
 
 	"github.com/abhinavxd/libredesk/internal/automation"
-	"github.com/abhinavxd/libredesk/internal/cannedresp"
 	"github.com/abhinavxd/libredesk/internal/conversation"
 	"github.com/abhinavxd/libredesk/internal/conversation/priority"
 	"github.com/abhinavxd/libredesk/internal/conversation/status"
@@ -67,7 +67,7 @@ type App struct {
 	tag           *tag.Manager
 	inbox         *inbox.Manager
 	tmpl          *template.Manager
-	cannedResp    *cannedresp.Manager
+	macro         *macro.Manager
 	conversation  *conversation.Manager
 	automation    *automation.Engine
 	businessHours *businesshours.Manager
@@ -149,15 +149,14 @@ func main() {
 		businessHours               = initBusinessHours(db)
 		user                        = initUser(i18n, db)
 		notifier                    = initNotifier(user)
-		automation                  = initAutomationEngine(db, user)
+		automation                  = initAutomationEngine(db)
 		sla                         = initSLA(db, team, settings, businessHours)
-		conversation                = initConversations(i18n, status, priority, wsHub, notifier, db, inbox, user, team, media, automation, template)
+		conversation                = initConversations(i18n, sla, status, priority, wsHub, notifier, db, inbox, user, team, media, automation, template)
 		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
-
 	// Set stores.
 	wsHub.SetConversationStore(conversation)
-	automation.SetConversationStore(conversation, sla)
+	automation.SetConversationStore(conversation)
 
 	// Start inbox receivers.
 	startInboxes(ctx, inbox, conversation)
@@ -209,8 +208,8 @@ func main() {
 		authz:         initAuthz(),
 		role:          initRole(db),
 		tag:           initTag(db),
+		macro:         initMacro(db),
 		ai:            initAI(db),
-		cannedResp:    initCannedResponse(db),
 	}
 
 	// Init fastglue and set app in ctx.
@@ -223,7 +222,7 @@ func main() {
 	initHandlers(g, wsHub)
 
 	s := &fasthttp.Server{
-		Name:                 "server",
+		Name:                 "libredesk",
 		ReadTimeout:          ko.MustDuration("app.server.read_timeout"),
 		WriteTimeout:         ko.MustDuration("app.server.write_timeout"),
 		MaxRequestBodySize:   ko.MustInt("app.server.max_body_size"),

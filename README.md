@@ -20,7 +20,7 @@ Self-hosted 100% open-source support desk. Single binary with minimal dependenci
 | **SLA**                                    | Configure and manage service level agreements.                                               |
 | **CSAT**                                   | Measure customer satisfaction with post-interaction surveys.                                 |
 | **Reports**                                | Gain insights and analyze support performance, with complete freedom to integrate analytics tools like Metabase for generating custom reports. |
-| **Canned Responses**                       | Save and reuse common replies for efficiency.                                                |
+| **Macros**                       | Save and reuse common replies and common actions for effciency                                             |
 | **Auto Assignment**                        | Automatically assign tickets to agents based on defined rules.                               |
 | **Snooze Conversations**                   | Temporarily pause conversations and set reminders to revisit them later.                     |
 | **Automation Rules**                       | Define rules to automate workflows on conversation creation, updates, or hourly triggers.    |

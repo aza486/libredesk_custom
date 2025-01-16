@@ -141,10 +141,10 @@ func (m *Manager) Update(id int, name, description, firstResponseDuration, resol
 }
 
 // ApplySLA associates an SLA policy with a conversation.
-func (m *Manager) ApplySLA(conversationID, slaPolicyID int) error {
+func (m *Manager) ApplySLA(conversationID, slaPolicyID int) (models.SLAPolicy, error) {
 	sla, err := m.Get(slaPolicyID)
 	if err != nil {
-		return err
+		return sla, err
 	}
 	for _, t := range []string{SLATypeFirstResponse, SLATypeResolution} {
 		if t == SLATypeFirstResponse && sla.FirstResponseTime == "" {
@@ -155,10 +155,10 @@ func (m *Manager) ApplySLA(conversationID, slaPolicyID int) error {
 		}
 		if _, err := m.q.InsertConversationSLA.Exec(conversationID, slaPolicyID, t); err != nil && !dbutil.IsUniqueViolationError(err) {
 			m.lo.Error("error applying SLA to conversation", "error", err)
-			return err
+			return sla, envelope.NewError(envelope.GeneralError, "Error applying SLA to conversation", nil)
 		}
 	}
-	return nil
+	return sla, nil
 }
 
 // Run starts the SLA worker pool and periodically processes unbreached SLAs (blocking).

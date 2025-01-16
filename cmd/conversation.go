@@ -481,23 +481,20 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 	return r.SendEnvelope("Status updated successfully")
 }
 
-// handleAddConversationTags adds tags to a conversation.
-func handleAddConversationTags(r *fastglue.Request) error {
+// handleUpdateConversationtags updates conversation tags.
+func handleUpdateConversationtags(r *fastglue.Request) error {
 	var (
-		app     = r.Context.(*App)
-		tagIDs  = []int{}
-		tagJSON = r.RequestCtx.PostArgs().Peek("tag_ids")
-		auser   = r.RequestCtx.UserValue("user").(amodels.User)
-		uuid    = r.RequestCtx.UserValue("uuid").(string)
+		app      = r.Context.(*App)
+		tagNames = []string{}
+		tagJSON  = r.RequestCtx.PostArgs().Peek("tags")
+		auser    = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid     = r.RequestCtx.UserValue("uuid").(string)
 	)
 
-	// Parse tag IDs from JSON
-	err := json.Unmarshal(tagJSON, &tagIDs)
-	if err != nil {
-		app.lo.Error("unmarshalling tag ids", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error adding tags", nil, "")
+	if err := json.Unmarshal(tagJSON, &tagNames); err != nil {
+		app.lo.Error("error unmarshalling tags JSON", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error unmarshalling tags JSON", nil, envelope.GeneralError)
 	}
-
 	conversation, err := app.conversation.GetConversation(0, uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -516,7 +513,7 @@ func handleAddConversationTags(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 
-	if err := app.conversation.UpsertConversationTags(uuid, tagIDs); err != nil {
+	if err := app.conversation.UpsertConversationTags(uuid, tagNames); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Tags added successfully")

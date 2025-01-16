@@ -1,7 +1,7 @@
 <template>
     <Toaster />
     <TooltipProvider :delay-duration="200">
-        <div class="font-inter">
+        <div class="!font-jakarta">
             <RouterView />
         </div>
     </TooltipProvider>

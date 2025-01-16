@@ -11,7 +11,7 @@ DROP TYPE IF EXISTS "template_type" CASCADE; CREATE TYPE "template_type" AS ENUM
 DROP TYPE IF EXISTS "user_type" CASCADE; CREATE TYPE "user_type" AS ENUM ('agent', 'contact');
 DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('openai');
 DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation_execution_mode" AS ENUM ('all', 'first_match');
-
+DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "visibility" AS ENUM ('all', 'team', 'user');
 
 DROP TABLE IF EXISTS conversation_slas CASCADE;
 CREATE TABLE conversation_slas (
@@ -163,15 +163,20 @@ CREATE TABLE automation_rules (
     CONSTRAINT constraint_automation_rules_on_description CHECK (length(description) <= 300)
 );
 
-DROP TABLE IF EXISTS canned_responses CASCADE;
-CREATE TABLE canned_responses (
-	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT NOW(),
-	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	title TEXT NOT NULL,
-	"content" TEXT NOT NULL,
-	CONSTRAINT constraint_canned_responses_on_title CHECK (length(title) <= 140),
-	CONSTRAINT constraint_canned_responses_on_content CHECK (length("content") <= 5000)
+DROP TABLE IF EXISTS macros CASCADE;
+CREATE TABLE macros (
+   id SERIAL PRIMARY KEY,
+   created_at TIMESTAMPTZ DEFAULT NOW(),
+   updated_at TIMESTAMPTZ DEFAULT NOW(),
+   title TEXT NOT NULL,
+   actions JSONB DEFAULT '{}'::jsonb NOT NULL,
+   visibility macro_visibility NOT NULL,
+   message_content TEXT NOT NULL,
+   user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+   team_id INT REFERENCES teams(id) ON DELETE CASCADE ON UPDATE CASCADE,
+   usage_count INT DEFAULT 0 NOT NULL,
+   CONSTRAINT title_length CHECK (length(title) <= 255),
+   CONSTRAINT message_content_length CHECK (length(message_content) <= 1000)
 );
 
 DROP TABLE IF EXISTS conversation_participants CASCADE;
@@ -252,10 +257,11 @@ CREATE INDEX index_settings_on_key ON settings USING btree ("key");
 DROP TABLE IF EXISTS tags CASCADE;
 CREATE TABLE tags (
 	id SERIAL PRIMARY KEY,
+	"name" TEXT NOT NULL,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	"name" TEXT NOT NULL,
-	CONSTRAINT constraint_tags_on_name_unique UNIQUE ("name")
+	CONSTRAINT constraint_tags_on_name_unique UNIQUE ("name"),
+	CONSTRAINT constraint_tags_on_name CHECK (length("name") <= 140)
 );
 
 DROP TABLE IF EXISTS team_members CASCADE;
@@ -464,5 +470,5 @@ VALUES
 	(
 		'Admin',
 		'Role for users who have complete access to everything.',
-		'{general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,canned_responses:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
+		'{general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
 	);

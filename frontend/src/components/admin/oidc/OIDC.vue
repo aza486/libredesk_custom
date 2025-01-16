@@ -1,22 +1,19 @@
 <template>
-  
-  <div class="w-8/12">
-    <template v-if="router.currentRoute.value.path === '/admin/oidc'">
-      <div class="flex justify-between mb-5">
-        <div></div>
-        <div>
-          <Button @click="navigateToAddOIDC">New OIDC</Button>
-        </div>
-      </div>
+  <template v-if="router.currentRoute.value.path === '/admin/oidc'">
+    <div class="flex justify-between mb-5">
+      <div></div>
       <div>
-        <Spinner v-if="isLoading"></Spinner>
-        <DataTable :columns="columns" :data="oidc" v-else />
+        <Button @click="navigateToAddOIDC">New OIDC</Button>
       </div>
-    </template>
-    <template v-else>
-      <router-view/>
-    </template>
-  </div>
+    </div>
+    <div>
+      <Spinner v-if="isLoading"></Spinner>
+      <DataTable :columns="columns" :data="oidc" v-else />
+    </div>
+  </template>
+  <template v-else>
+    <router-view />
+  </template>
 </template>
 
 <script setup>

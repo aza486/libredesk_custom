@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col items-center justify-center h-64 space-y-2">
-    <component :is="icon" :stroke-width="1.4" :size="70" />
+    <component :is="icon" :stroke-width="1" :size="50" />
     <h1 class="text-md font-semibold text-gray-800">
       {{ title }}
     </h1>

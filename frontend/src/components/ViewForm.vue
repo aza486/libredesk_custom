@@ -1,11 +1,11 @@
 <template>
   <Dialog :open="openDialog" @update:open="openDialog = false">
     <DialogContent>
-      <DialogHeader>
+      <DialogHeader class="space-y-1">
         <DialogTitle>{{ view?.id ? 'Edit' : 'Create' }} view</DialogTitle>
-        <DialogDescription
-          >Views let you create custom filters and save them for reuse.</DialogDescription
-        >
+        <DialogDescription>
+          Views let you create custom filters and save them.
+        </DialogDescription>
       </DialogHeader>
       <form @submit.prevent="onSubmit">
         <div class="grid gap-4 py-4">
@@ -50,7 +50,7 @@
               <FormControl>
                 <Filter :fields="filterFields" :showButtons="false" v-bind="componentField" />
               </FormControl>
-              <FormDescription>Add filters to customize view.</FormDescription>
+              <FormDescription>Add multiple filters to customize view.</FormDescription>
               <FormMessage />
             </FormItem>
           </FormField>
@@ -95,7 +95,7 @@ import {
 } from '@/components/ui/form'
 import { CONVERSATION_VIEWS_INBOXES } from '@/constants/conversation'
 import { Input } from '@/components/ui/input'
-import Filter from '@/components/common/Filter.vue'
+import Filter from '@/components/common/FilterBuilder.vue'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 import { toTypedSchema } from '@vee-validate/zod'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

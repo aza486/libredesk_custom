@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/automation"
+	amodels "github.com/abhinavxd/libredesk/internal/automation/models"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	pmodels "github.com/abhinavxd/libredesk/internal/conversation/priority/models"
 	smodels "github.com/abhinavxd/libredesk/internal/conversation/status/models"
@@ -21,6 +23,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/inbox"
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
+	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
@@ -52,6 +55,7 @@ type Manager struct {
 	mediaStore                 mediaStore
 	statusStore                statusStore
 	priorityStore              priorityStore
+	slaStore                   slaStore
 	notifier                   *notifier.Service
 	lo                         *logf.Logger
 	db                         *sqlx.DB
@@ -65,6 +69,10 @@ type Manager struct {
 	closed                     bool
 	closedMu                   sync.RWMutex
 	wg                         sync.WaitGroup
+}
+
+type slaStore interface {
+	ApplySLA(conversationID, slaID int) (slaModels.SLAPolicy, error)
 }
 
 type statusStore interface {
@@ -82,6 +90,7 @@ type teamStore interface {
 
 type userStore interface {
 	Get(int) (umodels.User, error)
+	GetSystemUser() (umodels.User, error)
 	CreateContact(user *umodels.User) error
 }
 
@@ -110,6 +119,7 @@ func New(
 	wsHub *ws.Hub,
 	i18n *i18n.I18n,
 	notifier *notifier.Service,
+	sla slaStore,
 	status statusStore,
 	priority priorityStore,
 	inboxStore inboxStore,
@@ -134,6 +144,7 @@ func New(
 		userStore:                  userStore,
 		teamStore:                  teamStore,
 		mediaStore:                 mediaStore,
+		slaStore:                   sla,
 		statusStore:                status,
 		priorityStore:              priority,
 		automation:                 automation,
@@ -546,7 +557,7 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 	if err := c.RecordStatusChange(status, uuid, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
 	}
-	
+
 	// Send WS update to all subscribers.
 	c.BroadcastConversationPropertyUpdate(uuid, "status", status)
 	return nil
@@ -626,8 +637,8 @@ func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error)
 }
 
 // UpsertConversationTags upserts the tags associated with a conversation.
-func (t *Manager) UpsertConversationTags(uuid string, tagIDs []int) error {
-	if _, err := t.q.UpsertConversationTags.Exec(uuid, pq.Array(tagIDs)); err != nil {
+func (t *Manager) UpsertConversationTags(uuid string, tagNames []string) error {
+	if _, err := t.q.UpsertConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
 		t.lo.Error("error upserting conversation tags", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error upserting tags", nil)
 	}
@@ -744,6 +755,79 @@ func (m *Manager) UnassignOpen(userID int) error {
 	if _, err := m.q.UnassignOpenConversations.Exec(userID); err != nil {
 		m.lo.Error("error unassigning open conversations", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error unassigning open conversations", nil)
+	}
+	return nil
+}
+
+// ApplyAction applies an action to a conversation, this can be called from multiple packages across the app to perform actions on conversations.
+// all actions are executed on behalf of the provided user if the user is not provided, system user is used.
+func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Conversation, user umodels.User) error {
+	if len(action.Value) == 0 {
+		m.lo.Warn("no value provided for action", "action", action.Type, "conversation_uuid", conversation.UUID)
+		return fmt.Errorf("no value provided for action %s", action.Type)
+	}
+
+	// If user is not provided, use system user.
+	if user.ID == 0 {
+		systemUser, err := m.userStore.GetSystemUser()
+		if err != nil {
+			return fmt.Errorf("could not apply %s action. could not fetch system user: %w", action.Type, err)
+		}
+		user = systemUser
+	}
+
+	switch action.Type {
+	case amodels.ActionAssignTeam:
+		m.lo.Debug("executing assign team action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		teamID, _ := strconv.Atoi(action.Value[0])
+		if err := m.UpdateConversationTeamAssignee(conversation.UUID, teamID, user); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	case amodels.ActionAssignUser:
+		m.lo.Debug("executing assign user action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		agentID, _ := strconv.Atoi(action.Value[0])
+		if err := m.UpdateConversationUserAssignee(conversation.UUID, agentID, user); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	case amodels.ActionSetPriority:
+		m.lo.Debug("executing set priority action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		priorityID, _ := strconv.Atoi(action.Value[0])
+		if err := m.UpdateConversationPriority(conversation.UUID, priorityID, "", user); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	case amodels.ActionSetStatus:
+		m.lo.Debug("executing set status action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		statusID, _ := strconv.Atoi(action.Value[0])
+		if err := m.UpdateConversationStatus(conversation.UUID, statusID, "", "", user); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	case amodels.ActionSendPrivateNote:
+		m.lo.Debug("executing send private note action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		if err := m.SendPrivateNote([]mmodels.Media{}, user.ID, conversation.UUID, action.Value[0]); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	case amodels.ActionReply:
+		m.lo.Debug("executing reply action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		if err := m.SendReply([]mmodels.Media{}, user.ID, conversation.UUID, action.Value[0], ""); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	case amodels.ActionSetSLA:
+		m.lo.Debug("executing apply SLA action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
+		slaID, _ := strconv.Atoi(action.Value[0])
+		slaPolicy, err := m.slaStore.ApplySLA(conversation.ID, slaID)
+		if err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+		if err := m.RecordSLASet(conversation.UUID, slaPolicy.Name, user); err != nil {
+			m.lo.Error("error recording SLA set activity", "error", err)
+		}
+	case amodels.ActionSetTags:
+		m.lo.Debug("executing set tags action", "value", action.Value, "conversation_uuid", conversation.UUID)
+		if err := m.UpsertConversationTags(conversation.UUID, action.Value); err != nil {
+			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
+		}
+	default:
+		return fmt.Errorf("unrecognized action type %s", action.Type)
 	}
 	return nil
 }

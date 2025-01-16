@@ -58,7 +58,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/conversations/{uuid}/priority", perm(handleUpdateConversationPriority, "conversations:update_priority"))
 	g.PUT("/api/v1/conversations/{uuid}/status", perm(handleUpdateConversationStatus, "conversations:update_status"))
 	g.PUT("/api/v1/conversations/{uuid}/last-seen", perm(handleUpdateConversationAssigneeLastSeen, "conversations:read"))
-	g.POST("/api/v1/conversations/{uuid}/tags", perm(handleAddConversationTags, "conversations:update_tags"))
+	g.POST("/api/v1/conversations/{uuid}/tags", perm(handleUpdateConversationtags, "conversations:update_tags"))
 	g.GET("/api/v1/conversations/{cuuid}/messages/{uuid}", perm(handleGetMessage, "messages:read"))
 	g.GET("/api/v1/conversations/{uuid}/messages", perm(handleGetMessages, "messages:read"))
 	g.POST("/api/v1/conversations/{cuuid}/messages", perm(handleSendMessage, "messages:write"))
@@ -86,11 +86,13 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Media.
 	g.POST("/api/v1/media", auth(handleMediaUpload))
 
-	// Canned response.
-	g.GET("/api/v1/canned-responses", auth(handleGetCannedResponses))
-	g.POST("/api/v1/canned-responses", perm(handleCreateCannedResponse, "canned_responses:manage"))
-	g.PUT("/api/v1/canned-responses/{id}", perm(handleUpdateCannedResponse, "canned_responses:manage"))
-	g.DELETE("/api/v1/canned-responses/{id}", perm(handleDeleteCannedResponse, "canned_responses:manage"))
+	// Macros.
+	g.GET("/api/v1/macros", auth(handleGetMacros))
+	g.GET("/api/v1/macros/{id}", perm(handleGetMacro, "macros:manage"))
+	g.POST("/api/v1/macros", perm(handleCreateMacro, "macros:manage"))
+	g.PUT("/api/v1/macros/{id}", perm(handleUpdateMacro, "macros:manage"))
+	g.DELETE("/api/v1/macros/{id}", perm(handleDeleteMacro, "macros:manage"))
+	g.POST("/api/v1/conversations/{uuid}/macros/{id}/apply", auth(handleApplyMacro))
 
 	// User.
 	g.GET("/api/v1/users/me", auth(handleGetCurrentUser))

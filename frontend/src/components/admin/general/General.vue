@@ -1,8 +1,5 @@
 <template>
-  <div>
-    
-  </div>
-  <div class="flex justify-center items-center flex-col w-8/12">
+  <div class="flex justify-center items-center flex-col">
     <GeneralSettingForm :submitForm="submitForm" :initial-values="initialValues" submitLabel="Save" />
   </div>
 </template>

@@ -1,7 +1,7 @@
 <template>
   <div v-if="conversationStore.messages.data">
     <!-- Header -->
-    <div class="p-3 border-b flex items-center justify-between">
+    <div class="p-2 border-b flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
         <div class="font-medium">
           {{ conversationStore.current.subject }}
@@ -16,7 +16,7 @@
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem v-for="status in conversationStore.statusesForSelect" :key="status.value"
+            <DropdownMenuItem v-for="status in conversationStore.statusOptions" :key="status.value"
               @click="handleUpdateStatus(status.label)">
               {{ status.label }}
             </DropdownMenuItem>

@@ -1,6 +1,4 @@
 <template>
-  
-  <div class="w-8/12">
     <div class="flex justify-between mb-5">
       <div class="flex justify-end mb-4 w-full">
         <Dialog v-model:open="dialogOpen">
@@ -27,7 +25,6 @@
     <div v-else>
       <DataTable :columns="columns" :data="tags" />
     </div>
-  </div>
 </template>
 
 <script setup>

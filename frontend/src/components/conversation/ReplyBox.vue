@@ -5,26 +5,6 @@
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = $event">
       <DialogContent class="max-w-[70%] max-h-[70%] h-[70%] m-0 p-6">
         <div v-if="isEditorFullscreen">
-          <div
-            v-if="filteredCannedResponses.length > 0"
-            class="w-full overflow-hidden p-2 border-t backdrop-blur"
-          >
-            <ul ref="cannedResponsesRef" class="space-y-2 max-h-96 overflow-y-auto">
-              <li
-                v-for="(response, index) in filteredCannedResponses"
-                :key="response.id"
-                :class="[
-                  'cursor-pointer rounded p-1 hover:bg-secondary',
-                  { 'bg-secondary': index === selectedResponseIndex }
-                ]"
-                @click="selectCannedResponse(response.content)"
-                @mouseenter="selectedResponseIndex = index"
-              >
-                <span class="font-semibold">{{ response.title }}</span> -
-                {{ getTextFromHTML(response.content).slice(0, 150) }}...
-              </li>
-            </ul>
-          </div>
           <Editor
             v-model:selectedText="selectedText"
             v-model:isBold="isBold"
@@ -33,7 +13,6 @@
             v-model:textContent="textContent"
             :placeholder="editorPlaceholder"
             :aiPrompts="aiPrompts"
-            @keydown="handleKeydown"
             @aiPromptSelected="handleAiPromptSelected"
             :contentToSet="contentToSet"
             v-model:cursorPosition="cursorPosition"
@@ -44,28 +23,6 @@
         </div>
       </DialogContent>
     </Dialog>
-
-    <!-- Canned responses on non-fullscreen editor -->
-    <div
-      v-if="filteredCannedResponses.length > 0 && !isEditorFullscreen"
-      class="w-full overflow-hidden p-2 border-t backdrop-blur"
-    >
-      <ul ref="cannedResponsesRef" class="space-y-2 max-h-96 overflow-y-auto">
-        <li
-          v-for="(response, index) in filteredCannedResponses"
-          :key="response.id"
-          :class="[
-            'cursor-pointer rounded p-1 hover:bg-secondary',
-            { 'bg-secondary': index === selectedResponseIndex }
-          ]"
-          @click="selectCannedResponse(response.content)"
-          @mouseenter="selectedResponseIndex = index"
-        >
-          <span class="font-semibold">{{ response.title }}</span> -
-          {{ getTextFromHTML(response.content).slice(0, 150) }}...
-        </li>
-      </ul>
-    </div>
 
     <!-- Main Editor non-fullscreen -->
     <div class="border-t" v-if="!isEditorFullscreen">
@@ -94,7 +51,6 @@
         v-model:textContent="textContent"
         :placeholder="editorPlaceholder"
         :aiPrompts="aiPrompts"
-        @keydown="handleKeydown"
         @aiPromptSelected="handleAiPromptSelected"
         :contentToSet="contentToSet"
         @send="handleSend"
@@ -104,18 +60,30 @@
         :insertContent="insertContent"
       />
 
+      <!-- Macro preview -->
+      <MacroActionsPreview
+        v-if="conversationStore.conversation?.macro?.actions?.length > 0"
+        :actions="conversationStore.conversation.macro.actions"
+        :onRemove="conversationStore.removeMacroAction"
+      />
+
       <!-- Attachments preview -->
-      <AttachmentsPreview :attachments="attachments" :onDelete="handleOnFileDelete" />
+      <AttachmentsPreview
+        :attachments="attachments"
+        :onDelete="handleOnFileDelete"
+        v-if="attachments.length > 0"
+      />
 
       <!-- Bottom menu bar -->
       <ReplyBoxBottomMenuBar
+        class="mt-1"
         :handleFileUpload="handleFileUpload"
         :handleInlineImageUpload="handleInlineImageUpload"
         :isBold="isBold"
         :isItalic="isItalic"
         @toggleBold="toggleBold"
         @toggleItalic="toggleItalic"
-        :hasText="hasText"
+        :enableSend="enableSend"
         :handleSend="handleSend"
         @emojiSelect="handleEmojiSelect"
       >
@@ -125,25 +93,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { Fullscreen } from 'lucide-vue-next'
 import api from '@/api'
 
-import { getTextFromHTML } from '@/utils/strings'
 import Editor from './ConversationTextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEmitter } from '@/composables/useEmitter'
 import AttachmentsPreview from '@/components/attachment/AttachmentsPreview.vue'
+import MacroActionsPreview from '../macro/MacroActionsPreview.vue'
 import ReplyBoxBottomMenuBar from '@/components/conversation/ReplyBoxMenuBar.vue'
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
-
 const insertContent = ref(null)
 const setInlineImage = ref(null)
 const clearEditorContent = ref(false)
@@ -155,41 +122,20 @@ const textContent = ref('')
 const contentToSet = ref('')
 const isBold = ref(false)
 const isItalic = ref(false)
-
-const uploadedFiles = ref([])
 const messageType = ref('reply')
-
-const filteredCannedResponses = ref([])
-const selectedResponseIndex = ref(-1)
-const cannedResponsesRef = ref(null)
-const cannedResponses = ref([])
 
 const aiPrompts = ref([])
 
-const editorPlaceholder =
-  "Press Enter to add a new line; Press '/' to select a Canned Response; Press Ctrl + Enter to send."
+const editorPlaceholder = 'Press Enter to add a new line; Press Ctrl + Enter to send.'
 
 onMounted(async () => {
-  await Promise.all([fetchCannedResponses(), fetchAiPrompts()])
+  await fetchAiPrompts()
 })
 
 const fetchAiPrompts = async () => {
   try {
     const resp = await api.getAiPrompts()
     aiPrompts.value = resp.data.data
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  }
-}
-
-const fetchCannedResponses = async () => {
-  try {
-    const resp = await api.getCannedResponses()
-    cannedResponses.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
@@ -224,35 +170,20 @@ const toggleItalic = () => {
 }
 
 const attachments = computed(() => {
-  return uploadedFiles.value.filter((upload) => upload.disposition === 'attachment')
+  return conversationStore.conversation.mediaFiles.filter(
+    (upload) => upload.disposition === 'attachment'
+  )
 })
 
-// Watch for text content changes and filter canned responses
-watch(textContent, (newVal) => {
-  filterCannedResponses(newVal)
+const enableSend = computed(() => {
+  return textContent.value.trim().length > 0 ||
+    conversationStore.conversation?.macro?.actions?.length > 0
+    ? true
+    : false
 })
 
-const filterCannedResponses = (input) => {
-  // Extract the text after the last `/`
-  const lastSlashIndex = input.lastIndexOf('/')
-  if (lastSlashIndex !== -1) {
-    const searchText = input.substring(lastSlashIndex + 1).trim()
-
-    // Filter canned responses based on the search text
-    filteredCannedResponses.value = cannedResponses.value.filter((response) =>
-      response.title.toLowerCase().includes(searchText.toLowerCase())
-    )
-
-    // Reset the selected response index
-    selectedResponseIndex.value = filteredCannedResponses.value.length > 0 ? 0 : -1
-  } else {
-    filteredCannedResponses.value = []
-    selectedResponseIndex.value = -1
-  }
-}
-
-const hasText = computed(() => {
-  return textContent.value.trim().length > 0 ? true : false
+const hasTextContent = computed(() => {
+  return textContent.value.trim().length > 0
 })
 
 const handleFileUpload = (event) => {
@@ -264,7 +195,7 @@ const handleFileUpload = (event) => {
         linked_model: 'messages'
       })
       .then((resp) => {
-        uploadedFiles.value.push(resp.data.data)
+        conversationStore.conversation.mediaFiles.push(resp.data.data)
       })
       .catch((error) => {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -290,7 +221,7 @@ const handleInlineImageUpload = (event) => {
           alt: resp.data.data.filename,
           title: resp.data.data.uuid
         }
-        uploadedFiles.value.push(resp.data.data)
+        conversationStore.conversation.mediaFiles.push(resp.data.data)
       })
       .catch((error) => {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -304,29 +235,42 @@ const handleInlineImageUpload = (event) => {
 
 const handleSend = async () => {
   try {
-    // Replace inline image url with cid.
-    const message = transformImageSrcToCID(htmlContent.value)
 
-    // Check which images are still in editor before sending.
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(htmlContent.value, 'text/html')
-    const inlineImageUUIDs = Array.from(doc.querySelectorAll('img.inline-image'))
-      .map((img) => img.getAttribute('title'))
-      .filter(Boolean)
+    // Send message if there is text content in the editor.
+    if (hasTextContent.value) {
+      // Replace inline image url with cid.
+      const message = transformImageSrcToCID(htmlContent.value)
 
-    uploadedFiles.value = uploadedFiles.value.filter(
-      (file) =>
-        // Keep if:
-        // 1. Not an inline image OR
-        // 2. Is an inline image that exists in editor
-        file.disposition !== 'inline' || inlineImageUUIDs.includes(file.uuid)
-    )
+      // Check which images are still in editor before sending.
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(htmlContent.value, 'text/html')
+      const inlineImageUUIDs = Array.from(doc.querySelectorAll('img.inline-image'))
+        .map((img) => img.getAttribute('title'))
+        .filter(Boolean)
 
-    await api.sendMessage(conversationStore.current.uuid, {
-      private: messageType.value === 'private_note',
-      message: message,
-      attachments: uploadedFiles.value.map((file) => file.id)
-    })
+      conversationStore.conversation.mediaFiles = conversationStore.conversation.mediaFiles.filter(
+        (file) =>
+          // Keep if:
+          // 1. Not an inline image OR
+          // 2. Is an inline image that exists in editor
+          file.disposition !== 'inline' || inlineImageUUIDs.includes(file.uuid)
+      )
+
+      await api.sendMessage(conversationStore.current.uuid, {
+        private: messageType.value === 'private_note',
+        message: message,
+        attachments: conversationStore.conversation.mediaFiles.map((file) => file.id)
+      })
+    }
+
+    // Apply macro if it exists.
+    if (conversationStore.conversation?.macro?.actions?.length > 0) {
+      await api.applyMacro(
+        conversationStore.current.uuid,
+        conversationStore.conversation.macro.id,
+        conversationStore.conversation.macro.actions
+      )
+    }
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
@@ -335,6 +279,8 @@ const handleSend = async () => {
     })
   } finally {
     clearEditorContent.value = true
+    conversationStore.resetMacro()
+    conversationStore.resetMediaFiles()
     nextTick(() => {
       clearEditorContent.value = false
     })
@@ -343,49 +289,23 @@ const handleSend = async () => {
 }
 
 const handleOnFileDelete = (uuid) => {
-  uploadedFiles.value = uploadedFiles.value.filter((item) => item.uuid !== uuid)
-}
-
-const handleKeydown = (event) => {
-  if (filteredCannedResponses.value.length > 0) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      selectedResponseIndex.value =
-        (selectedResponseIndex.value + 1) % filteredCannedResponses.value.length
-      scrollToSelectedItem()
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      selectedResponseIndex.value =
-        (selectedResponseIndex.value - 1 + filteredCannedResponses.value.length) %
-        filteredCannedResponses.value.length
-      scrollToSelectedItem()
-    } else if (event.key === 'Enter') {
-      event.preventDefault()
-      selectCannedResponse(filteredCannedResponses.value[selectedResponseIndex.value].content)
-    }
-  }
-}
-
-const scrollToSelectedItem = () => {
-  const list = cannedResponsesRef.value
-  const selectedItem = list.children[selectedResponseIndex.value]
-  if (selectedItem) {
-    selectedItem.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest'
-    })
-  }
-}
-
-const selectCannedResponse = (content) => {
-  contentToSet.value = content
-  filteredCannedResponses.value = []
-  selectedResponseIndex.value = -1
+  conversationStore.conversation.mediaFiles = conversationStore.conversation.mediaFiles.filter(
+    (item) => item.uuid !== uuid
+  )
 }
 
 const handleEmojiSelect = (emoji) => {
   insertContent.value = undefined
   // Force reactivity so the user can select the same emoji multiple times
-  nextTick(() => insertContent.value = emoji)
+  nextTick(() => (insertContent.value = emoji))
 }
+
+// Watch for changes in macro content and update editor content.
+watch(
+  () => conversationStore.conversation.macro,
+  () => {
+    contentToSet.value = conversationStore.conversation.macro.message_content
+  },
+  { deep: true }
+)
 </script>

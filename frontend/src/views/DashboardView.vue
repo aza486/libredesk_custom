@@ -77,7 +77,7 @@ const stopRealtimeUpdates = () => {
 
 const getDashboardData = () => {
   isLoading.value = true
-  Promise.all([getCardStats(), getDashboardCharts()])
+  Promise.allSettled([getCardStats(), getDashboardCharts()])
     .finally(() => {
       isLoading.value = false
     })

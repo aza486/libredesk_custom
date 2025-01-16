@@ -1,6 +1,4 @@
 <template>
-  
-  <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/teams/users'">
       <div class="flex justify-end mb-5">
         <Button @click="navigateToAddUser"> New user </Button>
@@ -13,7 +11,6 @@
     <template v-else>
       <router-view></router-view>
     </template>
-  </div>
 </template>
 
 <script setup>
@@ -25,8 +22,6 @@ import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
-import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
-
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
@@ -36,10 +31,6 @@ const router = useRouter()
 const isLoading = ref(false)
 const data = ref([])
 const emit = useEmitter()
-const breadcrumbLinks = [
-  
-  { path: '#', label: 'Users' }
-]
 
 onMounted(async () => {
   getData()
@@ -55,7 +46,7 @@ const getData = async () => {
     data.value = response.data.data
   } catch (error) {
     toast({
-      title: 'Uh oh! Could not fetch users.',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

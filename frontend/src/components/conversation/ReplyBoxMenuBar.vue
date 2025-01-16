@@ -35,7 +35,7 @@
         <Smile class="h-4 w-4" />
       </Toggle>
     </div>
-    <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!hasText">Send</Button>
+    <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!enableSend">Send</Button>
   </div>
 </template>
 
@@ -57,7 +57,7 @@ const emit = defineEmits(['toggleBold', 'toggleItalic', 'emojiSelect'])
 defineProps({
   isBold: Boolean,
   isItalic: Boolean,
-  hasText: Boolean,
+  enableSend: Boolean,
   handleSend: Function,
   handleFileUpload: Function,
   handleInlineImageUpload: Function

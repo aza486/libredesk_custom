@@ -8,7 +8,7 @@ import (
 
 	"github.com/abhinavxd/libredesk/internal/automation/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
-	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 )
 
 // evalConversationRules evaluates a list of rules against a given conversation.
@@ -39,7 +39,7 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 		if evaluateFinalResult(groupEvalResults, rule.GroupOperator) {
 			e.lo.Debug("rule evaluation successful executing actions", "conversation_uuid", conversation.UUID)
 			for _, action := range rule.Actions {
-				e.applyAction(action, conversation)
+				e.conversationStore.ApplyAction(action, conversation, umodels.User{})
 			}
 			if rule.ExecutionMode == models.ExecutionModeFirstMatch {
 				e.lo.Debug("first match rule execution mode, breaking out of rule evaluation", "conversation_uuid", conversation.UUID)
@@ -138,7 +138,6 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		return false
 	}
 
-	// Case sensitivity handling
 	if !rule.CaseSensitiveMatch {
 		valueToCompare = strings.ToLower(valueToCompare)
 		rule.Value = strings.ToLower(rule.Value)
@@ -209,56 +208,4 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	}
 	e.lo.Debug("conversation automation rule status", "has_met", conditionMet, "conversation_uuid", conversation.UUID)
 	return conditionMet
-}
-
-// applyAction applies a specific action to the given conversation.
-func (e *Engine) applyAction(action models.RuleAction, conversation cmodels.Conversation) error {
-	switch action.Type {
-	case models.ActionAssignTeam:
-		e.lo.Debug("executing assign team action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		teamID, _ := strconv.Atoi(action.Action)
-		if err := e.conversationStore.UpdateConversationTeamAssignee(conversation.UUID, teamID, e.systemUser); err != nil {
-			return err
-		}
-	case models.ActionAssignUser:
-		e.lo.Debug("executing assign user action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		agentID, _ := strconv.Atoi(action.Action)
-		if err := e.conversationStore.UpdateConversationUserAssignee(conversation.UUID, agentID, e.systemUser); err != nil {
-			return err
-		}
-	case models.ActionSetPriority:
-		e.lo.Debug("executing set priority action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		priorityID, _ := strconv.Atoi(action.Action)
-		if err := e.conversationStore.UpdateConversationPriority(conversation.UUID, priorityID, "", e.systemUser); err != nil {
-			return err
-		}
-	case models.ActionSetStatus:
-		e.lo.Debug("executing set status action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		statusID, _ := strconv.Atoi(action.Action)
-		if err := e.conversationStore.UpdateConversationStatus(conversation.UUID, statusID, "", "", e.systemUser); err != nil {
-			return err
-		}
-	case models.ActionSendPrivateNote:
-		e.lo.Debug("executing send private note action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.SendPrivateNote([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action); err != nil {
-			return err
-		}
-	case models.ActionReply:
-		e.lo.Debug("executing reply action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		if err := e.conversationStore.SendReply([]mmodels.Media{}, e.systemUser.ID, conversation.UUID, action.Action, "" /**meta**/); err != nil {
-			return err
-		}
-	case models.ActionSetSLA:
-		e.lo.Debug("executing SLA action", "value", action.Action, "conversation_uuid", conversation.UUID)
-		slaID, _ := strconv.Atoi(action.Action)
-		if err := e.slaStore.ApplySLA(conversation.ID, slaID); err != nil {
-			return err
-		}
-		if err := e.conversationStore.RecordSLASet(conversation.UUID, e.systemUser); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unrecognized rule action: %s", action.Type)
-	}
-	return nil
 }

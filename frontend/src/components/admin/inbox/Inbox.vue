@@ -1,6 +1,4 @@
 <template>
-  
-  <div class="w-8/12">
     <template v-if="router.currentRoute.value.path === '/admin/inboxes'">
       <div class="flex justify-between mb-5">
         <div class="flex justify-end w-full mb-4">
@@ -15,7 +13,6 @@
     <template v-else>
       <router-view/>
     </template>
-  </div>
 </template>
 
 <script setup>
@@ -50,7 +47,7 @@ const getInboxes = async () => {
     data.value = response.data.data
   } catch (error) {
     toast({
-      title: 'Could not fetch inboxes',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

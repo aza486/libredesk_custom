@@ -121,9 +121,9 @@ const roles = ref([])
 
 onMounted(async () => {
   try {
-    const [teamsResp, rolesResp] = await Promise.all([api.getTeams(), api.getRoles()])
-    teams.value = teamsResp.data.data
-    roles.value = rolesResp.data.data
+    const [teamsResp, rolesResp] = await Promise.allSettled([api.getTeams(), api.getRoles()])
+    teams.value = teamsResp.value.data.data
+    roles.value = rolesResp.value.data.data  
   } catch (err) {
     console.log(err)
   }

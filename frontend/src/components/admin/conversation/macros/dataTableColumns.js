@@ -4,12 +4,30 @@ import { format } from 'date-fns'
 
 export const columns = [
   {
-    accessorKey: 'title',
+    accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Title')
+      return h('div', { class: 'text-center' }, 'Name')
     },
     cell: function ({ row }) {
-      return h('div', { class: 'text-center font-medium' }, row.getValue('title'))
+      return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
+    }
+  },
+  {
+    accessorKey: 'visibility',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Visibility')
+    },
+    cell: function ({ row }) {
+      return h('div', { class: 'text-center' }, row.getValue('visibility'))
+    }
+  },
+  {
+    accessorKey: 'usage_count',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Usage')
+    },
+    cell: function ({ row }) {
+      return h('div', { class: 'text-center' }, row.getValue('usage_count'))
     }
   },
   {
@@ -34,12 +52,12 @@ export const columns = [
     id: 'actions',
     enableHiding: false,
     cell: ({ row }) => {
-      const cannedResponse = row.original
+      const macro = row.original
       return h(
         'div',
         { class: 'relative' },
         h(dropdown, {
-          cannedResponse
+          macro
         })
       )
     }

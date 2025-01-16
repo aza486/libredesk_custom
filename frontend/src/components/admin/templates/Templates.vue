@@ -1,6 +1,4 @@
 <template>
-  
-  <div class="w-8/12">
     <template v-if="router.currentRoute.value.path === '/admin/templates'">
       <div class="flex justify-between mb-5">
         <div></div>
@@ -27,7 +25,6 @@
     <template v-else>
       <router-view/>
     </template>
-  </div>
 </template>
 
 <script setup>

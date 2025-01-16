@@ -7,6 +7,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
+
 type User struct {
 	ID               int            `db:"id" json:"id"`
 	CreatedAt        time.Time      `db:"created_at" json:"created_at"`
@@ -15,6 +16,7 @@ type User struct {
 	LastName         string         `db:"last_name" json:"last_name"`
 	Email            null.String    `db:"email" json:"email,omitempty"`
 	Type             string         `db:"type" json:"type"`
+	PhoneNumber      null.String    `db:"phone_number" json:"phone_number,omitempty"`
 	AvatarURL        null.String    `db:"avatar_url" json:"avatar_url"`
 	Disabled         bool           `db:"disabled" json:"disabled"`
 	Password         string         `db:"password" json:"-"`

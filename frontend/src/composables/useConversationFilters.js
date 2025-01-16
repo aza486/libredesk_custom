@@ -18,31 +18,31 @@ export function useConversationFilters () {
             label: 'Status',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: cStore.statusesForSelect
+            options: cStore.statusOptions
         },
         priority_id: {
             label: 'Priority',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: cStore.prioritiesForSelect
+            options: cStore.priorityOptions
         },
         assigned_team_id: {
             label: 'Assigned team',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: tStore.forSelect
+            options: tStore.options
         },
         assigned_user_id: {
             label: 'Assigned user',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: uStore.forSelect
+            options: uStore.options
         },
         inbox_id: {
             label: 'Inbox',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: iStore.forSelect
+            options: iStore.options
         }
     }))
 
@@ -61,25 +61,25 @@ export function useConversationFilters () {
             label: 'Status',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: cStore.statusesForSelect
+            options: cStore.statusOptions
         },
         priority: {
             label: 'Priority',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: cStore.prioritiesForSelect
+            options: cStore.priorityOptions
         },
         assigned_team: {
             label: 'Assigned team',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: tStore.forSelect
+            options: tStore.options
         },
         assigned_user: {
             label: 'Assigned agent',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: uStore.forSelect
+            options: uStore.options
         },
         hours_since_created: {
             label: 'Hours since created',
@@ -95,7 +95,7 @@ export function useConversationFilters () {
             label: 'Inbox',
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
-            options: iStore.forSelect
+            options: iStore.options
         }
     }))
 
@@ -103,22 +103,22 @@ export function useConversationFilters () {
         assign_team: {
             label: 'Assign to team',
             type: FIELD_TYPE.SELECT,
-            options: tStore.forSelect
+            options: tStore.options
         },
         assign_user: {
             label: 'Assign to user',
             type: FIELD_TYPE.SELECT,
-            options: uStore.forSelect
+            options: uStore.options
         },
         set_status: {
             label: 'Set status',
             type: FIELD_TYPE.SELECT,
-            options: cStore.statusesForSelect
+            options: cStore.statusOptionsNoSnooze
         },
         set_priority: {
             label: 'Set priority',
             type: FIELD_TYPE.SELECT,
-            options: cStore.prioritiesForSelect
+            options: cStore.priorityOptions
         },
         send_private_note: {
             label: 'Send private note',
@@ -131,7 +131,11 @@ export function useConversationFilters () {
         set_sla: {
             label: 'Set SLA',
             type: FIELD_TYPE.SELECT,
-            options: slaStore.forSelect
+            options: slaStore.options
+        },
+        set_tags: {
+            label: 'Set tags',
+            type: FIELD_TYPE.TAG
         }
     }))
 

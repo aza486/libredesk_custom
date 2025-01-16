@@ -18,7 +18,6 @@ import (
 	"github.com/abhinavxd/libredesk/internal/autoassigner"
 	"github.com/abhinavxd/libredesk/internal/automation"
 	businesshours "github.com/abhinavxd/libredesk/internal/business_hours"
-	"github.com/abhinavxd/libredesk/internal/cannedresp"
 	"github.com/abhinavxd/libredesk/internal/conversation"
 	"github.com/abhinavxd/libredesk/internal/conversation/priority"
 	"github.com/abhinavxd/libredesk/internal/conversation/status"
@@ -26,6 +25,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/inbox"
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
+	"github.com/abhinavxd/libredesk/internal/macro"
 	"github.com/abhinavxd/libredesk/internal/media"
 	fs "github.com/abhinavxd/libredesk/internal/media/stores/localfs"
 	"github.com/abhinavxd/libredesk/internal/media/stores/s3"
@@ -196,6 +196,7 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 // initConversations inits conversation manager.
 func initConversations(
 	i18n *i18n.I18n,
+	sla *sla.Manager,
 	status *status.Manager,
 	priority *priority.Manager,
 	hub *ws.Hub,
@@ -208,7 +209,7 @@ func initConversations(
 	automationEngine *automation.Engine,
 	template *tmpl.Manager,
 ) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, notif, status, priority, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
+	c, err := conversation.New(hub, i18n, notif, sla, status, priority, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
 		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),
@@ -246,17 +247,17 @@ func initView(db *sqlx.DB) *view.Manager {
 	return m
 }
 
-// initCannedResponse inits canned response manager.
-func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
-	var lo = initLogger("canned-response")
-	c, err := cannedresp.New(cannedresp.Opts{
+// initMacro inits macro manager.
+func initMacro(db *sqlx.DB) *macro.Manager {
+	var lo = initLogger("macro")
+	m, err := macro.New(macro.Opts{
 		DB: db,
 		Lo: lo,
 	})
 	if err != nil {
-		log.Fatalf("error initializing canned responses manager: %v", err)
+		log.Fatalf("error initializing macro manager: %v", err)
 	}
-	return c
+	return m
 }
 
 // initBusinessHours inits business hours manager.
@@ -414,15 +415,9 @@ func initInbox(db *sqlx.DB) *inbox.Manager {
 }
 
 // initAutomationEngine initializes the automation engine.
-func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.Engine {
+func initAutomationEngine(db *sqlx.DB) *automation.Engine {
 	var lo = initLogger("automation_engine")
-
-	systemUser, err := userManager.GetSystemUser()
-	if err != nil {
-		log.Fatalf("error fetching system user: %v", err)
-	}
-
-	engine, err := automation.New(systemUser, automation.Opts{
+	engine, err := automation.New(automation.Opts{
 		DB: db,
 		Lo: lo,
 	})

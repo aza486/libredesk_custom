@@ -1,21 +1,25 @@
 <template>
   <div class="h-screen flex flex-col">
-    <div class="flex justify-start items-center p-3 w-full space-x-4 border-b">
-      <SidebarTrigger class="cursor-pointer w-5 h-5" />
-      <span class="text-xl font-semibold">{{ title }}</span>
-    </div>
+    <!-- Header -->
+    <header class="border-b">
+      <div class="flex items-center space-x-4 p-2">
+        <SidebarTrigger class="text-gray-500 hover:text-gray-700 transition-colors" />
+        <span class="text-xl font-semibold text-gray-800">{{ title }}</span>
+      </div>
+    </header>
 
-    <div class="flex justify-between px-2 py-2 w-full">
+    <!-- Filters -->
+    <div class="bg-white px-4 py-3 flex justify-between items-center">
       <DropdownMenu>
-        <DropdownMenuTrigger class="cursor-pointer">
-          <Button variant="ghost">
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" class="w-30">
             {{ conversationStore.getListStatus }}
-            <ChevronDown class="w-4 h-4 ml-2" />
+            <ChevronDown class="w-4 h-4 ml-2 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem
-            v-for="status in conversationStore.statusesForSelect"
+            v-for="status in conversationStore.statusOptions"
             :key="status.value"
             @click="handleStatusChange(status)"
           >
@@ -24,14 +28,13 @@
         </DropdownMenuContent>
       </DropdownMenu>
       <DropdownMenu>
-        <DropdownMenuTrigger class="cursor-pointer">
-          <Button variant="ghost">
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" class="w-30">
             {{ conversationStore.getListSortField }}
-            <ChevronDown class="w-4 h-4 ml-2" />
+            <ChevronDown class="w-4 h-4 ml-2 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <!-- TODO move hardcoded values to consts -->
           <DropdownMenuItem @click="handleSortChange('oldest')">Oldest</DropdownMenuItem>
           <DropdownMenuItem @click="handleSortChange('newest')">Newest</DropdownMenuItem>
           <DropdownMenuItem @click="handleSortChange('started_first')"
@@ -53,63 +56,79 @@
       </DropdownMenu>
     </div>
 
-    <!-- Empty -->
-    <EmptyList
-      class="px-4"
-      v-if="!hasConversations && !hasErrored && !isLoading"
-      title="No conversations found"
-      message="Try adjusting filters."
-      :icon="MessageCircleQuestion"
-    ></EmptyList>
-
-    <!-- List -->
+    <!-- Content -->
     <div class="flex-grow overflow-y-auto">
       <EmptyList
-        class="px-4"
-        v-if="conversationStore.conversations.errorMessage"
-        title="Could not fetch conversations"
-        :message="conversationStore.conversations.errorMessage"
-        :icon="MessageCircleWarning"
-      ></EmptyList>
+        v-if="!hasConversations && !hasErrored && !isLoading"
+        key="empty"
+        class="px-4 py-8"
+        title="No conversations found"
+        message="Try adjusting your filters"
+        :icon="MessageCircleQuestion"
+      />
 
-      <!-- Items -->
-      <div v-else>
-        <div class="space-y-5 px-2">
+      <!-- Empty State -->
+      <TransitionGroup
+        enter-active-class="transition-all duration-300 ease-in-out"
+        enter-from-class="opacity-0 transform translate-y-4"
+        enter-to-class="opacity-100 transform translate-y-0"
+        leave-active-class="transition-all duration-300 ease-in-out"
+        leave-from-class="opacity-100 transform translate-y-0"
+        leave-to-class="opacity-0 transform translate-y-4"
+      >
+        <!-- Error State -->
+        <EmptyList
+          v-if="conversationStore.conversations.errorMessage"
+          key="error"
+          class="px-4 py-8"
+          title="Could not fetch conversations"
+          :message="conversationStore.conversations.errorMessage"
+          :icon="MessageCircleWarning"
+        />
+
+        <!-- Conversation List -->
+        <div v-else key="list" class="divide-y divide-gray-200">
           <ConversationListItem
-            class="mt-2"
-            :conversation="conversation"
-            :currentConversation="conversationStore.current"
             v-for="conversation in conversationStore.conversationsList"
             :key="conversation.uuid"
+            :conversation="conversation"
+            :currentConversation="conversationStore.current"
             :contactFullName="conversationStore.getContactFullName(conversation.uuid)"
+            class="transition-colors duration-200 hover:bg-gray-50"
           />
         </div>
-      </div>
 
-      <!-- skeleton -->
-      <div v-if="isLoading">
-        <ConversationListItemSkeleton v-for="index in 10" :key="index" />
-      </div>
+        <!-- Loading Skeleton -->
+        <div v-if="isLoading" key="loading" class="space-y-4 p-4">
+          <ConversationListItemSkeleton v-for="index in 10" :key="index" />
+        </div>
+      </TransitionGroup>
 
-      <!-- Load more -->
-      <div class="flex justify-center items-center p-5 relative" v-if="!hasErrored">
-        <div v-if="conversationStore.conversations.hasMore">
-          <Button variant="link" @click="loadNextPage">
-            <p v-if="!isLoading">Load more</p>
-          </Button>
-        </div>
-        <div v-else-if="!conversationStore.conversations.hasMore && hasConversations">
-          All conversations loaded
-        </div>
+      <!-- Load More -->
+      <div
+        v-if="!hasErrored && (conversationStore.conversations.hasMore || hasConversations)"
+        class="flex justify-center items-center p-5"
+      >
+        <Button
+          v-if="conversationStore.conversations.hasMore"
+          variant="outline"
+          @click="loadNextPage"
+          :disabled="isLoading"
+          class="transition-all duration-200 ease-in-out transform hover:scale-105"
+        >
+          <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
+          {{ isLoading ? 'Loading...' : 'Load more' }}
+        </Button>
+        <p v-else class="text-sm text-gray-500">All conversations loaded</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, computed, onUnmounted } from 'vue'
+import { onMounted, computed, onUnmounted, ref } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
-import { MessageCircleQuestion, MessageCircleWarning, ChevronDown } from 'lucide-vue-next'
+import { MessageCircleQuestion, MessageCircleWarning, ChevronDown, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -124,24 +143,26 @@ import { useRoute } from 'vue-router'
 import ConversationListItemSkeleton from '@/components/conversation/list/ConversationListItemSkeleton.vue'
 
 const conversationStore = useConversationStore()
-let reFetchInterval = null
+const route = useRoute()
+let reFetchInterval = ref(null)
 
-// Re-fetch conversations list every 30 seconds for any missed updates.
-// FIXME: Figure out a better way to handle this.
+const title = computed(() => {
+  const typeValue = route.meta?.type?.(route)
+  return (
+    (typeValue || route.meta?.title || '').charAt(0).toUpperCase() +
+    (typeValue || route.meta?.title || '').slice(1)
+  )
+})
+
+// FIXME: Figure how to get missed updates.
 onMounted(() => {
-  reFetchInterval = setInterval(() => {
+  reFetchInterval.value = setInterval(() => {
     conversationStore.reFetchConversationsList(false)
   }, 30000)
 })
 
-const route = useRoute()
-const title = computed(() => {
- const typeValue = route.meta?.type?.(route)
- return (typeValue || route.meta?.title || '').charAt(0).toUpperCase() + (typeValue || route.meta?.title || '').slice(1)
-})
-
 onUnmounted(() => {
-  clearInterval(reFetchInterval)
+  clearInterval(reFetchInterval.value)
   conversationStore.clearListReRenderInterval()
 })
 
@@ -157,15 +178,7 @@ const loadNextPage = () => {
   conversationStore.fetchNextConversations()
 }
 
-const hasConversations = computed(() => {
-  return conversationStore.conversationsList.length !== 0
-})
-
-const hasErrored = computed(() => {
-  return conversationStore.conversations.errorMessage ? true : false
-})
-
-const isLoading = computed(() => {
-  return conversationStore.conversations.loading
-})
+const hasConversations = computed(() => conversationStore.conversationsList.length !== 0)
+const hasErrored = computed(() => !!conversationStore.conversations.errorMessage)
+const isLoading = computed(() => conversationStore.conversations.loading)
 </script>

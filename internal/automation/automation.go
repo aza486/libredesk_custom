@@ -15,7 +15,6 @@ import (
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
-	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -25,7 +24,6 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
-
 	// MaxQueueSize defines the maximum size of the task queues.
 	MaxQueueSize = 5000
 )
@@ -51,9 +49,7 @@ type Engine struct {
 	rulesMu           sync.RWMutex
 	q                 queries
 	lo                *logf.Logger
-	conversationStore ConversationStore
-	slaStore          SLAStore
-	systemUser        umodels.User
+	conversationStore conversationStore
 	taskQueue         chan ConversationTask
 	closed            bool
 	closedMu          sync.RWMutex
@@ -65,20 +61,10 @@ type Opts struct {
 	Lo *logf.Logger
 }
 
-type ConversationStore interface {
-	GetConversation(id int, uuid string) (cmodels.Conversation, error)
-	GetConversationsCreatedAfter(t time.Time) ([]cmodels.Conversation, error)
-	UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error
-	UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error
-	UpdateConversationStatus(uuid string, statusID int, status, snoozeDur string, actor umodels.User) error
-	UpdateConversationPriority(uuid string, priorityID int, priority string, actor umodels.User) error
-	SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error
-	SendReply(media []mmodels.Media, senderID int, conversationUUID, content, meta string) error
-	RecordSLASet(conversationUUID string, actor umodels.User) error
-}
-
-type SLAStore interface {
-	ApplySLA(conversationID, slaID int) error
+type conversationStore interface {
+	ApplyAction(action models.RuleAction, conversation cmodels.Conversation, user umodels.User) error
+	GetConversation(teamID int, uuid string) (cmodels.Conversation, error)
+	GetConversationsCreatedAfter(time.Time) ([]cmodels.Conversation, error)
 }
 
 type queries struct {
@@ -94,13 +80,12 @@ type queries struct {
 }
 
 // New initializes a new Engine.
-func New(systemUser umodels.User, opt Opts) (*Engine, error) {
+func New(opt Opts) (*Engine, error) {
 	var (
 		q queries
 		e = &Engine{
-			systemUser: systemUser,
-			lo:         opt.Lo,
-			taskQueue:  make(chan ConversationTask, MaxQueueSize),
+			lo:        opt.Lo,
+			taskQueue: make(chan ConversationTask, MaxQueueSize),
 		}
 	)
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opt.DB, efs); err != nil {
@@ -112,9 +97,8 @@ func New(systemUser umodels.User, opt Opts) (*Engine, error) {
 }
 
 // SetConversationStore sets conversations store.
-func (e *Engine) SetConversationStore(store ConversationStore, slaStore SLAStore) {
+func (e *Engine) SetConversationStore(store conversationStore) {
 	e.conversationStore = store
-	e.slaStore = slaStore
 }
 
 // ReloadRules reloads automation rules from DB.
@@ -277,43 +261,6 @@ func (e *Engine) UpdateRuleExecutionMode(ruleType, mode string) error {
 	return nil
 }
 
-// handleNewConversation handles new conversation events.
-func (e *Engine) handleNewConversation(conversationUUID string) {
-	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
-	if err != nil {
-		e.lo.Error("error fetching conversation for new event", "uuid", conversationUUID, "error", err)
-		return
-	}
-	rules := e.filterRulesByType(models.RuleTypeNewConversation, "")
-	e.evalConversationRules(rules, conversation)
-}
-
-// handleUpdateConversation handles update conversation events with specific eventType.
-func (e *Engine) handleUpdateConversation(conversationUUID, eventType string) {
-	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
-	if err != nil {
-		e.lo.Error("error fetching conversation for update event", "uuid", conversationUUID, "error", err)
-		return
-	}
-	rules := e.filterRulesByType(models.RuleTypeConversationUpdate, eventType)
-	e.evalConversationRules(rules, conversation)
-}
-
-// handleTimeTrigger handles time trigger events.
-func (e *Engine) handleTimeTrigger() {
-	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
-	conversations, err := e.conversationStore.GetConversationsCreatedAfter(thirtyDaysAgo)
-	if err != nil {
-		e.lo.Error("error fetching conversations for time trigger", "error", err)
-		return
-	}
-	rules := e.filterRulesByType(models.RuleTypeTimeTrigger, "")
-	e.lo.Debug("fetched conversations for evaluating time triggers", "conversations_count", len(conversations), "rules_count", len(rules))
-	for _, conversation := range conversations {
-		e.evalConversationRules(rules, conversation)
-	}
-}
-
 // EvaluateNewConversationRules enqueues a new conversation for rule evaluation.
 func (e *Engine) EvaluateNewConversationRules(conversationUUID string) {
 	e.closedMu.RLock()
@@ -352,6 +299,43 @@ func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string, eventT
 	default:
 		// Queue is full.
 		e.lo.Warn("EvaluateConversationUpdateRules: updateConversationQ is full, unable to enqueue conversation")
+	}
+}
+
+// handleNewConversation handles new conversation events.
+func (e *Engine) handleNewConversation(conversationUUID string) {
+	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
+	if err != nil {
+		e.lo.Error("error fetching conversation for new event", "uuid", conversationUUID, "error", err)
+		return
+	}
+	rules := e.filterRulesByType(models.RuleTypeNewConversation, "")
+	e.evalConversationRules(rules, conversation)
+}
+
+// handleUpdateConversation handles update conversation events with specific eventType.
+func (e *Engine) handleUpdateConversation(conversationUUID, eventType string) {
+	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
+	if err != nil {
+		e.lo.Error("error fetching conversation for update event", "uuid", conversationUUID, "error", err)
+		return
+	}
+	rules := e.filterRulesByType(models.RuleTypeConversationUpdate, eventType)
+	e.evalConversationRules(rules, conversation)
+}
+
+// handleTimeTrigger handles time trigger events.
+func (e *Engine) handleTimeTrigger() {
+	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
+	conversations, err := e.conversationStore.GetConversationsCreatedAfter(thirtyDaysAgo)
+	if err != nil {
+		e.lo.Error("error fetching conversations for time trigger", "error", err)
+		return
+	}
+	rules := e.filterRulesByType(models.RuleTypeTimeTrigger, "")
+	e.lo.Debug("fetched conversations for evaluating time triggers", "conversations_count", len(conversations), "rules_count", len(rules))
+	for _, conversation := range conversations {
+		e.evalConversationRules(rules, conversation)
 	}
 }
 

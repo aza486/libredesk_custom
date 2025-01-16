@@ -174,7 +174,7 @@ const adminNavItems = [
   {
     title: 'Conversations',
     href: '/admin/conversations',
-    description: 'Manage tags, canned responses and statuses.',
+    description: 'Manage tags, macros and statuses.',
     children: [
       {
         title: 'Tags',
@@ -183,9 +183,9 @@ const adminNavItems = [
         permissions: ['tags:manage'],
       },
       {
-        title: 'Canned responses',
-        href: '/admin/conversations/canned-responses',
-        description: 'Manage canned responses.',
+        title: 'Macros',
+        href: '/admin/conversations/macros',
+        description: 'Manage macros.',
         permissions: ['tags:manage'],
       },
       {
@@ -300,12 +300,12 @@ const adminNavItems = [
     ],
   },
   {
-    title: 'OpenID Connect SSO',
+    title: 'SSO',
     href: '/admin/oidc',
     description: 'Manage OpenID SSO configurations',
     children: [
       {
-        title: 'OpenID Connect SSO',
+        title: 'SSO',
         href: '/admin/oidc',
         description: 'Manage OpenID SSO configurations',
         permissions: ['tags:manage'],
@@ -338,7 +338,7 @@ const hasConversationOpen = computed(() => {
 <template>
   <div class="flex flex-row justify-between h-full">
     <div class="flex-1">
-      <SidebarProvider :open="open" @update:open="($event) => emit('update:open', $event)" style="--sidebar-width: 17rem;">
+      <SidebarProvider :open="open" @update:open="($event) => emit('update:open', $event)" style="--sidebar-width: 16rem;">
         <!-- Flex Container that holds all the sidebar components -->
         <Sidebar collapsible="icon" class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0">
 
@@ -519,7 +519,7 @@ const hasConversationOpen = computed(() => {
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild size="md">
+                    <SidebarMenuButton asChild>
                       <div>
                         <span class="font-semibold text-2xl">Inbox</span>
                       </div>

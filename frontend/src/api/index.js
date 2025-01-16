@@ -182,10 +182,24 @@ const sendMessage = (uuid, data) =>
   })
 const getConversation = (uuid) => http.get(`/api/v1/conversations/${uuid}`)
 const getConversationParticipants = (uuid) => http.get(`/api/v1/conversations/${uuid}/participants`)
-const getCannedResponses = () => http.get('/api/v1/canned-responses')
-const createCannedResponse = (data) => http.post('/api/v1/canned-responses', data)
-const updateCannedResponse = (id, data) => http.put(`/api/v1/canned-responses/${id}`, data)
-const deleteCannedResponse = (id) => http.delete(`/api/v1/canned-responses/${id}`)
+const getAllMacros = () => http.get('/api/v1/macros')
+const getMacro = (id) => http.get(`/api/v1/macros/${id}`)
+const createMacro = (data) => http.post('/api/v1/macros', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const updateMacro = (id, data) => http.put(`/api/v1/macros/${id}`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const deleteMacro = (id) => http.delete(`/api/v1/macros/${id}`)
+const applyMacro = (uuid, id, data) => http.post(`/api/v1/conversations/${uuid}/macros/${id}/apply`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const getTeamUnassignedConversations = (teamID, params) =>
   http.get(`/api/v1/teams/${teamID}/conversations/unassigned`, { params })
 const getAssignedConversations = (params) => http.get('/api/v1/conversations/assigned', { params })
@@ -290,10 +304,12 @@ export default {
   getConversationMessages,
   getCurrentUser,
   getCurrentUserTeams,
-  getCannedResponses,
-  createCannedResponse,
-  updateCannedResponse,
-  deleteCannedResponse,
+  getAllMacros,
+  getMacro,
+  createMacro,
+  updateMacro,
+  deleteMacro,
+  applyMacro,
   updateCurrentUser,
   updateAssignee,
   updateConversationStatus,

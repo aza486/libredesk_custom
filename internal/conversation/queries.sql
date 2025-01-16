@@ -81,7 +81,8 @@ SELECT
     ct.first_name as "contact.first_name",
     ct.last_name as "contact.last_name",
     ct.email as "contact.email",
-    ct.avatar_url as "contact.avatar_url"
+    ct.avatar_url as "contact.avatar_url",
+    ct.phone_number as "contact.phone_number"
 FROM conversations c
 JOIN users ct ON c.contact_id = ct.id
 LEFT JOIN sla_policies sla ON c.sla_policy_id = sla.id
@@ -320,13 +321,16 @@ WITH conversation_id AS (
 ),
 inserted AS (
     INSERT INTO conversation_tags (conversation_id, tag_id)
-    SELECT conversation_id.id, unnest($2::int[])
-    FROM conversation_id
+    SELECT conversation_id.id, t.id
+    FROM conversation_id, tags t
+    WHERE t.name = ANY($2::text[])
     ON CONFLICT (conversation_id, tag_id) DO UPDATE SET tag_id = EXCLUDED.tag_id
 )
 DELETE FROM conversation_tags
 WHERE conversation_id = (SELECT id FROM conversation_id) 
-  AND tag_id NOT IN (SELECT unnest($2::int[]));
+AND tag_id NOT IN (
+    SELECT id FROM tags WHERE name = ANY($2::text[])
+);
 
 -- name: get-to-address
 SELECT cc.identifier 

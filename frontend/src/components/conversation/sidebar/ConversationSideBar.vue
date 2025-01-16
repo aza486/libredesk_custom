@@ -1,15 +1,14 @@
 <template>
   <div v-if="conversationStore.current">
     <ConversationSideBarContact :conversation="conversationStore.current" class="p-3" />
-    <Accordion type="multiple" collapsible class="border-t mt-4" :default-value="[]">
+    <Accordion type="multiple" collapsible class="border-t" :default-value="[]">
       <AccordionItem value="Actions">
         <AccordionTrigger class="bg-muted p-3"> Actions </AccordionTrigger>
         <AccordionContent class="space-y-5 p-3">
-
           <!-- Agent -->
           <ComboBox
             v-model="assignedUserID"
-            :items="usersStore.forSelect"
+            :items="usersStore.options"
             placeholder="Search agent"
             defaultLabel="Assign agent"
             @select="selectAgent"
@@ -43,21 +42,21 @@
           <!-- Team -->
           <ComboBox
             v-model="assignedTeamID"
-            :items="teamsStore.forSelect"
+            :items="teamsStore.options"
             placeholder="Search team"
             defaultLabel="Assign team"
             @select="selectTeam"
           >
             <template #item="{ item }">
               <div class="flex items-center gap-2 ml-2">
-                {{item.emoji}}
+                {{ item.emoji }}
                 <span>{{ item.label }}</span>
               </div>
             </template>
 
             <template #selected="{ selected }">
               <div v-if="selected" class="flex items-center gap-2">
-                {{selected.emoji}}
+                {{ selected.emoji }}
                 <span>{{ selected.label }}</span>
               </div>
               <span v-else>Select team</span>
@@ -67,7 +66,7 @@
           <!-- Priority  -->
           <ComboBox
             v-model="conversationStore.current.priority"
-            :items="conversationStore.prioritiesForSelect"
+            :items="conversationStore.priorityOptions"
             :defaultLabel="conversationStore.current.priority ?? 'Select priority'"
             placeholder="Select priority"
             @select="selectPriority"
@@ -79,7 +78,6 @@
             :items="tags"
             placeholder="Select tags"
           />
-
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="Information">
@@ -106,7 +104,6 @@ import {
 } from '@/components/ui/accordion'
 import ConversationInfo from './ConversationInfo.vue'
 import ConversationSideBarContact from '@/components/conversation/sidebar/ConversationSideBarContact.vue'
-
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { SelectTag } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast/use-toast'
@@ -118,45 +115,32 @@ const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamsStore = useTeamStore()
 const tags = ref([])
-const tagIDMap = {}
 
 onMounted(async () => {
-  await Promise.all([fetchTags()])
+  await fetchTags()
 })
 
-// FIXME: Fix race.
 watch(
-  () => conversationStore.current && conversationStore.current.tags,
+  () => conversationStore.current?.tags,
   () => {
-    handleUpsertTags()
+    conversationStore.upsertTags({
+      tags: JSON.stringify(conversationStore.current.tags)
+    })
   },
-  { deep: true }
 )
 
 const assignedUserID = computed(() => String(conversationStore.current.assigned_user_id))
 const assignedTeamID = computed(() => String(conversationStore.current.assigned_team_id))
 
-const handleUpsertTags = () => {
-  let tagIDs = conversationStore.current.tags.map((tag) => {
-    if (tag in tagIDMap) {
-      return tagIDMap[tag]
-    }
-  })
-  conversationStore.upsertTags({
-    tag_ids: JSON.stringify(tagIDs)
-  })
-}
-
 const fetchTags = async () => {
   try {
     const resp = await api.getTags()
     resp.data.data.forEach((item) => {
-      tagIDMap[item.name] = item.id
       tags.value.push(item.name)
     })
   } catch (error) {
     toast({
-      title: 'Could not fetch tags',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

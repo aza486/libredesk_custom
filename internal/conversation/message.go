@@ -376,8 +376,8 @@ func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umod
 }
 
 // RecordSLASet records an activity for an SLA set.
-func (m *Manager) RecordSLASet(conversationUUID string, actor umodels.User) error {
-	return m.InsertConversationActivity(ActivitySLASet, conversationUUID, "", actor)
+func (m *Manager) RecordSLASet(conversationUUID string, slaName string, actor umodels.User) error {
+	return m.InsertConversationActivity(ActivitySLASet, conversationUUID, slaName, actor)
 }
 
 // InsertConversationActivity inserts an activity message.
@@ -425,13 +425,13 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 	case ActivitySelfAssign:
 		content = fmt.Sprintf("%s self-assigned this conversation", actorName)
 	case ActivityPriorityChange:
-		content = fmt.Sprintf("%s changed priority to %s", actorName, newValue)
+		content = fmt.Sprintf("%s set priority to %s", actorName, newValue)
 	case ActivityStatusChange:
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
 	case ActivityTagChange:
 		content = fmt.Sprintf("%s added tags %s", actorName, newValue)
 	case ActivitySLASet:
-		content = fmt.Sprintf("%s set an SLA to this conversation", actorName)
+		content = fmt.Sprintf("%s set %s SLA", actorName, newValue)
 	default:
 		return "", fmt.Errorf("invalid activity type %s", activityType)
 	}

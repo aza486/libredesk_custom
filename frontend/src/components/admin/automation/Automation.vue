@@ -1,5 +1,4 @@
 <template>
-  <div class="w-8/12">
     <div v-if="router.currentRoute.value.path === '/admin/automations'">
       <div class="flex justify-between mb-5">
         <div class="ml-auto">
@@ -11,7 +10,6 @@
       </div>
     </div>
     <router-view />
-  </div>
 </template>
 
 <script setup>

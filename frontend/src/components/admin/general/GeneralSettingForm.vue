@@ -242,7 +242,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not update settings',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

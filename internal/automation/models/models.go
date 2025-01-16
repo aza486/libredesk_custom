@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/lib/pq"
 )
 
@@ -15,6 +16,7 @@ const (
 	ActionSendPrivateNote = "send_private_note"
 	ActionReply           = "send_reply"
 	ActionSetSLA          = "set_sla"
+	ActionSetTags         = "set_tags"
 
 	OperatorAnd = "AND"
 	OperatorOR  = "OR"
@@ -51,6 +53,17 @@ const (
 	ExecutionModeAll        = "all"
 	ExecutionModeFirstMatch = "first_match"
 )
+
+// ActionPermissions maps actions to permissions
+var ActionPermissions = map[string]string{
+	ActionAssignTeam:      authzModels.PermConversationsUpdateTeamAssignee,
+	ActionAssignUser:      authzModels.PermConversationsUpdateUserAssignee,
+	ActionSetStatus:       authzModels.PermConversationsUpdateStatus,
+	ActionSetPriority:     authzModels.PermConversationsUpdatePriority,
+	ActionSendPrivateNote: authzModels.PermMessagesWrite,
+	ActionReply:           authzModels.PermMessagesWrite,
+	ActionSetTags:         authzModels.PermConversationsUpdateTags,
+}
 
 // RuleRecord represents a rule record in the database
 type RuleRecord struct {
@@ -89,6 +102,7 @@ type RuleDetail struct {
 }
 
 type RuleAction struct {
-	Type   string `json:"type" db:"type"`
-	Action string `json:"value" db:"value"`
+	Type         string   `json:"type" db:"type"`
+	Value        []string `json:"value" db:"value"`
+	DisplayValue []string `json:"display_value" db:"-"`
 }

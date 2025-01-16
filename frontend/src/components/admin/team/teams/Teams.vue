@@ -1,21 +1,18 @@
 <template>
-  
-  <div class="w-8/12">
-    <div v-if="router.currentRoute.value.path === '/admin/teams/teams'">
-      <div class="flex justify-end mb-5">
-        <Button @click="navigateToAddTeam"> New team </Button>
-      </div>
+  <div v-if="router.currentRoute.value.path === '/admin/teams/teams'">
+    <div class="flex justify-end mb-5">
+      <Button @click="navigateToAddTeam"> New team </Button>
+    </div>
+    <div>
       <div>
-        <div>
-          <Spinner v-if="isLoading"></Spinner>
-          <DataTable :columns="columns" :data="data" v-else />
-        </div>
+        <Spinner v-if="isLoading"></Spinner>
+        <DataTable :columns="columns" :data="data" v-else />
       </div>
     </div>
-    <template v-else>
-        <router-view></router-view>
-    </template>
   </div>
+  <template v-else>
+    <router-view></router-view>
+  </template>
 </template>
 
 <script setup>
@@ -24,7 +21,6 @@ import { handleHTTPError } from '@/utils/http'
 import { columns } from '@/components/admin/team/teams/TeamsDataTableColumns.js'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
-import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import DataTable from '@/components/admin/DataTable.vue'
 import api from '@/api'
 
@@ -32,11 +28,6 @@ import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-
-const breadcrumbLinks = [
-  
-  { path: '/admin/teams/', label: 'Teams' }
-]
 
 const emit = useEmitter()
 const router = useRouter()

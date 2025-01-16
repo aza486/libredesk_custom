@@ -8,7 +8,7 @@ import api from '@/api'
 export const useInboxStore = defineStore('inbox', () => {
   const inboxes = ref([])
   const emitter = useEmitter()
-  const forSelect = computed(() => inboxes.value.map(inb => ({
+  const options = computed(() => inboxes.value.map(inb => ({
     label: inb.name,
     value: String(inb.id)
   })))
@@ -27,7 +27,7 @@ export const useInboxStore = defineStore('inbox', () => {
   }
   return {
     inboxes,
-    forSelect,
+    options,
     fetchInboxes,
   }
 })

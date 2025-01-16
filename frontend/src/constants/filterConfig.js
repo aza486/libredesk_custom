@@ -1,5 +1,6 @@
 export const FIELD_TYPE = {
     SELECT: 'select',
+    TAG: 'tag',
     TEXT: 'text',
     NUMBER: 'number',
     RICHTEXT: 'richtext'

@@ -8,7 +8,7 @@ import api from '@/api'
 export const useSlaStore = defineStore('sla', () => {
     const slas = ref([])
     const emitter = useEmitter()
-    const forSelect = computed(() => slas.value.map(sla => ({
+    const options = computed(() => slas.value.map(sla => ({
         label: sla.name,
         value: String(sla.id)
     })))
@@ -27,7 +27,7 @@ export const useSlaStore = defineStore('sla', () => {
     }
     return {
         slas,
-        forSelect,
+        options,
         fetchSlas
     }
 })

@@ -8,7 +8,7 @@ import api from '@/api'
 export const useUsersStore = defineStore('users', () => {
     const users = ref([])
     const emitter = useEmitter()
-    const forSelect = computed(() => users.value.map(user => ({
+    const options = computed(() => users.value.map(user => ({
         label: user.first_name + ' ' + user.last_name,
         value: String(user.id),
         avatar_url: user.avatar_url,
@@ -28,7 +28,7 @@ export const useUsersStore = defineStore('users', () => {
     }
     return {
         users,
-        forSelect,
+        options,
         fetchUsers,
     }
 })

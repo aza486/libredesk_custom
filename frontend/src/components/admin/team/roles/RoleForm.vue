@@ -100,7 +100,7 @@ const permissions = ref([
       { name: 'status:manage', label: 'Manage Conversation Statuses' },
       { name: 'oidc:manage', label: 'Manage SSO Configuration' },
       { name: 'tags:manage', label: 'Manage Tags' },
-      { name: 'canned_responses:manage', label: 'Manage Canned Responses' },
+      { name: 'macros:manage', label: 'Manage Macros' },
       { name: 'users:manage', label: 'Manage Users' },
       { name: 'teams:manage', label: 'Manage Teams' },
       { name: 'automations:manage', label: 'Manage Automations' },

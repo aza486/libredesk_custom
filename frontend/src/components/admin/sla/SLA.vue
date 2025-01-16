@@ -1,22 +1,19 @@
 <template>
-    
-    <div class="w-8/12">
-        <template v-if="router.currentRoute.value.path === '/admin/sla'">
-            <div class="flex justify-between mb-5">
-                <div></div>
-                <div>
-                    <Button @click="navigateToAddSLA">New SLA</Button>
-                </div>
-            </div>
-            <div>
-                <Spinner v-if="isLoading"></Spinner>
-                <DataTable :columns="columns" :data="slas" v-else />
-            </div>
-        </template>
-        <template v-else>
-            <router-view/>
-        </template>
+  <template v-if="router.currentRoute.value.path === '/admin/sla'">
+    <div class="flex justify-between mb-5">
+      <div></div>
+      <div>
+        <Button @click="navigateToAddSLA">New SLA</Button>
+      </div>
     </div>
+    <div>
+      <Spinner v-if="isLoading"></Spinner>
+      <DataTable :columns="columns" :data="slas" v-else />
+    </div>
+  </template>
+  <template v-else>
+    <router-view />
+  </template>
 </template>
 
 <script setup>
@@ -37,29 +34,29 @@ const router = useRouter()
 const emit = useEmitter()
 
 onMounted(() => {
-    fetchAll()
-    emit.on(EMITTER_EVENTS.REFRESH_LIST, refreshList)
+  fetchAll()
+  emit.on(EMITTER_EVENTS.REFRESH_LIST, refreshList)
 })
 
 onUnmounted(() => {
-    emit.off(EMITTER_EVENTS.REFRESH_LIST, refreshList)
+  emit.off(EMITTER_EVENTS.REFRESH_LIST, refreshList)
 })
 
 const refreshList = (data) => {
-    if (data?.model === 'sla') fetchAll()
+  if (data?.model === 'sla') fetchAll()
 }
 
 const fetchAll = async () => {
-    try {
-        isLoading.value = true
-        const resp = await api.getAllSLAs()
-        slas.value = resp.data.data
-    } finally {
-        isLoading.value = false
-    }
+  try {
+    isLoading.value = true
+    const resp = await api.getAllSLAs()
+    slas.value = resp.data.data
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const navigateToAddSLA = () => {
-    router.push('/admin/sla/new')
+  router.push('/admin/sla/new')
 }
 </script>
