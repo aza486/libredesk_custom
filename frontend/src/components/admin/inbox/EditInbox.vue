@@ -27,8 +27,7 @@ const breadcrumbLinks = [
 
 const submitForm = (values) => {
   const payload = {
-    name: values.name,
-    from: values.from,
+    ...values,
     channel: inbox.value.channel,
     config: {
       imap: [{ ...values.imap }],
