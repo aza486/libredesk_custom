@@ -4,28 +4,40 @@
     <div class="p-2 border-b flex items-center justify-between">
       <div class="flex items-center space-x-3 text-sm">
         <div class="font-medium">
-          {{ conversationStore.current.subject }}
+          {{ conversationStore.current?.subject }}
         </div>
       </div>
       <div>
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <div class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm">
+            <div
+              class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
+            >
               <GalleryVerticalEnd size="14" class="text-secondary" />
-              <span class="text-secondary font-medium">{{ conversationStore.current.status }}</span>
+              <span class="text-secondary font-medium" v-if="conversationStore.current?.status">
+                {{ conversationStore.current?.status }}
+              </span>
+              <span v-else class="text-secondary font-medium">
+                Loading...
+              </span>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem v-for="status in conversationStore.statusOptions" :key="status.value"
-              @click="handleUpdateStatus(status.label)">
+            <DropdownMenuItem
+              v-for="status in conversationStore.statusOptions"
+              :key="status.value"
+              @click="handleUpdateStatus(status.label)"
+            >
               {{ status.label }}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </div>
+  </div>
 
-    <!-- Messages & reply box -->
+  <!-- Messages & reply box -->
+  <div>
     <div class="flex flex-col h-[calc(100vh-theme(spacing.10))]">
       <MessageList class="flex-1 overflow-y-auto" />
       <div class="sticky bottom-0 bg-white">
@@ -43,9 +55,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import {
-  GalleryVerticalEnd,
-} from 'lucide-vue-next'
+import { GalleryVerticalEnd } from 'lucide-vue-next'
 import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

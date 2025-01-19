@@ -138,7 +138,7 @@ func (u *Manager) CreateAgent(user *models.User) error {
 	if err != nil {
 		u.lo.Error("error generating password", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
-	}	
+	}
 	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
 	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
 		u.lo.Error("error creating user", "error", err)
@@ -277,22 +277,6 @@ func (u *Manager) ResetPassword(token, password string) error {
 	return nil
 }
 
-// ChangeSystemUserPassword updates the system user's password with a newly prompted one.
-func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
-	// Prompt for password and get hashed password
-	hashedPassword, err := promptAndHashPassword(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Update system user's password in the database.
-	if err := updateSystemUserPassword(db, hashedPassword); err != nil {
-		return fmt.Errorf("error updating system user password: %v", err)
-	}
-	fmt.Println("System user password updated successfully.")
-	return nil
-}
-
 // GetPermissions retrieves the permissions of a user by ID.
 func (u *Manager) GetPermissions(id int) ([]string, error) {
 	var permissions []string
@@ -330,6 +314,22 @@ func (u *Manager) isStrongPassword(password string) bool {
 	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
 	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
 	return hasUppercase && hasNumber
+}
+
+// ChangeSystemUserPassword updates the system user's password with a newly prompted one.
+func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
+	// Prompt for password and get hashed password
+	hashedPassword, err := promptAndHashPassword(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Update system user's password in the database.
+	if err := updateSystemUserPassword(db, hashedPassword); err != nil {
+		return fmt.Errorf("error updating system user password: %v", err)
+	}
+	fmt.Println("System user password updated successfully.")
+	return nil
 }
 
 // CreateSystemUser inserts a default system user into the users table with the prompted password.

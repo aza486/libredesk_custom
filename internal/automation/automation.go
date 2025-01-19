@@ -111,7 +111,7 @@ func (e *Engine) ReloadRules() {
 
 // Run starts the Engine with a worker pool to evaluate rules based on events.
 func (e *Engine) Run(ctx context.Context, workerCount int) {
-	// Start the worker pool
+	// Spawn worker pool.
 	for i := 0; i < workerCount; i++ {
 		e.wg.Add(1)
 		go e.worker(ctx)
@@ -304,28 +304,39 @@ func (e *Engine) EvaluateConversationUpdateRules(conversationUUID string, eventT
 
 // handleNewConversation handles new conversation events.
 func (e *Engine) handleNewConversation(conversationUUID string) {
+	e.lo.Debug("handling new conversation", "uuid", conversationUUID)
 	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
 	if err != nil {
 		e.lo.Error("error fetching conversation for new event", "uuid", conversationUUID, "error", err)
 		return
 	}
 	rules := e.filterRulesByType(models.RuleTypeNewConversation, "")
+	if len(rules) == 0 {
+		e.lo.Warn("no rules to evaluate for new conversation", "uuid", conversationUUID)
+		return
+	}
 	e.evalConversationRules(rules, conversation)
 }
 
 // handleUpdateConversation handles update conversation events with specific eventType.
 func (e *Engine) handleUpdateConversation(conversationUUID, eventType string) {
+	e.lo.Debug("handling update conversation", "uuid", conversationUUID, "event_type", eventType)
 	conversation, err := e.conversationStore.GetConversation(0, conversationUUID)
 	if err != nil {
 		e.lo.Error("error fetching conversation for update event", "uuid", conversationUUID, "error", err)
 		return
 	}
 	rules := e.filterRulesByType(models.RuleTypeConversationUpdate, eventType)
+	if len(rules) == 0 {
+		e.lo.Warn("no rules to evaluate for conversation update", "uuid", conversationUUID, "event_type", eventType)
+		return
+	}
 	e.evalConversationRules(rules, conversation)
 }
 
 // handleTimeTrigger handles time trigger events.
 func (e *Engine) handleTimeTrigger() {
+	e.lo.Debug("handling time trigger")
 	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
 	conversations, err := e.conversationStore.GetConversationsCreatedAfter(thirtyDaysAgo)
 	if err != nil {
@@ -333,6 +344,10 @@ func (e *Engine) handleTimeTrigger() {
 		return
 	}
 	rules := e.filterRulesByType(models.RuleTypeTimeTrigger, "")
+	if len(rules) == 0 {
+		e.lo.Warn("no rules to evaluate for time trigger")
+		return
+	}
 	e.lo.Debug("fetched conversations for evaluating time triggers", "conversations_count", len(conversations), "rules_count", len(rules))
 	for _, conversation := range conversations {
 		e.evalConversationRules(rules, conversation)

@@ -4,11 +4,10 @@ import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constan
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
-import { subscribeConversationsList } from '@/websocket'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
-  const MAX_CONV_LIST_PAGE_SIZE = 30
+  const MAX_CONV_LIST_PAGE_SIZE = 100
   const MAX_MESSAGE_LIST_PAGE_SIZE = 30
   const priorities = ref([])
   const statuses = ref([])
@@ -79,6 +78,7 @@ export const useConversationStore = defineStore('conversation', () => {
     loading: false,
     page: 1,
     hasMore: false,
+    total: 0,
     errorMessage: ''
   })
 
@@ -186,7 +186,16 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const conversationsList = computed(() => {
     if (!conversations.data) return []
-    return conversations.data
+    return [...conversations.data].sort((a, b) => {
+      const field = sortFieldMap[conversations.sortField]?.field
+      if (!a[field] && !b[field]) return 0
+      if (!a[field]) return 1       // null goes last
+      if (!b[field]) return -1
+      const order = sortFieldMap[conversations.sortField]?.order
+      return order === 'asc'
+        ? new Date(a[field]) - new Date(b[field])
+        : new Date(b[field]) - new Date(a[field])
+    })
   })
 
   const conversationMessages = computed(() => {
@@ -197,7 +206,9 @@ export const useConversationStore = defineStore('conversation', () => {
   function markConversationAsRead (uuid) {
     const index = conversations.data.findIndex(conv => conv.uuid === uuid)
     if (index !== -1) {
-      conversations.data[index].unread_message_count = 0
+      setTimeout(() => {
+        conversations.data[index].unread_message_count = 0
+      }, 3000)
     }
   }
 
@@ -217,8 +228,8 @@ export const useConversationStore = defineStore('conversation', () => {
   })
 
   async function fetchConversation (uuid) {
-    conversation.loading = true
     resetCurrentConversation()
+    conversation.loading = true
     try {
       const resp = await api.getConversation(uuid)
       conversation.data = resp.data.data
@@ -310,14 +321,18 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function fetchNextConversations () {
     conversations.page++
-    fetchConversationsList(true, conversations.listType, conversations.teamID, conversations.listFilters)
+    fetchConversationsList(true, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page)
   }
 
   function reFetchConversationsList (showLoader = true) {
-    fetchConversationsList(showLoader, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID)
+    fetchConversationsList(showLoader, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page)
   }
 
-  async function fetchConversationsList (showLoader = true, listType = null, teamID = 0, filters = [], viewID = 0) {
+  async function fetchFirstPageConversations () {
+    await fetchConversationsList(false, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, 1)
+  }
+
+  async function fetchConversationsList (showLoader = true, listType = null, teamID = 0, filters = [], viewID = 0, page = 0) {
     if (!listType) return
     if (conversations.listType !== listType || conversations.teamID !== teamID || conversations.viewID !== viewID) {
       resetConversations()
@@ -335,11 +350,12 @@ export const useConversationStore = defineStore('conversation', () => {
       })
     }
     if (filters) conversations.listFilters = filters
-    subscribeConversationsList(listType, teamID)
     if (showLoader) conversations.loading = true
     try {
       conversations.errorMessage = ''
-      const response = await makeConversationListRequest(listType, teamID, viewID, filters)
+      if (page === 0)
+        page = conversations.page
+      const response = await makeConversationListRequest(listType, teamID, viewID, filters, page)
       processConversationListResponse(response)
     } catch (error) {
       conversations.errorMessage = handleHTTPError(error).message
@@ -348,12 +364,12 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function makeConversationListRequest (listType, teamID, viewID, filters) {
+  async function makeConversationListRequest (listType, teamID, viewID, filters, page) {
     filters = filters.length > 0 ? JSON.stringify(filters) : []
     switch (listType) {
       case CONVERSATION_LIST_TYPE.ASSIGNED:
         return await api.getAssignedConversations({
-          page: conversations.page,
+          page: page,
           page_size: MAX_CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
@@ -361,7 +377,7 @@ export const useConversationStore = defineStore('conversation', () => {
         })
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return await api.getUnassignedConversations({
-          page: conversations.page,
+          page: page,
           page_size: MAX_CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
@@ -369,7 +385,7 @@ export const useConversationStore = defineStore('conversation', () => {
         })
       case CONVERSATION_LIST_TYPE.ALL:
         return await api.getAllConversations({
-          page: conversations.page,
+          page: page,
           page_size: MAX_CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
@@ -377,14 +393,14 @@ export const useConversationStore = defineStore('conversation', () => {
         })
       case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
         return await api.getTeamUnassignedConversations(teamID, {
-          page: conversations.page,
+          page: page,
           page_size: MAX_CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order
         })
       case CONVERSATION_LIST_TYPE.VIEW:
         return await api.getViewConversations(viewID, {
-          page: conversations.page,
+          page: page,
           page_size: MAX_CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order
@@ -407,6 +423,7 @@ export const useConversationStore = defineStore('conversation', () => {
     else conversations.hasMore = true
     if (!conversations.data) conversations.data = []
     conversations.data.push(...newConversations)
+    conversations.total = apiResponse.total
   }
 
   async function updatePriority (v) {
@@ -488,7 +505,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return conversations.data?.find(c => c.uuid === uuid) ? true : false
   }
 
-  function updateConversationLastMessage (message) {
+  function updateConversationList (message) {
     const listConversation = conversations.data.find(c => c.uuid === message.conversation_uuid)
     if (listConversation) {
       listConversation.last_message = message.content
@@ -496,10 +513,12 @@ export const useConversationStore = defineStore('conversation', () => {
       if (listConversation.uuid !== conversation?.data?.uuid) {
         listConversation.unread_message_count += 1
       }
+    } else {
+      fetchFirstPageConversations()
     }
   }
 
-  async function updateConversationMessageList (message) {
+  async function updateConversationMessage (message) {
     if (conversation?.data?.uuid === message.conversation_uuid) {
       if (!messages.data.some(msg => msg.uuid === message.uuid)) {
         fetchParticipants(message.conversation_uuid)
@@ -510,14 +529,15 @@ export const useConversationStore = defineStore('conversation', () => {
             conversation_uuid: message.conversation_uuid,
             message: fetchedMessage
           })
-        }, 50)
+        }, 100)
       }
     }
   }
 
   function addNewConversation (conversation) {
     if (!conversationUUIDExists(conversation.uuid)) {
-      conversations.data.push(conversation)
+      // Fetch list of conversations again.
+      fetchFirstPageConversations()
     }
   }
 
@@ -584,19 +604,19 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchNextConversations,
     updateMessageProp,
     updateAssigneeLastSeen,
-    updateConversationMessageList,
+    updateConversationMessage,
     snoozeConversation,
     fetchConversation,
     fetchConversationsList,
     fetchMessages,
     upsertTags,
-    reFetchConversationsList,
     updateAssignee,
     updatePriority,
     updateStatus,
-    updateConversationLastMessage,
+    updateConversationList,
     resetMessages,
     resetCurrentConversation,
+    fetchFirstPageConversations,
     fetchStatuses,
     fetchPriorities,
     setListSortField,

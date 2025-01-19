@@ -258,7 +258,7 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 
 	// Broadcast messge status update to all conversation subscribers.
 	conversationUUID, _ := m.getConversationUUIDFromMessageUUID(uuid)
-	m.BroadcastMessagePropUpdate(conversationUUID, uuid, "status" /*property*/, status)
+	m.BroadcastMessageUpdate(conversationUUID, uuid, "status" /*property*/, status)
 	return nil
 }
 
@@ -315,8 +315,11 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		message.Meta = "{}"
 	}
 
+	// Generate text content.
+	message.TextContent = stringutil.HTML2Text(message.Content)
+
 	// Insert Message.
-	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.SenderID, message.SenderType,
+	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.TextContent, message.SenderID, message.SenderType,
 		message.Private, message.ContentType, message.SourceID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
 		m.lo.Error("error inserting message in db", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
@@ -328,22 +331,21 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Add this user as a participant.
-	if err := m.AddConversationParticipant(message.SenderID, message.ConversationUUID); err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
+	if err := m.addConversationParticipant(message.SenderID, message.ConversationUUID); err != nil {
+		return envelope.NewError(envelope.GeneralError, err.Error(), nil)
 	}
 
 	// Update conversation last message details.
-	lastMessage := stringutil.HTML2Text(message.Content)
-	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, lastMessage, message.CreatedAt)
+	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.CreatedAt)
 
 	// Broadcast new message to all conversation subscribers.
-	m.BroadcastNewConversationMessage(message.ConversationUUID, lastMessage, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
+	m.BroadcastNewMessage(message.ConversationUUID, message.TextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
 }
 
 // RecordAssigneeUserChange records an activity for a user assignee change.
 func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error {
-	// Self assign.
+	// Self assignment.
 	if assigneeID == actor.ID {
 		return m.InsertConversationActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
 	}
@@ -574,7 +576,6 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 
 		m.lo.Debug("uploading message attachment", "name", attachment.Name)
 		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
-
 		reader := bytes.NewReader(attachment.Content)
 		_, err = m.mediaStore.UploadAndInsert(
 			attachment.Name,

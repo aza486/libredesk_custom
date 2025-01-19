@@ -1,21 +1,21 @@
 <template>
   <div v-if="dueAt" class="flex items-center justify-center">
-    <TransitionGroup name="fade" class="animate-fade-in-down">
+    <TransitionGroup name="fade">
       <span
-        v-if="actualAt && isAfterDueTime"
+        v-if="sla?.status === 'overdue'"
         key="overdue"
         class="inline-flex items-center bg-red-50 px-1 py-1 rounded-full text-xs font-medium text-red-700 border border-red-200 shadow-sm transition-all duration-300 ease-in-out hover:bg-red-100 animate-fade-in-down min-w-[90px]"
       >
-        <AlertCircle class="w-3 h-3  flex-shrink-0" />
+        <AlertCircle class="w-3 h-3 flex-shrink-0 mr-1" />
         <span class="flex-1 text-center">{{ label }} Overdue</span>
       </span>
 
       <span
-        v-else-if="actualAt && !isAfterDueTime && showSLAHit"
+        v-else-if="sla?.status === 'hit' && showSLAHit"
         key="sla-hit"
         class="inline-flex items-center bg-green-50 px-1 py-1 rounded-full text-xs font-medium text-green-700 border border-green-200 shadow-sm transition-all duration-300 ease-in-out hover:bg-green-100 animate-fade-in-down min-w-[90px]"
       >
-        <CheckCircle class="w-3 h-3  flex-shrink-0" />
+        <CheckCircle class="w-3 h-3 flex-shrink-0" />
         <span class="flex-1 text-center">{{ label }} SLA Hit</span>
       </span>
 
@@ -24,17 +24,8 @@
         key="remaining"
         class="inline-flex items-center bg-yellow-50 px-1 py-1 rounded-full text-xs font-medium text-yellow-700 border border-yellow-200 shadow-sm transition-all duration-300 ease-in-out hover:bg-yellow-100 animate-fade-in-down min-w-[90px]"
       >
-        <Clock class="w-3 h-3  flex-shrink-0" />
+        <Clock class="w-3 h-3 flex-shrink-0" />
         <span class="flex-1 text-center">{{ label }} {{ sla.value }}</span>
-      </span>
-
-      <span
-        v-else-if="sla?.status === 'overdue'"
-        key="sla-overdue"
-        class="inline-flex items-center bg-red-50 px-1 py-1 rounded-full text-xs font-medium text-red-700 border border-red-200 shadow-sm transition-all duration-300 ease-in-out hover:bg-red-100 animate-fade-in-down min-w-[90px]"
-      >
-        <AlertCircle class="w-3 h-3  flex-shrink-0" />
-        <span class="flex-1 text-center">{{ label }} overdue</span>
       </span>
     </TransitionGroup>
   </div>
@@ -54,6 +45,5 @@ const props = defineProps({
     default: true
   }
 })
-
-const { sla, isAfterDueTime } = useSla(ref(props.dueAt), ref(props.actualAt))
+const { sla } = useSla(ref(props.dueAt), ref(props.actualAt))
 </script>

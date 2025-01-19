@@ -60,6 +60,7 @@ type Conversation struct {
 	ResolutionDueAt    null.Time      `db:"resolution_due_at" json:"resolution_due_at"`
 	SLAPolicyID        null.Int       `db:"sla_policy_id" json:"sla_policy_id"`
 	SlaPolicyName      null.String    `db:"sla_policy_name" json:"sla_policy_name"`
+	NextSLADeadlineAt  null.Time      `db:"next_sla_deadline_at" json:"next_sla_deadline_at"`
 	Total              int            `db:"total" json:"-"`
 }
 
@@ -92,6 +93,7 @@ type Message struct {
 	Status           string                 `db:"status" json:"status"`
 	ConversationID   int                    `db:"conversation_id" json:"conversation_id"`
 	Content          string                 `db:"content" json:"content"`
+	TextContent      string                 `db:"text_content" json:"text_content"`
 	ContentType      string                 `db:"content_type" json:"content_type"`
 	Private          bool                   `db:"private" json:"private"`
 	SourceID         null.String            `db:"source_id" json:"-"`
@@ -121,6 +123,7 @@ func (m *Message) HideCSAT() {
 	}
 	if isCsat, _ := meta["is_csat"].(bool); isCsat {
 		m.Content = "Please rate your experience with us"
+		m.TextContent = m.Content
 	}
 }
 

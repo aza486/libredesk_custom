@@ -1,22 +1,17 @@
 // composables/useSla.js
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { isAfter } from 'date-fns'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { calculateSla } from '@/utils/sla'
 
 export function useSla (dueAt, actualAt) {
     const sla = ref(null)
 
-    const isAfterDueTime = computed(() => {
-        if (!dueAt.value || !actualAt.value) return false
-        return isAfter(new Date(actualAt.value), new Date(dueAt.value))
-    })
 
     function updateSla () {
         if (!dueAt.value) {
             sla.value = null
             return
         }
-        sla.value = calculateSla(dueAt.value)
+        sla.value = calculateSla(dueAt.value, actualAt.value)
     }
 
     onMounted(() => {
@@ -28,5 +23,5 @@ export function useSla (dueAt, actualAt) {
         })
     })
 
-    return { sla, isAfterDueTime, updateSla }
+    return { sla, updateSla }
 }

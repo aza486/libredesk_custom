@@ -11,11 +11,6 @@ import (
 	"github.com/fasthttp/websocket"
 )
 
-const (
-	maxConversationsPagesToSub = 10
-	maxConversationsPageSize   = 50
-)
-
 // SafeBool is a thread-safe boolean.
 type SafeBool struct {
 	flag bool
@@ -49,9 +44,6 @@ type Client struct {
 
 	// To prevent pushes to the channel.
 	Closed SafeBool
-
-	// Currently opened conversation UUID.
-	CurrentConversationUUID string
 
 	// Buffered channel of outbound ws messages.
 	Send chan models.WSMessage
@@ -102,118 +94,17 @@ func (c *Client) Listen() {
 
 // processIncomingMessage processes incoming messages from the client.
 func (c *Client) processIncomingMessage(data []byte) {
-	var req models.IncomingReq
-	if err := json.Unmarshal(data, &req); err != nil {
-		c.SendError("error unmarshalling request")
+	if string(data) == "ping" {
+		c.SendMessage([]byte("pong"), websocket.TextMessage)
 		return
 	}
-
-	switch req.Action {
-	case models.ActionConversationsListSub:
-		var sReq models.ConversationsListSubscribe
-		if err := json.Unmarshal(data, &sReq); err != nil {
-			c.SendError("error unmarshalling request: " + err.Error())
-			return
-		}
-
-
-		// First remove all user conversation subscriptions.
-		c.RemoveAllUserConversationSubscriptions(c.ID)
-
-		// Fetch conversations of this list and subscribe to them
-		for page := 1; page <= maxConversationsPagesToSub; page++ {
-			conversationUUIDs, err := c.Hub.conversationStore.GetConversationsListUUIDs(c.ID, sReq.TeamID, page, maxConversationsPageSize, sReq.Type)
-			if err != nil {
-				continue
-			}
-			c.SubscribeConversations(c.ID, conversationUUIDs)
-		}
-	case models.ActionSetCurrentConversation:
-		var subReq models.ConversationCurrentSet
-		if err := json.Unmarshal(data, &subReq); err != nil {
-			c.SendError("error unmarshalling request")
-			return
-		}
-
-		if c.CurrentConversationUUID != subReq.UUID {
-			c.UnsubscribeConversation(c.ID, c.CurrentConversationUUID)
-			c.CurrentConversationUUID = subReq.UUID
-			c.SubscribeConversations(c.ID, []string{subReq.UUID})
-		}
-	case models.ActionUnsetCurrentConversation:
-		c.UnsubscribeConversation(c.ID, c.CurrentConversationUUID)
-		c.CurrentConversationUUID = ""
-	default:
-		c.SendError("unknown action")
-	}
+	c.SendError("unknown incoming message type")
 }
 
-// close closes the client connection and removes all subscriptions.
+// close closes the client connection.
 func (c *Client) close() {
-	c.RemoveAllUserConversationSubscriptions(c.ID)
 	c.Closed.Set(true)
 	close(c.Send)
-}
-
-// SubscribeConversations subscribes the client to the specified conversations.
-func (c *Client) SubscribeConversations(userID int, conversationUUIDs []string) {
-	c.Hub.subMutex.Lock()
-	defer c.Hub.subMutex.Unlock()
-	for _, conversationUUID := range conversationUUIDs {
-		// Initialize the slice if it doesn't exist
-		if c.Hub.conversationSubs[conversationUUID] == nil {
-			c.Hub.conversationSubs[conversationUUID] = []int{}
-		}
-
-		// Check if userID already exists
-		exists := false
-		for _, id := range c.Hub.conversationSubs[conversationUUID] {
-			if id == userID {
-				exists = true
-				break
-			}
-		}
-
-		// Add userID if it doesn't exist
-		if !exists {
-			c.Hub.conversationSubs[conversationUUID] = append(c.Hub.conversationSubs[conversationUUID], userID)
-		}
-	}
-}
-
-// RemoveAllUserConversationSubscriptions removes all conversation subscriptions for the user.
-func (c *Client) RemoveAllUserConversationSubscriptions(userID int) {
-	c.Hub.subMutex.Lock()
-	defer c.Hub.subMutex.Unlock()
-	for conversationUUID, userIDs := range c.Hub.conversationSubs {
-		for i, id := range userIDs {
-			if id == userID {
-				c.Hub.conversationSubs[conversationUUID] = append(userIDs[:i], userIDs[i+1:]...)
-				break
-			}
-		}
-		if len(c.Hub.conversationSubs[conversationUUID]) == 0 {
-			delete(c.Hub.conversationSubs, conversationUUID)
-		}
-	}
-}
-
-// UnsubscribeConversation unsubscribes the user from the specified conversation.
-func (c *Client) UnsubscribeConversation(userID int, conversationUUID string) {
-	c.Hub.subMutex.Lock()
-	defer c.Hub.subMutex.Unlock()
-	if userIDs, ok := c.Hub.conversationSubs[conversationUUID]; ok {
-		for i, id := range userIDs {
-			if id == userID {
-				c.Hub.conversationSubs[conversationUUID] = append(userIDs[:i], userIDs[i+1:]...)
-				break
-			}
-		}
-		// Remove the conversation from the map if no users are subscribed
-		if len(c.Hub.conversationSubs[conversationUUID]) == 0 {
-			delete(c.Hub.conversationSubs, conversationUUID)
-		}
-	}
 }
 
 // SendError sends an error message to client.
@@ -224,7 +115,6 @@ func (c *Client) SendError(msg string) {
 	}
 	b, _ := json.Marshal(out)
 
-	// Try to send the error message over the Send channel
 	select {
 	case c.Send <- models.WSMessage{Data: b, MessageType: websocket.TextMessage}:
 	default:

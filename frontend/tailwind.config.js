@@ -25,6 +25,8 @@ module.exports = {
     extend: {
       fontFamily: {
         jakarta: ['Plus Jakarta Sans', 'Helvetica Neue', 'sans-serif'],
+        inter: ['Inter', 'Helvetica Neue', 'sans-serif'],
+        poppins: ['Poppins', 'Helvetica Neue', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -93,14 +95,41 @@ module.exports = {
             opacity: '1',
             transform: 'translateY(0)'
           },
-        }
+        },
+        'bounce-in': {
+          '0%': { transform: 'scale(0)' },
+          '50%': { transform: 'scale(1.2)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
+        'slide-in': {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' }
+        },
+        'slide-out': {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(20px)', opacity: '0' }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         'collapsible-down': 'collapsible-down 0.2s ease-in-out',
         'collapsible-up': 'collapsible-up 0.2s ease-in-out',
-        'fade-in-down': 'fade-in-down 0.3s ease-out'
+        'fade-in-down': 'fade-in-down 0.3s ease-out',
+        'bounce-in': 'bounce-in 0.3s',
+        'bounce-out': 'bounce-in 0.3s reverse',
+        'fade-in': 'fade-in 0.3s ease-out',
+        'fade-out': 'fade-out 0.3s ease-in',
+        'slide-in': 'slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        'slide-out': 'slide-out 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       },
     },
   },

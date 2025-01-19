@@ -27,6 +27,8 @@ SELECT
     conversations.subject,
     conversations.last_message,
     conversations.last_message_at,
+    conversations.next_sla_deadline_at,
+    conversations.priority_id,
     (
         SELECT COUNT(*)
         FROM conversation_messages m
@@ -39,14 +41,6 @@ FROM conversations
     JOIN inboxes ON conversations.inbox_id = inboxes.id
     LEFT JOIN conversation_statuses ON conversations.status_id = conversation_statuses.id
     LEFT JOIN conversation_priorities ON conversations.priority_id = conversation_priorities.id
-WHERE 1=1 %s
-
--- name: get-conversations-list-uuids
-SELECT
-    conversations.uuid
-FROM conversations
-LEFT JOIN conversation_statuses ON conversations.status_id = conversation_statuses.id
-LEFT JOIN conversation_priorities ON conversations.priority_id = conversation_priorities.id
 WHERE 1=1 %s
 
 -- name: get-conversation
@@ -466,6 +460,7 @@ INSERT INTO conversation_messages (
     status,
     conversation_id,
     "content",
+    text_content,
     sender_id,
     sender_type,
     private,
@@ -483,7 +478,8 @@ VALUES (
     $8,
     $9,
     $10,
-    $11
+    $11,
+    $12
 )
 RETURNING id, uuid, created_at;
 

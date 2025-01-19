@@ -1,7 +1,6 @@
 <template>
   <div>
     <!-- Fullscreen editor -->
-    <!-- TODO: Has to be a better way to do this than creating two separate editor components -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = $event">
       <DialogContent class="max-w-[70%] max-h-[70%] h-[70%] m-0 p-6">
         <div v-if="isEditorFullscreen">
@@ -24,70 +23,72 @@
       </DialogContent>
     </Dialog>
 
-    <!-- Main Editor non-fullscreen -->
-    <div class="border-t" v-if="!isEditorFullscreen">
-      <!-- Message type toggle -->
-      <div class="flex justify-between px-2 border-b py-2">
-        <Tabs v-model="messageType">
-          <TabsList>
-            <TabsTrigger value="reply"> Reply </TabsTrigger>
-            <TabsTrigger value="private_note"> Private note </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div
-          class="flex items-center mr-2 cursor-pointer"
-          @click="isEditorFullscreen = !isEditorFullscreen"
-        >
-          <Fullscreen size="20" />
+    <div class="m-3 border rounded-xl box">
+      <!-- Main Editor non-fullscreen -->
+      <div v-if="!isEditorFullscreen">
+        <!-- Message type toggle -->
+        <div class="flex justify-between px-2 border-b py-2">
+          <Tabs v-model="messageType">
+            <TabsList>
+              <TabsTrigger value="reply"> Reply </TabsTrigger>
+              <TabsTrigger value="private_note"> Private note </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div
+            class="flex items-center mr-2 cursor-pointer"
+            @click="isEditorFullscreen = !isEditorFullscreen"
+          >
+            <Maximize2 size="16" />
+          </div>
         </div>
+
+        <!-- Main Editor -->
+        <Editor
+          v-model:selectedText="selectedText"
+          v-model:isBold="isBold"
+          v-model:isItalic="isItalic"
+          v-model:htmlContent="htmlContent"
+          v-model:textContent="textContent"
+          :placeholder="editorPlaceholder"
+          :aiPrompts="aiPrompts"
+          @aiPromptSelected="handleAiPromptSelected"
+          :contentToSet="contentToSet"
+          @send="handleSend"
+          v-model:cursorPosition="cursorPosition"
+          :clearContent="clearEditorContent"
+          :setInlineImage="setInlineImage"
+          :insertContent="insertContent"
+        />
+
+        <!-- Macro preview -->
+        <MacroActionsPreview
+          v-if="conversationStore.conversation?.macro?.actions?.length > 0"
+          :actions="conversationStore.conversation.macro.actions"
+          :onRemove="conversationStore.removeMacroAction"
+        />
+
+        <!-- Attachments preview -->
+        <AttachmentsPreview
+          :attachments="attachments"
+          :onDelete="handleOnFileDelete"
+          v-if="attachments.length > 0"
+        />
+
+        <!-- Bottom menu bar -->
+        <ReplyBoxBottomMenuBar
+          class="mt-1"
+          :handleFileUpload="handleFileUpload"
+          :handleInlineImageUpload="handleInlineImageUpload"
+          :isBold="isBold"
+          :isItalic="isItalic"
+          @toggleBold="toggleBold"
+          @toggleItalic="toggleItalic"
+          :enableSend="enableSend"
+          :handleSend="handleSend"
+          @emojiSelect="handleEmojiSelect"
+        >
+        </ReplyBoxBottomMenuBar>
       </div>
-
-      <!-- Main Editor -->
-      <Editor
-        v-model:selectedText="selectedText"
-        v-model:isBold="isBold"
-        v-model:isItalic="isItalic"
-        v-model:htmlContent="htmlContent"
-        v-model:textContent="textContent"
-        :placeholder="editorPlaceholder"
-        :aiPrompts="aiPrompts"
-        @aiPromptSelected="handleAiPromptSelected"
-        :contentToSet="contentToSet"
-        @send="handleSend"
-        v-model:cursorPosition="cursorPosition"
-        :clearContent="clearEditorContent"
-        :setInlineImage="setInlineImage"
-        :insertContent="insertContent"
-      />
-
-      <!-- Macro preview -->
-      <MacroActionsPreview
-        v-if="conversationStore.conversation?.macro?.actions?.length > 0"
-        :actions="conversationStore.conversation.macro.actions"
-        :onRemove="conversationStore.removeMacroAction"
-      />
-
-      <!-- Attachments preview -->
-      <AttachmentsPreview
-        :attachments="attachments"
-        :onDelete="handleOnFileDelete"
-        v-if="attachments.length > 0"
-      />
-
-      <!-- Bottom menu bar -->
-      <ReplyBoxBottomMenuBar
-        class="mt-1"
-        :handleFileUpload="handleFileUpload"
-        :handleInlineImageUpload="handleInlineImageUpload"
-        :isBold="isBold"
-        :isItalic="isItalic"
-        @toggleBold="toggleBold"
-        @toggleItalic="toggleItalic"
-        :enableSend="enableSend"
-        :handleSend="handleSend"
-        @emojiSelect="handleEmojiSelect"
-      >
-      </ReplyBoxBottomMenuBar>
     </div>
   </div>
 </template>
@@ -97,7 +98,7 @@ import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { Fullscreen } from 'lucide-vue-next'
+import { Maximize2 } from 'lucide-vue-next'
 import api from '@/api'
 
 import Editor from './ConversationTextEditor.vue'
@@ -235,7 +236,6 @@ const handleInlineImageUpload = (event) => {
 
 const handleSend = async () => {
   try {
-
     // Send message if there is text content in the editor.
     if (hasTextContent.value) {
       // Replace inline image url with cid.

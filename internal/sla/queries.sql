@@ -64,7 +64,7 @@ SELECT
     c.assigned_team_id as conversation_assigned_team_id
 FROM conversation_slas cs
 LEFT JOIN conversations c ON cs.conversation_id = c.id
-WHERE cs.breached_at is NULL AND cs.met_at is NULL;
+WHERE cs.breached_at is NULL AND cs.met_at is NULL and c.sla_policy_id is NOT NULL;
 
 -- name: update-breached-at
 UPDATE conversation_slas

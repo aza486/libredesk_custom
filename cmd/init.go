@@ -33,6 +33,7 @@ import (
 	emailnotifier "github.com/abhinavxd/libredesk/internal/notification/providers/email"
 	"github.com/abhinavxd/libredesk/internal/oidc"
 	"github.com/abhinavxd/libredesk/internal/role"
+	"github.com/abhinavxd/libredesk/internal/search"
 	"github.com/abhinavxd/libredesk/internal/setting"
 	"github.com/abhinavxd/libredesk/internal/sla"
 	"github.com/abhinavxd/libredesk/internal/tag"
@@ -707,6 +708,19 @@ func initAI(db *sqlx.DB) *ai.Manager {
 	})
 	if err != nil {
 		log.Fatalf("error initializing AI manager: %v", err)
+	}
+	return m
+}
+
+// initSearch inits search manager.
+func initSearch(db *sqlx.DB) *search.Manager {
+	lo := initLogger("search")
+	m, err := search.New(search.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing search manager: %v", err)
 	}
 	return m
 }

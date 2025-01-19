@@ -1,25 +1,15 @@
 <script setup>
-import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
-import api from '@/api'
-import { useStorage } from '@vueuse/core'
 import { RouterLink, useRoute } from 'vue-router'
 import SidebarNavUser from './SidebarNavUser.vue'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenuBadge,
   SidebarHeader,
   SidebarInset,
-  SidebarMenuSkeleton,
   SidebarMenu,
   SidebarSeparator,
   SidebarGroupContent,
@@ -27,50 +17,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
-  SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarTrigger,
-  SidebarRail,
+  SidebarRail
 } from '@/components/ui/sidebar'
 import {
-  AudioWaveform,
-  BadgeCheck,
-  Bell,
   Users,
-  Bot,
   Inbox,
   ChevronRight,
-  ChevronsUpDown,
-  Command,
-  CreditCard,
   SlidersHorizontal,
-  Folder,
   Shield,
   FileLineChart,
   EllipsisVertical,
-  MessageCircleHeart,
   Plus,
-  MessageCircle,
+  Search,
+  MessageCircle
 } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { ref, onMounted, reactive, computed } from 'vue'
-import { handleHTTPError } from '@/utils/http'
-import { useEmitter } from '@/composables/useEmitter'
-import { EMITTER_EVENTS } from '@/constants/emitterEvents'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useConversationStore } from '@/stores/conversation'
-
 import ConversationSideBar from '@/components/conversation/sidebar/ConversationSideBar.vue'
 
 const route = useRoute()
@@ -78,10 +43,10 @@ const route = useRoute()
 defineProps({
   isLoading: Boolean,
   open: Boolean,
-  activeItem: { type: Object, default: () => { } },
-  activeGroup: { type: Object, default: () => { } },
+  activeItem: { type: Object, default: () => {} },
+  activeGroup: { type: Object, default: () => {} },
   userTeams: { type: Array, default: () => [] },
-  userViews: { type: Array, default: () => [] },
+  userViews: { type: Array, default: () => [] }
 })
 
 const conversationStore = useConversationStore()
@@ -103,26 +68,31 @@ const deleteView = (view) => {
 
 const filterNavItemsByPermissions = (navItems, userStore) => {
   return navItems
-    .filter(item => {
+    .filter((item) => {
       // Check if the item has permissions and if all are satisfied
-      const hasPermission = !item.permissions || item.permissions.every(permission => userStore.can(permission))
+      const hasPermission =
+        !item.permissions || item.permissions.every((permission) => userStore.can(permission))
 
       // Check if the children have permissions
       const filteredChildren = item.children
-        ? item.children.filter(child =>
-          !child.permissions || child.permissions.every(permission => userStore.can(permission))
-        )
+        ? item.children.filter(
+            (child) =>
+              !child.permissions ||
+              child.permissions.every((permission) => userStore.can(permission))
+          )
         : []
 
       // Include item only if it has permission and either no children or children with permission
       return hasPermission && (filteredChildren.length > 0 || !item.children)
     })
-    .map(item => ({
+    .map((item) => ({
       ...item,
       children: item.children
-        ? item.children.filter(child =>
-          !child.permissions || child.permissions.every(permission => userStore.can(permission))
-        )
+        ? item.children.filter(
+            (child) =>
+              !child.permissions ||
+              child.permissions.every((permission) => userStore.can(permission))
+          )
         : []
     }))
 }
@@ -134,8 +104,8 @@ const hasAdminAccess = computed(() => {
 })
 
 const filterReportsNavItemsByPermissions = (navItems, userStore) => {
-  return navItems.filter(item =>
-    !item.permissions || item.permissions.every(permission => userStore.can(permission))
+  return navItems.filter(
+    (item) => !item.permissions || item.permissions.every((permission) => userStore.can(permission))
   )
 }
 
@@ -143,19 +113,15 @@ const filteredReportsNavItems = computed(() =>
   filterReportsNavItemsByPermissions(reportsNavItems, userStore)
 )
 
-const hasReportsAccess = computed(() =>
-  filteredReportsNavItems.value.length > 0
-)
-
+const hasReportsAccess = computed(() => filteredReportsNavItems.value.length > 0)
 
 const reportsNavItems = [
   {
     title: 'Overview',
     href: '/reports/overview',
-    permissions: ['reports:manage'],
-  },
+    permissions: ['reports:manage']
+  }
 ]
-
 
 const adminNavItems = [
   {
@@ -167,9 +133,9 @@ const adminNavItems = [
         title: 'General',
         href: '/admin/general',
         description: 'Configure general app settings',
-        permissions: ['general_settings:manage'],
+        permissions: ['general_settings:manage']
       }
-    ],
+    ]
   },
   {
     title: 'Conversations',
@@ -180,21 +146,21 @@ const adminNavItems = [
         title: 'Tags',
         href: '/admin/conversations/tags',
         description: 'Manage conversation tags.',
-        permissions: ['tags:manage'],
+        permissions: ['tags:manage']
       },
       {
         title: 'Macros',
         href: '/admin/conversations/macros',
         description: 'Manage macros.',
-        permissions: ['tags:manage'],
+        permissions: ['tags:manage']
       },
       {
         title: 'Statuses',
         href: '/admin/conversations/statuses',
         description: 'Manage conversation statuses.',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'Inboxes',
@@ -205,9 +171,9 @@ const adminNavItems = [
         title: 'Inboxes',
         href: '/admin/inboxes',
         description: 'Manage your inboxes',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'Teams',
@@ -218,21 +184,21 @@ const adminNavItems = [
         title: 'Users',
         href: '/admin/teams/users',
         description: 'Manage users',
-        permissions: ['tags:manage'],
+        permissions: ['tags:manage']
       },
       {
         title: 'Teams',
         href: '/admin/teams/teams',
         description: 'Manage teams',
-        permissions: ['tags:manage'],
+        permissions: ['tags:manage']
       },
       {
         title: 'Roles',
         href: '/admin/teams/roles',
         description: 'Manage roles',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'Automations',
@@ -243,9 +209,9 @@ const adminNavItems = [
         title: 'Automations',
         href: '/admin/automations',
         description: 'Manage automations',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'Email notifications',
@@ -256,9 +222,9 @@ const adminNavItems = [
         title: 'Email notifications',
         href: '/admin/notification',
         description: 'Configure SMTP',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'Email templates',
@@ -269,9 +235,9 @@ const adminNavItems = [
         title: 'Email templates',
         href: '/admin/templates',
         description: 'Manage email templates',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'Business hours',
@@ -282,9 +248,9 @@ const adminNavItems = [
         title: 'Business hours',
         href: '/admin/business-hours',
         description: 'Manage business hours',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'SLA',
@@ -295,9 +261,9 @@ const adminNavItems = [
         title: 'SLA',
         href: '/admin/sla',
         description: 'Manage SLA policies',
-        permissions: ['tags:manage'],
-      },
-    ],
+        permissions: ['tags:manage']
+      }
+    ]
   },
   {
     title: 'SSO',
@@ -308,10 +274,10 @@ const adminNavItems = [
         title: 'SSO',
         href: '/admin/oidc',
         description: 'Manage OpenID SSO configurations',
-        permissions: ['tags:manage'],
-      },
-    ],
-  },
+        permissions: ['tags:manage']
+      }
+    ]
+  }
 ]
 
 const accountNavItems = [
@@ -331,23 +297,34 @@ const isInboxRoute = (path) => {
 }
 
 const hasConversationOpen = computed(() => {
-  return conversationStore.current
+  return conversationStore.current || conversationStore.conversation.loading
 })
 </script>
 
 <template>
   <div class="flex flex-row justify-between h-full">
     <div class="flex-1">
-      <SidebarProvider :open="open" @update:open="($event) => emit('update:open', $event)" style="--sidebar-width: 16rem;">
+      <SidebarProvider
+        :open="open"
+        @update:open="($event) => emit('update:open', $event)"
+        style="--sidebar-width: 16rem"
+      >
         <!-- Flex Container that holds all the sidebar components -->
-        <Sidebar collapsible="icon" class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0">
-
+        <Sidebar
+          collapsible="icon"
+          class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0"
+        >
           <!-- Left Sidebar (Icon Sidebar) -->
           <Sidebar collapsible="none" class="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
             <SidebarHeader>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton :isActive="isActiveParent('#')" size="sm" asChild class="md:h-8 md:p-0">
+                  <SidebarMenuButton
+                    :isActive="isActiveParent('#')"
+                    size="sm"
+                    asChild
+                    class="md:h-8 md:p-0"
+                  >
                     <a href="#">
                       <div class="flex items-center justify-center w-full h-full">
                         <MessageCircle size="25" />
@@ -369,14 +346,20 @@ const hasConversationOpen = computed(() => {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem v-if="hasAdminAccess">
-                      <SidebarMenuButton :isActive="route.path && route.path.startsWith('/admin')" asChild>
+                      <SidebarMenuButton
+                        :isActive="route.path && route.path.startsWith('/admin')"
+                        asChild
+                      >
                         <router-link :to="{ name: 'admin' }">
                           <Shield class="w-5 h-5" />
                         </router-link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem v-if="hasReportsAccess">
-                      <SidebarMenuButton :isActive="route.path && route.path.startsWith('/reports')" asChild>
+                      <SidebarMenuButton
+                        :isActive="route.path && route.path.startsWith('/reports')"
+                        asChild
+                      >
                         <router-link :to="{ name: 'reports' }">
                           <FileLineChart class="w-5 h-5" />
                         </router-link>
@@ -393,12 +376,20 @@ const hasConversationOpen = computed(() => {
 
           <!-- Reports sidebar -->
           <template
-            v-if="hasReportsAccess && route.matched.some(record => record.name && record.name.startsWith('reports'))">
-            <Sidebar collapsible="none" class="!border-r-0 bg-white ">
+            v-if="
+              hasReportsAccess &&
+              route.matched.some((record) => record.name && record.name.startsWith('reports'))
+            "
+          >
+            <Sidebar collapsible="none" class="!border-r-0 bg-white">
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild size="md">
+                    <SidebarMenuButton
+                      :isActive="isActiveParent('/reports/overview')"
+                      asChild
+                      size="md"
+                    >
                       <div>
                         <span class="font-semibold text-2xl">Reports</span>
                       </div>
@@ -424,10 +415,11 @@ const hasConversationOpen = computed(() => {
             </Sidebar>
           </template>
 
-
           <!-- Admin Sidebar -->
-          <template v-if="route.matched.some(record => record.name && record.name.startsWith('admin'))">
-            <Sidebar collapsible="none" class="!border-r-0 bg-white ">
+          <template
+            v-if="route.matched.some((record) => record.name && record.name.startsWith('admin'))"
+          >
+            <Sidebar collapsible="none" class="!border-r-0 bg-white">
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
@@ -444,18 +436,27 @@ const hasConversationOpen = computed(() => {
                 <SidebarGroup>
                   <SidebarMenu>
                     <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.title">
-                      <SidebarMenuButton v-if="!item.children" :isActive="isActiveParent(item.href)" asChild>
+                      <SidebarMenuButton
+                        v-if="!item.children"
+                        :isActive="isActiveParent(item.href)"
+                        asChild
+                      >
                         <router-link :to="item.href">
                           <span>{{ item.title }}</span>
                         </router-link>
                       </SidebarMenuButton>
 
-                      <Collapsible v-else class="group/collapsible" :default-open="isActiveParent(item.href)">
+                      <Collapsible
+                        v-else
+                        class="group/collapsible"
+                        :default-open="isActiveParent(item.href)"
+                      >
                         <CollapsibleTrigger as-child>
                           <SidebarMenuButton :isActive="isActiveParent(item.href)">
                             <span>{{ item.title }}</span>
                             <ChevronRight
-                              class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                            />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
@@ -480,11 +481,15 @@ const hasConversationOpen = computed(() => {
 
           <!-- Account sidebar -->
           <template v-if="isActiveParent('/account')">
-            <Sidebar collapsible="none" class="!border-r-0 bg-white ">
+            <Sidebar collapsible="none" class="!border-r-0 bg-white">
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild size="md">
+                    <SidebarMenuButton
+                      :isActive="isActiveParent('/account/profile')"
+                      asChild
+                      size="md"
+                    >
                       <div>
                         <span class="font-semibold text-2xl">Account</span>
                       </div>
@@ -515,13 +520,21 @@ const hasConversationOpen = computed(() => {
 
           <!-- Conversation Sidebar -->
           <template v-if="route.path && isInboxRoute(route.path)">
-            <Sidebar collapsible="none" class="!border-r-0 bg-white ">
+            <Sidebar collapsible="none" class="!border-r-0 bg-white">
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <div>
-                        <span class="font-semibold text-2xl">Inbox</span>
+                      <div class="flex items-center justify-between w-full">
+                        <div class="font-semibold text-2xl">Inbox</div>
+                        <div class="ml-auto">
+                          <router-link :to="{ name: 'search' }">
+                            <Search
+                              class="transition-transform duration-200 hover:scale-110 cursor-pointer"
+                              size="20"
+                            />
+                          </router-link>
+                        </div>
                       </div>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -529,7 +542,6 @@ const hasConversationOpen = computed(() => {
               </SidebarHeader>
               <SidebarSeparator />
               <SidebarContent>
-
                 <SidebarGroup>
                   <SidebarMenu>
                     <!-- Inboxes Collapsible -->
@@ -540,21 +552,30 @@ const hasConversationOpen = computed(() => {
                             <MessageCircle />
                             <span>Inboxes</span>
                             <ChevronRight
-                              class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                            />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem>
-                              <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')" asChild>
+                              <SidebarMenuButton
+                                :isActive="isActiveParent('/inboxes/assigned')"
+                                asChild
+                              >
                                 <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
                                   <span>My inbox</span>
                                 </router-link>
                               </SidebarMenuButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuButton :isActive="isActiveParent('/inboxes/unassigned')" asChild>
-                                <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
+                              <SidebarMenuButton
+                                :isActive="isActiveParent('/inboxes/unassigned')"
+                                asChild
+                              >
+                                <router-link
+                                  :to="{ name: 'inbox', params: { type: 'unassigned' } }"
+                                >
                                   <span>Unassigned</span>
                                 </router-link>
                               </SidebarMenuButton>
@@ -580,15 +601,21 @@ const hasConversationOpen = computed(() => {
                               <Users />
                               <span>Team inboxes</span>
                               <ChevronRight
-                                class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                              />
                             </router-link>
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem v-for="team in userTeams" :key="team.id">
-                              <SidebarMenuButton :isActive="isActiveParent(`/teams/${team.id}`)" asChild>
-                                <router-link :to="{ name: 'team-inbox', params: { teamID: team.id } }">
+                              <SidebarMenuButton
+                                :isActive="isActiveParent(`/teams/${team.id}`)"
+                                asChild
+                              >
+                                <router-link
+                                  :to="{ name: 'team-inbox', params: { teamID: team.id } }"
+                                >
                                   {{ team.emoji }}<span>{{ team.name }}</span>
                                 </router-link>
                               </SidebarMenuButton>
@@ -607,10 +634,11 @@ const hasConversationOpen = computed(() => {
                               <SlidersHorizontal />
                               <span>Views</span>
                               <div>
-                                <Plus size="18" @click.stop="openCreateViewDialog" class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 
-                            group-hover:opacity-100 hover:bg-gray-200 hover:shadow-sm
-                            text-gray-600 hover:text-gray-800 transform hover:scale-105 
-                            active:scale-100 p-1" />
+                                <Plus
+                                  size="18"
+                                  @click.stop="openCreateViewDialog"
+                                  class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
+                                />
                               </div>
                             </router-link>
                           </SidebarMenuButton>
@@ -618,13 +646,19 @@ const hasConversationOpen = computed(() => {
                         <SidebarMenuAction>
                           <ChevronRight
                             class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                            v-if="userViews.length" />
+                            v-if="userViews.length"
+                          />
                         </SidebarMenuAction>
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem v-for="view in userViews" :key="view.id">
-                              <SidebarMenuButton :isActive="isActiveParent(`/views/${view.id}`)" asChild>
-                                <router-link :to="{ name: 'view-inbox', params: { viewID: view.id } }">
+                              <SidebarMenuButton
+                                :isActive="isActiveParent(`/views/${view.id}`)"
+                                asChild
+                              >
+                                <router-link
+                                  :to="{ name: 'view-inbox', params: { viewID: view.id } }"
+                                >
                                   <span>{{ view.name }}</span>
                                 </router-link>
                               </SidebarMenuButton>
@@ -660,16 +694,15 @@ const hasConversationOpen = computed(() => {
           <slot></slot>
         </SidebarInset>
       </SidebarProvider>
-
     </div>
 
     <!-- Right Sidebar with conversation details -->
     <div v-if="hasConversationOpen">
-      <SidebarProvider :open="true" style="--sidebar-width: 20rem;">
+      <SidebarProvider :open="true" style="--sidebar-width: 20rem">
         <Sidebar collapsible="none" side="right">
           <SidebarSeparator />
           <SidebarContent>
-            <SidebarGroup style="padding: 0;">
+            <SidebarGroup style="padding: 0">
               <SidebarMenu>
                 <SidebarMenuItem>
                   <ConversationSideBar />

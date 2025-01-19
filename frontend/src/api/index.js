@@ -33,6 +33,8 @@ http.interceptors.request.use((request) => {
   return request
 })
 
+const searchConversations = (params) => http.get('/api/v1/conversations/search', { params })
+const searchMessages = (params) => http.get('/api/v1/messages/search', { params })
 const resetPassword = (data) => http.post('/api/v1/users/reset-password', data)
 const setPassword = (data) => http.post('/api/v1/users/set-password', data)
 const deleteUser = (id) => http.delete(`/api/v1/users/${id}`)
@@ -363,5 +365,7 @@ export default {
   updateView,
   deleteView,
   getAiPrompts,
-  aiCompletion
+  aiCompletion,
+  searchConversations,
+  searchMessages
 }

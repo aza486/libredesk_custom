@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="border-b">
       <div class="flex items-center space-x-4 p-2">
-        <SidebarTrigger class="text-gray-500 hover:text-gray-700 transition-colors" />
+        <SidebarTrigger class="h-4 w-4" />
         <span class="text-xl font-semibold text-gray-800">{{ title }}</span>
       </div>
     </header>
@@ -13,7 +13,10 @@
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
-            {{ conversationStore.getListStatus }}
+            <div>
+              <span class="mr-1">{{ conversationStore.conversations.total }}</span>
+              <span>{{ conversationStore.getListStatus }}</span>
+            </div>
             <ChevronDown class="w-4 h-4 ml-2 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
@@ -126,7 +129,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { MessageCircleQuestion, MessageCircleWarning, ChevronDown, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -152,13 +155,6 @@ const title = computed(() => {
     (typeValue || route.meta?.title || '').charAt(0).toUpperCase() +
     (typeValue || route.meta?.title || '').slice(1)
   )
-})
-
-// FIXME: Figure how to get missed updates.
-onMounted(() => {
-  reFetchInterval.value = setInterval(() => {
-    conversationStore.reFetchConversationsList(false)
-  }, 30000)
 })
 
 onUnmounted(() => {

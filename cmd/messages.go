@@ -99,7 +99,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		uuid  = r.RequestCtx.UserValue("uuid").(string)
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
-		auser  = r.RequestCtx.UserValue("user").(amodels.User)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
 	user, err := app.user.Get(auser.ID)
@@ -124,7 +124,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 func handleSendMessage(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
-		auser  = r.RequestCtx.UserValue("user").(amodels.User)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
 		req   = messageReq{}
 		media = []medModels.Media{}

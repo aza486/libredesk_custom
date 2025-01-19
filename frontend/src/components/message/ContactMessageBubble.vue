@@ -47,7 +47,6 @@
 import { computed, ref } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
-import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Letter } from 'vue-letter'
@@ -61,7 +60,7 @@ const convStore = useConversationStore()
 const showQuotedText = ref(false)
 
 const getAvatar = computed(() => {
-  return convStore.current.avatar_url || ''
+  return convStore.current?.avatar_url || ''
 })
 
 const sanitizedMessageContent = computed(() => {
@@ -83,12 +82,12 @@ const nonInlineAttachments = computed(() =>
 )
 
 const getFullName = computed(() => {
-  const contact = convStore.current.contact || {}
+  const contact = convStore.current?.contact || {}
   return `${contact.first_name || ''} ${contact.last_name || ''}`.trim()
 })
 
 const avatarFallback = computed(() => {
-  const contact = convStore.current.contact || {}
+  const contact = convStore.current?.contact || {}
   return (contact.first_name || '').toUpperCase().substring(0, 2)
 })
 </script>

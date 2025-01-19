@@ -3,6 +3,7 @@ import App from '../App.vue'
 import OuterApp from '../OuterApp.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ConversationsView from '../views/ConversationView.vue'
+import SearchView from '../views/SearchView.vue'
 import UserLoginView from '../views/UserLoginView.vue'
 import AccountView from '@/views/AccountView.vue'
 import AdminView from '@/views/AdminView.vue'
@@ -57,6 +58,12 @@ const routes = [
         redirect: '/inboxes/assigned',
         meta: { title: 'Inbox', hidePageHeader: true },
         children: [
+          {
+            path: 'search',
+            name: 'search',
+            component: SearchView,
+            meta: { title: 'Search', hidePageHeader: true },
+          },
           {
             path: ':type(assigned|unassigned|all)',
             name: 'inbox',
@@ -386,7 +393,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title || ''
+  document.title = to.meta.title + ' | LibreDesk'
   next()
 })
 

@@ -3,7 +3,7 @@
     <ConversationSideBarContact :conversation="conversationStore.current" class="p-3" />
     <Accordion type="multiple" collapsible class="border-t" :default-value="[]">
       <AccordionItem value="Actions">
-        <AccordionTrigger class="bg-muted p-3"> Actions </AccordionTrigger>
+        <AccordionTrigger class="bg-accent p-2"> Actions </AccordionTrigger>
         <AccordionContent class="space-y-5 p-3">
           <!-- Agent -->
           <ComboBox
@@ -81,7 +81,7 @@
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="Information">
-        <AccordionTrigger class="bg-muted p-3"> Information </AccordionTrigger>
+        <AccordionTrigger class="bg-accent p-2"> Information </AccordionTrigger>
         <AccordionContent class="space-y-5 p-3">
           <ConversationInfo :conversation="conversationStore.current"></ConversationInfo>
         </AccordionContent>
@@ -123,10 +123,11 @@ onMounted(async () => {
 watch(
   () => conversationStore.current?.tags,
   () => {
+    if (!conversationStore.current?.tags) return
     conversationStore.upsertTags({
       tags: JSON.stringify(conversationStore.current.tags)
     })
-  },
+  }
 )
 
 const assignedUserID = computed(() => String(conversationStore.current.assigned_user_id))

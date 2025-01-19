@@ -22,13 +22,13 @@ $(STUFFBIN):
 .PHONY: install-deps
 install-deps: $(STUFFBIN)
 	@echo "→ Installing frontend dependencies..."
-	@cd ${FRONTEND_DIR} && npm install
+	@cd ${FRONTEND_DIR} && pnpm install
 
 # Frontend builds
 .PHONY: frontend-build
 frontend-build:
 	@echo "→ Building frontend for production..."
-	@cd ${FRONTEND_DIR} && bun run build
+	@cd ${FRONTEND_DIR} && pnpm build
 
 # Backend builds
 .PHONY: backend-build
@@ -43,6 +43,7 @@ backend-build: $(STUFFBIN)
 build: frontend-build backend-build stuff
 	@echo "→ Build successful. Current version: $(VERSION)"
 
+# Stuff static assets into binary
 .PHONY: stuff
 stuff: $(STUFFBIN)
 	@echo "→ Stuffing static assets into binary..."

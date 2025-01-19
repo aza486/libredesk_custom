@@ -311,6 +311,11 @@ func (m *Manager) evaluateSLA(cSLA models.ConversationSLA) error {
 		return nil
 	}
 
+	if _, err := m.q.UpdateDueAt.Exec(cSLA.ID, deadline); err != nil {
+		m.lo.Error("error updating SLA due_at", "error", err)
+		return fmt.Errorf("updating SLA due_at: %v", err)
+	}
+
 	if !compareTime.IsZero() {
 		if compareTime.After(deadline) {
 			return m.markSLABreached(cSLA.ID)
@@ -322,10 +327,6 @@ func (m *Manager) evaluateSLA(cSLA models.ConversationSLA) error {
 		return m.markSLABreached(cSLA.ID)
 	}
 
-	if _, err := m.q.UpdateDueAt.Exec(cSLA.ID, deadline); err != nil {
-		m.lo.Error("error updating SLA due_at", "error", err)
-		return fmt.Errorf("updating SLA due_at: %v", err)
-	}
 	return nil
 }
 

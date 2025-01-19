@@ -43,7 +43,7 @@ var (
 )
 
 const (
-	conversationsListMaxPageSize = 50
+	conversationsListMaxPageSize = 100
 )
 
 // Manager handles the operations related to conversations
@@ -169,7 +169,6 @@ type queries struct {
 	GetConversationsCreatedAfter       *sqlx.Stmt `query:"get-conversations-created-after"`
 	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
 	GetConversations                   string     `query:"get-conversations"`
-	GetConversationsListUUIDs          string     `query:"get-conversations-list-uuids"`
 	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
@@ -244,7 +243,7 @@ func (c *Manager) UpdateConversationAssigneeLastSeen(uuid string) error {
 	}
 
 	// Broadcast the property update to all subscribers.
-	c.BroadcastConversationPropertyUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.RFC3339))
+	c.BroadcastConversationUpdate(uuid, "assignee_last_seen_at", time.Now().Format(time.RFC3339))
 	return nil
 }
 
@@ -256,17 +255,6 @@ func (c *Manager) GetConversationParticipants(uuid string) ([]models.Conversatio
 		return conv, envelope.NewError(envelope.GeneralError, "Error fetching conversation participants", nil)
 	}
 	return conv, nil
-}
-
-// AddConversationParticipant adds a user as participant to a conversation.
-func (c *Manager) AddConversationParticipant(userID int, conversationUUID string) error {
-	if _, err := c.q.InsertConverstionParticipant.Exec(userID, conversationUUID); err != nil {
-		if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "23505" {
-			return nil
-		}
-		return err
-	}
-	return nil
 }
 
 // GetUnassignedConversations retrieves unassigned conversations.
@@ -365,47 +353,6 @@ func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters
 	return conversations, nil
 }
 
-// GetConversationsListUUIDs retrieves the UUIDs of conversations list, used to subscribe to conversations.
-func (c *Manager) GetConversationsListUUIDs(userID, teamID, page, pageSize int, typ string) ([]string, error) {
-	var (
-		ids = make([]string, 0)
-		id  = userID
-	)
-
-	if typ == models.TeamUnassignedConversations {
-		id = teamID
-		if teamID == 0 {
-			return ids, fmt.Errorf("team ID is required for team unassigned conversations")
-		}
-		exists, err := c.teamStore.UserBelongsToTeam(userID, teamID)
-		if err != nil {
-			return ids, fmt.Errorf("fetching team members: %w", err)
-		}
-		if !exists {
-			return ids, fmt.Errorf("user does not belong to team")
-		}
-	}
-
-	query, qArgs, err := c.makeConversationsListQuery(id, c.q.GetConversationsListUUIDs, typ, "", "", page, pageSize, "")
-	if err != nil {
-		c.lo.Error("error generating conversations query", "error", err)
-		return ids, err
-	}
-
-	tx, err := c.db.BeginTxx(context.Background(), nil)
-	defer tx.Rollback()
-	if err != nil {
-		c.lo.Error("error preparing get conversation ids query", "error", err)
-		return ids, err
-	}
-
-	if err := tx.Select(&ids, query, qArgs...); err != nil {
-		c.lo.Error("error fetching conversation uuids", "error", err)
-		return ids, err
-	}
-	return ids, nil
-}
-
 // UpdateConversationMeta updates the metadata of a conversation.
 func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID string, meta map[string]string) error {
 	metaJSON, err := json.Marshal(meta)
@@ -439,7 +386,7 @@ func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conver
 
 	rows, _ := res.RowsAffected()
 	if rows > 0 {
-		c.BroadcastConversationPropertyUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
+		c.BroadcastConversationUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
 	}
 	return nil
 }
@@ -497,7 +444,7 @@ func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType strin
 		return fmt.Errorf("invalid assignee type: %s", assigneeType)
 	}
 	// Broadcast update to all subscribers.
-	c.BroadcastConversationPropertyUpdate(uuid, prop, assigneeID)
+	c.BroadcastConversationUpdate(uuid, prop, assigneeID)
 	return nil
 }
 
@@ -518,6 +465,7 @@ func (c *Manager) UpdateConversationPriority(uuid string, priorityID int, priori
 	if err := c.RecordPriorityChange(priority, uuid, actor); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error recording priority change", nil)
 	}
+	c.BroadcastConversationUpdate(uuid, "priority", priority)
 	return nil
 }
 
@@ -559,7 +507,7 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 	}
 
 	// Send WS update to all subscribers.
-	c.BroadcastConversationPropertyUpdate(uuid, "status", status)
+	c.BroadcastConversationUpdate(uuid, "status", status)
 	return nil
 }
 
@@ -681,6 +629,7 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 	// Conversations assigned to a team but not to a specific user.
 	case models.TeamUnassignedConversations:
 		baseQuery = fmt.Sprintf(baseQuery, "AND conversations.assigned_team_id = $1 AND conversations.assigned_user_id IS NULL")
+		// UserID is the team ID in this case.
 		qArgs = append(qArgs, userID)
 	default:
 		return "", nil, fmt.Errorf("unknown conversation type: %s", listType)
@@ -689,13 +638,14 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 	// Build the paginated query.
 	query, qArgs, err := dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
 		Order:    order,
-		OrderBy:  orderBy,
+		OrderBy:  "",
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
 		"conversations":         ConversationsListAllowedFilterFields,
 		"conversation_statuses": ConversationStatusesFilterFields,
 	})
+	fmt.Println("Query: ", query)
 	if err != nil {
 		c.lo.Error("error preparing query", "error", err)
 		return "", nil, err
@@ -828,6 +778,17 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Con
 		}
 	default:
 		return fmt.Errorf("unrecognized action type %s", action.Type)
+	}
+	return nil
+}
+
+// addConversationParticipant adds a user as participant to a conversation.
+func (c *Manager) addConversationParticipant(userID int, conversationUUID string) error {
+	if _, err := c.q.InsertConverstionParticipant.Exec(userID, conversationUUID); err != nil {
+		if !dbutil.IsUniqueViolationError(err) {
+			c.lo.Error("error adding conversation participant", "user_id", userID, "conversation_uuid", conversationUUID, "error", err)
+			return fmt.Errorf("adding conversation participant: %w", err)
+		}
 	}
 	return nil
 }

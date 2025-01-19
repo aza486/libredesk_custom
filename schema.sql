@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 DROP TYPE IF EXISTS "channels" CASCADE; CREATE TYPE "channels" AS ENUM ('email');
 DROP TYPE IF EXISTS "media_store" CASCADE; CREATE TYPE "media_store" AS ENUM ('s3', 'fs');
 DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM ('incoming','outgoing','activity');
@@ -140,11 +142,14 @@ CREATE TABLE conversation_messages (
     conversation_id BIGSERIAL REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE,
     content_type content_type NULL,
     "content" TEXT NULL,
+	text_content TEXT NULL,
     source_id TEXT NULL,
  	sender_id INT REFERENCES users(id) NULL,
     sender_type message_sender_type NOT NULL,
     meta JSONB DEFAULT '{}'::JSONB NULL
 );
+CREATE INDEX idx_conversation_messages_text_content ON conversation_messages 
+USING GIN (text_content gin_trgm_ops);
 
 DROP TABLE IF EXISTS automation_rules CASCADE;
 CREATE TABLE automation_rules (

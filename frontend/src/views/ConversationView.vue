@@ -1,11 +1,11 @@
 <template>
   <div class="flex">
-    <div class="border-r w-[380px]">
+    <div class="border-r w-[390px]">
       <ConversationList />
     </div>
     <div class="border-r flex-1">
-      <Conversation v-if="conversationStore.current"></Conversation>
-      <ConversationPlaceholder v-else></ConversationPlaceholder>
+      <Conversation v-if="conversationStore.current || conversationStore.conversation.loading" />
+      <ConversationPlaceholder v-else/>
     </div>
   </div>
 </template>
@@ -17,7 +17,6 @@ import Conversation from '@/components/conversation/Conversation.vue'
 import ConversationPlaceholder from '@/components/conversation/ConversationPlaceholder.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
-import { unsetCurrentConversation, setCurrentConversation } from '@/websocket'
 
 const props = defineProps({
   uuid: String,
@@ -44,7 +43,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  unsetCurrentConversation()
   conversationStore.resetCurrentConversation()
   conversationStore.resetMessages()
 })
@@ -54,7 +52,6 @@ watch(
   () => props.uuid,
   (newUUID, oldUUID) => {
     if (newUUID !== oldUUID && newUUID) {
-      unsetCurrentConversation()
       fetchConversation(newUUID)
     }
   }
@@ -90,7 +87,6 @@ watch(
 )
 
 const fetchConversation = async (uuid) => {
-  setCurrentConversation(uuid)
   await conversationStore.fetchConversation(uuid)
   await conversationStore.fetchMessages(uuid)
   await conversationStore.fetchParticipants(uuid)

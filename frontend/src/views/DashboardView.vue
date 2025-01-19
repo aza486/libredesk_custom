@@ -1,5 +1,5 @@
 <template>
-  <div class="page-content">
+  <div class="page-content p-4">
     <Spinner v-if="isLoading"></Spinner>
     <div class="space-y-4">
       <div class="text-sm text-gray-500 text-right">
@@ -9,10 +9,10 @@
         <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
         <Card class="w-8/12" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
       </div>
-      <div class="dashboard-card p-5">
+      <div class="dashboard-card p-5 bg-white">
         <LineChart :data="chartData.processedData"></LineChart>
       </div>
-      <div class="dashboard-card p-5">
+      <div class="dashboard-card p-5 bg-white">
         <BarChart :data="chartData.status_summary"></BarChart>
       </div>
     </div>

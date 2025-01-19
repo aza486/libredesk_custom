@@ -16,6 +16,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/csat"
 	"github.com/abhinavxd/libredesk/internal/macro"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
+	"github.com/abhinavxd/libredesk/internal/search"
 	"github.com/abhinavxd/libredesk/internal/sla"
 	"github.com/abhinavxd/libredesk/internal/view"
 
@@ -75,6 +76,7 @@ type App struct {
 	csat          *csat.Manager
 	view          *view.Manager
 	ai            *ai.Manager
+	search        *search.Manager
 	notifier      *notifier.Service
 }
 
@@ -154,8 +156,8 @@ func main() {
 		conversation                = initConversations(i18n, sla, status, priority, wsHub, notifier, db, inbox, user, team, media, automation, template)
 		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
-	// Set stores.
-	wsHub.SetConversationStore(conversation)
+
+	// Set store.
 	automation.SetConversationStore(conversation)
 
 	// Start inbox receivers.
@@ -203,9 +205,10 @@ func main() {
 		conversation:  conversation,
 		automation:    automation,
 		businessHours: businessHours,
+		authz:         initAuthz(),
 		view:          initView(db),
 		csat:          initCSAT(db),
-		authz:         initAuthz(),
+		search:        initSearch(db),
 		role:          initRole(db),
 		tag:           initTag(db),
 		macro:         initMacro(db),

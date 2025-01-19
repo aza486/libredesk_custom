@@ -1,7 +1,7 @@
 <template>
-  <div 
+  <div
     class="relative p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-    :class="{ 'bg-blue-50': conversation.uuid === currentConversation?.uuid }"
+    :class="{ 'bg-accent': conversation.uuid === currentConversation?.uuid }"
     @click="navigateToConversation(conversation.uuid)"
   >
     <div class="flex items-start space-x-4">
@@ -27,23 +27,34 @@
           <span>{{ conversation.inbox_name }}</span>
         </p>
 
-        <p class="mt-2 text-sm text-gray-600 line-clamp-2">
-          <CheckCheck class="inline w-4 h-4 mr-1 text-green-500" />
-          {{ trimmedLastMessage }}
-        </p>
+        <div class="mt-2 flex items-start justify-between">
+          <p class="text-sm text-gray-600 line-clamp-2 flex-1">
+            <CheckCheck class="inline-block w-4 h-4 mr-1 text-green-500 flex-shrink-0" />
+            {{ trimmedLastMessage }}
+          </p>
+          <div
+            v-if="conversation.unread_message_count > 0"
+            class="flex items-center justify-center w-5 h-5 bg-green-500 text-white text-xs rounded-full flex-shrink-0"
+          >
+            {{ conversation.unread_message_count }}
+          </div>
+        </div>
 
         <div class="flex items-center mt-2 space-x-2">
-          <SlaDisplay :dueAt="conversation.first_reply_due_at" :actualAt="conversation.first_reply_at" :label="'FRD'" :showSLAHit="false" />
-          <SlaDisplay :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" :label="'RD'" :showSLAHit="false" />
+          <SlaDisplay
+            :dueAt="conversation.first_reply_due_at"
+            :actualAt="conversation.first_reply_at"
+            :label="'FRD'"
+            :showSLAHit="false"
+          />
+          <SlaDisplay
+            :dueAt="conversation.resolution_due_at"
+            :actualAt="conversation.resolved_at"
+            :label="'RD'"
+            :showSLAHit="false"
+          />
         </div>
       </div>
-    </div>
-
-    <div 
-      v-if="conversation.unread_message_count > 0"
-      class="absolute top-4 right-4 flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-xs font-bold rounded-full"
-    >
-      {{ conversation.unread_message_count }}
     </div>
   </div>
 </template>
@@ -77,14 +88,13 @@ const navigateToConversation = (uuid) => {
     params: {
       uuid,
       ...(baseRoute === 'team-inbox-conversation' && { teamID: route.params.teamID }),
-      ...(baseRoute === 'view-inbox-conversation' && { viewID: route.params.viewID }),
-    },
+      ...(baseRoute === 'view-inbox-conversation' && { viewID: route.params.viewID })
+    }
   })
 }
 
 const trimmedLastMessage = computed(() => {
   const message = props.conversation.last_message || ''
-  return message.length > 100 ? message.slice(0, 100) + "..." : message
+  return message.length > 100 ? message.slice(0, 100) + '...' : message
 })
 </script>
-
