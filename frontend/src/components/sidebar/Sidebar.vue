@@ -33,6 +33,12 @@ import {
   Search,
   MessageCircle
 } from 'lucide-vue-next'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { useConversationStore } from '@/stores/conversation'

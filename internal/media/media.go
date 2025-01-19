@@ -197,14 +197,14 @@ func (m *Manager) DeleteByUUID(uuid string) error {
 	return nil
 }
 
-// DeleteUnlinkedMessageMedia is a blocking function that periodically deletes media files that are not linked to any conversation message.
-func (m *Manager) DeleteUnlinkedMessageMedia(ctx context.Context) {
+// DeleteUnlinkedMedia is a blocking function that periodically deletes media files that are not linked to any conversation message.
+func (m *Manager) DeleteUnlinkedMedia(ctx context.Context) {
 	m.deleteUnlinkedMessageMedia()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(24 * time.Hour):
+		case <-time.After(2 * time.Hour):
 			m.lo.Info("deleting unlinked message media")
 			if err := m.deleteUnlinkedMessageMedia(); err != nil {
 				m.lo.Error("error deleting unlinked media", "error", err)

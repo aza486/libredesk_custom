@@ -1,4 +1,4 @@
-// Package conversation provides functionality to manage conversations in the system.
+// Package conversation manages conversations and messages.
 package conversation
 
 import (
@@ -163,7 +163,6 @@ type queries struct {
 	// Conversation queries.
 	GetLatestReceivedMessageSourceID   *sqlx.Stmt `query:"get-latest-received-message-source-id"`
 	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
-	GetConversationID                  *sqlx.Stmt `query:"get-conversation-id"`
 	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
 	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
 	GetConversationsCreatedAfter       *sqlx.Stmt `query:"get-conversations-created-after"`
@@ -177,8 +176,7 @@ type queries struct {
 	UpdateConversationPriority         *sqlx.Stmt `query:"update-conversation-priority"`
 	UpdateConversationStatus           *sqlx.Stmt `query:"update-conversation-status"`
 	UpdateConversationLastMessage      *sqlx.Stmt `query:"update-conversation-last-message"`
-	UpdateConversationMeta             *sqlx.Stmt `query:"update-conversation-meta"`
-	InsertConverstionParticipant       *sqlx.Stmt `query:"insert-conversation-participant"`
+	InsertConversationParticipant      *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
 	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
 	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
@@ -269,19 +267,6 @@ func (c *Manager) GetUnassignedConversations() ([]models.Conversation, error) {
 	return conv, nil
 }
 
-// GetConversationID retrieves the ID of a conversation by its UUID.
-func (c *Manager) GetConversationID(uuid string) (int, error) {
-	var id int
-	if err := c.q.GetConversationID.QueryRow(uuid).Scan(&id); err != nil {
-		if err == sql.ErrNoRows {
-			return id, err
-		}
-		c.lo.Error("fetching conversation from DB", "error", err)
-		return id, err
-	}
-	return id, nil
-}
-
 // GetConversationUUID retrieves the UUID of a conversation by its ID.
 func (c *Manager) GetConversationUUID(id int) (string, error) {
 	var uuid string
@@ -353,20 +338,6 @@ func (c *Manager) GetConversations(userID int, listType, order, orderBy, filters
 	return conversations, nil
 }
 
-// UpdateConversationMeta updates the metadata of a conversation.
-func (c *Manager) UpdateConversationMeta(conversationID int, conversationUUID string, meta map[string]string) error {
-	metaJSON, err := json.Marshal(meta)
-	if err != nil {
-		c.lo.Error("error marshalling conversation meta", "meta", meta, "error", err)
-		return err
-	}
-	if _, err := c.q.UpdateConversationMeta.Exec(conversationID, conversationUUID, metaJSON); err != nil {
-		c.lo.Error("error updating conversation meta", "error", "error")
-		return err
-	}
-	return nil
-}
-
 // UpdateConversationLastMessage updates the last message details for a conversation.
 func (c *Manager) UpdateConversationLastMessage(convesationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
 	if _, err := c.q.UpdateConversationLastMessage.Exec(convesationID, conversationUUID, lastMessage, lastMessageAt); err != nil {
@@ -403,7 +374,7 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 	}
 
 	// Send email to assignee.
-	if err := c.SendAssignedConversationEmail([]int{assigneeID}, conversation.Subject.String, uuid); err != nil {
+	if err := c.SendAssignedConversationEmail([]int{assigneeID}, conversation); err != nil {
 		c.lo.Error("error sending assigned conversation email", "error", err)
 	}
 
@@ -638,14 +609,13 @@ func (c *Manager) makeConversationsListQuery(userID int, baseQuery, listType, or
 	// Build the paginated query.
 	query, qArgs, err := dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
 		Order:    order,
-		OrderBy:  "",
+		OrderBy:  orderBy,
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
 		"conversations":         ConversationsListAllowedFilterFields,
 		"conversation_statuses": ConversationStatusesFilterFields,
 	})
-	fmt.Println("Query: ", query)
 	if err != nil {
 		c.lo.Error("error preparing query", "error", err)
 		return "", nil, err
@@ -674,16 +644,27 @@ func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, 
 }
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
-func (m *Manager) SendAssignedConversationEmail(userIDs []int, subject, conversationUUID string) error {
+func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation models.Conversation) error {
+	agent, err := m.userStore.Get(userIDs[0])
+	if err != nil {
+		m.lo.Error("error fetching agent", "error", err)
+		return fmt.Errorf("fetching agent: %w", err)
+	}
+
 	content, subject, err := m.template.RenderNamedTemplate(template.TmplConversationAssigned,
 		map[string]interface{}{
 			"conversation": map[string]string{
-				"subject": subject,
-				"uuid":    conversationUUID,
+				"subject":          conversation.Subject.String,
+				"uuid":             conversation.UUID,
+				"reference_number": conversation.ReferenceNumber,
+				"priority":         conversation.Priority.String,
+			},
+			"agent": map[string]string{
+				"full_name": agent.FullName(),
 			},
 		})
 	if err != nil {
-		m.lo.Error("error rendering template", "template", template.TmplConversationAssigned, "conversation_uuid", conversationUUID, "error", err)
+		m.lo.Error("error rendering template", "template", template.TmplConversationAssigned, "conversation_uuid", conversation.UUID, "error", err)
 		return fmt.Errorf("rendering template: %w", err)
 	}
 	nm := notifier.Message{
@@ -784,7 +765,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Con
 
 // addConversationParticipant adds a user as participant to a conversation.
 func (c *Manager) addConversationParticipant(userID int, conversationUUID string) error {
-	if _, err := c.q.InsertConverstionParticipant.Exec(userID, conversationUUID); err != nil {
+	if _, err := c.q.InsertConversationParticipant.Exec(userID, conversationUUID); err != nil {
 		if !dbutil.IsUniqueViolationError(err) {
 			c.lo.Error("error adding conversation participant", "user_id", userID, "conversation_uuid", conversationUUID, "error", err)
 			return fmt.Errorf("adding conversation participant: %w", err)

@@ -7,8 +7,8 @@ import (
 )
 
 // RunUnsnoozer runs the conversation unsnoozer.
-func (c *Manager) RunUnsnoozer(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
+func (c *Manager) RunUnsnoozer(ctx context.Context, unsnoozeInterval time.Duration) {
+	ticker := time.NewTicker(unsnoozeInterval)
 	defer ticker.Stop()
 	for {
 		select {

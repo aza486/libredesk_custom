@@ -63,12 +63,12 @@
 
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                  <input
+                  <!-- <input
                     type="checkbox"
                     id="remember"
                     class="w-4 h-4 rounded bg-white border-gray-300 text-blue-600"
                   />
-                  <Label for="remember" class="text-sm text-gray-600">Remember me</Label>
+                  <Label for="remember" class="text-sm text-gray-600">Remember me</Label> -->
                 </div>
                 <router-link to="/reset-password" class="text-sm text-blue-600 hover:text-blue-500">
                   Forgot password?

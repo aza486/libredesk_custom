@@ -49,25 +49,24 @@ const (
 
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
 // pending outgoing messages at the specified read interval and pushes them to the outgoing queue.
-func (m *Manager) Run(ctx context.Context, dispatchConcurrency int, scanInterval time.Duration) {
+func (m *Manager) Run(ctx context.Context, incomingQWorkers, outgoingQWorkers, scanInterval time.Duration) {
 	dbScanner := time.NewTicker(scanInterval)
 	defer dbScanner.Stop()
 
-	// Spawn a worker goroutine pool to dispatch messages.
-	for range dispatchConcurrency {
+	for range outgoingQWorkers {
 		m.wg.Add(1)
 		go func() {
 			defer m.wg.Done()
 			m.MessageDispatchWorker(ctx)
 		}()
 	}
-
-	// Spawn a goroutine to process incoming messages.
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
-		m.IncomingMessageWorker(ctx)
-	}()
+	for range incomingQWorkers {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+			m.IncomingMessageWorker(ctx)
+		}()
+	}
 
 	// Scan pending outgoing messages and send them.
 	for {

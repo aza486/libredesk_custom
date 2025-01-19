@@ -46,7 +46,7 @@ var (
 	ko          = koanf.New(".")
 	frontendDir = "frontend/dist"
 	ctx         = context.Background()
-	buildString string
+	buildString = ""
 )
 
 // App is the global app context which is passed and injected in the http handlers.
@@ -103,7 +103,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	log.Printf("Build: %s", buildString)
+	colorlog.Green("Build: %s", buildString)
 
 	// Installer.
 	if ko.Bool("install") {
@@ -132,9 +132,12 @@ func main() {
 	loadSettings(settings)
 
 	var (
+		autoAssignInterval          = ko.MustDuration("autoassigner.interval")
+		unsnoozeInterval            = ko.MustDuration("conversation.unsnooze_interval")
 		automationWrk               = ko.MustInt("automation.worker_count")
-		messageDispatchWrk          = ko.MustInt("message.dispatch_workers")
-		messageDispatchScanInterval = ko.MustDuration("message.dispatch_scan_interval")
+		messageOutgoingQWorkers     = ko.MustDuration("message.outgoing_queue_workers")
+		messageIncomingQWorkers     = ko.MustDuration("message.incoming_queue_workers")
+		messageOutgoingScanInterval = ko.MustDuration("message.message_outoing_scan_interval")
 		lo                          = initLogger("libredesk")
 		wsHub                       = ws.NewHub()
 		rdb                         = initRedis()
@@ -157,34 +160,17 @@ func main() {
 		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
 
-	// Set store.
 	automation.SetConversationStore(conversation)
-
-	// Start inbox receivers.
 	startInboxes(ctx, inbox, conversation)
 
-	// Start evaluating automation rules.
 	go automation.Run(ctx, automationWrk)
-
-	// Start conversation auto assigner.
-	go autoassigner.Run(ctx)
-
-	// Start processing incoming and outgoing messages.
-	go conversation.Run(ctx, messageDispatchWrk, messageDispatchScanInterval)
-
-	// Run the unsnoozer.
-	go conversation.RunUnsnoozer(ctx)
-
-	// Start notifier.
+	go autoassigner.Run(ctx, autoAssignInterval)
+	go conversation.Run(ctx, messageIncomingQWorkers, messageOutgoingQWorkers, messageOutgoingScanInterval)
+	go conversation.RunUnsnoozer(ctx, unsnoozeInterval)
+	go media.DeleteUnlinkedMedia(ctx)
 	go notifier.Run(ctx)
-
-	// Start SLA monitor.
 	go sla.Run(ctx)
 
-	// Purge unlinked message media.
-	go media.DeleteUnlinkedMessageMedia(ctx)
-
-	// Init the app
 	var app = &App{
 		lo:            lo,
 		fs:            fs,
@@ -215,17 +201,12 @@ func main() {
 		ai:            initAI(db),
 	}
 
-	// Init fastglue and set app in ctx.
 	g := fastglue.NewGlue()
-
-	// Set the app in context.
 	g.SetContext(app)
-
-	// Init HTTP handlers.
 	initHandlers(g, wsHub)
 
 	s := &fasthttp.Server{
-		Name:                 "libredesk",
+		Name:                 "LibreDesk",
 		ReadTimeout:          ko.MustDuration("app.server.read_timeout"),
 		WriteTimeout:         ko.MustDuration("app.server.write_timeout"),
 		MaxRequestBodySize:   ko.MustInt("app.server.max_body_size"),
@@ -239,16 +220,14 @@ func main() {
 		}
 	}()
 
-	colorlog.Green("🚀 server listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
+	colorlog.Green("🚀 listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
 
 	// Wait for shutdown signal.
 	<-ctx.Done()
 	colorlog.Red("Shutting down the server. Please wait....")
-	// Shutdown HTTP server.
 	s.Shutdown()
 	colorlog.Red("Server shutdown complete.")
 	colorlog.Red("Shutting down services. Please wait....")
-	// Shutdown services.
 	inbox.Close()
 	colorlog.Red("Inbox shutdown complete.")
 	automation.Close()

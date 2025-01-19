@@ -6,15 +6,15 @@ SELECT id, name, channel, disabled, updated_at from inboxes where deleted_at is 
 
 -- name: insert-inbox
 INSERT INTO inboxes
-(channel, config, "name", "from")
-VALUES($1, $2, $3, $4);
+(channel, config, "name", "from", csat_enabled)
+VALUES($1, $2, $3, $4, $5)
 
 -- name: get-inbox
 SELECT * from inboxes where id = $1 and deleted_at is NULL;
 
 -- name: update
 UPDATE inboxes
-set channel = $2, config = $3, "name" = $4, "from" = $5, updated_at = now()
+set channel = $2, config = $3, "name" = $4, "from" = $5, csat_enabled = $6, updated_at = now()
 where id = $1 and deleted_at is NULL;
 
 -- name: soft-delete

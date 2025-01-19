@@ -11,36 +11,40 @@ RETURNING id, uuid;
 
 -- name: get-conversations
 SELECT
-    COUNT(*) OVER() AS total,
-    conversations.created_at,
-    conversations.updated_at,
-    conversations.uuid,
-    conversations.assignee_last_seen_at,
-    users.first_name as "contact.first_name",
-    users.last_name as "contact.last_name",
-    users.avatar_url as "contact.avatar_url",
-    inboxes.channel as inbox_channel,
-    inboxes.name as inbox_name,
-    conversations.sla_policy_id,
-    conversations.first_reply_at,
-    conversations.resolved_at,
-    conversations.subject,
-    conversations.last_message,
-    conversations.last_message_at,
-    conversations.next_sla_deadline_at,
-    conversations.priority_id,
-    (
-        SELECT COUNT(*)
-        FROM conversation_messages m
-        WHERE m.conversation_id = conversations.id AND m.created_at > conversations.assignee_last_seen_at
-    ) AS unread_message_count,
-    conversation_statuses.name as status,
-    conversation_priorities.name as priority
+COUNT(*) OVER() as total,
+conversations.created_at,
+conversations.updated_at,
+conversations.uuid,
+conversations.assignee_last_seen_at,
+users.first_name as "contact.first_name",
+users.last_name as "contact.last_name",
+users.avatar_url as "contact.avatar_url", 
+inboxes.channel as inbox_channel,
+inboxes.name as inbox_name,
+conversations.sla_policy_id,
+conversations.first_reply_at,
+conversations.resolved_at,
+conversations.subject,
+conversations.last_message,
+conversations.last_message_at,
+conversations.next_sla_deadline_at,
+conversations.priority_id,
+(
+  SELECT CASE WHEN COUNT(*) > 9 THEN 10 ELSE COUNT(*) END
+  FROM (
+    SELECT 1 FROM conversation_messages 
+    WHERE conversation_id = conversations.id 
+      AND created_at > conversations.assignee_last_seen_at
+    LIMIT 10
+  ) t
+) as unread_message_count,
+conversation_statuses.name as status,
+conversation_priorities.name as priority
 FROM conversations
-    JOIN users ON conversations.contact_id = users.id
-    JOIN inboxes ON conversations.inbox_id = inboxes.id
-    LEFT JOIN conversation_statuses ON conversations.status_id = conversation_statuses.id
-    LEFT JOIN conversation_priorities ON conversations.priority_id = conversation_priorities.id
+JOIN users ON contact_id = users.id
+JOIN inboxes ON inbox_id = inboxes.id  
+LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
+LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
 WHERE 1=1 %s
 
 -- name: get-conversation
@@ -115,9 +119,6 @@ LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
 WHERE c.created_at > $1;
 
--- name: get-conversation-id
-SELECT id from conversations where uuid = $1;
-
 -- name: get-conversation-uuid
 SELECT uuid from conversations where id = $1;
 
@@ -169,10 +170,11 @@ SET assignee_last_seen_at = now(),
     updated_at = now()
 WHERE uuid = $1;
 
--- name: update-conversation-meta
-UPDATE conversations 
-SET meta = meta || $3, updated_at = now()
-WHERE CASE WHEN $1 > 0 THEN id = $1 ELSE uuid = $2 END;
+-- name: update-conversation-last-message
+UPDATE conversations SET last_message = $3, last_message_at = $4 WHERE CASE 
+    WHEN $1 > 0 THEN id = $1
+    ELSE uuid = $2
+END
 
 -- name: get-conversation-participants
 SELECT users.id as id, first_name, last_name, avatar_url 
@@ -183,12 +185,6 @@ WHERE conversation_id =
     SELECT id FROM conversations WHERE uuid = $1
 );
 
--- name: update-conversation-last-message
-UPDATE conversations SET last_message = $3, last_message_at = $4 WHERE CASE 
-    WHEN $1 > 0 THEN id = $1
-    ELSE uuid = $2
-END
-
 -- name: insert-conversation-participant
 INSERT INTO conversation_participants
 (user_id, conversation_id)
@@ -196,30 +192,14 @@ VALUES($1, (SELECT id FROM conversations WHERE uuid = $2));
 
 -- name: get-unassigned-conversations
 SELECT
+    c.created_at,
     c.updated_at,
     c.uuid,
-    c.assignee_last_seen_at,
     c.assigned_team_id,
     inb.channel as inbox_channel,
-    inb.name as inbox_name,
-    ct.first_name,
-    ct.last_name,
-    ct.avatar_url,
-    c.subject,
-    c.last_message,
-    c.last_message_at,
-    (
-        SELECT COUNT(*)
-        FROM conversation_messages m
-        WHERE m.conversation_id = c.id AND m.created_at > c.assignee_last_seen_at
-    ) AS unread_message_count,
-    s.name as status,
-    p.name as priority
+    inb.name as inbox_name
 FROM conversations c
-    JOIN users ct ON c.contact_id = ct.id
     JOIN inboxes inb ON c.inbox_id = inb.id 
-    LEFT JOIN conversation_statuses s ON c.status_id = s.id
-    LEFT JOIN conversation_priorities p ON c.priority_id = p.id
 WHERE assigned_user_id IS NULL AND assigned_team_id IS NOT NULL;
 
 -- name: get-dashboard-counts
@@ -231,7 +211,7 @@ SELECT json_build_object(
 )
 FROM conversations c
 INNER JOIN conversation_statuses s ON c.status_id = s.id
-WHERE s.name = 'Open' AND 1=1 %s;
+WHERE s.name not in ('Resolved', 'Closed') AND 1=1 %s;
 
 -- name: get-dashboard-charts
 WITH new_conversations AS (
@@ -405,46 +385,36 @@ GROUP BY
 ORDER BY m.created_at;
 
 -- name: get-messages
-WITH conversation_id AS (
-    SELECT id
-    FROM conversations
-    WHERE uuid = $1
-    LIMIT 1
-),
-attachments AS (
-    SELECT 
-        model_id as message_id,
-        json_agg(
-            json_build_object(
-                'name', filename,
-                'content_type', content_type,
-                'uuid', uuid,
-                'size', size,
-                'content_id', content_id,
-                'disposition', disposition
-            ) ORDER BY filename
-        ) AS attachment_details
-    FROM media
-    WHERE model_type = 'messages'
-    GROUP BY message_id
-)
 SELECT
-    COUNT(*) OVER() AS total,
-    m.created_at,
-    m.updated_at,
-    m.status,
-    m.type,
-    m.content,
-    m.uuid,
-    m.private,
-    m.sender_id,
-    m.sender_type,
-    m.meta,
-    COALESCE(a.attachment_details, '[]'::json) AS attachments
+   COUNT(*) OVER() AS total,
+   m.created_at,
+   m.updated_at,
+   m.status,
+   m.type, 
+   m.content,
+   m.uuid,
+   m.private,
+   m.sender_id,
+   m.sender_type,
+   m.meta,
+   COALESCE(
+     (SELECT json_agg(
+       json_build_object(
+         'name', filename,
+         'content_type', content_type, 
+         'uuid', uuid,
+         'size', size,
+         'content_id', content_id,
+         'disposition', disposition
+       ) ORDER BY filename
+     ) FROM media 
+     WHERE model_type = 'messages' AND model_id = m.id),
+   '[]'::json) AS attachments
 FROM conversation_messages m
-LEFT JOIN attachments a ON a.message_id = m.id
-WHERE m.conversation_id = (SELECT id FROM conversation_id) ORDER BY m.created_at DESC
-%s
+WHERE m.conversation_id = (
+   SELECT id FROM conversations WHERE uuid = $1 LIMIT 1
+)
+ORDER BY m.created_at DESC %s
 
 -- name: insert-message
 WITH conversation_id AS (
