@@ -441,23 +441,14 @@ INSERT INTO conversation_priorities
 ("name")
 VALUES('High');
 
-
 -- Default conversation statuses
-INSERT INTO conversation_statuses
-("name")
-VALUES('Open');
-INSERT INTO conversation_statuses
-("name")
-VALUES('Replied');
-INSERT INTO conversation_statuses
-("name")
-VALUES('Resolved');
-INSERT INTO conversation_statuses
-("name")
-VALUES('Closed');
-INSERT INTO conversation_statuses
-("name")
-VALUES('Snoozed');
+INSERT INTO conversation_statuses (name) VALUES
+('Open'),          
+('In Progress'),
+('Waiting'),
+('Snoozed'),
+('Resolved'),
+('Closed');
 
 -- Default roles
 INSERT INTO
@@ -477,3 +468,26 @@ VALUES
 		'Role for users who have complete access to everything.',
 		'{general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
 	);
+
+
+-- Email notification templates
+INSERT INTO public.templates
+("type", body, is_default, "name", subject, is_builtin)
+VALUES('email_notification'::public."template_type", '<p>Hello {{ .agent.full_name }},</p>
+
+<p>A new conversation has been assigned to you:</p>
+
+<div>
+    Reference number: {{.conversation.reference_number }} <br>
+    Priority: {{.conversation.priority }}<br>
+    Subject: {{.conversation.suject }}
+</div>
+
+<p>
+<a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .conversation.uuid }}">View Conversation</a>
+</p>
+
+<div >
+    Best regards,<br>
+    LibreDesk
+</div>', false, 'Conversation assigned', 'New conversation assigned to you', true);
