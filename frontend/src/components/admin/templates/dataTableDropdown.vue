@@ -14,7 +14,7 @@ import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 
 const router = useRouter()
-const emit = useEmitter()
+const emitter = useEmitter()
 const props = defineProps({
   template: {
     type: Object,
@@ -32,11 +32,11 @@ const editTemplate = (id) => {
 const deleteTemplate = async (id) => {
   try {
     await api.deleteTemplate(id)
-    emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+    emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
       model: 'templates'
     })
   } catch (error) {
-    emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message

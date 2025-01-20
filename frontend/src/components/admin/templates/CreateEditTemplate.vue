@@ -3,15 +3,19 @@
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
   <Spinner v-if="isLoading"></Spinner>
-  <TemplateForm :initial-values="template" :submitForm="submitForm"
-    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }" :isLoading="formLoading" />
+  <TemplateForm
+    :initial-values="template"
+    :submitForm="submitForm"
+    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
+    :isLoading="formLoading"
+  />
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
 import api from '@/api'
 import TemplateForm from './TemplateForm.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
 import { handleHTTPError } from '@/utils/http'
@@ -23,6 +27,7 @@ const isLoading = ref(false)
 const formLoading = ref(false)
 const emitter = useEmitter()
 const router = useRouter()
+const route = useRoute()
 
 const props = defineProps({
   id: {
@@ -42,14 +47,17 @@ const submitForm = async (values) => {
       await api.createTemplate(values)
       toastDescription = 'Template created successfully'
       router.push('/admin/templates')
+      emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
+        model: 'templates'
+      })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
-      description: toastDescription,
+      title: 'Success',
+      description: toastDescription
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not save template',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -74,9 +82,17 @@ onMounted(async () => {
       const resp = await api.getTemplate(props.id)
       template.value = resp.data.data
     } catch (error) {
-      console.log(error)
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
     } finally {
       isLoading.value = false
+    }
+  } else {
+    template.value = {
+      type: route.query.type
     }
   }
 })

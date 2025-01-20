@@ -1,7 +1,7 @@
 <template>
   <div v-if="conversationStore.current">
     <ConversationSideBarContact :conversation="conversationStore.current" class="p-3" />
-    <Accordion type="multiple" collapsible class="border-t" :default-value="[]">
+    <Accordion type="multiple" collapsible class="border-t" :default-value="['Actions', 'Information']">
       <AccordionItem value="Actions">
         <AccordionTrigger class="bg-accent p-2"> Actions </AccordionTrigger>
         <AccordionContent class="space-y-5 p-3">

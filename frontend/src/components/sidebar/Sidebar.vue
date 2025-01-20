@@ -15,6 +15,7 @@ import {
   SidebarGroupContent,
   SidebarMenuAction,
   SidebarMenuButton,
+  SidebarMenuSubButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubItem,
@@ -37,7 +38,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
@@ -468,11 +469,11 @@ const hasConversationOpen = computed(() => {
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem v-for="child in item.children" :key="child.title">
-                              <SidebarMenuButton :isActive="isActiveParent(child.href)" asChild>
+                              <SidebarMenuSubButton size="sm" :isActive="isActiveParent(child.href)" asChild>
                                 <router-link :to="child.href">
                                   <span>{{ child.title }}</span>
                                 </router-link>
-                              </SidebarMenuButton>
+                              </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>
@@ -565,17 +566,17 @@ const hasConversationOpen = computed(() => {
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem>
-                              <SidebarMenuButton
+                              <SidebarMenuSubButton size="sm"
                                 :isActive="isActiveParent('/inboxes/assigned')"
                                 asChild
                               >
                                 <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
                                   <span>My inbox</span>
                                 </router-link>
-                              </SidebarMenuButton>
+                              </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuButton
+                              <SidebarMenuSubButton size="sm"
                                 :isActive="isActiveParent('/inboxes/unassigned')"
                                 asChild
                               >
@@ -584,14 +585,17 @@ const hasConversationOpen = computed(() => {
                                 >
                                   <span>Unassigned</span>
                                 </router-link>
-                              </SidebarMenuButton>
+                              </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuButton :isActive="isActiveParent('/inboxes/all')" asChild>
+                              <SidebarMenuSubButton size="sm"
+                                :isActive="isActiveParent('/inboxes/all')"
+                                asChild
+                              >
                                 <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
                                   <span>All</span>
                                 </router-link>
-                              </SidebarMenuButton>
+                              </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>
@@ -613,9 +617,9 @@ const hasConversationOpen = computed(() => {
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <SidebarMenuSub>
-                            <SidebarMenuSubItem v-for="team in userTeams" :key="team.id">
-                              <SidebarMenuButton
+                          <SidebarMenuSub v-for="team in userTeams" :key="team.id">
+                            <SidebarMenuSubItem>
+                              <SidebarMenuSubButton size="sm"
                                 :isActive="isActiveParent(`/teams/${team.id}`)"
                                 asChild
                               >
@@ -624,7 +628,7 @@ const hasConversationOpen = computed(() => {
                                 >
                                   {{ team.emoji }}<span>{{ team.name }}</span>
                                 </router-link>
-                              </SidebarMenuButton>
+                              </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>
@@ -649,16 +653,20 @@ const hasConversationOpen = computed(() => {
                             </router-link>
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
+
                         <SidebarMenuAction>
                           <ChevronRight
                             class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
                             v-if="userViews.length"
                           />
                         </SidebarMenuAction>
+
                         <CollapsibleContent>
-                          <SidebarMenuSub>
-                            <SidebarMenuSubItem v-for="view in userViews" :key="view.id">
-                              <SidebarMenuButton
+                          <SidebarMenuSub v-for="view in userViews" :key="view.id">
+
+                            <SidebarMenuSubItem>
+
+                              <SidebarMenuSubButton size="sm"
                                 :isActive="isActiveParent(`/views/${view.id}`)"
                                 asChild
                               >
@@ -667,22 +675,23 @@ const hasConversationOpen = computed(() => {
                                 >
                                   <span>{{ view.name }}</span>
                                 </router-link>
-                              </SidebarMenuButton>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <SidebarMenuAction>
+                              </SidebarMenuSubButton>
+
+                              <SidebarMenuAction>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
                                     <EllipsisVertical />
-                                  </SidebarMenuAction>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent side="right">
-                                  <DropdownMenuItem @click="() => editView(view)">
-                                    <span>Edit</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem @click="() => deleteView(view)">
-                                    <span>Delete</span>
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                    <DropdownMenuItem @click="() => editView(view)">
+                                      <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem @click="() => deleteView(view)">
+                                      <span>Delete</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </SidebarMenuAction>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>

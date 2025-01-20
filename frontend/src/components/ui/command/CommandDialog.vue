@@ -6,7 +6,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 const props = defineProps({
   open: { type: Boolean, required: false },
   defaultOpen: { type: Boolean, required: false },
-  modal: { type: Boolean, required: false }
+  modal: { type: Boolean, required: false },
+  class: { type: String, required: false }
 })
 const emits = defineEmits(['update:open'])
 
@@ -15,7 +16,7 @@ const forwarded = useForwardPropsEmits(props, emits)
 
 <template>
   <Dialog v-bind="forwarded">
-    <DialogContent class="overflow-hidden p-0 shadow-lg">
+    <DialogContent  :class="['overflow-hidden p-0 shadow-lg', props.class]">
       <Command
         class="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5"
       >

@@ -10,7 +10,7 @@ export const formSchema = z
     }),
     type: z.string().optional(),
     subject: z.string().optional(),
-    is_default: z.boolean().optional(),
+    is_default: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     if (data.type !== 'email_outgoing' && !data.subject) {

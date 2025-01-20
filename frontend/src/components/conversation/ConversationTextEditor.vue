@@ -94,7 +94,7 @@ const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
 
 const editorConfig = {
   extensions: [
-    // Lists are unstyled in tailwind, so we need to add classes to them.
+    // Lists are unstyled in tailwind, so need to add classes to them.
     StarterKit.configure({
       bulletList: {
         HTMLAttributes: {
@@ -136,7 +136,7 @@ const editorConfig = {
 const editor = ref(
   useEditor({
     ...editorConfig,
-    content: textContent.value,
+    content: htmlContent.value,
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection
       selectedText.value = getSelectionText(from, to, editor.state.doc)
@@ -249,6 +249,15 @@ onUnmounted(() => {
   max-height: 60% !important;
   overflow-y: scroll !important;
   padding: 10px;
+}
+
+.fullscreen-tiptap-editor {
+  @apply p-0;
+  .ProseMirror {
+    min-height: 600px !important;
+    width: 90%;
+    scrollbar-width: none;
+  }
 }
 
 .tiptap {

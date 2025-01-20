@@ -166,7 +166,7 @@ const routes = [
               {
                 path: 'new',
                 component: () => import('@/components/admin/business_hours/CreateOrEditBusinessHours.vue'),
-                meta: { title: 'Add Business Hours' }
+                meta: { title: 'New Business Hours' }
               },
               {
                 path: ':id/edit',
@@ -185,7 +185,7 @@ const routes = [
               {
                 path: 'new',
                 component: () => import('@/components/admin/sla/CreateEditSLA.vue'),
-                meta: { title: 'Add SLA' }
+                meta: { title: 'New SLA' }
               },
               {
                 path: ':id/edit',
@@ -310,14 +310,17 @@ const routes = [
             children: [
               {
                 path: ':id/edit',
+                name: 'edit-template',
                 props: true,
-                component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
+                component: () => import('@/components/admin/templates/CreateEditTemplate.vue'),
                 meta: { title: 'Edit Template' }
               },
               {
                 path: 'new',
-                component: () => import('@/components/admin/templates/AddEditTemplate.vue'),
-                meta: { title: 'Add Template' }
+                name: 'new-template',
+                props: true,
+                component: () => import('@/components/admin/templates/CreateEditTemplate.vue'),
+                meta: { title: 'New Template' }
               }
             ]
           },
@@ -329,13 +332,13 @@ const routes = [
               {
                 path: ':id/edit',
                 props: true,
-                component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
+                component: () => import('@/components/admin/oidc/CreateEditOIDC.vue'),
                 meta: { title: 'Edit OIDC' }
               },
               {
                 path: 'new',
-                component: () => import('@/components/admin/oidc/AddEditOIDC.vue'),
-                meta: { title: 'Add OIDC' }
+                component: () => import('@/components/admin/oidc/CreateEditOIDC.vue'),
+                meta: { title: 'New OIDC' }
               }
             ]
           },

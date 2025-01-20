@@ -4,31 +4,38 @@
       <FormItem v-auto-animate>
         <FormLabel>Name</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Template name" v-bind="componentField" :disabled="!isOutgoingTemplate" />
+          <Input
+            type="text"
+            placeholder="Template name"
+            v-bind="componentField"
+            :disabled="!isOutgoingTemplate"
+          />
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
 
-    <div v-if="!isOutgoingTemplate">
-      <FormField v-slot="{ componentField }" name="subject">
-        <FormItem>
-          <FormLabel>Subject</FormLabel>
-          <FormControl>
-            <Input type="text" placeholder="Subject for email" v-bind="componentField" />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      </FormField>
-    </div>
+    <FormField v-slot="{ componentField }" name="subject" v-if="!isOutgoingTemplate">
+      <FormItem>
+        <FormLabel>Subject</FormLabel>
+        <FormControl>
+          <Input type="text" placeholder="Subject for email" v-bind="componentField" />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
     <FormField v-slot="{ componentField, handleChange }" name="body">
       <FormItem>
         <FormLabel>Body</FormLabel>
         <FormControl>
-          <CodeEditor v-model="componentField.modelValue" @update:modelValue="handleChange"></CodeEditor>
+          <CodeEditor
+            v-model="componentField.modelValue"
+            @update:modelValue="handleChange"
+          ></CodeEditor>
         </FormControl>
-        <FormDescription v-if="isOutgoingTemplate">{{ `Make sure the template has \{\{ template "content" . \}\}` }}
+        <FormDescription v-if="isOutgoingTemplate">
+          {{ `Make sure the template has \{\{ template "content" . \}\} only once.` }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -67,7 +74,7 @@ import {
   FormDescription
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import CodeEditor from '@/components/common/CodeEditor.vue';
+import CodeEditor from '@/components/common/CodeEditor.vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 const props = defineProps({
@@ -86,12 +93,13 @@ const props = defineProps({
   },
   isLoading: {
     type: Boolean,
-    required: false,
+    required: false
   }
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(formSchema),
+  initialValues: props.initialValues
 })
 
 const onSubmit = form.handleSubmit((values) => {

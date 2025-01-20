@@ -1,5 +1,5 @@
 <template>
-  <CommandDialog :open="open" @update:open="handleOpenChange">
+  <CommandDialog :open="open" @update:open="handleOpenChange" class="z-[51]">
     <CommandInput placeholder="Type a command or search..." @keydown="onInputKeydown" />
     <CommandList class="!min-h-[400px]">
       <CommandEmpty>
@@ -203,9 +203,19 @@ const showDatePicker = ref(false)
 const selectedDate = ref(null)
 const selectedTime = ref('12:00')
 
-const keys = useMagicKeys()
-const cmdK = keys['meta+k']
-const ctrlK = keys['ctrl+k']
+const { Meta_K, Ctrl_K } = useMagicKeys({
+  passive: false,
+  onEventFired(e) {
+    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+    }
+  }
+})
+
+watch([Meta_K, Ctrl_K], ([mac, win]) => {
+  if (mac || win) handleOpenChange()
+})
+
 const highlightedMacro = ref(null)
 
 function handleApplyMacro(macro) {
@@ -290,31 +300,16 @@ function onInputKeydown(e) {
   }
 }
 
-function preventDefaultKey(event) {
-  if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-    event.preventDefault()
-    event.stopPropagation()
-    return false
-  }
-}
-
 onMounted(() => {
   emitter.on(EMITTER_EVENTS.SET_NESTED_COMMAND, (command) => {
     setNestedCommand(command)
     open.value = true
   })
-  window.addEventListener('keydown', preventDefaultKey)
-
   watchHighlightedMacro()
 })
 
 onUnmounted(() => {
   emitter.off(EMITTER_EVENTS.SET_NESTED_COMMAND)
-  window.removeEventListener('keydown', preventDefaultKey)
-})
-
-watch([cmdK, ctrlK], ([mac, win]) => {
-  if (mac || win) handleOpenChange()
 })
 
 const watchHighlightedMacro = () => {

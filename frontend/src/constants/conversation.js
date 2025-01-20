@@ -6,18 +6,13 @@ export const CONVERSATION_LIST_TYPE = {
   ALL: 'all'
 }
 
-export const CONVERSATION_VIEWS_INBOXES = {
-  'assigned': 'My inbox',
-  'unassigned': 'Unassigned',
-  'all': 'All',
-}
-
 export const CONVERSATION_DEFAULT_STATUSES = {
   OPEN: 'Open',
-  PENDING: 'Pending',
+  IN_PROGRESS: 'In Progress',
+  WAITING: 'Waiting',
+  SNOOZED: 'Snoozed',
   RESOLVED: 'Resolved',
   CLOSED: 'Closed',
-  SNOOZED: 'Snoozed',
 }
 
 export const CONVERSATION_DEFAULT_STATUSES_LIST = Object.values(CONVERSATION_DEFAULT_STATUSES);

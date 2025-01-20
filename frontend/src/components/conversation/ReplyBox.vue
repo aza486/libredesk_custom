@@ -1,24 +1,77 @@
 <template>
   <div>
     <!-- Fullscreen editor -->
-    <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = $event">
-      <DialogContent class="max-w-[70%] max-h-[70%] h-[70%] m-0 p-6">
-        <div v-if="isEditorFullscreen">
-          <Editor
-            v-model:selectedText="selectedText"
-            v-model:isBold="isBold"
-            v-model:isItalic="isItalic"
-            v-model:htmlContent="htmlContent"
-            v-model:textContent="textContent"
-            :placeholder="editorPlaceholder"
-            :aiPrompts="aiPrompts"
-            @aiPromptSelected="handleAiPromptSelected"
-            :contentToSet="contentToSet"
-            v-model:cursorPosition="cursorPosition"
-            :clearContent="clearEditorContent"
-            :setInlineImage="setInlineImage"
-            :insertContent="insertContent"
+    <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
+      <DialogContent
+        class="max-w-[80%] max-h-[80%] h-[80%] w-full m-0 p-6"
+        @escapeKeyDown="isEditorFullscreen = false"
+      >
+        <div v-if="isEditorFullscreen" class="h-full flex flex-col fullscreen-tiptap-editor">
+          <!-- Message type toggle -->
+          <div class="flex justify-between px-2 border-b py-2">
+            <Tabs v-model="messageType">
+              <TabsList>
+                <TabsTrigger value="reply"> Reply </TabsTrigger>
+                <TabsTrigger value="private_note"> Private note </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div
+              class="flex items-center mr-2 cursor-pointer"
+              @click="isEditorFullscreen = !isEditorFullscreen"
+            >
+              <!-- <Minimize2 size="16" /> -->
+            </div>
+          </div>
+
+          <!-- Main Editor -->
+          <div class="flex-grow overflow-y-auto">
+            <Editor
+              v-model:selectedText="selectedText"
+              v-model:isBold="isBold"
+              v-model:isItalic="isItalic"
+              v-model:htmlContent="htmlContent"
+              v-model:textContent="textContent"
+              :placeholder="editorPlaceholder"
+              :aiPrompts="aiPrompts"
+              @aiPromptSelected="handleAiPromptSelected"
+              :contentToSet="contentToSet"
+              @send="handleSend"
+              v-model:cursorPosition="cursorPosition"
+              :clearContent="clearEditorContent"
+              :setInlineImage="setInlineImage"
+              :insertContent="insertContent"
+              class="h-full"
+            />
+          </div>
+
+          <!-- Macro preview -->
+          <MacroActionsPreview
+            v-if="conversationStore.conversation?.macro?.actions?.length > 0"
+            :actions="conversationStore.conversation.macro.actions"
+            :onRemove="conversationStore.removeMacroAction"
           />
+
+          <!-- Attachments preview -->
+          <AttachmentsPreview
+            :attachments="attachments"
+            :onDelete="handleOnFileDelete"
+            v-if="attachments.length > 0"
+          />
+
+          <!-- Bottom menu bar -->
+          <ReplyBoxBottomMenuBar
+            class="mt-1"
+            :handleFileUpload="handleFileUpload"
+            :handleInlineImageUpload="handleInlineImageUpload"
+            :isBold="isBold"
+            :isItalic="isItalic"
+            @toggleBold="toggleBold"
+            @toggleItalic="toggleItalic"
+            :enableSend="enableSend"
+            :handleSend="handleSend"
+            @emojiSelect="handleEmojiSelect"
+          >
+          </ReplyBoxBottomMenuBar>
         </div>
       </DialogContent>
     </Dialog>
@@ -235,6 +288,7 @@ const handleInlineImageUpload = (event) => {
 }
 
 const handleSend = async () => {
+  isEditorFullscreen.value = false
   try {
     // Send message if there is text content in the editor.
     if (hasTextContent.value) {
@@ -304,7 +358,13 @@ const handleEmojiSelect = (emoji) => {
 watch(
   () => conversationStore.conversation.macro,
   () => {
-    contentToSet.value = conversationStore.conversation.macro.message_content
+    // hack: Quill editor adds <p><br></p> replace with <p></p>
+    if (conversationStore.conversation?.macro?.message_content) {
+      contentToSet.value = conversationStore.conversation.macro.message_content.replace(
+        /<p><br><\/p>/g,
+        '<p></p>'
+      )
+    }
   },
   { deep: true }
 )
