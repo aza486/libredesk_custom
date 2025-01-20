@@ -64,13 +64,15 @@ CREATE TABLE users (
     roles TEXT[] DEFAULT '{}'::TEXT[] NULL,
     reset_password_token TEXT NULL,
     reset_password_token_expiry TIMESTAMPTZ NULL,
-    CONSTRAINT constraint_users_on_email_and_type_unique UNIQUE (email, type),
     CONSTRAINT constraint_users_on_country CHECK (LENGTH(country) <= 140),
     CONSTRAINT constraint_users_on_phone_number CHECK (LENGTH(phone_number) <= 20),
     CONSTRAINT constraint_users_on_email_length CHECK (LENGTH(email) <= 320),
     CONSTRAINT constraint_users_on_first_name CHECK (LENGTH(first_name) <= 140),
     CONSTRAINT constraint_users_on_last_name CHECK (LENGTH(last_name) <= 140)
 );
+CREATE UNIQUE INDEX constraint_users_on_email_and_type_unique 
+ON users (email, type) 
+WHERE deleted_at IS NULL;
 
 DROP TABLE IF EXISTS contact_channels CASCADE;
 CREATE TABLE contact_channels (
@@ -109,7 +111,7 @@ CREATE TABLE conversations (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     "uuid" UUID DEFAULT gen_random_uuid() NOT NULL,
 	reference_number BIGSERIAL UNIQUE,
-    contact_id BIGINT NOT NULL,
+    contact_id INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
 	contact_channel_id INT REFERENCES contact_channels(id) ON DELETE SET NULL ON UPDATE CASCADE,
     assigned_user_id INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     assigned_team_id INT REFERENCES teams(id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -353,12 +355,10 @@ CREATE TABLE views (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-	inbox_type TEXT NOT NULL,
     name TEXT NOT NULL,
     filters JSONB NOT NULL,
     user_id INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-	CONSTRAINT constraint_views_on_name CHECK (length(name) <= 140),
-	CONSTRAINT constraint_views_on_inbox_type CHECK (length(inbox_type) <= 140)
+	CONSTRAINT constraint_views_on_name CHECK (length(name) <= 140)
 );
 
 DROP TABLE IF EXISTS ai_providers CASCADE;
