@@ -49,8 +49,16 @@ func NewEnforcer(lo *logf.Logger) (*Enforcer, error) {
 	return &Enforcer{enforcer: e, lo: lo}, nil
 }
 
-// LoadPermissions adds the user's permissions to the Casbin enforcer if not already present.
+// LoadPermissions syncs user permissions with Casbin enforcer by removing existing
+// policies and adding current permissions as new policies
 func (e *Enforcer) LoadPermissions(user umodels.User) error {
+	// Remove existing policies for the user
+	_, err := e.enforcer.RemoveFilteredPolicy(0, strconv.Itoa(user.ID))
+	if err != nil {
+		return fmt.Errorf("failed to remove policies: %v", err)
+	}
+
+	// Add each permission as a policy
 	for _, perm := range user.Permissions {
 		parts := strings.Split(perm, ":")
 		if len(parts) != 2 {
@@ -58,15 +66,8 @@ func (e *Enforcer) LoadPermissions(user umodels.User) error {
 		}
 
 		userID, permObj, permAct := strconv.Itoa(user.ID), parts[0], parts[1]
-
-		has, err := e.enforcer.HasPolicy(userID, permObj, permAct)
-		if err != nil {
-			return fmt.Errorf("failed to check casbin policy: %v", err)
-		}
-		if !has {
-			if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
-				return fmt.Errorf("failed to add casbin policy: %v", err)
-			}
+		if _, err := e.enforcer.AddPolicy(userID, permObj, permAct); err != nil {
+			return fmt.Errorf("failed to add casbin policy: %v", err)
 		}
 	}
 	return nil
