@@ -67,6 +67,9 @@ func (m *Manager) Create(t models.Template) error {
 		t.Type = TypeEmailOutgoing
 	}
 	if _, err := m.q.InsertTemplate.Exec(t.Name, t.Body, t.IsDefault, t.Subject, t.Type); err != nil {
+		if dbutil.IsUniqueViolationError(err) && t.IsDefault {
+			return envelope.NewError(envelope.GeneralError, "Default template already exists", nil)
+		}
 		m.lo.Error("error inserting template", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating template", nil)
 	}
