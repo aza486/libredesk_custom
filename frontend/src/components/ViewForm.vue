@@ -3,9 +3,7 @@
     <DialogContent>
       <DialogHeader class="space-y-1">
         <DialogTitle>{{ view?.id ? 'Edit' : 'Create' }} view</DialogTitle>
-        <DialogDescription>
-          Views let you create custom filters and save them.
-        </DialogDescription>
+        <DialogDescription> Views let you create custom filters and save them. </DialogDescription>
       </DialogHeader>
       <form @submit.prevent="onSubmit">
         <div class="grid gap-4 py-4">
@@ -16,31 +14,6 @@
                 <Input id="name" class="col-span-3" placeholder="Name" v-bind="componentField" />
               </FormControl>
               <FormDescription>Enter a unique name for your view.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          </FormField>
-          <FormField v-slot="{ componentField }" name="inbox_type">
-            <FormItem>
-              <FormLabel>Inbox</FormLabel>
-              <FormControl>
-                <Select class="w-full" v-bind="componentField">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select inbox" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem
-                        v-for="(value, key) in CONVERSATION_VIEWS_INBOXES"
-                        :key="key"
-                        :value="key"
-                      >
-                        {{ value }}
-                      </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormDescription>Select inbox to filter conversations from.</FormDescription>
               <FormMessage />
             </FormItem>
           </FormField>
@@ -78,14 +51,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import {
   FormControl,
   FormDescription,
   FormField,
@@ -93,7 +58,6 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form'
-import { CONVERSATION_VIEWS_INBOXES } from '@/constants/conversation'
 import { Input } from '@/components/ui/input'
 import Filter from '@/components/common/FilterBuilder.vue'
 import { useConversationFilters } from '@/composables/useConversationFilters'
@@ -128,7 +92,6 @@ const formSchema = toTypedSchema(
       .string()
       .min(2, { message: 'Name must be at least 2 characters.' })
       .max(250, { message: 'Name cannot exceed 250 characters.' }),
-    inbox_type: z.enum(Object.keys(CONVERSATION_VIEWS_INBOXES)),
     filters: z
       .array(
         z.object({

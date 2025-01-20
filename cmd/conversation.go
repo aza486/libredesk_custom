@@ -7,6 +7,7 @@ import (
 	"time"
 
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/abhinavxd/libredesk/internal/automation/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/csat"
@@ -130,8 +131,8 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 func handleGetViewConversations(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
-		user        = r.RequestCtx.UserValue("user").(amodels.User)
-		viewID, _   = strconv.Atoi(r.RequestCtx.UserValue("view_id").(string))
+		auser       = r.RequestCtx.UserValue("user").(amodels.User)
+		viewID, _   = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 		order       = string(r.RequestCtx.QueryArgs().Peek("order"))
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
 		page, _     = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("page")))
@@ -147,11 +148,40 @@ func handleGetViewConversations(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if view.UserID != user.ID {
+	if view.UserID != auser.ID {
 		return r.SendErrorEnvelope(fasthttp.StatusForbidden, "You don't have access to this view.", nil, envelope.PermissionError)
 	}
 
-	conversations, err := app.conversation.GetViewConversationsList(user.ID, view.InboxType, order, orderBy, string(view.Filters), page, pageSize)
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Prepare lists user has access to based on user permissions, internally this affects the SQL query.
+	lists := []string{}
+	for _, perm := range user.Permissions {
+		if perm == authzModels.PermConversationsReadAll {
+			// No further lists required as user has access to all conversations.
+			lists = []string{cmodels.AllConversations}
+			break
+		}
+		if perm == authzModels.PermConversationsReadUnassigned {
+			lists = append(lists, cmodels.UnassignedConversations)
+		}
+		if perm == authzModels.PermConversationsReadAssigned {
+			lists = append(lists, cmodels.AssignedConversations)
+		}
+		if perm == authzModels.PermConversationsReadTeamInbox {
+			lists = append(lists, cmodels.TeamUnassignedConversations)
+		}
+	}
+
+	// No lists found, user doesn't have access to any conversations.
+	if len(lists) == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusForbidden, "Permission denied", nil, envelope.PermissionError)
+	}
+
+	conversations, err := app.conversation.GetViewConversationsList(user.ID, user.Teams.IDs(), lists, order, orderBy, string(view.Filters), page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -180,7 +210,7 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 	var (
 		app         = r.Context.(*App)
 		auser       = r.RequestCtx.UserValue("user").(amodels.User)
-		teamIDStr   = r.RequestCtx.UserValue("team_id").(string)
+		teamIDStr   = r.RequestCtx.UserValue("id").(string)
 		order       = string(r.RequestCtx.QueryArgs().Peek("order"))
 		orderBy     = string(r.RequestCtx.QueryArgs().Peek("order_by"))
 		filters     = string(r.RequestCtx.QueryArgs().Peek("filters"))

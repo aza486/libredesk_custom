@@ -49,7 +49,7 @@ func handleCreateUserView(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty view `Filter`", nil, envelope.InputError)
 	}
 
-	if err := app.view.Create(view.Name, view.Filters, view.InboxType, user.ID); err != nil {
+	if err := app.view.Create(view.Name, view.Filters, user.ID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("View created successfully")
@@ -131,7 +131,7 @@ func handleUpdateUserView(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusForbidden, "Forbidden", nil, envelope.PermissionError)
 	}
 
-	if err = app.view.Update(id, view.Name, view.Filters, view.InboxType); err != nil {
+	if err = app.view.Update(id, view.Name, view.Filters); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

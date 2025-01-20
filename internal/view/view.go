@@ -74,8 +74,8 @@ func (v *Manager) GetUsersViews(userID int) ([]models.View, error) {
 }
 
 // Create creates a new view.
-func (v *Manager) Create(name string, filter []byte, baseList string, userID int) error {
-	if _, err := v.q.InsertView.Exec(name, filter, baseList, userID); err != nil {
+func (v *Manager) Create(name string, filter []byte, userID int) error {
+	if _, err := v.q.InsertView.Exec(name, filter, userID); err != nil {
 		v.lo.Error("error inserting view", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating view", nil)
 	}
@@ -83,8 +83,8 @@ func (v *Manager) Create(name string, filter []byte, baseList string, userID int
 }
 
 // Update updates a view by id.
-func (v *Manager) Update(id int, name string, filter []byte, baseList string) error {
-	if _, err := v.q.UpdateView.Exec(id, name, filter, baseList); err != nil {
+func (v *Manager) Update(id int, name string, filter []byte) error {
+	if _, err := v.q.UpdateView.Exec(id, name, filter); err != nil {
 		v.lo.Error("error updating view", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating view", nil)
 	}

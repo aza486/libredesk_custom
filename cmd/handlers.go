@@ -47,9 +47,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Assigned to logged in user.
 	g.GET("/api/v1/conversations/assigned", perm(handleGetAssignedConversations, "conversations:read_assigned"))
 	// Unassigned conversations assigned to a team.
-	g.GET("/api/v1/teams/{team_id}/conversations/unassigned", perm(handleGetTeamUnassignedConversations, "conversations:read_team_inbox"))
+	g.GET("/api/v1/teams/{id}/conversations/unassigned", perm(handleGetTeamUnassignedConversations, "conversations:read_team_inbox"))
 	// Filtered by view.
-	g.GET("/api/v1/views/{view_id}/conversations", perm(handleGetViewConversations, "conversations:read"))
+	g.GET("/api/v1/views/{id}/conversations", perm(handleGetViewConversations, "conversations:read"))
 
 	g.GET("/api/v1/conversations/{uuid}", perm(handleGetConversation, "conversations:read"))
 	g.GET("/api/v1/conversations/{uuid}/participants", perm(handleGetConversationParticipants, "conversations:read"))
