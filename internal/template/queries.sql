@@ -20,19 +20,19 @@ SET is_default = FALSE
 WHERE id != $1 AND $4 = TRUE;
 
 -- name: get-default
-SELECT id, name, body, subject FROM templates WHERE is_default is TRUE;
+SELECT id, type, name, body, subject FROM templates WHERE is_default is TRUE;
 
 -- name: get-all
-SELECT id, name, is_default, updated_at FROM templates WHERE type = $1 ORDER BY updated_at DESC;
+SELECT id, type, name, is_default, updated_at FROM templates WHERE type = $1 ORDER BY updated_at DESC;
 
 -- name: get-template
-SELECT id, name, body, subject, is_default, type FROM templates WHERE id = $1;
+SELECT id, type, name, body, subject, is_default, type FROM templates WHERE id = $1;
 
 -- name: delete
 DELETE FROM templates WHERE id = $1;
 
 -- name: get-by-name
-SELECT id, name, body, subject, is_default, type FROM templates WHERE name = $1;
+SELECT id, type, name, body, subject, is_default, type FROM templates WHERE name = $1;
 
 -- name: is-builtin
 SELECT EXISTS(SELECT 1 FROM templates WHERE id = $1 AND is_builtin is TRUE);

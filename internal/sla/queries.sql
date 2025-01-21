@@ -51,8 +51,11 @@ INSERT INTO applied_slas (
 VALUES ($1, $2, $3);
 
 -- name: get-unbreached-slas
+-- TODO: name this better.
 SELECT 
 	cs.id,
+    cs.created_at,
+    cs.updated_at,
     cs.sla_policy_id, 
     cs.sla_type, 
     cs.breached_at,
@@ -63,8 +66,8 @@ SELECT
     c.resolved_at as conversation_resolved_at,
     c.assigned_team_id as conversation_assigned_team_id
 FROM conversation_slas cs
-LEFT JOIN conversations c ON cs.conversation_id = c.id
-WHERE cs.breached_at is NULL AND cs.met_at is NULL and c.sla_policy_id is NOT NULL;
+INNER JOIN conversations c ON cs.conversation_id = c.id AND c.sla_policy_id = cs.sla_policy_id
+WHERE cs.breached_at is NULL AND cs.met_at is NULL
 
 -- name: update-breached-at
 UPDATE conversation_slas
@@ -79,7 +82,7 @@ WITH updated_slas AS (
     WHERE id = $1
     RETURNING conversation_id
 )
--- Also set in conversations table.
+-- Also set the earliest due_at in the conversation
 UPDATE conversations
 SET next_sla_deadline_at = $2
 WHERE id IN (SELECT conversation_id FROM updated_slas)

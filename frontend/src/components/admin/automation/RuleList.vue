@@ -7,7 +7,7 @@
             {{ rule.name }}
           </div>
           <div class="mb-1">
-            <Badge v-if="!rule.disabled" class="text-[9px]">Enabled</Badge>
+            <Badge v-if="rule.enabled" class="text-[9px]">Enabled</Badge>
             <Badge v-else variant="secondary">Disabled</Badge>
           </div>
         </span>
@@ -26,7 +26,7 @@
             <DropdownMenuItem @click="$emit('delete-rule', rule.id)">
               <span>Delete</span>
             </DropdownMenuItem>
-            <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-if="!rule.disabled">
+            <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-if="rule.enabled">
               <span>Disable</span>
             </DropdownMenuItem>
             <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-else>

@@ -1,8 +1,8 @@
 -- name: get-teams
-SELECT id, emoji, created_at, updated_at, name, conversation_assignment_type, timezone, disabled from teams order by updated_at desc;
+SELECT id, emoji, created_at, updated_at, name, conversation_assignment_type, timezone from teams order by updated_at desc;
 
 -- name: get-user-teams
-SELECT id, emoji, created_at, updated_at, name, conversation_assignment_type, timezone, disabled from teams WHERE id IN (SELECT team_id FROM team_members WHERE user_id = $1) order by updated_at desc;
+SELECT id, emoji, created_at, updated_at, name, conversation_assignment_type, timezone from teams WHERE id IN (SELECT team_id FROM team_members WHERE user_id = $1) order by updated_at desc;
 
 -- name: get-teams-compact
 SELECT id, name, emoji from teams order by name;
@@ -21,7 +21,7 @@ WHERE t.id = $1;
 INSERT INTO teams (name, timezone, conversation_assignment_type, business_hours_id, emoji) VALUES ($1, $2, $3, $4, $5) RETURNING id;
 
 -- name: update-team
-UPDATE teams set name = $2, timezone = $3, conversation_assignment_type = $4, business_hours_id = $5, emoji = $6 where id = $1;
+UPDATE teams set name = $2, timezone = $3, conversation_assignment_type = $4, business_hours_id = $5, emoji = $6, updated_at = now() where id = $1;
 
 -- name: upsert-user-teams
 WITH delete_old_teams AS (

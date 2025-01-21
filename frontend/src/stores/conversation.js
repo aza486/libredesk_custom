@@ -56,7 +56,6 @@ export const useConversationStore = defineStore('conversation', () => {
       order: 'desc'
     }
   }
-
   const sortFieldLabels = {
     oldest: 'Oldest',
     newest: 'Newest',
@@ -359,6 +358,7 @@ export const useConversationStore = defineStore('conversation', () => {
       processConversationListResponse(response)
     } catch (error) {
       conversations.errorMessage = handleHTTPError(error).message
+      conversations.total = 0
     } finally {
       conversations.loading = false
     }

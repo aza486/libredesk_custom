@@ -9,6 +9,22 @@
       <form @submit="onSubmit">
         <div class="space-y-5">
           <div class="space-y-5">
+            <FormField
+              v-slot="{ value, handleChange }"
+              type="checkbox"
+              name="enabled"
+              v-if="!isNewForm"
+            >
+              <FormItem class="flex flex-row items-start gap-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox :checked="value" @update:checked="handleChange" />
+                </FormControl>
+                <div class="space-y-1 leading-none">
+                  <FormLabel> Enabled </FormLabel>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            </FormField>
 
             <FormField v-slot="{ field }" name="name">
               <FormItem>
@@ -54,12 +70,16 @@
               </FormItem>
             </FormField>
 
-            <div :class="{ 'hidden': form.values.type !== 'conversation_update' }">
+            <div :class="{ hidden: form.values.type !== 'conversation_update' }">
               <FormField v-slot="{ componentField }" name="events">
                 <FormItem>
                   <FormLabel>Events</FormLabel>
                   <FormControl>
-                    <SelectTag v-bind="componentField" :items="conversationEvents || []" placeholder="Select events">
+                    <SelectTag
+                      v-bind="componentField"
+                      :items="conversationEvents || []"
+                      placeholder="Select events"
+                    >
                     </SelectTag>
                   </FormControl>
                   <FormDescription>Evaluate rule on these events.</FormDescription>
@@ -67,33 +87,50 @@
                 </FormItem>
               </FormField>
             </div>
-
           </div>
 
           <p class="font-semibold">Match these rules</p>
 
-          <RuleBox :ruleGroup="firstRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-            @remove-condition="handleRemoveCondition" :groupIndex="0" />
+          <RuleBox
+            :ruleGroup="firstRuleGroup"
+            @update-group="handleUpdateGroup"
+            @add-condition="handleAddCondition"
+            @remove-condition="handleRemoveCondition"
+            :groupIndex="0"
+          />
 
           <div class="flex justify-center">
             <div class="flex items-center space-x-2">
-              <Button :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
-                @click.prevent="toggleGroupOperator('AND')">
+              <Button
+                :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
+                @click.prevent="toggleGroupOperator('AND')"
+              >
                 AND
               </Button>
-              <Button :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
-                @click.prevent="toggleGroupOperator('OR')">
+              <Button
+                :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
+                @click.prevent="toggleGroupOperator('OR')"
+              >
                 OR
               </Button>
             </div>
           </div>
 
-          <RuleBox :ruleGroup="secondRuleGroup" @update-group="handleUpdateGroup" @add-condition="handleAddCondition"
-            @remove-condition="handleRemoveCondition" :groupIndex="1" />
+          <RuleBox
+            :ruleGroup="secondRuleGroup"
+            @update-group="handleUpdateGroup"
+            @add-condition="handleAddCondition"
+            @remove-condition="handleRemoveCondition"
+            :groupIndex="1"
+          />
           <p class="font-semibold">Perform these actions</p>
 
-          <ActionBox :actions="getActions()" :update-actions="handleUpdateActions" @add-action="handleAddAction"
-            @remove-action="handleRemoveAction" />
+          <ActionBox
+            :actions="getActions()"
+            :update-actions="handleUpdateActions"
+            @add-action="handleAddAction"
+            @remove-action="handleRemoveAction"
+          />
           <Button type="submit" :isLoading="isLoading">Save</Button>
         </div>
       </form>
@@ -108,6 +145,7 @@ import { Button } from '@/components/ui/button'
 import RuleBox from './RuleBox.vue'
 import ActionBox from './ActionBox.vue'
 import api from '@/api'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
@@ -164,12 +202,12 @@ const rule = ref({
 })
 
 const conversationEvents = [
-  "conversation.user.assigned",
-  "conversation.team.assigned",
-  "conversation.priority.change",
-  "conversation.status.change",
-  "conversation.message.outgoing",
-  "conversation.message.incoming",
+  'conversation.user.assigned',
+  'conversation.team.assigned',
+  'conversation.priority.change',
+  'conversation.status.change',
+  'conversation.message.outgoing',
+  'conversation.message.incoming'
 ]
 
 const props = defineProps({
@@ -188,6 +226,10 @@ const formTitle = computed(() => {
   return ''
   // if (props.id > 0) return 'Edit existing rule'
   // return 'Create new rule'
+})
+
+const isNewForm = computed(() => {
+  return props.id ? false : true
 })
 
 const breadcrumbLinks = [
@@ -271,7 +313,7 @@ const handleSave = async (values) => {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Invalid rules',
       variant: 'destructive',
-      description: "Make sure you have atleast one action and one rule."
+      description: 'Make sure you have atleast one action and one rule.'
     })
     return
   }
@@ -290,7 +332,7 @@ const handleSave = async (values) => {
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Saved',
-      description: "Rule saved successfully"
+      description: 'Rule saved successfully'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -349,5 +391,4 @@ onMounted(async () => {
   secondRuleGroup.value = getSecondGroup()
   groupOperator.value = getGroupOperator()
 })
-
 </script>

@@ -36,12 +36,12 @@ const updateUser = async (payload) => {
     formLoading.value = true
     await api.updateUser(user.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: "Saved",
+      title: "Success",
       description: "User updated successfully"
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not update user',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -57,7 +57,7 @@ onMounted(async () => {
     user.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not fetch user',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

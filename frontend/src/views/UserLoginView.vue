@@ -41,7 +41,7 @@
                 <Label for="email" class="text-sm font-medium text-gray-700">Email</Label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
                   placeholder="Enter your email"
                   v-model.trim="loginForm.email"
                   :class="{ 'border-red-500': emailHasError }"
@@ -120,11 +120,6 @@
 
     <footer class="p-6 text-center">
       <div class="text-sm text-gray-500 space-x-4">
-        <a href="#" class="hover:text-gray-700">Privacy Policy</a>
-        <span>•</span>
-        <a href="#" class="hover:text-gray-700">Terms of Service</a>
-        <span>•</span>
-        <a href="#" class="hover:text-gray-700">Legal Notice</a>
       </div>
     </footer>
   </div>

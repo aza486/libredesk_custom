@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/user/models"
-	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
 
@@ -20,9 +19,9 @@ func (u *Manager) CreateContact(user *models.User) error {
 	// Normalize email address.
 	user.Email = null.NewString(strings.ToLower(user.Email.String), user.Email.Valid)
 
-	if err := u.q.InsertContact.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles), user.InboxID, user.SourceChannelID).Scan(&user.ID, &user.ContactChannelID); err != nil {
-		u.lo.Error("creating user", "error", err)
-		return fmt.Errorf("creating user: %w", err)
+	if err := u.q.InsertContact.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, user.InboxID, user.SourceChannelID).Scan(&user.ID, &user.ContactChannelID); err != nil {
+		u.lo.Error("error inserting contact", "error", err)
+		return fmt.Errorf("insert contact: %w", err)
 	}
 	return nil
 }

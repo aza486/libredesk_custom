@@ -74,7 +74,7 @@ type RuleRecord struct {
 	Description   string          `db:"description" json:"description"`
 	Type          string          `db:"type" json:"type"`
 	Events        pq.StringArray  `db:"events" json:"events"`
-	Disabled      bool            `db:"disabled" json:"disabled"`
+	Enabled       bool            `db:"enabled" json:"enabled"`
 	Weight        int             `db:"weight" json:"weight"`
 	ExecutionMode string          `db:"execution_mode" json:"execution_mode"`
 	Rules         json.RawMessage `db:"rules" json:"rules"`

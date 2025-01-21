@@ -5,6 +5,7 @@ import (
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 )
 
@@ -35,12 +36,11 @@ func handleGetTeamsCompact(r *fastglue.Request) error {
 // handleGetTeam returns a single team.
 func handleGetTeam(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
+		app   = r.Context.(*App)
+		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-	if err != nil || id == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"Invalid team `id`.", nil, envelope.InputError)
+	if id < 1 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid team `id`.", nil, envelope.InputError)
 	}
 	team, err := app.team.Get(id)
 	if err != nil {
@@ -57,12 +57,9 @@ func handleCreateTeam(r *fastglue.Request) error {
 		timezone                   = string(r.RequestCtx.PostArgs().Peek("timezone"))
 		emoji                      = string(r.RequestCtx.PostArgs().Peek("emoji"))
 		conversationAssignmentType = string(r.RequestCtx.PostArgs().Peek("conversation_assignment_type"))
+		businessHrsID, _           = strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
 	)
-	businessHrsID, err := strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
-	if err != nil || businessHrsID == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `business_hours_id`.", nil, envelope.InputError)
-	}
-	if err := app.team.Create(name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
+	if err := app.team.Create(name, timezone, conversationAssignmentType, null.NewInt(businessHrsID, businessHrsID > 0), emoji); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Team created successfully.")
@@ -76,22 +73,16 @@ func handleUpdateTeam(r *fastglue.Request) error {
 		timezone                   = string(r.RequestCtx.PostArgs().Peek("timezone"))
 		emoji                      = string(r.RequestCtx.PostArgs().Peek("emoji"))
 		conversationAssignmentType = string(r.RequestCtx.PostArgs().Peek("conversation_assignment_type"))
+		id, _                      = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		businessHrsID, _           = strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
 	)
-	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-	if err != nil || id == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
-			"Invalid team `id`.", nil, envelope.InputError)
+	if id < 1 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid team `id`", nil, envelope.InputError)
 	}
-
-	businessHrsID, err := strconv.Atoi(string(r.RequestCtx.PostArgs().Peek("business_hours_id")))
-	if err != nil || businessHrsID == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `business_hours_id`.", nil, envelope.InputError)
-	}
-
-	if err = app.team.Update(id, name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
+	if err := app.team.Update(id, name, timezone, conversationAssignmentType, null.NewInt(businessHrsID, businessHrsID > 0), emoji); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Team updated successfully.")
 }
 
 // handleDeleteTeam deletes a team

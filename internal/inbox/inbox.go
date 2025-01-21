@@ -300,7 +300,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 		inbox.Config = updatedConfig
 	}
 
-	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled); err != nil {
+	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.Enabled); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating inbox", nil)
 	}

@@ -22,17 +22,11 @@ export const columns = [
     }
   },
   {
-    accessorKey: 'disabled',
+    accessorKey: 'enabled',
     header: () => h('div', { class: 'text-center' }, 'Enabled'),
     cell: ({ row }) => {
-      const disabled = row.getValue('disabled')
-      return h('div', { class: 'text-center' }, [
-        h('input', {
-          type: 'checkbox',
-          checked: !disabled,
-          disabled: true
-        })
-      ])
+      const enabled = row.getValue('enabled')
+      return h('div', { class: 'text-center' }, enabled ? 'Yes' : 'No')
     }
   },
   {

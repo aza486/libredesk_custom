@@ -586,7 +586,7 @@ func buildProviders(o *oidc.Manager) ([]auth_.Provider, error) {
 
 	providers := make([]auth_.Provider, 0, len(oidcConfigs))
 	for _, config := range oidcConfigs {
-		if config.Disabled {
+		if !config.Enabled {
 			continue
 		}
 		providers = append(providers, auth_.Provider{

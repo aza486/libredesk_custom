@@ -22,10 +22,10 @@
 
         <FormField v-slot="{ componentField }" name="is_always_open">
             <FormItem>
-                <FormLabel>
-                    Set business hours
-                </FormLabel>
-                <FormControl>
+            <FormLabel>
+                Set business hours
+            </FormLabel>
+            <FormControl>
                     <RadioGroup v-bind="componentField">
                         <div class="flex flex-col space-y-2">
                             <div class="flex items-center space-x-3">
@@ -247,7 +247,9 @@ const onSubmit = form.handleSubmit((values) => {
 watch(
     () => props.initialValues,
     (newValues) => {
-        if (!newValues || Object.keys(newValues).length === 0) return
+        if (!newValues || Object.keys(newValues).length === 0) {
+            return
+        }
         // Set business hours if provided
         newValues.is_always_open = newValues.is_always_open.toString()
         if (newValues.is_always_open === 'false') {

@@ -2,17 +2,11 @@
 package dbutil
 
 import (
-	"errors"
 	"io/fs"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/goyesql/v2"
 	goyesqlx "github.com/knadh/goyesql/v2/sqlx"
-)
-
-var (
-	// ErrUniqueViolation indicates a unique constraint violation.
-	ErrUniqueViolation = errors.New("unique constraint violation")
 )
 
 // ScanSQLFile scans a goyesql .sql file from the given fs and prepares the queries in the given struct.

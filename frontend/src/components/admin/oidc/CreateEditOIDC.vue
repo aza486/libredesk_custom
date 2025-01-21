@@ -16,7 +16,9 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const oidc = ref({
   provider: 'Google'
 })
@@ -43,9 +45,10 @@ const submitForm = async (values) => {
     } else {
       await api.createOIDC(values)
       toastDescription = 'Created successfully'
+      router.push('/admin/oidc')
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: toastDescription,
     })
   } finally {

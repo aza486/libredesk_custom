@@ -1,33 +1,30 @@
 <template>
-    <div v-if="router.currentRoute.value.path === '/admin/teams/users'">
-      <div class="flex justify-end mb-5">
-        <Button @click="navigateToAddUser"> New user </Button>
-      </div>
-      <div>
-        <Spinner v-if="isLoading"></Spinner>
-        <DataTable :columns="columns" :data="data" v-else />
-      </div>
+  <div>
+    <div class="flex justify-end mb-5">
+      <router-link :to="{ name: 'new-user' }">
+        <Button>New User</Button>
+      </router-link>
     </div>
-    <template v-else>
-      <router-view></router-view>
-    </template>
+    <div>
+      <Spinner v-if="isLoading"></Spinner>
+      <DataTable :columns="columns" :data="data" v-else />
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { columns } from '@/components/admin/team/users/UsersDataTableColumns.js'
+import { columns } from '@/components/admin/team/users/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import DataTable from '@/components/admin/DataTable.vue'
 import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
-import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
-const { toast } = useToast()
 
-const router = useRouter()
+const { toast } = useToast()
 const isLoading = ref(false)
 const data = ref([])
 const emit = useEmitter()
@@ -53,9 +50,5 @@ const getData = async () => {
   } finally {
     isLoading.value = false
   }
-}
-
-const navigateToAddUser = () => {
-  router.push('/admin/teams/users/new')
 }
 </script>

@@ -13,6 +13,19 @@ export const columns = [
     }
   },
   {
+    accessorKey: 'created_at',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Created at')
+    },
+    cell: function ({ row }) {
+      return h(
+        'div',
+        { class: 'text-center font-medium' },
+        format(row.getValue('created_at'), 'PPpp')
+      )
+    }
+  },
+  {
     accessorKey: 'updated_at',
     header: function () {
       return h('div', { class: 'text-center' }, 'Updated at')

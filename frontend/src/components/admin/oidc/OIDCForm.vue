@@ -11,7 +11,6 @@
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="Google"> Google </SelectItem>
-                <SelectItem value="Github"> Github </SelectItem>
                 <SelectItem value="Custom"> Custom </SelectItem>
               </SelectGroup>
             </SelectContent>
@@ -75,12 +74,12 @@
       </FormItem>
     </FormField>
 
-    <FormField name="disabled" v-slot="{ value, handleChange }" v-if="!isNewForm">
+    <FormField name="enabled" v-slot="{ value, handleChange }" v-if="!isNewForm">
       <FormItem>
         <FormControl>
           <div class="flex items-center space-x-2">
             <Checkbox :checked="value" @update:checked="handleChange" />
-            <Label>Disable</Label>
+            <Label>Enabled</Label>
           </div>
         </FormControl>
         <FormDescription></FormDescription>

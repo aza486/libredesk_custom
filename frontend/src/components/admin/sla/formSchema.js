@@ -3,9 +3,7 @@ import { isGoHourMinuteDuration } from '@/utils/strings'
 
 export const formSchema = z.object({
     name: z
-        .string({
-            required_error: 'Name is required.'
-        })
+        .string()
         .max(255, {
             message: 'Name must be at most 255 characters.'
         }),
@@ -13,8 +11,7 @@ export const formSchema = z.object({
         .string()
         .max(255, {
             message: 'Description must be at most 255 characters.'
-        })
-        .optional(),
+        }),
     first_response_time: z.string().optional().refine(isGoHourMinuteDuration, {
         message:
             'Invalid duration format. Should be a number followed by h (hours), m (minutes).'

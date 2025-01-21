@@ -13,6 +13,7 @@ import (
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
 
@@ -50,11 +51,9 @@ type queries struct {
 // New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
 		q:  q,
 		lo: opts.Lo,
@@ -102,8 +101,11 @@ func (u *Manager) Get(id int) (models.Team, error) {
 }
 
 // Create creates a new team.
-func (u *Manager) Create(name, timezone, conversationAssignmentType string, businessHrsID int, emoji string) error {
+func (u *Manager) Create(name, timezone, conversationAssignmentType string, businessHrsID null.Int, emoji string) error {
 	if _, err := u.q.InsertTeam.Exec(name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
+		if dbutil.IsUniqueViolationError(err) {
+			return envelope.NewError(envelope.GeneralError, "Team with the same name already exists", nil)
+		}
 		u.lo.Error("error inserting team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating team", nil)
 	}
@@ -111,7 +113,7 @@ func (u *Manager) Create(name, timezone, conversationAssignmentType string, busi
 }
 
 // Update updates an existing team.
-func (u *Manager) Update(id int, name, timezone, conversationAssignmentType string, businessHrsID int, emoji string) error {
+func (u *Manager) Update(id int, name, timezone, conversationAssignmentType string, businessHrsID null.Int, emoji string) error {
 	if _, err := u.q.UpdateTeam.Exec(id, name, timezone, conversationAssignmentType, businessHrsID, emoji); err != nil {
 		u.lo.Error("error updating team", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating team", nil)
@@ -154,13 +156,13 @@ func (u *Manager) UpsertUserTeams(id int, teamNames []string) error {
 func (u *Manager) UserBelongsToTeam(teamID, userID int) (bool, error) {
 	var exists bool
 	if err := u.q.UserBelongsToTeam.Get(&exists, teamID, userID); err != nil {
-		u.lo.Error("error checking if user belongs to team", "team_id", teamID, "user_id", userID, "error", err)
-		return false, envelope.NewError(envelope.GeneralError, "Error checking if user belongs to team", nil)
+		u.lo.Error("error fetching team members", "team_id", teamID, "user_id", userID, "error", err)
+		return false, envelope.NewError(envelope.GeneralError, "Error fetching team members", nil)
 	}
 	return exists, nil
 }
 
-// GetMembers retrieves members of a team by team ID.
+// GetMembers retrieves members of a team.
 func (u *Manager) GetMembers(id int) ([]umodels.User, error) {
 	var users []umodels.User
 	if err := u.q.GetTeamMembers.Select(&users, id); err != nil {

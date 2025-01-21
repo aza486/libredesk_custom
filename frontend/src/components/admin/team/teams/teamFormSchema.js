@@ -10,6 +10,6 @@ export const teamFormSchema = z.object({
     }),
   emoji: z.string({ required_error: 'Emoji is required.' }),
   conversation_assignment_type: z.string({ required_error: 'Conversation assignment type is required.' }),
-  business_hours_id : z.number({ required_error: 'Business hours is required.' }),
-  timezone: z.string().optional(),
+  timezone: z.string({ required_error: 'Timezone is required.' }),
+  business_hours_id: z.number().optional().nullable(),
 })

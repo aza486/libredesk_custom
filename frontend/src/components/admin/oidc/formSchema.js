@@ -13,11 +13,8 @@ export const oidcLoginFormSchema = z.object({
     .url({
       message: 'Provider URL must be a valid URL.'
     }),
-  client_id: z.string({
-    required_error: 'Client ID is required.'
-  }),
-  client_secret: z.string({
-    required_error: 'Client Secret is required.'
-  }),
-  redirect_uri: z.string().readonly().optional()
+  client_id: z.string(),
+  client_secret: z.string(),
+  redirect_uri: z.string().readonly().optional(),
+  enabled: z.boolean().default(true).optional(),
 })

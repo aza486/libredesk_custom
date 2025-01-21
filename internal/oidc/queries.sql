@@ -1,5 +1,5 @@
 -- name: get-all-oidc
-SELECT id, name, disabled, provider, updated_at FROM oidc order by updated_at desc;
+SELECT id, name, enabled, provider, updated_at FROM oidc order by updated_at desc;
 
 -- name: get-oidc
 SELECT * FROM oidc WHERE id = $1;
@@ -10,7 +10,7 @@ VALUES ($1, $2, $3, $4, $5);
 
 -- name: update-oidc
 UPDATE oidc 
-SET name = $2, provider = $3, provider_url = $4, client_id = $5, client_secret = $6, disabled = $7, updated_at = now()
+SET name = $2, provider = $3, provider_url = $4, client_id = $5, client_secret = $6, enabled = $7, updated_at = now()
 WHERE id = $1;
 
 -- name: delete-oidc

@@ -54,6 +54,7 @@ func handleCreateInbox(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleUpdateInbox updates an inbox
 func handleUpdateInbox(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)

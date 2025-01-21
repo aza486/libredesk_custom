@@ -13,13 +13,14 @@
             <div
               class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
             >
-              <GalleryVerticalEnd size="14" class="text-secondary" />
-              <span class="text-secondary font-medium" v-if="conversationStore.current?.status">
+              <PanelBottomOpen class="text-secondary inline-block" size="15" />
+              <span
+                class="text-secondary font-medium inline-block"
+                v-if="conversationStore.current?.status"
+              >
                 {{ conversationStore.current?.status }}
               </span>
-              <span v-else class="text-secondary font-medium">
-                Loading...
-              </span>
+              <span v-else class="text-secondary font-medium inline-block"> Loading... </span>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -55,7 +56,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { GalleryVerticalEnd } from 'lucide-vue-next'
+import { PanelBottomOpen } from 'lucide-vue-next'
 import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

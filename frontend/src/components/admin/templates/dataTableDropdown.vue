@@ -55,7 +55,11 @@ const deleteTemplate = async (id) => {
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editTemplate(props.template.id)"> Edit </DropdownMenuItem>
-      <DropdownMenuItem @click="deleteTemplate(props.template.id)"> Delete </DropdownMenuItem>
+      <DropdownMenuItem
+        @click="deleteTemplate(props.template.id)" v-if="props.template.type !== 'email_notification'"
+      >
+         Delete
+      </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

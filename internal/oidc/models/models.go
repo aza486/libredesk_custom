@@ -10,7 +10,7 @@ type OIDC struct {
 	CreatedAt       time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time `db:"updated_at" json:"updated_at"`
 	Name            string    `db:"name" json:"name"`
-	Disabled        bool      `db:"disabled" json:"disabled"`
+	Enabled         bool      `db:"enabled" json:"enabled"`
 	ClientID        string    `db:"client_id" json:"client_id"`
 	ClientSecret    string    `db:"client_secret" json:"client_secret"`
 	Provider        string    `db:"provider" json:"provider"`
@@ -22,7 +22,6 @@ type OIDC struct {
 // providerLogos holds known provider logos.
 var providerLogos = map[string]string{
 	"Google": "/images/google-logo.png",
-	"Github": "/images/github-logo.png",
 	"Custom": "",
 }
 

@@ -164,6 +164,10 @@ const routes = [
             meta: { title: 'Business Hours' },
             children: [
               {
+                path: '',
+                component: () => import('@/components/admin/business_hours/BusinessHoursList.vue'),
+              },
+              {
                 path: 'new',
                 component: () => import('@/components/admin/business_hours/CreateOrEditBusinessHours.vue'),
                 meta: { title: 'New Business Hours' }
@@ -183,6 +187,10 @@ const routes = [
             meta: { title: 'SLA' },
             children: [
               {
+                path: '',
+                component: () => import('@/components/admin/sla/SLAList.vue'),
+              },
+              {
                 path: 'new',
                 component: () => import('@/components/admin/sla/CreateEditSLA.vue'),
                 meta: { title: 'New SLA' }
@@ -201,13 +209,19 @@ const routes = [
             meta: { title: 'Inboxes' },
             children: [
               {
+                path: '',
+                component: () => import('@/components/admin/inbox/InboxList.vue'),
+              },
+              {
                 path: 'new',
+                name: 'new-inbox',
                 component: () => import('@/components/admin/inbox/NewInbox.vue'),
                 meta: { title: 'New Inbox' }
               },
               {
                 path: ':id/edit',
                 props: true,
+                name: 'edit-inbox',
                 component: () => import('@/components/admin/inbox/EditInbox.vue'),
                 meta: { title: 'Edit Inbox' }
               },
@@ -224,18 +238,23 @@ const routes = [
             children: [
               {
                 path: 'users',
-                component: () => import('@/components/admin/team/users/UsersCard.vue'),
+                component: () => import('@/components/admin/team/users/Users.vue'),
                 meta: { title: 'Users' },
                 children: [
                   {
+                    path: '',
+                    component: () => import('@/components/admin/team/users/UserList.vue'),
+                  },
+                  {
                     path: 'new',
-                    component: () => import('@/components/admin/team/users/AddUserForm.vue'),
+                    name: 'new-user',
+                    component: () => import('@/components/admin/team/users/CreateUser.vue'),
                     meta: { title: 'Create User' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
-                    component: () => import('@/components/admin/team/users/EditUserForm.vue'),
+                    component: () => import('@/components/admin/team/users/EditForm.vue'),
                     meta: { title: 'Edit User' }
                   },
                 ]
@@ -245,7 +264,10 @@ const routes = [
                 component: () => import('@/components/admin/team/teams/Teams.vue'),
                 meta: { title: 'Teams' },
                 children: [
-
+                  {
+                    path: '',
+                    component: () => import('@/components/admin/team/teams/TeamList.vue'),
+                  },
                   {
                     path: 'new',
                     component: () => import('@/components/admin/team/teams/CreateTeamForm.vue'),
@@ -264,6 +286,10 @@ const routes = [
                 component: () => import('@/components/admin/team/roles/Roles.vue'),
                 meta: { title: 'Roles' },
                 children: [
+                  {
+                    path: '',
+                    component: () => import('@/components/admin/team/roles/RoleList.vue'),
+                  },
                   {
                     path: 'new',
                     component: () => import('@/components/admin/team/roles/NewRole.vue'),
@@ -330,6 +356,10 @@ const routes = [
             meta: { title: 'OIDC' },
             children: [
               {
+                path: '',
+                component: () => import('@/components/admin/oidc/OIDCList.vue'),
+              },
+              {
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/components/admin/oidc/CreateEditOIDC.vue'),
@@ -362,13 +392,19 @@ const routes = [
                 meta: { title: 'Macros' },
                 children: [
                   {
+                    path: '',
+                    component: () => import('@/components/admin/conversation/macros/MacroList.vue'),
+                  },
+                  {
                     path: 'new',
+                    name: 'new-macro',
                     component: () => import('@/components/admin/conversation/macros/CreateMacro.vue'),
                     meta: { title: 'Create Macro' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
+                    name: 'edit-macro',
                     component: () => import('@/components/admin/conversation/macros/EditMacro.vue'),
                     meta: { title: 'Edit Macro' }
                   },

@@ -38,7 +38,7 @@ const getNotificationSettings = async () => {
     )
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not fetch',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -60,11 +60,12 @@ const submitForm = async (values) => {
     )
     await api.updateEmailNotificationSettings(updatedValues)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: 'Saved successfully'
+      title: 'Success',
+      description: 'Settings updated successfully'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not save',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

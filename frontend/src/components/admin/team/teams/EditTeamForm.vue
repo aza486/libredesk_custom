@@ -43,7 +43,7 @@ const updateTeam = async (payload) => {
     formLoading.value = true
     await api.updateTeam(team.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: "Updated successfully"
     })
   } catch (error) {

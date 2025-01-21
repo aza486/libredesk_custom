@@ -141,6 +141,9 @@ func (u *Manager) CreateAgent(user *models.User) error {
 	}
 	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
 	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
+		if dbutil.IsUniqueViolationError(err) {
+			return envelope.NewError(envelope.GeneralError, "User with the same email already exists", nil)
+		}
 		u.lo.Error("error creating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
 	}
@@ -207,7 +210,7 @@ func (u *Manager) Update(id int, user models.User) error {
 		u.lo.Debug("setting new password for user", "user_id", id)
 	}
 
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword); err != nil {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating user", nil)
 	}
@@ -334,16 +337,21 @@ func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
 
 // CreateSystemUser inserts a default system user into the users table with the prompted password.
 func CreateSystemUser(ctx context.Context, db *sqlx.DB) error {
-	// Prompt for password and get hashed password
 	hashedPassword, err := promptAndHashPassword(ctx)
 	if err != nil {
 		return err
 	}
-
 	_, err = db.Exec(`
-		INSERT INTO users (email, type, first_name, last_name, password, roles) 
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		SystemUserEmail, UserTypeAgent, "System", "", hashedPassword, pq.StringArray{rmodels.RoleAdmin})
+		WITH sys_user AS (
+			INSERT INTO users (email, type, first_name, last_name, password)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		)
+		INSERT INTO user_roles (user_id, role_id)
+		SELECT sys_user.id, roles.id 
+		FROM sys_user, roles 
+		WHERE roles.name = $6`,
+		SystemUserEmail, UserTypeAgent, "System", "", hashedPassword, rmodels.RoleAdmin)
 	if err != nil {
 		return fmt.Errorf("failed to create system user: %v", err)
 	}

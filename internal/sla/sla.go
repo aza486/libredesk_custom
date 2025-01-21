@@ -204,7 +204,7 @@ func (m *Manager) CalculateConversationDeadlines(conversationCreatedAt time.Time
 		if err != nil {
 			return firstResponseDeadline, resolutionDeadline, err
 		}
-		businessHrsID = team.BusinessHoursID
+		businessHrsID = team.BusinessHoursID.Int
 		timezone = team.Timezone
 	}
 
@@ -291,10 +291,14 @@ func (m *Manager) processUnbreachedSLAs() error {
 func (m *Manager) evaluateSLA(cSLA models.ConversationSLA) error {
 	var deadline, compareTime time.Time
 
-	firstResponseDeadline, resolutionDeadline, err := m.CalculateConversationDeadlines(cSLA.ConversationCreatedAt, cSLA.ConversationAssignedTeamID.Int, cSLA.SLAPolicyID)
+	// Calculate deadlines using the `created_at` which is the time SLA was applied to the conversation.
+	// This will take care of the case where SLA is changed for a conversation.
+	m.lo.Info("calculating SLA deadlines", "start_time", cSLA.CreatedAt, "conversation_id", cSLA.ConversationID, "sla_policy_id", cSLA.SLAPolicyID)
+	firstResponseDeadline, resolutionDeadline, err := m.CalculateConversationDeadlines(cSLA.CreatedAt, cSLA.ConversationAssignedTeamID.Int, cSLA.SLAPolicyID)
 	if err != nil {
 		return err
 	}
+
 	switch cSLA.SLAType {
 	case SLATypeFirstResponse:
 		deadline = firstResponseDeadline
@@ -307,10 +311,11 @@ func (m *Manager) evaluateSLA(cSLA models.ConversationSLA) error {
 	}
 
 	if deadline.IsZero() {
-		m.lo.Warn("could not calculate SLA deadline", "conversation_id", cSLA.ConversationID)
+		m.lo.Warn("could not calculate SLA deadline", "conversation_id", cSLA.ConversationID, "sla_policy_id", cSLA.SLAPolicyID)
 		return nil
 	}
 
+	// Save deadline in DB.
 	if _, err := m.q.UpdateDueAt.Exec(cSLA.ID, deadline); err != nil {
 		m.lo.Error("error updating SLA due_at", "error", err)
 		return fmt.Errorf("updating SLA due_at: %v", err)

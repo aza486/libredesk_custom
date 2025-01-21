@@ -132,7 +132,7 @@ const reportsNavItems = [
 
 const adminNavItems = [
   {
-    title: 'General',
+    title: 'Workspace',
     description: 'Configure general app settings',
     href: '/admin/general',
     children: [

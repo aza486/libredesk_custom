@@ -46,10 +46,15 @@ const fieldConfig = {
     label: 'From email address',
     description: 'From email address. e.g. My Support <mysupport@example.com>'
   },
+  enabled: {
+    label: 'Enabled',
+    description: 'Disable to scanning incoming emails and sending outgoing emails.',
+    component: 'switch'
+  },
   csat_enabled: {
     label: 'CSAT',
     description: 'Send a CSAT survey after a conversation is marked as resolved.',
-    component: 'switch',
+    component: 'switch'
   },
   imap: {
     label: 'IMAP',

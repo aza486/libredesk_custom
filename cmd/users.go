@@ -36,6 +36,7 @@ func handleGetUsers(r *fastglue.Request) error {
 	return r.SendEnvelope(agents)
 }
 
+// handleGetUsersCompact returns all users in a compact format.
 func handleGetUsersCompact(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -47,6 +48,7 @@ func handleGetUsersCompact(r *fastglue.Request) error {
 	return r.SendEnvelope(agents)
 }
 
+// handleGetUser returns a user.
 func handleGetUser(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -81,6 +83,7 @@ func handleGetCurrentUserTeams(r *fastglue.Request) error {
 	return r.SendEnvelope(teams)
 }
 
+// handleUpdateCurrentUser updates the current user.
 func handleUpdateCurrentUser(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -160,8 +163,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 			return sendErrorEnvelope(r, err)
 		}
 	}
-
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User updated successfully.")
 }
 
 // handleCreateUser creates a new user.
@@ -186,8 +188,8 @@ func handleCreateUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `first_name`", nil, envelope.InputError)
 	}
 
-	err := app.user.CreateAgent(&user)
-	if err != nil {
+	// Right now, only agents can be created, can be named better.
+	if err := app.user.CreateAgent(&user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -210,7 +212,7 @@ func handleCreateUser(r *fastglue.Request) error {
 		})
 		if err != nil {
 			app.lo.Error("error rendering template", "error", err)
-			return r.SendEnvelope(true)
+			return r.SendEnvelope("User created successfully, but error rendering welcome email.")
 		}
 
 		if err := app.notifier.Send(notifier.Message{
@@ -220,10 +222,10 @@ func handleCreateUser(r *fastglue.Request) error {
 			Provider: notifier.ProviderEmail,
 		}); err != nil {
 			app.lo.Error("error sending notification message", "error", err)
-			return r.SendEnvelope(true)
+			return r.SendEnvelope("User created successfully, but error sending welcome email.")
 		}
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User created successfully.")
 }
 
 // handleUpdateUser updates a user.
@@ -242,9 +244,20 @@ func handleUpdateUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
+	if user.Email.String == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
+	}
+
+	if user.Roles == nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Please select at least one role", nil, envelope.InputError)
+	}
+
+	if user.FirstName == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `first_name`", nil, envelope.InputError)
+	}
+
 	// Update user.
-	err = app.user.Update(id, user)
-	if err != nil {
+	if err = app.user.Update(id, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -253,23 +266,22 @@ func handleUpdateUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User updated successfully.")
 }
 
 // handleDeleteUser soft deletes a user.
 func handleDeleteUser(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
+		app     = r.Context.(*App)
+		id, err = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid user `id`.", nil, envelope.InputError)
 	}
 
 	// Soft delete user.
-	err = app.user.SoftDelete(id)
-	if err != nil {
+	if err = app.user.SoftDelete(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -278,7 +290,7 @@ func handleDeleteUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User deleted successfully.")
 }
 
 // handleGetCurrentUser returns the current logged in user.
@@ -322,7 +334,7 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Avatar deleted successfully.")
 }
 
 // handleResetPassword generates a reset password token and sends an email to the user.
@@ -371,7 +383,7 @@ func handleResetPassword(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending notification message", nil, envelope.GeneralError)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Reset password email sent successfully.")
 }
 
 // handleSetPassword resets the password with the provided token.
@@ -396,5 +408,5 @@ func handleSetPassword(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Password reset successfully.")
 }

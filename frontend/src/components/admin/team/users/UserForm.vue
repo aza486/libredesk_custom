@@ -9,6 +9,7 @@
         <FormMessage />
       </FormItem>
     </FormField>
+
     <FormField v-slot="{ field }" name="last_name">
       <FormItem>
         <FormLabel>Last name</FormLabel>
@@ -73,6 +74,18 @@
       </FormItem>
     </FormField>
 
+    <FormField v-slot="{ value, handleChange }" type="checkbox" name="enabled" v-if="!isNewForm">
+      <FormItem class="flex flex-row items-start gap-x-3 space-y-0">
+        <FormControl>
+          <Checkbox :checked="value" @update:checked="handleChange" />
+        </FormControl>
+        <div class="space-y-1 leading-none">
+          <FormLabel> Enabled </FormLabel>
+          <FormMessage />
+        </div>
+      </FormItem>
+    </FormField>
+
     <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
@@ -82,7 +95,7 @@ import { watch, onMounted, ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { userFormSchema } from './userFormSchema.js'
+import { userFormSchema } from './formSchema.js'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
@@ -123,7 +136,7 @@ onMounted(async () => {
   try {
     const [teamsResp, rolesResp] = await Promise.allSettled([api.getTeams(), api.getRoles()])
     teams.value = teamsResp.value.data.data
-    roles.value = rolesResp.value.data.data  
+    roles.value = rolesResp.value.data.data
   } catch (err) {
     console.log(err)
   }
@@ -133,11 +146,11 @@ const teamNames = computed(() => teams.value.map((team) => team.name))
 const roleNames = computed(() => roles.value.map((role) => role.name))
 
 const form = useForm({
-  validationSchema: toTypedSchema(userFormSchema),
+  validationSchema: toTypedSchema(userFormSchema)
 })
 
 const onSubmit = form.handleSubmit((values) => {
-  values.teams = values.teams.map(team => ({ name: team }))
+  values.teams = values.teams.map((team) => ({ name: team }))
   props.submitForm(values)
 })
 
@@ -148,12 +161,13 @@ watch(
     if (Object.keys(newValues).length) {
       setTimeout(() => {
         form.setValues(newValues)
-        form.setFieldValue('teams', newValues.teams.map(team => team.name))
+        form.setFieldValue(
+          'teams',
+          newValues.teams.map((team) => team.name)
+        )
       }, 0)
     }
   },
   { deep: true, immediate: true }
 )
-
-
 </script>

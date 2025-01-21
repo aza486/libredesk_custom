@@ -17,7 +17,7 @@ import (
 
 // Enforcer is a wrapper around Casbin enforcer.
 type Enforcer struct {
-	enforcer *casbin.Enforcer
+	enforcer *casbin.SyncedEnforcer
 	lo       *logf.Logger
 }
 
@@ -41,7 +41,7 @@ func NewEnforcer(lo *logf.Logger) (*Enforcer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Casbin model: %v", err)
 	}
-	e, err := casbin.NewEnforcer(m)
+	e, err := casbin.NewSyncedEnforcer(m)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Casbin enforcer: %v", err)
 	}

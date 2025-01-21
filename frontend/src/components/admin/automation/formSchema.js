@@ -8,6 +8,7 @@ export const formSchema = z
         description: z.string({
             required_error: 'Rule description is required.',
         }),
+        enabled: z.boolean().default(true),
         type: z.string({
             required_error: 'Rule type is required.',
         }),

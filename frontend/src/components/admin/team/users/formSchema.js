@@ -30,6 +30,6 @@ export const userFormSchema = z.object({
     .regex(/^$|^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,50}$/, {
       message: 'Password must be between 8 and 50 characters long, contain at least one uppercase letter and one number.'
     })
-    .optional()
-
+    .optional(),
+  enabled: z.boolean().optional().default(true)
 })

@@ -15,7 +15,7 @@ type Inbox struct {
 	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`
 	Name        string          `db:"name" json:"name"`
 	Channel     string          `db:"channel" json:"channel"`
-	Disabled    bool            `db:"disabled" json:"disabled"`
+	Enabled     bool            `db:"enabled" json:"enabled"`
 	CSATEnabled bool            `db:"csat_enabled" json:"csat_enabled"`
 	From        string          `db:"from" json:"from"`
 	Config      json.RawMessage `db:"config" json:"config"`

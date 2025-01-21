@@ -23,6 +23,7 @@ type SLAPolicy struct {
 type ConversationSLA struct {
 	ID                         int       `db:"id"`
 	CreatedAt                  time.Time `db:"created_at"`
+	UpdatedAt                  time.Time `db:"updated_at"`
 	ConversationID             int       `db:"conversation_id"`
 	ConversationCreatedAt      time.Time `db:"conversation_created_at"`
 	ConversationFirstReplyAt   null.Time `db:"conversation_first_reply_at"`

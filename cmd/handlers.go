@@ -24,8 +24,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/v1/oidc/finish", handleOIDCCallback)
 
-	// Serve media files.
+	// Media.
 	g.GET("/uploads/{uuid}", auth(handleServeMedia))
+	g.POST("/api/v1/media", auth(handleMediaUpload))
 
 	// Settings.
 	g.GET("/api/v1/settings/general", handleGetGeneralSettings)
@@ -40,17 +41,12 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/oidc/{id}", perm(handleUpdateOIDC, "oidc:manage"))
 	g.DELETE("/api/v1/oidc/{id}", perm(handleDeleteOIDC, "oidc:manage"))
 
-	// All.
+	// Conversations.
 	g.GET("/api/v1/conversations/all", perm(handleGetAllConversations, "conversations:read_all"))
-	// Not assigned to any user or team.
 	g.GET("/api/v1/conversations/unassigned", perm(handleGetUnassignedConversations, "conversations:read_unassigned"))
-	// Assigned to logged in user.
 	g.GET("/api/v1/conversations/assigned", perm(handleGetAssignedConversations, "conversations:read_assigned"))
-	// Unassigned conversations assigned to a team.
 	g.GET("/api/v1/teams/{id}/conversations/unassigned", perm(handleGetTeamUnassignedConversations, "conversations:read_team_inbox"))
-	// Filtered by view.
 	g.GET("/api/v1/views/{id}/conversations", perm(handleGetViewConversations, "conversations:read"))
-
 	g.GET("/api/v1/conversations/{uuid}", perm(handleGetConversation, "conversations:read"))
 	g.GET("/api/v1/conversations/{uuid}/participants", perm(handleGetConversationParticipants, "conversations:read"))
 	g.PUT("/api/v1/conversations/{uuid}/assignee/user", perm(handleUpdateConversationUserAssignee, "conversations:update_user_assignee"))
@@ -86,9 +82,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/tags", perm(handleCreateTag, "tags:manage"))
 	g.PUT("/api/v1/tags/{id}", perm(handleUpdateTag, "tags:manage"))
 	g.DELETE("/api/v1/tags/{id}", perm(handleDeleteTag, "tags:manage"))
-
-	// Media.
-	g.POST("/api/v1/media", auth(handleMediaUpload))
 
 	// Macros.
 	g.GET("/api/v1/macros", auth(handleGetMacros))
@@ -173,7 +166,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/sla/{id}", perm(fastglue.ReqLenRangeParams(handleUpdateSLA, slaReqFields), "sla:manage"))
 	g.DELETE("/api/v1/sla/{id}", perm(handleDeleteSLA, "sla:manage"))
 
-	// AI.
+	// AI completion.
 	g.GET("/api/v1/ai/prompts", auth(handleGetAIPrompts))
 	g.POST("/api/v1/ai/completion", auth(handleAICompletion))
 
@@ -181,10 +174,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/ws", auth(func(r *fastglue.Request) error {
 		return handleWS(r, hub)
 	}))
-
-	// Public pages.
-	g.GET("/csat/{uuid}", handleShowCSAT)
-	g.POST("/csat/{uuid}", fastglue.ReqLenRangeParams(handleUpdateCSATResponse, map[string][2]int{"feedback": {1, 1000}}))
 
 	// Frontend pages.
 	g.GET("/", notAuthPage(serveIndexPage))
@@ -200,6 +189,10 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/assets/{all:*}", serveFrontendStaticFiles)
 	g.GET("/images/{all:*}", serveFrontendStaticFiles)
 	g.GET("/static/public/{all:*}", serveStaticFiles)
+
+	// Public pages.
+	g.GET("/csat/{uuid}", handleShowCSAT)
+	g.POST("/csat/{uuid}", fastglue.ReqLenRangeParams(handleUpdateCSATResponse, map[string][2]int{"feedback": {1, 1000}}))
 
 	// Health check.
 	g.GET("/health", handleHealthCheck)

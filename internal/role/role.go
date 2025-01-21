@@ -3,6 +3,7 @@ package role
 
 import (
 	"embed"
+	"fmt"
 
 	amodels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
@@ -75,12 +76,12 @@ func (t *Manager) Get(id int) (models.Role, error) {
 
 // Delete deletes a role by ID.
 func (t *Manager) Delete(id int) error {
-	// Disallow deletion of predefined roles.
+	// Disallow deletion of default roles.
 	role, err := t.Get(id)
 	if err != nil {
 		return err
 	}
-	for _, r := range models.Roles {
+	for _, r := range models.DefaultRoles {
 		if role.Name == r {
 			return envelope.NewError(envelope.InputError, "Cannot delete default roles", nil)
 		}
@@ -95,10 +96,13 @@ func (t *Manager) Delete(id int) error {
 
 // Create creates a new role.
 func (u *Manager) Create(r models.Role) error {
-	if !u.validatePermissions(r.Permissions) {
-		return envelope.NewError(envelope.InputError, "Invalid permissions", nil)
+	if err := u.validatePermissions(r.Permissions); err != nil {
+		return err
 	}
 	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
+		if dbutil.IsUniqueViolationError(err) {
+			return envelope.NewError(envelope.InputError, "Role with this name already exists", nil)
+		}
 		u.lo.Error("error inserting role", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating role", nil)
 	}
@@ -107,9 +111,10 @@ func (u *Manager) Create(r models.Role) error {
 
 // Update updates an existing role.
 func (u *Manager) Update(id int, r models.Role) error {
-	if !u.validatePermissions(r.Permissions) {
-		return envelope.NewError(envelope.InputError, "Unknown permission", nil)
+	if err := u.validatePermissions(r.Permissions); err != nil {
+		return err
 	}
+
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating role", nil)
@@ -118,12 +123,15 @@ func (u *Manager) Update(id int, r models.Role) error {
 }
 
 // validatePermissions returns true if all given permissions are valid
-func (u *Manager) validatePermissions(permissions []string) bool {
+func (u *Manager) validatePermissions(permissions []string) error {
+	if len(permissions) == 0 {
+		return envelope.NewError(envelope.InputError, "Permissions cannot be empty", nil)
+	}
 	for _, perm := range permissions {
 		if !amodels.IsValidPermission(perm) {
 			u.lo.Error("error unknown permission", "permission", perm)
-			return false
+			return envelope.NewError(envelope.InputError, fmt.Sprintf("Unknown permission: %s", perm), nil)
 		}
 	}
-	return true
+	return nil
 }

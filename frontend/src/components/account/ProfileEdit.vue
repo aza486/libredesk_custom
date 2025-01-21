@@ -1,22 +1,26 @@
 <template>
-  <div>
+  <div class="p-5 w-screen h-screen">
     <div class="flex flex-col space-y-5">
       <div class="space-y-1">
         <span class="sub-title">Public avatar</span>
         <p class="text-muted-foreground text-xs">Change your avatar here.</p>
       </div>
       <div class="flex space-x-5">
-        <Avatar class="size-28">
+        <Avatar class="size-28 bg-white">
           <AvatarImage :src="userStore.avatar" alt="Cropped Image" />
           <AvatarFallback>{{ userStore.getInitials }}</AvatarFallback>
         </Avatar>
 
         <div class="flex flex-col space-y-5 justify-center">
-          <input ref="uploadInput" type="file" hidden accept="image/jpg, image/jpeg, image/png, image/gif"
-            @change="selectFile" />
+          <input
+            ref="uploadInput"
+            type="file"
+            hidden
+            accept="image/jpg, image/jpeg, image/png, image/gif"
+            @change="selectFile"
+          />
           <Button class="w-28" @click="selectAvatar"> Choose a file... </Button>
-          <Button class="w-28" @click="removeAvatar" variant="destructive">Remove
-            avatar</Button>
+          <Button class="w-28" @click="removeAvatar" variant="destructive">Remove avatar</Button>
         </div>
       </div>
 
@@ -29,12 +33,16 @@
             <DialogTitle class="text-xl">Crop avatar</DialogTitle>
           </DialogHeader>
 
-          <VuePictureCropper :boxStyle="{
-            width: '100%',
-            height: '400px',
-            backgroundColor: '#f8f8f8',
-            margin: 'auto'
-          }" :img="newUserAvatar" :options="{ viewMode: 1, dragMode: 'crop', aspectRatio: 1 }" />
+          <VuePictureCropper
+            :boxStyle="{
+              width: '100%',
+              height: '400px',
+              backgroundColor: '#f8f8f8',
+              margin: 'auto'
+            }"
+            :img="newUserAvatar"
+            :options="{ viewMode: 1, dragMode: 'crop', aspectRatio: 1 }"
+          />
           <DialogFooter class="sm:justify-end">
             <Button variant="secondary" @click="closeDialog"> Close </Button>
             <Button @click="getResult">Save</Button>
@@ -109,12 +117,12 @@ const saveUser = async () => {
     isSaving.value = true
     await api.updateCurrentUser(formData)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: "Profile updated successfully"
+      description: 'Profile updated successfully'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: "Could not save profile",
-      variant: "destructive",
+      title: 'Could not save profile',
+      variant: 'destructive',
       description: handleHTTPError(error).message
     })
   } finally {
@@ -128,12 +136,12 @@ const removeAvatar = async () => {
     await api.deleteUserAvatar()
     userStore.clearAvatar()
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: "Avatar removed"
+      description: 'Avatar removed'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: "Could not remove avatar",
-      variant: "destructive",
+      title: 'Could not remove avatar',
+      variant: 'destructive',
       description: handleHTTPError(error).message
     })
   }

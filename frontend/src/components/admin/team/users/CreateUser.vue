@@ -12,9 +12,12 @@ import { handleHTTPError } from '@/utils/http'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { useRouter } from 'vue-router'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
 const { toast } = useToast()
+const emitter = useEmitter()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
@@ -30,9 +33,9 @@ const createNewUser = async (values) => {
   try {
     formLoading.value = true
     await api.createUser(values)
-    toast({
-      title: 'Saved',
-      description: "User created successfully"
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Success',
+      description: 'User created successfully'
     })
     router.push('/admin/teams/users')
   } catch (error) {

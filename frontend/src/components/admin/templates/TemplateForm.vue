@@ -49,7 +49,7 @@
             <Label>Is default</Label>
           </div>
         </FormControl>
-        <FormDescription>There can be only one default template.</FormDescription>
+        <FormDescription>You can have only one default outgoing email template.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

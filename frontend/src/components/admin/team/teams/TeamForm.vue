@@ -10,7 +10,7 @@
             <EmojiPicker :native="true" @select="onSelectEmoji" class="w-[300px]" />
           </div>
         </FormControl>
-        <FormDescription>Select an emoji.</FormDescription>
+        <FormDescription>Display emoji for this team.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -89,7 +89,7 @@
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Default business hours.</FormDescription>
+        <FormDescription>Default business hours for the team, will be used to calculate SLA.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

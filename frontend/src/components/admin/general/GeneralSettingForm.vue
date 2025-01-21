@@ -1,6 +1,10 @@
 <template>
   <Spinner v-if="formLoading"></Spinner>
-  <form @submit="onSubmit" class="space-y-6 w-full" :class="{ 'opacity-50 transition-opacity duration-300': formLoading }">
+  <form
+    @submit="onSubmit"
+    class="space-y-6 w-full"
+    :class="{ 'opacity-50 transition-opacity duration-300': formLoading }"
+  >
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
         <FormLabel>Site Name</FormLabel>
@@ -31,7 +35,7 @@
         <FormMessage />
       </FormItem>
     </FormField>
-    
+
     <FormField v-slot="{ componentField }" name="timezone">
       <FormItem>
         <FormLabel>Timezone</FormLabel>
@@ -109,7 +113,11 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ field }" name="max_file_upload_size" :value="props.initialValues.max_file_upload_size">
+    <FormField
+      v-slot="{ field }"
+      name="max_file_upload_size"
+      :value="props.initialValues.max_file_upload_size"
+    >
       <FormItem>
         <FormLabel>Max allowed file upload size</FormLabel>
         <FormControl>
@@ -209,7 +217,7 @@ const fetchBusinessHours = async () => {
   try {
     const response = await api.getAllBusinessHours()
     // Convert business hours id to string
-    response.data.data.forEach(bh => {
+    response.data.data.forEach((bh) => {
       bh.id = bh.id.toString()
     })
     businessHours.value = response.data.data
@@ -236,8 +244,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     isLoading.value = true
     await props.submitForm(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: "Success",
-      variant: 'success',
+      title: 'Success',
       description: 'Settings updated successfully'
     })
   } catch (error) {
@@ -264,6 +271,6 @@ watch(
     form.setValues(newValues)
     formLoading.value = false
   },
-  { deep: true, immediate: true }
+  { deep: true }
 )
 </script>

@@ -34,7 +34,7 @@ func handleGetOIDC(r *fastglue.Request) error {
 			"Invalid OIDC `id`", nil, envelope.InputError)
 	}
 
-	o, err := app.oidc.Get(id)
+	o, err := app.oidc.Get(id, false)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

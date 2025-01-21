@@ -1,5 +1,5 @@
 import { h } from 'vue'
-import UserDataTableDropDown from '@/components/admin/team/users/UserDataTableDropDown.vue'
+import UserDataTableDropDown from '@/components/admin/team/users/dataTableDropdown.vue'
 import { format } from 'date-fns'
 
 export const columns = [
@@ -22,12 +22,34 @@ export const columns = [
     }
   },
   {
+    accessorKey: 'enabled',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Enabled')
+    },
+    cell: function ({ row }) {
+      return h('div', { class: 'text-center font-medium' }, row.getValue('enabled') ? 'Yes' : 'No')
+    }
+  },
+  {
     accessorKey: 'email',
     header: function () {
       return h('div', { class: 'text-center' }, 'Email')
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('email'))
+    }
+  },
+  {
+    accessorKey: 'created_at',
+    header: function () {
+      return h('div', { class: 'text-center' }, 'Created at')
+    },
+    cell: function ({ row }) {
+      return h(
+        'div',
+        { class: 'text-center font-medium' },
+        format(row.getValue('created_at'), 'PPpp')
+      )
     }
   },
   {

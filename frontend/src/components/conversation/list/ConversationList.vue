@@ -70,6 +70,16 @@
         :icon="MessageCircleQuestion"
       />
 
+      <!-- Error State -->
+      <EmptyList
+        v-if="conversationStore.conversations.errorMessage"
+        key="error"
+        class="px-4 py-8"
+        title="Could not fetch conversations"
+        :message="conversationStore.conversations.errorMessage"
+        :icon="MessageCircleWarning"
+      />
+
       <!-- Empty State -->
       <TransitionGroup
         enter-active-class="transition-all duration-300 ease-in-out"
@@ -79,18 +89,12 @@
         leave-from-class="opacity-100 transform translate-y-0"
         leave-to-class="opacity-0 transform translate-y-4"
       >
-        <!-- Error State -->
-        <EmptyList
-          v-if="conversationStore.conversations.errorMessage"
-          key="error"
-          class="px-4 py-8"
-          title="Could not fetch conversations"
-          :message="conversationStore.conversations.errorMessage"
-          :icon="MessageCircleWarning"
-        />
-
         <!-- Conversation List -->
-        <div v-else key="list" class="divide-y divide-gray-200">
+        <div
+          v-if="!conversationStore.conversations.errorMessage"
+          key="list"
+          class="divide-y divide-gray-200"
+        >
           <ConversationListItem
             v-for="conversation in conversationStore.conversationsList"
             :key="conversation.uuid"

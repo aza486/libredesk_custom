@@ -63,8 +63,7 @@ func handleUpdateAutomationRule(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
 	}
 
-	err = app.automation.UpdateRule(id, rule)
-	if err != nil {
+	if err = app.automation.UpdateRule(id, rule);err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Rule updated successfully")
@@ -79,8 +78,7 @@ func handleCreateAutomationRule(r *fastglue.Request) error {
 	if err := r.Decode(&rule, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
 	}
-	err := app.automation.CreateRule(rule)
-	if err != nil {
+	if err := app.automation.CreateRule(rule); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Rule created successfully")

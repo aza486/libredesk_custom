@@ -401,6 +401,11 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	_, err = app.team.Get(assigneeID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	conversation, err := app.conversation.GetConversation(0, uuid)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -416,7 +421,9 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Evaluate automation rules.
+	// TODO: Set SLA if the team has an SLA policy set.
+
+	// Evaluate automation rules on team assignment.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationTeamAssigned)
 	return r.SendEnvelope(true)
 }

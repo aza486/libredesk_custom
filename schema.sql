@@ -13,7 +13,7 @@ DROP TYPE IF EXISTS "template_type" CASCADE; CREATE TYPE "template_type" AS ENUM
 DROP TYPE IF EXISTS "user_type" CASCADE; CREATE TYPE "user_type" AS ENUM ('agent', 'contact');
 DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('openai');
 DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation_execution_mode" AS ENUM ('all', 'first_match');
-DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "visibility" AS ENUM ('all', 'team', 'user');
+DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "macro_visibility" AS ENUM ('all', 'team', 'user');
 
 DROP TABLE IF EXISTS conversation_slas CASCADE;
 CREATE TABLE conversation_slas (
@@ -36,9 +36,8 @@ CREATE TABLE teams (
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	"name" TEXT NOT NULL,
 	emoji TEXT NULL,
-	disabled bool DEFAULT false NOT NULL,
 	conversation_assignment_type conversation_assignment_type NOT NULL,
-	business_hours_id INT REFERENCES business_hours(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+	business_hours_id INT REFERENCES business_hours(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
 	timezone TEXT NULL,
 	CONSTRAINT constraint_teams_on_emoji CHECK (length(emoji) <= 1),
 	CONSTRAINT constraint_teams_on_name CHECK (length("name") <= 140),
@@ -53,7 +52,7 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     type user_type NOT NULL,
     deleted_at TIMESTAMPTZ NULL,
-    disabled BOOL DEFAULT FALSE NOT NULL,
+    enabled BOOL DEFAULT TRUE NOT NULL,
     email TEXT NULL,
     first_name TEXT NOT NULL,
     last_name TEXT NULL,
@@ -61,7 +60,7 @@ CREATE TABLE users (
     country TEXT NULL,
     "password" VARCHAR(150) NULL,
     avatar_url TEXT NULL,
-    roles TEXT[] DEFAULT '{}'::TEXT[] NULL,
+	custom_attributes JSONB DEFAULT '{}'::jsonb NOT NULL,
     reset_password_token TEXT NULL,
     reset_password_token_expiry TIMESTAMPTZ NULL,
     CONSTRAINT constraint_users_on_country CHECK (LENGTH(country) <= 140),
@@ -73,6 +72,16 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX constraint_users_on_email_and_type_unique 
 ON users (email, type) 
 WHERE deleted_at IS NULL;
+
+DROP TABLE IF EXISTS user_roles CASCADE;
+CREATE TABLE user_roles (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+	user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	role_id INT REFERENCES roles(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	CONSTRAINT constraint_user_roles_on_user_id_and_role_id_unique UNIQUE (user_id, role_id)
+);
 
 DROP TABLE IF EXISTS contact_channels CASCADE;
 CREATE TABLE contact_channels (
@@ -163,7 +172,7 @@ CREATE TABLE automation_rules (
     "type" VARCHAR NOT NULL,
     rules JSONB NULL,
     events TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
-    disabled BOOL DEFAULT false NOT NULL,
+    enabled BOOL DEFAULT TRUE NOT NULL,
 	weight INT DEFAULT 0 NOT NULL,
 	execution_mode automation_execution_mode DEFAULT 'all' NOT NULL,
     CONSTRAINT constraint_automation_rules_on_name CHECK (length("name") <= 140),
@@ -175,14 +184,14 @@ CREATE TABLE macros (
    id SERIAL PRIMARY KEY,
    created_at TIMESTAMPTZ DEFAULT NOW(),
    updated_at TIMESTAMPTZ DEFAULT NOW(),
-   title TEXT NOT NULL,
+   name TEXT NOT NULL,
    actions JSONB DEFAULT '{}'::jsonb NOT NULL,
    visibility macro_visibility NOT NULL,
    message_content TEXT NOT NULL,
    user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
    team_id INT REFERENCES teams(id) ON DELETE CASCADE ON UPDATE CASCADE,
    usage_count INT DEFAULT 0 NOT NULL,
-   CONSTRAINT title_length CHECK (length(title) <= 255),
+   CONSTRAINT name_length CHECK (length(name) <= 255),
    CONSTRAINT message_content_length CHECK (length(message_content) <= 1000)
 );
 
@@ -203,11 +212,11 @@ CREATE TABLE inboxes (
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
 	deleted_at TIMESTAMPTZ NULL,
 	channel "channels" NOT NULL,
-	disabled bool DEFAULT false NOT NULL,
+	enabled bool DEFAULT TRUE NOT NULL,
 	csat_enabled bool DEFAULT false NOT NULL,
 	config jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"name" VARCHAR(140) NOT NULL,
-	"from" VARCHAR(500) NULL,
+	"from" VARCHAR(500) NULL
 );
 
 DROP TABLE IF EXISTS media CASCADE;
@@ -237,9 +246,10 @@ CREATE TABLE oidc (
 	provider_url TEXT NOT NULL,
 	client_id TEXT NOT NULL,
 	client_secret TEXT NOT NULL,
-	disabled bool DEFAULT false NOT NULL,
+	enabled bool DEFAULT TRUE NOT NULL,
 	provider VARCHAR NULL,
-	"name" TEXT NULL
+	"name" TEXT NULL,
+	CONSTRAINT constraint_oidc_on_name CHECK (length("name") <= 140)
 );
 
 DROP TABLE IF EXISTS roles CASCADE;
@@ -248,8 +258,9 @@ CREATE TABLE roles (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     permissions TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
-    "name" TEXT NULL,
-    description TEXT NULL
+    "name" TEXT UNIQUE NOT NULL,
+    description TEXT NULL,
+	CONSTRAINT constraint_roles_on_name CHECK (length("name") <= 50),
 );
 
 DROP TABLE IF EXISTS settings CASCADE;
@@ -322,7 +333,7 @@ CREATE TABLE csat_responses (
     feedback TEXT NULL,
     response_timestamp TIMESTAMPTZ NULL,
     CONSTRAINT constraint_csat_responses_on_rating CHECK (rating >= 0 AND rating <= 5),
-    CONSTRAINT constraint_csat_responses_on_feedback CHECK (length(feedback) <= 1000),
+    CONSTRAINT constraint_csat_responses_on_feedback CHECK (length(feedback) <= 1000)
 );
 
 DROP TABLE IF EXISTS business_hours CASCADE;
@@ -376,6 +387,7 @@ CREATE UNIQUE INDEX unique_index_ai_providers_on_is_default_when_is_default_is_t
 WHERE (is_default = true);
 CREATE INDEX index_ai_providers_on_name ON ai_providers USING btree (name);
 
+DROP TABLE IF EXISTS ai_prompts CASCADE;
 CREATE TABLE ai_prompts (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -480,7 +492,7 @@ VALUES('email_notification'::public."template_type", '<p>Hello {{ .agent.full_na
 <div>
     Reference number: {{.conversation.reference_number }} <br>
     Priority: {{.conversation.priority }}<br>
-    Subject: {{.conversation.suject }}
+    Subject: {{.conversation.subject }}
 </div>
 
 <p>

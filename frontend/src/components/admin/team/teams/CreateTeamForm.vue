@@ -32,7 +32,7 @@ const createTeam = async (values) => {
     formLoading.value = true
     await api.createTeam(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: "Team created successfully"
     })
     router.push('/admin/teams/teams')

@@ -4,7 +4,7 @@
       <p class="text-sm-muted">{{ helptext }}</p>
     </div>
     <div v-if="type === 'new_conversation'">
-      <Select v-model="executionMode">
+      <Select v-model="executionMode" v-if="rules.length > 0">
         <SelectTrigger class="w-[280px]">
           <Settings size="18" />
           <SelectValue>{{

@@ -206,7 +206,7 @@ func (e *Engine) ToggleRule(id int) error {
 
 // UpdateRule updates an existing rule.
 func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
-	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, pq.Array(rule.Events), rule.Rules); err != nil {
+	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, pq.Array(rule.Events), rule.Rules, rule.Enabled); err != nil {
 		e.lo.Error("error updating rule", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating automation rule.", nil)
 	}
