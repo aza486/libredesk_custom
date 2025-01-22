@@ -9,26 +9,47 @@
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem> Edit </DropdownMenuItem>
+          <DropdownMenuItem>Edit</DropdownMenuItem>
         </DialogTrigger>
-        <DropdownMenuItem @click="deleteStatus"
-          v-if="CONVERSATION_DEFAULT_STATUSES_LIST.includes(props.status.name) === false"> Delete </DropdownMenuItem>
+        <DropdownMenuItem
+          @click="() => (alertOpen = true)"
+          v-if="!CONVERSATION_DEFAULT_STATUSES_LIST.includes(props.status.name)"
+        >
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
         <DialogTitle>Edit status</DialogTitle>
-        <DialogDescription> Change the status name. Click save when you're done. </DialogDescription>
+        <DialogDescription>
+          Change the status name. Click save when you're done.
+        </DialogDescription>
       </DialogHeader>
       <StatusForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit"> Save changes </Button>
+            <Button type="submit">Save changes</Button>
           </DialogFooter>
         </template>
       </StatusForm>
     </DialogContent>
   </Dialog>
+
+  <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete Status</AlertDialogTitle>
+        <AlertDialogDescription>
+          This action cannot be undone. This will permanently delete the status.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup>
@@ -40,6 +61,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -61,12 +92,13 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api/index.js'
 
 const dialogOpen = ref(false)
+const alertOpen = ref(false)
 const emit = useEmitter()
 
 const props = defineProps({
   status: {
     type: Object,
-    required: true,
+    required: true
   }
 })
 
@@ -80,18 +112,17 @@ const onSubmit = form.handleSubmit(async (values) => {
   emitRefreshStatusList()
 })
 
-const deleteStatus = async () => {
+const handleDelete = async () => {
   try {
     await api.deleteStatus(props.status.id)
+    alertOpen.value = false
+    emitRefreshStatusList()
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
-  } finally {
-    dialogOpen.value = false
-    emitRefreshStatusList()
   }
 }
 
@@ -101,7 +132,6 @@ const emitRefreshStatusList = () => {
   })
 }
 
-// Watch for changes in initialValues and update the form.
 watch(
   () => props.status,
   (newValues) => {

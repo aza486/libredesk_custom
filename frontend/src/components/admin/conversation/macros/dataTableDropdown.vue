@@ -8,12 +8,28 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editMacro">Edit</DropdownMenuItem>
-      <DropdownMenuItem @click="deleteMacro">Delete</DropdownMenuItem>
+      <DropdownMenuItem @click="() => (isDeleteOpen = true)">Delete</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
+
+  <AlertDialog :open="isDeleteOpen" @update:open="isDeleteOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete Macro</AlertDialogTitle>
+        <AlertDialogDescription>
+          Are you sure you want to delete this macro? This action cannot be undone.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { MoreHorizontal } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -21,8 +37,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useRouter } from 'vue-router'
@@ -30,6 +55,8 @@ import api from '@/api/index.js'
 
 const router = useRouter()
 const emit = useEmitter()
+const isDeleteOpen = ref(false)
+
 const props = defineProps({
   macro: {
     type: Object,
@@ -37,11 +64,10 @@ const props = defineProps({
   }
 })
 
-const deleteMacro = async () => {
+const handleDelete = async () => {
   await api.deleteMacro(props.macro.id)
-  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
-    model: 'macros'
-  })
+  isDeleteOpen.value = false
+  emit.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'macros' })
 }
 
 const editMacro = () => {

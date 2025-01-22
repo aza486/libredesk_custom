@@ -11,7 +11,7 @@
         <DialogTrigger as-child>
           <DropdownMenuItem> Edit </DropdownMenuItem>
         </DialogTrigger>
-        <DropdownMenuItem @click="deleteTag"> Delete </DropdownMenuItem>
+        <DropdownMenuItem @click="openAlertDialog"> Delete </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
@@ -28,6 +28,21 @@
       </TagsForm>
     </DialogContent>
   </Dialog>
+
+  <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+        <AlertDialogDescription>
+          This action cannot be undone. This will permanently the tag.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="deleteTag">Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup>
@@ -52,12 +67,23 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import TagsForm from './TagsForm.vue'
 import api from '@/api/index.js'
 
 const dialogOpen = ref(false)
+const alertOpen = ref(false)
 const emit = useEmitter()
 
 const props = defineProps({
@@ -80,6 +106,10 @@ const onSubmit = form.handleSubmit(async (values) => {
   dialogOpen.value = false
   emitRefreshTagsList()
 })
+
+const openAlertDialog = () => {
+  alertOpen.value = true
+}
 
 const deleteTag = async () => {
   await api.deleteTag(props.tag.id)

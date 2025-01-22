@@ -23,7 +23,7 @@
             <DropdownMenuItem @click="navigateToEditRule(rule.id)">
               <span>Edit</span>
             </DropdownMenuItem>
-            <DropdownMenuItem @click="$emit('delete-rule', rule.id)">
+            <DropdownMenuItem @click="() => (alertOpen = true)">
               <span>Delete</span>
             </DropdownMenuItem>
             <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-if="rule.enabled">
@@ -36,27 +36,52 @@
         </DropdownMenu>
       </div>
     </div>
-    <p class="text-sm-muted">
-      {{ rule.description }}
-    </p>
+    <p class="text-sm-muted">{{ rule.description }}</p>
   </div>
+
+  <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete Rule</AlertDialogTitle>
+        <AlertDialogDescription>
+          This action cannot be undone. This will permanently delete the automation rule.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { EllipsisVertical } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { Badge } from '@/components/ui/badge'
 
 const router = useRouter()
-defineEmits(['delete-rule', 'toggle-rule'])
+const alertOpen = ref(false)
+const emit = defineEmits(['delete-rule', 'toggle-rule'])
 
-defineProps({
+const props = defineProps({
   rule: {
     type: Object,
     required: true
@@ -65,5 +90,10 @@ defineProps({
 
 const navigateToEditRule = (id) => {
   router.push({ path: `/admin/automations/${id}/edit` })
+}
+
+const handleDelete = () => {
+  emit('delete-rule', props.rule.id)
+  alertOpen.value = false
 }
 </script>

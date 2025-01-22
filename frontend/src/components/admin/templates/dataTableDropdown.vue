@@ -1,4 +1,40 @@
+<template>
+  <DropdownMenu>
+    <DropdownMenuTrigger as-child>
+      <Button variant="ghost" class="w-8 h-8 p-0">
+        <span class="sr-only">Open menu</span>
+        <MoreHorizontal class="w-4 h-4" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuItem @click="editTemplate(props.template.id)">Edit</DropdownMenuItem>
+      <DropdownMenuItem
+        @click="() => (alertOpen = true)"
+        v-if="props.template.type !== 'email_notification'"
+      >
+        Delete
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+
+  <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Delete Template</AlertDialogTitle>
+        <AlertDialogDescription>
+          This action cannot be undone. This will permanently delete the template.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+</template>
+
 <script setup>
+import { ref } from 'vue'
 import { MoreHorizontal } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -6,6 +42,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
@@ -15,6 +61,8 @@ import api from '@/api'
 
 const router = useRouter()
 const emitter = useEmitter()
+const alertOpen = ref(false)
+
 const props = defineProps({
   template: {
     type: Object,
@@ -29,9 +77,10 @@ const editTemplate = (id) => {
   router.push({ path: `/admin/templates/${id}/edit` })
 }
 
-const deleteTemplate = async (id) => {
+const handleDelete = async () => {
   try {
-    await api.deleteTemplate(id)
+    await api.deleteTemplate(props.template.id)
+    alertOpen.value = false
     emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
       model: 'templates'
     })
@@ -44,22 +93,3 @@ const deleteTemplate = async (id) => {
   }
 }
 </script>
-
-<template>
-  <DropdownMenu>
-    <DropdownMenuTrigger as-child>
-      <Button variant="ghost" class="w-8 h-8 p-0">
-        <span class="sr-only">Open menu</span>
-        <MoreHorizontal class="w-4 h-4" />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent>
-      <DropdownMenuItem @click="editTemplate(props.template.id)"> Edit </DropdownMenuItem>
-      <DropdownMenuItem
-        @click="deleteTemplate(props.template.id)" v-if="props.template.type !== 'email_notification'"
-      >
-         Delete
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
-</template>
