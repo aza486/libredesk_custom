@@ -486,6 +486,19 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  async function removeAssignee (type) {
+    try {
+      await api.removeAssignee(conversation.data.uuid, type)
+      conversation.data[`assigned_${type}_id`] = null
+    } catch (error) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  }
+
   async function updateAssigneeLastSeen (uuid) {
     try {
       await api.updateAssigneeLastSeen(uuid)
@@ -625,6 +638,7 @@ export const useConversationStore = defineStore('conversation', () => {
     setMacro,
     resetMacro,
     resetMediaFiles,
+    removeAssignee,
     getListSortField,
     getListStatus,
     statuses,

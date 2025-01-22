@@ -174,6 +174,7 @@ type queries struct {
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
 	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
+	RemoveConversationAssignee         *sqlx.Stmt `query:"remove-conversation-assignee"`
 	UpdateConversationPriority         *sqlx.Stmt `query:"update-conversation-priority"`
 	UpdateConversationStatus           *sqlx.Stmt `query:"update-conversation-status"`
 	UpdateConversationLastMessage      *sqlx.Stmt `query:"update-conversation-last-message"`
@@ -762,6 +763,15 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Con
 		}
 	default:
 		return fmt.Errorf("unrecognized action type %s", action.Type)
+	}
+	return nil
+}
+
+// RemoveConversationAssignee removes the assignee from the conversation.
+func (m *Manager) RemoveConversationAssignee(uuid, typ string) error {
+	if _, err := m.q.RemoveConversationAssignee.Exec(uuid, typ); err != nil {
+		m.lo.Error("error removing conversation assignee", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error removing conversation assignee", nil)
 	}
 	return nil
 }

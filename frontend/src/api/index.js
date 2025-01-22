@@ -170,6 +170,7 @@ const getCurrentUserTeams = () => http.get('/api/v1/users/me/teams')
 const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
+const removeAssignee = (uuid, assignee_type) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}/remove`)
 const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)
@@ -367,5 +368,6 @@ export default {
   getAiPrompts,
   aiCompletion,
   searchConversations,
-  searchMessages
+  searchMessages,
+  removeAssignee,
 }

@@ -470,3 +470,11 @@ WHERE m.id = $1;
 
 -- name: update-message-status
 update conversation_messages set status = $1, updated_at = now() where uuid = $2;
+
+-- name: remove-conversation-assignee
+UPDATE conversations
+SET 
+    assigned_user_id = CASE WHEN $2 = 'user' THEN NULL ELSE assigned_user_id END,
+    assigned_team_id = CASE WHEN $2 = 'team' THEN NULL ELSE assigned_team_id END,
+    updated_at = now()
+WHERE uuid = $1;

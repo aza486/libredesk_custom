@@ -636,3 +636,45 @@ func sendCSATSurvey(app *App, conversation cmodels.Conversation, user umodels.Us
 	}
 	return app.conversation.SendReply(nil, user.ID, conversation.UUID, messageContent, string(metaJSON))
 }
+
+// handleRemoveUserAssignee removes the user assigned to a conversation.
+func handleRemoveUserAssignee(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+	)
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	_, err = enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if err = app.conversation.RemoveConversationAssignee(uuid, "user"); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleRemoveTeamAssignee removes the team assigned to a conversation.
+func handleRemoveTeamAssignee(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+	)
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	_, err = enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if err = app.conversation.RemoveConversationAssignee(uuid, "team"); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}

@@ -1,20 +1,31 @@
 <template>
   <div v-if="conversationStore.current">
     <ConversationSideBarContact :conversation="conversationStore.current" class="p-3" />
-    <Accordion type="multiple" collapsible class="border-t" :default-value="['Actions', 'Information']">
+    <Accordion
+      type="multiple"
+      collapsible
+      class="border-t"
+      :default-value="['Actions', 'Information']"
+    >
       <AccordionItem value="Actions">
         <AccordionTrigger class="bg-accent p-2"> Actions </AccordionTrigger>
         <AccordionContent class="space-y-5 p-3">
-          <!-- Agent -->
           <ComboBox
             v-model="assignedUserID"
-            :items="usersStore.options"
+            :items="[{ value: 'unassigned', label: 'Unassigned' }, ...usersStore.options]"
             placeholder="Search agent"
             defaultLabel="Assign agent"
             @select="selectAgent"
           >
             <template #item="{ item }">
-              <div class="flex items-center gap-2">
+              <div v-if="item.value === 'unassigned'" class="flex items-center gap-2">
+                <Avatar class="w-8 h-8">
+                  <AvatarImage src="/default-avatar.png" alt="UN" />
+                  <AvatarFallback>UN</AvatarFallback>
+                </Avatar>
+                <span>Unassigned</span>
+              </div>
+              <div v-else class="flex items-center gap-2">
                 <Avatar class="w-8 h-8">
                   <AvatarImage :src="item.avatar_url ?? ''" :alt="item.label.slice(0, 2)" />
                   <AvatarFallback>
@@ -26,7 +37,14 @@
             </template>
 
             <template #selected="{ selected }">
-              <div v-if="selected" class="flex items-center gap-2">
+              <div v-if="selected?.value === 'unassigned'" class="flex items-center gap-2">
+                <Avatar class="w-7 h-7">
+                  <AvatarImage src="/default-avatar.png" alt="UN" />
+                  <AvatarFallback>UN</AvatarFallback>
+                </Avatar>
+                <span>Unassigned</span>
+              </div>
+              <div v-else-if="selected" class="flex items-center gap-2">
                 <Avatar class="w-7 h-7">
                   <AvatarImage :src="selected.avatar_url ?? ''" :alt="selected.label.slice(0, 2)" />
                   <AvatarFallback>
@@ -39,10 +57,12 @@
             </template>
           </ComboBox>
 
-          <!-- Team -->
           <ComboBox
             v-model="assignedTeamID"
-            :items="teamsStore.options"
+            :items="[
+              { value: 'unassigned', label: 'Unassigned', emoji: '🚫' },
+              ...teamsStore.options
+            ]"
             placeholder="Search team"
             defaultLabel="Assign team"
             @select="selectTeam"
@@ -63,7 +83,6 @@
             </template>
           </ComboBox>
 
-          <!-- Priority  -->
           <ComboBox
             v-model="conversationStore.current.priority"
             :items="conversationStore.priorityOptions"
@@ -72,7 +91,6 @@
             @select="selectPriority"
           />
 
-          <!-- Tags -->
           <SelectTag
             v-model="conversationStore.current.tags"
             :items="tags"
@@ -160,16 +178,28 @@ const handleAssignedTeamChange = (id) => {
   })
 }
 
+const handleRemoveAssignee = (type) => {
+  conversationStore.removeAssignee(type)
+}
+
 const handlePriorityChange = (priority) => {
   conversationStore.updatePriority(priority)
 }
 
 const selectAgent = (agent) => {
+  if (agent.value === 'unassigned') {
+    handleRemoveAssignee('user')
+    return
+  }
   conversationStore.current.assigned_user_id = agent.value
   handleAssignedUserChange(agent.value)
 }
 
 const selectTeam = (team) => {
+  if (team.value === 'unassigned') {
+    handleRemoveAssignee('team')
+    return
+  }
   conversationStore.current.assigned_team_id = team.value
   handleAssignedTeamChange(team.value)
 }
