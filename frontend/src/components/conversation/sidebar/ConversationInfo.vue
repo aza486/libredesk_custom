@@ -23,7 +23,7 @@
     <div class="flex justify-start items-center space-x-2">
       <p class="font-medium">First reply at</p>
       <SlaDisplay
-        :dueAt="conversation.first_reply_due_at"
+        :dueAt="conversation.first_response_due_at"
         :actualAt="conversation.first_reply_at"
       />
     </div>

@@ -12,10 +12,13 @@ RETURNING id, uuid;
 -- name: get-conversations
 SELECT
 COUNT(*) OVER() as total,
+conversations.id,
 conversations.created_at,
 conversations.updated_at,
 conversations.uuid,
 conversations.assignee_last_seen_at,
+users.created_at as "contact.created_at",
+users.updated_at as "contact.updated_at",
 users.first_name as "contact.first_name",
 users.last_name as "contact.last_name",
 users.avatar_url as "contact.avatar_url", 
@@ -76,6 +79,8 @@ SELECT
         WHERE ct.conversation_id = c.id),
         '[]'::json
     )) AS tags,
+    ct.created_at as "contact.created_at",
+    ct.updated_at as "contact.updated_at",
     ct.first_name as "contact.first_name",
     ct.last_name as "contact.last_name",
     ct.email as "contact.email",

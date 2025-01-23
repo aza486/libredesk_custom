@@ -8,11 +8,16 @@ import (
 	"github.com/abhinavxd/libredesk/internal/business_hours/models"
 )
 
+var (
+	ErrInvalidSLADuration = fmt.Errorf("invalid SLA duration")
+	ErrMaxIterations      = fmt.Errorf("sla: exceeded maximum iterations - check configuration")
+)
+
 // CalculateDeadline computes the SLA deadline from a start time and SLA duration in minutes
 // considering the provided holidays, working hours, and time zone.
 func (m *Manager) CalculateDeadline(start time.Time, slaMinutes int, businessHours models.BusinessHours, timeZone string) (time.Time, error) {
 	if slaMinutes <= 0 {
-		return time.Time{}, fmt.Errorf("SLA duration must be positive")
+		return time.Time{}, ErrInvalidSLADuration
 	}
 
 	// If business is always open, return the deadline as the start time plus the SLA duration.
@@ -34,13 +39,13 @@ func (m *Manager) CalculateDeadline(start time.Time, slaMinutes int, businessHou
 	// Unmarshal working hours.
 	var workingHours map[string]models.WorkingHours
 	if err := json.Unmarshal(businessHours.Hours, &workingHours); err != nil {
-		return time.Time{}, fmt.Errorf("could not unmarshal working hours: %v", err)
+		return time.Time{}, fmt.Errorf("could not unmarshal working hours for SLA deadline calcuation: %v", err)
 	}
 
 	// Unmarshal holidays.
 	var holidays = []models.Holiday{}
 	if err := json.Unmarshal(businessHours.Holidays, &holidays); err != nil {
-		return time.Time{}, fmt.Errorf("could not unmarshal holidays: %v", err)
+		return time.Time{}, fmt.Errorf("could not unmarshal holidays for SLA deadline calcuation: %v", err)
 	}
 
 	// Create a map of holidays.
@@ -53,7 +58,7 @@ func (m *Manager) CalculateDeadline(start time.Time, slaMinutes int, businessHou
 	for remainingMinutes > 0 {
 		iterations++
 		if iterations > maxIterations {
-			return time.Time{}, fmt.Errorf("sla: exceeded maximum iterations - check configuration")
+			return time.Time{}, ErrMaxIterations
 		}
 
 		// Skip holidays.

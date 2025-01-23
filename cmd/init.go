@@ -41,7 +41,6 @@ import (
 	tmpl "github.com/abhinavxd/libredesk/internal/template"
 	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/abhinavxd/libredesk/internal/view"
-	"github.com/abhinavxd/libredesk/internal/workerpool"
 	"github.com/abhinavxd/libredesk/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
@@ -278,10 +277,9 @@ func initBusinessHours(db *sqlx.DB) *businesshours.Manager {
 func initSLA(db *sqlx.DB, teamManager *team.Manager, settings *setting.Manager, businessHours *businesshours.Manager) *sla.Manager {
 	var lo = initLogger("sla")
 	m, err := sla.New(sla.Opts{
-		DB:              db,
-		Lo:              lo,
-		ScannerInterval: ko.MustDuration("sla.scanner_interval"),
-	}, workerpool.New(ko.MustInt("sla.worker_count"), ko.MustInt("sla.queue_size")), teamManager, settings, businessHours)
+		DB: db,
+		Lo: lo,
+	}, teamManager, settings, businessHours)
 	if err != nil {
 		log.Fatalf("error initializing SLA manager: %v", err)
 	}

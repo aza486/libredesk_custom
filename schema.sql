@@ -6,28 +6,28 @@ DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM (
 DROP TYPE IF EXISTS "message_sender_type" CASCADE; CREATE TYPE "message_sender_type" AS ENUM ('user','contact');
 DROP TYPE IF EXISTS "message_status" CASCADE; CREATE TYPE "message_status" AS ENUM ('received','sent','failed','pending');
 DROP TYPE IF EXISTS "content_type" CASCADE; CREATE TYPE "content_type" AS ENUM ('text','html');
-DROP TYPE IF EXISTS "sla_status" CASCADE; CREATE TYPE "sla_status" AS ENUM ('active','missed');
 DROP TYPE IF EXISTS "conversation_assignment_type" CASCADE; CREATE TYPE "conversation_assignment_type" AS ENUM ('Round robin','Manual');
-DROP TYPE IF EXISTS "sla_type" CASCADE; CREATE TYPE "sla_type" AS ENUM ('first_response','resolution');
 DROP TYPE IF EXISTS "template_type" CASCADE; CREATE TYPE "template_type" AS ENUM ('email_outgoing', 'email_notification');
 DROP TYPE IF EXISTS "user_type" CASCADE; CREATE TYPE "user_type" AS ENUM ('agent', 'contact');
 DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('openai');
 DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation_execution_mode" AS ENUM ('all', 'first_match');
 DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "macro_visibility" AS ENUM ('all', 'team', 'user');
 
-DROP TABLE IF EXISTS conversation_slas CASCADE;
-CREATE TABLE conversation_slas (
-	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-	updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-	conversation_id BIGINT NOT NULL REFERENCES conversations(id),
-	sla_policy_id INT NOT NULL REFERENCES sla_policies(id),
-	sla_type sla_type NOT NULL,
-	due_at TIMESTAMPTZ NULL,
-	met_at TIMESTAMPTZ NULL,
-	breached_at TIMESTAMPTZ NULL,
-	CONSTRAINT constraint_conversation_slas_unique UNIQUE (sla_policy_id, conversation_id, sla_type)
+DROP TABLE IF EXISTS applied_slas CASCADE;
+CREATE TABLE applied_slas (
+   id BIGSERIAL PRIMARY KEY,
+   created_at TIMESTAMPTZ DEFAULT NOW(),
+   updated_at TIMESTAMPTZ DEFAULT NOW(),
+   conversation_id BIGINT REFERENCES conversations(id),
+   sla_policy_id BIGINT REFERENCES sla_policies(id),
+   first_response_deadline_at TIMESTAMPTZ NULL,
+   resolution_deadline_at TIMESTAMPTZ NULL,
+   first_response_breached_at TIMESTAMPTZ NULL,
+   resolution_breached_at TIMESTAMPTZ NULL,
+   first_response_met_at TIMESTAMPTZ NULL,
+   resolution_met_at TIMESTAMPTZ NULL
 );
+CREATE INDEX index_applied_slas_on_conversation_id ON applied_slas (conversation_id);
 
 DROP TABLE IF EXISTS teams CASCADE;
 CREATE TABLE teams (
@@ -38,6 +38,7 @@ CREATE TABLE teams (
 	emoji TEXT NULL,
 	conversation_assignment_type conversation_assignment_type NOT NULL,
 	business_hours_id INT REFERENCES business_hours(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
+	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
 	timezone TEXT NULL,
 	CONSTRAINT constraint_teams_on_emoji CHECK (length(emoji) <= 1),
 	CONSTRAINT constraint_teams_on_name CHECK (length("name") <= 140),

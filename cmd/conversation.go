@@ -39,10 +39,10 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Calculate SLA deadlines if conversation has an SLA policy.
+	// Set deadlines for SLA if conversation has a policy
 	for i := range conversations {
 		if conversations[i].SLAPolicyID.Int != 0 {
-			calculateSLA(app, &conversations[i])
+			setSLADeadlines(app, &conversations[i])
 		}
 	}
 
@@ -75,10 +75,10 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Calculate SLA deadlines if conversation has an SLA policy.
+	// Set deadlines for SLA if conversation has a policy
 	for i := range conversations {
 		if conversations[i].SLAPolicyID.Int != 0 {
-			calculateSLA(app, &conversations[i])
+			setSLADeadlines(app, &conversations[i])
 		}
 	}
 
@@ -111,10 +111,10 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Calculate SLA deadlines if conversation has an SLA policy.
+	// Set deadlines for SLA if conversation has a policy
 	for i := range conversations {
 		if conversations[i].SLAPolicyID.Int != 0 {
-			calculateSLA(app, &conversations[i])
+			setSLADeadlines(app, &conversations[i])
 		}
 	}
 
@@ -189,10 +189,10 @@ func handleGetViewConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Calculate SLA deadlines if conversation has an SLA policy.
+	// Set deadlines for SLA if conversation has a policy
 	for i := range conversations {
 		if conversations[i].SLAPolicyID.Int != 0 {
-			calculateSLA(app, &conversations[i])
+			setSLADeadlines(app, &conversations[i])
 		}
 	}
 
@@ -241,10 +241,10 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Calculate SLA deadlines if conversation has an SLA policy.
+	// Set deadlines for SLA if conversation has a policy
 	for i := range conversations {
 		if conversations[i].SLAPolicyID.Int != 0 {
-			calculateSLA(app, &conversations[i])
+			setSLADeadlines(app, &conversations[i])
 		}
 	}
 
@@ -280,9 +280,9 @@ func handleGetConversation(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 
-	// Calculate SLA deadlines if conversation has an SLA policy.
+	// Set deadlines for SLA if conversation has a policy
 	if conversation.SLAPolicyID.Int != 0 {
-		calculateSLA(app, &conversation)
+		setSLADeadlines(app, &conversation)
 	}
 	return r.SendEnvelope(conversation)
 }
@@ -406,22 +406,26 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	conversation, err := app.conversation.GetConversation(0, uuid)
+	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 	if err := app.conversation.UpdateConversationTeamAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// TODO: Set SLA if the team has an SLA policy set.
+	// Apply SLA policy if team has changed and has an SLA policy.
+	if conversation.AssignedTeamID.Int != assigneeID && assigneeID != 0 {
+		team, err := app.team.Get(assigneeID)
+		if err != nil {
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching team for setting SLA", nil, envelope.GeneralError)
+		}
+		if team.SLAPolicyID.Int != 0 {
+			if err := app.conversation.ApplySLA(conversation.UUID, conversation.ID, team.SLAPolicyID.Int, user); err != nil {
+				return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error applying SLA policy", nil, envelope.GeneralError)
+			}
+		}
+	}
 
 	// Evaluate automation rules on team assignment.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationTeamAssigned)
@@ -596,15 +600,18 @@ func enforceConversationAccess(app *App, uuid string, user umodels.User) (*cmode
 	return &conversation, nil
 }
 
-// calculateSLA calculates the SLA deadlines and sets them on the conversation.
-func calculateSLA(app *App, conversation *cmodels.Conversation) error {
-	firstRespAt, resolutionDueAt, err := app.sla.CalculateConversationDeadlines(conversation.CreatedAt, conversation.AssignedTeamID.Int, conversation.SLAPolicyID.Int)
+// setSLADeadlines gets the latest SLA deadlines for a conversation and sets them.
+func setSLADeadlines(app *App, conversation *cmodels.Conversation) error {
+	if conversation.ID < 1 {
+		return nil
+	}
+	first, resolution, err := app.sla.GetLatestDeadlines(conversation.ID)
 	if err != nil {
-		app.lo.Error("error calculating SLA deadlines for conversation", "id", conversation.ID, "error", err)
+		app.lo.Error("error getting SLA deadlines", "id", conversation.ID, "error", err)
 		return err
 	}
-	conversation.FirstReplyDueAt = null.NewTime(firstRespAt, firstRespAt != time.Time{})
-	conversation.ResolutionDueAt = null.NewTime(resolutionDueAt, resolutionDueAt != time.Time{})
+	conversation.FirstResponseDueAt = null.NewTime(first, first != time.Time{})
+	conversation.ResolutionDueAt = null.NewTime(resolution, resolution != time.Time{})
 	return nil
 }
 

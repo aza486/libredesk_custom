@@ -42,7 +42,7 @@
 
         <div class="flex items-center mt-2 space-x-2">
           <SlaDisplay
-            :dueAt="conversation.first_reply_due_at"
+            :dueAt="conversation.first_response_due_at"
             :actualAt="conversation.first_reply_at"
             :label="'FRD'"
             :showSLAHit="false"

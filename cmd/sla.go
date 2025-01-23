@@ -44,7 +44,6 @@ func handleCreateSLA(r *fastglue.Request) error {
 		firstRespTime = string(r.RequestCtx.PostArgs().Peek("first_response_time"))
 		resTime       = string(r.RequestCtx.PostArgs().Peek("resolution_time"))
 	)
-
 	// Validate time duration strings
 	if _, err := time.ParseDuration(firstRespTime); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `first_response_time` duration.", nil, envelope.InputError)
@@ -52,12 +51,10 @@ func handleCreateSLA(r *fastglue.Request) error {
 	if _, err := time.ParseDuration(resTime); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `resolution_time` duration.", nil, envelope.InputError)
 	}
-
 	if err := app.sla.Create(name, desc, firstRespTime, resTime); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("SLA created successfully.")
 }
 
 func handleDeleteSLA(r *fastglue.Request) error {

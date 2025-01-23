@@ -33,7 +33,7 @@ type Conversation struct {
 	CreatedAt          time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time      `db:"updated_at" json:"updated_at"`
 	UUID               string         `db:"uuid" json:"uuid"`
-	InboxID            int            `db:"inbox_id" json:"inbox_id"`
+	InboxID            int            `db:"inbox_id" json:"inbox_id,omitempty"`
 	ClosedAt           null.Time      `db:"closed_at" json:"closed_at,omitempty"`
 	ResolvedAt         null.Time      `db:"resolved_at" json:"resolved_at,omitempty"`
 	ReferenceNumber    string         `db:"reference_number" json:"reference_number,omitempty"`
@@ -56,11 +56,11 @@ type Conversation struct {
 	LastMessageAt      null.Time      `db:"last_message_at" json:"last_message_at"`
 	LastMessage        null.String    `db:"last_message" json:"last_message"`
 	Contact            umodels.User   `db:"contact" json:"contact"`
-	FirstReplyDueAt    null.Time      `db:"first_reply_due_at" json:"first_reply_due_at"`
-	ResolutionDueAt    null.Time      `db:"resolution_due_at" json:"resolution_due_at"`
 	SLAPolicyID        null.Int       `db:"sla_policy_id" json:"sla_policy_id"`
 	SlaPolicyName      null.String    `db:"sla_policy_name" json:"sla_policy_name"`
 	NextSLADeadlineAt  null.Time      `db:"next_sla_deadline_at" json:"next_sla_deadline_at"`
+	FirstResponseDueAt null.Time      `db:"-" json:"first_response_due_at"`
+	ResolutionDueAt    null.Time      `db:"-" json:"resolution_due_at"`
 	Total              int            `db:"total" json:"-"`
 }
 

@@ -12,4 +12,5 @@ export const teamFormSchema = z.object({
   conversation_assignment_type: z.string({ required_error: 'Conversation assignment type is required.' }),
   timezone: z.string({ required_error: 'Timezone is required.' }),
   business_hours_id: z.number().optional().nullable(),
+  sla_policy_id: z.number().optional().nullable(),
 })

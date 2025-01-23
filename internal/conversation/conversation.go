@@ -73,7 +73,7 @@ type Manager struct {
 }
 
 type slaStore interface {
-	ApplySLA(conversationID, slaID int) (slaModels.SLAPolicy, error)
+	ApplySLA(conversationID, assignedTeamID, slaID int) (slaModels.SLAPolicy, error)
 }
 
 type statusStore interface {
@@ -694,6 +694,20 @@ func (m *Manager) UnassignOpen(userID int) error {
 	return nil
 }
 
+// ApplySLA applies the SLA policy to a conversation.
+func (m *Manager) ApplySLA(conversationUUID string, conversationID, policyID int, actor umodels.User) error {
+	policy, err := m.slaStore.ApplySLA(conversationID, 0, policyID)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error applying SLA", nil)
+	}
+
+	// Record the SLA application as an activity.
+	if err := m.RecordSLASet(conversationUUID, policy.Name, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error recording SLA application", nil)
+	}
+	return nil
+}
+
 // ApplyAction applies an action to a conversation, this can be called from multiple packages across the app to perform actions on conversations.
 // all actions are executed on behalf of the provided user if the user is not provided, system user is used.
 func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Conversation, user umodels.User) error {
@@ -748,13 +762,9 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Con
 		}
 	case amodels.ActionSetSLA:
 		m.lo.Debug("executing apply SLA action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
-		slaID, _ := strconv.Atoi(action.Value[0])
-		slaPolicy, err := m.slaStore.ApplySLA(conversation.ID, slaID)
-		if err != nil {
+		slaPolicyID, _ := strconv.Atoi(action.Value[0])
+		if err := m.ApplySLA(conversation.UUID, conversation.ID, slaPolicyID, user); err != nil {
 			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
-		if err := m.RecordSLASet(conversation.UUID, slaPolicy.Name, user); err != nil {
-			m.lo.Error("error recording SLA set activity", "error", err)
 		}
 	case amodels.ActionSetTags:
 		m.lo.Debug("executing set tags action", "value", action.Value, "conversation_uuid", conversation.UUID)

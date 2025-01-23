@@ -147,7 +147,7 @@ func (m *Manager) processOutgoingMessage(message models.Message) {
 	// Helper function to handle errors
 	handleError := func(err error, errorMsg string) bool {
 		if err != nil {
-			m.lo.Error(errorMsg, "error", err, "id", message.ID)
+			m.lo.Error(errorMsg, "error", err, "message_id", message.ID)
 			m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 			return true
 		}

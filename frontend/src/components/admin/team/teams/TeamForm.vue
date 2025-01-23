@@ -1,6 +1,5 @@
 <template>
   <form @submit="onSubmit" class="space-y-6">
-
     <FormField name="emoji" v-slot="{ componentField }">
       <FormItem ref="emojiPickerContainer" class="relative">
         <FormLabel>Emoji</FormLabel>
@@ -43,7 +42,7 @@
           </Select>
         </FormControl>
         <FormDescription>
-          Round robin: Conversations are assigned to team members in a round-robin fashion. <br>
+          Round robin: Conversations are assigned to team members in a round-robin fashion. <br />
           Manual: Conversations are to be picked by team members.
         </FormDescription>
         <FormMessage />
@@ -89,7 +88,34 @@
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Default business hours for the team, will be used to calculate SLA.</FormDescription>
+        <FormDescription
+          >Default business hours for the team, will be used to calculate SLA.</FormDescription
+        >
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="sla_policy_id">
+      <FormItem>
+        <FormLabel>SLA policy</FormLabel>
+        <FormControl>
+          <Select v-bind="componentField">
+            <SelectTrigger>
+              <SelectValue placeholder="Select policy" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem v-for="sla in slaStore.options" :key="sla.value" :value="parseInt(sla.value)">
+                  {{ sla.label }}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </FormControl>
+        <FormDescription
+          >SLA policy to be auto applied to conversations, when conversations are assigned to this
+          team.</FormDescription
+        >
         <FormMessage />
       </FormItem>
     </FormField>
@@ -127,12 +153,15 @@ import { Input } from '@/components/ui/input'
 import EmojiPicker from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'
 import { handleHTTPError } from '@/utils/http'
+import { useSlaStore } from '@/stores/sla'
 import api from '@/api'
 
 const emitter = useEmitter()
+const slaStore = useSlaStore()
 const timezones = computed(() => Intl.supportedValuesOf('timeZone'))
 const assignmentTypes = ['Round robin', 'Manual']
 const businessHours = ref([])
+const slaPolicies = ref([])
 
 const props = defineProps({
   initialValues: { type: Object, required: false },
@@ -161,39 +190,40 @@ const fetchBusinessHours = async () => {
     businessHours.value = response.data.data
   } catch (error) {
     // If unauthorized (no permission), show a toast message.
-    const toastPayload = error.response.status === 403
-      ? {
-        title: 'Unauthorized',
-        variant: 'destructive',
-        description: 'You do not have permission to view business hours.'
-      }
-      : {
-        title: 'Could not fetch business hours',
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      }
+    const toastPayload =
+      error.response.status === 403
+        ? {
+            title: 'Unauthorized',
+            variant: 'destructive',
+            description: 'You do not have permission to view business hours.'
+          }
+        : {
+            title: 'Could not fetch business hours',
+            variant: 'destructive',
+            description: handleHTTPError(error).message
+          }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, toastPayload)
   }
 }
 
-const onSubmit = form.handleSubmit(values => {
+const onSubmit = form.handleSubmit((values) => {
   props.submitForm(values)
 })
 
 watch(
   () => props.initialValues,
-  newValues => {
+  (newValues) => {
     if (Object.keys(newValues).length === 0) return
     form.setValues(newValues)
   },
   { immediate: true }
 )
 
-function toggleEmojiPicker () {
+function toggleEmojiPicker() {
   isEmojiPickerVisible.value = !isEmojiPickerVisible.value
 }
 
-function onSelectEmoji (emoji) {
+function onSelectEmoji(emoji) {
   form.setFieldValue('emoji', emoji.i || emoji)
 }
 </script>

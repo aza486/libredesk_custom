@@ -2,7 +2,9 @@
 package businesshours
 
 import (
+	"database/sql"
 	"embed"
+	"errors"
 
 	"github.com/abhinavxd/libredesk/internal/business_hours/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
@@ -15,7 +17,8 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs embed.FS
+	efs                      embed.FS
+	ErrBusinessHoursNotFound = errors.New("business hours not found")
 )
 
 // Manager manages business hours.
@@ -45,25 +48,25 @@ type queries struct {
 // New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
 		q:  q,
 		lo: opts.Lo,
 	}, nil
 }
 
-// Get retrieves business hours by ID.
+// Get retrieves business hours.
 func (m *Manager) Get(id int) (models.BusinessHours, error) {
-	var bh models.BusinessHours
-	if err := m.q.GetBusinessHours.Get(&bh, id); err != nil {
-		m.lo.Error("error fetching business hours", "error", err)
-		return bh, envelope.NewError(envelope.GeneralError, "Error fetching business hours", nil)
+	var businessHours models.BusinessHours
+	if err := m.q.GetBusinessHours.Get(&businessHours, id); err != nil {
+		if err == sql.ErrNoRows {
+			return businessHours, ErrBusinessHoursNotFound
+		}
+		return businessHours, err
 	}
-	return bh, nil
+	return businessHours, nil
 }
 
 // GetAll retrieves all business hours.

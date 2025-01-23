@@ -17,7 +17,8 @@ type Team struct {
 	Name                       string      `db:"name" json:"name"`
 	ConversationAssignmentType string      `db:"conversation_assignment_type" json:"conversation_assignment_type,omitempty"`
 	Timezone                   string      `db:"timezone" json:"timezone,omitempty"`
-	BusinessHoursID            null.Int         `db:"business_hours_id" json:"business_hours_id,omitempty"`
+	BusinessHoursID            null.Int    `db:"business_hours_id" json:"business_hours_id,omitempty"`
+	SLAPolicyID                null.Int    `db:"sla_policy_id" json:"sla_policy_id,omitempty"`
 }
 
 type Teams []Team

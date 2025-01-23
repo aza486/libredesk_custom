@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 
+	businessHours "github.com/abhinavxd/libredesk/internal/business_hours"
 	models "github.com/abhinavxd/libredesk/internal/business_hours/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
@@ -30,10 +31,12 @@ func handleGetBusinessHour(r *fastglue.Request) error {
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid business hour `id`.", nil, envelope.InputError)
 	}
-
 	businessHour, err := app.businessHours.Get(id)
 	if err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
+		if err == businessHours.ErrBusinessHoursNotFound {
+			return r.SendErrorEnvelope(fasthttp.StatusNotFound, err.Error(), nil, envelope.NotFoundError)
+		}
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching business hour", nil, "")
 	}
 	return r.SendEnvelope(businessHour)
 }
