@@ -131,7 +131,6 @@ const requestResetAction = async () => {
     toast({
       title: 'Reset link sent',
       description: 'Please check your email for the reset link.',
-      variant: 'success'
     })
     router.push({ name: 'login' })
   } catch (err) {

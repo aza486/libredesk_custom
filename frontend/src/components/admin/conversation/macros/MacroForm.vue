@@ -146,7 +146,7 @@ import {
 } from '@/components/ui/select'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 
-const { conversationActions } = useConversationFilters()
+const { macroActions } = useConversationFilters()
 const formLoading = ref(false)
 const uStore = useUsersStore()
 const tStore = useTeamStore()
@@ -174,7 +174,7 @@ const form = useForm({
 })
 
 const actionConfig = ref({
-  actions: conversationActions,
+  actions: macroActions,
   typePlaceholder: 'Select action type',
   valuePlaceholder: 'Select value',
   addButtonText: 'Add new action'

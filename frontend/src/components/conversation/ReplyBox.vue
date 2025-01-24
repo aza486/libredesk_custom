@@ -129,7 +129,7 @@
       </DialogContent>
     </Dialog>
 
-    <div class="bg-card text-card-foreground rounded-lg shadow-md px-4 border pt-4 m-2">
+    <div class="bg-card text-card-foreground rounded-lg shadow-md px-2 border pt-2 m-2">
       <!-- Main Editor non-fullscreen -->
       <div v-if="!isEditorFullscreen" class="">
         <!-- Message type toggle -->

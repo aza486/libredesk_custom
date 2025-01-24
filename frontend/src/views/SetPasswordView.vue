@@ -162,7 +162,6 @@ const setPasswordAction = async () => {
     toast({
       title: 'Password set successfully',
       description: 'You can now login with your new password.',
-      variant: 'success'
     })
 
     router.push({ name: 'login' })

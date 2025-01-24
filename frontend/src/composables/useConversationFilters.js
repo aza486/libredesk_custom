@@ -139,9 +139,43 @@ export function useConversationFilters () {
         }
     }))
 
+    const macroActions = computed(() => ({
+        assign_team: {
+            label: 'Assign to team',
+            type: FIELD_TYPE.SELECT,
+            options: tStore.options
+        },
+        assign_user: {
+            label: 'Assign to user',
+            type: FIELD_TYPE.SELECT,
+            options: uStore.options
+        },
+        set_status: {
+            label: 'Set status',
+            type: FIELD_TYPE.SELECT,
+            options: cStore.statusOptionsNoSnooze
+        },
+        set_priority: {
+            label: 'Set priority',
+            type: FIELD_TYPE.SELECT,
+            options: cStore.priorityOptions
+        },
+        set_sla: {
+            label: 'Set SLA',
+            type: FIELD_TYPE.SELECT,
+            options: slaStore.options
+        },
+        set_tags: {
+            label: 'Set tags',
+            type: FIELD_TYPE.TAG
+        }
+    }))
+
+
     return {
         conversationsListFilters,
         conversationFilters,
-        conversationActions
+        conversationActions,
+        macroActions
     }
 }

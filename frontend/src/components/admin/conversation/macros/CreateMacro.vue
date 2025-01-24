@@ -36,7 +36,6 @@ const createMacro = async (values) => {
     await api.createMacro(values)
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Success',
-      variant: 'success',
       description: 'Macro created successfully'
     })
     router.push('/admin/conversations/macros')

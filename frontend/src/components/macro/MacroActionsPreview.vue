@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-import { X, Users, User, MessageSquare, Tags, Flag, Send } from 'lucide-vue-next'
+import { X, Users, User, MessageSquare, Tags, Flag } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 defineProps({
@@ -58,7 +58,6 @@ const getIcon = (type) =>
     assign_user: User,
     set_status: MessageSquare,
     set_priority: Flag,
-    send_reply: Send,
     set_tags: Tags
   })[type]
 
@@ -79,8 +78,6 @@ const getTooltip = (action) => {
       return `Set status to: ${getDisplayValue(action)}`
     case 'set_priority':
       return `Set priority to: ${getDisplayValue(action)}`
-    case 'send_reply':
-      return `Send reply: ${getDisplayValue(action)}`
     case 'set_tags':
       return `Set tags: ${getDisplayValue(action)}`
     default:
