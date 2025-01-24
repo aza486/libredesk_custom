@@ -83,3 +83,14 @@ func GetPathFromURL(rawURL string) (string, error) {
 	}
 	return parsedURL.Path, nil
 }
+
+// RemoveEmptyStrings removes empty strings from a slice of strings.
+func RemoveEmptyStrings(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
+}

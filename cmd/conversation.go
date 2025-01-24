@@ -44,6 +44,7 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		if conversations[i].SLAPolicyID.Int != 0 {
 			setSLADeadlines(app, &conversations[i])
 		}
+		conversations[i].ID = 0
 	}
 
 	return r.SendEnvelope(envelope.PageResults{
@@ -80,6 +81,7 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		if conversations[i].SLAPolicyID.Int != 0 {
 			setSLADeadlines(app, &conversations[i])
 		}
+		conversations[i].ID = 0
 	}
 
 	return r.SendEnvelope(envelope.PageResults{
@@ -116,6 +118,7 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 		if conversations[i].SLAPolicyID.Int != 0 {
 			setSLADeadlines(app, &conversations[i])
 		}
+		conversations[i].ID = 0
 	}
 
 	return r.SendEnvelope(envelope.PageResults{
@@ -194,6 +197,7 @@ func handleGetViewConversations(r *fastglue.Request) error {
 		if conversations[i].SLAPolicyID.Int != 0 {
 			setSLADeadlines(app, &conversations[i])
 		}
+		conversations[i].ID = 0
 	}
 
 	return r.SendEnvelope(envelope.PageResults{
@@ -246,6 +250,7 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 		if conversations[i].SLAPolicyID.Int != 0 {
 			setSLADeadlines(app, &conversations[i])
 		}
+		conversations[i].ID = 0
 	}
 
 	return r.SendEnvelope(envelope.PageResults{
@@ -268,22 +273,15 @@ func handleGetConversation(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	conversation, err := app.conversation.GetConversation(0, uuid)
+	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
-	}
-
 	// Set deadlines for SLA if conversation has a policy
 	if conversation.SLAPolicyID.Int != 0 {
-		setSLADeadlines(app, &conversation)
+		setSLADeadlines(app, conversation)
 	}
+	conversation.ID = 0
 	return r.SendEnvelope(conversation)
 }
 
@@ -636,12 +634,7 @@ func sendCSATSurvey(app *App, conversation cmodels.Conversation, user umodels.Us
 	meta := map[string]interface{}{
 		"is_csat": true,
 	}
-	metaJSON, err := json.Marshal(meta)
-	if err != nil {
-		app.lo.Error("error marshalling meta JSON for csat message", "error", err)
-		return err
-	}
-	return app.conversation.SendReply(nil, user.ID, conversation.UUID, messageContent, string(metaJSON))
+	return app.conversation.SendReply(nil, user.ID, conversation.UUID, messageContent, []string{}, []string{}, meta)
 }
 
 // handleRemoveUserAssignee removes the user assigned to a conversation.

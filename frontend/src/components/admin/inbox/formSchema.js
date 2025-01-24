@@ -44,7 +44,7 @@ export const formSchema = z.object({
     }),
   smtp: z
     .object({
-      host: z.string().describe('Host').default('smtp.google.com'),
+      host: z.string().describe('Host').default('smtp.gmail.com'),
       port: z
         .number({ invalid_type_error: 'Port must be a number.' })
         .min(1, { message: 'Port must be at least 1.' })

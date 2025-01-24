@@ -95,6 +95,8 @@ func (e *Email) Send(m models.Message) error {
 	email := smtppool.Email{
 		From:        m.From,
 		To:          m.To,
+		Cc:          m.CC,
+		Bcc:         m.BCC,
 		Subject:     m.Subject,
 		Attachments: attachments,
 		Headers:     textproto.MIMEHeader{},

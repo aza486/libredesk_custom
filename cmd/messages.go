@@ -12,9 +12,11 @@ import (
 )
 
 type messageReq struct {
-	Attachments []int  `json:"attachments"`
-	Message     string `json:"message"`
-	Private     bool   `json:"private"`
+	Attachments []int    `json:"attachments"`
+	Message     string   `json:"message"`
+	Private     bool     `json:"private"`
+	CC          []string `json:"cc"`
+	BCC         []string `json:"bcc"`
 }
 
 // handleGetMessages returns messages for a conversation.
@@ -126,8 +128,8 @@ func handleSendMessage(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
-		req   = messageReq{}
 		media = []medModels.Media{}
+		req   = messageReq{}
 	)
 
 	user, err := app.user.Get(auser.ID)
@@ -142,7 +144,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&req, "json"); err != nil {
-		app.lo.Error("error unmarshalling media ids", "error", err)
+		app.lo.Error("error unmarshalling message request", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
 	}
 
@@ -164,7 +166,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	// Reply.
-	if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message, ""); err != nil {
+	if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message, req.CC, req.BCC, map[string]interface{}{}); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

@@ -226,6 +226,14 @@ export const useConversationStore = defineStore('conversation', () => {
     return conversation.data
   })
 
+  const currentBCC = computed(() => {
+    return conversation.data?.bcc || []
+  })
+
+  const currentCC = computed(() => {
+    return conversation.data?.cc || []
+  })
+
   async function fetchConversation (uuid) {
     resetCurrentConversation()
     conversation.loading = true
@@ -607,6 +615,8 @@ export const useConversationStore = defineStore('conversation', () => {
     conversationMessages,
     current,
     currentContactName,
+    currentBCC,
+    currentCC,
     clearListReRenderInterval,
     conversationUUIDExists,
     updateConversationProp,

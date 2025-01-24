@@ -51,49 +51,70 @@ LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
 WHERE 1=1 %s
 
 -- name: get-conversation
+WITH last_reply AS (
+   SELECT 
+       conversation_id,
+       meta->'cc' as cc,
+       meta->'bcc' as bcc
+   FROM conversation_messages 
+   WHERE private = false
+   AND type IN ('outgoing', 'incoming')
+   AND (
+       ($1 > 0 AND conversation_id = $1)
+       OR ($2 != '' AND conversation_id = (SELECT id FROM conversations WHERE uuid = $2::uuid))
+   )
+   ORDER BY created_at DESC 
+   LIMIT 1
+)
 SELECT
-    c.id,
-    c.created_at,
-    c.updated_at,
-    c.closed_at,
-    c.resolved_at,
-    c.inbox_id,
-    c.status_id,
-    c.priority_id,
-    p.name as priority,
-    s.name as status,
-    c.uuid,
-    c.reference_number,
-    c.first_reply_at,
-    c.assigned_user_id,
-    c.assigned_team_id,
-    c.subject,
-    c.contact_id,
-    c.sla_policy_id,
-    c.last_message,
-    sla.name as sla_policy_name,
-    (SELECT COALESCE(
-        (SELECT json_agg(t.name)
-        FROM tags t
-        INNER JOIN conversation_tags ct ON ct.tag_id = t.id
-        WHERE ct.conversation_id = c.id),
-        '[]'::json
-    )) AS tags,
-    ct.created_at as "contact.created_at",
-    ct.updated_at as "contact.updated_at",
-    ct.first_name as "contact.first_name",
-    ct.last_name as "contact.last_name",
-    ct.email as "contact.email",
-    ct.avatar_url as "contact.avatar_url",
-    ct.phone_number as "contact.phone_number"
+   c.id,
+   c.created_at,
+   c.updated_at,
+   c.closed_at,
+   c.resolved_at,
+   c.inbox_id,
+   c.status_id,
+   c.priority_id,
+   p.name as priority,
+   s.name as status,
+   c.uuid,
+   c.reference_number,
+   c.first_reply_at,
+   c.assigned_user_id,
+   c.assigned_team_id,
+   c.subject,
+   c.contact_id,
+   c.sla_policy_id,
+   c.last_message,
+   sla.name as sla_policy_name,
+   (SELECT COALESCE(
+       (SELECT json_agg(t.name)
+       FROM tags t
+       INNER JOIN conversation_tags ct ON ct.tag_id = t.id
+       WHERE ct.conversation_id = c.id),
+       '[]'::json
+   )) AS tags,
+   ct.created_at as "contact.created_at",
+   ct.updated_at as "contact.updated_at",
+   ct.first_name as "contact.first_name",
+   ct.last_name as "contact.last_name", 
+   ct.email as "contact.email",
+   ct.avatar_url as "contact.avatar_url",
+   ct.phone_number as "contact.phone_number",
+   COALESCE(lr.cc, '[]'::jsonb) as cc,
+   COALESCE(lr.bcc, '[]'::jsonb) as bcc
 FROM conversations c
 JOIN users ct ON c.contact_id = ct.id
 LEFT JOIN sla_policies sla ON c.sla_policy_id = sla.id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
-WHERE ($1 > 0 AND c.id = $1)
-   OR ($2 != '' AND c.uuid = $2::uuid);
+LEFT JOIN last_reply lr ON lr.conversation_id = c.id
+WHERE 
+   ($1 > 0 AND c.id = $1)
+   OR 
+   ($2 != '' AND c.uuid = $2::uuid)
+
 
 -- name: get-conversations-created-after
 SELECT
@@ -349,6 +370,8 @@ SELECT
     m.conversation_id,
     m.content_type,
     m.source_id,
+    ARRAY(SELECT jsonb_array_elements_text(m.meta->'cc')) AS cc,
+    ARRAY(SELECT jsonb_array_elements_text(m.meta->'bcc')) AS bcc,
     c.inbox_id,
     c.uuid as conversation_uuid,
     c.subject

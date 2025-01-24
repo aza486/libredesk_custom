@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -127,7 +128,7 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if err != nil {
 		e.lo.Error("error checking if message exists", "message_id", env.MessageID)
-		return err
+		return fmt.Errorf("checking if message exists in DB: %w", err)
 	}
 
 	if exists {
@@ -149,6 +150,20 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 		Type:            user.UserTypeContact,
 	}
 
+	// Set CC addresses in meta.
+	var ccAddr = make([]string, len(env.Cc))
+	for _, cc := range env.Cc {
+		if cc.Addr() != "" {
+			ccAddr = append(ccAddr, cc.Addr())
+		}
+	}
+	meta, err := json.Marshal(map[string]interface{}{
+		"cc": ccAddr,
+	})
+	if err != nil {
+		e.lo.Error("error marshalling meta", "error", err)
+		return fmt.Errorf("marshalling meta: %w", err)
+	}
 	incomingMsg := models.IncomingMessage{
 		Message: models.Message{
 			Channel:    e.Channel(),
@@ -158,6 +173,7 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 			Status:     conversation.MessageStatusReceived,
 			Subject:    env.Subject,
 			SourceID:   null.StringFrom(env.MessageID),
+			Meta:       string(meta),
 		},
 		Contact: contact,
 		InboxID: inboxID,
@@ -229,7 +245,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Disposition: attachment.DispositionInline,
 		})
 	}
-	e.lo.Debug("enqueuing prepared incoming message for inserting in DB", "message_id", incomingMsg.Message.SourceID.String, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
+	e.lo.Debug("enqueuing incoming email message for inserting in DB", "message_id", incomingMsg.Message.SourceID.String, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
 	if err := e.messageStore.EnqueueIncoming(incomingMsg); err != nil {
 		return err
 	}

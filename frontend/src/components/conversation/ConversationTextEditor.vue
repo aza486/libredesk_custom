@@ -245,10 +245,9 @@ onUnmounted(() => {
 
 // Editor height
 .ProseMirror {
-  min-height: 200px !important;
+  min-height: 180px !important;
   max-height: 60% !important;
   overflow-y: scroll !important;
-  padding: 10px;
 }
 
 .fullscreen-tiptap-editor {

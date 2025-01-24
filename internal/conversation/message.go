@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -57,7 +58,7 @@ func (m *Manager) Run(ctx context.Context, incomingQWorkers, outgoingQWorkers, s
 		m.wg.Add(1)
 		go func() {
 			defer m.wg.Done()
-			m.MessageDispatchWorker(ctx)
+			m.MessageSenderWorker(ctx)
 		}()
 	}
 	for range incomingQWorkers {
@@ -125,8 +126,8 @@ func (m *Manager) IncomingMessageWorker(ctx context.Context) {
 	}
 }
 
-// MessageDispatchWorker dispatches outgoing pending messages.
-func (m *Manager) MessageDispatchWorker(ctx context.Context) {
+// MessageSenderWorker sends outgoing pending messages.
+func (m *Manager) MessageSenderWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -135,13 +136,13 @@ func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			m.processOutgoingMessage(message)
+			m.sendOutgoingMessage(message)
 		}
 	}
 }
 
-// processOutgoingMessage handles the processing of a single outgoing message
-func (m *Manager) processOutgoingMessage(message models.Message) {
+// sendOutgoingMessage sends an outgoing message.
+func (m *Manager) sendOutgoingMessage(message models.Message) {
 	defer m.outgoingProcessingMessages.Delete(message.ID)
 
 	// Helper function to handle errors
@@ -172,7 +173,7 @@ func (m *Manager) processOutgoingMessage(message models.Message) {
 		return
 	}
 
-	// Set message properties
+	// Set message sender and receiver
 	message.From = inbox.FromAddress()
 	message.To, _ = m.GetToAddress(message.ConversationID)
 	message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
@@ -287,7 +288,22 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 }
 
 // SendReply inserts a reply message in a conversation.
-func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content, meta string) error {
+func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string, cc, bcc []string, meta map[string]interface{}) error {
+	// Strip empty strings bc and cc.
+	cc = stringutil.RemoveEmptyStrings(cc)
+	bcc = stringutil.RemoveEmptyStrings(bcc)
+
+	// Combine cc and bcc into meta.
+	if len(cc) > 0 {
+		meta["cc"] = cc
+	}
+	if len(bcc) > 0 {
+		meta["bcc"] = bcc
+	}
+	metaJSON, err := json.Marshal(meta)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error marshalling message meta", nil)
+	}
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
@@ -298,7 +314,7 @@ func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUI
 		ContentType:      ContentTypeHTML,
 		Private:          false,
 		Media:            media,
-		Meta:             meta,
+		Meta:             string(metaJSON),
 	}
 	return m.InsertMessage(&message)
 }

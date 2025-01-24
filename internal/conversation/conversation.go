@@ -757,7 +757,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Con
 		}
 	case amodels.ActionReply:
 		m.lo.Debug("executing reply action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
-		if err := m.SendReply([]mmodels.Media{}, user.ID, conversation.UUID, action.Value[0], ""); err != nil {
+		if err := m.SendReply([]mmodels.Media{}, user.ID, conversation.UUID, action.Value[0], []string{}, []string{}, map[string]interface{}{}); err != nil {
 			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
 		}
 	case amodels.ActionSetSLA:

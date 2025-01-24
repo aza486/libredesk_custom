@@ -1,5 +1,5 @@
 <template>
-  <div class="flex justify-between items-center border-t h-14 px-2 relative">
+  <div class="flex justify-between items-center border-t h-14 relative">
     <EmojiPicker
       ref="emojiPickerRef"
       :native="true"
