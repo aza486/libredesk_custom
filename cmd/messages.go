@@ -157,21 +157,22 @@ func handleSendMessage(r *fastglue.Request) error {
 		media = append(media, m)
 	}
 
-	// Private note.
 	if req.Private {
 		if err := app.conversation.SendPrivateNote(media, user.ID, cuuid, req.Message); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-		return r.SendEnvelope("Private note sent successfully")
+	} else {
+		if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message, req.CC, req.BCC, map[string]interface{}{}); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		// Evaluate automation rules.
+		app.automation.EvaluateConversationUpdateRules(cuuid, models.EventConversationMessageOutgoing)
 	}
 
-	// Reply.
-	if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message, req.CC, req.BCC, map[string]interface{}{}); err != nil {
+	// Reopen conversation if snoozed or closed or resolved.
+	if err := app.conversation.ReOpenConversation(cuuid, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	// Evaluate automation rules.
-	app.automation.EvaluateConversationUpdateRules(cuuid, models.EventConversationMessageOutgoing)
 
 	return r.SendEnvelope("Message sent successfully")
 }

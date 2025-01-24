@@ -506,3 +506,11 @@ SET
     assigned_team_id = CASE WHEN $2 = 'team' THEN NULL ELSE assigned_team_id END,
     updated_at = now()
 WHERE uuid = $1;
+
+-- name: re-open-conversation
+UPDATE conversations
+SET status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'), snoozed_until = NULL,
+    updated_at = now()
+WHERE uuid = $1 and status_id in (
+    SELECT id FROM conversation_statuses WHERE name IN ('Snoozed', 'Closed', 'Resolved')
+)

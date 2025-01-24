@@ -182,6 +182,7 @@ type queries struct {
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
 	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
 	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
+	ReOpenConversation                 *sqlx.Stmt `query:"re-open-conversation"`
 	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
 
 	// Dashboard queries.
@@ -329,6 +330,28 @@ func (c *Manager) GetConversations(userID int, teamIDs []int, listTypes []string
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.conversations}"), nil)
 	}
 	return conversations, nil
+}
+
+// ReOpenConversation reopens a conversation if it's snoozed, resolved or closed.
+func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User) error {
+	rows, err := c.q.ReOpenConversation.Exec(conversationUUID)
+	if err != nil {
+		c.lo.Error("error reopening conversation", "uuid", conversationUUID, "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error reopening conversation", nil)
+	}
+
+	// Record the status change as an activity if the conversation was reopened.
+	count, _ := rows.RowsAffected()
+	if count > 0 {
+		// Record the status change as an activity.
+		if err := c.RecordStatusChange(models.StatusOpen, conversationUUID, actor); err != nil {
+			return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
+		}
+
+		// Send WS update to all subscribers.
+		c.BroadcastConversationUpdate(conversationUUID, "status", models.StatusOpen)
+	}
+	return nil
 }
 
 // UpdateConversationLastMessage updates the last message details for a conversation.

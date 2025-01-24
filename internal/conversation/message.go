@@ -499,6 +499,17 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
 	} else {
 		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)
+
+		// Reopen conversation if it's closed, snoozed, or resolved.
+		systemUser, err := m.userStore.GetSystemUser()
+		if err != nil {
+			m.lo.Error("error fetching system user", "error", err)
+			return fmt.Errorf("error fetching system user for reopening conversation: %w", err)
+		}
+		if err := m.ReOpenConversation(in.Message.ConversationUUID, systemUser); err != nil {
+			m.lo.Error("error reopening conversation", "error", err)
+			return fmt.Errorf("error reopening conversation: %w", err)
+		}
 	}
 	return nil
 }
