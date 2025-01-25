@@ -39,7 +39,9 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 		if evaluateFinalResult(groupEvalResults, rule.GroupOperator) {
 			e.lo.Debug("rule evaluation successful executing actions", "conversation_uuid", conversation.UUID)
 			for _, action := range rule.Actions {
-				e.conversationStore.ApplyAction(action, conversation, umodels.User{})
+				if err := e.conversationStore.ApplyAction(action, conversation, umodels.User{}); err != nil {
+					e.lo.Error("error applying action on conversation", "action", action, "conversation_uuid", conversation.UUID, "error", err)
+				}
 			}
 			if rule.ExecutionMode == models.ExecutionModeFirstMatch {
 				e.lo.Debug("first match rule execution mode, breaking out of rule evaluation", "conversation_uuid", conversation.UUID)
@@ -109,6 +111,8 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 
 	// Extract the value from the conversation based on the rule's field
 	switch rule.Field {
+	case models.ContactEmail:
+		valueToCompare = conversation.Contact.Email.String
 	case models.ConversationSubject:
 		valueToCompare = conversation.Subject.String
 	case models.ConversationContent:
@@ -165,31 +169,35 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 	case models.RuleOperatorNotEqual:
 		conditionMet = valueToCompare != rule.Value
 	case models.RuleOperatorContains:
-		// Split the value to compare into words
-		words := strings.Fields(valueToCompare)
-		wordMap := make(map[string]struct{}, len(words))
-		for _, word := range words {
-			wordMap[word] = struct{}{}
-		}
-		// Check if any of the rule values exist as complete words
-		for _, val := range ruleValues {
-			if _, exists := wordMap[val]; exists {
+		// Normalize input text by collapsing multiple spaces
+		normalizedInputText := strings.Join(strings.Fields(valueToCompare), " ")
+		conditionMet = false
+
+		// Check each rule value against the normalized input
+		for _, ruleValue := range ruleValues {
+			// Normalize rule value by collapsing multiple spaces
+			normalizedRuleValue := strings.Join(strings.Fields(ruleValue), " ")
+			if strings.Contains(
+				strings.ToLower(normalizedInputText),
+				strings.ToLower(normalizedRuleValue),
+			) {
 				conditionMet = true
 				break
 			}
 		}
 	case models.RuleOperatorNotContains:
-		// Split the value to compare into words
-		words := strings.Fields(valueToCompare)
-		wordMap := make(map[string]struct{}, len(words))
-		for _, word := range words {
-			wordMap[word] = struct{}{}
-		}
-
-		// Check if none of the rule values exist as complete words
+		// Normalize input text by collapsing multiple spaces
+		normalizedInputText := strings.Join(strings.Fields(valueToCompare), " ")
 		conditionMet = true
-		for _, val := range ruleValues {
-			if _, exists := wordMap[val]; exists {
+
+		// Check each rule value against the normalized input
+		for _, ruleValue := range ruleValues {
+			// Normalize rule value by collapsing multiple spaces
+			normalizedRuleValue := strings.Join(strings.Fields(ruleValue), " ")
+			if strings.Contains(
+				strings.ToLower(normalizedInputText),
+				strings.ToLower(normalizedRuleValue),
+			) {
 				conditionMet = false
 				break
 			}
