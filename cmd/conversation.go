@@ -262,27 +262,32 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 	})
 }
 
-// handleGetConversation retrieves a single conversation by UUID with permission checks.
+// handleGetConversation retrieves a single conversation by it's UUID.
 func handleGetConversation(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		uuid  = r.RequestCtx.UserValue("uuid").(string)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
+
 	user, err := app.user.Get(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	conversation, err := enforceConversationAccess(app, uuid, user)
+
+	conv, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	// Set deadlines for SLA if conversation has a policy
-	if conversation.SLAPolicyID.Int != 0 {
-		setSLADeadlines(app, conversation)
+
+	if conv.SLAPolicyID.Int != 0 {
+		setSLADeadlines(app, conv)
 	}
-	conversation.ID = 0
-	return r.SendEnvelope(conversation)
+
+	prev, _ := app.conversation.GetContactConversations(conv.ContactID)
+	conv.PreviousConversations = filterCurrentConv(prev, conv.UUID)
+	conv.ID = 0
+	return r.SendEnvelope(conv)
 }
 
 // handleUpdateConversationAssigneeLastSeen updates the assignee's last seen timestamp for a conversation.
@@ -296,21 +301,14 @@ func handleUpdateConversationAssigneeLastSeen(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	conversation, err := app.conversation.GetConversation(0, uuid)
+	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 	if err = app.conversation.UpdateConversationAssigneeLastSeen(uuid); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Last seen updated successfully")
 }
 
 // handleGetConversationParticipants retrieves participants of a conversation.
@@ -324,16 +322,9 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	conversation, err := app.conversation.GetConversation(0, uuid)
+	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 	p, err := app.conversation.GetConversationParticipants(uuid)
 	if err != nil {
@@ -677,4 +668,14 @@ func handleRemoveTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
+}
+
+// filterCurrentConv removes the current conversation from the list of conversations.
+func filterCurrentConv(convs []cmodels.Conversation, uuid string) []cmodels.Conversation {
+	for i, c := range convs {
+		if c.UUID == uuid {
+			return append(convs[:i], convs[i+1:]...)
+		}
+	}
+	return []cmodels.Conversation{}
 }

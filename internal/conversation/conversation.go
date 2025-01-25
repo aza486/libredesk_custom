@@ -169,6 +169,7 @@ type queries struct {
 	GetConversationsCreatedAfter       *sqlx.Stmt `query:"get-conversations-created-after"`
 	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
 	GetConversations                   string     `query:"get-conversations"`
+	GetContactConversations            *sqlx.Stmt `query:"get-contact-conversations"`
 	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
 	GetUserActiveConversationsCount    *sqlx.Stmt `query:"get-user-active-conversations-count"`
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
@@ -225,6 +226,16 @@ func (c *Manager) GetConversation(id int, uuid string) (models.Conversation, err
 		return conversation, envelope.NewError(envelope.GeneralError, "Error fetching conversation", nil)
 	}
 	return conversation, nil
+}
+
+// GetContactConversations retrieves conversations for a contact.
+func (c *Manager) GetContactConversations(contactID int) ([]models.Conversation, error) {
+	var conversations = make([]models.Conversation, 0)
+	if err := c.q.GetContactConversations.Select(&conversations, contactID); err != nil {
+		c.lo.Error("error fetching conversations", "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, "Error fetching conversations", nil)
+	}
+	return conversations, nil
 }
 
 // GetConversationsCreatedAfter retrieves conversations created after the specified time.

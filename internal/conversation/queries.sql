@@ -11,43 +11,43 @@ RETURNING id, uuid;
 
 -- name: get-conversations
 SELECT
-COUNT(*) OVER() as total,
-conversations.id,
-conversations.created_at,
-conversations.updated_at,
-conversations.uuid,
-conversations.assignee_last_seen_at,
-users.created_at as "contact.created_at",
-users.updated_at as "contact.updated_at",
-users.first_name as "contact.first_name",
-users.last_name as "contact.last_name",
-users.avatar_url as "contact.avatar_url", 
-inboxes.channel as inbox_channel,
-inboxes.name as inbox_name,
-conversations.sla_policy_id,
-conversations.first_reply_at,
-conversations.resolved_at,
-conversations.subject,
-conversations.last_message,
-conversations.last_message_at,
-conversations.next_sla_deadline_at,
-conversations.priority_id,
-(
-  SELECT CASE WHEN COUNT(*) > 9 THEN 10 ELSE COUNT(*) END
-  FROM (
-    SELECT 1 FROM conversation_messages 
-    WHERE conversation_id = conversations.id 
-      AND created_at > conversations.assignee_last_seen_at
-    LIMIT 10
-  ) t
-) as unread_message_count,
-conversation_statuses.name as status,
-conversation_priorities.name as priority
-FROM conversations
-JOIN users ON contact_id = users.id
-JOIN inboxes ON inbox_id = inboxes.id  
-LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
-LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
+    COUNT(*) OVER() as total,
+    conversations.id,
+    conversations.created_at,
+    conversations.updated_at,
+    conversations.uuid,
+    conversations.assignee_last_seen_at,
+    users.created_at as "contact.created_at",
+    users.updated_at as "contact.updated_at",
+    users.first_name as "contact.first_name",
+    users.last_name as "contact.last_name",
+    users.avatar_url as "contact.avatar_url", 
+    inboxes.channel as inbox_channel,
+    inboxes.name as inbox_name,
+    conversations.sla_policy_id,
+    conversations.first_reply_at,
+    conversations.resolved_at,
+    conversations.subject,
+    conversations.last_message,
+    conversations.last_message_at,
+    conversations.next_sla_deadline_at,
+    conversations.priority_id,
+    (
+    SELECT CASE WHEN COUNT(*) > 9 THEN 10 ELSE COUNT(*) END
+    FROM (
+        SELECT 1 FROM conversation_messages 
+        WHERE conversation_id = conversations.id 
+        AND created_at > conversations.assignee_last_seen_at
+        LIMIT 10
+    ) t
+    ) as unread_message_count,
+    conversation_statuses.name as status,
+    conversation_priorities.name as priority
+    FROM conversations
+    JOIN users ON contact_id = users.id
+    JOIN inboxes ON inbox_id = inboxes.id  
+    LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
+    LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
 WHERE 1=1 %s
 
 -- name: get-conversation
@@ -85,8 +85,8 @@ SELECT
    c.subject,
    c.contact_id,
    c.sla_policy_id,
-   c.last_message,
    sla.name as sla_policy_name,
+   c.last_message,
    (SELECT COALESCE(
        (SELECT json_agg(t.name)
        FROM tags t
@@ -144,6 +144,20 @@ JOIN users u ON c.contact_id = u.id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
 WHERE c.created_at > $1;
+
+-- name: get-contact-conversations
+SELECT
+    c.uuid,
+    u.first_name AS "contact.first_name",
+    u.last_name AS "contact.last_name",
+    u.avatar_url AS "contact.avatar_url",
+    c.last_message,
+    c.last_message_at
+FROM users u
+JOIN conversations c ON c.contact_id = u.id
+WHERE c.contact_id = $1
+ORDER BY c.created_at DESC
+LIMIT 10;
 
 -- name: get-conversation-uuid
 SELECT uuid from conversations where id = $1;

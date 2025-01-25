@@ -33,7 +33,7 @@
               variant="ghost"
               @click="isEditorFullscreen = false"
             >
-              <Minimize2 size="20" />
+              <Minimize2 size="18" />
             </span>
           </div>
 
@@ -153,11 +153,11 @@
             </TabsList>
           </Tabs>
           <span
-            class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer"
+            class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer mr-2"
             variant="ghost"
             @click="isEditorFullscreen = true"
           >
-            <Maximize2 size="20" />
+            <Maximize2 size="18"/>
           </span>
         </div>
 
