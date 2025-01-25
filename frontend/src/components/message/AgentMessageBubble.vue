@@ -1,44 +1,55 @@
 <template>
   <div class="flex flex-col items-end text-left">
+    <!-- Sender Name -->
     <div class="pr-[47px] mb-1">
-      <p class="text-muted-foreground text-sm">
+      <p class="text-muted-foreground text-sm font-medium">
         {{ getFullName }}
       </p>
     </div>
+
+    <!-- Message Bubble -->
     <div class="flex flex-row gap-2 justify-end">
       <div
-        class="flex flex-col message-bubble justify-end items-end relative !rounded-tr-none"
+        class="flex flex-col message-bubble justify-end items-end relative rounded-lg p-3 max-w-[80%]"
         :class="{
           '!bg-[#FEF1E1]': message.private,
-          'bg-white': !message.private,
+          'bg-white border border-border': !message.private,
           'opacity-50 animate-pulse': message.status === 'pending',
-          'bg-red': message.status === 'failed'
+          'bg-red-50 border-red-200': message.status === 'failed'
         }"
       >
+        <!-- Message Content -->
         <div v-html="messageContent" :class="{ 'mb-3': message.attachments.length > 0 }"></div>
+
+        <!-- Attachments -->
         <MessageAttachmentPreview :attachments="nonInlineAttachments" />
-        <Spinner v-if="message.status === 'pending'" size="w-4 h-4" />
+
+        <!-- Spinner for Pending Messages -->
+        <Spinner v-if="message.status === 'pending'" size="w-4 h-4" class="mt-2" />
 
         <!-- Icons -->
         <div class="flex items-center space-x-2 mt-2">
-          <Lock :size="10" v-if="isPrivateMessage" />
-          <CheckCheck :size="14" v-if="showCheckCheck" />
+          <Lock :size="10" v-if="isPrivateMessage" class="text-muted-foreground" />
+          <CheckCheck :size="14" v-if="showCheckCheck" class="text-green-500" />
           <RotateCcw
             size="10"
             @click="retryMessage(message)"
-            class="cursor-pointer"
+            class="cursor-pointer text-muted-foreground hover:text-foreground transition-colors duration-200"
             v-if="showRetry"
-          ></RotateCcw>
+          />
         </div>
       </div>
-      <Avatar class="cursor-pointer">
+
+      <!-- Avatar -->
+      <Avatar class="cursor-pointer w-8 h-8">
         <AvatarImage :src="getAvatar" />
-        <AvatarFallback>
+        <AvatarFallback class="font-medium">
           {{ avatarFallback }}
         </AvatarFallback>
       </Avatar>
     </div>
 
+    <!-- Timestamp -->
     <div class="pr-[47px]">
       <Tooltip>
         <TooltipTrigger>
@@ -58,11 +69,10 @@
 import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
-import { Lock } from 'lucide-vue-next'
+import { Lock, RotateCcw, CheckCheck } from 'lucide-vue-next'
 import { revertCIDToImageSrc } from '@/utils/strings'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Spinner } from '@/components/ui/spinner'
-import { RotateCcw, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import MessageAttachmentPreview from '@/components/attachment/MessageAttachmentPreview.vue'
 import api from '@/api'

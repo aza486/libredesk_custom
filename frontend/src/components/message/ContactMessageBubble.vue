@@ -1,31 +1,54 @@
 <template>
   <div class="flex flex-col items-start">
+    <!-- Sender Name -->
     <div class="pl-[47px] mb-1">
-      <p class="text-muted-foreground text-sm">
+      <p class="text-muted-foreground text-sm font-medium">
         {{ getFullName }}
       </p>
     </div>
+
+    <!-- Message Bubble -->
     <div class="flex flex-row gap-2">
-      <Avatar class="cursor-pointer">
+      <!-- Avatar -->
+      <Avatar class="cursor-pointer w-8 h-8">
         <AvatarImage :src="getAvatar" />
-        <AvatarFallback>
+        <AvatarFallback class="font-medium">
           {{ avatarFallback }}
         </AvatarFallback>
       </Avatar>
-      <div class="flex flex-col justify-end message-bubble !rounded-tl-none" :class="{
-        'show-quoted-text': showQuotedText,
-        'hide-quoted-text': !showQuotedText
-      }">
-        <Letter :html="sanitizedMessageContent" :allowedSchemas="['cid', 'https', 'http']" class="mb-1"
-          :class="{ 'mb-3': message.attachments.length > 0 }" />
-        <div v-if="hasQuotedContent" @click="toggleQuote"
-          class="text-xs cursor-pointer text-muted-foreground px-2 py-1 w-max hover:bg-muted hover:text-primary rounded-md transition-all">
+
+      <!-- Message Content -->
+      <div
+        class="flex flex-col justify-end message-bubble bg-white border border-border rounded-lg p-3 max-w-[80%]"
+        :class="{
+          '!rounded-tl-none': true,
+          'show-quoted-text': showQuotedText,
+          'hide-quoted-text': !showQuotedText
+        }"
+      >
+        <!-- Message Text -->
+        <Letter
+          :html="sanitizedMessageContent"
+          :allowedSchemas="['cid', 'https', 'http']"
+          class="mb-1"
+          :class="{ 'mb-3': message.attachments.length > 0 }"
+        />
+
+        <!-- Quoted Text Toggle -->
+        <div
+          v-if="hasQuotedContent"
+          @click="toggleQuote"
+          class="text-xs cursor-pointer text-muted-foreground px-2 py-1 w-max hover:bg-muted hover:text-primary rounded-md transition-all"
+        >
           {{ showQuotedText ? 'Hide quoted text' : 'Show quoted text' }}
         </div>
 
+        <!-- Attachments -->
         <MessageAttachmentPreview :attachments="nonInlineAttachments" />
       </div>
     </div>
+
+    <!-- Timestamp -->
     <div class="pl-[47px]">
       <Tooltip>
         <TooltipTrigger>
@@ -65,8 +88,8 @@ const getAvatar = computed(() => {
 
 const sanitizedMessageContent = computed(() => {
   const content = props.message.content || ''
-  return props.message.attachments.reduce((acc, { content_id, url }) =>
-    acc.replace(new RegExp(`cid:${content_id}`, 'g'), url),
+  return props.message.attachments.reduce(
+    (acc, { content_id, url }) => acc.replace(new RegExp(`cid:${content_id}`, 'g'), url),
     content
   )
 })
@@ -78,7 +101,7 @@ const toggleQuote = () => {
 }
 
 const nonInlineAttachments = computed(() =>
-  props.message.attachments.filter(attachment => attachment.disposition !== 'inline')
+  props.message.attachments.filter((attachment) => attachment.disposition !== 'inline')
 )
 
 const getFullName = computed(() => {
