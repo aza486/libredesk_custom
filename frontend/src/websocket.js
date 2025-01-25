@@ -10,7 +10,6 @@ export class WebSocketClient {
     this.maxReconnectAttempts = 50
     this.isReconnecting = false
     this.manualClose = false
-    this.messageQueue = []
     this.pingInterval = null
     this.lastPong = Date.now()
     this.convStore = useConversationStore()
@@ -22,6 +21,8 @@ export class WebSocketClient {
   }
 
   connect () {
+    if (this.isReconnecting || this.manualClose) return
+
     try {
       this.socket = new WebSocket('/ws')
       this.socket.addEventListener('open', this.handleOpen.bind(this))
@@ -41,7 +42,6 @@ export class WebSocketClient {
     this.isReconnecting = false
     this.lastPong = Date.now()
     this.setupPing()
-    this.flushMessageQueue()
   }
 
   handleMessage (event) {
@@ -93,6 +93,7 @@ export class WebSocketClient {
     this.reconnectAttempts++
 
     setTimeout(() => {
+      this.isReconnecting = false
       this.connect()
       this.reconnectInterval = Math.min(this.reconnectInterval * 1.5, this.maxReconnectInterval)
     }, this.reconnectInterval)
@@ -124,6 +125,7 @@ export class WebSocketClient {
             this.socket.close()
           }
         } catch (e) {
+          console.error('Ping error:', e)
           this.reconnect()
         }
       }
@@ -141,15 +143,7 @@ export class WebSocketClient {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message))
     } else {
-      this.messageQueue.push(message)
-    }
-  }
-
-  flushMessageQueue () {
-    console.log('flushing message queue')
-    while (this.messageQueue.length > 0) {
-      const message = this.messageQueue.shift()
-      this.send(message)
+      console.warn('WebSocket is not open. Message not sent:', message)
     }
   }
 
