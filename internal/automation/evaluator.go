@@ -55,7 +55,6 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 // evaluateFinalResult computes the final result of multiple group evaluations
 // based on the specified logical operator (AND/OR).
 func evaluateFinalResult(results []bool, operator string) bool {
-	fmt.Println("GROUP RESULTS: ", results)
 	if operator == models.OperatorAnd {
 		for _, result := range results {
 			if !result {
