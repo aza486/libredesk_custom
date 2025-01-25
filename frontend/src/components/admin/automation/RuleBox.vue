@@ -36,7 +36,7 @@
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Conversation</SelectLabel>
-                  <SelectItem v-for="(field, key) in conversationFilters" :key="key" :value="key">
+                  <SelectItem v-for="(field, key) in currentFilters" :key="key" :value="key">
                     {{ field.label }}
                   </SelectItem>
                 </SelectGroup>
@@ -157,6 +157,7 @@
                   </TagsInputItem>
                   <TagsInputInput placeholder="Select values" />
                 </TagsInput>
+                <p class="text-xs text-gray-500 mt-1">Press enter to select a value</p>
               </div>
             </div>
 
@@ -184,7 +185,7 @@
 </template>
 
 <script setup>
-import { toRefs } from 'vue'
+import { toRefs, computed, watch } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
@@ -219,12 +220,35 @@ const props = defineProps({
   groupIndex: {
     type: Number,
     required: true
+  },
+  type: {
+    type: String,
+    required: true
   }
 })
 
-const { conversationFilters } = useConversationFilters()
+const { conversationFilters, newConversationFilters } = useConversationFilters()
 const { ruleGroup } = toRefs(props)
 const emit = defineEmits(['update-group', 'add-condition', 'remove-condition'])
+
+// Computed property to get the correct filters based on type
+const currentFilters = computed(() => {
+  return props.type === 'new_conversation'
+    ? newConversationFilters.value
+    : conversationFilters.value
+})
+
+// Watch for type change and reset the rules as the fields will change
+watch(
+  () => props.type,
+  (newType, oldType) => {
+    // Make sure types have values and they are different.
+    if (newType !== oldType && newType && oldType) {
+      ruleGroup.value.rules = []
+      emitUpdate()
+    }
+  }
+)
 
 const handleGroupOperator = (value) => {
   ruleGroup.value.logical_op = value
@@ -287,18 +311,18 @@ const emitUpdate = () => {
 }
 
 const getFieldOperators = (field) => {
-  return conversationFilters.value[field]?.operators || []
+  return currentFilters.value[field]?.operators || []
 }
 
 const getFieldOptions = (field) => {
-  return conversationFilters.value[field]?.options || []
+  return currentFilters.value[field]?.options || []
 }
 
 const inputType = (index) => {
   const field = ruleGroup.value.rules[index]?.field
   const operator = ruleGroup.value.rules[index]?.operator
   if (['contains', 'not contains'].includes(operator)) return 'tag'
-  if (field) return conversationFilters.value[field].type
+  if (field) return currentFilters.value[field].type
   return ''
 }
 

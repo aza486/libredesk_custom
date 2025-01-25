@@ -46,7 +46,12 @@ export function useConversationFilters () {
         }
     }))
 
-    const conversationFilters = computed(() => ({
+    const newConversationFilters = computed(() => ({
+        email: {
+            label: 'Email',
+            type: FIELD_TYPE.TEXT,
+            operators: FIELD_OPERATORS.TEXT
+        },
         content: {
             label: 'Content',
             type: FIELD_TYPE.TEXT,
@@ -57,6 +62,49 @@ export function useConversationFilters () {
             type: FIELD_TYPE.TEXT,
             operators: FIELD_OPERATORS.TEXT
         },
+        status: {
+            label: 'Status',
+            type: FIELD_TYPE.SELECT,
+            operators: FIELD_OPERATORS.SELECT,
+            options: cStore.statusOptions
+        },
+        priority: {
+            label: 'Priority',
+            type: FIELD_TYPE.SELECT,
+            operators: FIELD_OPERATORS.SELECT,
+            options: cStore.priorityOptions
+        },
+        assigned_team: {
+            label: 'Assigned team',
+            type: FIELD_TYPE.SELECT,
+            operators: FIELD_OPERATORS.SELECT,
+            options: tStore.options
+        },
+        assigned_user: {
+            label: 'Assigned agent',
+            type: FIELD_TYPE.SELECT,
+            operators: FIELD_OPERATORS.SELECT,
+            options: uStore.options
+        },
+        hours_since_created: {
+            label: 'Hours since created',
+            type: FIELD_TYPE.NUMBER,
+            operators: FIELD_OPERATORS.NUMBER
+        },
+        hours_since_resolved: {
+            label: 'Hours since resolved',
+            type: FIELD_TYPE.NUMBER,
+            operators: FIELD_OPERATORS.NUMBER
+        },
+        inbox: {
+            label: 'Inbox',
+            type: FIELD_TYPE.SELECT,
+            operators: FIELD_OPERATORS.SELECT,
+            options: iStore.options
+        }
+    }))
+
+    const conversationFilters = computed(() => ({
         status: {
             label: 'Status',
             type: FIELD_TYPE.SELECT,
@@ -175,6 +223,7 @@ export function useConversationFilters () {
     return {
         conversationsListFilters,
         conversationFilters,
+        newConversationFilters,
         conversationActions,
         macroActions
     }

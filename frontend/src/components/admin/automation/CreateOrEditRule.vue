@@ -96,6 +96,7 @@
             @update-group="handleUpdateGroup"
             @add-condition="handleAddCondition"
             @remove-condition="handleRemoveCondition"
+            :type="form.values.type"
             :groupIndex="0"
           />
 
@@ -121,6 +122,7 @@
             @update-group="handleUpdateGroup"
             @add-condition="handleAddCondition"
             @remove-condition="handleRemoveCondition"
+            :type="form.values.type"
             :groupIndex="1"
           />
           <p class="font-semibold">Perform these actions</p>
@@ -360,6 +362,15 @@ const areRulesValid = () => {
   // Group should have atleast one rule.
   if (rule.value.rules[0].groups[0].rules.length == 0) {
     return false
+  }
+
+  // Make sure each rule has all the required fields.
+  for (const group of rule.value.rules[0].groups) {
+    for (const rule of group.rules) {
+      if (!rule.value || !rule.operator || !rule.field) {
+        return false
+      }
+    }
   }
   return true
 }
