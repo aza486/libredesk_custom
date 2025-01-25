@@ -1,39 +1,41 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50">
+  <div class="min-h-screen flex flex-col bg-background">
     <header class="p-6">
-      <h1 class="text-xl font-bold text-gray-900">LibreDesk</h1>
+      <h1 class="text-2xl font-bold text-foreground">LibreDesk</h1>
     </header>
 
     <main class="flex-1 flex items-center justify-center p-4">
       <div class="w-full max-w-[400px]">
-        <Card class="bg-white border border-gray-200 shadow-lg">
+        <Card class="bg-card border border-border shadow-xl rounded-xl">
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-2xl font-bold text-gray-900">Reset Password</CardTitle>
-              <p class="text-gray-600">Enter your email to receive a password reset link.</p>
+              <CardTitle class="text-3xl font-bold text-foreground">Reset Password</CardTitle>
+              <p class="text-muted-foreground">
+                Enter your email to receive a password reset link.
+              </p>
             </div>
 
             <form @submit.prevent="requestResetAction" class="space-y-4">
               <div class="space-y-2">
-                <Label for="email" class="text-sm font-medium text-gray-700">Email</Label>
+                <Label for="email" class="text-sm font-medium text-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="Enter your email address"
                   v-model.trim="resetForm.email"
-                  :class="{ 'border-red-500': emailHasError }"
-                  class="w-full bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+                  :class="{ 'border-destructive': emailHasError }"
+                  class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
                 />
               </div>
 
               <Button
-                class="w-full bg-primary hover:bg-slate-500 text-white"
+                class="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2 transition-all duration-200 ease-in-out transform hover:scale-105"
                 :disabled="isLoading"
                 type="submit"
               >
                 <span v-if="isLoading" class="flex items-center justify-center">
                   <svg
-                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary-foreground"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -62,11 +64,13 @@
               v-if="errorMessage"
               :errorMessage="errorMessage"
               :border="true"
-              class="w-full bg-red-50 text-red-600 border-red-200 p-3 rounded-md text-sm"
+              class="w-full bg-destructive/10 text-destructive border-destructive/20 p-3 rounded-lg text-sm"
             />
 
             <div class="text-center">
-              <router-link to="/" class="text-sm text-blue-600 hover:text-blue-500"
+              <router-link
+                to="/"
+                class="text-sm text-primary hover:text-primary/80 transition-all duration-200 ease-in-out"
                 >Back to Login</router-link
               >
             </div>
@@ -76,12 +80,18 @@
     </main>
 
     <footer class="p-6 text-center">
-      <div class="text-sm text-gray-500 space-x-4">
-        <a href="#" class="hover:text-gray-700">Privacy Policy</a>
+      <div class="text-sm text-muted-foreground space-x-4">
+        <a href="#" class="hover:text-foreground transition-all duration-200 ease-in-out"
+          >Privacy Policy</a
+        >
         <span>•</span>
-        <a href="#" class="hover:text-gray-700">Terms of Service</a>
+        <a href="#" class="hover:text-foreground transition-all duration-200 ease-in-out"
+          >Terms of Service</a
+        >
         <span>•</span>
-        <a href="#" class="hover:text-gray-700">Legal Notice</a>
+        <a href="#" class="hover:text-foreground transition-all duration-200 ease-in-out"
+          >Legal Notice</a
+        >
       </div>
     </footer>
   </div>
@@ -130,7 +140,7 @@ const requestResetAction = async () => {
     })
     toast({
       title: 'Reset link sent',
-      description: 'Please check your email for the reset link.',
+      description: 'Please check your email for the reset link.'
     })
     router.push({ name: 'login' })
   } catch (err) {

@@ -1,26 +1,26 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50">
+  <div class="min-h-screen flex flex-col bg-background">
     <header class="p-6">
-      <h1 class="text-xl font-bold text-gray-900">LibreDesk</h1>
+      <h1 class="text-2xl font-bold text-foreground">LibreDesk</h1>
     </header>
 
     <main class="flex-1 flex items-center justify-center p-4">
       <div class="w-full max-w-[400px]">
-        <Card class="bg-white border border-gray-200 shadow-lg">
+        <Card class="bg-card border border-border shadow-xl rounded-xl">
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-2xl font-bold text-gray-900">Sign in</CardTitle>
-              <p class="text-gray-600">Sign in to your account</p>
+              <CardTitle class="text-3xl font-bold text-foreground">Sign in</CardTitle>
+              <p class="text-muted-foreground">Sign in to your account</p>
             </div>
 
-            <div v-if="enabledOIDCProviders.length" class="space-y-3">
+            <div v-if="enabledOIDCProviders.length" class="space-y-4">
               <Button
                 v-for="oidcProvider in enabledOIDCProviders"
                 :key="oidcProvider.id"
                 variant="outline"
                 type="button"
                 @click="redirectToOIDC(oidcProvider)"
-                class="w-full bg-white hover:bg-gray-50 text-gray-700 border-gray-300"
+                class="w-full bg-card hover:bg-secondary text-foreground border-border rounded-lg py-2 transition-all duration-200 ease-in-out transform hover:scale-105"
               >
                 <img :src="oidcProvider.logo_url" width="20" class="mr-2" alt="" />
                 {{ oidcProvider.name }}
@@ -28,36 +28,36 @@
 
               <div class="relative">
                 <div class="absolute inset-0 flex items-center">
-                  <span class="w-full border-t border-gray-200"></span>
+                  <span class="w-full border-t border-border"></span>
                 </div>
                 <div class="relative flex justify-center text-xs uppercase">
-                  <span class="px-2 text-gray-500 bg-white">Or continue with</span>
+                  <span class="px-2 text-muted-foreground bg-card">Or continue with</span>
                 </div>
               </div>
             </div>
 
             <form @submit.prevent="loginAction" class="space-y-4">
               <div class="space-y-2">
-                <Label for="email" class="text-sm font-medium text-gray-700">Email</Label>
+                <Label for="email" class="text-sm font-medium text-foreground">Email</Label>
                 <Input
                   id="email"
                   type="text"
                   placeholder="Enter your email"
                   v-model.trim="loginForm.email"
-                  :class="{ 'border-red-500': emailHasError }"
-                  class="w-full bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+                  :class="{ 'border-destructive': emailHasError }"
+                  class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
                 />
               </div>
 
               <div class="space-y-2">
-                <Label for="password" class="text-sm font-medium text-gray-700">Password</Label>
+                <Label for="password" class="text-sm font-medium text-foreground">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="Enter your password"
                   v-model="loginForm.password"
-                  :class="{ 'border-red-500': passwordHasError }"
-                  class="w-full bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+                  :class="{ 'border-destructive': passwordHasError }"
+                  class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
                 />
               </div>
 
@@ -66,23 +66,26 @@
                   <!-- <input
                     type="checkbox"
                     id="remember"
-                    class="w-4 h-4 rounded bg-white border-gray-300 text-blue-600"
+                    class="w-4 h-4 rounded bg-card border-border text-primary"
                   />
-                  <Label for="remember" class="text-sm text-gray-600">Remember me</Label> -->
+                  <Label for="remember" class="text-sm text-muted-foreground">Remember me</Label> -->
                 </div>
-                <router-link to="/reset-password" class="text-sm text-blue-600 hover:text-blue-500">
+                <router-link
+                  to="/reset-password"
+                  class="text-sm text-primary hover:text-primary/80 transition-all duration-200 ease-in-out"
+                >
                   Forgot password?
                 </router-link>
               </div>
 
               <Button
-                class="w-full bg-primary hover:bg-slate-500 text-white"
+                class="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2 transition-all duration-200 ease-in-out transform hover:scale-105"
                 :disabled="isLoading"
                 type="submit"
               >
                 <span v-if="isLoading" class="flex items-center justify-center">
                   <svg
-                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary-foreground"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -111,7 +114,7 @@
               v-if="errorMessage"
               :errorMessage="errorMessage"
               :border="true"
-              class="w-full bg-red-50 text-red-600 border-red-200 p-3 rounded-md text-sm"
+              class="w-full bg-destructive/10 text-destructive border-destructive/20 p-3 rounded-lg text-sm"
             />
           </CardContent>
         </Card>
@@ -119,8 +122,7 @@
     </main>
 
     <footer class="p-6 text-center">
-      <div class="text-sm text-gray-500 space-x-4">
-      </div>
+      <div class="text-sm text-muted-foreground space-x-4"></div>
     </footer>
   </div>
 </template>
