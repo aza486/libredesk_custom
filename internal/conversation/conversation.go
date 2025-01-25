@@ -170,6 +170,7 @@ type queries struct {
 	GetUnassignedConversations         *sqlx.Stmt `query:"get-unassigned-conversations"`
 	GetConversations                   string     `query:"get-conversations"`
 	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
+	GetUserActiveConversationsCount    *sqlx.Stmt `query:"get-user-active-conversations-count"`
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
@@ -352,6 +353,16 @@ func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User
 		c.BroadcastConversationUpdate(conversationUUID, "status", models.StatusOpen)
 	}
 	return nil
+}
+
+// ActiveUserConversationsCount returns the count of active conversations for a user. i.e. conversations not closed or resolved status.
+func (c *Manager) ActiveUserConversationsCount(userID int) (int, error) {
+	var count int
+	if err := c.q.GetUserActiveConversationsCount.Get(&count, userID); err != nil {
+		c.lo.Error("error fetching active conversation count", "error", err)
+		return count, envelope.NewError(envelope.GeneralError, "Error fetching active conversation count", nil)
+	}
+	return count, nil
 }
 
 // UpdateConversationLastMessage updates the last message details for a conversation.

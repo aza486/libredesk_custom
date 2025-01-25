@@ -47,7 +47,7 @@ export function useConversationFilters () {
     }))
 
     const newConversationFilters = computed(() => ({
-        email: {
+        contact_email: {
             label: 'Email',
             type: FIELD_TYPE.TEXT,
             operators: FIELD_OPERATORS.TEXT

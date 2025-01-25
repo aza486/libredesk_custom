@@ -37,6 +37,7 @@ CREATE TABLE teams (
 	"name" TEXT NOT NULL,
 	emoji TEXT NULL,
 	conversation_assignment_type conversation_assignment_type NOT NULL,
+	max_auto_assigned_conversations INT DEFAULT 0 NOT NULL,
 	business_hours_id INT REFERENCES business_hours(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
 	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
 	timezone TEXT NULL,

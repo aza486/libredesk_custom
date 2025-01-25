@@ -184,6 +184,9 @@ SET status_id = (SELECT id FROM conversation_statuses WHERE name = $2),
     updated_at = now()
 WHERE uuid = $1;
 
+-- name: get-user-active-conversations-count
+SELECT COUNT(*) FROM conversations WHERE status_id IN (SELECT id FROM conversation_statuses WHERE name NOT IN ('Resolved', 'Closed')) and assigned_user_id = $1;
+
 -- name: update-conversation-priority
 UPDATE conversations 
 SET priority_id = (SELECT id FROM conversation_priorities WHERE name = $2),

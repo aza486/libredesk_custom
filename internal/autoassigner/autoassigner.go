@@ -27,6 +27,7 @@ const (
 type conversationStore interface {
 	GetUnassignedConversations() ([]models.Conversation, error)
 	UpdateConversationUserAssignee(conversationUUID string, userID int, user umodels.User) error
+	ActiveUserConversationsCount(userID int) (int, error)
 }
 
 type teamStore interface {
@@ -37,10 +38,10 @@ type teamStore interface {
 // Engine represents a manager for assigning unassigned conversations
 // to team agents in a round-robin pattern.
 type Engine struct {
-	// TODO: Implement a persistent store for the balancer.
 	roundRobinBalancer map[int]*balance.Balance
 	// Mutex to protect the balancer map
-	balanceMu sync.Mutex
+	balanceMu              sync.Mutex
+	teamMaxAutoAssignments map[int]int
 
 	systemUser        umodels.User
 	conversationStore conversationStore
@@ -55,10 +56,11 @@ type Engine struct {
 // conversation manager, and logger.
 func New(teamStore teamStore, conversationStore conversationStore, systemUser umodels.User, lo *logf.Logger) (*Engine, error) {
 	var e = Engine{
-		conversationStore: conversationStore,
-		teamStore:         teamStore,
-		systemUser:        systemUser,
-		lo:                lo,
+		conversationStore:      conversationStore,
+		teamStore:              teamStore,
+		systemUser:             systemUser,
+		lo:                     lo,
+		teamMaxAutoAssignments: make(map[int]int),
 	}
 	balancer, err := e.populateTeamBalancer()
 	if err != nil {
@@ -136,6 +138,7 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 
 	for _, team := range teams {
 		if team.ConversationAssignmentType != AssignmentTypeRoundRobin {
+			e.lo.Warn("unsupported conversation assignment type", "team_id", team.ID, "type", team.ConversationAssignmentType)
 			continue
 		}
 
@@ -151,6 +154,9 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 			}
 			balancer[team.ID].Add(strconv.Itoa(user.ID), 1)
 		}
+
+		// Set max auto assigned conversations for the team.
+		e.teamMaxAutoAssignments[team.ID] = team.MaxAutoAssignedConversations
 	}
 	return balancer, nil
 }
@@ -169,9 +175,11 @@ func (e *Engine) assignConversations() error {
 
 	for _, conversation := range unassignedConversations {
 		// Get user from the pool.
-		userIDStr, err := e.getUserFromPool(conversation)
+		userIDStr, err := e.getUserFromPool(conversation.AssignedTeamID.Int)
 		if err != nil {
-			e.lo.Error("error fetching user from balancer pool", "conversation_uuid", conversation.UUID, "error", err)
+			if err != ErrTeamNotFound {
+				e.lo.Error("error fetching user from balancer pool", "conversation_uuid", conversation.UUID, "error", err)
+			}
 			continue
 		}
 
@@ -182,7 +190,20 @@ func (e *Engine) assignConversations() error {
 			continue
 		}
 
-		// Assign conversation.
+		// Get active conversations count for the user.
+		activeConversationsCount, err := e.conversationStore.ActiveUserConversationsCount(userID)
+		if err != nil {
+			e.lo.Error("error fetching active conversations count for user", "user_id", userID, "error", err)
+			continue
+		}
+
+		// Check if user has reached the max auto assigned conversations limit.
+		if activeConversationsCount >= e.teamMaxAutoAssignments[conversation.AssignedTeamID.Int] {
+			e.lo.Debug("user has reached max auto assigned conversations limit, skipping auto assignment", "user_id", userID, "user_active_conversations_count", activeConversationsCount, "max_auto_assigned_conversations", e.teamMaxAutoAssignments[conversation.AssignedTeamID.Int])
+			continue
+		}
+
+		// Assign conversation to user.
 		if err := e.conversationStore.UpdateConversationUserAssignee(conversation.UUID, userID, e.systemUser); err != nil {
 			e.lo.Error("error assigning conversation", "conversation_uuid", conversation.UUID, "error", err)
 			continue
@@ -192,13 +213,12 @@ func (e *Engine) assignConversations() error {
 }
 
 // getUserFromPool returns user ID from the team balancer pool.
-func (e *Engine) getUserFromPool(conversation models.Conversation) (string, error) {
+func (e *Engine) getUserFromPool(assignedTeamID int) (string, error) {
 	e.balanceMu.Lock()
 	defer e.balanceMu.Unlock()
 
-	pool, ok := e.roundRobinBalancer[conversation.AssignedTeamID.Int]
+	pool, ok := e.roundRobinBalancer[assignedTeamID]
 	if !ok {
-		e.lo.Warn("team not found in balancer", "team_id", conversation.AssignedTeamID.Int)
 		return "", ErrTeamNotFound
 	}
 	return pool.Get(), nil

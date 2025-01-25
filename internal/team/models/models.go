@@ -10,15 +10,16 @@ import (
 )
 
 type Team struct {
-	ID                         int         `db:"id" json:"id"`
-	CreatedAt                  time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt                  time.Time   `db:"updated_at" json:"updated_at"`
-	Emoji                      null.String `db:"emoji" json:"emoji"`
-	Name                       string      `db:"name" json:"name"`
-	ConversationAssignmentType string      `db:"conversation_assignment_type" json:"conversation_assignment_type,omitempty"`
-	Timezone                   string      `db:"timezone" json:"timezone,omitempty"`
-	BusinessHoursID            null.Int    `db:"business_hours_id" json:"business_hours_id,omitempty"`
-	SLAPolicyID                null.Int    `db:"sla_policy_id" json:"sla_policy_id,omitempty"`
+	ID                           int         `db:"id" json:"id"`
+	CreatedAt                    time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt                    time.Time   `db:"updated_at" json:"updated_at"`
+	Emoji                        null.String `db:"emoji" json:"emoji"`
+	Name                         string      `db:"name" json:"name"`
+	ConversationAssignmentType   string      `db:"conversation_assignment_type" json:"conversation_assignment_type,omitempty"`
+	Timezone                     string      `db:"timezone" json:"timezone,omitempty"`
+	BusinessHoursID              null.Int    `db:"business_hours_id" json:"business_hours_id,omitempty"`
+	SLAPolicyID                  null.Int    `db:"sla_policy_id" json:"sla_policy_id,omitempty"`
+	MaxAutoAssignedConversations int         `db:"max_auto_assigned_conversations" json:"max_auto_assigned_conversations"`
 }
 
 type Teams []Team

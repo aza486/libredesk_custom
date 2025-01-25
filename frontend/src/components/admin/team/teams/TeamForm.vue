@@ -20,13 +20,14 @@
         <FormControl>
           <Input type="text" placeholder="Name" v-bind="componentField" />
         </FormControl>
-        <FormDescription>Select an unique name.</FormDescription>
+        <FormDescription>Select an unique name for the team.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField name="conversation_assignment_type" v-slot="{ componentField }">
       <FormItem>
+        <FormLabel>Auto assignment type</FormLabel>
         <FormControl>
           <Select v-bind="componentField">
             <SelectTrigger>
@@ -44,6 +45,21 @@
         <FormDescription>
           Round robin: Conversations are assigned to team members in a round-robin fashion. <br />
           Manual: Conversations are to be picked by team members.
+        </FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="max_auto_assigned_conversations">
+      <FormItem>
+        <FormLabel>Maximum auto-assigned conversations</FormLabel>
+        <FormControl>
+          <Input type="number" placeholder="0" v-bind="componentField" />
+        </FormControl>
+        <FormDescription>
+          Maximum number of active conversations that can be auto-assigned to an agent at once.
+          Conversations in "Resolved" or "Closed" states do not count toward this limit. Set to 0
+          for unlimited.
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -105,7 +121,11 @@
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem v-for="sla in slaStore.options" :key="sla.value" :value="parseInt(sla.value)">
+                <SelectItem
+                  v-for="sla in slaStore.options"
+                  :key="sla.value"
+                  :value="parseInt(sla.value)"
+                >
                   {{ sla.label }}
                 </SelectItem>
               </SelectGroup>

@@ -41,8 +41,8 @@ const (
 	ConversationAssignedTeam       = "assigned_team"
 	ConversationHoursSinceCreated  = "hours_since_created"
 	ConversationHoursSinceResolved = "hours_since_resolved"
-	ContactEmail                   = "contact_email"
 	ConversationInbox              = "inbox"
+	ContactEmail                   = "contact_email"
 
 	EventConversationUserAssigned    = "conversation.user.assigned"
 	EventConversationTeamAssigned    = "conversation.team.assigned"
