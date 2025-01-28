@@ -12,22 +12,60 @@ DROP TYPE IF EXISTS "user_type" CASCADE; CREATE TYPE "user_type" AS ENUM ('agent
 DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('openai');
 DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation_execution_mode" AS ENUM ('all', 'first_match');
 DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "macro_visibility" AS ENUM ('all', 'team', 'user');
+DROP TYPE IF EXISTS "media_disposition" CASCADE; CREATE TYPE "media_disposition" AS ENUM ('inline', 'attachment');
 
-DROP TABLE IF EXISTS applied_slas CASCADE;
-CREATE TABLE applied_slas (
-   id BIGSERIAL PRIMARY KEY,
-   created_at TIMESTAMPTZ DEFAULT NOW(),
-   updated_at TIMESTAMPTZ DEFAULT NOW(),
-   conversation_id BIGINT REFERENCES conversations(id),
-   sla_policy_id BIGINT REFERENCES sla_policies(id),
-   first_response_deadline_at TIMESTAMPTZ NULL,
-   resolution_deadline_at TIMESTAMPTZ NULL,
-   first_response_breached_at TIMESTAMPTZ NULL,
-   resolution_breached_at TIMESTAMPTZ NULL,
-   first_response_met_at TIMESTAMPTZ NULL,
-   resolution_met_at TIMESTAMPTZ NULL
+-- Sequence to generate reference number for conversations.
+DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
+
+-- Function to generate reference number for conversations with optional prefix.
+CREATE OR REPLACE FUNCTION generate_reference_number(prefix TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    RETURN prefix || nextval('conversation_reference_number_sequence');
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TABLE IF EXISTS sla_policies CASCADE;
+CREATE TABLE sla_policies (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+	name TEXT NOT NULL,
+	description TEXT NULL,
+	first_response_time TEXT NOT NULL,
+	resolution_time TEXT NOT NULL,
+	CONSTRAINT constraint_sla_policies_on_name CHECK (length(name) <= 140),
+	CONSTRAINT constraint_sla_policies_on_description CHECK (length(description) <= 300)
 );
-CREATE INDEX index_applied_slas_on_conversation_id ON applied_slas (conversation_id);
+
+DROP TABLE IF EXISTS business_hours CASCADE;
+CREATE TABLE business_hours (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+	name TEXT NOT NULL,
+	description TEXT NULL,
+	is_always_open BOOL DEFAULT false NOT NULL,
+	hours JSONB NOT NULL,
+	holidays JSONB DEFAULT '{}'::jsonb NOT NULL,
+	CONSTRAINT constraint_business_hours_on_name CHECK (length(name) <= 140),
+	CONSTRAINT constraint_business_hours_on_description CHECK (length(description) <= 300)
+);
+
+DROP TABLE IF EXISTS inboxes CASCADE;
+CREATE TABLE inboxes (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+	"name" TEXT NOT NULL,
+	deleted_at TIMESTAMPTZ NULL,
+	channel channels NOT NULL,
+	enabled bool DEFAULT TRUE NOT NULL,
+	csat_enabled bool DEFAULT false NOT NULL,
+	config jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"from" TEXT NULL,
+	CONSTRAINT constraint_inboxes_on_name CHECK (length("name") <= 140)
+);
 
 DROP TABLE IF EXISTS teams CASCADE;
 CREATE TABLE teams (
@@ -38,18 +76,33 @@ CREATE TABLE teams (
 	emoji TEXT NULL,
 	conversation_assignment_type conversation_assignment_type NOT NULL,
 	max_auto_assigned_conversations INT DEFAULT 0 NOT NULL,
+
+	-- Set to NULL when business hours or SLA policy is deleted.
 	business_hours_id INT REFERENCES business_hours(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
 	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE NULL,
+
 	timezone TEXT NULL,
 	CONSTRAINT constraint_teams_on_emoji CHECK (length(emoji) <= 1),
 	CONSTRAINT constraint_teams_on_name CHECK (length("name") <= 140),
-	CONSTRAINT constraint_teams_on_timezone CHECK (length(timezone) <= 50),
+	CONSTRAINT constraint_teams_on_timezone CHECK (length(timezone) <= 140),
 	CONSTRAINT constraint_teams_on_name_unique UNIQUE ("name")
+);
+
+DROP TABLE IF EXISTS roles CASCADE;
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    permissions TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
+    "name" TEXT UNIQUE NOT NULL,
+    description TEXT NULL,
+	CONSTRAINT constraint_roles_on_name CHECK (length("name") <= 50),
+	CONSTRAINT constraint_roles_on_description CHECK (length(description) <= 300)
 );
 
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     type user_type NOT NULL,
@@ -71,8 +124,7 @@ CREATE TABLE users (
     CONSTRAINT constraint_users_on_first_name CHECK (LENGTH(first_name) <= 140),
     CONSTRAINT constraint_users_on_last_name CHECK (LENGTH(last_name) <= 140)
 );
-CREATE UNIQUE INDEX constraint_users_on_email_and_type_unique 
-ON users (email, type) 
+CREATE UNIQUE INDEX index_users_on_email_and_type_when_deleted_at_is_null ON users (email, type) 
 WHERE deleted_at IS NULL;
 
 DROP TABLE IF EXISTS user_roles CASCADE;
@@ -80,21 +132,12 @@ CREATE TABLE user_roles (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+	-- Cascade deletes when user or role is deleted, as they are not useful without each other.
 	user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
 	role_id INT REFERENCES roles(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
-	CONSTRAINT constraint_user_roles_on_user_id_and_role_id_unique UNIQUE (user_id, role_id)
-);
 
-DROP TABLE IF EXISTS contact_channels CASCADE;
-CREATE TABLE contact_channels (
-	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT NOW(),
-	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	contact_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-	inbox_id INT NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE ON UPDATE CASCADE,
-	identifier TEXT NOT NULL,
-	CONSTRAINT constraint_contact_channels_on_identifier CHECK (length(identifier) <= 1000),
-	CONSTRAINT constraint_contact_channels_on_inbox_id_and_contact_id_unique UNIQUE (inbox_id, contact_id)
+	CONSTRAINT constraint_user_roles_on_user_id_and_role_id_unique UNIQUE (user_id, role_id)
 );
 
 DROP TABLE IF EXISTS conversation_statuses CASCADE;
@@ -102,8 +145,7 @@ CREATE TABLE conversation_statuses (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	"name" TEXT NOT NULL,
-	CONSTRAINT constraint_status_on_name_unique UNIQUE ("name")
+	"name" TEXT NOT NULL UNIQUE
 );
 
 DROP TABLE IF EXISTS conversation_priorities CASCADE;
@@ -111,8 +153,22 @@ CREATE TABLE conversation_priorities (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	"name" TEXT NOT NULL,
-	CONSTRAINT constraint_priority_on_name_unique UNIQUE ("name")
+	"name" TEXT NOT NULL UNIQUE
+);
+
+DROP TABLE IF EXISTS contact_channels CASCADE;
+CREATE TABLE contact_channels (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+	-- Cascade deletes when contact or inbox is deleted.
+	contact_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	inbox_id INT NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+
+	identifier TEXT NOT NULL,
+	CONSTRAINT constraint_contact_channels_on_identifier CHECK (length(identifier) <= 1000),
+	CONSTRAINT constraint_contact_channels_on_inbox_id_and_contact_id_unique UNIQUE (inbox_id, contact_id)
 );
 
 DROP TABLE IF EXISTS conversations CASCADE;
@@ -120,22 +176,34 @@ CREATE TABLE conversations (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    "uuid" UUID DEFAULT gen_random_uuid() NOT NULL,
-	reference_number BIGSERIAL UNIQUE,
-    contact_id INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
-	contact_channel_id INT REFERENCES contact_channels(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    assigned_user_id INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    "uuid" UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+	reference_number TEXT DEFAULT generate_reference_number('') NOT NULL UNIQUE,
+
+	-- Cascade deletes when contact is deleted.
+    contact_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+
+	-- Set to NULL when assigned user or team is deleted.
+    assigned_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     assigned_team_id INT REFERENCES teams(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    inbox_id INT NOT NULL,
-    meta JSONB DEFAULT '{}'::jsonb NOT NULL,
+
+	-- Set to NULL when SLA policy is deleted.
+	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE,
+	
+    -- Cascade deletes when inbox is deleted.
+	inbox_id INT REFERENCES inboxes(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+
+	-- Restrict delete.
+	contact_channel_id INT REFERENCES contact_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE NOT NULL,
+	status_id INT REFERENCES conversation_statuses(id) ON DELETE RESTRICT ON UPDATE CASCADE NOT NULL,
+    priority_id INT REFERENCES conversation_priorities(id) ON DELETE RESTRICT ON UPDATE CASCADE,	
+    
+	meta JSONB DEFAULT '{}'::jsonb NOT NULL,
 	custom_attributes JSONB DEFAULT '{}'::jsonb NOT NULL,
     assignee_last_seen_at TIMESTAMPTZ DEFAULT NOW(),
     first_reply_at TIMESTAMPTZ NULL,
     closed_at TIMESTAMPTZ NULL,
     resolved_at TIMESTAMPTZ NULL,
-    status_id INT REFERENCES conversation_statuses(id),
-    priority_id INT REFERENCES conversation_priorities(id),
-	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE,
+
 	"subject" TEXT NULL,
 	last_message_at TIMESTAMPTZ NULL,
 	last_message TEXT NULL,
@@ -148,20 +216,20 @@ CREATE TABLE conversation_messages (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    "uuid" UUID DEFAULT gen_random_uuid() NOT NULL,
+    "uuid" UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
     "type" message_type NOT NULL,
     status message_status NOT NULL,
-    private BOOL NULL,
-    conversation_id BIGSERIAL REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    private BOOL DEFAULT FALSE NOT NULL,
+    conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     content_type content_type NULL,
     "content" TEXT NULL,
 	text_content TEXT NULL,
     source_id TEXT NULL,
- 	sender_id INT REFERENCES users(id) NULL,
+ 	sender_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
     sender_type message_sender_type NOT NULL,
     meta JSONB DEFAULT '{}'::JSONB NULL
 );
-CREATE INDEX idx_conversation_messages_text_content ON conversation_messages 
+CREATE INDEX index_conversation_messages_on_text_content_trgm ON conversation_messages
 USING GIN (text_content gin_trgm_ops);
 
 DROP TABLE IF EXISTS automation_rules CASCADE;
@@ -190,11 +258,12 @@ CREATE TABLE macros (
    actions JSONB DEFAULT '{}'::jsonb NOT NULL,
    visibility macro_visibility NOT NULL,
    message_content TEXT NOT NULL,
-   user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
-   team_id INT REFERENCES teams(id) ON DELETE CASCADE ON UPDATE CASCADE,
+   -- Cascade deletes when user is deleted.
+   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+   team_id BIGINT REFERENCES teams(id) ON DELETE CASCADE ON UPDATE CASCADE,
    usage_count INT DEFAULT 0 NOT NULL,
-   CONSTRAINT name_length CHECK (length(name) <= 255),
-   CONSTRAINT message_content_length CHECK (length(message_content) <= 1000)
+   CONSTRAINT name_length CHECK (length(name) <= 140),
+   CONSTRAINT message_content_length CHECK (length(message_content) <= 5000)
 );
 
 DROP TABLE IF EXISTS conversation_participants CASCADE;
@@ -202,37 +271,25 @@ CREATE TABLE conversation_participants (
 	id BIGSERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
-	conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE,
-	CONSTRAINT constraint_conversation_participants_conversation_id_and_user_id_unique UNIQUE (conversation_id, user_id)
+	-- Cascade deletes when user or conversation is deleted.
+	user_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL
 );
+CREATE UNIQUE INDEX index_unique_conversation_participants_on_conversation_id_and_user_id ON conversation_participants (conversation_id, user_id);
 
-DROP TABLE IF EXISTS inboxes CASCADE;
-CREATE TABLE inboxes (
-	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT NOW(),
-	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	deleted_at TIMESTAMPTZ NULL,
-	channel "channels" NOT NULL,
-	enabled bool DEFAULT TRUE NOT NULL,
-	csat_enabled bool DEFAULT false NOT NULL,
-	config jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"name" VARCHAR(140) NOT NULL,
-	"from" VARCHAR(500) NULL
-);
 
 DROP TABLE IF EXISTS media CASCADE;
 CREATE TABLE media (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL UNIQUE,
 	store "media_store" NOT NULL,
 	filename TEXT NOT NULL,
 	content_type TEXT NOT NULL,
 	model_id INT NULL,
 	model_type TEXT NULL,
-	disposition VARCHAR(50) NULL,
+	disposition media_disposition DEFAULT 'attachment' NOT NULL,
 	content_id TEXT NULL,
 	"size" INT NULL,
 	meta jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -245,30 +302,20 @@ CREATE TABLE oidc (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
+	"name" TEXT NULL,
 	provider_url TEXT NOT NULL,
 	client_id TEXT NOT NULL,
 	client_secret TEXT NOT NULL,
 	enabled bool DEFAULT TRUE NOT NULL,
 	provider VARCHAR NULL,
-	"name" TEXT NULL,
 	CONSTRAINT constraint_oidc_on_name CHECK (length("name") <= 140)
 );
 
-DROP TABLE IF EXISTS roles CASCADE;
-CREATE TABLE roles (
-    id SERIAL PRIMARY KEY,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    permissions TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
-    "name" TEXT UNIQUE NOT NULL,
-    description TEXT NULL,
-	CONSTRAINT constraint_roles_on_name CHECK (length("name") <= 50),
-);
 
 DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	"key" TEXT NOT NULL,
+	"key" TEXT NOT NULL UNIQUE,
 	value jsonb DEFAULT '{}'::jsonb NOT NULL,
 	CONSTRAINT settings_key_key UNIQUE ("key")
 );
@@ -277,10 +324,9 @@ CREATE INDEX index_settings_on_key ON settings USING btree ("key");
 DROP TABLE IF EXISTS tags CASCADE;
 CREATE TABLE tags (
 	id SERIAL PRIMARY KEY,
-	"name" TEXT NOT NULL,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	CONSTRAINT constraint_tags_on_name_unique UNIQUE ("name"),
+	"name" TEXT NOT NULL UNIQUE,
 	CONSTRAINT constraint_tags_on_name CHECK (length("name") <= 140)
 );
 
@@ -289,12 +335,13 @@ CREATE TABLE team_members (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	team_id INT REFERENCES teams(id) ON DELETE CASCADE ON UPDATE CASCADE,
-	user_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	-- Cascade deletes when team or user is deleted.
+	team_id BIGINT REFERENCES teams(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	user_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
 	emoji TEXT NULL,
-	CONSTRAINT constraint_team_members_on_team_id_and_user_id_unique UNIQUE (team_id, user_id),
 	CONSTRAINT constraint_team_members_on_emoji CHECK (length(emoji) <= 1)
 );
+CREATE UNIQUE INDEX index_unique_team_members_on_team_id_and_user_id ON team_members (team_id, user_id);
 
 DROP TABLE IF EXISTS templates CASCADE;
 CREATE TABLE templates (
@@ -310,27 +357,31 @@ CREATE TABLE templates (
 	CONSTRAINT constraint_templates_on_name CHECK (length("name") <= 140),
 	CONSTRAINT constraint_templates_on_subject CHECK (length(subject) <= 1000)
 );
-CREATE UNIQUE INDEX unique_index_templates_on_is_default_when_is_default_is_true ON templates USING btree (is_default)
+CREATE UNIQUE INDEX index_unique_templates_on_is_default_when_is_default_is_true ON templates USING btree (is_default)
 WHERE (is_default = true);
 
 DROP TABLE IF EXISTS conversation_tags CASCADE;
 CREATE TABLE conversation_tags (
 	id BIGSERIAL PRIMARY KEY,
-	tag_id INT REFERENCES tags(id) ON DELETE CASCADE ON UPDATE CASCADE,
-	conversation_id BIGSERIAL REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	CONSTRAINT constraint_conversation_tags_on_conversation_id_and_tag_id_unique UNIQUE (conversation_id, tag_id)
+	-- Cascade deletes when tag or conversation is deleted.
+	tag_id INT REFERENCES tags(id) ON DELETE CASCADE ON UPDATE CASCADE,
+	conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+CREATE UNIQUE INDEX index_unique_conversation_tags_on_tag_id_and_conversation_id ON conversation_tags (tag_id, conversation_id);
 
 DROP TABLE IF EXISTS csat_responses CASCADE;
 CREATE TABLE csat_responses (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-	uuid UUID DEFAULT gen_random_uuid(),
-    conversation_id BIGSERIAL REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    assigned_agent_id INT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
+	uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+
+	-- Keep CSAT responses even if the conversation or agent is deleted.
+    conversation_id BIGINT REFERENCES conversations(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+    assigned_agent_id BIGINT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+
     rating INT DEFAULT 0 NOT NULL,
     feedback TEXT NULL,
     response_timestamp TIMESTAMPTZ NULL,
@@ -338,30 +389,6 @@ CREATE TABLE csat_responses (
     CONSTRAINT constraint_csat_responses_on_feedback CHECK (length(feedback) <= 1000)
 );
 
-DROP TABLE IF EXISTS business_hours CASCADE;
-CREATE TABLE business_hours (
-    id SERIAL PRIMARY KEY,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-	name TEXT NOT NULL,
-	description TEXT NULL,
-	is_always_open BOOL DEFAULT false NOT NULL,
-	hours JSONB NOT NULL,
-	holidays JSONB DEFAULT '{}'::jsonb NOT NULL,
-	CONSTRAINT constraint_business_hours_on_name CHECK (length(name) <= 140)
-);
-
-DROP TABLE IF EXISTS sla_policies CASCADE;
-CREATE TABLE sla_policies (
-	id SERIAL PRIMARY KEY,
-	created_at TIMESTAMPTZ DEFAULT NOW(),
-	updated_at TIMESTAMPTZ DEFAULT NOW(),
-	name TEXT NOT NULL,
-	description TEXT NULL,
-	first_response_time TEXT NOT NULL,
-	resolution_time TEXT NOT NULL,
-	CONSTRAINT constraint_sla_policies_on_name CHECK (length(name) <= 140)
-);
 
 DROP TABLE IF EXISTS views CASCADE;
 CREATE TABLE views (
@@ -370,8 +397,27 @@ CREATE TABLE views (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     name TEXT NOT NULL,
     filters JSONB NOT NULL,
-    user_id INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+	-- Delete user views when user is deleted.
+    user_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	CONSTRAINT constraint_views_on_name CHECK (length(name) <= 140)
+);
+
+DROP TABLE IF EXISTS applied_slas CASCADE;
+CREATE TABLE applied_slas (
+	id BIGSERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+	-- Conversation / SLA policy maybe deleted but for reports the applied SLA should remain.
+	conversation_id BIGINT REFERENCES conversations(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+
+	first_response_deadline_at TIMESTAMPTZ NULL,
+	resolution_deadline_at TIMESTAMPTZ NULL,
+	first_response_breached_at TIMESTAMPTZ NULL,
+	resolution_breached_at TIMESTAMPTZ NULL,
+	first_response_met_at TIMESTAMPTZ NULL,
+	resolution_met_at TIMESTAMPTZ NULL
 );
 
 DROP TABLE IF EXISTS ai_providers CASCADE;
@@ -379,15 +425,14 @@ CREATE TABLE ai_providers (
 	id SERIAL PRIMARY KEY,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 	updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-	name TEXT NOT NULL,
+	name TEXT NOT NULL UNIQUE,
 	provider ai_provider NOT NULL,
 	config JSONB NOT NULL DEFAULT '{}',
 	is_default BOOLEAN NOT NULL DEFAULT FALSE,
 	CONSTRAINT constraint_ai_providers_on_name CHECK (length(name) <= 140)
 );
-CREATE UNIQUE INDEX unique_index_ai_providers_on_is_default_when_is_default_is_true ON ai_providers USING btree (is_default)
+CREATE UNIQUE INDEX index_unique_ai_providers_on_is_default_when_is_default_is_true ON ai_providers USING btree (is_default)
 WHERE (is_default = true);
-CREATE INDEX index_ai_providers_on_name ON ai_providers USING btree (name);
 
 DROP TABLE IF EXISTS ai_prompts CASCADE;
 CREATE TABLE ai_prompts (
@@ -407,17 +452,12 @@ INSERT INTO ai_providers
 VALUES('openai', 'openai', '{"api_key": ""}'::jsonb, true);
 
 -- Default AI prompts
--- TODO: Narrow down the list of prompts.
-INSERT INTO public.ai_prompts ("key", "content", title)
+INSERT INTO ai_prompts ("key", "content", title)
 VALUES
 ('make_friendly', 'Modify the text to make it more friendly and approachable.', 'Make Friendly'),
 ('make_concise', 'Simplify the text to make it more concise and to the point.', 'Make Concise'),
 ('add_empathy', 'Add empathy to the text while retaining the original meaning.', 'Add Empathy'),
 ('adjust_positive_tone', 'Adjust the tone of the text to make it sound more positive and reassuring.', 'Adjust Positive Tone'),
-('provide_clear_explanation', 'Rewrite the text to provide a clearer explanation of the issue or solution.', 'Provide Clear Explanation'),
-('add_urgency', 'Modify the text to convey a sense of urgency without being rude.', 'Add Urgency'),
-('make_actionable', 'Rephrase the text to clearly specify the next steps for the customer.', 'Make Actionable'),
-('adjust_neutral_tone', 'Adjust the tone to make it neutral and unbiased.', 'Adjust Neutral Tone'),
 ('make_professional', 'Rephrase the text to make it sound more formal and professional and to the point.', 'Make Professional');
 
 -- Default settings
@@ -426,7 +466,7 @@ VALUES
     ('app.lang', '"en"'::jsonb),
     ('app.root_url', '"http://localhost:9000"'::jsonb),
     ('app.logo_url', '"http://localhost:9000/logo.png"'::jsonb),
-    ('app.site_name', '"My helpdesk"'::jsonb),
+    ('app.site_name', '"LibreDesk"'::jsonb),
     ('app.favicon_url', '"http://localhost:9000/favicon.ico"'::jsonb),
     ('app.max_file_upload_size', '20'::jsonb),
     ('app.allowed_file_upload_extensions', '["*"]'::jsonb),
@@ -445,15 +485,10 @@ VALUES
     ('notification.email.enabled', 'false'::jsonb);
 
 -- Default conversation priorities
-INSERT INTO conversation_priorities
-("name")
-VALUES('Low');
-INSERT INTO conversation_priorities
-("name")
-VALUES('Medium');
-INSERT INTO conversation_priorities
-("name")
-VALUES('High');
+INSERT INTO conversation_priorities (name) VALUES
+('Low'),
+('Medium'),
+('High');
 
 -- Default conversation statuses
 INSERT INTO conversation_statuses (name) VALUES

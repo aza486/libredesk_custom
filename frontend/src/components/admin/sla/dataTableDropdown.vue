@@ -51,10 +51,11 @@ import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http.js'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const router = useRouter()
-const emit = useEmitter()
+const emitter = useEmitter()
 const alertOpen = ref(false)
 
 const props = defineProps({
@@ -72,10 +73,19 @@ function edit(id) {
 }
 
 async function handleDelete() {
-  await api.deleteSLA(props.role.id)
-  alertOpen.value = false
-  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
-    model: 'sla'
-  })
+  try {
+    await api.deleteSLA(props.role.id)
+    emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
+      model: 'sla'
+    })
+  } catch (err) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(err).message
+    })
+  } finally {
+    alertOpen.value = false
+  }
 }
 </script>

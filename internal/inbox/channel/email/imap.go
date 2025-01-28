@@ -63,7 +63,7 @@ func (e *Email) processMailbox(cfg IMAPConfig) error {
 	}
 
 	// TODO: Set value from config.
-	since := time.Now().Add(-12 * time.Hour)
+	since := time.Now().Add(-24 * time.Hour)
 
 	searchData, err := e.searchMessages(client, since)
 	if err != nil {
@@ -217,6 +217,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 		incomingMsg.Message.ContentType = conversation.ContentTypeText
 	}
 
+	// Remove the angle brackets from the In-Reply-To and References headers.
 	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envelope.GetHeader("In-Reply-To"), "<", ""), ">", "")
 	references := strings.Fields(envelope.GetHeader("References"))
 	for i, ref := range references {

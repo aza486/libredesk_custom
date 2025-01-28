@@ -175,7 +175,7 @@ func handleApplyMacro(r *fastglue.Request) error {
 	for _, act := range incomingActions {
 		if actionTypes[act.Type] {
 			app.lo.Warn("duplicate action types found in macro apply apply request", "action", act.Type, "user_id", user.ID)
-			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Duplicate action types not allowed", nil, envelope.InputError)
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Duplicate actions are not allowed", nil, envelope.InputError)
 		}
 		actionTypes[act.Type] = true
 	}

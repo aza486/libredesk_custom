@@ -82,7 +82,6 @@ func (m *Manager) Delete(id int) error {
 	}
 
 	if _, err := m.q.DeleteStatus.Exec(id); err != nil {
-		// Check if the error is a foreign key error.
 		if dbutil.IsForeignKeyError(err) {
 			return envelope.NewError(envelope.InputError, "Cannot delete status as it is in use, Please remove this status from all conversations before deleting.", nil)
 		}

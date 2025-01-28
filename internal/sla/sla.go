@@ -24,7 +24,7 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs            embed.FS
+	efs embed.FS
 )
 
 const (
@@ -110,7 +110,7 @@ func (m *Manager) GetAll() ([]models.SLAPolicy, error) {
 	return slas, nil
 }
 
-// Create adds a new SLA policy.
+// Create creates a new SLA policy.
 func (m *Manager) Create(name, description string, firstResponseTime, resolutionTime string) error {
 	if _, err := m.q.InsertSLA.Exec(name, description, firstResponseTime, resolutionTime); err != nil {
 		m.lo.Error("error inserting SLA", "error", err)
@@ -119,7 +119,7 @@ func (m *Manager) Create(name, description string, firstResponseTime, resolution
 	return nil
 }
 
-// Delete removes an SLA policy.
+// Delete deletes an SLA policy.
 func (m *Manager) Delete(id int) error {
 	if _, err := m.q.DeleteSLA.Exec(id); err != nil {
 		m.lo.Error("error deleting SLA", "error", err)

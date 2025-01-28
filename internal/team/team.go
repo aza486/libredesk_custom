@@ -92,7 +92,7 @@ func (u *Manager) Get(id int) (models.Team, error) {
 	if err := u.q.GetTeam.Get(&team, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("team not found", "id", id, "error", err)
-			return team, nil
+			return team, envelope.NewError(envelope.InputError, "Team not found", nil)
 		}
 		u.lo.Error("error fetching team", "id", id, "error", err)
 		return team, envelope.NewError(envelope.GeneralError, "Error fetching team", nil)

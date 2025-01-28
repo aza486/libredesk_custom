@@ -407,11 +407,11 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 	if conversation.AssignedTeamID.Int != assigneeID && assigneeID != 0 {
 		team, err := app.team.Get(assigneeID)
 		if err != nil {
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching team for setting SLA", nil, envelope.GeneralError)
+			return sendErrorEnvelope(r, err)
 		}
 		if team.SLAPolicyID.Int != 0 {
-			if err := app.conversation.ApplySLA(conversation.UUID, conversation.ID, team.SLAPolicyID.Int, user); err != nil {
-				return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error applying SLA policy", nil, envelope.GeneralError)
+			if err := app.conversation.ApplySLA(conversation.UUID, conversation.ID, conversation.AssignedTeamID.Int, team.SLAPolicyID.Int, user); err != nil {
+				return sendErrorEnvelope(r, err)
 			}
 		}
 	}

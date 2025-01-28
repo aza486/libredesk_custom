@@ -205,10 +205,11 @@ type queries struct {
 // CreateConversation creates a new conversation and returns its ID and UUID.
 func (c *Manager) CreateConversation(contactID, contactChannelID, inboxID int, lastMessage string, lastMessageAt time.Time, subject string) (int, string, error) {
 	var (
-		id   int
-		uuid string
+		id     int
+		uuid   string
+		prefix string
 	)
-	if err := c.q.InsertConversation.QueryRow(contactID, contactChannelID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject).Scan(&id, &uuid); err != nil {
+	if err := c.q.InsertConversation.QueryRow(contactID, contactChannelID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject, prefix).Scan(&id, &uuid); err != nil {
 		c.lo.Error("error inserting new conversation into the DB", "error", err)
 		return id, uuid, err
 	}
@@ -740,9 +741,10 @@ func (m *Manager) UnassignOpen(userID int) error {
 }
 
 // ApplySLA applies the SLA policy to a conversation.
-func (m *Manager) ApplySLA(conversationUUID string, conversationID, policyID int, actor umodels.User) error {
-	policy, err := m.slaStore.ApplySLA(conversationID, 0, policyID)
+func (m *Manager) ApplySLA(conversationUUID string, conversationID, assignedTeamID, policyID int, actor umodels.User) error {
+	policy, err := m.slaStore.ApplySLA(conversationID, assignedTeamID, policyID)
 	if err != nil {
+		m.lo.Error("error applying SLA", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error applying SLA", nil)
 	}
 
@@ -808,7 +810,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Con
 	case amodels.ActionSetSLA:
 		m.lo.Debug("executing apply SLA action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
 		slaPolicyID, _ := strconv.Atoi(action.Value[0])
-		if err := m.ApplySLA(conversation.UUID, conversation.ID, slaPolicyID, user); err != nil {
+		if err := m.ApplySLA(conversation.UUID, conversation.ID, conversation.AssignedTeamID.Int, slaPolicyID, user); err != nil {
 			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
 		}
 	case amodels.ActionSetTags:

@@ -66,7 +66,7 @@
         key="empty"
         class="px-4 py-8"
         title="No conversations found"
-        message="Try adjusting your filters"
+        message="Try adjusting filters"
         :icon="MessageCircleQuestion"
       />
 

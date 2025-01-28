@@ -4,9 +4,25 @@ SET snoozed_until = NULL, status_id = (SELECT id FROM conversation_statuses WHER
 WHERE snoozed_until <= now();
 
 -- name: insert-conversation
+WITH 
+status_id AS (
+   SELECT id FROM conversation_statuses WHERE name = $3
+),
+reference_number AS (
+   SELECT generate_reference_number($8) as reference_number
+)
 INSERT INTO conversations
-(contact_id, contact_channel_id, status_id, inbox_id, last_message, last_message_at, subject)
-VALUES($1, $2, (SELECT id FROM conversation_statuses WHERE name = $3), $4, $5, $6, $7)
+(contact_id, contact_channel_id, status_id, inbox_id, last_message, last_message_at, subject, reference_number)
+VALUES(
+   $1, 
+   $2, 
+   (SELECT id FROM status_id), 
+   $4, 
+   $5, 
+   $6, 
+   $7, 
+   (SELECT reference_number FROM reference_number)
+)
 RETURNING id, uuid;
 
 -- name: get-conversations

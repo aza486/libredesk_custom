@@ -4,7 +4,7 @@ import { isGoDuration } from '@/utils/strings'
 export const formSchema = z.object({
   name: z.string().describe('Name').default(''),
   from: z.string().describe('From address').default(''),
-  enabled: z.boolean().describe('Enabled').default(true).optional(),
+  enabled: z.boolean().describe('Enabled').default(true),
   csat_enabled: z.boolean().describe('CSAT').default(false).optional(),
   imap: z
     .object({

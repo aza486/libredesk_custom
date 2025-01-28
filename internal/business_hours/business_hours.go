@@ -91,6 +91,9 @@ func (m *Manager) Create(name string, description null.String, isAlwaysOpen bool
 // Delete deletes business hours by ID.
 func (m *Manager) Delete(id int) error {
 	if _, err := m.q.DeleteBusinessHours.Exec(id); err != nil {
+		if dbutil.IsForeignKeyError(err) {
+			return envelope.NewError(envelope.GeneralError, "Cannot delete business hours as it is being used", nil)
+		}
 		m.lo.Error("error deleting business hours", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting business hours", nil)
 	}

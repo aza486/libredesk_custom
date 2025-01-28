@@ -138,7 +138,6 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 
 	for _, team := range teams {
 		if team.ConversationAssignmentType != AssignmentTypeRoundRobin {
-			e.lo.Warn("unsupported conversation assignment type", "team_id", team.ID, "type", team.ConversationAssignmentType)
 			continue
 		}
 
