@@ -93,6 +93,16 @@ func (m *Manager) Delete(id int) error {
 
 // Update updates a status by id.
 func (m *Manager) Update(id int, name string) error {
+	// Disallow updating of default statuses.
+	status, err := m.Get(id)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
+	}
+
+	if slices.Contains(models.DefaultStatuses, status.Name) {
+		return envelope.NewError(envelope.InputError, "Cannot update default status", nil)
+	}
+
 	if _, err := m.q.UpdateStatus.Exec(id, name); err != nil {
 		m.lo.Error("error updating status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)

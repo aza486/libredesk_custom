@@ -1,7 +1,10 @@
 <template>
   <Dialog v-model:open="dialogOpen">
     <DropdownMenu>
-      <DropdownMenuTrigger as-child>
+      <DropdownMenuTrigger
+        as-child
+        v-if="!CONVERSATION_DEFAULT_STATUSES_LIST.includes(props.status.name)"
+      >
         <Button variant="ghost" class="w-8 h-8 p-0">
           <span class="sr-only">Open menu</span>
           <MoreHorizontal class="w-4 h-4" />
@@ -9,14 +12,9 @@
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem>Edit</DropdownMenuItem>
+          <DropdownMenuItem> Edit </DropdownMenuItem>
         </DialogTrigger>
-        <DropdownMenuItem
-          @click="() => (alertOpen = true)"
-          v-if="!CONVERSATION_DEFAULT_STATUSES_LIST.includes(props.status.name)"
-        >
-          Delete
-        </DropdownMenuItem>
+        <DropdownMenuItem @click="() => (alertOpen = true)"> Delete </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
