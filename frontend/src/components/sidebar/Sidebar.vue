@@ -133,155 +133,118 @@ const reportsNavItems = [
 const adminNavItems = [
   {
     title: 'Workspace',
-    description: 'Configure general app settings',
-    href: '/admin/general',
     children: [
       {
         title: 'General',
         href: '/admin/general',
-        description: 'Configure general app settings',
         permissions: ['general_settings:manage']
+      },
+      {
+        title: 'Business Hours',
+        href: '/admin/business-hours',
+        permissions: ['business_hours:manage']
+      },
+      {
+        title: 'SLA',
+        href: '/admin/sla',
+        permissions: ['sla:manage']
       }
     ]
   },
   {
     title: 'Conversations',
-    href: '/admin/conversations',
-    description: 'Manage tags, macros and statuses.',
+    description: 'Manage tags, macros, and statuses.',
     children: [
       {
         title: 'Tags',
         href: '/admin/conversations/tags',
-        description: 'Manage conversation tags.',
         permissions: ['tags:manage']
       },
       {
         title: 'Macros',
         href: '/admin/conversations/macros',
-        description: 'Manage macros.',
-        permissions: ['tags:manage']
+        permissions: ['macros:manage']
       },
       {
         title: 'Statuses',
         href: '/admin/conversations/statuses',
-        description: 'Manage conversation statuses.',
-        permissions: ['tags:manage']
+        permissions: ['status:manage']
       }
     ]
   },
   {
     title: 'Inboxes',
-    href: '/admin/inboxes',
-    description: 'Manage your inboxes',
+    description: 'Manage inboxes.',
     children: [
       {
         title: 'Inboxes',
         href: '/admin/inboxes',
-        description: 'Manage your inboxes',
-        permissions: ['tags:manage']
+        permissions: ['inboxes:manage']
       }
     ]
   },
   {
-    title: 'Teams',
-    href: '/admin/teams',
-    description: 'Manage teams, manage agents and roles',
+    title: 'Teammates',
+    description: 'Manage users, teams, and roles.',
     children: [
       {
         title: 'Users',
         href: '/admin/teams/users',
-        description: 'Manage users',
-        permissions: ['tags:manage']
+        permissions: ['users:manage']
       },
       {
         title: 'Teams',
         href: '/admin/teams/teams',
-        description: 'Manage teams',
-        permissions: ['tags:manage']
+        permissions: ['teams:manage']
       },
       {
         title: 'Roles',
         href: '/admin/teams/roles',
-        description: 'Manage roles',
-        permissions: ['tags:manage']
+        permissions: ['roles:manage']
       }
     ]
   },
   {
     title: 'Automations',
-    href: '/admin/automations',
-    description: 'Manage automations and time triggers',
+    description: 'Manage automation rules.',
     children: [
       {
         title: 'Automations',
         href: '/admin/automations',
-        description: 'Manage automations',
-        permissions: ['tags:manage']
+        permissions: ['automations:manage']
       }
     ]
   },
   {
-    title: 'Email notifications',
-    href: '/admin/notification',
-    description: 'Configure SMTP',
+    title: 'Notifications',
+    description: 'Manage email notifications.',
     children: [
       {
-        title: 'Email notifications',
+        title: 'Notifications',
         href: '/admin/notification',
-        description: 'Configure SMTP',
-        permissions: ['tags:manage']
+        permissions: ['notification_settings:manage']
       }
     ]
   },
   {
-    title: 'Email templates',
-    href: '/admin/templates',
-    description: 'Manage email templates',
+    title: 'Templates',
+    description: 'Manage email templates.',
     children: [
       {
-        title: 'Email templates',
+        title: 'Templates',
         href: '/admin/templates',
-        description: 'Manage email templates',
-        permissions: ['tags:manage']
+        permissions: ['templates:manage']
       }
     ]
   },
   {
-    title: 'Business hours',
-    href: '/admin/business-hours',
-    description: 'Manage business hours',
+    title: 'Security',
+    description: 'Configure SSO and security.',
     children: [
       {
-        title: 'Business hours',
-        href: '/admin/business-hours',
-        description: 'Manage business hours',
-        permissions: ['tags:manage']
-      }
-    ]
-  },
-  {
-    title: 'SLA',
-    href: '/admin/sla',
-    description: 'Manage SLA policies',
-    children: [
-      {
-        title: 'SLA',
-        href: '/admin/sla',
-        description: 'Manage SLA policies',
-        permissions: ['tags:manage']
-      }
-    ]
-  },
-  {
-    title: 'SSO',
-    href: '/admin/oidc',
-    description: 'Manage OpenID SSO configurations',
-    children: [
-      {
-        title: 'SSO',
+        title: 'OpenID Connect SSO',
         href: '/admin/oidc',
-        description: 'Manage OpenID SSO configurations',
-        permissions: ['tags:manage']
+        permissions: ['oidc:manage']
       }
     ]
   }
@@ -469,7 +432,11 @@ const hasConversationOpen = computed(() => {
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem v-for="child in item.children" :key="child.title">
-                              <SidebarMenuSubButton size="sm" :isActive="isActiveParent(child.href)" asChild>
+                              <SidebarMenuSubButton
+                                size="sm"
+                                :isActive="isActiveParent(child.href)"
+                                asChild
+                              >
                                 <router-link :to="child.href">
                                   <span>{{ child.title }}</span>
                                 </router-link>
@@ -566,7 +533,8 @@ const hasConversationOpen = computed(() => {
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton size="sm"
+                              <SidebarMenuSubButton
+                                size="sm"
                                 :isActive="isActiveParent('/inboxes/assigned')"
                                 asChild
                               >
@@ -576,7 +544,8 @@ const hasConversationOpen = computed(() => {
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton size="sm"
+                              <SidebarMenuSubButton
+                                size="sm"
                                 :isActive="isActiveParent('/inboxes/unassigned')"
                                 asChild
                               >
@@ -588,7 +557,8 @@ const hasConversationOpen = computed(() => {
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton size="sm"
+                              <SidebarMenuSubButton
+                                size="sm"
                                 :isActive="isActiveParent('/inboxes/all')"
                                 asChild
                               >
@@ -619,7 +589,8 @@ const hasConversationOpen = computed(() => {
                         <CollapsibleContent>
                           <SidebarMenuSub v-for="team in userTeams" :key="team.id">
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton size="sm"
+                              <SidebarMenuSubButton
+                                size="sm"
                                 :isActive="isActiveParent(`/teams/${team.id}`)"
                                 asChild
                               >
@@ -663,10 +634,9 @@ const hasConversationOpen = computed(() => {
 
                         <CollapsibleContent>
                           <SidebarMenuSub v-for="view in userViews" :key="view.id">
-
                             <SidebarMenuSubItem>
-
-                              <SidebarMenuSubButton size="sm"
+                              <SidebarMenuSubButton
+                                size="sm"
                                 :isActive="isActiveParent(`/views/${view.id}`)"
                                 asChild
                               >
