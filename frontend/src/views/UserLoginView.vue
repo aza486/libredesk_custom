@@ -9,7 +9,7 @@
         <Card class="bg-card border border-border shadow-xl rounded-xl">
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-3xl font-bold text-foreground">Sign in</CardTitle>
+              <CardTitle class="text-3xl font-bold text-foreground">LibreDesk</CardTitle>
               <p class="text-muted-foreground">Sign in to your account</p>
             </div>
 
@@ -22,7 +22,7 @@
                 @click="redirectToOIDC(oidcProvider)"
                 class="w-full bg-card hover:bg-secondary text-foreground border-border rounded-lg py-2 transition-all duration-200 ease-in-out transform hover:scale-105"
               >
-                <img :src="oidcProvider.logo_url" width="20" class="mr-2" alt="" />
+                <img :src="oidcProvider.logo_url" width="20" class="mr-2" alt="" v-if="oidcProvider.logo_url" />
                 {{ oidcProvider.name }}
               </Button>
 
@@ -157,11 +157,11 @@ onMounted(async () => {
 
 const fetchOIDCProviders = async () => {
   try {
-    const resp = await api.getAllOIDC()
+    const resp = await api.getAllEnabledOIDC()
     oidcProviders.value = resp.data.data
   } catch (error) {
     toast({
-      title: 'Failed to load SSO providers.',
+      title: 'Failed to load OpenID Connect providers',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -169,7 +169,7 @@ const fetchOIDCProviders = async () => {
 }
 
 const redirectToOIDC = (provider) => {
-  window.location.href = `/api/oidc/${provider.id}/login`
+  window.location.href = `/api/v1/oidc/${provider.id}/login`
 }
 
 const validateForm = () => {
