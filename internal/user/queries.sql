@@ -21,7 +21,7 @@ FROM users
 WHERE id = $1 AND deleted_at IS NULL AND type = 'agent';
 
 -- name: get-user-by-email
-SELECT u.id, u.email, u.password, u.avatar_url, u.first_name, u.last_name,
+SELECT u.id, u.email, u.password, u.avatar_url, u.first_name, u.last_name, u.enabled,
       array_agg(DISTINCT r.name) as roles,
       array_agg(DISTINCT p) as permissions
 FROM users u

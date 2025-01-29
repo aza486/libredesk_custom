@@ -18,7 +18,7 @@ type User struct {
 	Type             string         `db:"type" json:"type"`
 	PhoneNumber      null.String    `db:"phone_number" json:"phone_number,omitempty"`
 	AvatarURL        null.String    `db:"avatar_url" json:"avatar_url"`
-	Enabled          bool           `db:"enabled" json:"enabled,omitempty"`
+	Enabled          bool           `db:"enabled" json:"enabled"`
 	Password         string         `db:"password" json:"-"`
 	Roles            pq.StringArray `db:"roles" json:"roles,omitempty"`
 	Permissions      pq.StringArray `db:"permissions" json:"permissions,omitempty"`
