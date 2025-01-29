@@ -65,9 +65,6 @@
         <FormLabel>Redirect URI</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Redirect URI" v-bind="componentField" readonly />
-          <span class="absolute end-0 inset-y-0 flex items-center justify-center px-2 cursor-pointer">
-            <Copy size="16" />
-          </span>
         </FormControl>
         <FormDescription>Set this URI for callback.</FormDescription>
         <FormMessage />
@@ -117,7 +114,6 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Copy } from 'lucide-vue-next'
 
 const props = defineProps({
   initialValues: {
