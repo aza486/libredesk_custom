@@ -7,7 +7,7 @@
           </DialogTrigger>
           <DialogContent class="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create new tag</DialogTitle>
+              <DialogTitle class="mb-1">Create new tag</DialogTitle>
               <DialogDescription> Set tag name. Click save when you're done. </DialogDescription>
             </DialogHeader>
             <TagsForm @submit.prevent="onSubmit">
