@@ -117,11 +117,12 @@ const saveUser = async () => {
     isSaving.value = true
     await api.updateCurrentUser(formData)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Success',
       description: 'Profile updated successfully'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not save profile',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -136,11 +137,12 @@ const removeAvatar = async () => {
     await api.deleteUserAvatar()
     userStore.clearAvatar()
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Success',
       description: 'Avatar removed'
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not remove avatar',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
