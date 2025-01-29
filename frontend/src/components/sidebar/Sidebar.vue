@@ -220,7 +220,7 @@ const adminNavItems = [
     description: 'Manage email notifications.',
     children: [
       {
-        title: 'Notifications',
+        title: 'Email',
         href: '/admin/notification',
         permissions: ['notification_settings:manage']
       }
