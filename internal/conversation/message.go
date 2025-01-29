@@ -7,17 +7,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/attachment"
 	amodels "github.com/abhinavxd/libredesk/internal/automation/models"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/image"
 	"github.com/abhinavxd/libredesk/internal/inbox"
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/lib/pq"
+	"github.com/volatiletech/null/v9"
 )
 
 const (
@@ -460,16 +465,14 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 // conversations, and creates a new conversation if necessary. It also
 // inserts the message, uploads any attachments, and queues the conversation evaluation of automation rules.
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
-	var err error
-
-	// Find or create contact and set sender ID.
-	if err = m.userStore.CreateContact(&in.Contact); err != nil {
+	// Find or create contact and set sender ID in message.
+	if err := m.userStore.CreateContact(&in.Contact); err != nil {
 		m.lo.Error("error upserting contact", "error", err)
 		return err
 	}
 	in.Message.SenderID = in.Contact.ID
 
-	// This message already exists?
+	// Conversations exists for this message? 
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
 	if err != nil && err != ErrConversationNotFound {
 		return err
@@ -489,9 +492,10 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return err
 	}
 
-	// Upload attachments.
+	// Upload message attachments.
 	if err := m.uploadMessageAttachments(&in.Message); err != nil {
-		return err
+		// Log error but continue processing.
+		m.lo.Error("error uploading message attachments", "message_source_id", in.Message.SourceID, "error", err)
 	}
 
 	// Evaluate automation rules for this conversation.
@@ -499,7 +503,6 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
 	} else {
 		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)
-
 		// Reopen conversation if it's closed, snoozed, or resolved.
 		systemUser, err := m.userStore.GetSystemUser()
 		if err != nil {
@@ -581,29 +584,32 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 }
 
 // uploadMessageAttachments uploads attachments for a message.
-func (m *Manager) uploadMessageAttachments(message *models.Message) error {
+func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 	if len(message.Attachments) == 0 {
 		return nil
 	}
 
-	var uploadErr error
+	var uploadErr []error
 	for _, attachment := range message.Attachments {
-		// Check if this attachment already exists by content ID.
-		exists, err := m.mediaStore.ContentIDExists(attachment.ContentID)
-		if err != nil {
-			m.lo.Error("error checking media existence", "error", err)
-			continue
+		// Check if this attachment already exists by the content ID.
+		if attachment.ContentID != "" {
+			exists, err := m.mediaStore.ContentIDExists(attachment.ContentID)
+			if err != nil {
+				m.lo.Error("error checking media existence by content ID", "content_id", attachment.ContentID, "error", err)
+				continue
+			}
+			if exists {
+				m.lo.Debug("attachment with content ID already exists", "content_id", attachment.ContentID)
+				continue
+			}
 		}
 
-		if exists {
-			m.lo.Debug("attachment already exists", "content_id", attachment.ContentID)
-			continue
-		}
+		m.lo.Debug("uploading message attachment", "name", attachment.Name, "content_id", attachment.ContentID, "size", attachment.Size)
 
-		m.lo.Debug("uploading message attachment", "name", attachment.Name)
+		// Sanitize filename and upload.
 		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
 		reader := bytes.NewReader(attachment.Content)
-		_, err = m.mediaStore.UploadAndInsert(
+		media, err := m.mediaStore.UploadAndInsert(
 			attachment.Name,
 			attachment.ContentType,
 			attachment.ContentID,
@@ -611,14 +617,23 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 			message.ID,
 			reader,
 			attachment.Size,
-			attachment.Disposition,
+			null.StringFrom(attachment.Disposition),
 			[]byte("{}"),
 		)
-
 		if err != nil {
-			uploadErr = err
+			uploadErr = append(uploadErr, err)
 			m.lo.Error("failed to upload attachment", "name", attachment.Name, "error", err)
 		}
+
+		// If the attachment is an image, generate and upload thumbnail.
+		attachmentExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(attachment.Name)), ".")
+		if slices.Contains(image.Exts, attachmentExt) {
+			if err := m.uploadThumbnailForMedia(media, attachment.Content); err != nil {
+				uploadErr = append(uploadErr, err)
+				m.lo.Error("error uploading thumbnail", "error", err)
+			}
+		}
+		
 	}
 	return uploadErr
 }
@@ -704,7 +719,7 @@ func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 		attachment := attachment.Attachment{
 			Name:    media.Filename,
 			Content: blob,
-			Header:  attachment.MakeHeader(media.ContentType, media.UUID, media.Filename, "base64", media.Disposition),
+			Header:  attachment.MakeHeader(media.ContentType, media.UUID, media.Filename, "base64", media.Disposition.String),
 		}
 		attachments = append(attachments, attachment)
 	}
@@ -725,4 +740,29 @@ func (m *Manager) getOutgoingProcessingMessageIDs() []int {
 		return true
 	})
 	return out
+}
+
+// uploadThumbnailForMedia prepares and uploads a thumbnail for an image attachment.
+func (m *Manager) uploadThumbnailForMedia(media mmodels.Media, content []byte) error {
+	// Create a reader from the content
+	file := bytes.NewReader(content)
+
+	// Seek to the beginning of the file
+	file.Seek(0, 0)
+
+	// Create the thumbnail
+	thumbFile, err := image.CreateThumb(image.DefThumbSize, file)
+	if err != nil {
+		return fmt.Errorf("error creating thumbnail: %w", err)
+	}
+
+	// Generate thumbnail name
+	thumbName := fmt.Sprintf("thumb_%s", media.UUID)
+
+	// Upload the thumbnail
+	if _, err := m.mediaStore.Upload(thumbName, media.ContentType, thumbFile); err != nil {
+		m.lo.Error("error uploading thumbnail", "error", err)
+		return fmt.Errorf("error uploading thumbnail: %w", err)
+	}
+	return nil
 }

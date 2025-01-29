@@ -16,6 +16,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 )
 
@@ -50,10 +51,10 @@ func handleMediaUpload(r *fastglue.Request) error {
 	defer file.Close()
 
 	// Inline?
-	var disposition = attachment.DispositionAttachment
+	var disposition = null.StringFrom(attachment.DispositionAttachment)
 	inline, ok := form.Value["inline"]
 	if ok && len(inline) > 0 && inline[0] == "true" {
-		disposition = attachment.DispositionInline
+		disposition = null.StringFrom(attachment.DispositionInline)
 	}
 
 	// Linked model?
@@ -94,11 +95,11 @@ func handleMediaUpload(r *fastglue.Request) error {
 		}
 	}()
 
-	// Generate and upload thumbnail and save it's dimensions if it's an image.
+	// Generate and upload thumbnail and store image dimensions in the media meta.
 	var meta = []byte("{}")
 	if slices.Contains(image.Exts, srcExt) {
 		file.Seek(0, 0)
-		thumbFile, err := image.CreateThumb(thumbnailSize, file)
+		thumbFile, err := image.CreateThumb(image.DefThumbSize, file)
 		if err != nil {
 			app.lo.Error("error creating thumb image", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error creating image thumbnail", nil, envelope.GeneralError)
@@ -121,7 +122,6 @@ func handleMediaUpload(r *fastglue.Request) error {
 			"width":  width,
 			"height": height,
 		})
-
 	}
 
 	file.Seek(0, 0)
@@ -133,7 +133,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Insert in DB.
-	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, linkedModel, disposition, uuid.String(), 0, int(srcFileSize), meta)
+	media, err := app.media.Insert(disposition, srcFileName, srcContentType, "" /**content_id**/, linkedModel, uuid.String(), 0, int(srcFileSize), meta)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error inserting metadata into database", "error", err)

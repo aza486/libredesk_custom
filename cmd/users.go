@@ -17,6 +17,7 @@ import (
 	tmpl "github.com/abhinavxd/libredesk/internal/template"
 	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 )
 
@@ -141,7 +142,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 		// Reset ptr.
 		file.Seek(0, 0)
-		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, "", mmodels.ModelUser, user.ID, file, int(srcFileSize), "", []byte("{}"))
+		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, "" /**content_id**/, mmodels.ModelUser, user.ID, file, int(srcFileSize), null.NewString("", false) /**disposition**/, []byte("{}") /**meta**/)
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
@@ -188,7 +189,7 @@ func handleCreateUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `first_name`", nil, envelope.InputError)
 	}
 
-	// Right now, only agents can be created, can be named better.
+	// Right now, only agents can be created.
 	if err := app.user.CreateAgent(&user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}

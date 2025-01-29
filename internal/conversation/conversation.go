@@ -32,6 +32,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	"github.com/lib/pq"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
 
@@ -100,7 +101,8 @@ type mediaStore interface {
 	Attach(id int, model string, modelID int) error
 	GetByModel(id int, model string) ([]mmodels.Media, error)
 	ContentIDExists(contentID string) (bool, error)
-	UploadAndInsert(fileName, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition string, meta []byte) (mmodels.Media, error)
+	Upload(fileName, contentType string, content io.ReadSeeker) (string, error)
+	UploadAndInsert(fileName, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (mmodels.Media, error)
 }
 
 type inboxStore interface {

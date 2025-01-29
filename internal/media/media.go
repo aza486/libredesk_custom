@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/media/models"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
 
@@ -72,14 +73,14 @@ type queries struct {
 }
 
 // UploadAndInsert uploads file on storage and inserts an entry in db.
-func (m *Manager) UploadAndInsert(srcFilename, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition string, meta []byte) (models.Media, error) {
+func (m *Manager) UploadAndInsert(srcFilename, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (models.Media, error) {
 	var uuid = uuid.New()
 	_, err := m.Upload(uuid.String(), contentType, content)
 	if err != nil {
 		return models.Media{}, err
 	}
 
-	media, err := m.Insert(srcFilename, contentType, contentID, modelType, disposition, uuid.String(), modelID, fileSize, meta)
+	media, err := m.Insert(disposition, srcFilename, contentType, contentID, modelType, uuid.String(), modelID, fileSize, meta)
 	if err != nil {
 		m.store.Delete(uuid.String())
 		return models.Media{}, err
@@ -98,7 +99,7 @@ func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (s
 }
 
 // Insert inserts media details into the database and returns the inserted media record.
-func (m *Manager) Insert(fileName, contentType, contentID, modelType, disposition, uuid string, modelID int, fileSize int, meta []byte) (models.Media, error) {
+func (m *Manager) Insert(disposition null.String, fileName, contentType, contentID, modelType, uuid string, modelID int, fileSize int, meta []byte) (models.Media, error) {
 	var id int
 	if err := m.queries.Insert.QueryRow(m.store.Name(), fileName, contentType, fileSize, meta, modelID, modelType, disposition, contentID, uuid).Scan(&id); err != nil {
 		m.lo.Error("error inserting media", "error", err)
@@ -184,19 +185,6 @@ func (m *Manager) Delete(name string) error {
 	return nil
 }
 
-// Delete deletes a media file from both the storage backend and the database.
-func (m *Manager) DeleteByUUID(uuid string) error {
-	if err := m.store.Delete(uuid); err != nil {
-		m.lo.Error("error deleting media from store", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error deleting media from store", nil)
-	}
-	if _, err := m.queries.Delete.Exec(uuid); err != nil {
-		m.lo.Error("error deleting media from db", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error deleting media from DB", nil)
-	}
-	return nil
-}
-
 // DeleteUnlinkedMedia is a blocking function that periodically deletes media files that are not linked to any conversation message.
 func (m *Manager) DeleteUnlinkedMedia(ctx context.Context) {
 	m.deleteUnlinkedMessageMedia()
@@ -221,7 +209,7 @@ func (m *Manager) deleteUnlinkedMessageMedia() error {
 		return err
 	}
 	for _, mm := range media {
-		if err := m.DeleteByUUID(mm.UUID); err != nil {
+		if err := m.Delete(mm.UUID); err != nil {
 			return err
 		}
 	}

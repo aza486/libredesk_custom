@@ -232,6 +232,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Name:        att.FileName,
 			Content:     att.Content,
 			ContentType: att.ContentType,
+			ContentID:   att.ContentID,
 			Size:        len(att.Content),
 			Disposition: attachment.DispositionAttachment,
 		})
