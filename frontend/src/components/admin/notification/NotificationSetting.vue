@@ -63,6 +63,7 @@ const submitForm = async (values) => {
       title: 'Success',
       description: 'Settings updated successfully'
     })
+    await getNotificationSettings()
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
