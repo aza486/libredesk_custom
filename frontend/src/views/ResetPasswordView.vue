@@ -81,17 +81,6 @@
 
     <footer class="p-6 text-center">
       <div class="text-sm text-muted-foreground space-x-4">
-        <a href="#" class="hover:text-foreground transition-all duration-200 ease-in-out"
-          >Privacy Policy</a
-        >
-        <span>•</span>
-        <a href="#" class="hover:text-foreground transition-all duration-200 ease-in-out"
-          >Terms of Service</a
-        >
-        <span>•</span>
-        <a href="#" class="hover:text-foreground transition-all duration-200 ease-in-out"
-          >Legal Notice</a
-        >
       </div>
     </footer>
   </div>
