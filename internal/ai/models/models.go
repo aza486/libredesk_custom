@@ -13,10 +13,10 @@ type Provider struct {
 }
 
 type Prompt struct {
-	ID        string    `db:"id" json:"id"`
+	ID        int       `db:"id" json:"id"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 	Title     string    `db:"title" json:"title"`
 	Key       string    `db:"key" json:"key"`
-	Content   string    `db:"content" json:"content"`
+	Content   string    `db:"content" json:"content,omitempty"`
 }

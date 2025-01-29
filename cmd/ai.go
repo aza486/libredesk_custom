@@ -9,7 +9,7 @@ func handleAICompletion(r *fastglue.Request) error {
 		promptKey = string(r.RequestCtx.PostArgs().Peek("prompt_key"))
 		content   = string(r.RequestCtx.PostArgs().Peek("content"))
 	)
-	resp, err := app.ai.SendPrompt(promptKey, content)
+	resp, err := app.ai.Completion(promptKey, content)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

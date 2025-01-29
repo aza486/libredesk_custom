@@ -5,4 +5,4 @@ SELECT id, name, provider, config, is_default FROM ai_providers where is_default
 SELECT id, key, title, content FROM ai_prompts where key = $1;
 
 -- name: get-prompts
-SELECT id, key, title, content FROM ai_prompts order by title;
+SELECT id, key, title FROM ai_prompts order by title;

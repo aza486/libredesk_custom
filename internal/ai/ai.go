@@ -49,8 +49,8 @@ func New(opts Opts) (*Manager, error) {
 	}, nil
 }
 
-// SendPrompt sends a prompt to the default provider and returns the response.
-func (m *Manager) SendPrompt(k string, prompt string) (string, error) {
+// Completion sends a prompt to the default provider and returns the response.
+func (m *Manager) Completion(k string, prompt string) (string, error) {
 	systemPrompt, err := m.getPrompt(k)
 	if err != nil {
 		return "", err
@@ -70,7 +70,7 @@ func (m *Manager) SendPrompt(k string, prompt string) (string, error) {
 	response, err := client.SendPrompt(payload)
 	if err != nil {
 		m.lo.Error("error sending prompt to provider", "error", err)
-		return "", envelope.NewError(envelope.GeneralError, "Error sending prompt to provider", nil)
+		return "", envelope.NewError(envelope.GeneralError, err.Error(), nil)
 	}
 
 	return response, nil
@@ -118,7 +118,7 @@ func (m *Manager) getDefaultProviderClient() (ProviderClient, error) {
 			m.lo.Error("error parsing provider config", "error", err)
 			return nil, envelope.NewError(envelope.GeneralError, "Error parsing provider config", nil)
 		}
-		return NewOpenAIClient(config.APIKey), nil
+		return NewOpenAIClient(config.APIKey, m.lo), nil
 	default:
 		m.lo.Error("unsupported provider type", "provider", p.Provider)
 		return nil, envelope.NewError(envelope.GeneralError, "Unsupported provider type", nil)
