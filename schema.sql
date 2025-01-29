@@ -1,7 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 DROP TYPE IF EXISTS "channels" CASCADE; CREATE TYPE "channels" AS ENUM ('email');
-DROP TYPE IF EXISTS "media_store" CASCADE; CREATE TYPE "media_store" AS ENUM ('s3', 'fs');
 DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM ('incoming','outgoing','activity');
 DROP TYPE IF EXISTS "message_sender_type" CASCADE; CREATE TYPE "message_sender_type" AS ENUM ('user','contact');
 DROP TYPE IF EXISTS "message_status" CASCADE; CREATE TYPE "message_status" AS ENUM ('received','sent','failed','pending');
@@ -13,6 +12,7 @@ DROP TYPE IF EXISTS "ai_provider" CASCADE; CREATE TYPE "ai_provider" AS ENUM ('o
 DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation_execution_mode" AS ENUM ('all', 'first_match');
 DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "macro_visibility" AS ENUM ('all', 'team', 'user');
 DROP TYPE IF EXISTS "media_disposition" CASCADE; CREATE TYPE "media_disposition" AS ENUM ('inline', 'attachment');
+DROP TYPE IF EXISTS "media_store" CASCADE; CREATE TYPE "media_store" AS ENUM ('s3', 'fs');
 
 -- Sequence to generate reference number for conversations.
 DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
@@ -277,7 +277,6 @@ CREATE TABLE conversation_participants (
 );
 CREATE UNIQUE INDEX index_unique_conversation_participants_on_conversation_id_and_user_id ON conversation_participants (conversation_id, user_id);
 
-
 DROP TABLE IF EXISTS media CASCADE;
 CREATE TABLE media (
 	id SERIAL PRIMARY KEY,
@@ -289,7 +288,7 @@ CREATE TABLE media (
 	content_type TEXT NOT NULL,
 	model_id INT NULL,
 	model_type TEXT NULL,
-	disposition media_disposition DEFAULT 'attachment' NOT NULL,
+	disposition media_disposition NULL,
 	content_id TEXT NULL,
 	"size" INT NULL,
 	meta jsonb DEFAULT '{}'::jsonb NOT NULL,
