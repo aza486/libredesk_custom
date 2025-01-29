@@ -90,6 +90,7 @@ const createOIDC = (data) =>
       'Content-Type': 'application/json'
     }
   })
+const getAllEnabledOIDC = () => http.get('/api/v1/oidc/enabled')
 const getAllOIDC = () => http.get('/api/v1/oidc')
 const getOIDC = (id) => http.get(`/api/v1/oidc/${id}`)
 const updateOIDC = (id, data) =>
@@ -340,6 +341,7 @@ export default {
   updateSettings,
   createOIDC,
   getAllOIDC,
+  getAllEnabledOIDC,
   getOIDC,
   updateOIDC,
   deleteOIDC,
