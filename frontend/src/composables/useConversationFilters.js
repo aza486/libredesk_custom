@@ -208,11 +208,6 @@ export function useConversationFilters () {
             type: FIELD_TYPE.SELECT,
             options: cStore.priorityOptions
         },
-        set_sla: {
-            label: 'Set SLA',
-            type: FIELD_TYPE.SELECT,
-            options: slaStore.options
-        },
         set_tags: {
             label: 'Set tags',
             type: FIELD_TYPE.TAG
