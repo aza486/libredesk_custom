@@ -24,7 +24,6 @@ func handleOIDCLogin(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
 	return r.Redirect(authURL, fasthttp.StatusFound, nil, "")
 }
 

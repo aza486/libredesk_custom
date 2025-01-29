@@ -14,6 +14,16 @@ const (
 	redirectURI = "/api/oidc/finish?id=%d"
 )
 
+// handleGetAllEnabledOIDC returns all enabled OIDC records
+func handleGetAllEnabledOIDC(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	out, err := app.oidc.GetAllEnabled()
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(out)
+}
+
 // handleGetAllOIDC returns all OIDC records
 func handleGetAllOIDC(r *fastglue.Request) error {
 	app := r.Context.(*App)

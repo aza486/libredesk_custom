@@ -31,11 +31,12 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetAllOIDC *sqlx.Stmt `query:"get-all-oidc"`
-	GetOIDC    *sqlx.Stmt `query:"get-oidc"`
-	InsertOIDC *sqlx.Stmt `query:"insert-oidc"`
-	UpdateOIDC *sqlx.Stmt `query:"update-oidc"`
-	DeleteOIDC *sqlx.Stmt `query:"delete-oidc"`
+	GetAllOIDC    *sqlx.Stmt `query:"get-all-oidc"`
+	GetAllEnabled *sqlx.Stmt `query:"get-all-enabled"`
+	GetOIDC       *sqlx.Stmt `query:"get-oidc"`
+	InsertOIDC    *sqlx.Stmt `query:"insert-oidc"`
+	UpdateOIDC    *sqlx.Stmt `query:"update-oidc"`
+	DeleteOIDC    *sqlx.Stmt `query:"delete-oidc"`
 }
 
 // New creates and returns a new instance of the oidc Manager.
@@ -70,6 +71,19 @@ func (o *Manager) Get(id int, includeSecret bool) (models.OIDC, error) {
 func (o *Manager) GetAll() ([]models.OIDC, error) {
 	var oidc = make([]models.OIDC, 0)
 	if err := o.q.GetAllOIDC.Select(&oidc); err != nil {
+		o.lo.Error("error fetching oidc", "error", err)
+		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
+	}
+	for i := range oidc {
+		oidc[i].SetProviderLogo()
+	}
+	return oidc, nil
+}
+
+// GetAllEnabled retrieves all enabled oidc.
+func (o *Manager) GetAllEnabled() ([]models.OIDC, error) {
+	var oidc = make([]models.OIDC, 0)
+	if err := o.q.GetAllEnabled.Select(&oidc); err != nil {
 		o.lo.Error("error fetching oidc", "error", err)
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}

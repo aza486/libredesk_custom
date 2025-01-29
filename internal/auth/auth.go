@@ -116,7 +116,7 @@ func (a *Auth) Reload(cfg Config) error {
 	for _, provider := range cfg.Providers {
 		oidcProv, err := oidc.NewProvider(context.Background(), provider.ProviderURL)
 		if err != nil {
-			a.logger.Error("error initializing oidc provider", "error", err, "provider", provider.Provider)
+			a.logger.Error("error initializing oidc provider", "provider", provider.Provider, "provider_url", provider.ProviderURL, "error", err)
 			continue
 		}
 
@@ -145,7 +145,6 @@ func (a *Auth) Reload(cfg Config) error {
 func (a *Auth) LoginURL(providerID int, state string) (string, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-
 	oauthCfg, ok := a.oauthCfgs[providerID]
 	if !ok {
 		return "", envelope.NewError(envelope.InputError, "Provider not found", nil)
