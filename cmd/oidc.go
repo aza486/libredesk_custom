@@ -71,7 +71,7 @@ func handleCreateOIDC(r *fastglue.Request) error {
 	if err := reloadAuth(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("OIDC created successfully")
 }
 
 func handleUpdateOIDC(r *fastglue.Request) error {
@@ -98,7 +98,7 @@ func handleUpdateOIDC(r *fastglue.Request) error {
 	if err := reloadAuth(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("OIDC updated successfully")
 }
 
 func handleDeleteOIDC(r *fastglue.Request) error {
@@ -119,5 +119,5 @@ func handleDeleteOIDC(r *fastglue.Request) error {
 	if err := reloadAuth(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("OIDC deleted successfully")
 }

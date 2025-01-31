@@ -169,10 +169,10 @@ func (u *Manager) GetByEmail(email string) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return user, fmt.Errorf("user not found")
+			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, err
+		return user, envelope.NewError(envelope.GeneralError, "Error fetching user", nil)
 	}
 	return user, nil
 }

@@ -153,7 +153,7 @@ func (a *Auth) LoginURL(providerID int, state string) (string, error) {
 }
 
 // ExchangeOIDCToken takes an OIDC authorization code, validates it, and returns an OIDC token for subsequent auth.
-func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonce string) (string, OIDCclaim, error) {
+func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code string) (string, OIDCclaim, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -184,10 +184,6 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonc
 		return "", OIDCclaim{}, fmt.Errorf("error verifying ID token: %v", err)
 	}
 
-	if idTk.Nonce != nonce {
-		return "", OIDCclaim{}, fmt.Errorf("nonce token mismatch")
-	}
-
 	var claims OIDCclaim
 	if err := idTk.Claims(&claims); err != nil {
 		return "", OIDCclaim{}, errors.New("error getting user from OIDC")
@@ -216,6 +212,43 @@ func (a *Auth) SaveSession(user amodels.User, r *fastglue.Request) error {
 		return err
 	}
 	return nil
+}
+
+// SetSessionValues sets passed values in the session.
+func (a *Auth) SetSessionValues(r *fastglue.Request, values map[string]interface{}) error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
+	if err != nil {
+		a.logger.Error("error acquiring session", "error", err)
+		return err
+	}
+
+	if err := sess.SetMulti(values); err != nil {
+		a.logger.Error("error setting session values", "error", err)
+		return err
+	}
+	return nil
+}
+
+// GetSessionValue returns the value for the given key from the session.
+func (a *Auth) GetSessionValue(r *fastglue.Request, key string) (any, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
+	if err != nil {
+		a.logger.Error("error acquiring session", "error", err)
+		return "", err
+	}
+
+	val, err := sess.Get(key)
+	if err != nil {
+		a.logger.Error("error fetching session value", "error", err)
+		return "", err
+	}
+	return val, nil
 }
 
 // SetCSRFCookie sets the CSRF token in the response cookie if not already set.

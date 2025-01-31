@@ -561,17 +561,14 @@ func initAuth(o *oidc.Manager, rd *redis.Client) *auth_.Auth {
 // reloadAuth reloads the auth providers.
 func reloadAuth(app *App) error {
 	app.lo.Info("reloading auth manager")
-
 	providers, err := buildProviders(app.oidc)
 	if err != nil {
 		log.Fatalf("error reloading auth: %v", err)
 	}
-
 	if err := app.auth.Reload(auth_.Config{Providers: providers}); err != nil {
 		app.lo.Error("error reloading auth", "error", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -600,13 +597,12 @@ func buildProviders(o *oidc.Manager) ([]auth_.Provider, error) {
 }
 
 // initOIDC initializes open id connect config manager.
-func initOIDC(db *sqlx.DB) *oidc.Manager {
+func initOIDC(db *sqlx.DB, settings *setting.Manager) *oidc.Manager {
 	lo := initLogger("oidc")
 	o, err := oidc.New(oidc.Opts{
 		DB: db,
 		Lo: lo,
-	})
-
+	}, settings)
 	if err != nil {
 		log.Fatalf("error initializing oidc: %v", err)
 	}

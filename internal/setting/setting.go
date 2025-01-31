@@ -32,6 +32,7 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
+	Get         *sqlx.Stmt `query:"get"`
 	GetAll      *sqlx.Stmt `query:"get-all"`
 	Update      *sqlx.Stmt `query:"update"`
 	GetByPrefix *sqlx.Stmt `query:"get-by-prefix"`
@@ -72,11 +73,9 @@ func (m *Manager) GetAll() (models.Settings, error) {
 // GetAllJSON retrieves all settings as JSON.
 func (m *Manager) GetAllJSON() (types.JSONText, error) {
 	var b types.JSONText
-
 	if err := m.q.GetAll.Get(&b); err != nil {
 		return b, err
 	}
-
 	return b, nil
 }
 
@@ -87,12 +86,10 @@ func (m *Manager) Update(s interface{}) error {
 	if err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating settings", nil)
 	}
-
 	// Update the settings in the DB.
 	if _, err := m.q.Update.Exec(b); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating settings", nil)
 	}
-
 	return nil
 }
 
@@ -102,6 +99,16 @@ func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 	if err := m.q.GetByPrefix.Get(&b, prefix+"%"); err != nil {
 		m.lo.Error("error fetching settings", "prefix", prefix, "error", err)
 		return b, envelope.NewError(envelope.GeneralError, "Error fetching settings", nil)
+	}
+	return b, nil
+}
+
+// Get retrieves a setting by key as JSON.
+func (m *Manager) Get(key string) (types.JSONText, error) {
+	var b types.JSONText
+	if err := m.q.Get.Get(&b, key); err != nil {
+		m.lo.Error("error fetching setting", "key", key, "error", err)
+		return b, envelope.NewError(envelope.GeneralError, "Error fetching setting", nil)
 	}
 	return b, nil
 }

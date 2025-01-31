@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	thumbPrefix   = "thumb_"
-	thumbnailSize = 150
+	thumbPrefix = "thumb_"
 )
 
 func handleMediaUpload(r *fastglue.Request) error {
@@ -110,7 +109,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 			return sendErrorEnvelope(r, err)
 		}
 
-		// Store image dimensions in the media meta.
+		// Store image dimensions in media meta, storing dimensions for image previews in future.
 		file.Seek(0, 0)
 		width, height, err := image.GetDimensions(file)
 		if err != nil {

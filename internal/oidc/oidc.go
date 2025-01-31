@@ -2,6 +2,7 @@ package oidc
 
 import (
 	"embed"
+	"fmt"
 	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
@@ -9,18 +10,21 @@ import (
 	"github.com/abhinavxd/libredesk/internal/oidc/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx/types"
 	"github.com/zerodha/logf"
 )
 
 var (
 	//go:embed queries.sql
-	efs embed.FS
+	efs         embed.FS
+	redirectURL = "/api/v1/oidc/%d/finish"
 )
 
 // Manager handles oidc-related operations.
 type Manager struct {
-	q  queries
-	lo *logf.Logger
+	q       queries
+	lo      *logf.Logger
+	setting settingsStore
 }
 
 // Opts contains options for initializing the Manager.
@@ -39,17 +43,20 @@ type queries struct {
 	DeleteOIDC    *sqlx.Stmt `query:"delete-oidc"`
 }
 
-// New creates and returns a new instance of the oidc Manager.
-func New(opts Opts) (*Manager, error) {
-	var q queries
+type settingsStore interface {
+	Get(key string) (types.JSONText, error)
+}
 
+// New creates and returns a new instance of the oidc Manager.
+func New(opts Opts, setting settingsStore) (*Manager, error) {
+	var q queries
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
-		q:  q,
-		lo: opts.Lo,
+		q:       q,
+		lo:      opts.Lo,
+		setting: setting,
 	}, nil
 }
 
@@ -74,7 +81,20 @@ func (o *Manager) GetAll() ([]models.OIDC, error) {
 		o.lo.Error("error fetching oidc", "error", err)
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
+
+	// Get root URL of the app.
+	rootURL, err := o.setting.Get("app.root_url")
+	if err != nil {
+		o.lo.Error("error fetching root URL", "error", err)
+		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching root URL", nil)
+	}
+
+	// Strip the quotes from the root URL.
+	rootURLStr := strings.Trim(string(rootURL), "\"")
+
+	// Set logo and redirect URL.
 	for i := range oidc {
+		oidc[i].RedirectURI = fmt.Sprintf(rootURLStr+redirectURL, oidc[i].ID)
 		oidc[i].SetProviderLogo()
 	}
 	return oidc, nil

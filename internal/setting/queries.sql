@@ -12,3 +12,6 @@ WHERE s.key = c.key;
 SELECT JSON_OBJECT_AGG(key, value) AS settings 
 FROM settings 
 WHERE key LIKE $1 || '%';
+
+-- name: get
+SELECT value FROM settings WHERE key = $1;

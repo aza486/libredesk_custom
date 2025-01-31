@@ -44,8 +44,11 @@ import (
 
 var (
 	ko          = koanf.New(".")
-	frontendDir = "frontend/dist"
 	ctx         = context.Background()
+	appName     = "libredesk"
+	frontendDir = "frontend/dist"
+
+	// Injected at build time.
 	buildString = ""
 )
 
@@ -143,7 +146,7 @@ func main() {
 		rdb                         = initRedis()
 		constants                   = initConstants()
 		i18n                        = initI18n(fs)
-		oidc                        = initOIDC(db)
+		oidc                        = initOIDC(db, settings)
 		status                      = initStatus(db)
 		priority                    = initPriority(db)
 		auth                        = initAuth(oidc, rdb)
@@ -206,7 +209,7 @@ func main() {
 	initHandlers(g, wsHub)
 
 	s := &fasthttp.Server{
-		Name:                 "LibreDesk",
+		Name:                 appName,
 		ReadTimeout:          ko.MustDuration("app.server.read_timeout"),
 		WriteTimeout:         ko.MustDuration("app.server.write_timeout"),
 		MaxRequestBodySize:   ko.MustInt("app.server.max_body_size"),

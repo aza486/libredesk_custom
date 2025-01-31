@@ -22,7 +22,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/login", handleLogin)
 	g.GET("/logout", handleLogout)
 	g.GET("/api/v1/oidc/{id}/login", handleOIDCLogin)
-	g.GET("/api/v1/oidc/finish", handleOIDCCallback)
+	g.GET("/api/v1/oidc/{id}/finish", handleOIDCCallback)
 
 	// Media.
 	g.GET("/uploads/{uuid}", auth(handleServeMedia))
