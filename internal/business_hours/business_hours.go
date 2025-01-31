@@ -40,9 +40,6 @@ type queries struct {
 	InsertBusinessHours *sqlx.Stmt `query:"insert-business-hours"`
 	DeleteBusinessHours *sqlx.Stmt `query:"delete-business-hours"`
 	UpdateBusinessHours *sqlx.Stmt `query:"update-business-hours"`
-	InsertHoliday       *sqlx.Stmt `query:"insert-holiday"`
-	DeleteHoliday       *sqlx.Stmt `query:"delete-holiday"`
-	GetAllHolidays      *sqlx.Stmt `query:"get-all-holidays"`
 }
 
 // New creates and returns a new instance of the Manager.

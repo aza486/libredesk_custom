@@ -42,19 +42,3 @@ SET "name" = $2,
     holidays = $6,
     updated_at = NOW()
 WHERE id = $1;
-
--- name: insert-holiday
-INSERT INTO holidays (
-    "name",
-    date
-    )
-VALUES ($1, $2);
-
--- name: delete-holiday
-DELETE FROM holidays
-WHERE "name" = $1;
-
--- name: get-all-holidays
-SELECT "name",
-    date
-FROM holidays;
