@@ -109,7 +109,7 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 	}
 
 	// Check `read` permission
-	if allowed, err := checkPermission("read"); err != nil || allowed {
+	if allowed, err := checkPermission("read"); err != nil || !allowed {
 		return allowed, err
 	}
 
