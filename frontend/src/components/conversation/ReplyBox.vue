@@ -53,7 +53,7 @@
                 @click="hideBcc"
                 class="text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
               >
-                {{ showBcc ? 'Remove BCC' : 'Add BCC' }}
+                {{ showBcc ? 'Remove BCC' : 'BCC' }}
               </Button>
             </div>
             <div v-if="showBcc" class="flex items-center space-x-2">
@@ -176,7 +176,7 @@
               @click="hideBcc"
               class="text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
             >
-              {{ showBcc ? 'Remove BCC' : 'Add BCC' }}
+              {{ showBcc ? 'Remove BCC' : 'BCC' }}
             </Button>
           </div>
           <div v-if="showBcc" class="flex items-center space-x-2">
