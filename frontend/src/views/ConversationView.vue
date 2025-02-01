@@ -5,7 +5,7 @@
     </div>
     <div class="border-r flex-1">
       <Conversation v-if="conversationStore.current || conversationStore.conversation.loading" />
-      <ConversationPlaceholder v-else/>
+      <ConversationPlaceholder v-else />
     </div>
   </div>
 </template>
@@ -35,7 +35,11 @@ onMounted(() => {
     conversationStore.fetchConversationsList(true, props.type)
   }
   if (props.teamID) {
-    conversationStore.fetchConversationsList(true, CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED, props.teamID)
+    conversationStore.fetchConversationsList(
+      true,
+      CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
+      props.teamID
+    )
   }
   if (props.viewID) {
     conversationStore.fetchConversationsList(true, CONVERSATION_LIST_TYPE.VIEW, 0, [], props.viewID)
@@ -72,7 +76,11 @@ watch(
   () => props.teamID,
   (newTeamID, oldTeamID) => {
     if (newTeamID !== oldTeamID && newTeamID) {
-      conversationStore.fetchConversationsList(true, CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED, newTeamID)
+      conversationStore.fetchConversationsList(
+        true,
+        CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
+        newTeamID
+      )
     }
   }
 )
@@ -89,7 +97,9 @@ watch(
 const fetchConversation = async (uuid) => {
   await conversationStore.fetchConversation(uuid)
   await conversationStore.fetchMessages(uuid)
-  await conversationStore.fetchParticipants(uuid)
-  await conversationStore.updateAssigneeLastSeen(uuid)
+  await Promise.all([
+    conversationStore.fetchParticipants(uuid),
+    conversationStore.updateAssigneeLastSeen(uuid)
+  ])
 }
 </script>

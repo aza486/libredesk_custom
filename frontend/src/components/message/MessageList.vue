@@ -2,8 +2,6 @@
   <div class="flex flex-col relative h-full">
     <div ref="threadEl" class="flex-1 overflow-y-auto" @scroll="handleScroll">
       <div class="min-h-full pb-20 px-4">
-        <DotLoader v-if="conversationStore.messages.loading" />
-
         <div
           class="text-center mt-3"
           v-if="conversationStore.messages.hasMore && !conversationStore.messages.loading"
@@ -24,6 +22,7 @@
           leave-active-class="animate-slide-out"
           tag="div"
           class="space-y-4"
+          v-if="!conversationStore.messages.loading"
         >
           <div
             v-for="message in conversationStore.conversationMessages"
@@ -42,6 +41,7 @@
             </div>
           </div>
         </TransitionGroup>
+        <MessagesSkeleton v-else />
       </div>
     </div>
 
@@ -77,13 +77,13 @@ import { ref, onMounted, watch } from 'vue'
 import ContactMessageBubble from './ContactMessageBubble.vue'
 import ActivityMessageBubble from './ActivityMessageBubble.vue'
 import AgentMessageBubble from './AgentMessageBubble.vue'
-import { DotLoader } from '@/components/ui/loader'
 import { useConversationStore } from '@/stores/conversation'
 import { useUserStore } from '@/stores/user'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, ChevronDown } from 'lucide-vue-next'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
+import MessagesSkeleton from './MessagesSkeleton.vue'
 
 const conversationStore = useConversationStore()
 const userStore = useUserStore()
@@ -143,7 +143,11 @@ watch(
   (messages) => {
     // Scroll to bottom when conversation changes and there are new messages.
     // New messages on next db page should not scroll to bottom.
-    if (messages.length > 0 && currentConversationUUID.value !== conversationStore.current?.uuid) {
+    if (
+      messages.length > 0 &&
+      conversationStore?.current?.uuid &&
+      currentConversationUUID.value !== conversationStore.current.uuid
+    ) {
       currentConversationUUID.value = conversationStore.current.uuid
       unReadMessages.value = 0
       scrollToBottom()

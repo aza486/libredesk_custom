@@ -198,7 +198,6 @@ export const useConversationStore = defineStore('conversation', () => {
   })
 
   const conversationMessages = computed(() => {
-    if (!messages.data) return []
     return [...messages.data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   })
 
@@ -237,6 +236,8 @@ export const useConversationStore = defineStore('conversation', () => {
   async function fetchConversation (uuid) {
     resetCurrentConversation()
     conversation.loading = true
+    // Set messages loading to true as well as both are loaded together
+    messages.loading = true
     try {
       const resp = await api.getConversation(uuid)
       conversation.data = resp.data.data
