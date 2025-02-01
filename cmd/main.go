@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/abhinavxd/libredesk/internal/ai"
@@ -54,8 +55,8 @@ var (
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
-	consts        constants
 	fs            stuffbin.FileSystem
+	consts        atomic.Value
 	auth          *auth_.Auth
 	authz         *authz.Enforcer
 	i18n          *i18n.I18n
@@ -190,7 +191,7 @@ func main() {
 		priority:      priority,
 		tmpl:          template,
 		notifier:      notifier,
-		consts:        constants,
+		consts:        atomic.Value{},
 		conversation:  conversation,
 		automation:    automation,
 		businessHours: businessHours,
@@ -203,6 +204,7 @@ func main() {
 		macro:         initMacro(db),
 		ai:            initAI(db),
 	}
+	app.consts.Store(constants)
 
 	g := fastglue.NewGlue()
 	g.SetContext(app)

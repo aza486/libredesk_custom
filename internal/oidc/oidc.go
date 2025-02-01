@@ -67,7 +67,13 @@ func (o *Manager) Get(id int, includeSecret bool) (models.OIDC, error) {
 		o.lo.Error("error fetching oidc", "error", err)
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
+	// Set logo and redirect URL.
 	oidc.SetProviderLogo()
+	rootURL, err := o.getAppRootURL()
+	if err != nil {
+		return models.OIDC{}, err
+	}
+	oidc.RedirectURI = fmt.Sprintf(rootURL+redirectURL, oidc.ID)
 	if oidc.ClientSecret != "" && !includeSecret {
 		oidc.ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
 	}
@@ -83,18 +89,14 @@ func (o *Manager) GetAll() ([]models.OIDC, error) {
 	}
 
 	// Get root URL of the app.
-	rootURL, err := o.setting.Get("app.root_url")
+	rootURL, err := o.getAppRootURL()
 	if err != nil {
-		o.lo.Error("error fetching root URL", "error", err)
-		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching root URL", nil)
+		return nil, err
 	}
-
-	// Strip the quotes from the root URL.
-	rootURLStr := strings.Trim(string(rootURL), "\"")
 
 	// Set logo and redirect URL.
 	for i := range oidc {
-		oidc[i].RedirectURI = fmt.Sprintf(rootURLStr+redirectURL, oidc[i].ID)
+		oidc[i].RedirectURI = fmt.Sprintf(rootURL+redirectURL, oidc[i].ID)
 		oidc[i].SetProviderLogo()
 	}
 	return oidc, nil
@@ -145,4 +147,14 @@ func (o *Manager) Delete(id int) error {
 		return envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
 	return nil
+}
+
+// getAppRootURL returns the root URL of the app.
+func (o *Manager) getAppRootURL() (string, error) {
+	rootURL, err := o.setting.Get("app.root_url")
+	if err != nil {
+		o.lo.Error("error fetching root URL", "error", err)
+		return "", envelope.NewError(envelope.GeneralError, "Error fetching root URL", nil)
+	}
+	return strings.Trim(string(rootURL), "\""), nil
 }

@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"html/template"
+	"sync"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
@@ -24,6 +25,7 @@ var (
 
 // Manager handles template-related operations.
 type Manager struct {
+	mutex   sync.RWMutex
 	tpls    *template.Template
 	webTpls *template.Template
 	funcMap template.FuncMap
@@ -49,7 +51,14 @@ func New(lo *logf.Logger, db *sqlx.DB, webTpls *template.Template, tpls *templat
 	if err := dbutil.ScanSQLFile("queries.sql", &q, db, efs); err != nil {
 		return nil, err
 	}
-	return &Manager{tpls, webTpls, funcMap, q, lo}, nil
+	return &Manager{
+		mutex:   sync.RWMutex{},
+		tpls:    tpls,
+		webTpls: webTpls,
+		funcMap: funcMap,
+		q:       q,
+		lo:      lo,
+	}, nil
 }
 
 // Update updates a new template with the given name, and body.
@@ -150,4 +159,14 @@ func (m *Manager) getByName(name string) (models.Template, error) {
 		return template, envelope.NewError(envelope.GeneralError, "Error fetching template", nil)
 	}
 	return template, nil
+}
+
+// Reload reloads the templates and function map.
+func (m *Manager) Reload(webTpls, tpls *template.Template, funcMap template.FuncMap) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	m.webTpls = webTpls
+	m.tpls = tpls
+	m.funcMap = funcMap
+	return nil
 }

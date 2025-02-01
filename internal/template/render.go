@@ -24,6 +24,8 @@ const (
 
 // RenderWithBaseTemplate merges the given content with the default outgoing email template, if available.
 func (m *Manager) RenderWithBaseTemplate(data any, content string) (string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
 		if err == ErrTemplateNotFound {
@@ -137,6 +139,8 @@ func (m *Manager) RenderNamedTemplate(name string, data any) (string, string, er
 
 // RenderTemplate executes a named in-memory template with the provided data.
 func (m *Manager) RenderTemplate(name string, data interface{}) (string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	var buf bytes.Buffer
 	if err := m.tpls.ExecuteTemplate(&buf, name, data); err != nil {
 		return "", fmt.Errorf("executing in-memory template %q: %w", name, err)
@@ -145,8 +149,10 @@ func (m *Manager) RenderTemplate(name string, data interface{}) (string, error) 
 }
 
 // RenderWebPage renders a template to the http.ResponseWriter with data.
-func (t *Manager) RenderWebPage(ctx *fasthttp.RequestCtx, tmplFile string, data map[string]interface{}) error {
+func (m *Manager) RenderWebPage(ctx *fasthttp.RequestCtx, tmplFile string, data map[string]interface{}) error {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	ctx.SetContentType("text/html; charset=utf-8")
 	ctx.SetStatusCode(fasthttp.StatusOK)
-	return t.webTpls.ExecuteTemplate(ctx, tmplFile, data)
+	return m.webTpls.ExecuteTemplate(ctx, tmplFile, data)
 }

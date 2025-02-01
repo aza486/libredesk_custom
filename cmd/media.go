@@ -70,17 +70,18 @@ func handleMediaUpload(r *fastglue.Request) error {
 	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
 
 	// Check file size
-	if bytesToMegabytes(srcFileSize) > app.consts.MaxFileUploadSizeMB {
-		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", app.consts.MaxFileUploadSizeMB)
+	consts := app.consts.Load().(*constants)
+	if bytesToMegabytes(srcFileSize) > float64(consts.MaxFileUploadSizeMB) {
+		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", consts.MaxFileUploadSizeMB)
 		return r.SendErrorEnvelope(
 			http.StatusRequestEntityTooLarge,
-			fmt.Sprintf("File size is too large. Please upload file lesser than %f MB", app.consts.MaxFileUploadSizeMB),
+			fmt.Sprintf("File size is too large. Please upload file lesser than %d MB", consts.MaxFileUploadSizeMB),
 			nil,
 			envelope.GeneralError,
 		)
 	}
 
-	if !slices.Contains(app.consts.AllowedUploadFileExtensions, "*") && !slices.Contains(app.consts.AllowedUploadFileExtensions, srcExt) {
+	if !slices.Contains(consts.AllowedUploadFileExtensions, "*") && !slices.Contains(consts.AllowedUploadFileExtensions, srcExt) {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File type not allowed", nil, envelope.InputError)
 	}
 
@@ -182,8 +183,8 @@ func handleServeMedia(r *fastglue.Request) error {
 	if !allowed {
 		return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
 	}
-
-	switch app.consts.UploadProvider {
+	consts := app.consts.Load().(*constants)
+	switch consts.UploadProvider {
 	case "fs":
 		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), uuid))
 	case "s3":

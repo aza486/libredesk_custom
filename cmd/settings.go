@@ -37,6 +37,13 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	// Reload the settings and templates.
+	if err := reloadSettings(app); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Could not reload settings, Please restart the app.", nil)
+	}
+	if err := reloadTemplates(app); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Could not reload settings, Please restart the app.", nil)
+	}
 	return r.SendEnvelope("Settings updated successfully")
 }
 
@@ -90,5 +97,5 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope("Settings updated successfully")
+	return r.SendEnvelope("Settings updated successfully, Please restart the app for changes to take effect.")
 }

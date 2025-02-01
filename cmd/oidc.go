@@ -1,17 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/oidc/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
-)
-
-const (
-	redirectURI = "/api/oidc/finish?id=%d"
 )
 
 // handleGetAllEnabledOIDC returns all enabled OIDC records
@@ -36,21 +31,16 @@ func handleGetAllOIDC(r *fastglue.Request) error {
 
 // handleGetOIDC returns an OIDC record by id.
 func handleGetOIDC(r *fastglue.Request) error {
-	app := r.Context.(*App)
-
+	var app = r.Context.(*App)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid OIDC `id`", nil, envelope.InputError)
 	}
-
 	o, err := app.oidc.Get(id, false)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	o.RedirectURI = fmt.Sprintf("%s%s", app.consts.AppBaseURL, fmt.Sprintf(redirectURI, o.ID))
-
 	return r.SendEnvelope(o)
 }
 

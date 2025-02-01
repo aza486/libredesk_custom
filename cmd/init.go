@@ -65,7 +65,7 @@ type constants struct {
 	SiteName                    string
 	UploadProvider              string
 	AllowedUploadFileExtensions []string
-	MaxFileUploadSizeMB         float64
+	MaxFileUploadSizeMB         int
 }
 
 // Config loads config files into koanf.
@@ -108,14 +108,14 @@ func initFlags() {
 }
 
 // initConstants initializes the app constants.
-func initConstants() constants {
-	return constants{
+func initConstants() *constants {
+	return &constants{
 		AppBaseURL:                  ko.String("app.root_url"),
 		LogoURL:                     ko.String("app.logo_url"),
 		SiteName:                    ko.String("app.site_name"),
 		UploadProvider:              ko.MustString("upload.provider"),
 		AllowedUploadFileExtensions: ko.Strings("app.allowed_file_upload_extensions"),
-		MaxFileUploadSizeMB:         ko.Float64("app.max_file_upload_size"),
+		MaxFileUploadSizeMB:         ko.Int("app.max_file_upload_size"),
 	}
 }
 
@@ -300,7 +300,7 @@ func initCSAT(db *sqlx.DB) *csat.Manager {
 }
 
 // initTemplates inits template manager.
-func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.Manager {
+func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts *constants) *tmpl.Manager {
 	var (
 		lo      = initLogger("template")
 		funcMap = getTmplFuncs(consts)
@@ -309,7 +309,6 @@ func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.M
 	if err != nil {
 		log.Fatalf("error parsing e-mail templates: %v", err)
 	}
-
 	webTpls, err := stuffbin.ParseTemplatesGlob(funcMap, fs, "/static/public/web-templates/*.html")
 	if err != nil {
 		log.Fatalf("error parsing web templates: %v", err)
@@ -322,7 +321,7 @@ func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.M
 }
 
 // getTmplFuncs returns the template functions.
-func getTmplFuncs(consts constants) template.FuncMap {
+func getTmplFuncs(consts *constants) template.FuncMap {
 	return template.FuncMap{
 		"RootURL": func() string {
 			return consts.AppBaseURL
@@ -340,6 +339,45 @@ func getTmplFuncs(consts constants) template.FuncMap {
 			return consts.SiteName
 		},
 	}
+}
+
+// reloadSettings reloads the settings from the database into the Koanf instance.
+func reloadSettings(app *App) error {
+	app.lo.Info("reloading settings")
+	j, err := app.setting.GetAllJSON()
+	if err != nil {
+		app.lo.Error("error parsing settings from DB", "error", err)
+		return err
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal(j, &out); err != nil {
+		app.lo.Error("error unmarshalling settings from DB", "error", err)
+		return err
+	}
+	if err := ko.Load(confmap.Provider(out, "."), nil); err != nil {
+		app.lo.Error("error loading settings into koanf", "error", err)
+		return err
+	}
+	newConsts := initConstants()
+	app.consts.Store(newConsts)
+	return nil
+}
+
+// reloadTemplates reloads the templates from the filesystem.
+func reloadTemplates(app *App) error {
+	app.lo.Info("reloading templates")
+	funcMap := getTmplFuncs(app.consts.Load().(*constants))
+	tpls, err := stuffbin.ParseTemplatesGlob(funcMap, app.fs, "/static/email-templates/*.html")
+	if err != nil {
+		app.lo.Error("error parsing email templates", "error", err)
+		return err
+	}
+	webTpls, err := stuffbin.ParseTemplatesGlob(funcMap, app.fs, "/static/public/web-templates/*.html")
+	if err != nil {
+		app.lo.Error("error parsing web templates", "error", err)
+		return err
+	}
+	return app.tmpl.Reload(webTpls, tpls, funcMap)
 }
 
 // initTeam inits team manager.

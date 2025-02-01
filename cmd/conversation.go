@@ -620,7 +620,8 @@ func sendCSATSurvey(app *App, conversation cmodels.Conversation, user umodels.Us
 		return err
 	}
 
-	csatURL := fmt.Sprintf("%s/csat/%s", app.consts.AppBaseURL, csatR.UUID)
+	consts := app.consts.Load().(*constants)
+	csatURL := fmt.Sprintf("%s/csat/%s", consts.AppBaseURL, csatR.UUID)
 	messageContent := fmt.Sprintf("Please rate your experience with us: <a href=\"%s\">Rate now</a>", csatURL)
 	meta := map[string]interface{}{
 		"is_csat": true,
