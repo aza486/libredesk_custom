@@ -3,7 +3,6 @@ import { Primitive } from 'radix-vue'
 import { buttonVariants } from '.'
 import { cn } from '@/lib/utils'
 import { ref, computed } from 'vue'
-import { ReloadIcon } from '@radix-icons/vue'
 
 const props = defineProps({
   variant: { type: null, required: false },
@@ -30,9 +29,11 @@ const computedClass = computed(() => {
     :class="computedClass"
     :disabled="isLoading || isDisabled"
   >
-    <template v-if="isLoading">
-      <ReloadIcon class="animate-spin h-3 w-3 mr-2 text-white" />
-    </template>
-    <slot />
+    <span v-if="isLoading" class="dot-loader">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </span>
+    <slot v-else />
   </Primitive>
 </template>
