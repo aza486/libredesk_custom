@@ -13,7 +13,6 @@
             <div
               class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
             >
-              <PanelBottomOpen class="text-secondary inline-block" size="15" />
               <span
                 class="text-secondary font-medium inline-block"
                 v-if="conversationStore.current?.status"
@@ -56,7 +55,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { PanelBottomOpen } from 'lucide-vue-next'
 import MessageList from '@/components/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
