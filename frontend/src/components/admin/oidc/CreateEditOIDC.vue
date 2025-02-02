@@ -3,8 +3,13 @@
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
   <Spinner v-if="isLoading"></Spinner>
-  <OIDCForm :initial-values="oidc" :submitForm="submitForm" :isNewForm="isNewForm"
-    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }" :isLoading="formLoading" />
+  <OIDCForm
+    :initial-values="oidc"
+    :submitForm="submitForm"
+    :isNewForm="isNewForm"
+    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
+    :isLoading="formLoading"
+  />
 </template>
 
 <script setup>
@@ -41,22 +46,30 @@ const submitForm = async (values) => {
         values.client_secret = ''
       }
       await api.updateOIDC(props.id, values)
-      toastDescription = 'Updated successfully'
+      toastDescription = 'Provider updated successfully'
     } else {
       await api.createOIDC(values)
-      toastDescription = 'Created successfully'
+      toastDescription = 'Provider created successfully'
       router.push('/admin/oidc')
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Success',
-      description: toastDescription,
+      description: toastDescription
     })
   } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
+    if (props.id) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error reloading OIDC providers',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    } else {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
   } finally {
     formLoading.value = false
   }
