@@ -43,6 +43,8 @@ next_sla_deadline_at = LEAST(
 WHERE id IN (SELECT conversation_id FROM new_sla);
 
 -- name: get-pending-slas
+-- Get all the applied SLAs that are not yet breached or met and is also set on the conversation.
+-- This make sure when SLA is changed, we don't update the breached or met status of the previous SLA.
 SELECT a.id, a.first_response_deadline_at, c.first_reply_at as first_response_at,
 a.resolution_deadline_at, c.resolved_at as resolved_at
 FROM applied_slas a 

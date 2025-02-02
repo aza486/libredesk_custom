@@ -137,15 +137,15 @@ func (m *Manager) Update(id int, name, description string, firstResponseTime, re
 	return nil
 }
 
-// getBusinessHours returns the business hours ID and timezone for a team.
-func (m *Manager) getBusinessHours(assignedTeamID int) (bmodels.BusinessHours, string, error) {
+// getBusinessHoursAndTimezone returns the business hours ID and timezone for a team, falling back to app settings.
+func (m *Manager) getBusinessHoursAndTimezone(assignedTeamID int) (bmodels.BusinessHours, string, error) {
 	var (
 		businessHrsID int
 		timezone      string
 		bh            bmodels.BusinessHours
 	)
 
-	// Fetch from team if assigned.
+	// Fetch from team if assignedTeamID is provided.
 	if assignedTeamID != 0 {
 		team, err := m.teamStore.Get(assignedTeamID)
 		if err != nil {
@@ -193,18 +193,19 @@ func (m *Manager) getBusinessHours(assignedTeamID int) (bmodels.BusinessHours, s
 func (m *Manager) CalculateDeadlines(startTime time.Time, slaPolicyID, assignedTeamID int) (Deadlines, error) {
 	var deadlines Deadlines
 
-	businessHrs, timezone, err := m.getBusinessHours(assignedTeamID)
+	businessHrs, timezone, err := m.getBusinessHoursAndTimezone(assignedTeamID)
 	if err != nil {
 		return deadlines, err
 	}
 
-	m.lo.Info("calculating deadlines", "business_hours", businessHrs.Hours, "timezone", timezone, "always_open", businessHrs.IsAlwaysOpen)
+	m.lo.Info("calculating deadlines", "timezone", timezone, "business_hours_always_open", businessHrs.IsAlwaysOpen, "business_hours", businessHrs.Hours)
 
 	sla, err := m.Get(slaPolicyID)
 	if err != nil {
 		return deadlines, err
 	}
 
+	// Helper function to calculate deadlines by parsing the duration string.
 	calculateDeadline := func(durationStr string) (time.Time, error) {
 		if durationStr == "" {
 			return time.Time{}, nil
@@ -219,6 +220,7 @@ func (m *Manager) CalculateDeadlines(startTime time.Time, slaPolicyID, assignedT
 		}
 		return deadline, nil
 	}
+
 	if deadlines.FirstResponse, err = calculateDeadline(sla.FirstResponseTime); err != nil {
 		return deadlines, err
 	}
@@ -229,10 +231,10 @@ func (m *Manager) CalculateDeadlines(startTime time.Time, slaPolicyID, assignedT
 }
 
 // ApplySLA applies an SLA policy to a conversation.
-func (m *Manager) ApplySLA(conversationID, assignedTeamID, slaPolicyID int) (models.SLAPolicy, error) {
+func (m *Manager) ApplySLA(startTime time.Time, conversationID, assignedTeamID, slaPolicyID int) (models.SLAPolicy, error) {
 	var sla models.SLAPolicy
 
-	deadlines, err := m.CalculateDeadlines(time.Now(), slaPolicyID, assignedTeamID)
+	deadlines, err := m.CalculateDeadlines(startTime, slaPolicyID, assignedTeamID)
 	if err != nil {
 		return sla, err
 	}
@@ -263,11 +265,11 @@ func (m *Manager) GetLatestDeadlines(conversationID int) (time.Time, time.Time, 
 }
 
 // Run starts the SLA evaluation loop and evaluates pending SLAs.
-func (m *Manager) Run(ctx context.Context) {
+func (m *Manager) Run(ctx context.Context, evalInterval time.Duration) {
 	m.wg.Add(1)
 	defer m.wg.Done()
 
-	ticker := time.NewTicker(2 * time.Minute)
+	ticker := time.NewTicker(evalInterval)
 	defer ticker.Stop()
 
 	for {
@@ -289,6 +291,7 @@ func (m *Manager) Close() error {
 }
 
 // evaluatePendingSLAs fetches unbreached SLAs and evaluates them.
+// Here evaluation means checking if the SLA deadlines have been met or breached and updating timestamps accordingly.
 func (m *Manager) evaluatePendingSLAs(ctx context.Context) error {
 	var pendingSLAs []models.AppliedSLA
 	if err := m.q.GetPendingSLAs.SelectContext(ctx, &pendingSLAs); err != nil {
@@ -306,6 +309,7 @@ func (m *Manager) evaluatePendingSLAs(ctx context.Context) error {
 			}
 		}
 	}
+	m.lo.Info("evaluated pending SLAs", "count", len(pendingSLAs))
 	return nil
 }
 
@@ -318,15 +322,15 @@ func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
 		}
 		if !metAt.Valid && now.After(deadline) {
 			_, err := m.q.UpdateBreach.Exec(sla.ID, slaType)
-			return err
+			return fmt.Errorf("updating SLA breach: %w", err)
 		}
 		if metAt.Valid {
 			if metAt.Time.After(deadline) {
 				_, err := m.q.UpdateBreach.Exec(sla.ID, slaType)
-				return err
+				return fmt.Errorf("updating SLA breach: %w", err)
 			}
 			_, err := m.q.UpdateMet.Exec(sla.ID, slaType)
-			return err
+			return fmt.Errorf("updating SLA met: %w", err)
 		}
 		return nil
 	}

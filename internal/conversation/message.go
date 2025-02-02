@@ -421,8 +421,10 @@ func (m *Manager) InsertConversationActivity(activityType, conversationUUID, new
 		SenderType:       SenderTypeUser,
 	}
 
-	// InsertMessage message in DB.
-	m.InsertMessage(&message)
+	if err := m.InsertMessage(&message); err != nil {
+		m.lo.Error("error inserting activity message", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error inserting activity message", nil)
+	}
 	return nil
 }
 
@@ -474,7 +476,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 
 	// Conversations exists for this message?
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
-	if err != nil && err != ErrConversationNotFound {
+	if err != nil && err != errConversationNotFound {
 		return err
 	}
 	if conversationID > 0 {
@@ -521,7 +523,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 func (m *Manager) MessageExists(messageID string) (bool, error) {
 	_, err := m.findConversationID([]string{messageID})
 	if err != nil {
-		if errors.Is(err, ErrConversationNotFound) {
+		if errors.Is(err, errConversationNotFound) {
 			return false, nil
 		}
 		m.lo.Error("error fetching message from db", "error", err)
@@ -552,7 +554,7 @@ func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error
 	var conversation = models.Conversation{}
 	if err := m.q.GetConversationByMessageID.Get(&conversation, id); err != nil {
 		if err == sql.ErrNoRows {
-			return conversation, ErrConversationNotFound
+			return conversation, errConversationNotFound
 		}
 		m.lo.Error("error fetching message from DB", "error", err)
 		return conversation, envelope.NewError(envelope.GeneralError, "Error fetching message", nil)
@@ -652,7 +654,7 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID, contactC
 		sourceIDs = append(sourceIDs, in.InReplyTo)
 	}
 	conversationID, err = m.findConversationID(sourceIDs)
-	if err != nil && err != ErrConversationNotFound {
+	if err != nil && err != errConversationNotFound {
 		return new, err
 	}
 
@@ -684,12 +686,12 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID, contactC
 // findConversationID finds the conversation ID from the message source ID.
 func (m *Manager) findConversationID(messageSourceIDs []string) (int, error) {
 	if len(messageSourceIDs) == 0 {
-		return 0, ErrConversationNotFound
+		return 0, errConversationNotFound
 	}
 	var conversationID int
 	if err := m.q.MessageExistsBySourceID.QueryRow(pq.Array(messageSourceIDs)).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
-			return conversationID, ErrConversationNotFound
+			return conversationID, errConversationNotFound
 		}
 		m.lo.Error("error fetching msg from DB", "error", err)
 		return conversationID, err

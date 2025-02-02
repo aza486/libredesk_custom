@@ -136,12 +136,13 @@ func main() {
 	loadSettings(settings)
 
 	var (
-		autoAssignInterval          = ko.MustDuration("autoassigner.interval")
+		autoAssignInterval          = ko.MustDuration("autoassigner.autoassign_interval")
 		unsnoozeInterval            = ko.MustDuration("conversation.unsnooze_interval")
-		automationWrk               = ko.MustInt("automation.worker_count")
+		automationWorkers           = ko.MustInt("automation.worker_count")
 		messageOutgoingQWorkers     = ko.MustDuration("message.outgoing_queue_workers")
 		messageIncomingQWorkers     = ko.MustDuration("message.incoming_queue_workers")
 		messageOutgoingScanInterval = ko.MustDuration("message.message_outoing_scan_interval")
+		slaEvaluationInterval       = ko.MustDuration("sla.evaluation_interval")
 		lo                          = initLogger("libredesk")
 		wsHub                       = ws.NewHub()
 		rdb                         = initRedis()
@@ -167,14 +168,13 @@ func main() {
 
 	automation.SetConversationStore(conversation)
 	startInboxes(ctx, inbox, conversation)
-
-	go automation.Run(ctx, automationWrk)
+	go automation.Run(ctx, automationWorkers)
 	go autoassigner.Run(ctx, autoAssignInterval)
 	go conversation.Run(ctx, messageIncomingQWorkers, messageOutgoingQWorkers, messageOutgoingScanInterval)
 	go conversation.RunUnsnoozer(ctx, unsnoozeInterval)
-	go media.DeleteUnlinkedMedia(ctx)
 	go notifier.Run(ctx)
-	go sla.Run(ctx)
+	go sla.Run(ctx, slaEvaluationInterval)
+	go media.DeleteUnlinkedMedia(ctx)
 
 	var app = &App{
 		lo:            lo,
@@ -230,25 +230,23 @@ func main() {
 
 	// Wait for shutdown signal.
 	<-ctx.Done()
-	colorlog.Red("Shutting down the server. Please wait....")
+	colorlog.Red("Shutting down HTTP server...")
 	s.Shutdown()
-	colorlog.Red("Server shutdown complete.")
-	colorlog.Red("Shutting down services. Please wait....")
+	colorlog.Red("Shutting down inboxes...")
 	inbox.Close()
-	colorlog.Red("Inbox shutdown complete.")
+	colorlog.Red("Shutting down automation...")
 	automation.Close()
-	colorlog.Red("Automation shutdown complete.")
+	colorlog.Red("Shutting down autoassigner...")
 	autoassigner.Close()
-	colorlog.Red("Autoassigner shutdown complete.")
+	colorlog.Red("Shutting down notifier...")
 	notifier.Close()
-	colorlog.Red("Notifier shutdown complete.")
+	colorlog.Red("Shutting down conversation...")
 	conversation.Close()
-	colorlog.Red("Conversation shutdown complete.")
+	colorlog.Red("Shutting down SLA...")
 	sla.Close()
-	colorlog.Red("SLA shutdown complete.")
+	colorlog.Red("Shutting down database...")
 	db.Close()
-	colorlog.Red("Database shutdown complete.")
+	colorlog.Red("Shutting down redis...")
 	rdb.Close()
-	colorlog.Red("Redis shutdown complete.")
 	colorlog.Green("Shutdown complete.")
 }

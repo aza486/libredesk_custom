@@ -40,9 +40,9 @@ import (
 var (
 	//go:embed queries.sql
 	efs                                  embed.FS
-	ErrConversationNotFound              = errors.New("conversation not found")
-	ConversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id"}
-	ConversationStatusesFilterFields     = []string{"id", "name"}
+	errConversationNotFound              = errors.New("conversation not found")
+	conversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id"}
+	conversationStatusesFilterFields     = []string{"id", "name"}
 	csatReplyMessage                     = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
 )
 
@@ -78,7 +78,7 @@ type Manager struct {
 }
 
 type slaStore interface {
-	ApplySLA(conversationID, assignedTeamID, slaID int) (slaModels.SLAPolicy, error)
+	ApplySLA(startTime time.Time, conversationID, assignedTeamID, slaID int) (slaModels.SLAPolicy, error)
 }
 
 type statusStore interface {
@@ -380,7 +380,7 @@ func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User
 
 		// Record the status change as an activity.
 		if err := c.RecordStatusChange(models.StatusOpen, conversationUUID, actor); err != nil {
-			return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
+			return err
 		}
 	}
 	return nil
@@ -687,8 +687,8 @@ func (c *Manager) makeConversationsListQuery(userID int, teamIDs []int, listType
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
-		"conversations":         ConversationsListAllowedFilterFields,
-		"conversation_statuses": ConversationStatusesFilterFields,
+		"conversations":         conversationsListAllowedFilterFields,
+		"conversation_statuses": conversationStatusesFilterFields,
 	})
 }
 
@@ -716,7 +716,7 @@ func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, 
 func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation models.Conversation) error {
 	agent, err := m.userStore.Get(userIDs[0])
 	if err != nil {
-		m.lo.Error("error fetching agent", "error", err)
+		m.lo.Error("error fetching agent", "user_id", userIDs[0], "error", err)
 		return fmt.Errorf("fetching agent: %w", err)
 	}
 
@@ -760,16 +760,16 @@ func (m *Manager) UnassignOpen(userID int) error {
 }
 
 // ApplySLA applies the SLA policy to a conversation.
-func (m *Manager) ApplySLA(conversationUUID string, conversationID, assignedTeamID, policyID int, actor umodels.User) error {
-	policy, err := m.slaStore.ApplySLA(conversationID, assignedTeamID, policyID)
+func (m *Manager) ApplySLA(conversation models.Conversation, policyID int, actor umodels.User) error {
+	policy, err := m.slaStore.ApplySLA(conversation.CreatedAt, conversation.ID, conversation.AssignedTeamID.Int, policyID)
 	if err != nil {
-		m.lo.Error("error applying SLA", "error", err)
+		m.lo.Error("error applying SLA to conversation", "conversation_id", conversation.ID, "policy_id", policyID, "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error applying SLA", nil)
 	}
 
 	// Record the SLA application as an activity.
-	if err := m.RecordSLASet(conversationUUID, policy.Name, actor); err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error recording SLA application", nil)
+	if err := m.RecordSLASet(conversation.UUID, policy.Name, actor); err != nil {
+		return err
 	}
 	return nil
 }
@@ -816,7 +816,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 		return m.SendReply([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0], nil, nil, nil)
 	case amodels.ActionSetSLA:
 		slaID, _ := strconv.Atoi(action.Value[0])
-		return m.ApplySLA(conv.UUID, conv.ID, conv.AssignedTeamID.Int, slaID, user)
+		return m.ApplySLA(conv, slaID, user)
 	case amodels.ActionSetTags:
 		return m.UpsertConversationTags(conv.UUID, action.Value)
 	case amodels.ActionSendCSAT:

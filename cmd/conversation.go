@@ -393,21 +393,21 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Apply SLA policy if team has changed and has an SLA policy.
+	// Evaluate automation rules on team assignment.
+	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationTeamAssigned)
+
+	// Apply SLA policy if team has changed and the new team has an SLA policy.
 	if conversation.AssignedTeamID.Int != assigneeID && assigneeID != 0 {
 		team, err := app.team.Get(assigneeID)
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 		if team.SLAPolicyID.Int != 0 {
-			if err := app.conversation.ApplySLA(conversation.UUID, conversation.ID, conversation.AssignedTeamID.Int, team.SLAPolicyID.Int, user); err != nil {
+			if err := app.conversation.ApplySLA(*conversation, team.SLAPolicyID.Int, user); err != nil {
 				return sendErrorEnvelope(r, err)
 			}
 		}
 	}
-
-	// Evaluate automation rules on team assignment.
-	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationTeamAssigned)
 	return r.SendEnvelope("Team assigned successfully")
 }
 

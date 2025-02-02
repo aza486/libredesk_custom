@@ -136,7 +136,6 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 
 	if exists {
-		e.lo.Debug("message already exists", "message_id", env.MessageID)
 		return nil
 	}
 
