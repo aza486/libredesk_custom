@@ -51,6 +51,12 @@ const submitForm = async (values) => {
       title: 'Success',
       description: toastDescription,
     })
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     formLoading.value = false
   }
@@ -77,7 +83,7 @@ onMounted(async () => {
       oidc.value = resp.data.data
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not fetch OIDC config',
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
