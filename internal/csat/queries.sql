@@ -1,9 +1,8 @@
 -- name: insert
 INSERT INTO csat_responses (
-        conversation_id,
-        assigned_agent_id
+        conversation_id
     )
-VALUES ($1, $2)
+VALUES ($1)
 RETURNING uuid;
 
 -- name: get
@@ -12,7 +11,6 @@ SELECT id,
     created_at,
     updated_at,
     conversation_id,
-    assigned_agent_id,
     rating,
     feedback,
     response_timestamp

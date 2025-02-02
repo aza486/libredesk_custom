@@ -14,7 +14,6 @@ type CSATResponse struct {
 	CreatedAt         time.Time   `db:"created_at"`
 	UpdatedAt         time.Time   `db:"updated_at"`
 	ConversationID    int         `db:"conversation_id"`
-	AssignedAgentID   int         `db:"assigned_agent_id"`
 	Score             int         `db:"rating"`
 	Feedback          null.String `db:"feedback"`
 	ResponseTimestamp null.Time   `db:"response_timestamp"`

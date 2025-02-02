@@ -379,7 +379,6 @@ CREATE TABLE csat_responses (
 
 	-- Keep CSAT responses even if the conversation or agent is deleted.
     conversation_id BIGINT REFERENCES conversations(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
-    assigned_agent_id BIGINT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
 
     rating INT DEFAULT 0 NOT NULL,
     feedback TEXT NULL,
