@@ -58,10 +58,6 @@ func (m *Manager) Create(conversationID, assignedAgentID int) (models.CSATRespon
 	)
 	err := m.q.Insert.QueryRow(conversationID, assignedAgentID).Scan(&uuid)
 	if err != nil {
-		if dbutil.IsUniqueViolationError(err) {
-			m.lo.Warn("CSAT already exists", "conversation_id", conversationID, "error", err)
-			return rsp, ErrCSATAlreadyExists
-		}
 		m.lo.Error("error creating CSAT", "error", err)
 		return rsp, envelope.NewError(envelope.GeneralError, "Error creating CSAT", nil)
 	}

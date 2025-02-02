@@ -169,7 +169,7 @@ func handleSendMessage(r *fastglue.Request) error {
 		app.automation.EvaluateConversationUpdateRules(cuuid, models.EventConversationMessageOutgoing)
 	}
 
-	// Reopen conversation if snoozed or closed or resolved.
+	// Reopen if snoozed/closed/resolved regardless of automation rules - this is the default behavior
 	if err := app.conversation.ReOpenConversation(cuuid, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}

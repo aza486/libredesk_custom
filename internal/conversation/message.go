@@ -298,7 +298,7 @@ func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUI
 	cc = stringutil.RemoveEmptyStrings(cc)
 	bcc = stringutil.RemoveEmptyStrings(bcc)
 
-	// Combine cc and bcc into meta.
+	// Set cc and bcc in meta.
 	if len(cc) > 0 {
 		meta["cc"] = cc
 	}
@@ -355,10 +355,10 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		return envelope.NewError(envelope.GeneralError, err.Error(), nil)
 	}
 
-	// Update conversation last message details.
+	// Update conversation last message details in conversation.
 	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.CreatedAt)
 
-	// Broadcast new message to all conversation subscribers.
+	// Broadcast new message.
 	m.BroadcastNewMessage(message.ConversationUUID, message.TextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
 }

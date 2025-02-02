@@ -358,13 +358,13 @@ func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User
 	// Record the status change as an activity if the conversation was reopened.
 	count, _ := rows.RowsAffected()
 	if count > 0 {
+		// Broadcast update using WS
+		c.BroadcastConversationUpdate(conversationUUID, "status", models.StatusOpen)
+
 		// Record the status change as an activity.
 		if err := c.RecordStatusChange(models.StatusOpen, conversationUUID, actor); err != nil {
 			return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
 		}
-
-		// Send WS update to all subscribers.
-		c.BroadcastConversationUpdate(conversationUUID, "status", models.StatusOpen)
 	}
 	return nil
 }
@@ -518,7 +518,7 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 		return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
 	}
 
-	// Send WS update to all subscribers.
+	// Broadcast update using WS
 	c.BroadcastConversationUpdate(uuid, "status", status)
 	return nil
 }

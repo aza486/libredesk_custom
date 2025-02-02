@@ -10,7 +10,6 @@ import (
 	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/abhinavxd/libredesk/internal/automation/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
-	"github.com/abhinavxd/libredesk/internal/csat"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/valyala/fasthttp"
@@ -350,17 +349,9 @@ func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	conversation, err := app.conversation.GetConversation(0, uuid)
+	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 
 	if err := app.conversation.UpdateConversationUserAssignee(uuid, assigneeID, user); err != nil {
@@ -418,7 +409,7 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 
 	// Evaluate automation rules on team assignment.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationTeamAssigned)
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Team assigned successfully")
 }
 
 // handleUpdateConversationPriority updates the priority of a conversation.
@@ -465,36 +456,37 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 		uuid         = r.RequestCtx.UserValue("uuid").(string)
 		auser        = r.RequestCtx.UserValue("user").(amodels.User)
 	)
+
+	// Validate inputs
 	if status == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `status`", nil, envelope.InputError)
 	}
-
 	if snoozedUntil == "" && status == cmodels.StatusSnoozed {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `snoozed_until`", nil, envelope.InputError)
 	}
-
-	conversation, err := app.conversation.GetConversation(0, uuid)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
+	if status == cmodels.StatusSnoozed {
+		_, err := time.ParseDuration(snoozedUntil)
+		if err != nil {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `snoozed_until`", nil, envelope.InputError)
+		}
 	}
 
-	if status == cmodels.StatusResolved && conversation.AssignedUserID.Int == 0 {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Cannot resolve the conversation without an assigned user, Please assign a user before attempting to resolve.", nil))
-	}
-
+	// Enforce conversation access.
 	user, err := app.user.Get(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
+	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
+
+	// Make sure a user is assigned before resolving conversation.
+	if status == cmodels.StatusResolved && conversation.AssignedUserID.Int == 0 {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Cannot resolve the conversation without an assigned user, Please assign a user before attempting to resolve.", nil))
 	}
 
+	// Update conversation status.
 	if err := app.conversation.UpdateConversationStatus(uuid, 0 /**status_id**/, status, snoozedUntil, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -604,25 +596,28 @@ func setSLADeadlines(app *App, conversation *cmodels.Conversation) error {
 	return nil
 }
 
-// sendCSATSurvey sends a CSAT survey if enabled on the inbox.
-func sendCSATSurvey(app *App, conversation cmodels.Conversation, user umodels.User) error {
+// Send CSAT survey email when enabled for inbox
+func sendCSATSurvey(app *App, conversation *cmodels.Conversation, user umodels.User) error {
+	// Check if CSAT is enabled on the inbox.
 	inbox, err := app.inbox.GetDBRecord(conversation.InboxID)
 	if err != nil {
 		return err
 	}
-
 	if !inbox.CSATEnabled {
 		return nil
 	}
 
+	// Create CSAT survey.
 	csatR, err := app.csat.Create(conversation.ID, conversation.AssignedUserID.Int)
-	if err != nil && err != csat.ErrCSATAlreadyExists {
+	if err != nil {
 		return err
 	}
 
+	// Send CSAT survey to user as a reply.
 	consts := app.consts.Load().(*constants)
 	csatURL := fmt.Sprintf("%s/csat/%s", consts.AppBaseURL, csatR.UUID)
 	messageContent := fmt.Sprintf("Please rate your experience with us: <a href=\"%s\">Rate now</a>", csatURL)
+	// Store is_csat meta to identify and filter CSAT replies from agent view
 	meta := map[string]interface{}{
 		"is_csat": true,
 	}
