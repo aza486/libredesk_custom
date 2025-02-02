@@ -147,6 +147,7 @@ func main() {
 		rdb                         = initRedis()
 		constants                   = initConstants()
 		i18n                        = initI18n(fs)
+		csat                        = initCSAT(db)
 		oidc                        = initOIDC(db, settings)
 		status                      = initStatus(db)
 		priority                    = initPriority(db)
@@ -160,7 +161,7 @@ func main() {
 		notifier                    = initNotifier(user)
 		automation                  = initAutomationEngine(db)
 		sla                         = initSLA(db, team, settings, businessHours)
-		conversation                = initConversations(i18n, sla, status, priority, wsHub, notifier, db, inbox, user, team, media, automation, template)
+		conversation                = initConversations(i18n, sla, status, priority, wsHub, notifier, db, inbox, user, team, media, settings, csat, automation, template)
 		autoassigner                = initAutoAssigner(team, user, conversation)
 	)
 

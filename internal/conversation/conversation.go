@@ -19,6 +19,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	pmodels "github.com/abhinavxd/libredesk/internal/conversation/priority/models"
 	smodels "github.com/abhinavxd/libredesk/internal/conversation/status/models"
+	csatModels "github.com/abhinavxd/libredesk/internal/csat/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/inbox"
@@ -42,6 +43,7 @@ var (
 	ErrConversationNotFound              = errors.New("conversation not found")
 	ConversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id"}
 	ConversationStatusesFilterFields     = []string{"id", "name"}
+	csatReplyMessage                     = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
 )
 
 const (
@@ -58,6 +60,8 @@ type Manager struct {
 	statusStore                statusStore
 	priorityStore              priorityStore
 	slaStore                   slaStore
+	settingsStore              settingsStore
+	csatStore                  csatStore
 	notifier                   *notifier.Service
 	lo                         *logf.Logger
 	db                         *sqlx.DB
@@ -109,6 +113,15 @@ type inboxStore interface {
 	Get(int) (inbox.Inbox, error)
 }
 
+type settingsStore interface {
+	GetAppRootURL() (string, error)
+}
+
+type csatStore interface {
+	Create(conversationID int) (csatModels.CSATResponse, error)
+	MakePublicURL(appBaseURL, uuid string) string
+}
+
 // Opts holds the options for creating a new Manager.
 type Opts struct {
 	DB                       *sqlx.DB
@@ -122,13 +135,15 @@ func New(
 	wsHub *ws.Hub,
 	i18n *i18n.I18n,
 	notifier *notifier.Service,
-	sla slaStore,
-	status statusStore,
-	priority priorityStore,
+	slaStore slaStore,
+	statusStore statusStore,
+	priorityStore priorityStore,
 	inboxStore inboxStore,
 	userStore userStore,
 	teamStore teamStore,
 	mediaStore mediaStore,
+	settingsStore settingsStore,
+	csatStore csatStore,
 	automation *automation.Engine,
 	template *template.Manager,
 	opts Opts) (*Manager, error) {
@@ -147,9 +162,11 @@ func New(
 		userStore:                  userStore,
 		teamStore:                  teamStore,
 		mediaStore:                 mediaStore,
-		slaStore:                   sla,
-		statusStore:                status,
-		priorityStore:              priority,
+		settingsStore:              settingsStore,
+		csatStore:                  csatStore,
+		slaStore:                   slaStore,
+		statusStore:                statusStore,
+		priorityStore:              priorityStore,
 		automation:                 automation,
 		template:                   template,
 		db:                         opts.DB,
@@ -759,71 +776,54 @@ func (m *Manager) ApplySLA(conversationUUID string, conversationID, assignedTeam
 
 // ApplyAction applies an action to a conversation, this can be called from multiple packages across the app to perform actions on conversations.
 // all actions are executed on behalf of the provided user if the user is not provided, system user is used.
-func (m *Manager) ApplyAction(action amodels.RuleAction, conversation models.Conversation, user umodels.User) error {
-	if len(action.Value) == 0 {
-		m.lo.Warn("no value provided for action", "action", action.Type, "conversation_uuid", conversation.UUID)
-		return fmt.Errorf("no value provided for action %s", action.Type)
+func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversation, user umodels.User) error {
+	// CSAT action does not require a value.
+	if len(action.Value) == 0 && action.Type != amodels.ActionSendCSAT {
+		return fmt.Errorf("empty value for action %s", action.Type)
 	}
 
-	// If user is not provided, use system user.
+	// Fall back to system user if user is not provided.
 	if user.ID == 0 {
-		systemUser, err := m.userStore.GetSystemUser()
-		if err != nil {
-			return fmt.Errorf("could not apply %s action. could not fetch system user: %w", action.Type, err)
+		var err error
+		if user, err = m.userStore.GetSystemUser(); err != nil {
+			return fmt.Errorf("get system user: %w", err)
 		}
-		user = systemUser
 	}
+
+	m.lo.Debug("executing action",
+		"type", action.Type,
+		"value", action.Value,
+		"conv_uuid", conv.UUID,
+		"user_id", user.ID,
+	)
 
 	switch action.Type {
 	case amodels.ActionAssignTeam:
-		m.lo.Debug("executing assign team action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
 		teamID, _ := strconv.Atoi(action.Value[0])
-		if err := m.UpdateConversationTeamAssignee(conversation.UUID, teamID, user); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.UpdateConversationTeamAssignee(conv.UUID, teamID, user)
 	case amodels.ActionAssignUser:
-		m.lo.Debug("executing assign user action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
 		agentID, _ := strconv.Atoi(action.Value[0])
-		if err := m.UpdateConversationUserAssignee(conversation.UUID, agentID, user); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.UpdateConversationUserAssignee(conv.UUID, agentID, user)
 	case amodels.ActionSetPriority:
-		m.lo.Debug("executing set priority action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
 		priorityID, _ := strconv.Atoi(action.Value[0])
-		if err := m.UpdateConversationPriority(conversation.UUID, priorityID, "", user); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.UpdateConversationPriority(conv.UUID, priorityID, "", user)
 	case amodels.ActionSetStatus:
-		m.lo.Debug("executing set status action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
 		statusID, _ := strconv.Atoi(action.Value[0])
-		if err := m.UpdateConversationStatus(conversation.UUID, statusID, "", "", user); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.UpdateConversationStatus(conv.UUID, statusID, "", "", user)
 	case amodels.ActionSendPrivateNote:
-		m.lo.Debug("executing send private note action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
-		if err := m.SendPrivateNote([]mmodels.Media{}, user.ID, conversation.UUID, action.Value[0]); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.SendPrivateNote([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0])
 	case amodels.ActionReply:
-		m.lo.Debug("executing reply action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
-		if err := m.SendReply([]mmodels.Media{}, user.ID, conversation.UUID, action.Value[0], []string{}, []string{}, map[string]interface{}{}); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.SendReply([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0], nil, nil, nil)
 	case amodels.ActionSetSLA:
-		m.lo.Debug("executing apply SLA action", "value", action.Value[0], "conversation_uuid", conversation.UUID)
-		slaPolicyID, _ := strconv.Atoi(action.Value[0])
-		if err := m.ApplySLA(conversation.UUID, conversation.ID, conversation.AssignedTeamID.Int, slaPolicyID, user); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		slaID, _ := strconv.Atoi(action.Value[0])
+		return m.ApplySLA(conv.UUID, conv.ID, conv.AssignedTeamID.Int, slaID, user)
 	case amodels.ActionSetTags:
-		m.lo.Debug("executing set tags action", "value", action.Value, "conversation_uuid", conversation.UUID)
-		if err := m.UpsertConversationTags(conversation.UUID, action.Value); err != nil {
-			return fmt.Errorf("could not apply %s action: %w", action.Type, err)
-		}
+		return m.UpsertConversationTags(conv.UUID, action.Value)
+	case amodels.ActionSendCSAT:
+		return m.SendCSATReply(user.ID, conv)
 	default:
-		return fmt.Errorf("unrecognized action type %s", action.Type)
+		return fmt.Errorf("unknown action: %s", action.Type)
 	}
-	return nil
 }
 
 // RemoveConversationAssignee removes the assignee from the conversation.
@@ -835,13 +835,30 @@ func (m *Manager) RemoveConversationAssignee(uuid, typ string) error {
 	return nil
 }
 
+// SendCSATReply sends a CSAT reply message to a conversation.
+func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversation) error {
+	appRootURL, err := m.settingsStore.GetAppRootURL()
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error fetching app root URL", nil)
+	}
+	csat, err := m.csatStore.Create(conversation.ID)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error creating CSAT", nil)
+	}
+	csatPublicURL := m.csatStore.MakePublicURL(appRootURL, csat.UUID)
+	message := fmt.Sprintf(csatReplyMessage, csatPublicURL)
+	// Store `is_csat` meta to identify and filter CSAT public url from the message.
+	meta := map[string]interface{}{
+		"is_csat": true,
+	}
+	return m.SendReply([]mmodels.Media{}, actorUserID, conversation.UUID, message, nil, nil, meta)
+}
+
 // addConversationParticipant adds a user as participant to a conversation.
 func (c *Manager) addConversationParticipant(userID int, conversationUUID string) error {
-	if _, err := c.q.InsertConversationParticipant.Exec(userID, conversationUUID); err != nil {
-		if !dbutil.IsUniqueViolationError(err) {
-			c.lo.Error("error adding conversation participant", "user_id", userID, "conversation_uuid", conversationUUID, "error", err)
-			return fmt.Errorf("adding conversation participant: %w", err)
-		}
+	if _, err := c.q.InsertConversationParticipant.Exec(userID, conversationUUID); err != nil && !dbutil.IsUniqueViolationError(err) {
+		c.lo.Error("error adding conversation participant", "user_id", userID, "conversation_uuid", conversationUUID, "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error adding conversation participant", nil)
 	}
 	return nil
 }

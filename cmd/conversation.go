@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -361,7 +360,7 @@ func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
 	// Evaluate automation rules.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationUserAssigned)
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User assigned successfully")
 }
 
 // handleUpdateTeamAssignee updates the team assigned to a conversation.
@@ -496,8 +495,15 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 
 	// If status is `Resolved`, send CSAT survey if enabled on inbox.
 	if status == cmodels.StatusResolved {
-		if err := sendCSATSurvey(app, conversation, user); err != nil {
+		// Check if CSAT is enabled on the inbox and send CSAT survey message.
+		inbox, err := app.inbox.GetDBRecord(conversation.InboxID)
+		if err != nil {
 			return sendErrorEnvelope(r, err)
+		}
+		if inbox.CSATEnabled {
+			if err := app.conversation.SendCSATReply(user.ID, *conversation); err != nil {
+				return sendErrorEnvelope(r, err)
+			}
 		}
 	}
 	return r.SendEnvelope("Status updated successfully")
@@ -594,34 +600,6 @@ func setSLADeadlines(app *App, conversation *cmodels.Conversation) error {
 	conversation.FirstResponseDueAt = null.NewTime(first, first != time.Time{})
 	conversation.ResolutionDueAt = null.NewTime(resolution, resolution != time.Time{})
 	return nil
-}
-
-// Send CSAT survey email when enabled for inbox
-func sendCSATSurvey(app *App, conversation *cmodels.Conversation, user umodels.User) error {
-	// Check if CSAT is enabled on the inbox.
-	inbox, err := app.inbox.GetDBRecord(conversation.InboxID)
-	if err != nil {
-		return err
-	}
-	if !inbox.CSATEnabled {
-		return nil
-	}
-
-	// Create CSAT survey.
-	csatR, err := app.csat.Create(conversation.ID, conversation.AssignedUserID.Int)
-	if err != nil {
-		return err
-	}
-
-	// Send CSAT survey to user as a reply.
-	consts := app.consts.Load().(*constants)
-	csatURL := fmt.Sprintf("%s/csat/%s", consts.AppBaseURL, csatR.UUID)
-	messageContent := fmt.Sprintf("Please rate your experience with us: <a href=\"%s\">Rate now</a>", csatURL)
-	// Store is_csat meta to identify and filter CSAT replies from agent view
-	meta := map[string]interface{}{
-		"is_csat": true,
-	}
-	return app.conversation.SendReply(nil, user.ID, conversation.UUID, messageContent, []string{}, []string{}, meta)
 }
 
 // handleRemoveUserAssignee removes the user assigned to a conversation.

@@ -35,7 +35,7 @@ const updateMacro = async (payload) => {
     formLoading.value = true
     await api.updateMacro(macro.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: 'Macro updated successfully'
     })
   } catch (error) {

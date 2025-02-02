@@ -146,7 +146,7 @@ async function createInbox (payload) {
     isLoading.value = true
     await api.createInbox(payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: 'Inbox created successfully'
     })
     router.push('/admin/inboxes')

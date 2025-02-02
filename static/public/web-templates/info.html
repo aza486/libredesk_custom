@@ -2,9 +2,11 @@
 {{ template "header" . }}
 
 <section class="center">
-    {{ if .message }}
-    <p class="green">{{ .message }}</p>
+    <h1>{{ .Data.Title }}</h1>
+    {{ if .Data.Message }}
+    <p class="green">{{ .Data.Message }}</p>
     {{ end }}
+
 </section>
 
 {{ template "footer" . }}

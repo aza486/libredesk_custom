@@ -333,7 +333,7 @@ const handleSave = async (values) => {
       router.push('/admin/automations')
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: 'Rule saved successfully'
     })
   } catch (error) {

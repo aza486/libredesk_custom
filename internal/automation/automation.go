@@ -336,7 +336,7 @@ func (e *Engine) handleUpdateConversation(conversationUUID, eventType string) {
 
 // handleTimeTrigger handles time trigger events.
 func (e *Engine) handleTimeTrigger() {
-	e.lo.Debug("handling time trigger")
+	e.lo.Debug("handling time triggers")
 	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour)
 	conversations, err := e.conversationStore.GetConversationsCreatedAfter(thirtyDaysAgo)
 	if err != nil {
@@ -349,7 +349,13 @@ func (e *Engine) handleTimeTrigger() {
 		return
 	}
 	e.lo.Debug("fetched conversations for evaluating time triggers", "conversations_count", len(conversations), "rules_count", len(rules))
-	for _, conversation := range conversations {
+	for _, c := range conversations {
+		// Fetch entire conversation.
+		conversation, err := e.conversationStore.GetConversation(0, c.UUID)
+		if err != nil {
+			e.lo.Error("error fetching conversation for time trigger", "uuid", c.UUID, "error", err)
+			continue
+		}
 		e.evalConversationRules(rules, conversation)
 	}
 }

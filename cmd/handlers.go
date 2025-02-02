@@ -195,7 +195,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Public pages.
 	g.GET("/csat/{uuid}", handleShowCSAT)
-	g.POST("/csat/{uuid}", fastglue.ReqLenRangeParams(handleUpdateCSATResponse, map[string][2]int{"feedback": {1, 1000}}))
+	g.POST("/csat/{uuid}", handleUpdateCSATResponse)
 
 	// Health check.
 	g.GET("/health", handleHealthCheck)

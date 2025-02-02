@@ -135,30 +135,8 @@ WHERE
 -- name: get-conversations-created-after
 SELECT
     c.id,
-    c.created_at,
-    c.updated_at,
-    c.closed_at,
-    c.resolved_at,
-    p.name as priority,
-    s.name as status,
-    c.uuid,
-    c.reference_number,
-    c.first_reply_at,
-    u.first_name as first_name,
-    u.last_name as last_name,
-    u.email as email,
-    u.avatar_url as avatar_url,
-    (SELECT COALESCE(
-        (SELECT json_agg(t.name)
-        FROM tags t
-        INNER JOIN conversation_tags ct ON ct.tag_id = t.id
-        WHERE ct.conversation_id = c.id),
-        '[]'::json
-    )) AS tags
+    c.uuid
 FROM conversations c
-JOIN users u ON c.contact_id = u.id
-LEFT JOIN conversation_statuses s ON c.status_id = s.id
-LEFT JOIN conversation_priorities p ON c.priority_id = p.id
 WHERE c.created_at > $1;
 
 -- name: get-contact-conversations

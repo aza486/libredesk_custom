@@ -61,6 +61,7 @@ import (
 // constants holds the app constants.
 type constants struct {
 	AppBaseURL                  string
+	FaviconURL                  string
 	LogoURL                     string
 	SiteName                    string
 	UploadProvider              string
@@ -111,6 +112,7 @@ func initFlags() {
 func initConstants() *constants {
 	return &constants{
 		AppBaseURL:                  ko.String("app.root_url"),
+		FaviconURL:                  ko.String("app.favicon_url"),
 		LogoURL:                     ko.String("app.logo_url"),
 		SiteName:                    ko.String("app.site_name"),
 		UploadProvider:              ko.MustString("upload.provider"),
@@ -206,10 +208,12 @@ func initConversations(
 	userStore *user.Manager,
 	teamStore *team.Manager,
 	mediaStore *media.Manager,
+	settings *setting.Manager,
+	csat *csat.Manager,
 	automationEngine *automation.Engine,
 	template *tmpl.Manager,
 ) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, notif, sla, status, priority, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
+	c, err := conversation.New(hub, i18n, notif, sla, status, priority, inboxStore, userStore, teamStore, mediaStore, settings, csat, automationEngine, template, conversation.Opts{
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
 		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),
@@ -325,6 +329,9 @@ func getTmplFuncs(consts *constants) template.FuncMap {
 	return template.FuncMap{
 		"RootURL": func() string {
 			return consts.AppBaseURL
+		},
+		"FaviconURL": func() string {
+			return consts.FaviconURL
 		},
 		"Date": func(layout string) string {
 			if layout == "" {

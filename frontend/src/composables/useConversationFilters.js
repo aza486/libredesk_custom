@@ -176,6 +176,9 @@ export function useConversationFilters () {
             label: 'Send reply',
             type: FIELD_TYPE.RICHTEXT
         },
+        send_csat: {
+            label: 'Send CSAT',
+        },
         set_sla: {
             label: 'Set SLA',
             type: FIELD_TYPE.SELECT,

@@ -4,6 +4,7 @@ package setting
 import (
 	"embed"
 	"encoding/json"
+	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
@@ -111,4 +112,14 @@ func (m *Manager) Get(key string) (types.JSONText, error) {
 		return b, envelope.NewError(envelope.GeneralError, "Error fetching setting", nil)
 	}
 	return b, nil
+}
+
+// GetAppRootURL returns the root URL of the app.
+func (m *Manager) GetAppRootURL() (string, error) {
+	rootURL, err := m.Get("app.root_url")
+	if err != nil {
+		m.lo.Error("error fetching root URL", "error", err)
+		return "", envelope.NewError(envelope.GeneralError, "Error fetching app root URL", nil)
+	}
+	return strings.Trim(string(rootURL), "\""), nil
 }

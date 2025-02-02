@@ -331,7 +331,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		message.Status = MessageStatusSent
 	}
 
-	if message.Meta == "" {
+	if message.Meta == "" || message.Meta == "null" {
 		message.Meta = "{}"
 	}
 
@@ -352,7 +352,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 
 	// Add this user as a participant.
 	if err := m.addConversationParticipant(message.SenderID, message.ConversationUUID); err != nil {
-		return envelope.NewError(envelope.GeneralError, err.Error(), nil)
+		return err
 	}
 
 	// Update conversation last message details in conversation.
@@ -472,7 +472,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	}
 	in.Message.SenderID = in.Contact.ID
 
-	// Conversations exists for this message? 
+	// Conversations exists for this message?
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
 	if err != nil && err != ErrConversationNotFound {
 		return err
@@ -633,7 +633,6 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 				m.lo.Error("error uploading thumbnail", "error", err)
 			}
 		}
-		
 	}
 	return uploadErr
 }

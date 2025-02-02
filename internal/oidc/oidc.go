@@ -10,7 +10,6 @@ import (
 	"github.com/abhinavxd/libredesk/internal/oidc/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/jmoiron/sqlx"
-	"github.com/jmoiron/sqlx/types"
 	"github.com/zerodha/logf"
 )
 
@@ -44,7 +43,7 @@ type queries struct {
 }
 
 type settingsStore interface {
-	Get(key string) (types.JSONText, error)
+	GetAppRootURL() (string, error)
 }
 
 // New creates and returns a new instance of the oidc Manager.
@@ -69,11 +68,12 @@ func (o *Manager) Get(id int, includeSecret bool) (models.OIDC, error) {
 	}
 	// Set logo and redirect URL.
 	oidc.SetProviderLogo()
-	rootURL, err := o.getAppRootURL()
+	rootURL, err := o.setting.GetAppRootURL()
 	if err != nil {
 		return models.OIDC{}, err
 	}
 	oidc.RedirectURI = fmt.Sprintf(rootURL+redirectURL, oidc.ID)
+	// If secret is not to be included, replace it with dummy characters.
 	if oidc.ClientSecret != "" && !includeSecret {
 		oidc.ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
 	}
@@ -89,7 +89,7 @@ func (o *Manager) GetAll() ([]models.OIDC, error) {
 	}
 
 	// Get root URL of the app.
-	rootURL, err := o.getAppRootURL()
+	rootURL, err := o.setting.GetAppRootURL()
 	if err != nil {
 		return nil, err
 	}
@@ -147,14 +147,4 @@ func (o *Manager) Delete(id int) error {
 		return envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
 	return nil
-}
-
-// getAppRootURL returns the root URL of the app.
-func (o *Manager) getAppRootURL() (string, error) {
-	rootURL, err := o.setting.Get("app.root_url")
-	if err != nil {
-		o.lo.Error("error fetching root URL", "error", err)
-		return "", envelope.NewError(envelope.GeneralError, "Error fetching root URL", nil)
-	}
-	return strings.Trim(string(rootURL), "\""), nil
 }

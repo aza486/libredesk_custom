@@ -55,7 +55,7 @@ const submitForm = async (values) => {
     formLoading.value = true
     await api.updateRole(props.id, values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: 'Role updated successfully'
     })
   } catch (error) {

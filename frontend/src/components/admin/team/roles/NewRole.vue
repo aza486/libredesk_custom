@@ -29,7 +29,7 @@ const submitForm = async (values) => {
     formLoading.value = true
     await api.createRole(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: "Role created successfully"
     })
     router.push('/admin/teams/roles')

@@ -76,8 +76,8 @@ func RandomNumericString(n int) (string, error) {
 }
 
 // GetPathFromURL extracts the path from a URL.
-func GetPathFromURL(rawURL string) (string, error) {
-	parsedURL, err := url.Parse(rawURL)
+func GetPathFromURL(u string) (string, error) {
+	parsedURL, err := url.Parse(u)
 	if err != nil {
 		return "", err
 	}

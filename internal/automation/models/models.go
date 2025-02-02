@@ -17,6 +17,7 @@ const (
 	ActionReply           = "send_reply"
 	ActionSetSLA          = "set_sla"
 	ActionSetTags         = "set_tags"
+	ActionSendCSAT        = "send_csat"
 
 	OperatorAnd = "AND"
 	OperatorOR  = "OR"

@@ -54,7 +54,7 @@ const updateInbox = async (payload) => {
     isLoading.value = true
     await api.updateInbox(inbox.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Saved',
+      title: 'Success',
       description: 'Inbox updated succcessfully'
     })
   } catch (error) {

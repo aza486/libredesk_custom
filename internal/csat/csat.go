@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"errors"
+	"fmt"
 
 	"github.com/abhinavxd/libredesk/internal/csat/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
@@ -15,8 +16,12 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs embed.FS
+	efs                  embed.FS
 	ErrCSATAlreadyExists = errors.New("CSAT already exists")
+)
+
+const (
+	csatURL = "%s/csat/%s"
 )
 
 // Manager manages CSAT.
@@ -51,15 +56,14 @@ func New(opts Opts) (*Manager, error) {
 }
 
 // Create creates a new CSAT for the given conversation ID.
-func (m *Manager) Create(conversationID, assignedAgentID int) (models.CSATResponse, error) {
+func (m *Manager) Create(conversationID int) (models.CSATResponse, error) {
 	var (
 		uuid string
 		rsp  models.CSATResponse
 	)
-	err := m.q.Insert.QueryRow(conversationID, assignedAgentID).Scan(&uuid)
-	if err != nil {
+	if err := m.q.Insert.QueryRow(conversationID).Scan(&uuid); err != nil {
 		m.lo.Error("error creating CSAT", "error", err)
-		return rsp, envelope.NewError(envelope.GeneralError, "Error creating CSAT", nil)
+		return rsp, envelope.NewError(envelope.GeneralError, "Error creating CSAT survey", nil)
 	}
 	return m.Get(uuid)
 }
@@ -92,7 +96,12 @@ func (m *Manager) UpdateResponse(uuid string, score int, feedback string) error 
 	_, err = m.q.Update.Exec(uuid, score, feedback)
 	if err != nil {
 		m.lo.Error("error updating CSAT", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error updating CSAT", nil)
+		return envelope.NewError(envelope.GeneralError, "Error saving CSAT response", nil)
 	}
 	return nil
+}
+
+// MakePublicURL returns the public URL for the given CSAT UUID.
+func (m *Manager) MakePublicURL(appBaseURL, uuid string) string {
+	return fmt.Sprintf(csatURL, appBaseURL, uuid)
 }

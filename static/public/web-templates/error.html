@@ -2,8 +2,8 @@
 {{ template "header" . }}
 
 <section class="center">
-    {{ if .error_message }}
-    <p class="error">{{ .error_message }}</p>
+    {{ if .Data.ErrorMessage }}
+    <p class="error">{{ .Data.ErrorMessage }}</p>
     {{ end }}
 </section>
 
