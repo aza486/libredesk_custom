@@ -10,6 +10,10 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+var (
+	oidcStateSessKey = "oidc_state"
+)
+
 // handleOIDCLogin redirects to the OIDC provider for login.
 func handleOIDCLogin(r *fastglue.Request) error {
 	var (
@@ -28,7 +32,7 @@ func handleOIDCLogin(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error generating state.", nil, envelope.GeneralError)
 	}
 	if err = app.auth.SetSessionValues(r, map[string]interface{}{
-		"oidc_state": state,
+		oidcStateSessKey: state,
 	}); err != nil {
 		app.lo.Error("error saving state in session", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error saving state in session.", nil, envelope.GeneralError)
@@ -55,7 +59,7 @@ func handleOIDCCallback(r *fastglue.Request) error {
 	}
 
 	// Compare the state from the session with the state from the query.
-	sessionState, err := app.auth.GetSessionValue(r, "oidc_state")
+	sessionState, err := app.auth.GetSessionValue(r, oidcStateSessKey)
 	if err != nil {
 		app.lo.Error("error getting state from session", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error getting state from session.", nil, envelope.GeneralError)
