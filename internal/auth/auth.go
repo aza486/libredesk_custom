@@ -117,7 +117,7 @@ func (a *Auth) Reload(cfg Config) error {
 		oidcProv, err := oidc.NewProvider(context.Background(), provider.ProviderURL)
 		if err != nil {
 			a.logger.Error("error initializing oidc provider", "provider", provider.Provider, "provider_url", provider.ProviderURL, "error", err)
-			continue
+			return envelope.NewError(envelope.GeneralError, err.Error(), nil)
 		}
 
 		oauthCfg := oauth2.Config{
