@@ -1,3 +1,4 @@
+// Package auth implements OIDC multi-provider authentication and session management
 package auth
 
 import (
@@ -25,6 +26,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// OIDCclaim holds OIDC token claims data
 type OIDCclaim struct {
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
@@ -32,6 +34,7 @@ type OIDCclaim struct {
 	Picture       string `json:"picture"`
 }
 
+// Provider defines an OIDC provider configuration 
 type Provider struct {
 	ID           int
 	Provider     string
@@ -41,10 +44,12 @@ type Provider struct {
 	ClientSecret string
 }
 
+// Config stores multiple OIDC provider configurations
 type Config struct {
 	Providers []Provider
 }
 
+// Auth is the auth service it manages OIDC authentication and sessions
 type Auth struct {
 	mu        sync.RWMutex
 	cfg       Config
@@ -55,7 +60,7 @@ type Auth struct {
 	rd        *redis.Client
 }
 
-// New initializes an OIDC configuration for multiple providers.
+// New creates an Auth service with configured OIDC providers
 func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 	oauthCfgs := make(map[int]oauth2.Config)
 	verifiers := make(map[int]*oidc.IDTokenVerifier)
