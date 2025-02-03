@@ -38,16 +38,17 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 		case <-ctx.Done():
 			return nil
 		case <-readTicker.C:
+			e.lo.Debug("processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 			if err := e.processMailbox(ctx, cfg); err != nil && err != context.Canceled {
 				e.lo.Error("error processing mailbox", "error", err)
 			}
+			e.lo.Debug("finished processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 		}
 	}
 }
 
 // processMailbox processes emails in the specified mailbox.
 func (e *Email) processMailbox(ctx context.Context, cfg IMAPConfig) error {
-	e.lo.Debug("processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 	client, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
 	if err != nil {
 		return fmt.Errorf("error connecting to IMAP server: %w", err)
@@ -93,7 +94,7 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 	seqSet := imap.SeqSet{}
 	seqSet.AddRange(searchData.Min, searchData.Max)
 
-	// Fetch only envelope.
+	// Fetch only envelope, body is fetch later.
 	fetchOptions := &imap.FetchOptions{
 		Envelope: true,
 	}
@@ -101,21 +102,40 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 	fetchCmd := client.Fetch(seqSet, fetchOptions)
 
 	for {
+		// Check for context cancellation before fetching the next message.
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			msg := fetchCmd.Next()
-			if msg == nil {
+		}
+
+		// Fetch the next message.
+		msg := fetchCmd.Next()
+		if msg == nil {
+			// No more messages to process.
+			return nil
+		}
+
+		// Process message envelope.
+		for {
+			// Check for context cancellation before processing the next item.
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
+			// Fetch the next item in the message.
+			fetchItem := msg.Next()
+			if fetchItem == nil {
+				// No message items left to process.
 				break
 			}
 
-			// Process message envelope.
-			for fetchItem := msg.Next(); fetchItem != nil; fetchItem = msg.Next() {
-				if item, ok := fetchItem.(imapclient.FetchItemDataEnvelope); ok {
-					if err := e.processEnvelope(ctx, client, item.Envelope, msg.SeqNum, inboxID); err != nil && err != context.Canceled {
-						e.lo.Error("error processing envelope", "error", err)
-					}
+			// Process the envelope item.
+			if item, ok := fetchItem.(imapclient.FetchItemDataEnvelope); ok {
+				if err := e.processEnvelope(ctx, client, item.Envelope, msg.SeqNum, inboxID); err != nil && err != context.Canceled {
+					e.lo.Error("error processing envelope", "error", err)
 				}
 			}
 		}
@@ -154,7 +174,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 
 	// Set CC addresses in meta.
-	var ccAddr = make([]string, len(env.Cc))
+	var ccAddr = make([]string, 0, len(env.Cc))
 	for _, cc := range env.Cc {
 		if cc.Addr() != "" {
 			ccAddr = append(ccAddr, cc.Addr())
@@ -196,17 +216,21 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 
 	// Fetch full message.
 	for {
+		// Check for context cancellation before processing the next item.
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			for fullFetchItem := fullMsg.Next(); fullFetchItem != nil; fullFetchItem = fullMsg.Next() {
-				if fullItem, ok := fullFetchItem.(imapclient.FetchItemDataBodySection); ok {
-					e.lo.Debug("fetching full message body", "message_id", env.MessageID)
-					return e.processFullMessage(fullItem, incomingMsg)
-				}
-			}
+		}
+
+		fullFetchItem := fullMsg.Next()
+		if fullFetchItem == nil {
 			return nil
+		}
+
+		if fullItem, ok := fullFetchItem.(imapclient.FetchItemDataBodySection); ok {
+			e.lo.Debug("fetching full message body", "message_id", env.MessageID)
+			return e.processFullMessage(fullItem, incomingMsg)
 		}
 	}
 }
