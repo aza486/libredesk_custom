@@ -30,7 +30,7 @@ const (
 	MessageOutgoing = "outgoing"
 	MessageActivity = "activity"
 
-	SenderTypeUser    = "user"
+	SenderTypeAgent   = "agent"
 	SenderTypeContact = "contact"
 
 	MessageStatusPending  = "pending"
@@ -282,7 +282,7 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
 		Type:             MessageOutgoing,
-		SenderType:       SenderTypeUser,
+		SenderType:       SenderTypeAgent,
 		Status:           MessageStatusSent,
 		Content:          content,
 		ContentType:      ContentTypeHTML,
@@ -313,7 +313,7 @@ func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUI
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
 		Type:             MessageOutgoing,
-		SenderType:       SenderTypeUser,
+		SenderType:       SenderTypeAgent,
 		Status:           MessageStatusPending,
 		Content:          content,
 		ContentType:      ContentTypeHTML,
@@ -418,7 +418,7 @@ func (m *Manager) InsertConversationActivity(activityType, conversationUUID, new
 		ConversationUUID: conversationUUID,
 		Private:          true,
 		SenderID:         actor.ID,
-		SenderType:       SenderTypeUser,
+		SenderType:       SenderTypeAgent,
 	}
 
 	if err := m.InsertMessage(&message); err != nil {

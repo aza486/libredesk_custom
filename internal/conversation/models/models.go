@@ -46,6 +46,7 @@ type Conversation struct {
 	AssignedUserID        null.Int        `db:"assigned_user_id" json:"assigned_user_id"`
 	AssignedTeamID        null.Int        `db:"assigned_team_id" json:"assigned_team_id"`
 	AssigneeLastSeenAt    null.Time       `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
+	WaitingSince          null.Time       `db:"waiting_since" json:"waiting_since"`
 	Subject               null.String     `db:"subject" json:"subject"`
 	UnreadMessageCount    int             `db:"unread_message_count" json:"unread_message_count"`
 	InboxName             string          `db:"inbox_name" json:"inbox_name"`

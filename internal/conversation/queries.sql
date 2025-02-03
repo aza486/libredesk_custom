@@ -32,6 +32,7 @@ SELECT
     conversations.created_at,
     conversations.updated_at,
     conversations.uuid,
+    conversations.waiting_since,
     conversations.assignee_last_seen_at,
     users.created_at as "contact.created_at",
     users.updated_at as "contact.updated_at",
@@ -96,6 +97,7 @@ SELECT
    c.uuid,
    c.reference_number,
    c.first_reply_at,
+   c.waiting_since,
    c.assigned_user_id,
    c.assigned_team_id,
    c.subject,
@@ -461,16 +463,18 @@ inserted_msg AS (
        $1, $2, (SELECT id FROM conversation_id),
        $5, $6, $7, $8, $9, $10, $11, $12
    )
-   RETURNING id, uuid, created_at
+   RETURNING id, uuid, created_at, conversation_id
+),
+updated_conversation AS (
+   UPDATE conversations 
+   SET waiting_since = CASE
+       WHEN $8 = 'contact' THEN NOW()
+       WHEN $8 = 'agent' THEN NULL
+       ELSE waiting_since
+   END
+   WHERE id = (SELECT id FROM conversation_id)
 )
-UPDATE conversations 
-SET waiting_since = CASE
-   WHEN $8 = 'contact' THEN NOW()
-   WHEN $8 = 'agent' THEN NULL
-   ELSE waiting_since
-END
-WHERE id = (SELECT id FROM conversation_id)
-RETURNING (SELECT * FROM inserted_msg);
+SELECT id, uuid, created_at FROM inserted_msg;
 
 -- name: message-exists-by-source-id
 SELECT conversation_id
