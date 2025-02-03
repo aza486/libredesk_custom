@@ -159,6 +159,8 @@ SELECT uuid from conversations where id = $1;
 -- name: update-conversation-assigned-user
 UPDATE conversations
 SET assigned_user_id = $2,
+-- Reset assignee_last_seen_at when assigned to a new user.
+assignee_last_seen_at = NULL,
 updated_at = now()
 WHERE uuid = $1;
 
@@ -171,24 +173,9 @@ WHERE uuid = $1;
 -- name: update-conversation-status
 UPDATE conversations
 SET status_id = (SELECT id FROM conversation_statuses WHERE name = $2),
-    resolved_at = CASE 
-                    WHEN $2 = 'Resolved' THEN 
-                        COALESCE(resolved_at, CURRENT_TIMESTAMP)
-                    WHEN $2 != 'Resolved' THEN 
-                        resolved_at
-                  END,
-    closed_at = CASE 
-                  WHEN $2 = 'Closed' THEN 
-                      COALESCE(closed_at, CURRENT_TIMESTAMP)
-                  ELSE 
-                      closed_at
-                END,
-    snoozed_until = CASE 
-                      WHEN $2 = 'Snoozed' THEN 
-                          $3::timestamptz
-                      ELSE 
-                          NULL
-                    END,
+    resolved_at = CASE WHEN $2 = 'Resolved' THEN NOW() ELSE resolved_at END,
+    closed_at = CASE WHEN $2 = 'Closed' THEN NOW() ELSE closed_at END,
+    snoozed_until = CASE WHEN $2 = 'Snoozed' THEN $3::timestamptz ELSE NULL END,
     updated_at = now()
 WHERE uuid = $1;
 
@@ -457,40 +444,33 @@ ORDER BY m.created_at DESC %s
 
 -- name: insert-message
 WITH conversation_id AS (
-    SELECT id 
-    FROM conversations 
-    WHERE CASE 
-        WHEN $3 > 0 THEN id = $3 
-        ELSE uuid = $4 
-    END
+   SELECT id 
+   FROM conversations 
+   WHERE CASE 
+       WHEN $3 > 0 THEN id = $3 
+       ELSE uuid = $4 
+   END
+),
+inserted_msg AS (
+   INSERT INTO conversation_messages (
+       "type", status, conversation_id, "content", 
+       text_content, sender_id, sender_type, private,
+       content_type, source_id, meta
+   )
+   VALUES (
+       $1, $2, (SELECT id FROM conversation_id),
+       $5, $6, $7, $8, $9, $10, $11, $12
+   )
+   RETURNING id, uuid, created_at
 )
-INSERT INTO conversation_messages (
-    "type",
-    status,
-    conversation_id,
-    "content",
-    text_content,
-    sender_id,
-    sender_type,
-    private,
-    content_type,
-    source_id,
-    meta
-)
-VALUES (
-    $1,
-    $2,
-    (SELECT id FROM conversation_id),
-    $5,
-    $6,
-    $7,
-    $8,
-    $9,
-    $10,
-    $11,
-    $12
-)
-RETURNING id, uuid, created_at;
+UPDATE conversations 
+SET waiting_since = CASE
+   WHEN $8 = 'contact' THEN NOW()
+   WHEN $8 = 'agent' THEN NULL
+   ELSE waiting_since
+END
+WHERE id = (SELECT id FROM conversation_id)
+RETURNING (SELECT * FROM inserted_msg);
 
 -- name: message-exists-by-source-id
 SELECT conversation_id

@@ -44,7 +44,7 @@ export const useConversationStore = defineStore('conversation', () => {
       order: 'desc'
     },
     waiting_longest: {
-      field: 'last_message_at',
+      field: 'waiting_since',
       order: 'asc'
     },
     next_sla_target: {
@@ -56,6 +56,7 @@ export const useConversationStore = defineStore('conversation', () => {
       order: 'desc'
     }
   }
+
   const sortFieldLabels = {
     oldest: 'Oldest',
     newest: 'Newest',

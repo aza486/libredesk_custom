@@ -205,6 +205,7 @@ CREATE TABLE conversations (
     resolved_at TIMESTAMPTZ NULL,
 
 	"subject" TEXT NULL,
+	waiting_since TIMESTAMPTZ NULL,
 	last_message_at TIMESTAMPTZ NULL,
 	last_message TEXT NULL,
 	next_sla_deadline_at TIMESTAMPTZ NULL,
