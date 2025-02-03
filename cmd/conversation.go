@@ -331,8 +331,8 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 	return r.SendEnvelope(p)
 }
 
-// handleUpdateConversationUserAssignee updates the user assigned to a conversation.
-func handleUpdateConversationUserAssignee(r *fastglue.Request) error {
+// handleUpdateUserAssignee updates the user assigned to a conversation.
+func handleUpdateUserAssignee(r *fastglue.Request) error {
 	var (
 		app        = r.Context.(*App)
 		uuid       = r.RequestCtx.UserValue("uuid").(string)
