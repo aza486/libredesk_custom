@@ -406,7 +406,7 @@ SELECT
         '[]'::json
     ) AS attachments
 FROM conversation_messages m
-LEFT JOIN media ON media.model_id = m.id AND media.model_type = 'messages'
+LEFT JOIN media ON media.model_type = 'messages' AND media.model_id = m.id
 WHERE m.uuid = $1
 GROUP BY 
     m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type
