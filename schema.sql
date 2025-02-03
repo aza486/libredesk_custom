@@ -124,7 +124,7 @@ CREATE TABLE users (
     CONSTRAINT constraint_users_on_first_name CHECK (LENGTH(first_name) <= 140),
     CONSTRAINT constraint_users_on_last_name CHECK (LENGTH(last_name) <= 140)
 );
-CREATE UNIQUE INDEX index_users_on_email_and_type_when_deleted_at_is_null ON users (email, type) 
+CREATE UNIQUE INDEX index_unique_users_on_email_and_type_when_deleted_at_is_null ON users (email, type) 
 WHERE deleted_at IS NULL;
 
 DROP TABLE IF EXISTS user_roles CASCADE;
@@ -139,6 +139,7 @@ CREATE TABLE user_roles (
 
 	CONSTRAINT constraint_user_roles_on_user_id_and_role_id_unique UNIQUE (user_id, role_id)
 );
+CREATE INDEX index_user_roles_on_user_id ON user_roles(user_id);
 
 DROP TABLE IF EXISTS conversation_statuses CASCADE;
 CREATE TABLE conversation_statuses (
@@ -211,6 +212,17 @@ CREATE TABLE conversations (
 	next_sla_deadline_at TIMESTAMPTZ NULL,
 	snoozed_until TIMESTAMPTZ NULL
 );
+CREATE INDEX index_conversations_on_assigned_user_id ON conversations (assigned_user_id);
+CREATE INDEX index_conversations_on_assigned_team_id ON conversations (assigned_team_id);
+CREATE INDEX index_conversations_on_snoozed_until ON conversations (snoozed_until);
+CREATE INDEX index_conversations_on_contact_id ON conversations (contact_id);
+CREATE INDEX index_conversations_on_inbox_id ON conversations (inbox_id);
+CREATE INDEX index_conversations_on_status_id ON conversations (status_id);
+CREATE INDEX index_conversations_on_priority_id ON conversations (priority_id);
+CREATE INDEX index_conversations_on_created_at ON conversations (created_at);
+CREATE INDEX index_conversations_on_last_message_at ON conversations (last_message_at);
+CREATE INDEX index_conversations_on_next_sla_deadline_at ON conversations (next_sla_deadline_at);
+CREATE INDEX index_conversations_on_waiting_since ON conversations (waiting_since);
 
 DROP TABLE IF EXISTS conversation_messages CASCADE;
 CREATE TABLE conversation_messages (
@@ -230,8 +242,11 @@ CREATE TABLE conversation_messages (
     sender_type message_sender_type NOT NULL,
     meta JSONB DEFAULT '{}'::JSONB NULL
 );
-CREATE INDEX index_conversation_messages_on_text_content_trgm ON conversation_messages
-USING GIN (text_content gin_trgm_ops);
+CREATE INDEX index_trgm_conversation_messages_on_text_content ON conversation_messages USING GIN (text_content gin_trgm_ops);
+CREATE INDEX index_conversation_messages_on_conversation_id ON conversation_messages (conversation_id);
+CREATE INDEX index_conversation_messages_on_created_at ON conversation_messages (created_at);
+CREATE INDEX index_conversation_messages_on_source_id ON conversation_messages (source_id);
+CREATE INDEX index_conversation_messages_on_status ON conversation_messages (status);
 
 DROP TABLE IF EXISTS automation_rules CASCADE;
 CREATE TABLE automation_rules (
@@ -249,6 +264,8 @@ CREATE TABLE automation_rules (
     CONSTRAINT constraint_automation_rules_on_name CHECK (length("name") <= 140),
     CONSTRAINT constraint_automation_rules_on_description CHECK (length(description) <= 300)
 );
+CREATE INDEX index_automation_rules_on_enabled_and_weight ON automation_rules(enabled, weight);
+CREATE INDEX index_automation_rules_on_type_and_weight ON automation_rules(type, weight);
 
 DROP TABLE IF EXISTS macros CASCADE;
 CREATE TABLE macros (
@@ -296,6 +313,8 @@ CREATE TABLE media (
 	CONSTRAINT constraint_media_on_filename CHECK (length(filename) <= 1000),
 	CONSTRAINT constraint_media_on_content_id CHECK (length(content_id) <= 300)
 );
+CREATE INDEX index_media_on_model_type_and_model_id ON media(model_type, model_id);
+CREATE INDEX index_media_on_content_id ON media(content_id);
 
 DROP TABLE IF EXISTS oidc CASCADE;
 CREATE TABLE oidc (
@@ -310,7 +329,6 @@ CREATE TABLE oidc (
 	provider VARCHAR NULL,
 	CONSTRAINT constraint_oidc_on_name CHECK (length("name") <= 140)
 );
-
 
 DROP TABLE IF EXISTS settings CASCADE;
 CREATE TABLE settings (
@@ -369,7 +387,7 @@ CREATE TABLE conversation_tags (
 	tag_id INT REFERENCES tags(id) ON DELETE CASCADE ON UPDATE CASCADE,
 	conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX index_unique_conversation_tags_on_tag_id_and_conversation_id ON conversation_tags (tag_id, conversation_id);
+CREATE UNIQUE INDEX index_conversation_tags_on_conversation_id_and_tag_id ON conversation_tags (conversation_id, tag_id); 
 
 DROP TABLE IF EXISTS csat_responses CASCADE;
 CREATE TABLE csat_responses (
@@ -387,7 +405,7 @@ CREATE TABLE csat_responses (
     CONSTRAINT constraint_csat_responses_on_rating CHECK (rating >= 0 AND rating <= 5),
     CONSTRAINT constraint_csat_responses_on_feedback CHECK (length(feedback) <= 1000)
 );
-
+CREATE INDEX index_csat_responses_on_uuid ON csat_responses(uuid);
 
 DROP TABLE IF EXISTS views CASCADE;
 CREATE TABLE views (
@@ -400,6 +418,7 @@ CREATE TABLE views (
     user_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE,
 	CONSTRAINT constraint_views_on_name CHECK (length(name) <= 140)
 );
+CREATE INDEX index_views_on_user_id ON views(user_id);
 
 DROP TABLE IF EXISTS applied_slas CASCADE;
 CREATE TABLE applied_slas (
@@ -418,6 +437,7 @@ CREATE TABLE applied_slas (
 	first_response_met_at TIMESTAMPTZ NULL,
 	resolution_met_at TIMESTAMPTZ NULL
 );
+CREATE INDEX index_applied_slas_on_conversation_id ON applied_slas(conversation_id);
 
 DROP TABLE IF EXISTS ai_providers CASCADE;
 CREATE TABLE ai_providers (
