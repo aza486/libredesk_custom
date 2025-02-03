@@ -34,7 +34,7 @@ type OIDCclaim struct {
 	Picture       string `json:"picture"`
 }
 
-// Provider defines an OIDC provider configuration 
+// Provider defines an OIDC provider configuration
 type Provider struct {
 	ID           int
 	Provider     string
@@ -92,7 +92,7 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 		Cookie: simplesessions.CookieOptions{
 			IsHTTPOnly: true,
 			IsSecure:   true,
-			MaxAge:     time.Hour * 6,
+			Expires:    time.Now().Add(time.Hour * 48),
 		},
 	})
 
