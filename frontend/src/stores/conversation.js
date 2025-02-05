@@ -127,7 +127,6 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function setListStatus (status, fetch = true) {
-    if (conversations.status === status) return
     conversations.status = status
     if (fetch) {
       resetConversations()
@@ -345,6 +344,9 @@ export const useConversationStore = defineStore('conversation', () => {
     if (!listType) return
     if (conversations.listType !== listType || conversations.teamID !== teamID || conversations.viewID !== viewID) {
       resetConversations()
+    }
+    if (conversations.listType !== listType) {
+      resetCurrentConversation()
     }
     if (listType) conversations.listType = listType
     if (teamID) conversations.teamID = teamID

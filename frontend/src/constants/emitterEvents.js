@@ -4,4 +4,5 @@ export const EMITTER_EVENTS = {
     SHOW_SOONER: 'show-sooner',
     NEW_MESSAGE: 'new-message',
     SET_NESTED_COMMAND: 'set-nested-command',
+    CONVERSATION_SIDEBAR_TOGGLE: 'conversation-sidebar-toggle'
 }

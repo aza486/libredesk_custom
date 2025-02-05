@@ -1,20 +1,22 @@
 <template>
-  <Sidebar
-    :isLoading="false"
-    :open="sidebarOpen"
-    :userTeams="userStore.teams"
-    :userViews="userViews"
-    @update:open="sidebarOpen = $event"
-    @create-view="openCreateViewForm = true"
-    @edit-view="editView"
-    @delete-view="deleteView"
-  >
-    <div class="w-full h-screen border-l">
-      <PageHeader />
-      <RouterView />
-    </div>
-    <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
-  </Sidebar>
+  <div class="flex">
+    <!-- Main sidebar -->
+    <Sidebar
+      class="w-full"
+      :userTeams="userStore.teams"
+      :userViews="userViews"
+      @create-view="openCreateViewForm = true"
+      @edit-view="editView"
+      @delete-view="deleteView"
+    >
+      <div class="h-screen border-l">
+        <PageHeader />
+        <RouterView />
+      </div>
+      <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
+    </Sidebar>
+  </div>
+  <!-- Command box -->
   <Command />
 </template>
 
@@ -34,15 +36,14 @@ import { useTeamStore } from '@/stores/team'
 import { useSlaStore } from '@/stores/sla'
 import { useMacroStore } from '@/stores/macro'
 import { useTagStore } from '@/stores/tag'
-import PageHeader from './components/common/PageHeader.vue'
-import ViewForm from '@/components/ViewForm.vue'
+import PageHeader from './components/layout/PageHeader.vue'
+import ViewForm from '@/features/view/ViewForm.vue'
 import api from '@/api'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
-import Command from '@/components/command/CommandBox.vue'
+import Command from '@/features/command/CommandBox.vue'
 
 const { toast } = useToast()
 const emitter = useEmitter()
-const sidebarOpen = ref(true)
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
 const usersStore = useUsersStore()

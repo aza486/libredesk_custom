@@ -40,26 +40,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { useStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { useConversationStore } from '@/stores/conversation'
-import ConversationSideBar from '@/components/conversation/sidebar/ConversationSideBar.vue'
 
 const route = useRoute()
 
 defineProps({
-  isLoading: Boolean,
-  open: Boolean,
-  activeItem: { type: Object, default: () => {} },
-  activeGroup: { type: Object, default: () => {} },
   userTeams: { type: Array, default: () => [] },
   userViews: { type: Array, default: () => [] }
 })
 
-const conversationStore = useConversationStore()
 const userStore = useUserStore()
 
-const emit = defineEmits(['createView', 'editView', 'deleteView', 'update:open'])
+const emit = defineEmits(['createView', 'editView', 'deleteView'])
 
 const openCreateViewDialog = () => {
   emit('createView')
@@ -153,7 +147,6 @@ const adminNavItems = [
   },
   {
     title: 'Conversations',
-    description: 'Manage tags, macros, and statuses.',
     children: [
       {
         title: 'Tags',
@@ -174,7 +167,6 @@ const adminNavItems = [
   },
   {
     title: 'Inboxes',
-    description: 'Manage inboxes.',
     children: [
       {
         title: 'Inboxes',
@@ -185,7 +177,6 @@ const adminNavItems = [
   },
   {
     title: 'Teammates',
-    description: 'Manage users, teams, and roles.',
     children: [
       {
         title: 'Users',
@@ -206,7 +197,6 @@ const adminNavItems = [
   },
   {
     title: 'Automations',
-    description: 'Manage automation rules.',
     children: [
       {
         title: 'Automations',
@@ -217,7 +207,6 @@ const adminNavItems = [
   },
   {
     title: 'Notifications',
-    description: 'Manage email notifications.',
     children: [
       {
         title: 'Email',
@@ -228,7 +217,6 @@ const adminNavItems = [
   },
   {
     title: 'Templates',
-    description: 'Manage email templates.',
     children: [
       {
         title: 'Templates',
@@ -239,7 +227,6 @@ const adminNavItems = [
   },
   {
     title: 'Security',
-    description: 'Configure SSO and security.',
     children: [
       {
         title: 'OpenID Connect SSO',
@@ -263,23 +250,21 @@ const isActiveParent = (parentHref) => {
 }
 
 const isInboxRoute = (path) => {
-  return path.startsWith('/inboxes') || path.startsWith('/teams') || path.startsWith('/views')
+  return path.startsWith('/inboxes')
 }
 
-const hasConversationOpen = computed(() => {
-  return conversationStore.current || conversationStore.conversation.loading
-})
+const sidebarOpen = useStorage('sidebarOpen', true)
 </script>
 
 <template>
   <div class="flex flex-row justify-between h-full">
     <div class="flex-1">
       <SidebarProvider
-        :open="open"
-        @update:open="($event) => emit('update:open', $event)"
         style="--sidebar-width: 16rem"
+        :default-open="sidebarOpen"
+        v-on:update:open="sidebarOpen = $event"
       >
-        <!-- Flex Container that holds all the sidebar components -->
+
         <Sidebar
           collapsible="icon"
           class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0"
@@ -591,7 +576,7 @@ const hasConversationOpen = computed(() => {
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 size="sm"
-                                :isActive="isActiveParent(`/teams/${team.id}`)"
+                                :isActive="isActiveParent(`/inboxes/teams/${team.id}`)"
                                 asChild
                               >
                                 <router-link
@@ -637,7 +622,7 @@ const hasConversationOpen = computed(() => {
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 size="sm"
-                                :isActive="isActiveParent(`/views/${view.id}`)"
+                                :isActive="isActiveParent(`/inboxes/views/${view.id}`)"
                                 asChild
                               >
                                 <router-link
@@ -678,25 +663,6 @@ const hasConversationOpen = computed(() => {
         <SidebarInset>
           <slot></slot>
         </SidebarInset>
-      </SidebarProvider>
-    </div>
-
-    <!-- Right Sidebar with conversation details -->
-    <div v-if="hasConversationOpen">
-      <SidebarProvider :open="true" style="--sidebar-width: 20rem">
-        <Sidebar collapsible="none" side="right">
-          <SidebarSeparator />
-          <SidebarContent>
-            <SidebarGroup style="padding: 0">
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <ConversationSideBar />
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarRail />
-        </Sidebar>
       </SidebarProvider>
     </div>
   </div>

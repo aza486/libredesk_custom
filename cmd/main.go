@@ -143,7 +143,7 @@ func main() {
 		messageIncomingQWorkers     = ko.MustDuration("message.incoming_queue_workers")
 		messageOutgoingScanInterval = ko.MustDuration("message.message_outoing_scan_interval")
 		slaEvaluationInterval       = ko.MustDuration("sla.evaluation_interval")
-		lo                          = initLogger("libredesk")
+		lo                          = initLogger(appName)
 		wsHub                       = ws.NewHub()
 		rdb                         = initRedis()
 		constants                   = initConstants()
@@ -221,12 +221,14 @@ func main() {
 	}
 
 	go func() {
+		colorlog.Green("Server started at %s", ko.String("app.server.address"))
+		if ko.String("server.socket") != "" {
+			colorlog.Green("Unix socket created at %s", ko.String("server.socket"))
+		}
 		if err := g.ListenAndServe(ko.String("app.server.address"), ko.String("server.socket"), s); err != nil {
 			log.Fatalf("error starting server: %v", err)
 		}
 	}()
-
-	colorlog.Green("🚀 listening on %s %s", ko.String("app.server.address"), ko.String("app.server.socket"))
 
 	// Wait for shutdown signal.
 	<-ctx.Done()
