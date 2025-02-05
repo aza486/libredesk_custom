@@ -231,7 +231,7 @@ WHERE assigned_user_id IS NULL AND assigned_team_id IS NOT NULL;
 -- name: get-dashboard-counts
 SELECT json_build_object(
     'open', COUNT(*),
-    'awaiting_response', COUNT(CASE WHEN c.first_reply_at IS NULL THEN 1 END),
+    'awaiting_response', COUNT(CASE WHEN c.waiting_since IS NOT NULL THEN 1 END),
     'unassigned', COUNT(CASE WHEN c.assigned_user_id IS NULL THEN 1 END),
     'pending', COUNT(CASE WHEN c.first_reply_at IS NOT NULL THEN 1 END)
 )
