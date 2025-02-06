@@ -46,7 +46,7 @@ import {
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
-const conversationSidebarOpen = useStorage('conversationSidebarOpen', false)
+const conversationSidebarOpen = useStorage('conversationSidebarOpen', true)
 
 const toggleSidebar = () => {
   conversationSidebarOpen.value = !conversationSidebarOpen.value

@@ -16,7 +16,7 @@
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
-import AutomationTabs from '@/components/admin/automation/AutomationTabs.vue'
+import AutomationTabs from '@/features/admin/automation/AutomationTabs.vue'
 
 const router = useRouter()
 const selectedTab = useStorage('automationsTab', 'new_conversation')
