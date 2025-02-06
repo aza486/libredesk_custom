@@ -10,13 +10,11 @@
           {{ conversation?.contact?.first_name?.toUpperCase().substring(0, 2) }}
         </AvatarFallback>
       </Avatar>
-      <div class="mt-2">
-        <PanelLeft
-          class="cursor-pointer"
-          @click="emitter.emit(EMITTER_EVENTS.CONVERSATION_SIDEBAR_TOGGLE)"
-          size="16"
-        />
-      </div>
+      <PanelLeft
+        class="cursor-pointer"
+        @click="emitter.emit(EMITTER_EVENTS.CONVERSATION_SIDEBAR_TOGGLE)"
+        size="16"
+      />
     </div>
     <div>
       <h4 class="mt-3">
