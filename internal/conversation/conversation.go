@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -202,6 +203,7 @@ type queries struct {
 	InsertConversationParticipant      *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
 	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
+	GetConversationTags                *sqlx.Stmt `query:"get-conversation-tags"`
 	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
 	ReOpenConversation                 *sqlx.Stmt `query:"re-open-conversation"`
 	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
@@ -614,12 +616,46 @@ func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error)
 }
 
 // UpsertConversationTags upserts the tags associated with a conversation.
-func (t *Manager) UpsertConversationTags(uuid string, tagNames []string) error {
+func (t *Manager) UpsertConversationTags(uuid string, tagNames []string, actor umodels.User) error {
+	// Get the existing tags.
+	tags, err := t.getConversationTags(uuid)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error fetching tags", nil)
+	}
+
+	// Upsert the tags.
 	if _, err := t.q.UpsertConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
 		t.lo.Error("error upserting conversation tags", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error upserting tags", nil)
 	}
+
+	// Find the newly added tags.
+	newTags := []string{}
+	for _, tag := range tagNames {
+		if slices.Contains(tags, tag) {
+			continue
+		}
+		newTags = append(newTags, tag)
+	}
+
+	// Record the new tags as activities.
+	for _, tag := range newTags {
+		if err := t.RecordTagChange(uuid, tag, actor); err != nil {
+			return envelope.NewError(envelope.GeneralError, "Error recording tag change", nil)
+		}
+	}
+
 	return nil
+}
+
+// getConversationTags retrieves the tags associated with a conversation.
+func (t *Manager) getConversationTags(uuid string) ([]string, error) {
+	var tags []string
+	if err := t.q.GetConversationTags.Select(&tags, uuid); err != nil {
+		t.lo.Error("error fetching conversation tags", "error", err)
+		return tags, envelope.NewError(envelope.GeneralError, "Error fetching tags", nil)
+	}
+	return tags, nil
 }
 
 // makeConversationsListQuery prepares a SQL query string for conversations list
@@ -818,7 +854,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 		slaID, _ := strconv.Atoi(action.Value[0])
 		return m.ApplySLA(conv, slaID, user)
 	case amodels.ActionSetTags:
-		return m.UpsertConversationTags(conv.UUID, action.Value)
+		return m.UpsertConversationTags(conv.UUID, action.Value, user)
 	case amodels.ActionSendCSAT:
 		return m.SendCSATReply(user.ID, conv)
 	default:

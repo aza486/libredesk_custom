@@ -319,6 +319,7 @@ WHERE first_reply_at IS NULL AND id = $1;
 WITH conversation_id AS (
     SELECT id FROM conversations WHERE uuid = $1
 ),
+-- Insert new tags
 inserted AS (
     INSERT INTO conversation_tags (conversation_id, tag_id)
     SELECT conversation_id.id, t.id
@@ -326,11 +327,18 @@ inserted AS (
     WHERE t.name = ANY($2::text[])
     ON CONFLICT (conversation_id, tag_id) DO UPDATE SET tag_id = EXCLUDED.tag_id
 )
+-- Delete tags that are not in the new list
 DELETE FROM conversation_tags
 WHERE conversation_id = (SELECT id FROM conversation_id) 
 AND tag_id NOT IN (
     SELECT id FROM tags WHERE name = ANY($2::text[])
 );
+
+-- name: get-conversation-tags
+SELECT t.name
+FROM conversation_tags ct
+JOIN tags t ON ct.tag_id = t.id
+WHERE ct.conversation_id = (SELECT id FROM conversations WHERE uuid = $1);
 
 -- name: get-to-address
 SELECT cc.identifier 

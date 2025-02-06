@@ -539,7 +539,7 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 
-	if err := app.conversation.UpsertConversationTags(uuid, tagNames); err != nil {
+	if err := app.conversation.UpsertConversationTags(uuid, tagNames, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Tags added successfully")

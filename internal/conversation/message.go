@@ -402,6 +402,11 @@ func (m *Manager) RecordSLASet(conversationUUID string, slaName string, actor um
 	return m.InsertConversationActivity(ActivitySLASet, conversationUUID, slaName, actor)
 }
 
+// RecordTagChange records an activity for a tag change.
+func (m *Manager) RecordTagChange(conversationUUID string, tag string, actor umodels.User) error {
+	return m.InsertConversationActivity(ActivityTagChange, conversationUUID, tag, actor)
+}
+
 // InsertConversationActivity inserts an activity message.
 func (m *Manager) InsertConversationActivity(activityType, conversationUUID, newValue string, actor umodels.User) error {
 	content, err := m.getMessageActivityContent(activityType, newValue, actor.FullName())
@@ -453,7 +458,7 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 	case ActivityStatusChange:
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
 	case ActivityTagChange:
-		content = fmt.Sprintf("%s added tags %s", actorName, newValue)
+		content = fmt.Sprintf("%s added tag %s", actorName, newValue)
 	case ActivitySLASet:
 		content = fmt.Sprintf("%s set %s SLA", actorName, newValue)
 	default:
