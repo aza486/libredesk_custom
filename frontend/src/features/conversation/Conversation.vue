@@ -4,19 +4,7 @@
       <!-- Header -->
       <div class="p-2 border-b flex items-center justify-between">
         <div class="flex items-center space-x-3 pr-5">
-          <Dialog v-if="showSubjectDialog">
-            <DialogTrigger>
-              <Button variant="outline">
-                {{ subjectTrimmed }}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              {{ conversationStore.current?.subject }}
-            </DialogContent>
-          </Dialog>
-          <div v-else>
-            {{ conversationStore.current?.subject }}
-          </div>
+          {{ conversationStore.currentContactName }}
         </div>
         <div class="flex items-center space-x-2">
           <div>
@@ -73,7 +61,6 @@ import {
 import MessageList from '@/features/conversation/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { useEmitter } from '@/composables/useEmitter'
 const conversationStore = useConversationStore()
@@ -86,16 +73,4 @@ const handleUpdateStatus = (status) => {
   }
   conversationStore.updateStatus(status)
 }
-
-const maxSubjectLength = 90
-
-const subjectTrimmed = computed(() => {
-  return conversationStore.current?.subject?.length > maxSubjectLength
-    ? conversationStore.current?.subject?.slice(0, maxSubjectLength) + '...'
-    : conversationStore.current?.subject
-})
-
-const showSubjectDialog = computed(() => {
-  return conversationStore.current?.subject?.length > maxSubjectLength
-})
 </script>

@@ -1,10 +1,7 @@
 <template>
   <div class="flex flex-col gap-1 mb-5">
-    <p class="font-medium">SLA policy</p>
-    <p v-if="conversation.sla_policy_name">
-      {{ conversation.sla_policy_name }}
-    </p>
-    <p v-else>-</p>
+    <p class="font-medium">Subject</p>
+    <p>{{ conversation.subject || '-' }}</p>
   </div>
 
   <div class="flex flex-col gap-1 mb-5">
@@ -48,6 +45,14 @@
     <p>
       {{ format(conversation.closed_at, 'PPpp') }}
     </p>
+  </div>
+
+  <div class="flex flex-col gap-1 mb-5">
+    <p class="font-medium">SLA policy</p>
+    <p v-if="conversation.sla_policy_name">
+      {{ conversation.sla_policy_name }}
+    </p>
+    <p v-else>-</p>
   </div>
 </template>
 
