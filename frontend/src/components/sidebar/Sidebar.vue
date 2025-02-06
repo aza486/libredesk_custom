@@ -472,7 +472,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                           <router-link :to="{ name: 'search' }">
                             <Search
                               class="transition-transform duration-200 hover:scale-110 cursor-pointer"
-                              size="20"
+                              size="18"
                             />
                           </router-link>
                         </div>
