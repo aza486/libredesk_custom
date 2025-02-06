@@ -107,8 +107,9 @@
           <!-- Attachments preview -->
           <AttachmentsPreview
             :attachments="attachments"
+            :uploadingFiles="uploadingFiles"
             :onDelete="handleOnFileDelete"
-            v-if="attachments.length > 0"
+            v-if="attachments.length > 0 || uploadingFiles.length > 0"
             class="mt-4"
           />
 
@@ -157,7 +158,7 @@
             variant="ghost"
             @click="isEditorFullscreen = true"
           >
-            <Maximize2 size="18"/>
+            <Maximize2 size="18" />
           </span>
         </div>
 
@@ -226,8 +227,10 @@
         <!-- Attachments preview -->
         <AttachmentsPreview
           :attachments="attachments"
+          :uploadingFiles="uploadingFiles"
           :onDelete="handleOnFileDelete"
-          v-if="attachments.length > 0"
+          v-if="attachments.length > 0 || uploadingFiles.length > 0"
+          class="mt-4"
         />
 
         <!-- Bottom menu bar -->
@@ -286,6 +289,7 @@ const cc = ref('')
 const bcc = ref('')
 const emailErrors = ref([])
 const aiPrompts = ref([])
+const uploadingFiles = ref([])
 const editorPlaceholder = 'Press Enter to add a new line; Press Ctrl + Enter to send.'
 
 onMounted(async () => {
@@ -374,7 +378,10 @@ const hasTextContent = computed(() => {
 })
 
 const handleFileUpload = (event) => {
-  for (const file of event.target.files) {
+  const files = Array.from(event.target.files)
+  uploadingFiles.value = files
+
+  for (const file of files) {
     api
       .uploadMedia({
         files: file,
@@ -383,8 +390,10 @@ const handleFileUpload = (event) => {
       })
       .then((resp) => {
         conversationStore.conversation.mediaFiles.push(resp.data.data)
+        uploadingFiles.value = uploadingFiles.value.filter((f) => f.name !== file.name)
       })
       .catch((error) => {
+        uploadingFiles.value = uploadingFiles.value.filter((f) => f.name !== file.name)
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
           title: 'Error',
           variant: 'destructive',
