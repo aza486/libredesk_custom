@@ -369,7 +369,7 @@ const enableSend = computed(() => {
   return (
     (textContent.value.trim().length > 0 ||
       conversationStore.conversation?.macro?.actions?.length > 0) &&
-    emailErrors.value.length === 0
+    emailErrors.value.length === 0 && !uploadingFiles.value.length
   )
 })
 
