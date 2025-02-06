@@ -1,3 +1,16 @@
 <template>
-  <router-view></router-view>
+  <AdminPageWithHelp>
+    <template #content>
+      <router-view></router-view>
+    </template>
+
+    <template #help>
+      <p>Configure team settings including working hours and SLA policies.</p>
+      <p>Manage agent auto-assignment rules for team efficiency.</p>
+    </template>
+  </AdminPageWithHelp>
 </template>
+
+<script setup>
+import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
+</script>

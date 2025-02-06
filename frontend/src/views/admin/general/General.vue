@@ -1,16 +1,26 @@
 <template>
-  <div class="flex justify-center items-center flex-col">
-    <GeneralSettingForm
-      :submitForm="submitForm"
-      :initial-values="initialValues"
-      submitLabel="Save"
-    />
-  </div>
+  <AdminPageWithHelp>
+    <template #content>
+      <GeneralSettingForm
+        :submitForm="submitForm"
+        :initial-values="initialValues"
+        submitLabel="Save"
+      />
+    </template>
+
+    <template #help>
+      <p>Configure core helpdesk settings like helpdesk name, timezone, business hours, and more.</p>
+      <p>
+        These settings affect your entire helpdesk system.
+      </p>
+    </template>
+  </AdminPageWithHelp>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import GeneralSettingForm from '@/features/admin/general/GeneralSettingForm.vue'
+import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
 
 import api from '@/api'
 const initialValues = ref({})

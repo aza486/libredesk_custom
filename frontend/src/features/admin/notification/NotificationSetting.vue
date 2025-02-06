@@ -1,16 +1,29 @@
 <template>
-  <Spinner v-if="formLoading" class="mx-auto" />
-  <NotificationsForm
-    v-else
-    :initial-values="initialValues"
-    :submit-form="submitForm"
-    :isLoading="formLoading"
-  />
+  <AdminPageWithHelp>
+    <template #content>
+      <Spinner v-if="formLoading" class="mx-auto" />
+      <NotificationsForm
+        v-else
+        :initial-values="initialValues"
+        :submit-form="submitForm"
+        :isLoading="formLoading"
+      />
+    </template>
+
+    <template #help>
+      <p>Configure SMTP server settings for sending email notifications to team members.</p>
+      <p>
+        Once configured, teammates receive automated alerts for conversation assignments, SLA
+        breaches, and other important events.
+      </p>
+    </template>
+  </AdminPageWithHelp>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '@/api'
+import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
 
 import NotificationsForm from './NotificationSettingForm.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

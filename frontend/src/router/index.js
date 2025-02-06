@@ -163,6 +163,11 @@ const routes = [
         meta: { title: 'Admin' },
         children: [
           {
+            path: 'general',
+            component: () => import('@/views/admin/general/General.vue'),
+            meta: { title: 'General' }
+          },
+          {
             path: 'business-hours',
             component: () => import('@/views/admin/business-hours/BusinessHours.vue'),
             meta: { title: 'Business Hours' },
@@ -327,11 +332,6 @@ const routes = [
                 meta: { title: 'Edit Automation' }
               }
             ]
-          },
-          {
-            path: 'general',
-            component: () => import('@/views/admin/general/General.vue'),
-            meta: { title: 'General' }
           },
           {
             path: 'templates',
