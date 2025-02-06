@@ -271,24 +271,6 @@ const sidebarOpen = useStorage('sidebarOpen', true)
         >
           <!-- Left Sidebar (Icon Sidebar) -->
           <Sidebar collapsible="none" class="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
-            <SidebarHeader>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    :isActive="isActiveParent('#')"
-                    size="sm"
-                    asChild
-                    class="md:h-8 md:p-0"
-                  >
-                    <a href="#">
-                      <div class="flex items-center justify-center w-full h-full">
-                        <MessageCircle size="25" />
-                      </div>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarHeader>
             <SidebarContent>
               <SidebarGroup>
                 <SidebarGroupContent class="px-1.5 md:px-0">
