@@ -533,11 +533,9 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
-	if err != nil {
+	if allowed, err := app.authz.EnforceConversationAccess(user, conversation); err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
+	} else if !allowed {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 
