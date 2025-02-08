@@ -321,16 +321,21 @@ func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
 			return nil
 		}
 		if !metAt.Valid && now.After(deadline) {
-			_, err := m.q.UpdateBreach.Exec(sla.ID, slaType)
-			return fmt.Errorf("updating SLA breach: %w", err)
+			if _, err := m.q.UpdateBreach.Exec(sla.ID, slaType); err != nil {
+				return fmt.Errorf("updating SLA breach: %w", err)
+			}
+			return nil
 		}
 		if metAt.Valid {
 			if metAt.Time.After(deadline) {
-				_, err := m.q.UpdateBreach.Exec(sla.ID, slaType)
-				return fmt.Errorf("updating SLA breach: %w", err)
+				if _, err := m.q.UpdateBreach.Exec(sla.ID, slaType); err != nil {
+					return fmt.Errorf("updating SLA breach: %w", err)
+				}
+			} else {
+				if _, err := m.q.UpdateMet.Exec(sla.ID, slaType); err != nil {
+					return fmt.Errorf("updating SLA met: %w", err)
+				}
 			}
-			_, err := m.q.UpdateMet.Exec(sla.ID, slaType)
-			return fmt.Errorf("updating SLA met: %w", err)
 		}
 		return nil
 	}
