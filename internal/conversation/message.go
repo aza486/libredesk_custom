@@ -294,11 +294,10 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 
 // SendReply inserts a reply message in a conversation.
 func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string, cc, bcc []string, meta map[string]interface{}) error {
-	// Strip empty strings bc and cc.
-	cc = stringutil.RemoveEmptyStrings(cc)
-	bcc = stringutil.RemoveEmptyStrings(bcc)
+	cc = stringutil.RemoveEmpty(cc)
+	bcc = stringutil.RemoveEmpty(bcc)
 
-	// Set cc and bcc in meta.
+	// Save cc and bcc as JSON in meta.
 	if len(cc) > 0 {
 		meta["cc"] = cc
 	}
@@ -331,11 +330,12 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		message.Status = MessageStatusSent
 	}
 
+	// Handle empty meta.
 	if message.Meta == "" || message.Meta == "null" {
 		message.Meta = "{}"
 	}
 
-	// Generate text content.
+	// Convert HTML content to text for search.
 	message.TextContent = stringutil.HTML2Text(message.Content)
 
 	// Insert Message.
@@ -355,7 +355,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		return err
 	}
 
-	// Update conversation last message details in conversation.
+	// Update conversation last message details in conversation metadata.
 	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.CreatedAt)
 
 	// Broadcast new message.
@@ -494,15 +494,15 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return err
 	}
 
-	// Insert message.
-	if err = m.InsertMessage(&in.Message); err != nil {
-		return err
-	}
-
 	// Upload message attachments.
 	if err := m.uploadMessageAttachments(&in.Message); err != nil {
 		// Log error but continue processing.
 		m.lo.Error("error uploading message attachments", "message_source_id", in.Message.SourceID, "error", err)
+	}
+
+	// Insert message.
+	if err = m.InsertMessage(&in.Message); err != nil {
+		return err
 	}
 
 	// Evaluate automation rules for this conversation.
@@ -615,17 +615,18 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 
 		// Sanitize filename and upload.
 		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
-		reader := bytes.NewReader(attachment.Content)
+		attachReader := bytes.NewReader(attachment.Content)
 		media, err := m.mediaStore.UploadAndInsert(
 			attachment.Name,
 			attachment.ContentType,
 			attachment.ContentID,
-			mmodels.ModelMessages,
-			message.ID,
-			reader,
+			/** Linking media to message happens later **/
+			null.String{}, /** modelType */
+			null.Int{},    /** modelID **/
+			attachReader,
 			attachment.Size,
 			null.StringFrom(attachment.Disposition),
-			[]byte("{}"),
+			[]byte("{}"), /** meta **/
 		)
 		if err != nil {
 			uploadErr = append(uploadErr, err)
@@ -640,6 +641,7 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 				m.lo.Error("error uploading thumbnail", "error", err)
 			}
 		}
+		message.Media = append(message.Media, media)
 	}
 	return uploadErr
 }

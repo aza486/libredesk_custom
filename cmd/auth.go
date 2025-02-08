@@ -26,7 +26,7 @@ func handleOIDCLogin(r *fastglue.Request) error {
 	}
 
 	// Set a state and save it in the session, to prevent CSRF attacks.
-	state, err := stringutil.RandomAlNumString(32)
+	state, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
 		app.lo.Error("error generating state", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error generating state.", nil, envelope.GeneralError)

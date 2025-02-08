@@ -41,8 +41,8 @@ func SanitizeFilename(fName string) string {
 	return filepath.Base(name)
 }
 
-// RandomAlNumString generates a random alphanumeric string of length n.
-func RandomAlNumString(n int) (string, error) {
+// RandomAlphanumeric generates a random alphanumeric string of length n.
+func RandomAlphanumeric(n int) (string, error) {
 	const dictionary = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	bytes := make([]byte, n)
@@ -58,8 +58,8 @@ func RandomAlNumString(n int) (string, error) {
 	return string(bytes), nil
 }
 
-// RandomNumericString generates a random numeric string of length n.
-func RandomNumericString(n int) (string, error) {
+// RandomNumeric generates a random numeric string of length n.
+func RandomNumeric(n int) (string, error) {
 	const dictionary = "0123456789"
 
 	bytes := make([]byte, n)
@@ -84,8 +84,8 @@ func GetPathFromURL(u string) (string, error) {
 	return parsedURL.Path, nil
 }
 
-// RemoveEmptyStrings removes empty strings from a slice of strings.
-func RemoveEmptyStrings(s []string) []string {
+// RemoveEmpty removes empty strings from a slice of strings.
+func RemoveEmpty(s []string) []string {
 	var r []string
 	for _, str := range s {
 		if str != "" {

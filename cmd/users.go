@@ -142,7 +142,12 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 		// Reset ptr.
 		file.Seek(0, 0)
-		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, "" /**content_id**/, mmodels.ModelUser, user.ID, file, int(srcFileSize), null.NewString("", false) /**disposition**/, []byte("{}") /**meta**/)
+		linkedModel := null.StringFrom(mmodels.ModelUser)
+		linkedID := null.IntFrom(user.ID)
+		disposition := null.NewString("", false)
+		contentID := ""
+		meta := []byte("{}")
+		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)

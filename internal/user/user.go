@@ -250,7 +250,7 @@ func (u *Manager) GetEmail(id int) (string, error) {
 
 // SetResetPasswordToken sets a reset password token for a user and returns the token.
 func (u *Manager) SetResetPasswordToken(id int) (string, error) {
-	token, err := stringutil.RandomAlNumString(32)
+	token, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
 		u.lo.Error("error generating reset password token", "error", err)
 		return "", envelope.NewError(envelope.GeneralError, "Error generating reset password token", nil)
@@ -300,7 +300,7 @@ func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {
 
 // generatePassword generates a random password and returns its bcrypt hash.
 func (u *Manager) generatePassword() ([]byte, error) {
-	password, _ := stringutil.RandomAlNumString(70)
+	password, _ := stringutil.RandomAlphanumeric(70)
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		u.lo.Error("error generating bcrypt password", "error", err)

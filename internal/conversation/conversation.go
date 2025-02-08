@@ -107,7 +107,7 @@ type mediaStore interface {
 	GetByModel(id int, model string) ([]mmodels.Media, error)
 	ContentIDExists(contentID string) (bool, error)
 	Upload(fileName, contentType string, content io.ReadSeeker) (string, error)
-	UploadAndInsert(fileName, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (mmodels.Media, error)
+	UploadAndInsert(fileName, contentType, contentID string, modelType null.String, modelID null.Int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (mmodels.Media, error)
 }
 
 type inboxStore interface {

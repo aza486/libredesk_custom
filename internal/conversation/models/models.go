@@ -121,8 +121,8 @@ type Message struct {
 	Total            int                    `db:"total" json:"-"`
 }
 
-// HideCSAT hides the CSAT message.
-func (m *Message) HideCSAT() {
+// CensorCSATContent redacts the content of a CSAT message to prevent leaking the CSAT survey public link.
+func (m *Message) CensorCSATContent() {
 	var meta map[string]interface{}
 	if err := json.Unmarshal([]byte(m.Meta), &meta); err != nil {
 		return

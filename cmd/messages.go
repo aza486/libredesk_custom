@@ -51,7 +51,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		for j := range messages[i].Attachments {
 			messages[i].Attachments[j].URL = app.media.GetURL(messages[i].Attachments[j].UUID)
 		}
-		messages[i].HideCSAT()
+		messages[i].CensorCSATContent()
 	}
 	return r.SendEnvelope(envelope.PageResults{
 		Total:      total,
@@ -86,7 +86,8 @@ func handleGetMessage(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	message.HideCSAT()
+	// Redact CSAT survey link
+	message.CensorCSATContent()
 
 	for j := range message.Attachments {
 		message.Attachments[j].URL = app.media.GetURL(message.Attachments[j].UUID)
@@ -145,14 +146,14 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	if err := r.Decode(&req, "json"); err != nil {
 		app.lo.Error("error unmarshalling message request", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "error decoding request", nil, envelope.GeneralError)
 	}
 
 	for _, id := range req.Attachments {
 		m, err := app.media.Get(id)
 		if err != nil {
 			app.lo.Error("error fetching media", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching media", nil, "")
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching media", nil, envelope.GeneralError)
 		}
 		media = append(media, m)
 	}

@@ -329,7 +329,7 @@ func (a *Auth) DestroySession(r *fastglue.Request) error {
 
 // generateCSRFToken creates a random base64 encoded str.
 func generateCSRFToken() (string, error) {
-	b, err := stringutil.RandomAlNumString(30)
+	b, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
 		return "", err
 	}

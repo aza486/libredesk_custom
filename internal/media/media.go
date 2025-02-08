@@ -73,7 +73,7 @@ type queries struct {
 }
 
 // UploadAndInsert uploads file on storage and inserts an entry in db.
-func (m *Manager) UploadAndInsert(srcFilename, contentType, contentID, modelType string, modelID int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (models.Media, error) {
+func (m *Manager) UploadAndInsert(srcFilename, contentType, contentID string, modelType null.String, modelID null.Int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (models.Media, error) {
 	var uuid = uuid.New()
 	_, err := m.Upload(uuid.String(), contentType, content)
 	if err != nil {
@@ -99,7 +99,7 @@ func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (s
 }
 
 // Insert inserts media details into the database and returns the inserted media record.
-func (m *Manager) Insert(disposition null.String, fileName, contentType, contentID, modelType, uuid string, modelID int, fileSize int, meta []byte) (models.Media, error) {
+func (m *Manager) Insert(disposition null.String, fileName, contentType, contentID string, modelType null.String, uuid string, modelID null.Int, fileSize int, meta []byte) (models.Media, error) {
 	var id int
 	if err := m.queries.Insert.QueryRow(m.store.Name(), fileName, contentType, fileSize, meta, modelID, modelType, disposition, contentID, uuid).Scan(&id); err != nil {
 		m.lo.Error("error inserting media", "error", err)
@@ -155,8 +155,8 @@ func (m *Manager) GetURL(name string) string {
 // Attach associates a media file with a specific model by its ID and model name.
 func (m *Manager) Attach(id int, model string, modelID int) error {
 	if _, err := m.queries.Attach.Exec(id, model, modelID); err != nil {
-		m.lo.Error("error attaching media to model", "model", model, "model_id", modelID, "error", err)
-		return err
+		m.lo.Error("error attaching media to model", "model", model, "model_id", modelID, "media_id", id, "error", err)
+		return fmt.Errorf("attaching media;%d to model:%s model_id:%d: %w", id, model, modelID, err)
 	}
 	return nil
 }

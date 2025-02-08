@@ -13,7 +13,7 @@ const (
 	// Built-in templates names stored in the database.
 	TmplConversationAssigned = "Conversation assigned"
 
-	// Built-in templates in fetched from memory stored in `static` directory.
+	// Built-in templates fetched from memory stored in `static` directory.
 	TmplResetPassword = "reset-password"
 	TmplWelcome       = "welcome"
 
@@ -29,7 +29,7 @@ func (m *Manager) RenderWithBaseTemplate(data any, content string) (string, erro
 	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
 		if err == ErrTemplateNotFound {
-			m.lo.Warn("default outgoing email template not found, rendering content without base")
+			m.lo.Warn("default outgoing email template not found, rendering content any template")
 			return content, nil
 		}
 		return "", err
@@ -95,7 +95,7 @@ func (m *Manager) RenderNamedTemplate(name string, data any) (string, string, er
 	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
 		if err == ErrTemplateNotFound {
-			m.lo.Warn("default outgoing email template not found, rendering content without base")
+			m.lo.Warn("default outgoing email template not found, rendering content any template")
 			content, err := executeContentTemplate(tmpl.Body)
 			if err != nil {
 				return "", "", err
