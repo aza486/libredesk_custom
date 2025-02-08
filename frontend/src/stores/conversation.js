@@ -7,8 +7,8 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
-  const MAX_CONV_LIST_PAGE_SIZE = 100
-  const MAX_MESSAGE_LIST_PAGE_SIZE = 30
+  const CONV_LIST_PAGE_SIZE = 100
+  const MESSAGE_LIST_PAGE_SIZE = 100
   const priorities = ref([])
   const statuses = ref([])
 
@@ -275,7 +275,7 @@ export const useConversationStore = defineStore('conversation', () => {
   async function fetchMessages (uuid) {
     messages.loading = true
     try {
-      const response = await api.getConversationMessages(uuid, { page: messages.page, page_size: MAX_MESSAGE_LIST_PAGE_SIZE })
+      const response = await api.getConversationMessages(uuid, { page: messages.page, page_size: MESSAGE_LIST_PAGE_SIZE })
       const result = response.data?.data || {}
       const results = result.results || []
       const newMessages = results.filter(message => {
@@ -382,7 +382,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.ASSIGNED:
         return await api.getAssignedConversations({
           page: page,
-          page_size: MAX_CONV_LIST_PAGE_SIZE,
+          page_size: CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
@@ -390,7 +390,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return await api.getUnassignedConversations({
           page: page,
-          page_size: MAX_CONV_LIST_PAGE_SIZE,
+          page_size: CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
@@ -398,7 +398,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.ALL:
         return await api.getAllConversations({
           page: page,
-          page_size: MAX_CONV_LIST_PAGE_SIZE,
+          page_size: CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
@@ -406,14 +406,14 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
         return await api.getTeamUnassignedConversations(teamID, {
           page: page,
-          page_size: MAX_CONV_LIST_PAGE_SIZE,
+          page_size: CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order
         })
       case CONVERSATION_LIST_TYPE.VIEW:
         return await api.getViewConversations(viewID, {
           page: page,
-          page_size: MAX_CONV_LIST_PAGE_SIZE,
+          page_size: CONV_LIST_PAGE_SIZE,
           order_by: sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order
         })
