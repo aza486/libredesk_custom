@@ -21,12 +21,25 @@
     </div>
     <div>
       <Spinner v-if="isLoading"></Spinner>
-      <div class="space-y-5" v-else>
-        <draggable v-model="rules" class="space-y-5" item-key="name" @end="onDragEnd">
-          <template #item="{ element }">
-            <RuleList :rule="element" @delete-rule="deleteRule" @toggle-rule="toggleRule" />
-          </template>
-        </draggable>
+      <div class="space-y-4" v-else>
+        <div v-if="type === 'new_conversation'">
+          <draggable v-model="rules" class="space-y-5" item-key="id" @end="onDragEnd">
+            <template #item="{ element }">
+              <div class="draggable-item">
+                <RuleList :rule="element" @delete-rule="deleteRule" @toggle-rule="toggleRule" />
+              </div>
+            </template>
+          </draggable>
+        </div>
+        <div v-else>
+          <RuleList
+            v-for="rule in rules"
+            :key="rule.id"
+            :rule="rule"
+            @delete-rule="deleteRule"
+            @toggle-rule="toggleRule"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -102,3 +115,13 @@ const updateExecutionMode = async () => {
 
 watch(executionMode, updateExecutionMode)
 </script>
+
+<style scoped>
+.draggable-item {
+  cursor: grab;
+}
+
+.draggable-item:active {
+  cursor: grabbing;
+}
+</style>
