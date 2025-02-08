@@ -17,27 +17,29 @@
     </p>
   </div>
 
-  <div class="flex flex-col gap-1 mb-5" v-if="conversation.first_reply_at">
+  <div class="flex flex-col gap-1 mb-5">
     <div class="flex justify-start items-center space-x-2">
       <p class="font-medium">First reply at</p>
-      <SlaDisplay
+      <SlaBadge
         :dueAt="conversation.first_response_due_at"
         :actualAt="conversation.first_reply_at"
       />
     </div>
-    <p>
+    <p v-if="conversation.first_reply_at">
       {{ format(conversation.first_reply_at, 'PPpp') }}
     </p>
+    <p v-else>-</p>
   </div>
 
-  <div class="flex flex-col gap-1 mb-5" v-if="conversation.resolved_at">
+  <div class="flex flex-col gap-1 mb-5">
     <div class="flex justify-start items-center space-x-2">
       <p class="font-medium">Resolved at</p>
-      <SlaDisplay :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" />
+      <SlaBadge :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" />
     </div>
-    <p>
+    <p v-if="conversation.resolved_at">
       {{ format(conversation.resolved_at, 'PPpp') }}
     </p>
+    <p v-else>-</p>
   </div>
 
   <div class="flex flex-col gap-1 mb-5" v-if="conversation.closed_at">
@@ -58,7 +60,7 @@
 
 <script setup>
 import { format } from 'date-fns'
-import SlaDisplay from '@/features/sla/SlaDisplay.vue'
+import SlaBadge from '@/features/sla/SlaBadge.vue'
 defineProps({
   conversation: Object
 })

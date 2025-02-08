@@ -41,17 +41,17 @@
         </div>
 
         <div class="flex items-center mt-2 space-x-2">
-          <SlaDisplay
+          <SlaBadge
             :dueAt="conversation.first_response_due_at"
             :actualAt="conversation.first_reply_at"
             :label="'FRD'"
-            :showSLAHit="false"
+            :showSLAMet="false"
           />
-          <SlaDisplay
+          <SlaBadge
             :dueAt="conversation.resolution_due_at"
             :actualAt="conversation.resolved_at"
             :label="'RD'"
-            :showSLAHit="false"
+            :showSLAMet="false"
           />
         </div>
       </div>
@@ -65,7 +65,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { formatTime } from '@/utils/datetime'
 import { Mail, CheckCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import SlaDisplay from '@/features/sla/SlaDisplay.vue'
+import SlaBadge from '@/features/sla/SlaBadge.vue'
 
 const router = useRouter()
 const route = useRoute()
