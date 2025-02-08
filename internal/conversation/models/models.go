@@ -89,7 +89,7 @@ type NewConversationsStats struct {
 
 // Message represents a message in a conversation
 type Message struct {
-	ID               int                    `db:"id" json:"id"`
+	ID               int                    `db:"id" json:"id,omitempty"`
 	CreatedAt        time.Time              `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time              `db:"updated_at" json:"updated_at"`
 	UUID             string                 `db:"uuid" json:"uuid"`
