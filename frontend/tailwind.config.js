@@ -23,6 +23,12 @@ module.exports = {
       },
     },
     extend: {
+      height: {
+        screen: '100dvh',
+      },
+      minHeight: {
+        screen: '100dvh',
+      },
       fontFamily: {
         jakarta: ['Plus Jakarta Sans', 'Helvetica Neue', 'sans-serif'],
         inter: ['Inter', 'Helvetica Neue', 'sans-serif'],

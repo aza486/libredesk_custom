@@ -26,8 +26,9 @@ export const useUserStore = defineStore('user', () => {
   const teams = computed(() => user.value.teams || [])
 
   const getFullName = computed(() => {
-    if (!user.value.first_name && !user.value.last_name) return ''
-    return `${user.value.first_name || ''} ${user.value.last_name || ''}`.trim()
+    const first = user.value.first_name ?? ''
+    const last = user.value.last_name ?? ''
+    return `${first} ${last}`.trim()
   })
 
   const getInitials = computed(() => {

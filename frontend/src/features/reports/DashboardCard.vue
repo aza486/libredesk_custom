@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-1 flex-col gap-x-5 box p-5 rounded-md space-y-5 bg-white">
+  <div class="flex flex-1 flex-col gap-x-5 box p-5 space-y-5 bg-white">
     <div class="flex items-center space-x-2">
       <p class="text-2xl">{{ title }}</p>
       <div class="bg-green-100/70 flex items-center space-x-2 px-1 rounded">

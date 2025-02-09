@@ -3,7 +3,7 @@
     <DialogContent>
       <DialogHeader class="space-y-1">
         <DialogTitle>{{ view?.id ? 'Edit' : 'Create' }} view</DialogTitle>
-        <DialogDescription> Views let you create custom filters and save them. </DialogDescription>
+        <DialogDescription> Views let you create filters and save them. </DialogDescription>
       </DialogHeader>
       <form @submit.prevent="onSubmit">
         <div class="grid gap-4 py-4">
@@ -13,7 +13,7 @@
               <FormControl>
                 <Input id="name" class="col-span-3" placeholder="Name" v-bind="componentField" />
               </FormControl>
-              <FormDescription>Enter a unique name for your view.</FormDescription>
+              <FormDescription>Enter an unique name for your view.</FormDescription>
               <FormMessage />
             </FormItem>
           </FormField>

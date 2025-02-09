@@ -1,17 +1,15 @@
 <template>
-  <div class="flex h-screen">
-    <template v-if="!isSearchRoute">
-      <div class="w-[390px] border-r shrink-0 overflow-y-auto">
-        <ConversationList />
-      </div>
-      <div class="grow overflow-hidden">
-        <router-view v-slot="{ Component }">
-          <keep-alive>
-            <component :is="Component" />
-          </keep-alive>
-        </router-view>
-      </div>
-    </template>
+  <div class="flex h-screen w-full" v-if="!isSearchRoute">
+    <div class="w-[400px] border-r shrink-0 overflow-y-auto">
+      <ConversationList />
+    </div>
+    <div class="grow">
+      <router-view v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
+    </div>
   </div>
 </template>
 

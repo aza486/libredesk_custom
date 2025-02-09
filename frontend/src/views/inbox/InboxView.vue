@@ -1,5 +1,5 @@
 <template>
-  <ConversationPlaceholder v-if="!conversationStore.current" />
+  <ConversationPlaceholder v-if="!conversationStore.current && !conversationStore.conversation.loading" />
   <router-view />
 </template>
 

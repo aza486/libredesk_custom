@@ -1,6 +1,6 @@
 <template>
   <div>
-    <ConversationSideBarContact :conversation="conversationStore.current" class="p-4 border-b" />
+    <ConversationSideBarContact class="p-4" />
     <Accordion
       type="multiple"
       collapsible
@@ -127,7 +127,7 @@
           Information
         </AccordionTrigger>
         <AccordionContent class="p-4">
-          <ConversationInfo :conversation="conversationStore.current" />
+          <ConversationInfo />
         </AccordionContent>
       </AccordionItem>
 
@@ -137,7 +137,7 @@
         </AccordionTrigger>
         <AccordionContent class="p-4">
           <div
-            v-if="conversationStore.current.previous_conversations.length === 0"
+            v-if="conversationStore.current.previous_conversations.length === 0 || conversationStore.conversation.loading"
             class="text-center text-sm text-muted-foreground py-4"
           >
             No previous conversations
@@ -153,7 +153,7 @@
                   type: 'assigned'
                 }
               }"
-              class="block p-3 rounded-md hover:bg-muted transition-colors"
+              class="block p-2 rounded-md hover:bg-muted"
             >
               <div class="flex items-center justify-between">
                 <div class="flex flex-col">
@@ -196,7 +196,6 @@ import { SelectTag } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast/use-toast'
 import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
-import { SidebarTrigger } from '@/components/ui/sidebar'
 import { CircleAlert, SignalLow, SignalMedium, SignalHigh, Users } from 'lucide-vue-next'
 
 const { toast } = useToast()

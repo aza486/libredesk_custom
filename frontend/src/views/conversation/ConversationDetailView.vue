@@ -1,9 +1,9 @@
 <template>
   <div class="flex">
     <div class="grow">
-      <Conversation v-if="conversationStore.messages.data" />
+      <Conversation v-if="conversationStore.current || conversationStore.conversation.loading" />
     </div>
-    <div class="grow-0">
+    <div>
       <ConversationSideBarWrapper
         v-if="conversationStore.current || conversationStore.conversation.loading"
       />
@@ -24,12 +24,12 @@ const props = defineProps({
 const conversationStore = useConversationStore()
 
 const fetchConversation = async (uuid) => {
-  await conversationStore.fetchConversation(uuid)
-  await conversationStore.fetchMessages(uuid)
   await Promise.all([
-    conversationStore.fetchParticipants(uuid),
-    conversationStore.updateAssigneeLastSeen(uuid)
+    conversationStore.fetchConversation(uuid),
+    conversationStore.fetchMessages(uuid, true),
+    conversationStore.fetchParticipants(uuid)
   ])
+  await conversationStore.updateAssigneeLastSeen(uuid)
 }
 
 // Initial fetch

@@ -4,7 +4,7 @@
       :editor="editor"
       :tippy-options="{ duration: 100 }"
       v-if="editor"
-      class="bg-white p-1 box rounded-lg will-change-transform"
+      class="bg-white p-1 box will-change-transform"
     >
       <div class="flex space-x-1 items-center">
         <DropdownMenu>

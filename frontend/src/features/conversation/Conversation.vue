@@ -39,9 +39,9 @@
 
     <!-- Messages & reply box -->
     <div>
-      <div class="flex flex-col h-[calc(100vh-theme(spacing.10))]">
+      <div class="flex flex-col h-screen">
         <MessageList class="flex-1 overflow-y-auto" />
-        <div class="sticky bottom-0 bg-white">
+        <div class="sticky bottom-0">
           <ReplyBox class="h-max" />
         </div>
       </div>
@@ -50,7 +50,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import {
   DropdownMenu,

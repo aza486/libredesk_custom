@@ -211,6 +211,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   const currentContactName = computed(() => {
+    if (!conversation.data?.contact) return ''
     return conversation.data?.contact.first_name + ' ' + conversation.data?.contact.last_name
   })
 
@@ -233,28 +234,6 @@ export const useConversationStore = defineStore('conversation', () => {
     return conversation.data?.cc || []
   })
 
-  async function fetchConversation (uuid) {
-    resetCurrentConversation()
-    conversation.loading = true
-    // Set messages loading to true as well as both are loaded together
-    messages.loading = true
-    try {
-      const resp = await api.getConversation(uuid)
-      conversation.data = resp.data.data
-      markConversationAsRead(uuid)
-      resetMessages()
-    } catch (error) {
-      conversation.errorMessage = handleHTTPError(error).message
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
-        variant: 'destructive',
-        description: conversation.errorMessage
-      })
-    } finally {
-      conversation.loading = false
-    }
-  }
-
   async function fetchParticipants (uuid) {
     try {
       const resp = await api.getConversationParticipants(uuid)
@@ -272,7 +251,25 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchMessages (uuid) {
+  async function fetchConversation (uuid) {
+    conversation.loading = true
+    try {
+      const resp = await api.getConversation(uuid)
+      conversation.data = resp.data.data
+    } catch (error) {
+      conversation.errorMessage = handleHTTPError(error).message
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: conversation.errorMessage
+      })
+    } finally {
+      conversation.loading = false
+    }
+  }
+
+  async function fetchMessages (uuid, reset = false) {
+    if (reset) resetMessages()
     messages.loading = true
     try {
       const response = await api.getConversationMessages(uuid, { page: messages.page, page_size: MESSAGE_LIST_PAGE_SIZE })
@@ -288,7 +285,10 @@ export const useConversationStore = defineStore('conversation', () => {
       if (newMessages.length === 0 && messages.page === 1) messages.data = []
       if (result.total_pages <= messages.page) messages.hasMore = false
       else messages.hasMore = true
+      // Prepend new messages to the list
       messages.data.unshift(...newMessages)
+      // Mark conversation as read
+      markConversationAsRead(uuid)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',

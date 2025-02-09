@@ -3,7 +3,7 @@
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
-        class="max-w-[70%] max-h-[70%] h-[90%] w-full bg-card text-card-foreground rounded-lg shadow-xl p-0 px-4 py-4"
+        class="max-w-[70%] max-h-[70%] h-[90%] w-full bg-card text-card-foreground px-4 py-4"
         @escapeKeyDown="isEditorFullscreen = false"
         hide-close-button="true"
       >
@@ -130,7 +130,7 @@
       </DialogContent>
     </Dialog>
 
-    <div class="bg-card text-card-foreground rounded-lg shadow-md px-2 border pt-2 m-2">
+    <div class="bg-card text-card-foreground box px-2 pt-2 m-2">
       <!-- Main Editor non-fullscreen -->
       <div v-if="!isEditorFullscreen" class="">
         <!-- Message type toggle -->
@@ -158,7 +158,7 @@
             variant="ghost"
             @click="isEditorFullscreen = true"
           >
-            <Maximize2 size="18" />
+            <Maximize2 size="15" />
           </span>
         </div>
 

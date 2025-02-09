@@ -265,11 +265,12 @@ const sidebarOpen = useStorage('sidebarOpen', true)
         v-on:update:open="sidebarOpen = $event"
       >
 
+        <!-- Main sidebar holding other sidebars -->
         <Sidebar
           collapsible="icon"
           class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0"
         >
-          <!-- Left Sidebar (Icon Sidebar) -->
+          <!-- Icon sidebar -->
           <Sidebar collapsible="none" class="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
             <SidebarContent>
               <SidebarGroup>

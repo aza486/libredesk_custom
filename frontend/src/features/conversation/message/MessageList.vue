@@ -41,7 +41,7 @@
             </div>
           </div>
         </TransitionGroup>
-        <MessagesSkeleton v-else />
+        <MessagesSkeleton :count="20" v-else />
       </div>
     </div>
 
@@ -54,7 +54,7 @@
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 translate-y-1"
     >
-      <div v-show="!isAtBottom" class="absolute bottom-6 right-6 z-10">
+      <div v-show="!isAtBottom" class="absolute bottom-12 right-6 z-10">
         <button
           @click="handleScrollToBottom"
           class="w-10 h-10 rounded-full flex items-center justify-center shadow-lg border bg-white text-primary transition-colors duration-200 hover:bg-gray-100"

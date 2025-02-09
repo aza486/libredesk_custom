@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-5 rounded-lg" :class="{ 'box border p-5': actions.length > 0 }">
+  <div class="space-y-5 rounded-lg" :class="{ 'box p-5': actions.length > 0 }">
     <div class="space-y-5">
       <div v-for="(action, index) in actions" :key="index" class="space-y-5">
         <div v-if="index > 0">

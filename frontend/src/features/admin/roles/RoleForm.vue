@@ -21,7 +21,7 @@
 
     <p class="text-base">Set permissions for this role</p>
 
-    <div v-for="entity in permissions" :key="entity.name" class="border box p-4 rounded-lg shadow-sm">
+    <div v-for="entity in permissions" :key="entity.name" class="box p-4">
       <p class="text-lg mb-5">{{ entity.name }}</p>
       <div class="space-y-4">
         <FormField v-for="permission in entity.permissions" :key="permission.name" type="checkbox"
