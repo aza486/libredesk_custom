@@ -48,7 +48,7 @@
                   :class="{ 'bg-primary/5 text-primary': selectedMacroIndex === index }"
                 >
                   <div class="flex items-center space-x-2 justify-start">
-                    <Zap :size="18" class="text-primary" />
+                    <Zap :size="14" class="text-primary" />
                     <span class="text-sm overflow">{{ macro.label }}</span>
                   </div>
                 </CommandItem>

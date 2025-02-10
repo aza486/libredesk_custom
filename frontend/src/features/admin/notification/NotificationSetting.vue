@@ -1,12 +1,11 @@
 <template>
   <AdminPageWithHelp>
     <template #content>
-      <Spinner v-if="formLoading" class="mx-auto" />
+      <Spinner v-if="isLoading" />
       <NotificationsForm
-        v-else
         :initial-values="initialValues"
         :submit-form="submitForm"
-        :isLoading="formLoading"
+        :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
       />
     </template>
 
@@ -32,7 +31,7 @@ import { handleHTTPError } from '@/utils/http'
 import { Spinner } from '@/components/ui/spinner'
 
 const initialValues = ref({})
-const formLoading = ref(false)
+const isLoading = ref(false)
 const emitter = useEmitter()
 
 onMounted(() => {
@@ -41,7 +40,7 @@ onMounted(() => {
 
 const getNotificationSettings = async () => {
   try {
-    formLoading.value = true
+    isLoading.value = true
     const resp = await api.getEmailNotificationSettings()
     initialValues.value = Object.fromEntries(
       Object.entries(resp.data.data).map(([key, value]) => [
@@ -56,13 +55,12 @@ const getNotificationSettings = async () => {
       description: handleHTTPError(error).message
     })
   } finally {
-    formLoading.value = false
+    isLoading.value = false
   }
 }
 
 const submitForm = async (values) => {
   try {
-    formLoading.value = true
     const updatedValues = Object.fromEntries(
       Object.entries(values).map(([key, value]) => {
         if (key === 'password' && value.includes('•')) {
@@ -83,8 +81,6 @@ const submitForm = async (values) => {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
-  } finally {
-    formLoading.value = false
   }
 }
 </script>

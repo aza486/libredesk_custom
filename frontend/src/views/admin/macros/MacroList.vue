@@ -1,13 +1,13 @@
 <template>
-  <div>
+  <Spinner v-if="formLoading" />
+  <div :class="{ 'transition-opacity duration-300 opacity-50': formLoading }">
     <div class="flex justify-end mb-5">
       <router-link :to="{ name: 'new-macro' }">
         <Button> New macro </Button>
       </router-link>
     </div>
     <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable v-else :columns="columns" :data="macros" />
+      <DataTable :columns="columns" :data="macros" />
     </div>
   </div>
 </template>

@@ -1,9 +1,5 @@
 <template>
-  <form
-    @submit="onSmtpSubmit"
-    class="space-y-6"
-    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
-  >
+  <form @submit="onSmtpSubmit" class="space-y-6">
     <!-- Enabled Field -->
     <FormField name="enabled" v-slot="{ value, handleChange }">
       <FormItem>
@@ -151,7 +147,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -176,6 +172,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 
+const isLoading = ref(false)
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -189,10 +186,6 @@ const props = defineProps({
     type: String,
     required: false,
     default: () => 'Save'
-  },
-  isLoading: {
-    type: Boolean,
-    required: false
   }
 })
 
@@ -200,8 +193,13 @@ const smtpForm = useForm({
   validationSchema: toTypedSchema(smtpConfigSchema)
 })
 
-const onSmtpSubmit = smtpForm.handleSubmit((values) => {
-  props.submitForm(values)
+const onSmtpSubmit = smtpForm.handleSubmit(async (values) => {
+  isLoading.value = true
+  try {
+    await props.submitForm(values)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 // Watch for changes in initialValues and update the form.

@@ -1,5 +1,6 @@
 <template>
-  <div class="space-y-5">
+  <Spinner v-if="isLoading" />
+  <div class="space-y-5" :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
     <div>
       <p class="text-sm-muted">{{ helptext }}</p>
     </div>
@@ -19,27 +20,25 @@
         </SelectContent>
       </Select>
     </div>
-    <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <div class="space-y-4" v-else>
-        <div v-if="type === 'new_conversation'">
-          <draggable v-model="rules" class="space-y-5" item-key="id" @end="onDragEnd">
-            <template #item="{ element }">
-              <div class="draggable-item">
-                <RuleList :rule="element" @delete-rule="deleteRule" @toggle-rule="toggleRule" />
-              </div>
-            </template>
-          </draggable>
-        </div>
-        <div v-else>
-          <RuleList
-            v-for="rule in rules"
-            :key="rule.id"
-            :rule="rule"
-            @delete-rule="deleteRule"
-            @toggle-rule="toggleRule"
-          />
-        </div>
+
+    <div class="space-y-4">
+      <div v-if="type === 'new_conversation'">
+        <draggable v-model="rules" class="space-y-5" item-key="id" @end="onDragEnd">
+          <template #item="{ element }">
+            <div class="draggable-item">
+              <RuleList :rule="element" @delete-rule="deleteRule" @toggle-rule="toggleRule" />
+            </div>
+          </template>
+        </draggable>
+      </div>
+      <div v-else>
+        <RuleList
+          v-for="rule in rules"
+          :key="rule.id"
+          :rule="rule"
+          @delete-rule="deleteRule"
+          @toggle-rule="toggleRule"
+        />
       </div>
     </div>
   </div>

@@ -1,9 +1,7 @@
 <template>
-  <Spinner v-if="formLoading"></Spinner>
   <form
     @submit="onSubmit"
     class="space-y-6 w-full"
-    :class="{ 'opacity-50 transition-opacity duration-300': formLoading }"
   >
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
@@ -144,7 +142,7 @@
         <FormMessage />
       </FormItem>
     </FormField>
-    <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
+    <Button type="submit" :isLoading="formLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
 
@@ -154,7 +152,6 @@ import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from './formSchema.js'
-import { Spinner } from '@/components/ui/spinner'
 import {
   FormControl,
   FormField,
@@ -186,9 +183,8 @@ import api from '@/api'
 
 const emitter = useEmitter()
 const timezones = Intl.supportedValuesOf('timeZone')
-const isLoading = ref(false)
-const formLoading = ref(true)
 const businessHours = ref({})
+const formLoading = ref(false)
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -202,6 +198,10 @@ const props = defineProps({
     type: String,
     required: false,
     default: () => 'Submit'
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -241,7 +241,7 @@ const fetchBusinessHours = async () => {
 
 const onSubmit = form.handleSubmit(async (values) => {
   try {
-    isLoading.value = true
+    formLoading.value = true
     await props.submitForm(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Success',
@@ -254,7 +254,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       description: handleHTTPError(error).message
     })
   } finally {
-    isLoading.value = false
+    formLoading.value = false
   }
 })
 
@@ -269,7 +269,6 @@ watch(
     if (newValues.business_hours_id)
       newValues.business_hours_id = newValues.business_hours_id.toString()
     form.setValues(newValues)
-    formLoading.value = false
   },
   { deep: true }
 )

@@ -1,29 +1,31 @@
 <template>
+  <Spinner v-if="isLoading" />
   <AdminPageWithHelp>
     <template #content>
       <template v-if="router.currentRoute.value.path === '/admin/templates'">
-        <div class="flex justify-between mb-5">
-          <div></div>
-          <div class="flex justify-end mb-4">
-            <Button @click="navigateToNewTemplate" :disabled="templateType !== 'email_outgoing'">
-              New template
-            </Button>
+        <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
+          <div class="flex justify-between mb-5">
+            <div></div>
+            <div class="flex justify-end mb-4">
+              <Button @click="navigateToNewTemplate" :disabled="templateType !== 'email_outgoing'">
+                New template
+              </Button>
+            </div>
           </div>
-        </div>
-        <div>
-          <Spinner v-if="isLoading" />
-          <Tabs default-value="email_outgoing" v-model="templateType">
-            <TabsList class="grid w-full grid-cols-2 mb-5">
-              <TabsTrigger value="email_outgoing">Outgoing email templates</TabsTrigger>
-              <TabsTrigger value="email_notification">Email notification templates</TabsTrigger>
-            </TabsList>
-            <TabsContent value="email_outgoing">
-              <DataTable :columns="outgoingEmailTemplatesColumns" :data="templates" />
-            </TabsContent>
-            <TabsContent value="email_notification">
-              <DataTable :columns="emailNotificationTemplates" :data="templates" />
-            </TabsContent>
-          </Tabs>
+          <div>
+            <Tabs default-value="email_outgoing" v-model="templateType">
+              <TabsList class="grid w-full grid-cols-2 mb-5">
+                <TabsTrigger value="email_outgoing">Outgoing email templates</TabsTrigger>
+                <TabsTrigger value="email_notification">Email notification templates</TabsTrigger>
+              </TabsList>
+              <TabsContent value="email_outgoing">
+                <DataTable :columns="outgoingEmailTemplatesColumns" :data="templates" />
+              </TabsContent>
+              <TabsContent value="email_notification">
+                <DataTable :columns="emailNotificationTemplates" :data="templates" />
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </template>
       <template v-else>
@@ -100,6 +102,7 @@ const navigateToNewTemplate = () => {
 watch(
   templateType,
   () => {
+    templates.value = []
     fetchAll()
   },
   { immediate: true }

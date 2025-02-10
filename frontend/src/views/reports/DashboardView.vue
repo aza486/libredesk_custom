@@ -1,13 +1,21 @@
 <template>
-  <div class="page-content p-4 pr-36">
-    <Spinner v-if="isLoading"></Spinner>
+  <div
+    class="page-content p-4 pr-36"
+    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
+  >
+    <Spinner v-if="isLoading" />
     <div class="space-y-4">
       <div class="text-sm text-gray-500 text-right">
         Last updated: {{ new Date(lastUpdate).toLocaleTimeString() }}
       </div>
       <div class="mt-7 flex w-full space-x-4">
         <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
-        <Card class="w-8/12" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
+        <Card
+          class="w-8/12"
+          title="Agent status"
+          :counts="sampleAgentStatusCounts"
+          :labels="sampleAgentStatusLabels"
+        />
       </div>
       <div class="rounded-lg box w-full p-5 bg-white">
         <LineChart :data="chartData.processedData"></LineChart>
@@ -76,14 +84,14 @@ const stopRealtimeUpdates = () => {
 
 const getDashboardData = () => {
   isLoading.value = true
-  Promise.allSettled([getCardStats(), getDashboardCharts()])
-    .finally(() => {
-      isLoading.value = false
-    })
+  Promise.allSettled([getCardStats(), getDashboardCharts()]).finally(() => {
+    isLoading.value = false
+  })
 }
 
 const getCardStats = async () => {
-  return api.getOverviewCounts()
+  return api
+    .getOverviewCounts()
     .then((resp) => {
       cardCounts.value = resp.data.data
     })
@@ -97,16 +105,18 @@ const getCardStats = async () => {
 }
 
 const getDashboardCharts = async () => {
-  return api.getOverviewCharts()
+  return api
+    .getOverviewCharts()
     .then((resp) => {
       chartData.value.new_conversations = resp.data.data.new_conversations || []
       chartData.value.resolved_conversations = resp.data.data.resolved_conversations || []
       chartData.value.messages_sent = resp.data.data.messages_sent || []
-      chartData.value.processedData = resp.data.data.new_conversations.map(item => ({
+      chartData.value.processedData = resp.data.data.new_conversations.map((item) => ({
         date: item.date,
         'New conversations': item.count,
-        'Resolved conversations': resp.data.data.resolved_conversations.find(r => r.date === item.date)?.count || 0,
-        'Messages sent': resp.data.data.messages_sent.find(r => r.date === item.date)?.count || 0
+        'Resolved conversations':
+          resp.data.data.resolved_conversations.find((r) => r.date === item.date)?.count || 0,
+        'Messages sent': resp.data.data.messages_sent.find((r) => r.date === item.date)?.count || 0
       }))
       chartData.value.status_summary = resp.data.data.status_summary || []
     })

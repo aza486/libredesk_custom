@@ -1,5 +1,6 @@
 <template>
-  <div>
+  <Spinner v-if="isLoading" />
+  <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
     <div class="flex justify-between mb-5">
       <div></div>
       <router-link :to="{ name: 'new-inbox' }">
@@ -7,8 +8,7 @@
       </router-link>
     </div>
     <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="data" v-else />
+      <DataTable :columns="columns" :data="data" />
     </div>
   </div>
 </template>

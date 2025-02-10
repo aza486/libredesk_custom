@@ -1,11 +1,11 @@
 <template>
-  <div>
+  <Spinner v-if="isLoading" />
+  <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
     <div class="flex justify-end mb-5">
       <Button @click="navigateToNewRole"> New role </Button>
     </div>
     <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="roles" v-else />
+      <DataTable :columns="columns" :data="roles" />
     </div>
   </div>
 </template>

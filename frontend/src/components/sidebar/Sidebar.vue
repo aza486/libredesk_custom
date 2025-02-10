@@ -467,7 +467,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                         <div class="font-semibold text-2xl">Inbox</div>
                         <div class="ml-auto">
                           <router-link :to="{ name: 'search' }">
-                            <div class="flex items-center bg-accent p-2 rounded-full">
+                            <div class="flex items-center bg-accent p-2 rounded-full border">
                               <Search
                                 class="transition-transform duration-200 hover:scale-110 cursor-pointer"
                                 size="15"

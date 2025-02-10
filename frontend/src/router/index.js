@@ -178,6 +178,7 @@ const routes = [
               },
               {
                 path: 'new',
+                name: 'new-business-hours',
                 component: () => import('@/views/admin/business-hours/CreateOrEditBusinessHours.vue'),
                 meta: { title: 'New Business Hours' }
               },
@@ -357,7 +358,7 @@ const routes = [
           {
             path: 'oidc',
             component: () => import('@/views/admin/oidc/OIDC.vue'),
-            meta: { title: 'OIDC' },
+            meta: { title: 'SSO' },
             children: [
               {
                 path: '',
@@ -367,12 +368,12 @@ const routes = [
                 path: ':id/edit',
                 props: true,
                 component: () => import('@/views/admin/oidc/CreateEditOIDC.vue'),
-                meta: { title: 'Edit OIDC' }
+                meta: { title: 'Edit SSO' }
               },
               {
                 path: 'new',
                 component: () => import('@/views/admin/oidc/CreateEditOIDC.vue'),
-                meta: { title: 'New OIDC' }
+                meta: { title: 'New SSO' }
               }
             ]
           },

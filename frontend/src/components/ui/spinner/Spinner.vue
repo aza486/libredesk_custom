@@ -1,8 +1,8 @@
 <template>
-  <div role="status" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+  <div role="status" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
     <svg :class="spinnerClass" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle
-        class="opacity-25"
+        class="opacity-10"
         cx="12"
         cy="12"
         r="10"
@@ -24,7 +24,7 @@ import { computed } from 'vue'
 const props = defineProps({
   size: {
     type: String,
-    default: 'w-8 h-8'
+    default: 'w-5 h-5'
   },
   color: {
     type: String,

@@ -1,14 +1,16 @@
 <template>
-  <div>
+  <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
     <div class="flex justify-between mb-5">
       <div></div>
       <div>
-        <Button @click="navigateToNewBH">New business hour</Button>
+        <router-link :to="{ name: 'new-business-hours' }">
+          <Button>New business hour</Button>
+        </router-link>
       </div>
     </div>
     <div>
       <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="businessHours" v-else />
+      <DataTable :columns="columns" :data="businessHours" />
     </div>
   </div>
 </template>
@@ -17,7 +19,6 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import DataTable from '@/components/datatable/DataTable.vue'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import { Spinner } from '@/components/ui/spinner'
 import { columns } from '@/features/admin/business-hours/dataTableColumns.js'
@@ -26,7 +27,6 @@ import api from '@/api'
 
 const businessHours = ref([])
 const isLoading = ref(false)
-const router = useRouter()
 const emit = useEmitter()
 
 onMounted(() => {
@@ -50,9 +50,5 @@ const fetchAll = async () => {
   } finally {
     isLoading.value = false
   }
-}
-
-const navigateToNewBH = () => {
-  router.push('/admin/business-hours/new')
 }
 </script>

@@ -1,13 +1,13 @@
 <template>
-  <div>
+  <Spinner v-if="isLoading" />
+  <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
     <div class="flex justify-end mb-5">
       <router-link :to="{ name: 'new-user' }">
         <Button>New User</Button>
       </router-link>
     </div>
     <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="data" v-else />
+      <DataTable :columns="columns" :data="data" />
     </div>
   </div>
 </template>
