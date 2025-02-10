@@ -10,18 +10,18 @@
         <div v-if="isEditorFullscreen" class="h-full flex flex-col">
           <!-- Message type toggle -->
           <div class="flex justify-between items-center border-b border-border pb-4">
-            <Tabs v-model="messageType" class="space-x-2">
-              <TabsList class="bg-muted p-1 rounded-md">
+            <Tabs v-model="messageType" class="rounded-lg">
+              <TabsList class="bg-muted p-1 rounded-lg">
                 <TabsTrigger
                   value="reply"
-                  class="px-3 py-1 rounded-md transition-colors duration-200"
+                  class="px-3 py-1 rounded-lg transition-colors duration-200"
                   :class="{ 'bg-background text-foreground': messageType === 'reply' }"
                 >
                   Reply
                 </TabsTrigger>
                 <TabsTrigger
                   value="private_note"
-                  class="px-3 py-1 rounded-md transition-colors duration-200"
+                  class="px-3 py-1 rounded-lg transition-colors duration-200"
                   :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
                 >
                   Private note
@@ -115,7 +115,7 @@
 
           <!-- Bottom menu bar -->
           <ReplyBoxBottomMenuBar
-            class="mt-4 border-t border-border pt-4"
+            class="mt-4  pt-4"
             :handleFileUpload="handleFileUpload"
             :handleInlineImageUpload="handleInlineImageUpload"
             :isBold="isBold"
@@ -130,23 +130,23 @@
       </DialogContent>
     </Dialog>
 
+    <!-- Main Editor non-fullscreen -->
     <div class="bg-card text-card-foreground box px-2 pt-2 m-2">
-      <!-- Main Editor non-fullscreen -->
       <div v-if="!isEditorFullscreen" class="">
         <!-- Message type toggle -->
         <div class="flex justify-between items-center mb-4">
-          <Tabs v-model="messageType">
-            <TabsList class="bg-muted p-1 rounded-md">
+          <Tabs v-model="messageType" class="rounded-lg">
+            <TabsList class="bg-muted p-1 rounded-lg">
               <TabsTrigger
                 value="reply"
-                class="px-3 py-1 rounded-md transition-colors duration-200"
+                class="px-3 py-1 rounded-lg transition-colors duration-200"
                 :class="{ 'bg-background text-foreground': messageType === 'reply' }"
               >
                 Reply
               </TabsTrigger>
               <TabsTrigger
                 value="private_note"
-                class="px-3 py-1 rounded-md transition-colors duration-200"
+                class="px-3 py-1 rounded-lg transition-colors duration-200"
                 :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
               >
                 Private note
@@ -369,7 +369,8 @@ const enableSend = computed(() => {
   return (
     (textContent.value.trim().length > 0 ||
       conversationStore.conversation?.macro?.actions?.length > 0) &&
-    emailErrors.value.length === 0 && !uploadingFiles.value.length
+    emailErrors.value.length === 0 &&
+    !uploadingFiles.value.length
   )
 })
 

@@ -1,40 +1,51 @@
 <template>
   <div
-    class="relative p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-    :class="{ 'bg-accent': conversation.uuid === currentConversation?.uuid }"
+    class="group relative p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-accent/20 border-gray-200 last:border-b-0 hover:shadow-sm"
+    :class="{
+      'bg-accent/30 border-l-4': conversation.uuid === currentConversation?.uuid
+    }"
     @click="navigateToConversation(conversation.uuid)"
   >
-    <div class="flex items-start space-x-4">
-      <Avatar class="w-12 h-12 rounded-full ring-2 ring-white">
-        <AvatarImage :src="conversation.avatar_url" v-if="conversation.avatar_url" />
+    <div class="flex items-start gap-4">
+      <!-- Avatar -->
+      <Avatar class="w-12 h-12 rounded-full shadow">
+        <AvatarImage
+          :src="conversation.avatar_url"
+          class="object-cover"
+          v-if="conversation.avatar_url"
+        />
         <AvatarFallback>
           {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
         </AvatarFallback>
       </Avatar>
 
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-medium text-gray-900 truncate">
+      <!-- Content container -->
+      <div class="flex-1 min-w-0 space-y-2">
+        <!-- Contact name and last message time -->
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-semibold text-gray-900 truncate">
             {{ contactFullName }}
           </h3>
-          <span class="text-xs text-gray-500" v-if="conversation.last_message_at">
+          <span class="text-xs text-gray-400 whitespace-nowrap" v-if="conversation.last_message_at">
             {{ formatTime(conversation.last_message_at) }}
           </span>
         </div>
 
-        <p class="mt-1 text-xs text-gray-500 flex items-center space-x-1">
-          <Mail class="w-3 h-3" />
+        <!-- Inbox name -->
+        <p class="text-xs text-gray-400 flex items-center gap-1.5">
+          <Mail class="w-3.5 h-3.5 text-gray-400/80" />
           <span>{{ conversation.inbox_name }}</span>
         </p>
 
-        <div class="mt-2 flex items-start justify-between">
+        <!-- Message preview and unread count -->
+        <div class="flex items-start justify-between gap-2">
           <p class="text-sm text-gray-600 line-clamp-2 flex-1">
-            <CheckCheck class="inline-block w-4 h-4 mr-1 text-green-500 flex-shrink-0" />
+            <CheckCheck class="inline-block w-4 h-4 mr-1.5 text-green-600 flex-shrink-0" />
             {{ trimmedLastMessage }}
           </p>
           <div
             v-if="conversation.unread_message_count > 0"
-            class="flex items-center justify-center w-5 h-5 bg-green-500 text-white text-xs rounded-full flex-shrink-0"
+            class="flex items-center justify-center w-6 h-6 bg-green-600 text-white text-xs font-medium rounded-full"
           >
             {{ conversation.unread_message_count }}
           </div>

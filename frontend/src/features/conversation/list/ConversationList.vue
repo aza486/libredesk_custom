@@ -9,7 +9,7 @@
     </header>
 
     <!-- Filters -->
-    <div class="bg-white px-2 py-3 flex justify-between items-center">
+    <div class="bg-white px-2 py-2 flex justify-between items-center">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
@@ -106,7 +106,7 @@
         </div>
 
         <!-- Loading Skeleton -->
-        <div v-if="isLoading" key="loading" class="space-y-4 p-4">
+        <div v-if="isLoading" key="loading" class="space-y-4">
           <ConversationListItemSkeleton v-for="index in 10" :key="index" />
         </div>
       </TransitionGroup>

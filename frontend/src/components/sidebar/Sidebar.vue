@@ -15,7 +15,6 @@ import {
   SidebarGroupContent,
   SidebarMenuAction,
   SidebarMenuButton,
-  SidebarMenuSubButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubItem,
@@ -229,7 +228,7 @@ const adminNavItems = [
     title: 'Security',
     children: [
       {
-        title: 'OpenID Connect SSO',
+        title: 'SSO',
         href: '/admin/oidc',
         permissions: ['oidc:manage']
       }
@@ -260,11 +259,10 @@ const sidebarOpen = useStorage('sidebarOpen', true)
   <div class="flex flex-row justify-between h-full">
     <div class="flex-1">
       <SidebarProvider
-        style="--sidebar-width: 16rem"
+        style="--sidebar-width: 15rem"
         :default-open="sidebarOpen"
         v-on:update:open="sidebarOpen = $event"
       >
-
         <!-- Main sidebar holding other sidebars -->
         <Sidebar
           collapsible="icon"
@@ -326,7 +324,6 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                     <SidebarMenuButton
                       :isActive="isActiveParent('/reports/overview')"
                       asChild
-                      size="md"
                     >
                       <div>
                         <span class="font-semibold text-2xl">Reports</span>
@@ -361,7 +358,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild size="md">
+                    <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
                       <div>
                         <span class="font-semibold text-2xl">Admin</span>
                       </div>
@@ -400,7 +397,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem v-for="child in item.children" :key="child.title">
-                              <SidebarMenuSubButton
+                              <SidebarMenuButton
                                 size="sm"
                                 :isActive="isActiveParent(child.href)"
                                 asChild
@@ -408,7 +405,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                                 <router-link :to="child.href">
                                   <span>{{ child.title }}</span>
                                 </router-link>
-                              </SidebarMenuSubButton>
+                              </SidebarMenuButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>
@@ -430,7 +427,6 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                     <SidebarMenuButton
                       :isActive="isActiveParent('/account/profile')"
                       asChild
-                      size="md"
                     >
                       <div>
                         <span class="font-semibold text-2xl">Account</span>
@@ -460,7 +456,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
             </Sidebar>
           </template>
 
-          <!-- Conversation Sidebar -->
+          <!-- Inbox sidebar -->
           <template v-if="route.path && isInboxRoute(route.path)">
             <Sidebar collapsible="none" class="!border-r-0 bg-white">
               <SidebarHeader>
@@ -471,10 +467,13 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                         <div class="font-semibold text-2xl">Inbox</div>
                         <div class="ml-auto">
                           <router-link :to="{ name: 'search' }">
-                            <Search
-                              class="transition-transform duration-200 hover:scale-110 cursor-pointer"
-                              size="18"
-                            />
+                            <div class="flex items-center bg-accent p-2 rounded-full">
+                              <Search
+                                class="transition-transform duration-200 hover:scale-110 cursor-pointer"
+                                size="15"
+                                stroke-width="2.5"
+                              />
+                            </div>
                           </router-link>
                         </div>
                       </div>
@@ -501,7 +500,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
+                              <SidebarMenuButton
                                 size="sm"
                                 :isActive="isActiveParent('/inboxes/assigned')"
                                 asChild
@@ -509,10 +508,10 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                                 <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
                                   <span>My inbox</span>
                                 </router-link>
-                              </SidebarMenuSubButton>
+                              </SidebarMenuButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
+                              <SidebarMenuButton
                                 size="sm"
                                 :isActive="isActiveParent('/inboxes/unassigned')"
                                 asChild
@@ -522,10 +521,10 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                                 >
                                   <span>Unassigned</span>
                                 </router-link>
-                              </SidebarMenuSubButton>
+                              </SidebarMenuButton>
                             </SidebarMenuSubItem>
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
+                              <SidebarMenuButton
                                 size="sm"
                                 :isActive="isActiveParent('/inboxes/all')"
                                 asChild
@@ -533,7 +532,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                                 <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
                                   <span>All</span>
                                 </router-link>
-                              </SidebarMenuSubButton>
+                              </SidebarMenuButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>
@@ -557,7 +556,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                         <CollapsibleContent>
                           <SidebarMenuSub v-for="team in userTeams" :key="team.id">
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
+                              <SidebarMenuButton
                                 size="sm"
                                 :isActive="isActiveParent(`/inboxes/teams/${team.id}`)"
                                 asChild
@@ -567,7 +566,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                                 >
                                   {{ team.emoji }}<span>{{ team.name }}</span>
                                 </router-link>
-                              </SidebarMenuSubButton>
+                              </SidebarMenuButton>
                             </SidebarMenuSubItem>
                           </SidebarMenuSub>
                         </CollapsibleContent>
@@ -603,7 +602,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                         <CollapsibleContent>
                           <SidebarMenuSub v-for="view in userViews" :key="view.id">
                             <SidebarMenuSubItem>
-                              <SidebarMenuSubButton
+                              <SidebarMenuButton
                                 size="sm"
                                 :isActive="isActiveParent(`/inboxes/views/${view.id}`)"
                                 asChild
@@ -611,9 +610,9 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                                 <router-link
                                   :to="{ name: 'view-inbox', params: { viewID: view.id } }"
                                 >
-                                  <span>{{ view.name }}</span>
+                                <span class="break-all w-24">{{ view.name }}</span>
                                 </router-link>
-                              </SidebarMenuSubButton>
+                              </SidebarMenuButton>
 
                               <SidebarMenuAction>
                                 <DropdownMenu>

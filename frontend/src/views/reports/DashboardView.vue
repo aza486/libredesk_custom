@@ -9,10 +9,10 @@
         <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
         <Card class="w-8/12" title="Agent status" :counts="sampleAgentStatusCounts" :labels="sampleAgentStatusLabels" />
       </div>
-      <div class="dashboard-card p-5 bg-white">
+      <div class="rounded-lg box w-full p-5 bg-white">
         <LineChart :data="chartData.processedData"></LineChart>
       </div>
-      <div class="dashboard-card p-5 bg-white">
+      <div class="rounded-lg box w-full p-5 bg-white">
         <BarChart :data="chartData.status_summary"></BarChart>
       </div>
     </div>

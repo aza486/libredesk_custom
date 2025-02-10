@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-screen w-full" v-if="!isSearchRoute">
-    <div class="w-[400px] border-r shrink-0 overflow-y-auto">
+    <div class="w-[450px] border-r shrink-0 overflow-y-auto">
       <ConversationList />
     </div>
     <div class="grow">

@@ -6,8 +6,8 @@
       collapsible
       :default-value="['Actions', 'Information', 'Previous conversations']"
     >
-      <AccordionItem value="Actions">
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium">
+      <AccordionItem value="Actions" class="border-0 mb-2 mb-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           Actions
         </AccordionTrigger>
         <AccordionContent class="space-y-4 p-4">
@@ -122,8 +122,8 @@
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem value="Information">
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium">
+      <AccordionItem value="Information" class="border-0 mb-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           Information
         </AccordionTrigger>
         <AccordionContent class="p-4">
@@ -131,13 +131,16 @@
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem value="Previous conversations">
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium">
+      <AccordionItem value="Previous conversations" class="border-0 mb-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           Previous conversations
         </AccordionTrigger>
         <AccordionContent class="p-4">
           <div
-            v-if="conversationStore.current.previous_conversations.length === 0 || conversationStore.conversation.loading"
+            v-if="
+              conversationStore.current.previous_conversations.length === 0 ||
+              conversationStore.conversation.loading
+            "
             class="text-center text-sm text-muted-foreground py-4"
           >
             No previous conversations

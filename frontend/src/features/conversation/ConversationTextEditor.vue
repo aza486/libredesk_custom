@@ -245,7 +245,7 @@ onUnmounted(() => {
 
 // Editor height
 .ProseMirror {
-  min-height: 180px !important;
+  min-height: 80px !important;
   max-height: 60% !important;
   overflow-y: scroll !important;
 }
