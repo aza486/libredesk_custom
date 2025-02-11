@@ -1,11 +1,9 @@
 <template>
   <div class="overflow-y-scroll h-full">
     <SearchHeader v-model="searchQuery" @search="handleSearch" />
-
     <div v-if="loading" class="flex justify-center items-center h-64">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <Spinner class="" />
     </div>
-
     <div v-else-if="error" class="mt-8 text-center">
       <p class="text-lg text-destructive">{{ error }}</p>
       <button
@@ -31,8 +29,6 @@
       >
         Please enter at least {{ MIN_SEARCH_LENGTH }} characters to search.
       </p>
-
-      <!-- New component for when search is not performed -->
       <div v-else class="mt-16 text-center">
         <h2 class="text-2xl font-semibold text-primary mb-4">Search conversations</h2>
         <p class="text-lg text-muted-foreground">
@@ -47,6 +43,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import SearchHeader from '@/features/search/SearchHeader.vue'
 import SearchResults from '@/features/search/SearchResults.vue'
+import Spinner from '@/components/ui/spinner/Spinner.vue'
 import api from '@/api'
 
 const MIN_SEARCH_LENGTH = 2
