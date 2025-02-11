@@ -1,13 +1,14 @@
 <template>
-  <Spinner v-if="isLoading" />
   <AdminPageWithHelp>
     <template #content>
-      <GeneralSettingForm
-        :submitForm="submitForm"
-        :initial-values="initialValues"
-        submitLabel="Save"
-        :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
-      />
+      <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
+        <GeneralSettingForm
+          :submitForm="submitForm"
+          :initial-values="initialValues"
+          submitLabel="Save"
+        />
+        <Spinner v-if="isLoading" />
+      </div>
     </template>
     <template #help>
       <p>

@@ -1,6 +1,6 @@
 <template>
-  <Spinner v-if="isLoading" />
   <div class="space-y-5" :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
+    <Spinner v-if="isLoading" />
     <div>
       <p class="text-sm-muted">{{ helptext }}</p>
     </div>

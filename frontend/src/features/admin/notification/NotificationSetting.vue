@@ -1,12 +1,10 @@
 <template>
   <AdminPageWithHelp>
     <template #content>
-      <Spinner v-if="isLoading" />
-      <NotificationsForm
-        :initial-values="initialValues"
-        :submit-form="submitForm"
-        :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
-      />
+      <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
+        <Spinner v-if="isLoading" />
+        <NotificationsForm :initial-values="initialValues" :submit-form="submitForm" />
+      </div>
     </template>
 
     <template #help>

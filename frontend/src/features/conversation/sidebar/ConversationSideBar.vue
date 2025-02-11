@@ -213,12 +213,22 @@ onMounted(async () => {
 
 watch(
   () => conversationStore.current?.tags,
-  () => {
-    if (!conversationStore.current?.tags) return
+  (newTags, oldTags) => {
+    // Check if the tags are the same.
+    if (
+      Array.isArray(newTags) &&
+      Array.isArray(oldTags) &&
+      newTags.length === oldTags.length &&
+      newTags.every((item) => oldTags.includes(item))
+    ) {
+      return
+    }
+
     conversationStore.upsertTags({
-      tags: JSON.stringify(conversationStore.current.tags)
+      tags: JSON.stringify(newTags)
     })
-  }
+  },
+  { immediate: false }
 )
 
 const assignedUserID = computed(() => String(conversationStore.current?.assigned_user_id))
