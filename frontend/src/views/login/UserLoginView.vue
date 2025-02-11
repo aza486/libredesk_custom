@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-background">
     <header class="p-6">
-      <h1 class="text-2xl font-bold text-foreground">LibreDesk</h1>
+      <h1 class="text-2xl font-bold text-foreground">Libredesk</h1>
     </header>
 
     <main class="flex-1 flex items-center justify-center p-4">
@@ -13,7 +13,7 @@
         >
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-3xl font-bold text-foreground">LibreDesk</CardTitle>
+              <CardTitle class="text-3xl font-bold text-foreground">Libredesk</CardTitle>
               <p class="text-muted-foreground">Sign in to your account</p>
             </div>
 

@@ -485,7 +485,7 @@ VALUES
     ('app.lang', '"en"'::jsonb),
     ('app.root_url', '"http://localhost:9000"'::jsonb),
     ('app.logo_url', '"http://localhost:9000/logo.png"'::jsonb),
-    ('app.site_name', '"LibreDesk"'::jsonb),
+    ('app.site_name', '"Libredesk"'::jsonb),
     ('app.favicon_url', '"http://localhost:9000/favicon.ico"'::jsonb),
     ('app.max_file_upload_size', '20'::jsonb),
     ('app.allowed_file_upload_extensions', '["*"]'::jsonb),
@@ -557,5 +557,5 @@ VALUES('email_notification'::public."template_type", '<p>Hello {{ .agent.full_na
 
 <div >
     Best regards,<br>
-    LibreDesk
+    Libredesk
 </div>', false, 'Conversation assigned', 'New conversation assigned to you', true);

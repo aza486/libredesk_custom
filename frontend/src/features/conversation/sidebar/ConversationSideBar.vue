@@ -115,6 +115,7 @@
           </ComboBox>
 
           <SelectTag
+            v-if="conversationStore.current"
             v-model="conversationStore.current.tags"
             :items="tags"
             placeholder="Select tags"
@@ -138,8 +139,8 @@
         <AccordionContent class="p-4">
           <div
             v-if="
-              conversationStore.current.previous_conversations.length === 0 ||
-              conversationStore.conversation.loading
+              conversationStore.current?.previous_conversations?.length === 0 ||
+              conversationStore.conversation?.loading
             "
             class="text-center text-sm text-muted-foreground py-4"
           >
@@ -206,15 +207,35 @@ const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamsStore = useTeamStore()
 const tags = ref([])
+let isConversationChange = false
+
+// Watch for changes in the current conversation and set the flag
+watch(
+  () => conversationStore.current,
+  (newConversation, oldConversation) => {
+    // Set the flag when the conversation changes
+    if (newConversation?.uuid !== oldConversation?.uuid) {
+      isConversationChange = true
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   await fetchTags()
 })
 
+// Watch for changes in the tags and upsert the tags
 watch(
   () => conversationStore.current?.tags,
   (newTags, oldTags) => {
-    // Check if the tags are the same.
+    // Skip if the tags change is due to a conversation change.
+    if (isConversationChange) {
+      isConversationChange = false
+      return
+    }
+
+    // Skip if the tags are the same (deep comparison)
     if (
       Array.isArray(newTags) &&
       Array.isArray(oldTags) &&

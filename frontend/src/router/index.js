@@ -437,7 +437,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title + ' - LibreDesk'
+  document.title = to.meta.title + ' - Libredesk'
   next()
 })
 

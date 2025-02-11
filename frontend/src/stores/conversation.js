@@ -185,6 +185,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const conversationsList = computed(() => {
     if (!conversations.data) return []
+    // Sort conversations based on the selected sort field
     return [...conversations.data].sort((a, b) => {
       const field = sortFieldMap[conversations.sortField]?.field
       if (!a[field] && !b[field]) return 0
@@ -223,7 +224,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   const current = computed(() => {
-    return conversation.data
+    return conversation.data || {}
   })
 
   const currentBCC = computed(() => {

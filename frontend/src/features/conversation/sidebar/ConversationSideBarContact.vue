@@ -31,7 +31,7 @@
           <Skeleton class="w-32 h-4" />
         </span>
         <span v-else>
-          {{ conversation.contact.email }}
+          {{ conversation?.contact?.email }}
         </span>
       </p>
       <p class="text-sm text-muted-foreground flex gap-2 mt-1">

@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-background">
     <header class="p-6">
-      <h1 class="text-2xl font-bold text-foreground">LibreDesk</h1>
+      <h1 class="text-2xl font-bold text-foreground">Libredesk</h1>
     </header>
 
     <main class="flex-1 flex items-center justify-center p-4">

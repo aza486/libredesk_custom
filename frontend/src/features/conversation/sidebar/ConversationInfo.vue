@@ -17,9 +17,10 @@
   <div class="flex flex-col gap-1 mb-5">
     <p class="font-medium">Initiated at</p>
     <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
-    <p v-else>
+    <p v-if="conversation.created_at">
       {{ format(conversation.created_at, 'PPpp') }}
     </p>
+    <p v-else>-</p>
   </div>
 
   <div class="flex flex-col gap-1 mb-5">
