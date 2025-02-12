@@ -1,9 +1,5 @@
 <template>
   <div class="min-h-screen flex flex-col bg-background">
-    <header class="p-6">
-      <h1 class="text-2xl font-bold text-foreground">Libredesk</h1>
-    </header>
-
     <main class="flex-1 flex items-center justify-center p-4">
       <div class="w-full max-w-[400px]">
         <Card
@@ -72,14 +68,6 @@
               </div>
 
               <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <!-- <input
-                    type="checkbox"
-                    id="remember"
-                    class="w-4 h-4 rounded bg-card border-border text-primary"
-                  />
-                  <Label for="remember" class="text-sm text-muted-foreground">Remember me</Label> -->
-                </div>
                 <router-link
                   to="/reset-password"
                   class="text-sm text-primary hover:text-primary/80 transition-all duration-200 ease-in-out"
@@ -161,7 +149,19 @@ const loginForm = ref({
 })
 const oidcProviders = ref([])
 
+const isDemoBuild = import.meta.env.VITE_DEMO_BUILD === 'true'
+
+const demoCredentials = {
+  email: 'demo@libredesk.io',
+  password: 'demo@libredesk.io'
+}
+
 onMounted(async () => {
+  // Prefill the login form with demo credentials if it's a demo build
+  if (isDemoBuild) {
+    loginForm.value.email = demoCredentials.email
+    loginForm.value.password = demoCredentials.password
+  }
   fetchOIDCProviders()
 })
 

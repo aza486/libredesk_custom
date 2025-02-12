@@ -1,9 +1,5 @@
 <template>
   <div class="min-h-screen flex flex-col bg-background">
-    <header class="p-6">
-      <h1 class="text-2xl font-bold text-foreground">Libredesk</h1>
-    </header>
-
     <main class="flex-1 flex items-center justify-center p-4">
       <div class="w-full max-w-[400px]">
         <Card class="bg-card border border-border shadow-xl rounded-xl">
@@ -86,8 +82,7 @@
     </main>
 
     <footer class="p-6 text-center">
-      <div class="text-sm text-muted-foreground space-x-4">
-      </div>
+      <div class="text-sm text-muted-foreground space-x-4"></div>
     </footer>
   </div>
 </template>

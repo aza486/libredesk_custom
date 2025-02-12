@@ -2,3 +2,4 @@ node_modules
 config.toml
 libredesk.bin
 uploads/*
+.env
