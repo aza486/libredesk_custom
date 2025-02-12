@@ -18,18 +18,18 @@ import { onMounted, ref } from 'vue'
 import { h } from 'vue'
 import InboxDataTableDropDown from '@/features/admin/inbox/InboxDataTableDropDown.vue'
 import { handleHTTPError } from '@/utils/http'
-import { useToast } from '@/components/ui/toast/use-toast'
 import { Button } from '@/components/ui/button'
 import DataTable from '@/components/datatable/DataTable.vue'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
 import { useRouter } from 'vue-router'
 
 import { format } from 'date-fns'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/api'
 
-const { toast } = useToast()
 const router = useRouter()
-
+const emitter = useEmitter()
 const isLoading = ref(false)
 const data = ref([])
 
@@ -43,7 +43,7 @@ const getInboxes = async () => {
     const response = await api.getInboxes()
     data.value = response.data.data
   } catch (error) {
-    toast({
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message

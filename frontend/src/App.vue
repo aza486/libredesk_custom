@@ -25,7 +25,6 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
-import { useToast } from '@/components/ui/toast/use-toast'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
@@ -39,10 +38,10 @@ import { useTagStore } from '@/stores/tag'
 import PageHeader from './components/layout/PageHeader.vue'
 import ViewForm from '@/features/view/ViewForm.vue'
 import api from '@/api'
+import { toast as sooner } from 'vue-sonner'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
 import Command from '@/features/command/CommandBox.vue'
 
-const { toast } = useToast()
 const emitter = useEmitter()
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
@@ -120,7 +119,13 @@ const getUserViews = async () => {
 }
 
 const initToaster = () => {
-  emitter.on(EMITTER_EVENTS.SHOW_TOAST, toast)
+  emitter.on(EMITTER_EVENTS.SHOW_TOAST, (message) => {
+    if (message.variant === 'destructive') {
+      sooner.error(message.description)
+    } else {
+      sooner.success(message.description)
+    }
+  })
 }
 
 const listenViewRefresh = () => {

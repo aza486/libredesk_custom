@@ -88,7 +88,6 @@ import { useRouter } from 'vue-router'
 import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 import { validateEmail } from '@/utils/strings'
-import { useToast } from '@/components/ui/toast/use-toast'
 import { useTemporaryClass } from '@/composables/useTemporaryClass'
 import { Button } from '@/components/ui/button'
 import { Error } from '@/components/ui/error'
@@ -99,7 +98,6 @@ import { Label } from '@/components/ui/label'
 const errorMessage = ref('')
 const isLoading = ref(false)
 const router = useRouter()
-const { toast } = useToast()
 const resetForm = ref({
   email: ''
 })

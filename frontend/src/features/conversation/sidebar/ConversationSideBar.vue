@@ -197,12 +197,13 @@ import ConversationInfo from './ConversationInfo.vue'
 import ConversationSideBarContact from '@/features/conversation/sidebar/ConversationSideBarContact.vue'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { SelectTag } from '@/components/ui/select'
-import { useToast } from '@/components/ui/toast/use-toast'
 import { handleHTTPError } from '@/utils/http'
-import api from '@/api'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
 import { CircleAlert, SignalLow, SignalMedium, SignalHigh, Users } from 'lucide-vue-next'
+import api from '@/api'
 
-const { toast } = useToast()
+const emitter = useEmitter()
 const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamsStore = useTeamStore()
@@ -262,7 +263,7 @@ const fetchTags = async () => {
     const resp = await api.getTags()
     tags.value = resp.data.data.map((item) => item.name)
   } catch (error) {
-    toast({
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message

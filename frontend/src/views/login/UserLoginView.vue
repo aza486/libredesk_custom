@@ -131,24 +131,24 @@ import { useRouter } from 'vue-router'
 import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 import { validateEmail } from '@/utils/strings'
-import { useToast } from '@/components/ui/toast/use-toast'
 import { useTemporaryClass } from '@/composables/useTemporaryClass'
 import { Button } from '@/components/ui/button'
 import { Error } from '@/components/ui/error'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
+const emitter = useEmitter()
 const errorMessage = ref('')
 const isLoading = ref(false)
 const router = useRouter()
-const { toast } = useToast()
 const loginForm = ref({
   email: '',
   password: ''
 })
 const oidcProviders = ref([])
-
 const isDemoBuild = import.meta.env.VITE_DEMO_BUILD === 'true'
 
 const demoCredentials = {
@@ -170,8 +170,8 @@ const fetchOIDCProviders = async () => {
     const resp = await api.getAllEnabledOIDC()
     oidcProviders.value = resp.data.data
   } catch (error) {
-    toast({
-      title: 'Failed to load OpenID Connect providers',
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

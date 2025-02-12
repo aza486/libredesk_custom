@@ -92,7 +92,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
-import { useToast } from '@/components/ui/toast/use-toast'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useTemporaryClass } from '@/composables/useTemporaryClass'
 import { Button } from '@/components/ui/button'
 import { Error } from '@/components/ui/error'
@@ -104,7 +105,7 @@ const errorMessage = ref('')
 const isLoading = ref(false)
 const router = useRouter()
 const route = useRoute()
-const { toast } = useToast()
+const emitter = useEmitter()
 const passwordForm = ref({
   password: '',
   confirmPassword: '',
@@ -115,10 +116,10 @@ onMounted(() => {
   passwordForm.value.token = route.query.token
   if (!passwordForm.value.token) {
     router.push({ name: 'login' })
-    toast({
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
-      description: 'Invalid reset link. Please request a new password reset link.',
-      variant: 'destructive'
+      variant: 'destructive',
+      description: 'Invalid reset link. Please request a new password reset link.'
     })
   }
 })
@@ -150,18 +151,15 @@ const setPasswordAction = async () => {
       token: passwordForm.value.token,
       password: passwordForm.value.password
     })
-
-    toast({
-      title: 'Password set successfully',
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: 'You can now login with your new password.'
     })
-
     router.push({ name: 'login' })
   } catch (err) {
-    toast({
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
-      description: err.response.data.message,
-      variant: 'destructive'
+      variant: 'destructive',
+      description: handleHTTPError(err).message
     })
     errorMessage.value = handleHTTPError(err).message
     useTemporaryClass('set-password-container', 'animate-shake')

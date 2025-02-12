@@ -29,14 +29,16 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useToast } from '@/components/ui/toast/use-toast'
-import api from '@/api'
+import { useEmitter } from '@/composables/useEmitter'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { handleHTTPError } from '@/utils/http'
 import Card from '@/features/reports/DashboardCard.vue'
 import LineChart from '@/features/reports/DashboardLineChart.vue'
 import BarChart from '@/features/reports/DashboardBarChart.vue'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
+import api from '@/api'
 
-const { toast } = useToast()
+const emitter = useEmitter()
 const isLoading = ref(false)
 const cardCounts = ref({})
 const chartData = ref({})
@@ -95,11 +97,11 @@ const getCardStats = async () => {
     .then((resp) => {
       cardCounts.value = resp.data.data
     })
-    .catch((err) => {
-      toast({
+    .catch((error) => {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',
-        description: err.response.data.message,
-        variant: 'destructive'
+        variant: 'destructive',
+        description: handleHTTPError(error).message
       })
     })
 }
@@ -120,11 +122,11 @@ const getDashboardCharts = async () => {
       }))
       chartData.value.status_summary = resp.data.data.status_summary || []
     })
-    .catch((err) => {
-      toast({
+    .catch((error) => {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',
-        description: err.response.data.message,
-        variant: 'destructive'
+        variant: 'destructive',
+        description: handleHTTPError(error).message
       })
     })
 }
