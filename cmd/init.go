@@ -420,7 +420,8 @@ func initMedia(db *sqlx.DB) *media.Manager {
 			Region:     ko.String("upload.s3.region"),
 			Bucket:     ko.String("upload.s3.bucket"),
 			BucketPath: ko.String("upload.s3.bucket_path"),
-			BucketType: ko.String("upload.s3.bucket_type"),
+			// All files are private by default.
+			BucketType: "private",
 			Expiry:     ko.Duration("upload.s3.expiry"),
 		})
 		if err != nil {
