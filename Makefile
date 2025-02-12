@@ -64,3 +64,9 @@ build: frontend-build backend-build stuff
 stuff: $(STUFFBIN)
 	@echo "→ Stuffing static assets into binary..."
 	@$(STUFFBIN) -a stuff -in ${BIN_LIBREDESK} -out ${BIN_LIBREDESK} ${STATIC}
+
+# Build the application in demo mode.
+.PHONY: demo-build
+demo-build:
+	@echo "→ Building in demo mode..."
+	@export VITE_DEMO_BUILD="true" && $(MAKE) build
