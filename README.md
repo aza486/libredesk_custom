@@ -4,9 +4,7 @@ Open-source, self-hosted customer support desk. Single binary app.
 
 > This project is currently in **alpha**. Features and APIs may change and are not yet fully tested.
 
----
-
-### Developer Setup
+## Developer Setup
 
 #### Prerequisites
 
