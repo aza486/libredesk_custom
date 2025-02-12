@@ -92,6 +92,17 @@ func main() {
 	// Load command line flags into Koanf.
 	initFlags()
 
+	// Version flag.
+	if ko.Bool("version") {
+		fmt.Println(buildString)
+		os.Exit(0)
+	}
+
+	// Build string injected at build time.
+	if buildString != "" {
+		colorlog.Green("Build: %s", buildString)
+	}
+
 	// Load the config files into Koanf.
 	initConfig(ko)
 
@@ -100,14 +111,6 @@ func main() {
 
 	// Init DB.
 	db := initDB()
-
-	// Version flag.
-	if ko.Bool("version") {
-		fmt.Println(buildString)
-		os.Exit(0)
-	}
-
-	colorlog.Green("Build: %s", buildString)
 
 	// Installer.
 	if ko.Bool("install") {

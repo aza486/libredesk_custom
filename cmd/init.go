@@ -18,6 +18,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/autoassigner"
 	"github.com/abhinavxd/libredesk/internal/automation"
 	businesshours "github.com/abhinavxd/libredesk/internal/business_hours"
+	"github.com/abhinavxd/libredesk/internal/colorlog"
 	"github.com/abhinavxd/libredesk/internal/conversation"
 	"github.com/abhinavxd/libredesk/internal/conversation/priority"
 	"github.com/abhinavxd/libredesk/internal/conversation/status"
@@ -126,6 +127,7 @@ func initFS() stuffbin.FileSystem {
 	var files = []string{
 		"frontend/dist",
 		"i18n",
+		"static",
 	}
 
 	// Get self executable path.
@@ -140,7 +142,7 @@ func initFS() stuffbin.FileSystem {
 	if err != nil {
 		if err == stuffbin.ErrNoID {
 			// The embed failed or the binary's already unstuffed or running in local / dev mode, use the local filesystem.
-			log.Println("unstuff failed, using local FS")
+			colorlog.Red("binary unstuff failed, using local filesystem for static files")
 			fs, err = stuffbin.NewLocalFS("/", files...)
 			if err != nil {
 				log.Fatalf("error initializing local FS: %v", err)
