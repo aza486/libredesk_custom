@@ -21,7 +21,6 @@
       <div
         class="flex flex-col justify-end message-bubble bg-white border border-border rounded-lg p-3 max-w-[80%]"
         :class="{
-          '!rounded-tl-none': true,
           'show-quoted-text': showQuotedText,
           'hide-quoted-text': !showQuotedText
         }"

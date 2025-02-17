@@ -321,10 +321,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton
-                      :isActive="isActiveParent('/reports/overview')"
-                      asChild
-                    >
+                    <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild>
                       <div>
                         <span class="font-semibold text-2xl">Reports</span>
                       </div>
@@ -424,10 +421,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
               <SidebarHeader>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton
-                      :isActive="isActiveParent('/account/profile')"
-                      asChild
-                    >
+                    <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild>
                       <div>
                         <span class="font-semibold text-2xl">Account</span>
                       </div>
@@ -558,7 +552,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                             <SidebarMenuSubItem>
                               <SidebarMenuButton
                                 size="sm"
-                                :isActive="isActiveParent(`/inboxes/teams/${team.id}`)"
+                                :is-active="route.params.teamID == team.id"
                                 asChild
                               >
                                 <router-link
@@ -604,13 +598,13 @@ const sidebarOpen = useStorage('sidebarOpen', true)
                             <SidebarMenuSubItem>
                               <SidebarMenuButton
                                 size="sm"
-                                :isActive="isActiveParent(`/inboxes/views/${view.id}`)"
+                                :isActive="route.params.viewID == view.id"
                                 asChild
                               >
                                 <router-link
                                   :to="{ name: 'view-inbox', params: { viewID: view.id } }"
                                 >
-                                <span class="break-all w-24">{{ view.name }}</span>
+                                  <span class="break-all w-24">{{ view.name }}</span>
                                 </router-link>
                               </SidebarMenuButton>
 
