@@ -259,7 +259,7 @@ const sidebarOpen = useStorage('sidebarOpen', true)
   <div class="flex flex-row justify-between h-full">
     <div class="flex-1">
       <SidebarProvider
-        style="--sidebar-width: 15rem"
+        style="--sidebar-width: 16rem"
         :default-open="sidebarOpen"
         v-on:update:open="sidebarOpen = $event"
       >
