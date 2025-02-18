@@ -1,27 +1,65 @@
 <template>
-  <div class="flex">
-    <!-- Main sidebar -->
-    <Sidebar
-      class="w-full"
-      :userTeams="userStore.teams"
-      :userViews="userViews"
-      @create-view="openCreateViewForm = true"
-      @edit-view="editView"
-      @delete-view="deleteView"
-    >
-      <div class="h-screen border-l">
+  <div class="flex w-full h-screen">
+    <!-- Icon sidebar always visible -->
+    <SidebarProvider style="--sidebar-width: 3rem" class="w-auto z-50">
+      <ShadcnSidebar collapsible="none" class="border-r">
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/inboxes')">
+                    <router-link :to="{ name: 'inboxes' }">
+                      <Inbox />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem v-if="userStore.hasAdminTabPermissions">
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/admin')">
+                    <router-link :to="{ name: 'admin' }">
+                      <Shield />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem v-if="userStore.hasReportTabPermissions">
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/reports')">
+                    <router-link :to="{ name: 'reports' }">
+                      <FileLineChart />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <SidebarNavUser />
+        </SidebarFooter>
+      </ShadcnSidebar>
+    </SidebarProvider>
+
+    <!-- Main sidebar that collapses -->
+    <div class="flex-1">
+      <Sidebar
+        :userTeams="userStore.teams"
+        :userViews="userViews"
+        @create-view="openCreateViewForm = true"
+        @edit-view="editView"
+        @delete-view="deleteView"
+      >
         <PageHeader />
         <RouterView />
-      </div>
-      <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
-    </Sidebar>
+        <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
+      </Sidebar>
+    </div>
   </div>
+
   <!-- Command box -->
   <Command />
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterView } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
@@ -41,7 +79,22 @@ import api from '@/api'
 import { toast as sooner } from 'vue-sonner'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
 import Command from '@/features/command/CommandBox.vue'
+import { Inbox, Shield, FileLineChart } from 'lucide-vue-next'
+import { useRoute } from 'vue-router'
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarGroupContent,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider
+} from '@/components/ui/sidebar'
+import SidebarNavUser from '@/components/sidebar/SidebarNavUser.vue'
 
+const route = useRoute()
 const emitter = useEmitter()
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
@@ -60,11 +113,6 @@ onMounted(() => {
   initToaster()
   listenViewRefresh()
   initStores()
-})
-
-onUnmounted(() => {
-  emitter.off(EMITTER_EVENTS.SHOW_TOAST, toast)
-  emitter.off(EMITTER_EVENTS.REFRESH_LIST, refreshViews)
 })
 
 // initialize data stores

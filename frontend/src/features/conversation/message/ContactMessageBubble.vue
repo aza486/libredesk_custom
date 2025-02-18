@@ -82,7 +82,7 @@ const convStore = useConversationStore()
 const showQuotedText = ref(false)
 
 const getAvatar = computed(() => {
-  return convStore.current?.avatar_url || ''
+  return convStore.current?.contact.avatar_url || ''
 })
 
 const sanitizedMessageContent = computed(() => {

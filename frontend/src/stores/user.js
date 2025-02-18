@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
+import { adminNavItems, reportsNavItems } from '@/constants/navigation'
+import { filterNavItems } from '@/utils/nav-permissions'
 import api from '@/api'
 
 export const useUserStore = defineStore('user', () => {
@@ -37,6 +39,18 @@ export const useUserStore = defineStore('user', () => {
     return `${firstInitial}${lastInitial}`
   })
 
+  const can = (permission) => {
+    return user.value.permissions.includes(permission)
+  }
+
+  const hasAdminTabPermissions = computed(() => {
+    return filterNavItems(adminNavItems, can).length > 0
+  })
+
+  const hasReportTabPermissions = computed(() => {
+    return filterNavItems(reportsNavItems, can).length > 0
+  })
+
   const getCurrentUser = async () => {
     try {
       const response = await api.getCurrentUser()
@@ -69,10 +83,6 @@ export const useUserStore = defineStore('user', () => {
     user.value.avatar_url = ''
   }
 
-  const can = (permission) => {
-    return user.value.permissions.includes(permission)
-  }
-
   return {
     user,
     userID,
@@ -84,6 +94,8 @@ export const useUserStore = defineStore('user', () => {
     permissions,
     getFullName,
     getInitials,
+    hasAdminTabPermissions,
+    hasReportTabPermissions,
     getCurrentUser,
     clearAvatar,
     setAvatar,

@@ -1,5 +1,5 @@
 <template>
-  <ConversationPlaceholder v-if="!conversationStore.current && !conversationStore.conversation.loading" />
+  <ConversationPlaceholder v-if="route.name === 'inbox'" />
   <router-view />
 </template>
 

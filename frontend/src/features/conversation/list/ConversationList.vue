@@ -38,8 +38,8 @@
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem @click="handleSortChange('oldest')">Oldest</DropdownMenuItem>
-          <DropdownMenuItem @click="handleSortChange('newest')">Newest</DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('oldest')">Oldest activity</DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('newest')">Newest activity</DropdownMenuItem>
           <DropdownMenuItem @click="handleSortChange('started_first')"
             >Started first</DropdownMenuItem
           >

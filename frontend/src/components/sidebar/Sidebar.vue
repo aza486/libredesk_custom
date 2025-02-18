@@ -1,18 +1,15 @@
 <script setup>
+import { adminNavItems, reportsNavItems, accountNavItems } from '@/constants/navigation'
 import { RouterLink, useRoute } from 'vue-router'
-import SidebarNavUser from './SidebarNavUser.vue'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarSeparator,
-  SidebarGroupContent,
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -22,16 +19,13 @@ import {
   SidebarRail
 } from '@/components/ui/sidebar'
 import {
-  Users,
-  Inbox,
   ChevronRight,
-  SlidersHorizontal,
-  Shield,
-  FileLineChart,
   EllipsisVertical,
   Plus,
-  Search,
-  MessageCircle
+  CircleUserRound,
+  UserSearch,
+  UsersRound,
+  Search
 } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -39,19 +33,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { filterNavItems } from '@/utils/nav-permissions'
 import { useStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
-
-const route = useRoute()
 
 defineProps({
   userTeams: { type: Array, default: () => [] },
   userViews: { type: Array, default: () => [] }
 })
-
 const userStore = useUserStore()
-
+const route = useRoute()
 const emit = defineEmits(['createView', 'editView', 'deleteView'])
 
 const openCreateViewDialog = () => {
@@ -66,183 +58,8 @@ const deleteView = (view) => {
   emit('deleteView', view)
 }
 
-const filterNavItemsByPermissions = (navItems, userStore) => {
-  return navItems
-    .filter((item) => {
-      // Check if the item has permissions and if all are satisfied
-      const hasPermission =
-        !item.permissions || item.permissions.every((permission) => userStore.can(permission))
-
-      // Check if the children have permissions
-      const filteredChildren = item.children
-        ? item.children.filter(
-            (child) =>
-              !child.permissions ||
-              child.permissions.every((permission) => userStore.can(permission))
-          )
-        : []
-
-      // Include item only if it has permission and either no children or children with permission
-      return hasPermission && (filteredChildren.length > 0 || !item.children)
-    })
-    .map((item) => ({
-      ...item,
-      children: item.children
-        ? item.children.filter(
-            (child) =>
-              !child.permissions ||
-              child.permissions.every((permission) => userStore.can(permission))
-          )
-        : []
-    }))
-}
-
-const filteredAdminNavItems = computed(() => filterNavItemsByPermissions(adminNavItems, userStore))
-
-const hasAdminAccess = computed(() => {
-  return filterNavItemsByPermissions(adminNavItems, userStore).length > 0
-})
-
-const filterReportsNavItemsByPermissions = (navItems, userStore) => {
-  return navItems.filter(
-    (item) => !item.permissions || item.permissions.every((permission) => userStore.can(permission))
-  )
-}
-
-const filteredReportsNavItems = computed(() =>
-  filterReportsNavItemsByPermissions(reportsNavItems, userStore)
-)
-
-const hasReportsAccess = computed(() => filteredReportsNavItems.value.length > 0)
-
-const reportsNavItems = [
-  {
-    title: 'Overview',
-    href: '/reports/overview',
-    permissions: ['reports:manage']
-  }
-]
-
-const adminNavItems = [
-  {
-    title: 'Workspace',
-    children: [
-      {
-        title: 'General',
-        href: '/admin/general',
-        permissions: ['general_settings:manage']
-      },
-      {
-        title: 'Business Hours',
-        href: '/admin/business-hours',
-        permissions: ['business_hours:manage']
-      },
-      {
-        title: 'SLA',
-        href: '/admin/sla',
-        permissions: ['sla:manage']
-      }
-    ]
-  },
-  {
-    title: 'Conversations',
-    children: [
-      {
-        title: 'Tags',
-        href: '/admin/conversations/tags',
-        permissions: ['tags:manage']
-      },
-      {
-        title: 'Macros',
-        href: '/admin/conversations/macros',
-        permissions: ['macros:manage']
-      },
-      {
-        title: 'Statuses',
-        href: '/admin/conversations/statuses',
-        permissions: ['status:manage']
-      }
-    ]
-  },
-  {
-    title: 'Inboxes',
-    children: [
-      {
-        title: 'Inboxes',
-        href: '/admin/inboxes',
-        permissions: ['inboxes:manage']
-      }
-    ]
-  },
-  {
-    title: 'Teammates',
-    children: [
-      {
-        title: 'Users',
-        href: '/admin/teams/users',
-        permissions: ['users:manage']
-      },
-      {
-        title: 'Teams',
-        href: '/admin/teams/teams',
-        permissions: ['teams:manage']
-      },
-      {
-        title: 'Roles',
-        href: '/admin/teams/roles',
-        permissions: ['roles:manage']
-      }
-    ]
-  },
-  {
-    title: 'Automations',
-    children: [
-      {
-        title: 'Automations',
-        href: '/admin/automations',
-        permissions: ['automations:manage']
-      }
-    ]
-  },
-  {
-    title: 'Notifications',
-    children: [
-      {
-        title: 'Email',
-        href: '/admin/notification',
-        permissions: ['notification_settings:manage']
-      }
-    ]
-  },
-  {
-    title: 'Templates',
-    children: [
-      {
-        title: 'Templates',
-        href: '/admin/templates',
-        permissions: ['templates:manage']
-      }
-    ]
-  },
-  {
-    title: 'Security',
-    children: [
-      {
-        title: 'SSO',
-        href: '/admin/oidc',
-        permissions: ['oidc:manage']
-      }
-    ]
-  }
-]
-
-const accountNavItems = [
-  {
-    title: 'Profile',
-    href: '/account/profile',
-    description: 'Update your profile'
-  }
-]
+const filteredAdminNavItems = computed(() => filterNavItems(adminNavItems, userStore.can))
+const filteredReportsNavItems = computed(() => filterNavItems(reportsNavItems, userStore.can))
 
 const isActiveParent = (parentHref) => {
   return route.path.startsWith(parentHref)
@@ -252,394 +69,305 @@ const isInboxRoute = (path) => {
   return path.startsWith('/inboxes')
 }
 
-const sidebarOpen = useStorage('sidebarOpen', true)
+const sidebarOpen = useStorage('mainSidebarOpen', true)
 </script>
 
 <template>
-  <div class="flex flex-row justify-between h-full">
-    <div class="flex-1">
-      <SidebarProvider
-        style="--sidebar-width: 16rem"
-        :default-open="sidebarOpen"
-        v-on:update:open="sidebarOpen = $event"
-      >
-        <!-- Main sidebar holding other sidebars -->
-        <Sidebar
-          collapsible="icon"
-          class="overflow-hidden [&>[data-sidebar=sidebar]]:flex-row !border-r-0"
-        >
-          <!-- Icon sidebar -->
-          <Sidebar collapsible="none" class="!w-[calc(var(--sidebar-width-icon)_+_1px)] border-r">
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupContent class="px-1.5 md:px-0">
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton :isActive="route.path && isInboxRoute(route.path)" asChild>
-                        <router-link :to="{ name: 'inboxes' }">
-                          <Inbox class="w-5 h-5" />
-                        </router-link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem v-if="hasAdminAccess">
-                      <SidebarMenuButton
-                        :isActive="route.path && route.path.startsWith('/admin')"
-                        asChild
-                      >
-                        <router-link :to="{ name: 'admin' }">
-                          <Shield class="w-5 h-5" />
-                        </router-link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem v-if="hasReportsAccess">
-                      <SidebarMenuButton
-                        :isActive="route.path && route.path.startsWith('/reports')"
-                        asChild
-                      >
-                        <router-link :to="{ name: 'reports' }">
-                          <FileLineChart class="w-5 h-5" />
-                        </router-link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-            <SidebarFooter>
-              <SidebarNavUser />
-            </SidebarFooter>
-          </Sidebar>
+  <SidebarProvider
+    style="--sidebar-width: 14rem"
+    :default-open="sidebarOpen"
+    v-on:update:open="sidebarOpen = $event"
+  >
+    <!-- Reports sidebar -->
+    <template
+      v-if="
+        userStore.hasReportTabPermissions &&
+        route.matched.some((record) => record.name && record.name.startsWith('reports'))
+      "
+    >
+      <Sidebar collapsible="offcanvas" class="border-r ml-12">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild>
+                <div>
+                  <span class="font-semibold text-xl">Reports</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarSeparator />
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem v-for="item in filteredReportsNavItems" :key="item.title">
+                <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
+                  <router-link :to="item.href">
+                    <span>{{ item.title }}</span>
+                  </router-link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
+    </template>
 
-          <!-- Reports sidebar -->
-          <template
-            v-if="
-              hasReportsAccess &&
-              route.matched.some((record) => record.name && record.name.startsWith('reports'))
-            "
-          >
-            <Sidebar collapsible="none" class="!border-r-0 bg-white">
-              <SidebarHeader>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild>
-                      <div>
-                        <span class="font-semibold text-2xl">Reports</span>
-                      </div>
+    <!-- Admin Sidebar -->
+    <template v-if="route.matched.some((record) => record.name && record.name.startsWith('admin'))">
+      <Sidebar collapsible="offcanvas" class="border-r ml-12">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
+                <div>
+                  <span class="font-semibold text-xl">Admin</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarSeparator />
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.title">
+                <SidebarMenuButton
+                  v-if="!item.children"
+                  :isActive="isActiveParent(item.href)"
+                  asChild
+                >
+                  <router-link :to="item.href">
+                    <span>{{ item.title }}</span>
+                  </router-link>
+                </SidebarMenuButton>
+
+                <Collapsible
+                  v-else
+                  class="group/collapsible"
+                  :default-open="isActiveParent(item.href)"
+                >
+                  <CollapsibleTrigger as-child>
+                    <SidebarMenuButton :isActive="isActiveParent(item.href)">
+                      <span>{{ item.title }}</span>
+                      <ChevronRight
+                        class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                      />
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarHeader>
-              <SidebarSeparator />
-              <SidebarContent>
-                <SidebarGroup>
-                  <SidebarMenu>
-                    <SidebarMenuItem v-for="item in filteredReportsNavItems" :key="item.title">
-                      <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
-                        <router-link :to="item.href">
-                          <span>{{ item.title }}</span>
-                        </router-link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroup>
-              </SidebarContent>
-              <SidebarRail />
-            </Sidebar>
-          </template>
-
-          <!-- Admin Sidebar -->
-          <template
-            v-if="route.matched.some((record) => record.name && record.name.startsWith('admin'))"
-          >
-            <Sidebar collapsible="none" class="!border-r-0 bg-white">
-              <SidebarHeader>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
-                      <div>
-                        <span class="font-semibold text-2xl">Admin</span>
-                      </div>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarHeader>
-              <SidebarSeparator />
-              <SidebarContent>
-                <SidebarGroup>
-                  <SidebarMenu>
-                    <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.title">
-                      <SidebarMenuButton
-                        v-if="!item.children"
-                        :isActive="isActiveParent(item.href)"
-                        asChild
-                      >
-                        <router-link :to="item.href">
-                          <span>{{ item.title }}</span>
-                        </router-link>
-                      </SidebarMenuButton>
-
-                      <Collapsible
-                        v-else
-                        class="group/collapsible"
-                        :default-open="isActiveParent(item.href)"
-                      >
-                        <CollapsibleTrigger as-child>
-                          <SidebarMenuButton :isActive="isActiveParent(item.href)">
-                            <span>{{ item.title }}</span>
-                            <ChevronRight
-                              class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                            />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            <SidebarMenuSubItem v-for="child in item.children" :key="child.title">
-                              <SidebarMenuButton
-                                size="sm"
-                                :isActive="isActiveParent(child.href)"
-                                asChild
-                              >
-                                <router-link :to="child.href">
-                                  <span>{{ child.title }}</span>
-                                </router-link>
-                              </SidebarMenuButton>
-                            </SidebarMenuSubItem>
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroup>
-              </SidebarContent>
-              <SidebarRail />
-            </Sidebar>
-          </template>
-
-          <!-- Account sidebar -->
-          <template v-if="isActiveParent('/account')">
-            <Sidebar collapsible="none" class="!border-r-0 bg-white">
-              <SidebarHeader>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild>
-                      <div>
-                        <span class="font-semibold text-2xl">Account</span>
-                      </div>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarHeader>
-              <SidebarSeparator />
-              <SidebarContent>
-                <SidebarGroup>
-                  <SidebarMenu>
-                    <SidebarMenuItem v-for="item in accountNavItems" :key="item.title">
-                      <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
-                        <router-link :to="item.href">
-                          <span>{{ item.title }}</span>
-                        </router-link>
-                      </SidebarMenuButton>
-                      <SidebarMenuAction>
-                        <span class="sr-only">{{ item.description }}</span>
-                      </SidebarMenuAction>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroup>
-              </SidebarContent>
-              <SidebarRail />
-            </Sidebar>
-          </template>
-
-          <!-- Inbox sidebar -->
-          <template v-if="route.path && isInboxRoute(route.path)">
-            <Sidebar collapsible="none" class="!border-r-0 bg-white">
-              <SidebarHeader>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <div class="flex items-center justify-between w-full">
-                        <div class="font-semibold text-2xl">Inbox</div>
-                        <div class="ml-auto">
-                          <router-link :to="{ name: 'search' }">
-                            <div class="flex items-center bg-accent p-2 rounded-full">
-                              <Search
-                                class="transition-transform duration-200 hover:scale-110 cursor-pointer"
-                                size="15"
-                                stroke-width="2.5"
-                              />
-                            </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem v-for="child in item.children" :key="child.title">
+                        <SidebarMenuButton size="sm" :isActive="isActiveParent(child.href)" asChild>
+                          <router-link :to="child.href">
+                            <span>{{ child.title }}</span>
                           </router-link>
-                        </div>
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </Collapsible>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
+    </template>
+
+    <!-- Account sidebar -->
+    <template v-if="isActiveParent('/account')">
+      <Sidebar collapsible="offcanvas" class="border-r ml-12">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild>
+                <div>
+                  <span class="font-semibold text-xl">Account</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarSeparator />
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem v-for="item in accountNavItems" :key="item.title">
+                <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
+                  <router-link :to="item.href">
+                    <span>{{ item.title }}</span>
+                  </router-link>
+                </SidebarMenuButton>
+                <SidebarMenuAction>
+                  <span class="sr-only">{{ item.description }}</span>
+                </SidebarMenuAction>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
+    </template>
+
+    <!-- Inbox sidebar -->
+    <template v-if="route.path && isInboxRoute(route.path)">
+      <Sidebar collapsible="offcanvas" class="border-r ml-12">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <div class="flex items-center justify-between w-full">
+                  <div class="font-semibold text-xl">Inbox</div>
+                  <div class="ml-auto">
+                    <router-link :to="{ name: 'search' }">
+                      <div class="flex items-center bg-accent p-2 rounded-full">
+                        <Search
+                          class="transition-transform duration-200 hover:scale-110 cursor-pointer"
+                          size="15"
+                          stroke-width="2.5"
+                        />
                       </div>
+                    </router-link>
+                  </div>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarSeparator />
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/assigned')">
+                  <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
+                    <CircleUserRound />
+                    <span>My inbox</span>
+                  </router-link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/unassigned')">
+                  <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
+                    <UserSearch />
+                    <span>Unassigned</span>
+                  </router-link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/all')">
+                  <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
+                    <UsersRound />
+                    <span>All</span>
+                  </router-link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <!-- Team Inboxes -->
+              <Collapsible defaultOpen class="group/collapsible" v-if="userTeams.length">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger as-child>
+                    <SidebarMenuButton asChild>
+                      <router-link to="#">
+                        <!-- <Users /> -->
+                        <span>Team inboxes</span>
+                        <ChevronRight
+                          class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                        />
+                      </router-link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarHeader>
-              <SidebarSeparator />
-              <SidebarContent>
-                <SidebarGroup>
-                  <SidebarMenu>
-                    <!-- Inboxes Collapsible -->
-                    <Collapsible class="group/collapsible" defaultOpen>
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger as-child>
-                          <SidebarMenuButton>
-                            <MessageCircle />
-                            <span>Inboxes</span>
-                            <ChevronRight
-                              class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                            />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            <SidebarMenuSubItem>
-                              <SidebarMenuButton
-                                size="sm"
-                                :isActive="isActiveParent('/inboxes/assigned')"
-                                asChild
-                              >
-                                <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
-                                  <span>My inbox</span>
-                                </router-link>
-                              </SidebarMenuButton>
-                            </SidebarMenuSubItem>
-                            <SidebarMenuSubItem>
-                              <SidebarMenuButton
-                                size="sm"
-                                :isActive="isActiveParent('/inboxes/unassigned')"
-                                asChild
-                              >
-                                <router-link
-                                  :to="{ name: 'inbox', params: { type: 'unassigned' } }"
-                                >
-                                  <span>Unassigned</span>
-                                </router-link>
-                              </SidebarMenuButton>
-                            </SidebarMenuSubItem>
-                            <SidebarMenuSubItem>
-                              <SidebarMenuButton
-                                size="sm"
-                                :isActive="isActiveParent('/inboxes/all')"
-                                asChild
-                              >
-                                <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
-                                  <span>All</span>
-                                </router-link>
-                              </SidebarMenuButton>
-                            </SidebarMenuSubItem>
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub v-for="team in userTeams" :key="team.id">
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :is-active="route.params.teamID == team.id"
+                          asChild
+                        >
+                          <router-link :to="{ name: 'team-inbox', params: { teamID: team.id } }">
+                            {{ team.emoji }}<span>{{ team.name }}</span>
+                          </router-link>
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
-                    <!-- Team Inboxes -->
-                    <Collapsible defaultOpen class="group/collapsible" v-if="userTeams.length">
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger as-child>
-                          <SidebarMenuButton asChild>
-                            <router-link to="#">
-                              <Users />
-                              <span>Team inboxes</span>
-                              <ChevronRight
-                                class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                              />
-                            </router-link>
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub v-for="team in userTeams" :key="team.id">
-                            <SidebarMenuSubItem>
-                              <SidebarMenuButton
-                                size="sm"
-                                :is-active="route.params.teamID == team.id"
-                                asChild
-                              >
-                                <router-link
-                                  :to="{ name: 'team-inbox', params: { teamID: team.id } }"
-                                >
-                                  {{ team.emoji }}<span>{{ team.name }}</span>
-                                </router-link>
-                              </SidebarMenuButton>
-                            </SidebarMenuSubItem>
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
+              <!-- Views -->
+              <Collapsible class="group/collapsible" defaultOpen>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger as-child>
+                    <SidebarMenuButton asChild>
+                      <router-link to="#">
+                        <!-- <SlidersHorizontal /> -->
+                        <span>Views</span>
+                        <div>
+                          <Plus
+                            size="18"
+                            @click.stop="openCreateViewDialog"
+                            class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
+                          />
+                        </div>
+                      </router-link>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
 
-                    <!-- Views -->
-                    <Collapsible class="group/collapsible" defaultOpen>
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger as-child>
-                          <SidebarMenuButton asChild>
-                            <router-link to="#">
-                              <SlidersHorizontal />
-                              <span>Views</span>
-                              <div>
-                                <Plus
-                                  size="18"
-                                  @click.stop="openCreateViewDialog"
-                                  class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
-                                />
-                              </div>
-                            </router-link>
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
+                  <SidebarMenuAction>
+                    <ChevronRight
+                      class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                      v-if="userViews.length"
+                    />
+                  </SidebarMenuAction>
+
+                  <CollapsibleContent>
+                    <SidebarMenuSub v-for="view in userViews" :key="view.id">
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="route.params.viewID == view.id"
+                          asChild
+                        >
+                          <router-link :to="{ name: 'view-inbox', params: { viewID: view.id } }">
+                            <span class="break-all w-24">{{ view.name }}</span>
+                          </router-link>
+                        </SidebarMenuButton>
 
                         <SidebarMenuAction>
-                          <ChevronRight
-                            class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                            v-if="userViews.length"
-                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <EllipsisVertical />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem @click="() => editView(view)">
+                                <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem @click="() => deleteView(view)">
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </SidebarMenuAction>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+    </template>
 
-                        <CollapsibleContent>
-                          <SidebarMenuSub v-for="view in userViews" :key="view.id">
-                            <SidebarMenuSubItem>
-                              <SidebarMenuButton
-                                size="sm"
-                                :isActive="route.params.viewID == view.id"
-                                asChild
-                              >
-                                <router-link
-                                  :to="{ name: 'view-inbox', params: { viewID: view.id } }"
-                                >
-                                  <span class="break-all w-24">{{ view.name }}</span>
-                                </router-link>
-                              </SidebarMenuButton>
-
-                              <SidebarMenuAction>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <EllipsisVertical />
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent>
-                                    <DropdownMenuItem @click="() => editView(view)">
-                                      <span>Edit</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem @click="() => deleteView(view)">
-                                      <span>Delete</span>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </SidebarMenuAction>
-                            </SidebarMenuSubItem>
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  </SidebarMenu>
-                </SidebarGroup>
-              </SidebarContent>
-            </Sidebar>
-          </template>
-        </Sidebar>
-
-        <!-- Main Content Area -->
-        <SidebarInset>
-          <slot></slot>
-        </SidebarInset>
-      </SidebarProvider>
-    </div>
-  </div>
+    <!-- Main Content Area -->
+    <SidebarInset>
+      <slot></slot>
+    </SidebarInset>
+  </SidebarProvider>
 </template>

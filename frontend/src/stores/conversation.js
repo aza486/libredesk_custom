@@ -58,8 +58,8 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   const sortFieldLabels = {
-    oldest: 'Oldest',
-    newest: 'Newest',
+    oldest: 'Oldest activity',
+    newest: 'Newest activity',
     started_first: 'Started first',
     started_last: 'Started last',
     waiting_longest: 'Waiting longest',

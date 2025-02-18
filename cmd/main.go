@@ -48,7 +48,6 @@ var (
 	ctx         = context.Background()
 	appName     = "libredesk"
 	frontendDir = "frontend/dist"
-	envDemo     = "demo"
 
 	// Injected at build time.
 	buildString = ""
@@ -171,16 +170,14 @@ func main() {
 	)
 	automation.SetConversationStore(conversation)
 
-	if ko.MustString("app.env") != envDemo {
-		startInboxes(ctx, inbox, conversation)
-		go automation.Run(ctx, automationWorkers)
-		go autoassigner.Run(ctx, autoAssignInterval)
-		go conversation.Run(ctx, messageIncomingQWorkers, messageOutgoingQWorkers, messageOutgoingScanInterval)
-		go conversation.RunUnsnoozer(ctx, unsnoozeInterval)
-		go notifier.Run(ctx)
-		go sla.Run(ctx, slaEvaluationInterval)
-		go media.DeleteUnlinkedMedia(ctx)
-	}
+	startInboxes(ctx, inbox, conversation)
+	go automation.Run(ctx, automationWorkers)
+	go autoassigner.Run(ctx, autoAssignInterval)
+	go conversation.Run(ctx, messageIncomingQWorkers, messageOutgoingQWorkers, messageOutgoingScanInterval)
+	go conversation.RunUnsnoozer(ctx, unsnoozeInterval)
+	go notifier.Run(ctx)
+	go sla.Run(ctx, slaEvaluationInterval)
+	go media.DeleteUnlinkedMedia(ctx)
 
 	var app = &App{
 		lo:            lo,
@@ -227,7 +224,6 @@ func main() {
 	}
 
 	go func() {
-		colorlog.Green("Starting HTTP server in %s mode", ko.String("app.env"))
 		colorlog.Green("Server started at %s", ko.String("app.server.address"))
 		if ko.String("server.socket") != "" {
 			colorlog.Green("Unix socket created at %s", ko.String("server.socket"))
