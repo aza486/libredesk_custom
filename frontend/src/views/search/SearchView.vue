@@ -1,39 +1,36 @@
 <template>
-  <div class="overflow-y-scroll h-full">
+  <div class="flex flex-col h-screen">
     <SearchHeader v-model="searchQuery" @search="handleSearch" />
-    <div v-if="loading" class="flex justify-center items-center h-64">
-      <Spinner class="" />
-    </div>
-    <div v-else-if="error" class="mt-8 text-center">
-      <p class="text-lg text-destructive">{{ error }}</p>
-      <button
-        @click="handleSearch"
-        class="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-      >
-        Try Again
-      </button>
-    </div>
+    <div class="flex-1 overflow-y-auto">
+      <div v-if="loading" class="flex justify-center items-center h-64">
+        <Spinner />
+      </div>
+      <div v-else-if="error" class="mt-8 text-center space-y-4">
+        <p class="text-lg text-destructive">{{ error }}</p>
+        <Button @click="handleSearch"> Try again </Button>
+      </div>
 
-    <div v-else>
-      <p
-        v-if="searchPerformed && totalResults === 0"
-        class="mt-8 text-center text-muted-foreground"
-      >
-        No results found for "{{ searchQuery }}". Try a different search term.
-      </p>
-      <SearchResults v-else-if="searchPerformed" :results="results" />
-
-      <p
-        v-else-if="searchQuery.length > 0 && searchQuery.length < MIN_SEARCH_LENGTH"
-        class="mt-8 text-center text-muted-foreground"
-      >
-        Please enter at least {{ MIN_SEARCH_LENGTH }} characters to search.
-      </p>
-      <div v-else class="mt-16 text-center">
-        <h2 class="text-2xl font-semibold text-primary mb-4">Search conversations</h2>
-        <p class="text-lg text-muted-foreground">
-          Search by reference number, messages, or any keywords related to your conversations.
+      <div v-else>
+        <p
+          v-if="searchPerformed && totalResults === 0"
+          class="mt-8 text-center text-muted-foreground"
+        >
+          No results found for "{{ searchQuery }}". Try a different search term.
         </p>
+        <SearchResults v-else-if="searchPerformed" :results="results" class="h-full" />
+
+        <p
+          v-else-if="searchQuery.length > 0 && searchQuery.length < MIN_SEARCH_LENGTH"
+          class="mt-8 text-center text-muted-foreground"
+        >
+          Please enter at least {{ MIN_SEARCH_LENGTH }} characters to search.
+        </p>
+        <div v-else class="mt-16 text-center">
+          <h2 class="text-2xl font-semibold text-primary mb-4">Search conversations</h2>
+          <p class="text-lg text-muted-foreground">
+            Search by reference number, messages, or any keywords related to your conversations.
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -41,12 +38,14 @@
 
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { handleHTTPError } from '@/utils/http'
+import { Button } from '@/components/ui/button'
 import SearchHeader from '@/features/search/SearchHeader.vue'
 import SearchResults from '@/features/search/SearchResults.vue'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 import api from '@/api'
 
-const MIN_SEARCH_LENGTH = 2
+const MIN_SEARCH_LENGTH = 3
 const DEBOUNCE_DELAY = 300
 
 const searchQuery = ref('')
@@ -82,8 +81,7 @@ const handleSearch = async () => {
       messages: messagesResults.data.data
     }
   } catch (err) {
-    console.error(err)
-    error.value = 'An error occurred while searching. Please try again.'
+    error.value = handleHTTPError(err).message
   } finally {
     loading.value = false
   }
