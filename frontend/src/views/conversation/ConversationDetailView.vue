@@ -26,7 +26,7 @@ const conversationStore = useConversationStore()
 const fetchConversation = async (uuid) => {
   await Promise.all([
     conversationStore.fetchConversation(uuid),
-    conversationStore.fetchMessages(uuid, true),
+    conversationStore.fetchMessages(uuid),
     conversationStore.fetchParticipants(uuid)
   ])
   await conversationStore.updateAssigneeLastSeen(uuid)

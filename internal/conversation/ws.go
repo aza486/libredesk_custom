@@ -27,9 +27,10 @@ func (m *Manager) BroadcastMessageUpdate(conversationUUID, messageUUID, prop str
 	message := wsmodels.Message{
 		Type: wsmodels.MessageTypeMessagePropUpdate,
 		Data: map[string]interface{}{
-			"uuid":  messageUUID,
-			"prop":  prop,
-			"value": value,
+			"conversation_uuid": conversationUUID,
+			"uuid":              messageUUID,
+			"prop":              prop,
+			"value":             value,
 		},
 	}
 	m.broadcastToUsers([]int{}, message)

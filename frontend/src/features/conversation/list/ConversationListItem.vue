@@ -40,7 +40,7 @@
         <!-- Message preview and unread count -->
         <div class="flex items-start justify-between gap-2">
           <p class="text-sm text-gray-600 line-clamp-2 flex-1">
-            <CheckCheck class="inline-block w-4 h-4 mr-1.5 text-green-600 flex-shrink-0" />
+            <Reply class="inline-block w-4 h-4 mr-1.5 text-green-600 flex-shrink-0" />
             {{ trimmedLastMessage }}
           </p>
           <div
@@ -74,7 +74,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatTime } from '@/utils/datetime'
-import { Mail, CheckCheck } from 'lucide-vue-next'
+import { Mail, Reply } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import SlaBadge from '@/features/sla/SlaBadge.vue'
 

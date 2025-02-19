@@ -4,6 +4,7 @@ import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constan
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
+import MessageCache from '@/utils/conversation-message-cache'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
@@ -19,6 +20,7 @@ export const useConversationStore = defineStore('conversation', () => {
   const statusOptions = computed(() => {
     return statuses.value.map(s => ({ label: s.name, value: s.id }))
   })
+  // Status options excluding 'Snoozed'
   const statusOptionsNoSnooze = computed(() =>
     statuses.value.filter(s => s.name !== 'Snoozed').map(s => ({
       label: s.name,
@@ -26,6 +28,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }))
   )
 
+  // TODO: Move to constants.
   const sortFieldMap = {
     oldest: {
       field: 'last_message_at',
@@ -92,15 +95,12 @@ export const useConversationStore = defineStore('conversation', () => {
   })
 
   const messages = reactive({
-    data: [],
+    data: new MessageCache(),
     loading: false,
     page: 1,
-    hasMore: false,
-    errorMessage: ''
   })
 
   let seenConversationUUIDs = new Map()
-  let seenMessageUUIDs = new Set()
   let reRenderInterval = setInterval(() => {
     conversations.data = [...conversations.data]
   }, 120000)
@@ -198,8 +198,12 @@ export const useConversationStore = defineStore('conversation', () => {
     })
   })
 
+  const currentConversationHasMoreMessages = computed(() => {
+    return messages.data.hasMore(conversation.data?.uuid)
+  })
+
   const conversationMessages = computed(() => {
-    return [...messages.data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    return messages.data.getAllPagesMessages(conversation.data?.uuid)
   })
 
   function markConversationAsRead (uuid) {
@@ -269,61 +273,66 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchMessages (uuid, reset = false) {
-    if (reset) resetMessages()
+  /**
+   * Fetches messages for a conversation if not already cached.
+   * 
+   * @param {string} uuid
+   * @returns 
+   */
+  async function fetchMessages (uuid, fetchNextPage = false) {
+    // Messages are already cached?
+    let hasMessages = messages.data.getAllPagesMessages(uuid)
+    if (hasMessages.length > 0 && !fetchNextPage)
+      return
+
+    // Fetch messages from server.
     messages.loading = true
+    // Increment page number
+    let page = messages.data.getLastFetchedPage(uuid) + 1
     try {
-      const response = await api.getConversationMessages(uuid, { page: messages.page, page_size: MESSAGE_LIST_PAGE_SIZE })
+      const response = await api.getConversationMessages(uuid, { page: page, page_size: MESSAGE_LIST_PAGE_SIZE })
       const result = response.data?.data || {}
-      const results = result.results || []
-      const newMessages = results.filter(message => {
-        if (!seenMessageUUIDs.has(message.uuid)) {
-          seenMessageUUIDs.add(message.uuid)
-          return true
-        }
-        return false
-      })
-      if (newMessages.length === 0 && messages.page === 1) messages.data = []
-      if (result.total_pages <= messages.page) messages.hasMore = false
-      else messages.hasMore = true
-      // Prepend new messages to the list
-      messages.data.unshift(...newMessages)
+      const newMessages = result.results || []
       // Mark conversation as read
       markConversationAsRead(uuid)
+      // Cache messages
+      messages.data.addMessages(uuid, newMessages, result.page, result.total_pages)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
-      messages.data = []
-      messages.hasMore = false
     } finally {
       messages.loading = false
     }
   }
 
   async function fetchNextMessages () {
-    messages.page++
-    fetchMessages(conversation.data.uuid)
+    fetchMessages(conversation.data.uuid, true)
   }
 
-  async function fetchMessage (cuuid, uuid) {
+  /**
+   * Fetches a single message from the server and adds it to the cache.
+   * 
+   * @param {string} conversationUUID
+   * @param {string} messageUUID
+   * @returns {object}
+   */
+  async function fetchMessage (conversationUUID, messageUUID) {
     try {
-      const response = await api.getConversationMessage(cuuid, uuid)
+      const response = await api.getConversationMessage(conversationUUID, messageUUID)
       if (response?.data?.data) {
         const newMsg = response.data.data
-        if (!messages.data.some(m => m.uuid === newMsg.uuid)) {
-          messages.data.push(newMsg)
-        }
+        // Add message to cache.
+        messages.data.addMessage(conversationUUID, newMsg)
         return newMsg
       }
     } catch (error) {
-      messages.errorMessage = handleHTTPError(error).message
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         title: 'Error',
         variant: 'destructive',
-        description: messages.errorMessage
+        description: handleHTTPError(error).message
       })
     }
   }
@@ -544,19 +553,23 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  /**
+   * Update conversation message in the cache by fetching it from the server.
+   * 
+   * @param {object} message - Message object with conversation_uuid field
+   */
   async function updateConversationMessage (message) {
-    if (conversation?.data?.uuid === message.conversation_uuid) {
-      if (!messages.data.some(msg => msg.uuid === message.uuid)) {
-        fetchParticipants(message.conversation_uuid)
-        const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
-        updateAssigneeLastSeen(message.conversation_uuid)
-        setTimeout(() => {
-          emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
-            conversation_uuid: message.conversation_uuid,
-            message: fetchedMessage
-          })
-        }, 100)
-      }
+    // Message does not exist in cache, fetch from server and update.
+    if (!messages.data.hasMessage(message.conversation_uuid, message.uuid)) {
+      fetchParticipants(message.conversation_uuid)
+      const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
+      setTimeout(() => {
+        emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
+          conversation_uuid: message.conversation_uuid,
+          message: fetchedMessage
+        })
+      }, 100)
+      updateAssigneeLastSeen(message.conversation_uuid)
     }
   }
 
@@ -567,10 +580,15 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  /**
+   * Update a single message property in the cache.
+   * 
+   * @param {Object} message - Message
+   */
   function updateMessageProp (message) {
-    const existingMessage = messages.data.find(m => m.uuid === message.uuid)
-    if (existingMessage) {
-      existingMessage[message.prop] = message.value
+    const exists = messages.data.hasMessage(message.conversation_uuid, message.uuid)
+    if (exists) {
+      messages.data.updateMessageField(message.conversation_uuid, message.uuid, message.prop, message.value)
     }
   }
 
@@ -601,16 +619,6 @@ export const useConversationStore = defineStore('conversation', () => {
     seenConversationUUIDs = new Map()
   }
 
-  function resetMessages () {
-    messages.data.length = 0
-    Object.assign(messages, {
-      loading: false,
-      page: 1,
-      hasMore: true,
-      errorMessage: ''
-    })
-    seenMessageUUIDs = new Set()
-  }
 
   return {
     conversations,
@@ -618,6 +626,7 @@ export const useConversationStore = defineStore('conversation', () => {
     messages,
     conversationsList,
     conversationMessages,
+    currentConversationHasMoreMessages,
     current,
     currentContactName,
     currentBCC,
@@ -642,7 +651,6 @@ export const useConversationStore = defineStore('conversation', () => {
     updatePriority,
     updateStatus,
     updateConversationList,
-    resetMessages,
     resetCurrentConversation,
     fetchFirstPageConversations,
     fetchStatuses,

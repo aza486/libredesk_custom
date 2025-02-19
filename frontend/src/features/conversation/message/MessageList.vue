@@ -4,7 +4,10 @@
       <div class="min-h-full pb-20 px-4">
         <div
           class="text-center mt-3"
-          v-if="conversationStore.messages.hasMore && !conversationStore.messages.loading"
+          v-if="
+            conversationStore.currentConversationHasMoreMessages &&
+            !conversationStore.messages.loading
+          "
         >
           <Button
             size="sm"
@@ -19,7 +22,6 @@
 
         <TransitionGroup
           enter-active-class="animate-slide-in"
-          leave-active-class="animate-slide-out"
           tag="div"
           class="space-y-4"
           v-if="!conversationStore.messages.loading"
