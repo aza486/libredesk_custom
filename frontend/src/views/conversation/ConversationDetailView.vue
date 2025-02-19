@@ -1,6 +1,6 @@
 <template>
   <div class="flex">
-    <div class="grow min-w-[500px]">
+    <div class="grow min-w-[300px]">
       <Conversation v-if="conversationStore.current || conversationStore.conversation.loading" />
     </div>
     <div>
