@@ -3,12 +3,13 @@ package main
 import (
 	"strconv"
 
-	amodels "github.com/abhinavxd/artemis/internal/automation/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
+	amodels "github.com/abhinavxd/libredesk/internal/automation/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
+// handleGetAutomationRules gets all automation rules
 func handleGetAutomationRules(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -21,6 +22,7 @@ func handleGetAutomationRules(r *fastglue.Request) error {
 	return r.SendEnvelope(out)
 }
 
+// handleGetAutomationRuleByID gets an automation rule by ID
 func handleGetAutomationRule(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -33,6 +35,7 @@ func handleGetAutomationRule(r *fastglue.Request) error {
 	return r.SendEnvelope(out)
 }
 
+// handleToggleAutomationRule toggles an automation rule
 func handleToggleAutomationRule(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -41,9 +44,10 @@ func handleToggleAutomationRule(r *fastglue.Request) error {
 	if err := app.automation.ToggleRule(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Rule toggled successfully")
 }
 
+// handleUpdateAutomationRule updates an automation rule
 func handleUpdateAutomationRule(r *fastglue.Request) error {
 	var (
 		app     = r.Context.(*App)
@@ -59,13 +63,13 @@ func handleUpdateAutomationRule(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
 	}
 
-	err = app.automation.UpdateRule(id, rule)
-	if err != nil {
+	if err = app.automation.UpdateRule(id, rule);err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Rule updated successfully")
 }
 
+// handleCreateAutomationRule creates a new automation rule
 func handleCreateAutomationRule(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
@@ -74,13 +78,13 @@ func handleCreateAutomationRule(r *fastglue.Request) error {
 	if err := r.Decode(&rule, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
 	}
-	err := app.automation.CreateRule(rule)
-	if err != nil {
+	if err := app.automation.CreateRule(rule); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Rule created successfully")
 }
 
+// handleDeleteAutomationRule deletes an automation rule
 func handleDeleteAutomationRule(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -96,5 +100,37 @@ func handleDeleteAutomationRule(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Rule deleted successfully")
+}
+
+// handleUpdateAutomationRuleWeights updates the weights of the automation rules
+func handleUpdateAutomationRuleWeights(r *fastglue.Request) error {
+	var (
+		app     = r.Context.(*App)
+		weights = make(map[int]int)
+	)
+	if err := r.Decode(&weights, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", nil, envelope.InputError)
+	}
+	err := app.automation.UpdateRuleWeights(weights)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope("Weights updated successfully")
+}
+
+// handleUpdateAutomationRuleExecutionMode updates the execution mode of the automation rules for a given type
+func handleUpdateAutomationRuleExecutionMode(r *fastglue.Request) error {
+	var (
+		app  = r.Context.(*App)
+		mode = string(r.RequestCtx.PostArgs().Peek("mode"))
+	)
+	if mode != amodels.ExecutionModeAll && mode != amodels.ExecutionModeFirstMatch {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid execution mode", nil, envelope.InputError)
+	}
+	// Only new conversation rules can be updated as they are the only ones that have execution mode.
+	if err := app.automation.UpdateRuleExecutionMode(amodels.RuleTypeNewConversation, mode); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope("Execution mode updated successfully")
 }

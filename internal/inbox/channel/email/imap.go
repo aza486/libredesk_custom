@@ -2,14 +2,16 @@ package email
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
-	"github.com/abhinavxd/artemis/internal/conversation"
-	"github.com/abhinavxd/artemis/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	"github.com/abhinavxd/libredesk/internal/conversation"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/user"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 	"github.com/jhillyerd/enmime"
@@ -36,16 +38,17 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 		case <-ctx.Done():
 			return nil
 		case <-readTicker.C:
-			if err := e.processMailbox(cfg); err != nil {
+			e.lo.Debug("processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+			if err := e.processMailbox(ctx, cfg); err != nil && err != context.Canceled {
 				e.lo.Error("error processing mailbox", "error", err)
 			}
+			e.lo.Debug("finished processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 		}
 	}
 }
 
 // processMailbox processes emails in the specified mailbox.
-func (e *Email) processMailbox(cfg IMAPConfig) error {
-	e.lo.Debug("processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+func (e *Email) processMailbox(ctx context.Context, cfg IMAPConfig) error {
 	client, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
 	if err != nil {
 		return fmt.Errorf("error connecting to IMAP server: %w", err)
@@ -60,14 +63,15 @@ func (e *Email) processMailbox(cfg IMAPConfig) error {
 		return fmt.Errorf("error selecting mailbox: %w", err)
 	}
 
-	since := time.Now().Add(-12 * time.Hour)
+	// TODO: Set value from config.
+	since := time.Now().Add(-24 * time.Hour)
 
 	searchData, err := e.searchMessages(client, since)
 	if err != nil {
 		return fmt.Errorf("error searching messages: %w", err)
 	}
 
-	return e.fetchAndProcessMessages(client, searchData, e.Identifier())
+	return e.fetchAndProcessMessages(ctx, client, searchData, e.Identifier())
 }
 
 // searchMessages searches for messages in the specified time range.
@@ -86,11 +90,11 @@ func (e *Email) searchMessages(client *imapclient.Client, since time.Time) (*ima
 }
 
 // fetchAndProcessMessages fetches and processes messages based on the search results.
-func (e *Email) fetchAndProcessMessages(client *imapclient.Client, searchData *imap.SearchData, inboxID int) error {
+func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.Client, searchData *imap.SearchData, inboxID int) error {
 	seqSet := imap.SeqSet{}
 	seqSet.AddRange(searchData.Min, searchData.Max)
 
-	// Fetch only envelope.
+	// Fetch only envelope, body is fetch later.
 	fetchOptions := &imap.FetchOptions{
 		Envelope: true,
 	}
@@ -98,25 +102,48 @@ func (e *Email) fetchAndProcessMessages(client *imapclient.Client, searchData *i
 	fetchCmd := client.Fetch(seqSet, fetchOptions)
 
 	for {
-		msg := fetchCmd.Next()
-		if msg == nil {
-			break
+		// Check for context cancellation before fetching the next message.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
-		for fetchItem := msg.Next(); fetchItem != nil; fetchItem = msg.Next() {
+		// Fetch the next message.
+		msg := fetchCmd.Next()
+		if msg == nil {
+			// No more messages to process.
+			return nil
+		}
+
+		// Process message envelope.
+		for {
+			// Check for context cancellation before processing the next item.
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
+			}
+
+			// Fetch the next item in the message.
+			fetchItem := msg.Next()
+			if fetchItem == nil {
+				// No message items left to process.
+				break
+			}
+
+			// Process the envelope item.
 			if item, ok := fetchItem.(imapclient.FetchItemDataEnvelope); ok {
-				if err := e.processEnvelope(client, item.Envelope, msg.SeqNum, inboxID); err != nil {
+				if err := e.processEnvelope(ctx, client, item.Envelope, msg.SeqNum, inboxID); err != nil && err != context.Canceled {
 					e.lo.Error("error processing envelope", "error", err)
 				}
 			}
 		}
 	}
-
-	return nil
 }
 
 // processEnvelope processes an email envelope.
-func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, seqNum uint32, inboxID int) error {
+func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, env *imap.Envelope, seqNum uint32, inboxID int) error {
 	if len(env.From) == 0 {
 		e.lo.Warn("no sender received for email", "message_id", env.MessageID)
 		return nil
@@ -125,24 +152,41 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if err != nil {
 		e.lo.Error("error checking if message exists", "message_id", env.MessageID)
-		return err
+		return fmt.Errorf("checking if message exists in DB: %w", err)
 	}
 
 	if exists {
-		e.lo.Debug("message already exists", "message_id", env.MessageID)
 		return nil
 	}
 
 	e.lo.Debug("message does not exist", "message_id", env.MessageID)
 
-	var contact = cmodels.Contact{
-		Source:   e.Channel(),
-		SourceID: env.From[0].Addr(),
-		Email:    env.From[0].Addr(),
-		InboxID:  inboxID,
+	// Make contact.
+	firstName, lastName := getContactName(env.From[0])
+	var contact = umodels.User{
+		InboxID:         inboxID,
+		FirstName:       firstName,
+		LastName:        lastName,
+		SourceChannel:   null.NewString(e.Channel(), true),
+		SourceChannelID: null.NewString(env.From[0].Addr(), true),
+		Email:           null.NewString(env.From[0].Addr(), true),
+		Type:            user.UserTypeContact,
 	}
-	contact.FirstName, contact.LastName = getContactName(env.From[0])
 
+	// Set CC addresses in meta.
+	var ccAddr = make([]string, 0, len(env.Cc))
+	for _, cc := range env.Cc {
+		if cc.Addr() != "" {
+			ccAddr = append(ccAddr, cc.Addr())
+		}
+	}
+	meta, err := json.Marshal(map[string]interface{}{
+		"cc": ccAddr,
+	})
+	if err != nil {
+		e.lo.Error("error marshalling meta", "error", err)
+		return fmt.Errorf("marshalling meta: %w", err)
+	}
 	incomingMsg := models.IncomingMessage{
 		Message: models.Message{
 			Channel:    e.Channel(),
@@ -152,6 +196,7 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 			Status:     conversation.MessageStatusReceived,
 			Subject:    env.Subject,
 			SourceID:   null.StringFrom(env.MessageID),
+			Meta:       string(meta),
 		},
 		Contact: contact,
 		InboxID: inboxID,
@@ -169,14 +214,25 @@ func (e *Email) processEnvelope(client *imapclient.Client, env *imap.Envelope, s
 		return nil
 	}
 
-	for fullFetchItem := fullMsg.Next(); fullFetchItem != nil; fullFetchItem = fullMsg.Next() {
+	// Fetch full message.
+	for {
+		// Check for context cancellation before processing the next item.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		fullFetchItem := fullMsg.Next()
+		if fullFetchItem == nil {
+			return nil
+		}
+
 		if fullItem, ok := fullFetchItem.(imapclient.FetchItemDataBodySection); ok {
 			e.lo.Debug("fetching full message body", "message_id", env.MessageID)
 			return e.processFullMessage(fullItem, incomingMsg)
 		}
 	}
-
-	return nil
 }
 
 // processFullMessage processes the full email message.
@@ -195,6 +251,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 		incomingMsg.Message.ContentType = conversation.ContentTypeText
 	}
 
+	// Remove the angle brackets from the In-Reply-To and References headers.
 	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envelope.GetHeader("In-Reply-To"), "<", ""), ">", "")
 	references := strings.Fields(envelope.GetHeader("References"))
 	for i, ref := range references {
@@ -209,6 +266,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Name:        att.FileName,
 			Content:     att.Content,
 			ContentType: att.ContentType,
+			ContentID:   att.ContentID,
 			Size:        len(att.Content),
 			Disposition: attachment.DispositionAttachment,
 		})
@@ -223,7 +281,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Disposition: attachment.DispositionInline,
 		})
 	}
-	e.lo.Debug("enqueuing message", "message_id", incomingMsg.Message.SourceID, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
+	e.lo.Debug("enqueuing incoming email message for inserting in DB", "message_id", incomingMsg.Message.SourceID.String, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
 	if err := e.messageStore.EnqueueIncoming(incomingMsg); err != nil {
 		return err
 	}

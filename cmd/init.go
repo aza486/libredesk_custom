@@ -12,31 +12,37 @@ import (
 
 	"html/template"
 
-	auth_ "github.com/abhinavxd/artemis/internal/auth"
-	"github.com/abhinavxd/artemis/internal/authz"
-	"github.com/abhinavxd/artemis/internal/autoassigner"
-	"github.com/abhinavxd/artemis/internal/automation"
-	"github.com/abhinavxd/artemis/internal/cannedresp"
-	"github.com/abhinavxd/artemis/internal/contact"
-	"github.com/abhinavxd/artemis/internal/conversation"
-	"github.com/abhinavxd/artemis/internal/conversation/priority"
-	"github.com/abhinavxd/artemis/internal/conversation/status"
-	"github.com/abhinavxd/artemis/internal/inbox"
-	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
-	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
-	"github.com/abhinavxd/artemis/internal/media"
-	fs "github.com/abhinavxd/artemis/internal/media/stores/localfs"
-	"github.com/abhinavxd/artemis/internal/media/stores/s3"
-	notifier "github.com/abhinavxd/artemis/internal/notification"
-	emailnotifier "github.com/abhinavxd/artemis/internal/notification/providers/email"
-	"github.com/abhinavxd/artemis/internal/oidc"
-	"github.com/abhinavxd/artemis/internal/role"
-	"github.com/abhinavxd/artemis/internal/setting"
-	"github.com/abhinavxd/artemis/internal/tag"
-	"github.com/abhinavxd/artemis/internal/team"
-	tmpl "github.com/abhinavxd/artemis/internal/template"
-	"github.com/abhinavxd/artemis/internal/user"
-	"github.com/abhinavxd/artemis/internal/ws"
+	"github.com/abhinavxd/libredesk/internal/ai"
+	auth_ "github.com/abhinavxd/libredesk/internal/auth"
+	"github.com/abhinavxd/libredesk/internal/authz"
+	"github.com/abhinavxd/libredesk/internal/autoassigner"
+	"github.com/abhinavxd/libredesk/internal/automation"
+	businesshours "github.com/abhinavxd/libredesk/internal/business_hours"
+	"github.com/abhinavxd/libredesk/internal/colorlog"
+	"github.com/abhinavxd/libredesk/internal/conversation"
+	"github.com/abhinavxd/libredesk/internal/conversation/priority"
+	"github.com/abhinavxd/libredesk/internal/conversation/status"
+	"github.com/abhinavxd/libredesk/internal/csat"
+	"github.com/abhinavxd/libredesk/internal/inbox"
+	"github.com/abhinavxd/libredesk/internal/inbox/channel/email"
+	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
+	"github.com/abhinavxd/libredesk/internal/macro"
+	"github.com/abhinavxd/libredesk/internal/media"
+	fs "github.com/abhinavxd/libredesk/internal/media/stores/localfs"
+	"github.com/abhinavxd/libredesk/internal/media/stores/s3"
+	notifier "github.com/abhinavxd/libredesk/internal/notification"
+	emailnotifier "github.com/abhinavxd/libredesk/internal/notification/providers/email"
+	"github.com/abhinavxd/libredesk/internal/oidc"
+	"github.com/abhinavxd/libredesk/internal/role"
+	"github.com/abhinavxd/libredesk/internal/search"
+	"github.com/abhinavxd/libredesk/internal/setting"
+	"github.com/abhinavxd/libredesk/internal/sla"
+	"github.com/abhinavxd/libredesk/internal/tag"
+	"github.com/abhinavxd/libredesk/internal/team"
+	tmpl "github.com/abhinavxd/libredesk/internal/template"
+	"github.com/abhinavxd/libredesk/internal/user"
+	"github.com/abhinavxd/libredesk/internal/view"
+	"github.com/abhinavxd/libredesk/internal/ws"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	kjson "github.com/knadh/koanf/parsers/json"
@@ -56,11 +62,12 @@ import (
 // constants holds the app constants.
 type constants struct {
 	AppBaseURL                  string
+	FaviconURL                  string
 	LogoURL                     string
 	SiteName                    string
 	UploadProvider              string
 	AllowedUploadFileExtensions []string
-	MaxFileUploadSizeMB         float64
+	MaxFileUploadSizeMB         int
 }
 
 // Config loads config files into koanf.
@@ -103,14 +110,15 @@ func initFlags() {
 }
 
 // initConstants initializes the app constants.
-func initConstants() constants {
-	return constants{
+func initConstants() *constants {
+	return &constants{
 		AppBaseURL:                  ko.String("app.root_url"),
+		FaviconURL:                  ko.String("app.favicon_url"),
 		LogoURL:                     ko.String("app.logo_url"),
 		SiteName:                    ko.String("app.site_name"),
 		UploadProvider:              ko.MustString("upload.provider"),
 		AllowedUploadFileExtensions: ko.Strings("app.allowed_file_upload_extensions"),
-		MaxFileUploadSizeMB:         ko.Float64("app.max_file_upload_size"),
+		MaxFileUploadSizeMB:         ko.Int("app.max_file_upload_size"),
 	}
 }
 
@@ -119,6 +127,7 @@ func initFS() stuffbin.FileSystem {
 	var files = []string{
 		"frontend/dist",
 		"i18n",
+		"static",
 	}
 
 	// Get self executable path.
@@ -133,7 +142,7 @@ func initFS() stuffbin.FileSystem {
 	if err != nil {
 		if err == stuffbin.ErrNoID {
 			// The embed failed or the binary's already unstuffed or running in local / dev mode, use the local filesystem.
-			log.Println("unstuff failed, using local FS")
+			colorlog.Red("binary unstuff failed, using local filesystem for static files")
 			fs, err = stuffbin.NewLocalFS("/", files...)
 			if err != nil {
 				log.Fatalf("error initializing local FS: %v", err)
@@ -189,9 +198,24 @@ func initUser(i18n *i18n.I18n, DB *sqlx.DB) *user.Manager {
 }
 
 // initConversations inits conversation manager.
-func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sqlx.DB, contactStore *contact.Manager,
-	inboxStore *inbox.Manager, userStore *user.Manager, teamStore *team.Manager, mediaStore *media.Manager, automationEngine *automation.Engine, template *tmpl.Manager) *conversation.Manager {
-	c, err := conversation.New(hub, i18n, n, contactStore, inboxStore, userStore, teamStore, mediaStore, automationEngine, template, conversation.Opts{
+func initConversations(
+	i18n *i18n.I18n,
+	sla *sla.Manager,
+	status *status.Manager,
+	priority *priority.Manager,
+	hub *ws.Hub,
+	notif *notifier.Service,
+	db *sqlx.DB,
+	inboxStore *inbox.Manager,
+	userStore *user.Manager,
+	teamStore *team.Manager,
+	mediaStore *media.Manager,
+	settings *setting.Manager,
+	csat *csat.Manager,
+	automationEngine *automation.Engine,
+	template *tmpl.Manager,
+) *conversation.Manager {
+	c, err := conversation.New(hub, i18n, notif, sla, status, priority, inboxStore, userStore, teamStore, mediaStore, settings, csat, automationEngine, template, conversation.Opts{
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
 		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),
@@ -203,8 +227,8 @@ func initConversations(i18n *i18n.I18n, hub *ws.Hub, n *notifier.Service, db *sq
 	return c
 }
 
-// initTags inits tag manager.
-func initTags(db *sqlx.DB) *tag.Manager {
+// initTag inits tag manager.
+func initTag(db *sqlx.DB) *tag.Manager {
 	var lo = initLogger("tag_manager")
 	mgr, err := tag.New(tag.Opts{
 		DB: db,
@@ -216,39 +240,86 @@ func initTags(db *sqlx.DB) *tag.Manager {
 	return mgr
 }
 
-// initCannedResponse inits canned response manager.
-func initCannedResponse(db *sqlx.DB) *cannedresp.Manager {
-	var lo = initLogger("canned-response")
-	c, err := cannedresp.New(cannedresp.Opts{
+// initViews inits view manager.
+func initView(db *sqlx.DB) *view.Manager {
+	var lo = initLogger("view_manager")
+	m, err := view.New(view.Opts{
 		DB: db,
 		Lo: lo,
 	})
 	if err != nil {
-		log.Fatalf("error initializing canned responses manager: %v", err)
+		log.Fatalf("error initializing view manager: %v", err)
 	}
-	return c
+	return m
 }
 
-func initContact(db *sqlx.DB) *contact.Manager {
-	var lo = initLogger("contact-manager")
-	m, err := contact.New(contact.Opts{
+// initMacro inits macro manager.
+func initMacro(db *sqlx.DB) *macro.Manager {
+	var lo = initLogger("macro")
+	m, err := macro.New(macro.Opts{
 		DB: db,
 		Lo: lo,
 	})
 	if err != nil {
-		log.Fatalf("error initializing contact manager: %v", err)
+		log.Fatalf("error initializing macro manager: %v", err)
+	}
+	return m
+}
+
+// initBusinessHours inits business hours manager.
+func initBusinessHours(db *sqlx.DB) *businesshours.Manager {
+	var lo = initLogger("business-hours")
+	m, err := businesshours.New(businesshours.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing business hours manager: %v", err)
+	}
+	return m
+}
+
+// initSLA inits SLA manager.
+func initSLA(db *sqlx.DB, teamManager *team.Manager, settings *setting.Manager, businessHours *businesshours.Manager) *sla.Manager {
+	var lo = initLogger("sla")
+	m, err := sla.New(sla.Opts{
+		DB: db,
+		Lo: lo,
+	}, teamManager, settings, businessHours)
+	if err != nil {
+		log.Fatalf("error initializing SLA manager: %v", err)
+	}
+	return m
+}
+
+// initCSAT inits CSAT manager.
+func initCSAT(db *sqlx.DB) *csat.Manager {
+	var lo = initLogger("csat")
+	m, err := csat.New(csat.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing CSAT manager: %v", err)
 	}
 	return m
 }
 
 // initTemplates inits template manager.
-func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.Manager {
-	lo := initLogger("template")
-	tpls, err := stuffbin.ParseTemplatesGlob(getTmplFuncs(consts), fs, "/static/email-templates/*.html")
+func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts *constants) *tmpl.Manager {
+	var (
+		lo      = initLogger("template")
+		funcMap = getTmplFuncs(consts)
+	)
+	tpls, err := stuffbin.ParseTemplatesGlob(funcMap, fs, "/static/email-templates/*.html")
 	if err != nil {
 		log.Fatalf("error parsing e-mail templates: %v", err)
 	}
-	m, err := tmpl.New(lo, db, tpls)
+	webTpls, err := stuffbin.ParseTemplatesGlob(funcMap, fs, "/static/public/web-templates/*.html")
+	if err != nil {
+		log.Fatalf("error parsing web templates: %v", err)
+	}
+	m, err := tmpl.New(lo, db, webTpls, tpls, funcMap)
 	if err != nil {
 		log.Fatalf("error initializing template manager: %v", err)
 	}
@@ -256,10 +327,13 @@ func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts constants) *tmpl.M
 }
 
 // getTmplFuncs returns the template functions.
-func getTmplFuncs(consts constants) template.FuncMap {
+func getTmplFuncs(consts *constants) template.FuncMap {
 	return template.FuncMap{
 		"RootURL": func() string {
 			return consts.AppBaseURL
+		},
+		"FaviconURL": func() string {
+			return consts.FaviconURL
 		},
 		"Date": func(layout string) string {
 			if layout == "" {
@@ -274,6 +348,45 @@ func getTmplFuncs(consts constants) template.FuncMap {
 			return consts.SiteName
 		},
 	}
+}
+
+// reloadSettings reloads the settings from the database into the Koanf instance.
+func reloadSettings(app *App) error {
+	app.lo.Info("reloading settings")
+	j, err := app.setting.GetAllJSON()
+	if err != nil {
+		app.lo.Error("error parsing settings from DB", "error", err)
+		return err
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal(j, &out); err != nil {
+		app.lo.Error("error unmarshalling settings from DB", "error", err)
+		return err
+	}
+	if err := ko.Load(confmap.Provider(out, "."), nil); err != nil {
+		app.lo.Error("error loading settings into koanf", "error", err)
+		return err
+	}
+	newConsts := initConstants()
+	app.consts.Store(newConsts)
+	return nil
+}
+
+// reloadTemplates reloads the templates from the filesystem.
+func reloadTemplates(app *App) error {
+	app.lo.Info("reloading templates")
+	funcMap := getTmplFuncs(app.consts.Load().(*constants))
+	tpls, err := stuffbin.ParseTemplatesGlob(funcMap, app.fs, "/static/email-templates/*.html")
+	if err != nil {
+		app.lo.Error("error parsing email templates", "error", err)
+		return err
+	}
+	webTpls, err := stuffbin.ParseTemplatesGlob(funcMap, app.fs, "/static/public/web-templates/*.html")
+	if err != nil {
+		app.lo.Error("error parsing web templates", "error", err)
+		return err
+	}
+	return app.tmpl.Reload(webTpls, tpls, funcMap)
 }
 
 // initTeam inits team manager.
@@ -307,7 +420,8 @@ func initMedia(db *sqlx.DB) *media.Manager {
 			Region:     ko.String("upload.s3.region"),
 			Bucket:     ko.String("upload.s3.bucket"),
 			BucketPath: ko.String("upload.s3.bucket_path"),
-			BucketType: ko.String("upload.s3.bucket_type"),
+			// All files are private by default.
+			BucketType: "private",
 			Expiry:     ko.Duration("upload.s3.expiry"),
 		})
 		if err != nil {
@@ -348,15 +462,9 @@ func initInbox(db *sqlx.DB) *inbox.Manager {
 }
 
 // initAutomationEngine initializes the automation engine.
-func initAutomationEngine(db *sqlx.DB, userManager *user.Manager) *automation.Engine {
+func initAutomationEngine(db *sqlx.DB) *automation.Engine {
 	var lo = initLogger("automation_engine")
-
-	systemUser, err := userManager.GetSystemUser()
-	if err != nil {
-		log.Fatalf("error fetching system user: %v", err)
-	}
-
-	engine, err := automation.New(systemUser, automation.Opts{
+	engine, err := automation.New(automation.Opts{
 		DB: db,
 		Lo: lo,
 	})
@@ -407,11 +515,11 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 
 	// Load JSON data into Koanf.
 	if err := ko.Load(rawbytes.Provider([]byte(inboxRecord.Config)), kjson.Parser()); err != nil {
-		log.Fatalf("error loading config: %v", err)
+		return nil, fmt.Errorf("loading config: %w", err)
 	}
 
 	if err := ko.UnmarshalWithConf("", &config, koanf.UnmarshalConf{Tag: "json"}); err != nil {
-		log.Fatalf("error unmarshalling `%s` %s config: %v", inboxRecord.Channel, inboxRecord.Name, err)
+		return nil, fmt.Errorf("unmarshalling `%s` %s config: %w", inboxRecord.Channel, inboxRecord.Name, err)
 	}
 
 	if len(config.SMTP) == 0 {
@@ -435,11 +543,10 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 	})
 
 	if err != nil {
-		log.Fatalf("ERROR: initalizing `%s` inbox: `%s` error : %v", inboxRecord.Channel, inboxRecord.Name, err)
-		return nil, err
+		return nil, fmt.Errorf("initializing `%s` inbox: `%s` error : %w", inboxRecord.Channel, inboxRecord.Name, err)
 	}
 
-	log.Printf("`%s` inbox successfully initalized. %d smtp servers. %d imap clients.", inboxRecord.Name, len(config.SMTP), len(config.IMAP))
+	log.Printf("`%s` inbox successfully initialized. %d SMTP servers. %d IMAP clients.", inboxRecord.Name, len(config.SMTP), len(config.IMAP))
 
 	return inbox, nil
 }
@@ -502,17 +609,14 @@ func initAuth(o *oidc.Manager, rd *redis.Client) *auth_.Auth {
 // reloadAuth reloads the auth providers.
 func reloadAuth(app *App) error {
 	app.lo.Info("reloading auth manager")
-
 	providers, err := buildProviders(app.oidc)
 	if err != nil {
 		log.Fatalf("error reloading auth: %v", err)
 	}
-
 	if err := app.auth.Reload(auth_.Config{Providers: providers}); err != nil {
 		app.lo.Error("error reloading auth", "error", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -525,7 +629,7 @@ func buildProviders(o *oidc.Manager) ([]auth_.Provider, error) {
 
 	providers := make([]auth_.Provider, 0, len(oidcConfigs))
 	for _, config := range oidcConfigs {
-		if config.Disabled {
+		if !config.Enabled {
 			continue
 		}
 		providers = append(providers, auth_.Provider{
@@ -541,13 +645,12 @@ func buildProviders(o *oidc.Manager) ([]auth_.Provider, error) {
 }
 
 // initOIDC initializes open id connect config manager.
-func initOIDC(db *sqlx.DB) *oidc.Manager {
+func initOIDC(db *sqlx.DB, settings *setting.Manager) *oidc.Manager {
 	lo := initLogger("oidc")
 	o, err := oidc.New(oidc.Opts{
 		DB: db,
 		Lo: lo,
-	})
-
+	}, settings)
 	if err != nil {
 		log.Fatalf("error initializing oidc: %v", err)
 	}
@@ -636,6 +739,32 @@ func initPriority(db *sqlx.DB) *priority.Manager {
 		log.Fatalf("error initializing priority manager: %v", err)
 	}
 	return manager
+}
+
+// initAI inits AI manager.
+func initAI(db *sqlx.DB) *ai.Manager {
+	lo := initLogger("ai")
+	m, err := ai.New(ai.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing AI manager: %v", err)
+	}
+	return m
+}
+
+// initSearch inits search manager.
+func initSearch(db *sqlx.DB) *search.Manager {
+	lo := initLogger("search")
+	m, err := search.New(search.Opts{
+		DB: db,
+		Lo: lo,
+	})
+	if err != nil {
+		log.Fatalf("error initializing search manager: %v", err)
+	}
+	return m
 }
 
 // initLogger initializes a logf logger.

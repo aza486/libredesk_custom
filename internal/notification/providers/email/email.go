@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"net/textproto"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	"github.com/abhinavxd/artemis/internal/inbox/channel/email"
-	notifier "github.com/abhinavxd/artemis/internal/notification"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	"github.com/abhinavxd/libredesk/internal/inbox/channel/email"
+	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	"github.com/knadh/smtppool"
 	"github.com/zerodha/logf"
 )

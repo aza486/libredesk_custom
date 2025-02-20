@@ -1,129 +1,244 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, watch, toRefs } from 'vue'
-import { CONVERSATION_LIST_TYPE } from '@/constants/conversation'
+import { computed, reactive, ref } from 'vue'
+import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
-import { useStorage } from '@vueuse/core'
-import { subscribeConversationsList } from '@/websocket'
+import MessageCache from '@/utils/conversation-message-cache'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
-  const conversationsListType = useStorage('conversation_list_type', CONVERSATION_LIST_TYPE.ASSIGNED)
-  const conversationListFilters = useStorage('conversation_list_filters', [])
+  const CONV_LIST_PAGE_SIZE = 100
+  const MESSAGE_LIST_PAGE_SIZE = 100
+  const priorities = ref([])
+  const statuses = ref([])
 
-  // List of conversations
+  // Options for select fields
+  const priorityOptions = computed(() => {
+    return priorities.value.map(p => ({ label: p.name, value: p.id }))
+  })
+  const statusOptions = computed(() => {
+    return statuses.value.map(s => ({ label: s.name, value: s.id }))
+  })
+  // Status options excluding 'Snoozed'
+  const statusOptionsNoSnooze = computed(() =>
+    statuses.value.filter(s => s.name !== 'Snoozed').map(s => ({
+      label: s.name,
+      value: s.id
+    }))
+  )
+
+  // TODO: Move to constants.
+  const sortFieldMap = {
+    oldest: {
+      field: 'last_message_at',
+      order: 'asc'
+    },
+    newest: {
+      field: 'last_message_at',
+      order: 'desc'
+    },
+    started_first: {
+      field: 'created_at',
+      order: 'asc'
+    },
+    started_last: {
+      field: 'created_at',
+      order: 'desc'
+    },
+    waiting_longest: {
+      field: 'waiting_since',
+      order: 'asc'
+    },
+    next_sla_target: {
+      field: 'next_sla_deadline_at',
+      order: 'asc'
+    },
+    priority_first: {
+      field: 'priority_id',
+      order: 'desc'
+    }
+  }
+
+  const sortFieldLabels = {
+    oldest: 'Oldest activity',
+    newest: 'Newest activity',
+    started_first: 'Started first',
+    started_last: 'Started last',
+    waiting_longest: 'Waiting longest',
+    next_sla_target: 'Next SLA target',
+    priority_first: 'Priority first'
+  }
+
   const conversations = reactive({
     data: [],
+    listType: null,
+    status: 'Open',
+    sortField: 'newest',
+    listFilters: [],
+    viewID: 0,
+    teamID: 0,
     loading: false,
-    type: conversationsListType,
-    filters: conversationListFilters,
     page: 1,
     hasMore: false,
+    total: 0,
     errorMessage: ''
   })
 
-  // Currently selected conversation.
   const conversation = reactive({
     data: null,
     participants: {},
+    mediaFiles: [],
+    macro: {},
     loading: false,
     errorMessage: ''
   })
 
-  // Messages for the selected conversation.
   const messages = reactive({
-    data: [],
+    data: new MessageCache(),
     loading: false,
     page: 1,
-    hasMore: false,
-    errorMessage: ''
   })
 
-  const { type: conversatonType } = toRefs(conversations);
-
-  // Set type on tab change.
-  watch(conversatonType, (type) => {
-    setConversationList(type)
-  })
-
-  // Map to track seen msg UUIDs for deduplication
   let seenConversationUUIDs = new Map()
-  let seenMessageUUIDs = new Set()
   let reRenderInterval = setInterval(() => {
     conversations.data = [...conversations.data]
   }, 120000)
   const emitter = useEmitter()
 
-  // Clears the re-render interval
   function clearListReRenderInterval () {
     clearInterval(reRenderInterval)
   }
 
-  // Sort conversations by last_message_at
-  const sortedConversations = computed(() => {
-    if (!conversations.data) {
-      return []
+  function setMacro (macros) {
+    conversation.macro = macros
+  }
+
+  function removeMacroAction (action) {
+    conversation.macro.actions = conversation.macro.actions.filter(a => a.type !== action.type)
+  }
+
+  function resetMacro () {
+    conversation.macro = {}
+  }
+
+  function resetMediaFiles () {
+    conversation.mediaFiles = []
+  }
+
+  function setListStatus (status, fetch = true) {
+    conversations.status = status
+    if (fetch) {
+      resetConversations()
+      reFetchConversationsList()
     }
-    return [...conversations.data].sort(
-      (a, b) => new Date(b.last_message_at) - new Date(a.last_message_at)
-    )
+  }
+
+  function setListSortField (field) {
+    if (conversations.sortField === field) return
+    conversations.sortField = field
+    resetConversations()
+    reFetchConversationsList()
+  }
+
+  const getListSortField = computed(() => {
+    return sortFieldLabels[conversations.sortField]
   })
 
-  // Sort messages by created_at
-  const sortedMessages = computed(() => {
-    if (!messages.data) {
-      return []
+  const getListStatus = computed(() => {
+    return conversations.status
+  })
+
+  async function fetchStatuses () {
+    if (statuses.value.length > 0) return
+    try {
+      const response = await api.getStatuses()
+      statuses.value = response.data.data.map(status => ({
+        ...status,
+        id: status.id.toString()
+      }))
+    } catch (error) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
     }
-    return [...messages.data].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  }
+
+  async function fetchPriorities () {
+    if (priorities.value.length > 0) return
+    try {
+      const response = await api.getPriorities()
+      priorities.value = response.data.data.map(priority => ({
+        ...priority,
+        id: priority.id.toString()
+      }))
+    } catch (error) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  }
+
+  const conversationsList = computed(() => {
+    if (!conversations.data) return []
+    // Sort conversations based on the selected sort field
+    return [...conversations.data].sort((a, b) => {
+      const field = sortFieldMap[conversations.sortField]?.field
+      if (!a[field] && !b[field]) return 0
+      if (!a[field]) return 1       // null goes last
+      if (!b[field]) return -1
+      const order = sortFieldMap[conversations.sortField]?.order
+      return order === 'asc'
+        ? new Date(a[field]) - new Date(b[field])
+        : new Date(b[field]) - new Date(a[field])
+    })
+  })
+
+  const currentConversationHasMoreMessages = computed(() => {
+    return messages.data.hasMore(conversation.data?.uuid)
+  })
+
+  const conversationMessages = computed(() => {
+    return messages.data.getAllPagesMessages(conversation.data?.uuid)
   })
 
   function markConversationAsRead (uuid) {
-    const index = conversations.data.findIndex((conv) => conv.uuid === uuid)
+    const index = conversations.data.findIndex(conv => conv.uuid === uuid)
     if (index !== -1) {
-      conversations.data[index].unread_message_count = 0
+      setTimeout(() => {
+        conversations.data[index].unread_message_count = 0
+      }, 3000)
     }
   }
 
   const currentContactName = computed(() => {
-    return conversation.data?.contact.first_name + " " + conversation.data?.contact.last_name
+    if (!conversation.data?.contact) return ''
+    return conversation.data?.contact.first_name + ' ' + conversation.data?.contact.last_name
   })
 
-  const getContactFullName = (uuid) => {
+  function getContactFullName (uuid) {
     if (conversations?.data) {
-      const conv = conversations.data.find((conv) => conv.uuid === uuid)
+      const conv = conversations.data.find(conv => conv.uuid === uuid)
       return conv ? `${conv.contact.first_name} ${conv.contact.last_name}` : ''
     }
   }
 
-  // Returns the current conversation
   const current = computed(() => {
-    return conversation.data
+    return conversation.data || {}
   })
 
-  // Fetches conversation by uuid.
-  async function fetchConversation (uuid) {
-    conversation.loading = true
-    try {
-      const resp = await api.getConversation(uuid)
-      conversation.data = resp.data.data
-      // Mark this conversation as read.
-      markConversationAsRead(uuid)
-      // Reset messages state.
-      resetMessages()
-    } catch (error) {
-      conversation.errorMessage = handleHTTPError(error).message
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
-        variant: 'destructive',
-        description: conversation.errorMessage
-      })
-    } finally {
-      conversation.loading = false
-    }
-  }
+  const currentBCC = computed(() => {
+    return conversation.data?.bcc || []
+  })
 
-  // Fetches participants of conversation by uuid.
+  const currentCC = computed(() => {
+    return conversation.data?.cc || []
+  })
+
   async function fetchParticipants (uuid) {
     try {
       const resp = await api.getConversationParticipants(uuid)
@@ -134,142 +249,203 @@ export const useConversationStore = defineStore('conversation', () => {
       updateParticipants(participants)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
     }
   }
 
-  // Fetches messages of a conversation.
-  async function fetchMessages (uuid) {
-    messages.loading = true
+  async function fetchConversation (uuid) {
+    conversation.loading = true
     try {
-      const response = await api.getConversationMessages(uuid, messages.page)
-      const result = response.data?.data || {}
-      const results = result.results || []
-      // Filter out messages already seen.
-      const newMessages = results.filter((message) => {
-        if (!seenMessageUUIDs.has(message.uuid)) {
-          seenMessageUUIDs.add(message.uuid)
-          return true
-        }
-        return false
+      const resp = await api.getConversation(uuid)
+      conversation.data = resp.data.data
+    } catch (error) {
+      conversation.errorMessage = handleHTTPError(error).message
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
+        variant: 'destructive',
+        description: conversation.errorMessage
       })
-      if (newMessages.length === 0 && messages.page === 1) messages.data = []
-      if (result.total_pages <= messages.page)
-        messages.hasMore = false
-      else
-        messages.hasMore = true
-      messages.data.unshift(...newMessages)
+    } finally {
+      conversation.loading = false
+    }
+  }
+
+  /**
+   * Fetches messages for a conversation if not already cached.
+   * 
+   * @param {string} uuid
+   * @returns 
+   */
+  async function fetchMessages (uuid, fetchNextPage = false) {
+    // Messages are already cached?
+    let hasMessages = messages.data.getAllPagesMessages(uuid)
+    if (hasMessages.length > 0 && !fetchNextPage)
+      return
+
+    // Fetch messages from server.
+    messages.loading = true
+    // Increment page number
+    let page = messages.data.getLastFetchedPage(uuid) + 1
+    try {
+      const response = await api.getConversationMessages(uuid, { page: page, page_size: MESSAGE_LIST_PAGE_SIZE })
+      const result = response.data?.data || {}
+      const newMessages = result.results || []
+      // Mark conversation as read
+      markConversationAsRead(uuid)
+      // Cache messages
+      messages.data.addMessages(uuid, newMessages, result.page, result.total_pages)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Something went wrong',
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
-      messages.data = []
-      messages.hasMore = false
     } finally {
       messages.loading = false
     }
   }
 
-  // Fetches next page of messages by incrementing the page number.
   async function fetchNextMessages () {
-    messages.page++
-    fetchMessages(conversation.data.uuid)
+    fetchMessages(conversation.data.uuid, true)
   }
 
-  // Fetches a specific message of conversation
-  async function fetchMessage (cuuid, uuid) {
+  /**
+   * Fetches a single message from the server and adds it to the cache.
+   * 
+   * @param {string} conversationUUID
+   * @param {string} messageUUID
+   * @returns {object}
+   */
+  async function fetchMessage (conversationUUID, messageUUID) {
     try {
-      const response = await api.getConversationMessage(cuuid, uuid)
+      const response = await api.getConversationMessage(conversationUUID, messageUUID)
       if (response?.data?.data) {
         const newMsg = response.data.data
-        if (!messages.data.some((m) => m.uuid === newMsg.uuid)) {
-          messages.data.push(newMsg)
-        }
+        // Add message to cache.
+        messages.data.addMessage(conversationUUID, newMsg)
         return newMsg
       }
     } catch (error) {
-      messages.errorMessage = handleHTTPError(error).message
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not fetch message',
+        title: 'Error',
         variant: 'destructive',
-        description: messages.errorMessage
+        description: handleHTTPError(error).message
       })
     }
   }
 
-  function setConversationList (type) {
-    resetConversations()
-    conversations.type = type
-    subscribeConversationsList(type)
-    fetchConversationsList(true)
+  function fetchNextConversations () {
+    conversations.page++
+    fetchConversationsList(true, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page)
   }
 
-  function setConversationListFilters (filters) {
-    resetConversations()
-    conversations.filters = filters
-    fetchConversationsList(true)
+  function reFetchConversationsList (showLoader = true) {
+    fetchConversationsList(showLoader, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page)
   }
 
-  async function fetchConversationsList (showLoader = true) {
+  async function fetchFirstPageConversations () {
+    await fetchConversationsList(false, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, 1)
+  }
+
+  async function fetchConversationsList (showLoader = true, listType = null, teamID = 0, filters = [], viewID = 0, page = 0) {
+    if (!listType) return
+    if (conversations.listType !== listType || conversations.teamID !== teamID || conversations.viewID !== viewID) {
+      resetConversations()
+    }
+    if (conversations.listType !== listType) {
+      resetCurrentConversation()
+    }
+    if (listType) conversations.listType = listType
+    if (teamID) conversations.teamID = teamID
+    if (viewID) conversations.viewID = viewID
+    if (conversations.status) {
+      filters = filters.filter(f => f.model !== 'conversation_statuses')
+      filters.push({
+        model: 'conversation_statuses',
+        field: 'name',
+        operator: 'equals',
+        value: conversations.status
+      })
+    }
+    if (filters) conversations.listFilters = filters
     if (showLoader) conversations.loading = true
-
     try {
       conversations.errorMessage = ''
-      let response = null
-
-      switch (conversations.type) {
-        case CONVERSATION_LIST_TYPE.ASSIGNED:
-          response = await api.getAssignedConversations({
-            page: conversations.page,
-            filters: conversations.filters ? JSON.stringify(conversations.filters) : '[]',
-          })
-          break
-        case CONVERSATION_LIST_TYPE.UNASSIGNED:
-          response = await api.getUnassignedConversations({
-            page: conversations.page,
-            filters: conversations.filters ? JSON.stringify(conversations.filters) : '[]',
-          })
-          break
-        case CONVERSATION_LIST_TYPE.ALL:
-          response = await api.getAllConversations({
-            page: conversations.page,
-            filters: conversations.filters ? JSON.stringify(conversations.filters) : '[]',
-          })
-          break
-        default:
-          return
-      }
-      const apiResponse = response.data.data
-      const newConversations = apiResponse.results.filter((conversation) => {
-        if (!seenConversationUUIDs.has(conversation.uuid)) {
-          seenConversationUUIDs.set(conversation.uuid, true)
-          return true
-        }
-        return false
-      })
-      if (apiResponse.total_pages <= conversations.page)
-        conversations.hasMore = false
-      else
-        conversations.hasMore = true
-      if (!conversations.data) conversations.data = []
-      conversations.data.push(...newConversations)
+      if (page === 0)
+        page = conversations.page
+      const response = await makeConversationListRequest(listType, teamID, viewID, filters, page)
+      processConversationListResponse(response)
     } catch (error) {
       conversations.errorMessage = handleHTTPError(error).message
+      conversations.total = 0
     } finally {
       conversations.loading = false
     }
   }
 
+  async function makeConversationListRequest (listType, teamID, viewID, filters, page) {
+    filters = filters.length > 0 ? JSON.stringify(filters) : []
+    switch (listType) {
+      case CONVERSATION_LIST_TYPE.ASSIGNED:
+        return await api.getAssignedConversations({
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters
+        })
+      case CONVERSATION_LIST_TYPE.UNASSIGNED:
+        return await api.getUnassignedConversations({
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters
+        })
+      case CONVERSATION_LIST_TYPE.ALL:
+        return await api.getAllConversations({
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters
+        })
+      case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
+        return await api.getTeamUnassignedConversations(teamID, {
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order
+        })
+      case CONVERSATION_LIST_TYPE.VIEW:
+        return await api.getViewConversations(viewID, {
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order
+        })
+      default:
+        throw new Error('Invalid conversation list type: ' + listType)
+    }
+  }
 
-  // Increments the page and fetches conversations
-  function fetchNextConversations () {
-    conversations.page++
-    fetchConversationsList(true)
+  function processConversationListResponse (response) {
+    const apiResponse = response.data.data
+    const newConversations = apiResponse.results.filter(conversation => {
+      if (!seenConversationUUIDs.has(conversation.uuid)) {
+        seenConversationUUIDs.set(conversation.uuid, true)
+        return true
+      }
+      return false
+    })
+    if (apiResponse.total_pages <= conversations.page) conversations.hasMore = false
+    else conversations.hasMore = true
+    if (!conversations.data) conversations.data = []
+    conversations.data.push(...newConversations)
+    conversations.total = apiResponse.total
   }
 
   async function updatePriority (v) {
@@ -277,7 +453,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationPriority(conversation.data.uuid, { priority: v })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not update priority',
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -289,7 +465,19 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationStatus(conversation.data.uuid, { status: v })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not update status',
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  }
+
+  async function snoozeConversation (snoozeDuration) {
+    try {
+      await api.updateConversationStatus(conversation.data.uuid, { status: CONVERSATION_DEFAULT_STATUSES.SNOOZED, snoozed_until: snoozeDuration })
+    } catch (error) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -301,7 +489,7 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.upsertTags(conversation.data.uuid, v)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not add tags',
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -313,7 +501,20 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateAssignee(conversation.data.uuid, type, v)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not update assignee',
+        title: 'Error',
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  }
+
+  async function removeAssignee (type) {
+    try {
+      await api.removeAssignee(conversation.data.uuid, type)
+      conversation.data[`assigned_${type}_id`] = null
+    } catch (error) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -324,7 +525,7 @@ export const useConversationStore = defineStore('conversation', () => {
     try {
       await api.updateAssigneeLastSeen(uuid)
     } catch (error) {
-      // Pass.
+      // pass
     }
   }
 
@@ -336,97 +537,100 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function conversationUUIDExists (uuid) {
-    return conversations.data?.find((c) => c.uuid === uuid) ? true : false
+    return conversations.data?.find(c => c.uuid === uuid) ? true : false
   }
 
-  /**** Websocket updates ****/
-
-  // Update the last message for a conversation.
-  function updateConversationLastMessage (message) {
-    const listConversation = conversations.data.find((c) => c.uuid === message.conversation_uuid)
+  function updateConversationList (message) {
+    const listConversation = conversations.data.find(c => c.uuid === message.conversation_uuid)
     if (listConversation) {
       listConversation.last_message = message.content
       listConversation.last_message_at = message.created_at
-      // Increment unread count only if conversation is not open.
       if (listConversation.uuid !== conversation?.data?.uuid) {
         listConversation.unread_message_count += 1
       }
+    } else {
+      fetchFirstPageConversations()
     }
   }
 
-  // Adds a new message to conversation.
-  async function updateConversationMessageList (message) {
-    // Fetch entire message only if the convesation is open and the message is not present in the list.
-    if (conversation?.data?.uuid === message.conversation_uuid) {
-      if (!messages.data.some((msg) => msg.uuid === message.uuid)) {
-        fetchParticipants(message.conversation_uuid)
-        const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
-        updateAssigneeLastSeen(message.conversation_uuid)
-        setTimeout(() => {
-          emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, { conversation_uuid: message.conversation_uuid, message: fetchedMessage })
-        }, 50)
-      }
+  /**
+   * Update conversation message in the cache by fetching it from the server.
+   * 
+   * @param {object} message - Message object with conversation_uuid field
+   */
+  async function updateConversationMessage (message) {
+    // Message does not exist in cache, fetch from server and update.
+    if (!messages.data.hasMessage(message.conversation_uuid, message.uuid)) {
+      fetchParticipants(message.conversation_uuid)
+      const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
+      setTimeout(() => {
+        emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
+          conversation_uuid: message.conversation_uuid,
+          message: fetchedMessage
+        })
+      }, 100)
+      updateAssigneeLastSeen(message.conversation_uuid)
     }
   }
 
   function addNewConversation (conversation) {
     if (!conversationUUIDExists(conversation.uuid)) {
-      conversations.data.push(conversation)
+      // Fetch list of conversations again.
+      fetchFirstPageConversations()
     }
   }
 
+  /**
+   * Update a single message property in the cache.
+   * 
+   * @param {Object} message - Message
+   */
   function updateMessageProp (message) {
-    const existingMessage = messages.data.find((m) => m.uuid === message.uuid)
-    if (existingMessage) {
-      existingMessage[message.prop] = message.value
+    const exists = messages.data.hasMessage(message.conversation_uuid, message.uuid)
+    if (exists) {
+      messages.data.updateMessageField(message.conversation_uuid, message.uuid, message.prop, message.value)
     }
   }
 
   function updateConversationProp (update) {
-    // Update prop in open conversation.
     if (conversation.data?.uuid === update.uuid) {
       conversation.data[update.prop] = update.value
     }
-    // Update prop in conversation list.
-    const existingConversation = conversations?.data?.find((c) => c.uuid === update.uuid)
+    const existingConversation = conversations?.data?.find(c => c.uuid === update.uuid)
     if (existingConversation) {
-      existingConversation[conversation.prop] = conversation.value
+      existingConversation[update.prop] = update.value
     }
+  }
+
+  function resetCurrentConversation () {
+    Object.assign(conversation, {
+      data: null,
+      participants: {},
+      macro: {},
+      mediaFiles: [],
+      loading: false,
+      errorMessage: ''
+    })
   }
 
   function resetConversations () {
     conversations.data = []
-    conversations.loading = false
     conversations.page = 1
-    conversations.hasMore = true
-    conversations.errorMessage = ''
-    seenConversationUUIDs.clear()
+    seenConversationUUIDs = new Map()
   }
 
-  function resetCurrentConversation () {
-    conversation.data = null
-    conversation.participants = {}
-    conversation.loading = false
-    conversation.errorMessage = ''
-  }
-
-  function resetMessages () {
-    messages.data = []
-    messages.loading = false
-    messages.page = 1
-    messages.hasMore = true
-    messages.errorMessage = ''
-    seenMessageUUIDs = new Set()
-  }
 
   return {
     conversations,
     conversation,
     messages,
-    sortedConversations,
-    sortedMessages,
+    conversationsList,
+    conversationMessages,
+    currentConversationHasMoreMessages,
     current,
     currentContactName,
+    currentBCC,
+    currentCC,
     clearListReRenderInterval,
     conversationUUIDExists,
     updateConversationProp,
@@ -437,18 +641,33 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchNextConversations,
     updateMessageProp,
     updateAssigneeLastSeen,
-    updateConversationMessageList,
+    updateConversationMessage,
+    snoozeConversation,
     fetchConversation,
     fetchConversationsList,
     fetchMessages,
-    setConversationList,
-    setConversationListFilters,
     upsertTags,
     updateAssignee,
     updatePriority,
     updateStatus,
-    updateConversationLastMessage,
-    resetMessages,
+    updateConversationList,
     resetCurrentConversation,
+    fetchFirstPageConversations,
+    fetchStatuses,
+    fetchPriorities,
+    setListSortField,
+    setListStatus,
+    removeMacroAction,
+    setMacro,
+    resetMacro,
+    resetMediaFiles,
+    removeAssignee,
+    getListSortField,
+    getListStatus,
+    statuses,
+    priorities,
+    priorityOptions,
+    statusOptionsNoSnooze,
+    statusOptions
   }
 })

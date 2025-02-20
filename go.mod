@@ -1,4 +1,4 @@
-module github.com/abhinavxd/artemis
+module github.com/abhinavxd/libredesk
 
 go 1.22.3
 

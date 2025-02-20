@@ -12,7 +12,7 @@ write_timeout = "5s"
 max_body_size = 10000000
 keepalive_timeout = "10s"
 
-# File upload.
+# File upload provider.
 [upload]
 provider = "fs"
 
@@ -23,14 +23,12 @@ upload_path = '/home/ubuntu/uploads'
 # S3 provider.
 [upload.s3]
 url = ""
-public_url = ""
 access_key = ""
 secret_key = ""
 region = "ap-south-1"
 bucket = "bucket"
 bucket_path = ""
-bucket_type = "private"
-expiry = "15m"
+expiry = "6h"
 
 # Postgres.
 [db]
@@ -38,11 +36,11 @@ host = "127.0.0.1"
 port = 5432
 user = "postgres"
 password = "postgres"
-database = "database"
+database = "libredesk"
 ssl_mode = "disable"
-max_open = 10
-max_idle = 10
-max_lifetime = "10s"
+max_open = 30
+max_idle = 30
+max_lifetime = "300s"
 
 # Redis.
 [redis]
@@ -51,14 +49,24 @@ password = ""
 db = 0
 
 [message]
-dispatch_workers = 10
-dispatch_scan_interval = "50ms"
+outgoing_queue_workers = 10
+incoming_queue_workers = 10
+message_outoing_scan_interval = "50ms"
 incoming_queue_size = 5000
 outgoing_queue_size = 5000
 
 [notification]
 concurrency = 2
-queue_size = 100
+queue_size = 2000
 
 [automation]
 worker_count = 10
+
+[autoassigner]
+autoassign_interval = "5m"
+
+[conversation]
+unsnooze_interval = "5m"
+
+[sla]
+evaluation_interval = "5m"

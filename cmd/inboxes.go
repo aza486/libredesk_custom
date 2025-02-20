@@ -3,8 +3,8 @@ package main
 import (
 	"strconv"
 
-	"github.com/abhinavxd/artemis/internal/envelope"
-	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -23,7 +23,7 @@ func handleGetInbox(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	inbox, err := app.inbox.GetByID(id)
+	inbox, err := app.inbox.GetDBRecord(id)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching inbox", nil, envelope.GeneralError)
 	}
@@ -54,6 +54,7 @@ func handleCreateInbox(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleUpdateInbox updates an inbox
 func handleUpdateInbox(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -74,7 +75,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	}
 
 	if err := reloadInboxes(app); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes, Please restart the app if the issue persists", nil, envelope.GeneralError)
 	}
 
 	return r.SendEnvelope(inbox)

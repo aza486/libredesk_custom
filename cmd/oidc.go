@@ -1,18 +1,23 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/oidc/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/oidc/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
-const (
-	redirectURI = "/api/oidc/finish?id=%d"
-)
+// handleGetAllEnabledOIDC returns all enabled OIDC records
+func handleGetAllEnabledOIDC(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	out, err := app.oidc.GetAllEnabled()
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(out)
+}
 
 // handleGetAllOIDC returns all OIDC records
 func handleGetAllOIDC(r *fastglue.Request) error {
@@ -26,21 +31,16 @@ func handleGetAllOIDC(r *fastglue.Request) error {
 
 // handleGetOIDC returns an OIDC record by id.
 func handleGetOIDC(r *fastglue.Request) error {
-	app := r.Context.(*App)
-
+	var app = r.Context.(*App)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid OIDC `id`", nil, envelope.InputError)
 	}
-
-	o, err := app.oidc.Get(id)
+	o, err := app.oidc.Get(id, false)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	o.RedirectURI = fmt.Sprintf("%s%s", app.consts.AppBaseURL, fmt.Sprintf(redirectURI, o.ID))
-
 	return r.SendEnvelope(o)
 }
 
@@ -61,7 +61,7 @@ func handleCreateOIDC(r *fastglue.Request) error {
 	if err := reloadAuth(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("OIDC created successfully")
 }
 
 func handleUpdateOIDC(r *fastglue.Request) error {
@@ -86,9 +86,9 @@ func handleUpdateOIDC(r *fastglue.Request) error {
 
 	// Reload the auth manager to update the OIDC providers.
 	if err := reloadAuth(app); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("OIDC updated successfully")
 }
 
 func handleDeleteOIDC(r *fastglue.Request) error {
@@ -107,7 +107,7 @@ func handleDeleteOIDC(r *fastglue.Request) error {
 
 	// Reload the auth manager to update the OIDC providers.
 	if err := reloadAuth(app); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading auth", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("OIDC deleted successfully")
 }

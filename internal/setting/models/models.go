@@ -5,8 +5,11 @@ type General struct {
 	Lang                        string   `json:"app.lang"`
 	MaxFileUploadSize           int      `json:"app.max_file_upload_size"`
 	FaviconURL                  string   `json:"app.favicon_url"`
+	LogoURL                     string   `json:"app.logo_url"`
 	RootURL                     string   `json:"app.root_url"`
 	AllowedFileUploadExtensions []string `json:"app.allowed_file_upload_extensions"`
+	Timezone                    string   `json:"app.timezone"`
+	BusinessHoursID             string   `json:"app.business_hours_id"`
 }
 
 type EmailNotification struct {

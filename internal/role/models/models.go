@@ -6,10 +6,14 @@ import (
 	"github.com/lib/pq"
 )
 
-// Default roles
-var Roles = []string{
-	"Admin",
-	"Agent",
+const (
+	RoleAdmin = "Admin"
+	RoleAgent = "Agent"
+)
+
+var DefaultRoles = []string{
+	RoleAdmin,
+	RoleAgent,
 }
 
 type Role struct {

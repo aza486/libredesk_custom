@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// PaginationOptions represents the options for paginating a query
+// PaginationOptions represents the options for paginating a query.
 type PaginationOptions struct {
 	Page     int
 	PageSize int
@@ -15,12 +15,13 @@ type PaginationOptions struct {
 	Order    string
 }
 
+// Order directions.
 const (
-	ASC  string = "ASC"
-	DESC string = "DESC"
+	ASC  = "ASC"
+	DESC = "DESC"
 )
 
-// Filter represents a single filter condition
+// Filter represents a filter to be applied to a query.
 type Filter struct {
 	Model    string `json:"model"`
 	Field    string `json:"field"`
@@ -28,107 +29,111 @@ type Filter struct {
 	Value    string `json:"value"`
 }
 
-// AllowedFields represents the allowed fields for each model
+// AllowedFields is a map of model names to a list of allowed fields for that model.
 type AllowedFields map[string][]string
 
-// PaginateAndFilterQuery returns a paginated and filtered query with arguments
-func PaginateAndFilterQuery(baseQuery string, existingArgs []interface{}, opts PaginationOptions, filtersJSON string, allowedFields AllowedFields) (string, []interface{}, error) {
-	// Parse filters
+// BuildPaginatedQuery builds a paginated query from the given base query, existing arguments, pagination options, filters JSON, and allowed fields.
+func BuildPaginatedQuery(baseQuery string, existingArgs []interface{}, opts PaginationOptions, filtersJSON string, allowedFields AllowedFields) (string, []interface{}, error) {
+	if opts.Page <= 0 {
+		return "", nil, fmt.Errorf("invalid page number: %d", opts.Page)
+	}
+	if opts.PageSize <= 0 {
+		return "", nil, fmt.Errorf("invalid page size: %d", opts.PageSize)
+	}
+
 	var filters []Filter
 	if filtersJSON != "" {
 		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
-			return "", nil, fmt.Errorf("invalid filters JSON: %v", err)
+			return "", nil, fmt.Errorf("invalid filters JSON: %w", err)
 		}
 	}
 
-	// Apply filters
-	query, args, err := applyFilters(baseQuery, existingArgs, filters, allowedFields)
+	whereClause, filterArgs, err := buildWhereClause(filters, existingArgs, allowedFields)
 	if err != nil {
 		return "", nil, err
 	}
 
-	// Calculate offset
-	offset := (opts.Page - 1) * opts.PageSize
+	query := baseQuery
+	args := existingArgs
 
-	// Prepare the order by clause
-	var orderByClause string
-	if opts.OrderBy != "" {
-		orderByClause = fmt.Sprintf("ORDER BY %s", opts.OrderBy)
-		if opts.Order != "" {
-			switch strings.ToUpper(opts.Order) {
-			case ASC, DESC:
-				orderByClause += " " + strings.ToUpper(opts.Order)
-			default:
-				return "", nil, fmt.Errorf("invalid order direction: %s", opts.Order)
-			}
-		}
+	if whereClause != "" {
+		query += " AND " + whereClause
+		args = append(args, filterArgs...)
 	}
 
-	// Append pagination to the query
-	query = fmt.Sprintf("%s %s LIMIT $%d OFFSET $%d",
-		query,
-		orderByClause,
-		len(args)+1,
-		len(args)+2,
-	)
+	if opts.OrderBy != "" {
+		order := strings.ToUpper(opts.Order)
+		if order != "" && order != ASC && order != DESC {
+			return "", nil, fmt.Errorf("invalid order direction: %s", opts.Order)
+		}
+		query += fmt.Sprintf(" ORDER BY %s %s NULLS LAST", opts.OrderBy, order)
+	}
 
-	// Append pagination arguments
+	offset := (opts.Page - 1) * opts.PageSize
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, opts.PageSize, offset)
 
 	return query, args, nil
 }
 
-// applyFilters applies passed filters to the based query.
-func applyFilters(baseQuery string, existingArgs []interface{}, filters []Filter, allowedFields AllowedFields) (string, []interface{}, error) {
-	var conditions []string
-	args := make([]interface{}, len(existingArgs))
-	copy(args, existingArgs)
+// buildWhereClause builds a WHERE clause from the given filters and returns the WHERE clause and the arguments to be passed to the query.
+func buildWhereClause(filters []Filter, existingArgs []interface{}, allowedFields AllowedFields) (string, []interface{}, error) {
+	conditions := []string{}
+	args := []interface{}{}
+	paramCount := len(existingArgs) + 1
 
-	operatorMap := map[string]string{
-		"=":  "=",
-		"!=": "!=",
-		">":  ">",
-		"<":  "<",
-		">=": ">=",
-		"<=": "<=",
-	}
-
-	// Build the conditions
-	for _, filter := range filters {
-		modelFields, ok := allowedFields[filter.Model]
+	for _, f := range filters {
+		modelFields, ok := allowedFields[f.Model]
 		if !ok {
-			return "", nil, fmt.Errorf("invalid model in filter: %s", filter.Model)
+			return "", nil, fmt.Errorf("invalid model: %s", f.Model)
 		}
-		if !slices.Contains(modelFields, filter.Field) {
-			return "", nil, fmt.Errorf("invalid field in filter: %s for model: %s", filter.Field, filter.Model)
-		}
-		op, ok := operatorMap[filter.Operator]
-		if !ok {
-			return "", nil, fmt.Errorf("invalid operator: %s", filter.Operator)
+		if !slices.Contains(modelFields, f.Field) {
+			return "", nil, fmt.Errorf("invalid field: %s for model: %s", f.Field, f.Model)
 		}
 
-		var condition string
-		if op == "!=" {
-			// For != operator, include NULL values using OR IS NULL
-			condition = fmt.Sprintf("(%s.%s %s $%d OR %s.%s IS NULL)",
-				filter.Model, filter.Field, op, len(args)+1,
-				filter.Model, filter.Field)
-		} else {
-			condition = fmt.Sprintf("%s.%s %s $%d",
-				filter.Model, filter.Field, op, len(args)+1)
-		}
+		field := fmt.Sprintf("%s.%s", f.Model, f.Field)
 
-		conditions = append(conditions, condition)
-		args = append(args, filter.Value)
+		switch f.Operator {
+		case "equals":
+			conditions = append(conditions, field+fmt.Sprintf(" = $%d", paramCount))
+			args = append(args, f.Value)
+			paramCount++
+		case "not equals":
+			conditions = append(conditions, field+fmt.Sprintf(" != $%d", paramCount))
+			args = append(args, f.Value)
+			paramCount++
+		case "set":
+			conditions = append(conditions, field+" IS NOT NULL")
+		case "not set":
+			conditions = append(conditions, field+" IS NULL")
+		case "in":
+			var arr []string
+			if err := json.Unmarshal([]byte(f.Value), &arr); err != nil {
+				return "", nil, fmt.Errorf("invalid array format for 'in' operator: %v", err)
+			}
+			placeholders := make([]string, len(arr))
+			for i, v := range arr {
+				placeholders[i] = fmt.Sprintf("$%d", paramCount)
+				args = append(args, v)
+				paramCount++
+			}
+			conditions = append(conditions, field+" IN ("+strings.Join(placeholders, ",")+")")
+		case "between":
+			values := strings.Split(f.Value, ",")
+			if len(values) != 2 {
+				return "", nil, fmt.Errorf("between requires 2 values")
+			}
+			conditions = append(conditions, fmt.Sprintf("%s BETWEEN $%d AND $%d", field, paramCount, paramCount+1))
+			args = append(args, strings.TrimSpace(values[0]), strings.TrimSpace(values[1]))
+			paramCount += 2
+		default:
+			return "", nil, fmt.Errorf("invalid operator: %s", f.Operator)
+		}
 	}
 
-	if len(conditions) > 0 {
-		if strings.Contains(baseQuery, "WHERE") {
-			baseQuery += " AND " + strings.Join(conditions, " AND ")
-		} else {
-			baseQuery += " WHERE " + strings.Join(conditions, " AND ")
-		}
+	if len(conditions) == 0 {
+		return "", nil, nil
 	}
 
-	return baseQuery, args, nil
+	return strings.Join(conditions, " AND "), args, nil
 }

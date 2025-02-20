@@ -4,10 +4,11 @@ package setting
 import (
 	"embed"
 	"encoding/json"
+	"strings"
 
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/setting/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/setting/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/zerodha/logf"
@@ -32,6 +33,7 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
+	Get         *sqlx.Stmt `query:"get"`
 	GetAll      *sqlx.Stmt `query:"get-all"`
 	Update      *sqlx.Stmt `query:"update"`
 	GetByPrefix *sqlx.Stmt `query:"get-by-prefix"`
@@ -72,11 +74,9 @@ func (m *Manager) GetAll() (models.Settings, error) {
 // GetAllJSON retrieves all settings as JSON.
 func (m *Manager) GetAllJSON() (types.JSONText, error) {
 	var b types.JSONText
-
 	if err := m.q.GetAll.Get(&b); err != nil {
 		return b, err
 	}
-
 	return b, nil
 }
 
@@ -87,12 +87,10 @@ func (m *Manager) Update(s interface{}) error {
 	if err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating settings", nil)
 	}
-
 	// Update the settings in the DB.
 	if _, err := m.q.Update.Exec(b); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating settings", nil)
 	}
-
 	return nil
 }
 
@@ -101,7 +99,27 @@ func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 	var b types.JSONText
 	if err := m.q.GetByPrefix.Get(&b, prefix+"%"); err != nil {
 		m.lo.Error("error fetching settings", "prefix", prefix, "error", err)
-		return b, err
+		return b, envelope.NewError(envelope.GeneralError, "Error fetching settings", nil)
 	}
 	return b, nil
+}
+
+// Get retrieves a setting by key as JSON.
+func (m *Manager) Get(key string) (types.JSONText, error) {
+	var b types.JSONText
+	if err := m.q.Get.Get(&b, key); err != nil {
+		m.lo.Error("error fetching setting", "key", key, "error", err)
+		return b, envelope.NewError(envelope.GeneralError, "Error fetching setting", nil)
+	}
+	return b, nil
+}
+
+// GetAppRootURL returns the root URL of the app.
+func (m *Manager) GetAppRootURL() (string, error) {
+	rootURL, err := m.Get("app.root_url")
+	if err != nil {
+		m.lo.Error("error fetching root URL", "error", err)
+		return "", envelope.NewError(envelope.GeneralError, "Error fetching app root URL", nil)
+	}
+	return strings.Trim(string(rootURL), "\""), nil
 }

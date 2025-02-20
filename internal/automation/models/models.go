@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/lib/pq"
 )
 
@@ -13,7 +14,10 @@ const (
 	ActionSetStatus       = "set_status"
 	ActionSetPriority     = "set_priority"
 	ActionSendPrivateNote = "send_private_note"
-	ActionReply           = "reply"
+	ActionReply           = "send_reply"
+	ActionSetSLA          = "set_sla"
+	ActionSetTags         = "set_tags"
+	ActionSendCSAT        = "send_csat"
 
 	OperatorAnd = "AND"
 	OperatorOR  = "OR"
@@ -38,6 +42,8 @@ const (
 	ConversationAssignedTeam       = "assigned_team"
 	ConversationHoursSinceCreated  = "hours_since_created"
 	ConversationHoursSinceResolved = "hours_since_resolved"
+	ConversationInbox              = "inbox"
+	ContactEmail                   = "contact_email"
 
 	EventConversationUserAssigned    = "conversation.user.assigned"
 	EventConversationTeamAssigned    = "conversation.team.assigned"
@@ -45,27 +51,44 @@ const (
 	EventConversationPriorityChange  = "conversation.priority.change"
 	EventConversationMessageOutgoing = "conversation.message.outgoing"
 	EventConversationMessageIncoming = "conversation.message.incoming"
+
+	ExecutionModeAll        = "all"
+	ExecutionModeFirstMatch = "first_match"
 )
+
+// ActionPermissions maps actions to permissions
+var ActionPermissions = map[string]string{
+	ActionAssignTeam:      authzModels.PermConversationsUpdateTeamAssignee,
+	ActionAssignUser:      authzModels.PermConversationsUpdateUserAssignee,
+	ActionSetStatus:       authzModels.PermConversationsUpdateStatus,
+	ActionSetPriority:     authzModels.PermConversationsUpdatePriority,
+	ActionSendPrivateNote: authzModels.PermMessagesWrite,
+	ActionReply:           authzModels.PermMessagesWrite,
+	ActionSetTags:         authzModels.PermConversationsUpdateTags,
+}
 
 // RuleRecord represents a rule record in the database
 type RuleRecord struct {
-	ID          int             `db:"id" json:"id"`
-	CreatedAt   time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time       `db:"updated_at" json:"updated_at"`
-	Name        string          `db:"name" json:"name"`
-	Description string          `db:"description" json:"description"`
-	Type        string          `db:"type" json:"type"`
-	Events      pq.StringArray  `db:"events" json:"events"`
-	Disabled    bool            `db:"disabled" json:"disabled"`
-	Rules       json.RawMessage `db:"rules" json:"rules"`
+	ID            int             `db:"id" json:"id"`
+	CreatedAt     time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time       `db:"updated_at" json:"updated_at"`
+	Name          string          `db:"name" json:"name"`
+	Description   string          `db:"description" json:"description"`
+	Type          string          `db:"type" json:"type"`
+	Events        pq.StringArray  `db:"events" json:"events"`
+	Enabled       bool            `db:"enabled" json:"enabled"`
+	Weight        int             `db:"weight" json:"weight"`
+	ExecutionMode string          `db:"execution_mode" json:"execution_mode"`
+	Rules         json.RawMessage `db:"rules" json:"rules"`
 }
 
 type Rule struct {
-	Type          string       `json:"type" db:"type"`
-	Events        []string     `json:"event" db:"event"`
-	GroupOperator string       `json:"group_operator" db:"group_operator"`
-	Groups        []RuleGroup  `json:"groups" db:"groups"`
-	Actions       []RuleAction `json:"actions" db:"actions"`
+	Type          string       `json:"type"`
+	ExecutionMode string       `json:"execution_mode"`
+	Events        []string     `json:"event"`
+	GroupOperator string       `json:"group_operator"`
+	Groups        []RuleGroup  `json:"groups"`
+	Actions       []RuleAction `json:"actions"`
 }
 
 type RuleGroup struct {
@@ -81,6 +104,7 @@ type RuleDetail struct {
 }
 
 type RuleAction struct {
-	Type   string `json:"type" db:"type"`
-	Action string `json:"value" db:"value"`
+	Type         string   `json:"type" db:"type"`
+	Value        []string `json:"value" db:"value"`
+	DisplayValue []string `json:"display_value" db:"-"`
 }

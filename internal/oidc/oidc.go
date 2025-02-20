@@ -2,25 +2,28 @@ package oidc
 
 import (
 	"embed"
+	"fmt"
 	"strings"
 
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/oidc/models"
-	"github.com/abhinavxd/artemis/internal/stringutil"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/oidc/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
 
 var (
 	//go:embed queries.sql
-	efs embed.FS
+	efs         embed.FS
+	redirectURL = "/api/v1/oidc/%d/finish"
 )
 
 // Manager handles oidc-related operations.
 type Manager struct {
-	q  queries
-	lo *logf.Logger
+	q       queries
+	lo      *logf.Logger
+	setting settingsStore
 }
 
 // Opts contains options for initializing the Manager.
@@ -31,36 +34,47 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetAllOIDC *sqlx.Stmt `query:"get-all-oidc"`
-	GetOIDC    *sqlx.Stmt `query:"get-oidc"`
-	InsertOIDC *sqlx.Stmt `query:"insert-oidc"`
-	UpdateOIDC *sqlx.Stmt `query:"update-oidc"`
-	DeleteOIDC *sqlx.Stmt `query:"delete-oidc"`
+	GetAllOIDC    *sqlx.Stmt `query:"get-all-oidc"`
+	GetAllEnabled *sqlx.Stmt `query:"get-all-enabled"`
+	GetOIDC       *sqlx.Stmt `query:"get-oidc"`
+	InsertOIDC    *sqlx.Stmt `query:"insert-oidc"`
+	UpdateOIDC    *sqlx.Stmt `query:"update-oidc"`
+	DeleteOIDC    *sqlx.Stmt `query:"delete-oidc"`
+}
+
+type settingsStore interface {
+	GetAppRootURL() (string, error)
 }
 
 // New creates and returns a new instance of the oidc Manager.
-func New(opts Opts) (*Manager, error) {
+func New(opts Opts, setting settingsStore) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
-		q:  q,
-		lo: opts.Lo,
+		q:       q,
+		lo:      opts.Lo,
+		setting: setting,
 	}, nil
 }
 
 // Get returns an oidc by id.
-func (o *Manager) Get(id int) (models.OIDC, error) {
+func (o *Manager) Get(id int, includeSecret bool) (models.OIDC, error) {
 	var oidc models.OIDC
 	if err := o.q.GetOIDC.Get(&oidc, id); err != nil {
 		o.lo.Error("error fetching oidc", "error", err)
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
+	// Set logo and redirect URL.
 	oidc.SetProviderLogo()
-	if oidc.ClientSecret != "" {
+	rootURL, err := o.setting.GetAppRootURL()
+	if err != nil {
+		return models.OIDC{}, err
+	}
+	oidc.RedirectURI = fmt.Sprintf(rootURL+redirectURL, oidc.ID)
+	// If secret is not to be included, replace it with dummy characters.
+	if oidc.ClientSecret != "" && !includeSecret {
 		oidc.ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
 	}
 	return oidc, nil
@@ -70,6 +84,28 @@ func (o *Manager) Get(id int) (models.OIDC, error) {
 func (o *Manager) GetAll() ([]models.OIDC, error) {
 	var oidc = make([]models.OIDC, 0)
 	if err := o.q.GetAllOIDC.Select(&oidc); err != nil {
+		o.lo.Error("error fetching oidc", "error", err)
+		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
+	}
+
+	// Get root URL of the app.
+	rootURL, err := o.setting.GetAppRootURL()
+	if err != nil {
+		return nil, err
+	}
+
+	// Set logo and redirect URL.
+	for i := range oidc {
+		oidc[i].RedirectURI = fmt.Sprintf(rootURL+redirectURL, oidc[i].ID)
+		oidc[i].SetProviderLogo()
+	}
+	return oidc, nil
+}
+
+// GetAllEnabled retrieves all enabled oidc.
+func (o *Manager) GetAllEnabled() ([]models.OIDC, error) {
+	var oidc = make([]models.OIDC, 0)
+	if err := o.q.GetAllEnabled.Select(&oidc); err != nil {
 		o.lo.Error("error fetching oidc", "error", err)
 		return oidc, envelope.NewError(envelope.GeneralError, "Error fetching OIDC", nil)
 	}
@@ -90,14 +126,14 @@ func (o *Manager) Create(oidc models.OIDC) error {
 
 // Create updates a oidc by id.
 func (o *Manager) Update(id int, oidc models.OIDC) error {
-	current, err := o.Get(id)
+	current, err := o.Get(id, true)
 	if err != nil {
 		return err
 	}
 	if oidc.ClientSecret == "" {
 		oidc.ClientSecret = current.ClientSecret
 	}
-	if _, err := o.q.UpdateOIDC.Exec(id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Disabled); err != nil {
+	if _, err := o.q.UpdateOIDC.Exec(id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Enabled); err != nil {
 		o.lo.Error("error updating oidc", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating OIDC", nil)
 	}

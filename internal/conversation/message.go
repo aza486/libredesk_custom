@@ -7,17 +7,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	amodels "github.com/abhinavxd/artemis/internal/automation/models"
-	"github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/inbox"
-	mmodels "github.com/abhinavxd/artemis/internal/media/models"
-	"github.com/abhinavxd/artemis/internal/stringutil"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	amodels "github.com/abhinavxd/libredesk/internal/automation/models"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/image"
+	"github.com/abhinavxd/libredesk/internal/inbox"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/lib/pq"
+	"github.com/volatiletech/null/v9"
 )
 
 const (
@@ -25,13 +30,13 @@ const (
 	MessageOutgoing = "outgoing"
 	MessageActivity = "activity"
 
-	SenderTypeUser    = "user"
+	SenderTypeAgent   = "agent"
 	SenderTypeContact = "contact"
 
-	MessageStatusPending   = "pending"
-	MessageStatusSent      = "sent"
-	MessageStatusFailed    = "failed"
-	MessageStatusReceived  = "received"
+	MessageStatusPending  = "pending"
+	MessageStatusSent     = "sent"
+	MessageStatusFailed   = "failed"
+	MessageStatusReceived = "received"
 
 	ActivityStatusChange       = "status_change"
 	ActivityPriorityChange     = "priority_change"
@@ -39,6 +44,7 @@ const (
 	ActivityAssignedTeamChange = "assigned_team_change"
 	ActivitySelfAssign         = "self_assign"
 	ActivityTagChange          = "tag_change"
+	ActivitySLASet             = "sla_set"
 
 	ContentTypeText = "text"
 	ContentTypeHTML = "html"
@@ -49,25 +55,24 @@ const (
 
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
 // pending outgoing messages at the specified read interval and pushes them to the outgoing queue.
-func (m *Manager) Run(ctx context.Context, dispatchConcurrency int, scanInterval time.Duration) {
+func (m *Manager) Run(ctx context.Context, incomingQWorkers, outgoingQWorkers, scanInterval time.Duration) {
 	dbScanner := time.NewTicker(scanInterval)
 	defer dbScanner.Stop()
 
-	// Spawn a worker goroutine pool to dispatch messages.
-	for range dispatchConcurrency {
+	for range outgoingQWorkers {
 		m.wg.Add(1)
 		go func() {
 			defer m.wg.Done()
-			m.MessageDispatchWorker(ctx)
+			m.MessageSenderWorker(ctx)
 		}()
 	}
-
-	// Spawn a goroutine to process incoming messages.
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
-		m.IncomingMessageWorker(ctx)
-	}()
+	for range incomingQWorkers {
+		m.wg.Add(1)
+		go func() {
+			defer m.wg.Done()
+			m.IncomingMessageWorker(ctx)
+		}()
+	}
 
 	// Scan pending outgoing messages and send them.
 	for {
@@ -126,8 +131,8 @@ func (m *Manager) IncomingMessageWorker(ctx context.Context) {
 	}
 }
 
-// MessageDispatchWorker dispatches outgoing pending messages.
-func (m *Manager) MessageDispatchWorker(ctx context.Context) {
+// MessageSenderWorker sends outgoing pending messages.
+func (m *Manager) MessageSenderWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -136,19 +141,19 @@ func (m *Manager) MessageDispatchWorker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			m.processOutgoingMessage(message)
+			m.sendOutgoingMessage(message)
 		}
 	}
 }
 
-// processOutgoingMessage handles the processing of a single outgoing message
-func (m *Manager) processOutgoingMessage(message models.Message) {
+// sendOutgoingMessage sends an outgoing message.
+func (m *Manager) sendOutgoingMessage(message models.Message) {
 	defer m.outgoingProcessingMessages.Delete(message.ID)
 
 	// Helper function to handle errors
 	handleError := func(err error, errorMsg string) bool {
 		if err != nil {
-			m.lo.Error(errorMsg, "error", err, "id", message.ID)
+			m.lo.Error(errorMsg, "error", err, "message_id", message.ID)
 			m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
 			return true
 		}
@@ -173,9 +178,9 @@ func (m *Manager) processOutgoingMessage(message models.Message) {
 		return
 	}
 
-	// Set message properties
+	// Set message sender and receiver
 	message.From = inbox.FromAddress()
-	message.To, _ = m.GetToAddress(message.ConversationID, inbox.Channel())
+	message.To, _ = m.GetToAddress(message.ConversationID)
 	message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
 
 	// Send message
@@ -193,12 +198,12 @@ func (m *Manager) processOutgoingMessage(message models.Message) {
 func (m *Manager) RenderContentInTemplate(channel string, message *models.Message) error {
 	switch channel {
 	case inbox.ChannelEmail:
-		conversation, err := m.GetConversation(message.ConversationUUID)
+		conversation, err := m.GetConversation(0, message.ConversationUUID)
 		if err != nil {
 			m.lo.Error("error fetching conversation", "uuid", message.ConversationUUID, "error", err)
 			return fmt.Errorf("fetching conversation: %w", err)
 		}
-		message.Content, err = m.template.RenderEmail(conversation, message.Content)
+		message.Content, err = m.template.RenderWithBaseTemplate(conversation, message.Content)
 		if err != nil {
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
 			return fmt.Errorf("could not render email content using template: %w", err)
@@ -258,7 +263,7 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 
 	// Broadcast messge status update to all conversation subscribers.
 	conversationUUID, _ := m.getConversationUUIDFromMessageUUID(uuid)
-	m.BroadcastMessagePropUpdate(conversationUUID, uuid, "status" /*property*/, status)
+	m.BroadcastMessageUpdate(conversationUUID, uuid, "status" /*property*/, status)
 	return nil
 }
 
@@ -277,7 +282,7 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
 		Type:             MessageOutgoing,
-		SenderType:       SenderTypeUser,
+		SenderType:       SenderTypeAgent,
 		Status:           MessageStatusSent,
 		Content:          content,
 		ContentType:      ContentTypeHTML,
@@ -288,18 +293,32 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 }
 
 // SendReply inserts a reply message in a conversation.
-func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string) error {
-	// Insert Message.
+func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string, cc, bcc []string, meta map[string]interface{}) error {
+	cc = stringutil.RemoveEmpty(cc)
+	bcc = stringutil.RemoveEmpty(bcc)
+
+	// Save cc and bcc as JSON in meta.
+	if len(cc) > 0 {
+		meta["cc"] = cc
+	}
+	if len(bcc) > 0 {
+		meta["bcc"] = bcc
+	}
+	metaJSON, err := json.Marshal(meta)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error marshalling message meta", nil)
+	}
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
 		Type:             MessageOutgoing,
-		SenderType:       SenderTypeUser,
+		SenderType:       SenderTypeAgent,
 		Status:           MessageStatusPending,
 		Content:          content,
 		ContentType:      ContentTypeHTML,
 		Private:          false,
 		Media:            media,
+		Meta:             string(metaJSON),
 	}
 	return m.InsertMessage(&message)
 }
@@ -311,12 +330,16 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		message.Status = MessageStatusSent
 	}
 
-	if message.Meta == "" {
+	// Handle empty meta.
+	if message.Meta == "" || message.Meta == "null" {
 		message.Meta = "{}"
 	}
 
+	// Convert HTML content to text for search.
+	message.TextContent = stringutil.HTML2Text(message.Content)
+
 	// Insert Message.
-	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.SenderID, message.SenderType,
+	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.TextContent, message.SenderID, message.SenderType,
 		message.Private, message.ContentType, message.SourceID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
 		m.lo.Error("error inserting message in db", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
@@ -328,22 +351,21 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Add this user as a participant.
-	if err := m.AddConversationParticipant(message.SenderID, message.ConversationUUID); err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error sending message", nil)
+	if err := m.addConversationParticipant(message.SenderID, message.ConversationUUID); err != nil {
+		return err
 	}
 
-	// Update conversation meta with the last message details.
-	plainTextContent := stringutil.HTML2Text(message.Content)
-	m.UpdateConversationLastMessage(0, message.ConversationUUID, plainTextContent, message.CreatedAt)
+	// Update conversation last message details in conversation metadata.
+	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.CreatedAt)
 
-	// Broadcast new message to all conversation subscribers.
-	m.BroadcastNewConversationMessage(message.ConversationUUID, plainTextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
+	// Broadcast new message.
+	m.BroadcastNewMessage(message.ConversationUUID, message.TextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
 	return nil
 }
 
 // RecordAssigneeUserChange records an activity for a user assignee change.
 func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error {
-	// Self assign.
+	// Self assignment.
 	if assigneeID == actor.ID {
 		return m.InsertConversationActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
 	}
@@ -358,7 +380,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 
 // RecordAssigneeTeamChange records an activity for a team assignee change.
 func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, actor umodels.User) error {
-	team, err := m.teamStore.GetTeam(teamID)
+	team, err := m.teamStore.Get(teamID)
 	if err != nil {
 		return err
 	}
@@ -373,6 +395,16 @@ func (m *Manager) RecordPriorityChange(priority, conversationUUID string, actor 
 // RecordStatusChange records an activity for a status change.
 func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umodels.User) error {
 	return m.InsertConversationActivity(ActivityStatusChange, conversationUUID, status, actor)
+}
+
+// RecordSLASet records an activity for an SLA set.
+func (m *Manager) RecordSLASet(conversationUUID string, slaName string, actor umodels.User) error {
+	return m.InsertConversationActivity(ActivitySLASet, conversationUUID, slaName, actor)
+}
+
+// RecordTagChange records an activity for a tag change.
+func (m *Manager) RecordTagChange(conversationUUID string, tag string, actor umodels.User) error {
+	return m.InsertConversationActivity(ActivityTagChange, conversationUUID, tag, actor)
 }
 
 // InsertConversationActivity inserts an activity message.
@@ -391,11 +423,13 @@ func (m *Manager) InsertConversationActivity(activityType, conversationUUID, new
 		ConversationUUID: conversationUUID,
 		Private:          true,
 		SenderID:         actor.ID,
-		SenderType:       SenderTypeUser,
+		SenderType:       SenderTypeAgent,
 	}
 
-	// InsertMessage message in DB.
-	m.InsertMessage(&message)
+	if err := m.InsertMessage(&message); err != nil {
+		m.lo.Error("error inserting activity message", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error inserting activity message", nil)
+	}
 	return nil
 }
 
@@ -420,11 +454,13 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 	case ActivitySelfAssign:
 		content = fmt.Sprintf("%s self-assigned this conversation", actorName)
 	case ActivityPriorityChange:
-		content = fmt.Sprintf("%s changed priority to %s", actorName, newValue)
+		content = fmt.Sprintf("%s set priority to %s", actorName, newValue)
 	case ActivityStatusChange:
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
 	case ActivityTagChange:
-		content = fmt.Sprintf("%s added tags %s", actorName, newValue)
+		content = fmt.Sprintf("%s added tag %s", actorName, newValue)
+	case ActivitySLASet:
+		content = fmt.Sprintf("%s set %s SLA", actorName, newValue)
 	default:
 		return "", fmt.Errorf("invalid activity type %s", activityType)
 	}
@@ -434,20 +470,18 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 // processIncomingMessage handles the insertion of an incoming message and
 // associated contact. It finds or creates the contact, checks for existing
 // conversations, and creates a new conversation if necessary. It also
-// inserts the message, uploads any attachments, and evaluates automation rules.
+// inserts the message, uploads any attachments, and queues the conversation evaluation of automation rules.
 func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
-	var err error
-
-	// Find or create contact.
-	in.Message.SenderID, err = m.contactStore.Upsert(in.Contact)
-	if err != nil {
+	// Find or create contact and set sender ID in message.
+	if err := m.userStore.CreateContact(&in.Contact); err != nil {
 		m.lo.Error("error upserting contact", "error", err)
 		return err
 	}
+	in.Message.SenderID = in.Contact.ID
 
-	// This message already exists?
+	// Conversations exists for this message?
 	conversationID, err := m.findConversationID([]string{in.Message.SourceID.String})
-	if err != nil && err != ErrConversationNotFound {
+	if err != nil && err != errConversationNotFound {
 		return err
 	}
 	if conversationID > 0 {
@@ -455,18 +489,19 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 	}
 
 	// Find or create new conversation.
-	isNewConversation, err := m.findOrCreateConversation(&in.Message, in.InboxID, in.Message.SenderID)
+	isNewConversation, err := m.findOrCreateConversation(&in.Message, in.InboxID, in.Contact.ContactChannelID, in.Contact.ID)
 	if err != nil {
 		return err
 	}
 
-	// Insert message.
-	if err = m.InsertMessage(&in.Message); err != nil {
-		return err
+	// Upload message attachments.
+	if err := m.uploadMessageAttachments(&in.Message); err != nil {
+		// Log error but continue processing.
+		m.lo.Error("error uploading message attachments", "message_source_id", in.Message.SourceID, "error", err)
 	}
 
-	// Upload attachments.
-	if err := m.uploadMessageAttachments(&in.Message); err != nil {
+	// Insert message.
+	if err = m.InsertMessage(&in.Message); err != nil {
 		return err
 	}
 
@@ -475,6 +510,16 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
 	} else {
 		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)
+		// Reopen conversation if it's closed, snoozed, or resolved.
+		systemUser, err := m.userStore.GetSystemUser()
+		if err != nil {
+			m.lo.Error("error fetching system user", "error", err)
+			return fmt.Errorf("error fetching system user for reopening conversation: %w", err)
+		}
+		if err := m.ReOpenConversation(in.Message.ConversationUUID, systemUser); err != nil {
+			m.lo.Error("error reopening conversation", "error", err)
+			return fmt.Errorf("error reopening conversation: %w", err)
+		}
 	}
 	return nil
 }
@@ -483,7 +528,7 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 func (m *Manager) MessageExists(messageID string) (bool, error) {
 	_, err := m.findConversationID([]string{messageID})
 	if err != nil {
-		if errors.Is(err, ErrConversationNotFound) {
+		if errors.Is(err, errConversationNotFound) {
 			return false, nil
 		}
 		m.lo.Error("error fetching message from db", "error", err)
@@ -514,7 +559,7 @@ func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error
 	var conversation = models.Conversation{}
 	if err := m.q.GetConversationByMessageID.Get(&conversation, id); err != nil {
 		if err == sql.ErrNoRows {
-			return conversation, ErrConversationNotFound
+			return conversation, errConversationNotFound
 		}
 		m.lo.Error("error fetching message from DB", "error", err)
 		return conversation, envelope.NewError(envelope.GeneralError, "Error fetching message", nil)
@@ -525,13 +570,13 @@ func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error
 // generateMessagesQuery generates the SQL query for fetching messages in a conversation.
 func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, page, pageSize int) (string, int, []interface{}, error) {
 	if page <= 0 {
-		page = 1
+		return "", 0, nil, errors.New("page must be greater than 0")
 	}
 	if pageSize > maxMessagesPerPage {
 		pageSize = maxMessagesPerPage
 	}
 	if pageSize <= 0 {
-		pageSize = 10
+		return "", 0, nil, errors.New("page size must be greater than 0")
 	}
 
 	// Calculate the offset
@@ -546,51 +591,63 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 }
 
 // uploadMessageAttachments uploads attachments for a message.
-func (m *Manager) uploadMessageAttachments(message *models.Message) error {
+func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 	if len(message.Attachments) == 0 {
 		return nil
 	}
 
-	var uploadErr error
+	var uploadErr []error
 	for _, attachment := range message.Attachments {
-		// Check if this attachment already exists by content ID.
-		exists, err := m.mediaStore.ContentIDExists(attachment.ContentID)
-		if err != nil {
-			m.lo.Error("error checking media existence", "error", err)
-			continue
+		// Check if this attachment already exists by the content ID.
+		if attachment.ContentID != "" {
+			exists, err := m.mediaStore.ContentIDExists(attachment.ContentID)
+			if err != nil {
+				m.lo.Error("error checking media existence by content ID", "content_id", attachment.ContentID, "error", err)
+				continue
+			}
+			if exists {
+				m.lo.Debug("attachment with content ID already exists", "content_id", attachment.ContentID)
+				continue
+			}
 		}
 
-		if exists {
-			m.lo.Debug("attachment already exists", "content_id", attachment.ContentID)
-			continue
-		}
+		m.lo.Debug("uploading message attachment", "name", attachment.Name, "content_id", attachment.ContentID, "size", attachment.Size)
 
-		m.lo.Debug("uploading message attachment", "name", attachment.Name)
+		// Sanitize filename and upload.
 		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
-
-		reader := bytes.NewReader(attachment.Content)
-		_, err = m.mediaStore.UploadAndInsert(
+		attachReader := bytes.NewReader(attachment.Content)
+		media, err := m.mediaStore.UploadAndInsert(
 			attachment.Name,
 			attachment.ContentType,
 			attachment.ContentID,
-			mmodels.ModelMessages,
-			message.ID,
-			reader,
+			/** Linking media to message happens later **/
+			null.String{}, /** modelType */
+			null.Int{},    /** modelID **/
+			attachReader,
 			attachment.Size,
-			attachment.Disposition,
-			[]byte("{}"),
+			null.StringFrom(attachment.Disposition),
+			[]byte("{}"), /** meta **/
 		)
-
 		if err != nil {
-			uploadErr = err
+			uploadErr = append(uploadErr, err)
 			m.lo.Error("failed to upload attachment", "name", attachment.Name, "error", err)
 		}
+
+		// If the attachment is an image, generate and upload thumbnail.
+		attachmentExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(attachment.Name)), ".")
+		if slices.Contains(image.Exts, attachmentExt) {
+			if err := m.uploadThumbnailForMedia(media, attachment.Content); err != nil {
+				uploadErr = append(uploadErr, err)
+				m.lo.Error("error uploading thumbnail", "error", err)
+			}
+		}
+		message.Media = append(message.Media, media)
 	}
 	return uploadErr
 }
 
 // findOrCreateConversation finds or creates a conversation for the given message.
-func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, contactID int) (bool, error) {
+func (m *Manager) findOrCreateConversation(in *models.Message, inboxID, contactChannelID, contactID int) (bool, error) {
 	var (
 		new              bool
 		err              error
@@ -604,25 +661,16 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		sourceIDs = append(sourceIDs, in.InReplyTo)
 	}
 	conversationID, err = m.findConversationID(sourceIDs)
-	if err != nil && err != ErrConversationNotFound {
+	if err != nil && err != errConversationNotFound {
 		return new, err
 	}
 
 	// Conversation not found, create one.
 	if conversationID == 0 {
 		new = true
-
-		// Put subject & last message details in meta.
-		plainTextContent := stringutil.HTML2Text(in.Content)
-		conversationMeta, err := json.Marshal(map[string]string{
-			"subject":         in.Subject,
-			"last_message":    plainTextContent,
-			"last_message_at": time.Now().Format(time.RFC3339),
-		})
-		if err != nil {
-			return false, err
-		}
-		conversationID, conversationUUID, err = m.CreateConversation(contactID, inboxID, conversationMeta)
+		lastMessage := stringutil.HTML2Text(in.Content)
+		lastMessageAt := time.Now()
+		conversationID, conversationUUID, err = m.CreateConversation(contactID, contactChannelID, inboxID, lastMessage, lastMessageAt, in.Subject)
 		if err != nil || conversationID == 0 {
 			return new, err
 		}
@@ -630,7 +678,6 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 		in.ConversationUUID = conversationUUID
 		return new, nil
 	}
-
 	// Get UUID.
 	if conversationUUID == "" {
 		conversationUUID, err = m.GetConversationUUID(conversationID)
@@ -646,12 +693,12 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID int, cont
 // findConversationID finds the conversation ID from the message source ID.
 func (m *Manager) findConversationID(messageSourceIDs []string) (int, error) {
 	if len(messageSourceIDs) == 0 {
-		return 0, ErrConversationNotFound
+		return 0, errConversationNotFound
 	}
 	var conversationID int
 	if err := m.q.MessageExistsBySourceID.QueryRow(pq.Array(messageSourceIDs)).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
-			return conversationID, ErrConversationNotFound
+			return conversationID, errConversationNotFound
 		}
 		m.lo.Error("error fetching msg from DB", "error", err)
 		return conversationID, err
@@ -680,7 +727,7 @@ func (m *Manager) attachAttachmentsToMessage(message *models.Message) error {
 		attachment := attachment.Attachment{
 			Name:    media.Filename,
 			Content: blob,
-			Header:  attachment.MakeHeader(media.ContentType, media.UUID, media.Filename, "base64", media.Disposition),
+			Header:  attachment.MakeHeader(media.ContentType, media.UUID, media.Filename, "base64", media.Disposition.String),
 		}
 		attachments = append(attachments, attachment)
 	}
@@ -701,4 +748,29 @@ func (m *Manager) getOutgoingProcessingMessageIDs() []int {
 		return true
 	})
 	return out
+}
+
+// uploadThumbnailForMedia prepares and uploads a thumbnail for an image attachment.
+func (m *Manager) uploadThumbnailForMedia(media mmodels.Media, content []byte) error {
+	// Create a reader from the content
+	file := bytes.NewReader(content)
+
+	// Seek to the beginning of the file
+	file.Seek(0, 0)
+
+	// Create the thumbnail
+	thumbFile, err := image.CreateThumb(image.DefThumbSize, file)
+	if err != nil {
+		return fmt.Errorf("error creating thumbnail: %w", err)
+	}
+
+	// Generate thumbnail name
+	thumbName := fmt.Sprintf("thumb_%s", media.UUID)
+
+	// Upload the thumbnail
+	if _, err := m.mediaStore.Upload(thumbName, media.ContentType, thumbFile); err != nil {
+		m.lo.Error("error uploading thumbnail", "error", err)
+		return fmt.Errorf("error uploading thumbnail: %w", err)
+	}
+	return nil
 }

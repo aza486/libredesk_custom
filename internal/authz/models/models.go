@@ -5,6 +5,7 @@ const (
 	PermConversationsReadAll            = "conversations:read_all"
 	PermConversationsReadUnassigned     = "conversations:read_unassigned"
 	PermConversationsReadAssigned       = "conversations:read_assigned"
+	PermConversationsReadTeamInbox      = "conversations:read_team_inbox"
 	PermConversationsRead               = "conversations:read"
 	PermConversationsUpdateUserAssignee = "conversations:update_user_assignee"
 	PermConversationsUpdateTeamAssignee = "conversations:update_team_assignee"
@@ -14,70 +15,60 @@ const (
 	PermMessagesRead                    = "messages:read"
 	PermMessagesWrite                   = "messages:write"
 
-	// Conversation Status
-	PermStatusRead   = "status:read"
-	PermStatusWrite  = "status:write"
-	PermStatusDelete = "status:delete"
+	// View
+	PermViewManage = "view:manage"
 
-	// Admin
-	PermAdminRead = "admin:read"
-
-	// Settings
-	PermSettingsGeneralWrite       = "settings_general:write"
-	PermSettingsNotificationsWrite = "settings_notifications:write"
-	PermSettingsNotificationsRead  = "settings_notifications:read"
-
-	// OpenID Connect SSO
-	PermOIDCRead   = "oidc:read"
-	PermOIDCWrite  = "oidc:write"
-	PermOIDCDelete = "oidc:delete"
+	// Status
+	PermStatusManage = "status:manage"
 
 	// Tags
-	PermTagsWrite  = "tags:write"
-	PermTagsDelete = "tags:delete"
+	PermTagsManage = "tags:manage"
 
-	// Canned Responses
-	PermCannedResponsesWrite  = "canned_responses:write"
-	PermCannedResponsesDelete = "canned_responses:delete"
-
-	// Dashboard
-	PermDashboardGlobalRead = "dashboard_global:read"
+	// Macros
+	PermMacrosManage = "macros:manage"
 
 	// Users
-	PermUsersRead   = "users:read"
-	PermUsersWrite  = "users:write"
-	PermUsersDelete = "users:delete"
+	PermUsersManage = "users:manage"
 
 	// Teams
-	PermTeamsRead   = "teams:read"
-	PermTeamsWrite  = "teams:write"
-	PermTeamsDelete = "teams:delete"
+	PermTeamsManage = "teams:manage"
 
 	// Automations
-	PermAutomationsRead   = "automations:read"
-	PermAutomationsWrite  = "automations:write"
-	PermAutomationsDelete = "automations:delete"
+	PermAutomationsManage = "automations:manage"
 
 	// Inboxes
-	PermInboxesRead   = "inboxes:read"
-	PermInboxesWrite  = "inboxes:write"
-	PermInboxesDelete = "inboxes:delete"
+	PermInboxesManage = "inboxes:manage"
 
 	// Roles
-	PermRolesRead   = "roles:read"
-	PermRolesWrite  = "roles:write"
-	PermRolesDelete = "roles:delete"
+	PermRolesManage = "roles:manage"
 
 	// Templates
-	PermTemplatesRead   = "templates:read"
-	PermTemplatesWrite  = "templates:write"
-	PermTemplatesDelete = "templates:delete"
+	PermTemplatesManage = "templates:manage"
+
+	// Reports
+	PermReportsManage = "reports:manage"
+
+	// Business Hours
+	PermBusinessHoursManage = "business_hours:manage"
+
+	// SLA
+	PermSLAManage = "sla:manage"
+
+	// General Settings
+	PermGeneralSettingsManage = "general_settings:manage"
+
+	// Notification Settings
+	PermNotificationSettingsManage = "notification_settings:manage"
+
+	// OpenID Connect SSO
+	PermOIDCManage = "oidc:manage"
 )
 
 var validPermissions = map[string]struct{}{
 	PermConversationsReadAll:            {},
 	PermConversationsReadUnassigned:     {},
 	PermConversationsReadAssigned:       {},
+	PermConversationsReadTeamInbox:      {},
 	PermConversationsRead:               {},
 	PermConversationsUpdateUserAssignee: {},
 	PermConversationsUpdateTeamAssignee: {},
@@ -86,40 +77,25 @@ var validPermissions = map[string]struct{}{
 	PermConversationsUpdateTags:         {},
 	PermMessagesRead:                    {},
 	PermMessagesWrite:                   {},
-	PermStatusRead:                      {},
-	PermStatusWrite:                     {},
-	PermStatusDelete:                    {},
-	PermAdminRead:                       {},
-	PermSettingsGeneralWrite:            {},
-	PermSettingsNotificationsWrite:      {},
-	PermSettingsNotificationsRead:       {},
-	PermOIDCRead:                        {},
-	PermOIDCWrite:                       {},
-	PermOIDCDelete:                      {},
-	PermTagsWrite:                       {},
-	PermTagsDelete:                      {},
-	PermCannedResponsesWrite:            {},
-	PermCannedResponsesDelete:           {},
-	PermDashboardGlobalRead:             {},
-	PermUsersRead:                       {},
-	PermUsersWrite:                      {},
-	PermTeamsRead:                       {},
-	PermTeamsWrite:                      {},
-	PermAutomationsRead:                 {},
-	PermAutomationsWrite:                {},
-	PermAutomationsDelete:               {},
-	PermInboxesRead:                     {},
-	PermInboxesWrite:                    {},
-	PermInboxesDelete:                   {},
-	PermRolesRead:                       {},
-	PermRolesWrite:                      {},
-	PermRolesDelete:                     {},
-	PermTemplatesRead:                   {},
-	PermTemplatesWrite:                  {},
-	PermTemplatesDelete:                 {},
+	PermViewManage:                      {},
+	PermStatusManage:                    {},
+	PermTagsManage:                      {},
+	PermMacrosManage:                    {},
+	PermUsersManage:                     {},
+	PermTeamsManage:                     {},
+	PermAutomationsManage:               {},
+	PermInboxesManage:                   {},
+	PermRolesManage:                     {},
+	PermTemplatesManage:                 {},
+	PermReportsManage:                   {},
+	PermBusinessHoursManage:             {},
+	PermSLAManage:                       {},
+	PermGeneralSettingsManage:           {},
+	PermNotificationSettingsManage:      {},
+	PermOIDCManage:                      {},
 }
 
-// IsValidPermission retuns true if it's a valid perm.
+// IsValidPermission returns true if it's a valid permission.
 func IsValidPermission(permission string) bool {
 	_, exists := validPermissions[permission]
 	return exists

@@ -1,50 +1,71 @@
 package models
 
 import (
+	"encoding/json"
 	"net/textproto"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	cmodels "github.com/abhinavxd/artemis/internal/contact/models"
-	mmodels "github.com/abhinavxd/artemis/internal/media/models"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
 
 var (
-	StatusOpen = "Open"
+	StatusOpen     = "Open"
+	StatusReplied  = "Replied"
+	StatusResolved = "Resolved"
+	StatusClosed   = "Closed"
+	StatusSnoozed  = "Snoozed"
 
 	AssigneeTypeTeam = "team"
 	AssigneeTypeUser = "user"
 
-	AllConversations        = "all"
-	AssignedConversations   = "assigned"
-	UnassignedConversations = "unassigned"
+	AllConversations            = "all"
+	AssignedConversations       = "assigned"
+	UnassignedConversations     = "unassigned"
+	TeamUnassignedConversations = "team_unassigned"
 )
 
 type Conversation struct {
-	ID                 int             `db:"id" json:"id"`
-	CreatedAt          time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt          time.Time       `db:"updated_at" json:"updated_at"`
-	UUID               string          `db:"uuid" json:"uuid"`
-	ClosedAt           null.Time       `db:"closed_at" json:"closed_at,omitempty"`
-	ResolvedAt         null.Time       `db:"resolved_at" json:"resolved_at,omitempty"`
-	ReferenceNumber    string          `db:"reference_number" json:"reference_number,omitempty"`
-	Priority           null.String     `db:"priority" json:"priority"`
-	Status             null.String     `db:"status" json:"status"`
-	FirstReplyAt       null.Time       `db:"first_reply_at" json:"first_reply_at"`
-	ContactID          int             `db:"contact_id" json:"contact_id"`
-	AssignedUserID     null.Int        `db:"assigned_user_id" json:"assigned_user_id"`
-	AssignedTeamID     null.Int        `db:"assigned_team_id" json:"assigned_team_id"`
-	AssigneeLastSeenAt null.Time       `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
-	Subject            string          `db:"subject" json:"subject"`
-	UnreadMessageCount int             `db:"unread_message_count" json:"unread_message_count"`
-	InboxName          string          `db:"inbox_name" json:"inbox_name"`
-	InboxChannel       string          `db:"inbox_channel" json:"inbox_channel"`
-	Tags               null.JSON       `db:"tags" json:"tags"`
-	LastMessageAt      null.Time       `db:"last_message_at" json:"last_message_at"`
-	LastMessage        string          `db:"last_message" json:"last_message"`
-	Contact            cmodels.Contact `db:"contact" json:"contact"`
-	Total              int             `db:"total" json:"-"`
+	ID                    int             `db:"id" json:"id,omitempty"`
+	CreatedAt             time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt             time.Time       `db:"updated_at" json:"updated_at"`
+	UUID                  string          `db:"uuid" json:"uuid"`
+	ContactID             int             `db:"contact_id" json:"contact_id"`
+	InboxID               int             `db:"inbox_id" json:"inbox_id,omitempty"`
+	ClosedAt              null.Time       `db:"closed_at" json:"closed_at,omitempty"`
+	ResolvedAt            null.Time       `db:"resolved_at" json:"resolved_at,omitempty"`
+	ReferenceNumber       string          `db:"reference_number" json:"reference_number,omitempty"`
+	Priority              null.String     `db:"priority" json:"priority"`
+	PriorityID            null.Int        `db:"priority_id" json:"priority_id"`
+	Status                null.String     `db:"status" json:"status"`
+	StatusID              null.Int        `db:"status_id" json:"status_id"`
+	FirstReplyAt          null.Time       `db:"first_reply_at" json:"first_reply_at"`
+	AssignedUserID        null.Int        `db:"assigned_user_id" json:"assigned_user_id"`
+	AssignedTeamID        null.Int        `db:"assigned_team_id" json:"assigned_team_id"`
+	AssigneeLastSeenAt    null.Time       `db:"assignee_last_seen_at" json:"assignee_last_seen_at"`
+	WaitingSince          null.Time       `db:"waiting_since" json:"waiting_since"`
+	Subject               null.String     `db:"subject" json:"subject"`
+	UnreadMessageCount    int             `db:"unread_message_count" json:"unread_message_count"`
+	InboxName             string          `db:"inbox_name" json:"inbox_name"`
+	InboxChannel          string          `db:"inbox_channel" json:"inbox_channel"`
+	Tags                  null.JSON       `db:"tags" json:"tags"`
+	Meta                  pq.StringArray  `db:"meta" json:"meta"`
+	CustomAttributes      pq.StringArray  `db:"custom_attributes" json:"custom_attributes"`
+	LastMessageAt         null.Time       `db:"last_message_at" json:"last_message_at"`
+	LastMessage           null.String     `db:"last_message" json:"last_message"`
+	Contact               umodels.User    `db:"contact" json:"contact"`
+	SLAPolicyID           null.Int        `db:"sla_policy_id" json:"sla_policy_id"`
+	SlaPolicyName         null.String     `db:"sla_policy_name" json:"sla_policy_name"`
+	NextSLADeadlineAt     null.Time       `db:"next_sla_deadline_at" json:"next_sla_deadline_at"`
+	BCC                   json.RawMessage `db:"bcc" json:"bcc"`
+	CC                    json.RawMessage `db:"cc" json:"cc"`
+	FirstResponseDueAt    null.Time       `db:"-" json:"first_response_due_at"`
+	ResolutionDueAt       null.Time       `db:"-" json:"resolution_due_at"`
+	PreviousConversations []Conversation  `db:"-" json:"previous_conversations"`
+	Total                 int             `db:"total" json:"-"`
 }
 
 type ConversationParticipant struct {
@@ -68,7 +89,7 @@ type NewConversationsStats struct {
 
 // Message represents a message in a conversation
 type Message struct {
-	ID               int                    `db:"id" json:"id"`
+	ID               int                    `db:"id" json:"id,omitempty"`
 	CreatedAt        time.Time              `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time              `db:"updated_at" json:"updated_at"`
 	UUID             string                 `db:"uuid" json:"uuid"`
@@ -76,6 +97,7 @@ type Message struct {
 	Status           string                 `db:"status" json:"status"`
 	ConversationID   int                    `db:"conversation_id" json:"conversation_id"`
 	Content          string                 `db:"content" json:"content"`
+	TextContent      string                 `db:"text_content" json:"text_content"`
 	ContentType      string                 `db:"content_type" json:"content_type"`
 	Private          bool                   `db:"private" json:"private"`
 	SourceID         null.String            `db:"source_id" json:"-"`
@@ -90,6 +112,8 @@ type Message struct {
 	AltContent       string                 `db:"alt_content" json:"-"`
 	Subject          string                 `db:"subject" json:"-"`
 	Channel          string                 `db:"channel" json:"-"`
+	CC               pq.StringArray         `db:"cc" json:"-"`
+	BCC              pq.StringArray         `db:"bcc" json:"-"`
 	References       []string               `json:"-"`
 	InReplyTo        string                 `json:"-"`
 	Headers          textproto.MIMEHeader   `json:"-"`
@@ -97,10 +121,22 @@ type Message struct {
 	Total            int                    `db:"total" json:"-"`
 }
 
+// CensorCSATContent redacts the content of a CSAT message to prevent leaking the CSAT survey public link.
+func (m *Message) CensorCSATContent() {
+	var meta map[string]interface{}
+	if err := json.Unmarshal([]byte(m.Meta), &meta); err != nil {
+		return
+	}
+	if isCsat, _ := meta["is_csat"].(bool); isCsat {
+		m.Content = "Please rate your experience with us"
+		m.TextContent = m.Content
+	}
+}
+
 // IncomingMessage links a message with the contact information and inbox id.
 type IncomingMessage struct {
 	Message Message
-	Contact cmodels.Contact
+	Contact umodels.User
 	InboxID int
 }
 

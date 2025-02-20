@@ -4,9 +4,9 @@ package priority
 import (
 	"embed"
 
-	"github.com/abhinavxd/artemis/internal/conversation/priority/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/conversation/priority/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -31,6 +31,7 @@ type Opts struct {
 // queries contains prepared SQL queries.
 type queries struct {
 	GetAll *sqlx.Stmt `query:"get-all"`
+	Get    *sqlx.Stmt `query:"get"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -53,4 +54,14 @@ func (m *Manager) GetAll() ([]models.Priority, error) {
 		return nil, envelope.NewError(envelope.GeneralError, "Error fetching priorities", nil)
 	}
 	return priorities, nil
+}
+
+// Get retrieves a priority by ID.
+func (m *Manager) Get(id int) (models.Priority, error) {
+	var priority models.Priority
+	if err := m.q.Get.Get(&priority, id); err != nil {
+		m.lo.Error("error fetching priority", "error", err)
+		return priority, envelope.NewError(envelope.GeneralError, "Error fetching priority", nil)
+	}
+	return priority, nil
 }

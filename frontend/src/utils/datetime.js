@@ -9,7 +9,7 @@ export function formatTime(t) {
 
     if (minutesDifference === 0) {
       return `Just now`
-    } else if (minutesDifference < 60) {
+    } else if (minutesDifference < 121) {
       return `${minutesDifference} minutes ago`
     } else if (hoursDifference < 24) {
       return `${hoursDifference} hours ago`

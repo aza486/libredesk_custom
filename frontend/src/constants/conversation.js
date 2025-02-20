@@ -1,18 +1,18 @@
 export const CONVERSATION_LIST_TYPE = {
   ASSIGNED: 'assigned',
   UNASSIGNED: 'unassigned',
+  TEAM_UNASSIGNED: 'team_unassigned',
+  VIEW: 'view',
   ALL: 'all'
 }
 
-export const CONVERSATION_WS_ACTIONS = {
-  SUB_LIST: 'conversations_list_sub',
-  SET_CURRENT: 'conversation_set_current',
-  UNSET_CURRENT: 'conversation_unset_current'
+export const CONVERSATION_DEFAULT_STATUSES = {
+  OPEN: 'Open',
+  IN_PROGRESS: 'In Progress',
+  WAITING: 'Waiting',
+  SNOOZED: 'Snoozed',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
 }
 
-export const CONVERSATION_DEFAULT_STATUSES = [
-  'Open',
-  'Pending',
-  'Resolved',
-  'Closed'
-]
+export const CONVERSATION_DEFAULT_STATUSES_LIST = Object.values(CONVERSATION_DEFAULT_STATUSES);

@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/abhinavxd/artemis/internal/conversation/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	imodels "github.com/abhinavxd/artemis/internal/inbox/models"
+	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -82,7 +82,7 @@ type Manager struct {
 
 // Prepared queries.
 type queries struct {
-	GetByID     *sqlx.Stmt `query:"get-by-id"`
+	GetInbox    *sqlx.Stmt `query:"get-inbox"`
 	GetActive   *sqlx.Stmt `query:"get-active-inboxes"`
 	GetAll      *sqlx.Stmt `query:"get-all-inboxes"`
 	Update      *sqlx.Stmt `query:"update"`
@@ -119,11 +119,10 @@ func (m *Manager) Register(i Inbox) {
 	m.inboxes[i.Identifier()] = i
 }
 
-// Get returns the inbox with the given ID.
+// Get retrieves the initialized inbox instance with the specified ID from memory.
 func (m *Manager) Get(id int) (Inbox, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
 	i, ok := m.inboxes[id]
 	if !ok {
 		return nil, ErrInboxNotFound
@@ -131,10 +130,10 @@ func (m *Manager) Get(id int) (Inbox, error) {
 	return i, nil
 }
 
-// GetByID returns an inbox from the DB by the given ID.
-func (m *Manager) GetByID(id int) (imodels.Inbox, error) {
+// GetDBRecord returns the inbox record from the DB.
+func (m *Manager) GetDBRecord(id int) (imodels.Inbox, error) {
 	var inbox imodels.Inbox
-	if err := m.queries.GetByID.Get(&inbox, id); err != nil {
+	if err := m.queries.GetInbox.Get(&inbox, id); err != nil {
 		m.lo.Error("error fetching inbox", "error", err)
 		return inbox, envelope.NewError(envelope.GeneralError, "Error fetching inbox", nil)
 	}
@@ -163,7 +162,7 @@ func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 
 // Create creates an inbox in the DB.
 func (m *Manager) Create(inbox imodels.Inbox) error {
-	if _, err := m.queries.InsertInbox.Exec(inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
+	if _, err := m.queries.InsertInbox.Exec(inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating inbox", nil)
 	}
@@ -195,7 +194,7 @@ func (m *Manager) InitInboxes(initFn initFn) error {
 	return nil
 }
 
-// Reload reloads inboxes with the provided initialization function.
+// Reload hot reloads the inboxes with the given init function.
 func (m *Manager) Reload(ctx context.Context, initFn initFn) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -248,7 +247,7 @@ func (m *Manager) Reload(ctx context.Context, initFn initFn) error {
 
 // Update updates an inbox in the DB.
 func (m *Manager) Update(id int, inbox imodels.Inbox) error {
-	current, err := m.GetByID(id)
+	current, err := m.GetDBRecord(id)
 	if err != nil {
 		return err
 	}
@@ -301,7 +300,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 		inbox.Config = updatedConfig
 	}
 
-	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From); err != nil {
+	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.Enabled); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating inbox", nil)
 	}

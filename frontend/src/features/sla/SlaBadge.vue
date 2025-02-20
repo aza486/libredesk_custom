@@ -1,0 +1,65 @@
+<template>
+  <div v-if="dueAt" class="flex justify-start items-center space-x-2">
+    <TransitionGroup name="fade">
+      <!-- Overdue-->
+      <span v-if="sla?.status === 'overdue'" key="overdue" class="sla-badge box sla-overdue">
+        <AlertCircle size="10" class="text-red-800" />
+        <span class="text-xs text-red-800">{{ label }} Overdue</span>
+      </span>
+
+      <!-- SLA Hit -->
+      <span
+        v-else-if="sla?.status === 'hit' && showSLAMet"
+        key="sla-hit"
+        class="sla-badge box sla-hit"
+      >
+        <CheckCircle size="10" />
+        <span class="sla-text">{{ label }} SLA met</span>
+      </span>
+
+      <!-- Remaining -->
+      <span
+        v-else-if="sla?.status === 'remaining'"
+        key="remaining"
+        class="sla-badge box sla-remaining"
+      >
+        <Clock size="10" />
+        <span class="sla-text">{{ label }} {{ sla.value }}</span>
+      </span>
+    </TransitionGroup>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { useSla } from '@/composables/useSla'
+import { AlertCircle, CheckCircle, Clock } from 'lucide-vue-next'
+const props = defineProps({
+  dueAt: String,
+  actualAt: String,
+  label: String,
+  showSLAMet: {
+    type: Boolean,
+    default: true
+  }
+})
+const { sla } = useSla(ref(props.dueAt), ref(props.actualAt))
+</script>
+
+<style scoped>
+.sla-badge {
+  @apply inline-flex items-center justify-center p-1 text-xs space-x-1 w-full rounded-lg;
+}
+
+.sla-overdue {
+  @apply bg-red-100 text-red-800;
+}
+
+.sla-hit {
+  @apply bg-green-100 text-green-800;
+}
+
+.sla-remaining {
+  @apply bg-yellow-100 text-yellow-800;
+}
+</style>

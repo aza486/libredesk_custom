@@ -1,14 +1,29 @@
 -- name: get-all-tags
-select id,
+select
+    id,
     created_at,
+    updated_at,
     name
-from tags;
+from
+    tags;
 
 -- name: insert-tag
-INSERT into tags (name) values ($1);
+INSERT into
+    tags (name)
+values
+    ($1);
 
 -- name: delete-tag
-DELETE from tags where id = $1;
+DELETE from
+    tags
+where
+    id = $1;
 
 -- name: update-tag
-UPDATE tags set name = $2 where id = $1;
+UPDATE
+    tags
+set
+    name = $2,
+    updated_at = now()
+where
+    id = $1;

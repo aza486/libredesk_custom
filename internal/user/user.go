@@ -2,17 +2,20 @@
 package user
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/stringutil"
-	"github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
+	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	"github.com/lib/pq"
@@ -34,6 +37,8 @@ const (
 	SystemUserEmail          = "System"
 	MinSystemUserPasswordLen = 8
 	MaxSystemUserPasswordLen = 50
+	UserTypeAgent            = "agent"
+	UserTypeContact          = "contact"
 )
 
 // Manager handles user-related operations.
@@ -51,7 +56,6 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	CreateUser            *sqlx.Stmt `query:"create-user"`
 	GetUsers              *sqlx.Stmt `query:"get-users"`
 	GetUserCompact        *sqlx.Stmt `query:"get-users-compact"`
 	GetUser               *sqlx.Stmt `query:"get-user"`
@@ -64,16 +68,16 @@ type queries struct {
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
 	ResetPassword         *sqlx.Stmt `query:"reset-password"`
+	InsertAgent           *sqlx.Stmt `query:"insert-agent"`
+	InsertContact         *sqlx.Stmt `query:"insert-contact"`
 }
 
 // New creates and returns a new instance of the Manager.
 func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
 		q:    q,
 		lo:   opts.Lo,
@@ -81,8 +85,8 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	}, nil
 }
 
-// Login authenticates a user by email and password.
-func (u *Manager) Login(email string, password []byte) (models.User, error) {
+// VerifyPassword authenticates a user by email and password.
+func (u *Manager) VerifyPassword(email string, password []byte) (models.User, error) {
 	var user models.User
 
 	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
@@ -128,15 +132,18 @@ func (u *Manager) GetAllCompact() ([]models.User, error) {
 	return users, nil
 }
 
-// Create creates a new user.
-func (u *Manager) Create(user *models.User) error {
+// CreateAgent creates a new agent user.
+func (u *Manager) CreateAgent(user *models.User) error {
 	password, err := u.generatePassword()
 	if err != nil {
 		u.lo.Error("error generating password", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
 	}
-	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
-	if err := u.q.CreateUser.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
+	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
+	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
+		if dbutil.IsUniqueViolationError(err) {
+			return envelope.NewError(envelope.GeneralError, "User with the same email already exists", nil)
+		}
 		u.lo.Error("error creating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating user", nil)
 	}
@@ -162,10 +169,10 @@ func (u *Manager) GetByEmail(email string) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return user, fmt.Errorf("user not found")
+			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, err
+		return user, envelope.NewError(envelope.GeneralError, "Error fetching user", nil)
 	}
 	return user, nil
 }
@@ -203,14 +210,14 @@ func (u *Manager) Update(id int, user models.User) error {
 		u.lo.Debug("setting new password for user", "user_id", id)
 	}
 
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword); err != nil {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating user", nil)
 	}
 	return nil
 }
 
-// Delete deletes a user by ID.
+// SoftDelete soft deletes a user.
 func (u *Manager) SoftDelete(id int) error {
 	// Disallow if user is system user.
 	systemUser, err := u.GetSystemUser()
@@ -243,7 +250,7 @@ func (u *Manager) GetEmail(id int) (string, error) {
 
 // SetResetPasswordToken sets a reset password token for a user and returns the token.
 func (u *Manager) SetResetPasswordToken(id int) (string, error) {
-	token, err := stringutil.RandomAlNumString(32)
+	token, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
 		u.lo.Error("error generating reset password token", "error", err)
 		return "", envelope.NewError(envelope.GeneralError, "Error generating reset password token", nil)
@@ -293,11 +300,11 @@ func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {
 
 // generatePassword generates a random password and returns its bcrypt hash.
 func (u *Manager) generatePassword() ([]byte, error) {
-	password, _ := stringutil.RandomAlNumString(16)
+	password, _ := stringutil.RandomAlphanumeric(70)
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		u.lo.Error("error generating bcrypt password", "error", err)
-		return nil, fmt.Errorf("error generating bcrypt password: %w", err)
+		return nil, fmt.Errorf("generating bcrypt password: %w", err)
 	}
 	return bytes, nil
 }
@@ -312,29 +319,10 @@ func (u *Manager) isStrongPassword(password string) bool {
 	return hasUppercase && hasNumber
 }
 
-// CreateSystemUser inserts a default system user into the users table with the prompted password.
-func CreateSystemUser(db *sqlx.DB) error {
-	// Prompt for password and get hashed password
-	hashedPassword, err := promptAndHashPassword()
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(`
-		INSERT INTO users (email, first_name, last_name, password, roles) 
-		VALUES ($1, $2, $3, $4, $5)`,
-		SystemUserEmail, "System", "", hashedPassword, pq.StringArray{"Admin"})
-	if err != nil {
-		return fmt.Errorf("failed to create system user: %v", err)
-	}
-	fmt.Println("System user created successfully")
-	return nil
-}
-
 // ChangeSystemUserPassword updates the system user's password with a newly prompted one.
-func ChangeSystemUserPassword(db *sqlx.DB) error {
+func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
 	// Prompt for password and get hashed password
-	hashedPassword, err := promptAndHashPassword()
+	hashedPassword, err := promptAndHashPassword(ctx)
 	if err != nil {
 		return err
 	}
@@ -347,24 +335,56 @@ func ChangeSystemUserPassword(db *sqlx.DB) error {
 	return nil
 }
 
-// promptAndHashPassword handles password input and validation, and returns the hashed password.
-func promptAndHashPassword() ([]byte, error) {
-	var password string
-	for {
-		fmt.Print("Please set System admin password (min 8, max 50 characters, at least 1 uppercase letter, 1 number): ")
-		fmt.Scanf("%s", &password)
-		if isStrongSystemUserPassword(password) {
-			break
-		}
-		fmt.Println("Password does not meet the strength requirements.")
-	}
-
-	// Hash the password using bcrypt.
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+// CreateSystemUser inserts a default system user into the users table with the prompted password.
+func CreateSystemUser(ctx context.Context, db *sqlx.DB) error {
+	hashedPassword, err := promptAndHashPassword(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %v", err)
+		return err
 	}
-	return hashedPassword, nil
+	_, err = db.Exec(`
+		WITH sys_user AS (
+			INSERT INTO users (email, type, first_name, last_name, password)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id
+		)
+		INSERT INTO user_roles (user_id, role_id)
+		SELECT sys_user.id, roles.id 
+		FROM sys_user, roles 
+		WHERE roles.name = $6`,
+		SystemUserEmail, UserTypeAgent, "System", "", hashedPassword, rmodels.RoleAdmin)
+	if err != nil {
+		return fmt.Errorf("failed to create system user: %v", err)
+	}
+	fmt.Println("System user created successfully")
+	return nil
+}
+
+// promptAndHashPassword handles password input and validation, and returns the hashed password.
+func promptAndHashPassword(ctx context.Context) ([]byte, error) {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			fmt.Print("Please set System admin password (min 8, max 50 characters, at least 1 uppercase letter, 1 number): ")
+			buffer := make([]byte, 256)
+			n, err := os.Stdin.Read(buffer)
+			if err != nil {
+				return nil, fmt.Errorf("error reading input: %v", err)
+			}
+
+			password := strings.TrimSpace(string(buffer[:n]))
+			if isStrongSystemUserPassword(password) {
+				// Hash the password using bcrypt.
+				hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+				if err != nil {
+					return nil, fmt.Errorf("failed to hash password: %v", err)
+				}
+				return hashedPassword, nil
+			}
+			fmt.Println("Password does not meet the strength requirements.")
+		}
+	}
 }
 
 // updateSystemUserPassword updates the password of the system user in the database.

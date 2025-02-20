@@ -5,9 +5,9 @@ import (
 	"embed"
 	"slices"
 
-	"github.com/abhinavxd/artemis/internal/conversation/status/models"
-	"github.com/abhinavxd/artemis/internal/dbutil"
-	"github.com/abhinavxd/artemis/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/conversation/status/models"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/jmoiron/sqlx"
 	"github.com/zerodha/logf"
 )
@@ -41,11 +41,9 @@ type queries struct {
 // New creates and returns a new instance of the Manager.
 func New(opts Opts) (*Manager, error) {
 	var q queries
-
 	if err := dbutil.ScanSQLFile("queries.sql", &q, opts.DB, efs); err != nil {
 		return nil, err
 	}
-
 	return &Manager{
 		q:  q,
 		lo: opts.Lo,
@@ -74,7 +72,7 @@ func (m *Manager) Create(name string) error {
 // Delete deletes a status by ID.
 func (m *Manager) Delete(id int) error {
 	// Disallow deletion of default statuses.
-	status, err := m.get(id)
+	status, err := m.Get(id)
 	if err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
 	}
@@ -84,9 +82,8 @@ func (m *Manager) Delete(id int) error {
 	}
 
 	if _, err := m.q.DeleteStatus.Exec(id); err != nil {
-		// Check if the error is a foreign key error.
 		if dbutil.IsForeignKeyError(err) {
-			return envelope.NewError(envelope.InputError, "Cannot delete status as it is in use, Please remove this status from all conversations before deleting", nil)
+			return envelope.NewError(envelope.InputError, "Cannot delete status as it is in use, Please remove this status from all conversations before deleting.", nil)
 		}
 		m.lo.Error("error deleting status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting status", nil)
@@ -96,6 +93,16 @@ func (m *Manager) Delete(id int) error {
 
 // Update updates a status by id.
 func (m *Manager) Update(id int, name string) error {
+	// Disallow updating of default statuses.
+	status, err := m.Get(id)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
+	}
+
+	if slices.Contains(models.DefaultStatuses, status.Name) {
+		return envelope.NewError(envelope.InputError, "Cannot update default status", nil)
+	}
+
 	if _, err := m.q.UpdateStatus.Exec(id, name); err != nil {
 		m.lo.Error("error updating status", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating status", nil)
@@ -103,12 +110,12 @@ func (m *Manager) Update(id int, name string) error {
 	return nil
 }
 
-// get retrieves a status by ID.
-func (m *Manager) get(id int) (models.Status, error) {
+// Get retrieves a status by ID.
+func (m *Manager) Get(id int) (models.Status, error) {
 	var status models.Status
 	if err := m.q.GetStatus.Get(&status, id); err != nil {
 		m.lo.Error("error fetching status", "error", err)
-		return status, err
+		return status, envelope.NewError(envelope.GeneralError, "Error fetching status", nil)
 	}
 	return status, nil
 }

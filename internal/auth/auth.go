@@ -1,3 +1,4 @@
+// Package auth implements OIDC multi-provider authentication and session management
 package auth
 
 import (
@@ -9,12 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/stringutil"
-	"github.com/abhinavxd/artemis/internal/user/models"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
+	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/redis/go-redis/v9"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/logf"
 	sessredisstore "github.com/zerodha/simplesessions/stores/redis/v3"
@@ -23,6 +26,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// OIDCclaim holds OIDC token claims data
 type OIDCclaim struct {
 	Email         string `json:"email"`
 	EmailVerified bool   `json:"email_verified"`
@@ -30,6 +34,7 @@ type OIDCclaim struct {
 	Picture       string `json:"picture"`
 }
 
+// Provider defines an OIDC provider configuration
 type Provider struct {
 	ID           int
 	Provider     string
@@ -39,10 +44,12 @@ type Provider struct {
 	ClientSecret string
 }
 
+// Config stores multiple OIDC provider configurations
 type Config struct {
 	Providers []Provider
 }
 
+// Auth is the auth service it manages OIDC authentication and sessions
 type Auth struct {
 	mu        sync.RWMutex
 	cfg       Config
@@ -53,7 +60,7 @@ type Auth struct {
 	rd        *redis.Client
 }
 
-// New initializes an OIDC configuration for multiple providers.
+// New creates an Auth service with configured OIDC providers
 func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 	oauthCfgs := make(map[int]oauth2.Config)
 	verifiers := make(map[int]*oidc.IDTokenVerifier)
@@ -85,7 +92,7 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 		Cookie: simplesessions.CookieOptions{
 			IsHTTPOnly: true,
 			IsSecure:   true,
-			MaxAge:     time.Hour * 6,
+			Expires:    time.Now().Add(time.Hour * 48),
 		},
 	})
 
@@ -114,8 +121,8 @@ func (a *Auth) Reload(cfg Config) error {
 	for _, provider := range cfg.Providers {
 		oidcProv, err := oidc.NewProvider(context.Background(), provider.ProviderURL)
 		if err != nil {
-			a.logger.Error("error initializing oidc provider", "error", err, "provider", provider.Provider)
-			continue
+			a.logger.Error("error initializing oidc provider", "provider", provider.Provider, "provider_url", provider.ProviderURL, "error", err)
+			return envelope.NewError(envelope.GeneralError, err.Error(), nil)
 		}
 
 		oauthCfg := oauth2.Config{
@@ -143,7 +150,6 @@ func (a *Auth) Reload(cfg Config) error {
 func (a *Auth) LoginURL(providerID int, state string) (string, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-
 	oauthCfg, ok := a.oauthCfgs[providerID]
 	if !ok {
 		return "", envelope.NewError(envelope.InputError, "Provider not found", nil)
@@ -152,7 +158,7 @@ func (a *Auth) LoginURL(providerID int, state string) (string, error) {
 }
 
 // ExchangeOIDCToken takes an OIDC authorization code, validates it, and returns an OIDC token for subsequent auth.
-func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonce string) (string, OIDCclaim, error) {
+func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code string) (string, OIDCclaim, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -183,10 +189,6 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonc
 		return "", OIDCclaim{}, fmt.Errorf("error verifying ID token: %v", err)
 	}
 
-	if idTk.Nonce != nonce {
-		return "", OIDCclaim{}, fmt.Errorf("nonce token mismatch")
-	}
-
 	var claims OIDCclaim
 	if err := idTk.Claims(&claims); err != nil {
 		return "", OIDCclaim{}, errors.New("error getting user from OIDC")
@@ -195,7 +197,7 @@ func (a *Auth) ExchangeOIDCToken(ctx context.Context, providerID int, code, nonc
 }
 
 // SaveSession creates and sets a session (post successful login/auth).
-func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
+func (a *Auth) SaveSession(user amodels.User, r *fastglue.Request) error {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -215,6 +217,43 @@ func (a *Auth) SaveSession(user models.User, r *fastglue.Request) error {
 		return err
 	}
 	return nil
+}
+
+// SetSessionValues sets passed values in the session.
+func (a *Auth) SetSessionValues(r *fastglue.Request, values map[string]interface{}) error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
+	if err != nil {
+		a.logger.Error("error acquiring session", "error", err)
+		return err
+	}
+
+	if err := sess.SetMulti(values); err != nil {
+		a.logger.Error("error setting session values", "error", err)
+		return err
+	}
+	return nil
+}
+
+// GetSessionValue returns the value for the given key from the session.
+func (a *Auth) GetSessionValue(r *fastglue.Request, key string) (any, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	sess, err := a.sess.Acquire(r.RequestCtx, r, r)
+	if err != nil {
+		a.logger.Error("error acquiring session", "error", err)
+		return "", err
+	}
+
+	val, err := sess.Get(key)
+	if err != nil {
+		a.logger.Error("error fetching session value", "error", err)
+		return "", err
+	}
+	return val, nil
 }
 
 // SetCSRFCookie sets the CSRF token in the response cookie if not already set.
@@ -265,7 +304,7 @@ func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 
 	return models.User{
 		ID:        userID,
-		Email:     email,
+		Email:     null.NewString(email, email != ""),
 		FirstName: firstName,
 		LastName:  lastName,
 	}, nil
@@ -290,7 +329,7 @@ func (a *Auth) DestroySession(r *fastglue.Request) error {
 
 // generateCSRFToken creates a random base64 encoded str.
 func generateCSRFToken() (string, error) {
-	b, err := stringutil.RandomAlNumString(30)
+	b, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
 		return "", err
 	}

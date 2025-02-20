@@ -8,14 +8,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/image"
-	mmodels "github.com/abhinavxd/artemis/internal/media/models"
-	notifier "github.com/abhinavxd/artemis/internal/notification"
-	"github.com/abhinavxd/artemis/internal/stringutil"
-	tmpl "github.com/abhinavxd/artemis/internal/template"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/image"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	notifier "github.com/abhinavxd/libredesk/internal/notification"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
+	tmpl "github.com/abhinavxd/libredesk/internal/template"
+	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 )
 
@@ -23,6 +25,7 @@ const (
 	maxAvatarSizeMB = 5
 )
 
+// handleGetUsers returns all users.
 func handleGetUsers(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -34,6 +37,7 @@ func handleGetUsers(r *fastglue.Request) error {
 	return r.SendEnvelope(agents)
 }
 
+// handleGetUsersCompact returns all users in a compact format.
 func handleGetUsersCompact(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -45,6 +49,7 @@ func handleGetUsersCompact(r *fastglue.Request) error {
 	return r.SendEnvelope(agents)
 }
 
+// handleGetUser returns a user.
 func handleGetUser(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -61,11 +66,34 @@ func handleGetUser(r *fastglue.Request) error {
 	return r.SendEnvelope(user)
 }
 
+// handleGetCurrentUserTeams returns the teams of a user.
+func handleGetCurrentUserTeams(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+	)
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	teams, err := app.team.GetUserTeams(user.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(teams)
+}
+
+// handleUpdateCurrentUser updates the current user.
 func handleUpdateCurrentUser(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	// Get current user.
 	currentUser, err := app.user.Get(user.ID)
@@ -114,7 +142,12 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 		// Reset ptr.
 		file.Seek(0, 0)
-		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, "", mmodels.ModelUser, user.ID, file, int(srcFileSize), "", []byte("{}"))
+		linkedModel := null.StringFrom(mmodels.ModelUser)
+		linkedID := null.IntFrom(user.ID)
+		disposition := null.NewString("", false)
+		contentID := ""
+		meta := []byte("{}")
+		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error uploading file", nil, envelope.GeneralError)
@@ -136,26 +169,33 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 			return sendErrorEnvelope(r, err)
 		}
 	}
-
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User updated successfully.")
 }
 
 // handleCreateUser creates a new user.
 func handleCreateUser(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
-		user = umodels.User{}
+		user = models.User{}
 	)
 	if err := r.Decode(&user, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
-	if user.Email == "" {
+	if user.Email.String == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
 
-	err := app.user.Create(&user)
-	if err != nil {
+	if user.Roles == nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Please select at least one role", nil, envelope.InputError)
+	}
+
+	if user.FirstName == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `first_name`", nil, envelope.InputError)
+	}
+
+	// Right now, only agents can be created.
+	if err := app.user.CreateAgent(&user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -172,13 +212,13 @@ func handleCreateUser(r *fastglue.Request) error {
 		}
 
 		// Render template and send email.
-		content, err := app.tmpl.Render(tmpl.TmplWelcome, map[string]interface{}{
+		content, err := app.tmpl.RenderTemplate(tmpl.TmplWelcome, map[string]interface{}{
 			"ResetToken": resetToken,
 			"Email":      user.Email,
 		})
 		if err != nil {
 			app.lo.Error("error rendering template", "error", err)
-			return r.SendEnvelope(true)
+			return r.SendEnvelope("User created successfully, but error rendering welcome email.")
 		}
 
 		if err := app.notifier.Send(notifier.Message{
@@ -188,17 +228,17 @@ func handleCreateUser(r *fastglue.Request) error {
 			Provider: notifier.ProviderEmail,
 		}); err != nil {
 			app.lo.Error("error sending notification message", "error", err)
-			return r.SendEnvelope(true)
+			return r.SendEnvelope("User created successfully, but error sending welcome email.")
 		}
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User created successfully.")
 }
 
 // handleUpdateUser updates a user.
 func handleUpdateUser(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
-		user = umodels.User{}
+		user = models.User{}
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
@@ -210,9 +250,20 @@ func handleUpdateUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
+	if user.Email.String == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
+	}
+
+	if user.Roles == nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Please select at least one role", nil, envelope.InputError)
+	}
+
+	if user.FirstName == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `first_name`", nil, envelope.InputError)
+	}
+
 	// Update user.
-	err = app.user.Update(id, user)
-	if err != nil {
+	if err = app.user.Update(id, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -221,23 +272,22 @@ func handleUpdateUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User updated successfully.")
 }
 
-// handleDeleteUser deletes a user.
+// handleDeleteUser soft deletes a user.
 func handleDeleteUser(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
+		app     = r.Context.(*App)
+		id, err = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid user `id`.", nil, envelope.InputError)
 	}
 
 	// Soft delete user.
-	err = app.user.SoftDelete(id)
-	if err != nil {
+	if err = app.user.SoftDelete(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -246,16 +296,16 @@ func handleDeleteUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("User deleted successfully.")
 }
 
 // handleGetCurrentUser returns the current logged in user.
 func handleGetCurrentUser(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	u, err := app.user.Get(user.ID)
+	u, err := app.user.Get(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -265,12 +315,12 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 // handleDeleteAvatar deletes a user avatar.
 func handleDeleteAvatar(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
 	// Get user
-	user, err := app.user.Get(user.ID)
+	user, err := app.user.Get(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -290,19 +340,18 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Avatar deleted successfully.")
 }
 
 // handleResetPassword generates a reset password token and sends an email to the user.
 func handleResetPassword(r *fastglue.Request) error {
 	var (
-		app      = r.Context.(*App)
-		p        = r.RequestCtx.PostArgs()
-		user, ok = r.RequestCtx.UserValue("user").(umodels.User)
-		email    = string(p.Peek("email"))
+		app       = r.Context.(*App)
+		p         = r.RequestCtx.PostArgs()
+		auser, ok = r.RequestCtx.UserValue("user").(amodels.User)
+		email     = string(p.Peek("email"))
 	)
-
-	if ok && user.ID > 0 {
+	if ok && auser.ID > 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "User is already logged in", nil, envelope.InputError)
 	}
 
@@ -321,7 +370,7 @@ func handleResetPassword(r *fastglue.Request) error {
 	}
 
 	// Send email.
-	content, err := app.tmpl.Render(tmpl.TmplResetPassword,
+	content, err := app.tmpl.RenderTemplate(tmpl.TmplResetPassword,
 		map[string]string{
 			"ResetToken": token,
 		})
@@ -340,14 +389,14 @@ func handleResetPassword(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending notification message", nil, envelope.GeneralError)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Reset password email sent successfully.")
 }
 
 // handleSetPassword resets the password with the provided token.
 func handleSetPassword(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
-		user, ok = r.RequestCtx.UserValue("user").(umodels.User)
+		user, ok = r.RequestCtx.UserValue("user").(amodels.User)
 		p        = r.RequestCtx.PostArgs()
 		password = string(p.Peek("password"))
 		token    = string(p.Peek("token"))
@@ -365,5 +414,5 @@ func handleSetPassword(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Password reset successfully.")
 }

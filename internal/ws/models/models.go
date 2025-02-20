@@ -2,10 +2,6 @@ package models
 
 // Action constants for WebSocket messages.
 const (
-	ActionConversationsListSub     = "conversations_list_sub"
-	ActionSetCurrentConversation   = "conversation_set_current"
-	ActionUnsetCurrentConversation = "conversation_unset_current"
-
 	MessageTypeMessagePropUpdate          = "message_prop_update"
 	MessageTypeConversationPropertyUpdate = "conversation_prop_update"
 	MessageTypeNewMessage                 = "new_message"
@@ -29,19 +25,4 @@ type Message struct {
 type BroadcastMessage struct {
 	Data  []byte `json:"data"`
 	Users []int  `json:"users"`
-}
-
-// IncomingReq represents an incoming WebSocket request.
-type IncomingReq struct {
-	Action string `json:"action"`
-}
-
-// ConversationsListSubscribe represents a request to subscribe to conversations list
-type ConversationsListSubscribe struct {
-	Type string `json:"type"`
-}
-
-// ConversationCurrentSet represents a request to set current conversation
-type ConversationCurrentSet struct {
-	UUID string `json:"uuid"`
 }

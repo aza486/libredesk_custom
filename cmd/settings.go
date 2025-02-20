@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/setting/models"
-	"github.com/abhinavxd/artemis/internal/stringutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/setting/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
+// handleGetGeneralSettings fetches general settings.
 func handleGetGeneralSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -22,6 +23,7 @@ func handleGetGeneralSettings(r *fastglue.Request) error {
 	return r.SendEnvelope(out)
 }
 
+// handleUpdateGeneralSettings updates general settings.
 func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -35,9 +37,17 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	// Reload the settings and templates.
+	if err := reloadSettings(app); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Could not reload settings, Please restart the app.", nil)
+	}
+	if err := reloadTemplates(app); err != nil {
+		return envelope.NewError(envelope.GeneralError, "Could not reload settings, Please restart the app.", nil)
+	}
+	return r.SendEnvelope("Settings updated successfully")
 }
 
+// handleGetEmailNotificationSettings fetches email notification settings.
 func handleGetEmailNotificationSettings(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -59,6 +69,7 @@ func handleGetEmailNotificationSettings(r *fastglue.Request) error {
 	return r.SendEnvelope(notif)
 }
 
+// handleUpdateEmailNotificationSettings updates email notification settings.
 func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -86,5 +97,5 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope("Settings updated successfully, Please restart the app for changes to take effect.")
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/abhinavxd/artemis/internal/media"
+	"github.com/abhinavxd/libredesk/internal/media"
 )
 
 // Opts holds fs options.

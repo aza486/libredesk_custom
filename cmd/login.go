@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/abhinavxd/artemis/internal/envelope"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
-// handleLogin logs in the user.
+// handleLogin logs a user in.
 func handleLogin(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
@@ -14,11 +15,16 @@ func handleLogin(r *fastglue.Request) error {
 		email    = string(p.Peek("email"))
 		password = p.Peek("password")
 	)
-	user, err := app.user.Login(email, password)
+	user, err := app.user.VerifyPassword(email, password)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if err := app.auth.SaveSession(user, r); err != nil {
+	if err := app.auth.SaveSession(amodels.User{
+		ID:        user.ID,
+		Email:     user.Email.String,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+	}, r); err != nil {
 		app.lo.Error("error saving session", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("user.errorAcquiringSession"), nil))
 	}
@@ -44,5 +50,5 @@ func handleLogout(r *fastglue.Request) error {
 		"no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
 	r.RequestCtx.Response.Header.Add("Pragma", "no-cache")
 	r.RequestCtx.Response.Header.Add("Expires", "-1")
-	return r.RedirectURI("dashboard", fasthttp.StatusFound, nil, "")
+	return r.RedirectURI("/", fasthttp.StatusFound, nil, "")
 }

@@ -5,14 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/volatiletech/null/v9"
 )
 
 type Team struct {
-	ID                      int       `db:"id" json:"id"`
-	CreatedAt               time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt               time.Time `db:"updated_at" json:"updated_at"`
-	Name                    string    `db:"name" json:"name"`
-	AutoAssignConversations bool      `db:"auto_assign_conversations" json:"auto_assign_conversations"`
+	ID                           int         `db:"id" json:"id"`
+	CreatedAt                    time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt                    time.Time   `db:"updated_at" json:"updated_at"`
+	Emoji                        null.String `db:"emoji" json:"emoji"`
+	Name                         string      `db:"name" json:"name"`
+	ConversationAssignmentType   string      `db:"conversation_assignment_type" json:"conversation_assignment_type,omitempty"`
+	Timezone                     string      `db:"timezone" json:"timezone,omitempty"`
+	BusinessHoursID              null.Int    `db:"business_hours_id" json:"business_hours_id,omitempty"`
+	SLAPolicyID                  null.Int    `db:"sla_policy_id" json:"sla_policy_id,omitempty"`
+	MaxAutoAssignedConversations int         `db:"max_auto_assigned_conversations" json:"max_auto_assigned_conversations"`
 }
 
 type Teams []Team
@@ -48,9 +55,9 @@ func (t Teams) Names() []string {
 
 // IDs returns a slice of all team IDs in the Teams slice.
 func (t Teams) IDs() []int {
-    ids := make([]int, len(t))
-    for i, team := range t {
-        ids[i] = team.ID
-    }
-    return ids
+	ids := make([]int, len(t))
+	for i, team := range t {
+		ids[i] = team.ID
+	}
+	return ids
 }

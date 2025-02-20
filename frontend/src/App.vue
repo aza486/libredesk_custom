@@ -1,98 +1,190 @@
 <template>
-  <div class="flex">
-    <NavBar :is-collapsed="isCollapsed" :links="navLinks" :bottom-links="bottomLinks"
-      class="shadow shadow-gray-300 h-screen" />
-    <ResizablePanelGroup direction="horizontal" auto-save-id="app.vue.resizable.panel">
-      <ResizableHandle id="resize-handle-1" />
-      <ResizablePanel id="resize-panel-2">
-        <div class="w-full h-screen">
-          <RouterView />
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+  <div class="flex w-full h-screen">
+    <!-- Icon sidebar always visible -->
+    <SidebarProvider style="--sidebar-width: 3rem" class="w-auto z-50">
+      <ShadcnSidebar collapsible="none" class="border-r">
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/inboxes')">
+                    <router-link :to="{ name: 'inboxes' }">
+                      <Inbox />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem v-if="userStore.hasAdminTabPermissions">
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/admin')">
+                    <router-link :to="{ name: 'admin' }">
+                      <Shield />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem v-if="userStore.hasReportTabPermissions">
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/reports')">
+                    <router-link :to="{ name: 'reports' }">
+                      <FileLineChart />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <SidebarNavUser />
+        </SidebarFooter>
+      </ShadcnSidebar>
+    </SidebarProvider>
+
+    <!-- Main sidebar that collapses -->
+    <div class="flex-1">
+      <Sidebar
+        :userTeams="userStore.teams"
+        :userViews="userViews"
+        @create-view="openCreateViewForm = true"
+        @edit-view="editView"
+        @delete-view="deleteView"
+      >
+        <PageHeader />
+        <RouterView />
+        <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
+      </Sidebar>
+    </div>
   </div>
+
+  <!-- Command box -->
+  <Command />
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
+import { onMounted, ref } from 'vue'
+import { RouterView } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { initWS } from '@/websocket.js'
-import { useEmitter } from '@/composables/useEmitter'
-import { useToast } from '@/components/ui/toast/use-toast'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import NavBar from '@/components/NavBar.vue'
+import { useEmitter } from '@/composables/useEmitter'
+import { handleHTTPError } from '@/utils/http'
+import { useConversationStore } from './stores/conversation'
+import { useInboxStore } from '@/stores/inbox'
+import { useUsersStore } from '@/stores/users'
+import { useTeamStore } from '@/stores/team'
+import { useSlaStore } from '@/stores/sla'
+import { useMacroStore } from '@/stores/macro'
+import { useTagStore } from '@/stores/tag'
+import PageHeader from './components/layout/PageHeader.vue'
+import ViewForm from '@/features/view/ViewForm.vue'
+import api from '@/api'
+import { toast as sooner } from 'vue-sonner'
+import Sidebar from '@/components/sidebar/Sidebar.vue'
+import Command from '@/features/command/CommandBox.vue'
+import { Inbox, Shield, FileLineChart } from 'lucide-vue-next'
+import { useRoute } from 'vue-router'
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarGroupContent,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider
+} from '@/components/ui/sidebar'
+import SidebarNavUser from '@/components/sidebar/SidebarNavUser.vue'
 
-const { t } = useI18n()
-const { toast } = useToast()
+const route = useRoute()
 const emitter = useEmitter()
-const isCollapsed = ref(true)
-const allNavLinks = [
-  {
-    title: t('navbar.dashboard'),
-    to: '/dashboard',
-    label: '',
-    icon: 'lucide:layout-dashboard',
-    permission: 'dashboard_global:read',
-  },
-  {
-    title: t('navbar.conversations'),
-    to: '/conversations',
-    label: '',
-    icon: 'lucide:message-circle-more'
-  },
-  {
-    title: t('navbar.account'),
-    to: '/account/profile',
-    label: '',
-    icon: 'lucide:circle-user-round'
-  },
-  {
-    title: t('navbar.admin'),
-    to: '/admin/general',
-    label: '',
-    icon: 'lucide:settings',
-    permission: 'admin:read'
-  }
-]
-
-const bottomLinks = [
-  {
-    to: '/logout',
-    icon: 'lucide:log-out',
-    title: 'Logout'
-  }
-]
 const userStore = useUserStore()
-const router = useRouter()
-initWS()
+const conversationStore = useConversationStore()
+const usersStore = useUsersStore()
+const teamStore = useTeamStore()
+const inboxStore = useInboxStore()
+const slaStore = useSlaStore()
+const macroStore = useMacroStore()
+const tagStore = useTagStore()
+const userViews = ref([])
+const view = ref({})
+const openCreateViewForm = ref(false)
 
+initWS()
 onMounted(() => {
   initToaster()
-  getCurrentUser()
+  listenViewRefresh()
+  initStores()
 })
 
-onUnmounted(() => {
-  emitter.off(EMITTER_EVENTS.SHOW_TOAST, toast)
-})
+// initialize data stores
+const initStores = async () => {
+  await Promise.allSettled([
+    userStore.getCurrentUser(),
+    getUserViews(),
+    conversationStore.fetchStatuses(),
+    conversationStore.fetchPriorities(),
+    usersStore.fetchUsers(),
+    teamStore.fetchTeams(),
+    inboxStore.fetchInboxes(),
+    slaStore.fetchSlas(),
+    macroStore.loadMacros(),
+    tagStore.fetchTags()
+  ])
+}
 
-const getCurrentUser = () => {
-  userStore.getCurrentUser().catch((err) => {
-    if (err.response && err.response.status === 401) {
-      router.push('/')
+const editView = (v) => {
+  view.value = { ...v }
+  openCreateViewForm.value = true
+}
+
+const deleteView = async (view) => {
+  try {
+    await api.deleteView(view.id)
+    emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'view' })
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Success',
+      description: 'View deleted successfully'
+    })
+  } catch (err) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(err).message
+    })
+  }
+}
+
+const getUserViews = async () => {
+  try {
+    const response = await api.getCurrentUserViews()
+    userViews.value = response.data.data
+  } catch (err) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(err).message
+    })
+  }
+}
+
+const initToaster = () => {
+  emitter.on(EMITTER_EVENTS.SHOW_TOAST, (message) => {
+    if (message.variant === 'destructive') {
+      sooner.error(message.description)
+    } else {
+      sooner.success(message.description)
     }
   })
 }
 
-const initToaster = () => {
-  emitter.on(EMITTER_EVENTS.SHOW_TOAST, toast)
+const listenViewRefresh = () => {
+  emitter.on(EMITTER_EVENTS.REFRESH_LIST, refreshViews)
 }
 
-const navLinks = computed(() =>
-  allNavLinks.filter((link) =>
-    !link.permission || (userStore.permissions.includes(link.permission) && link.permission)
-  )
-)
+const refreshViews = (data) => {
+  openCreateViewForm.value = false
+  // TODO: move model to constants.
+  if (data?.model === 'view') {
+    getUserViews()
+  }
+}
 </script>

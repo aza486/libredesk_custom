@@ -9,19 +9,19 @@ import (
 
 	"slices"
 
-	"github.com/abhinavxd/artemis/internal/attachment"
-	"github.com/abhinavxd/artemis/internal/envelope"
-	"github.com/abhinavxd/artemis/internal/image"
-	"github.com/abhinavxd/artemis/internal/stringutil"
-	umodels "github.com/abhinavxd/artemis/internal/user/models"
+	"github.com/abhinavxd/libredesk/internal/attachment"
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/image"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 )
 
 const (
-	thumbPrefix   = "thumb_"
-	thumbnailSize = 150
+	thumbPrefix = "thumb_"
 )
 
 func handleMediaUpload(r *fastglue.Request) error {
@@ -50,10 +50,10 @@ func handleMediaUpload(r *fastglue.Request) error {
 	defer file.Close()
 
 	// Inline?
-	var disposition = attachment.DispositionAttachment
+	var disposition = null.StringFrom(attachment.DispositionAttachment)
 	inline, ok := form.Value["inline"]
 	if ok && len(inline) > 0 && inline[0] == "true" {
-		disposition = attachment.DispositionInline
+		disposition = null.StringFrom(attachment.DispositionInline)
 	}
 
 	// Linked model?
@@ -70,17 +70,18 @@ func handleMediaUpload(r *fastglue.Request) error {
 	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
 
 	// Check file size
-	if bytesToMegabytes(srcFileSize) > app.consts.MaxFileUploadSizeMB {
-		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", app.consts.MaxFileUploadSizeMB)
+	consts := app.consts.Load().(*constants)
+	if bytesToMegabytes(srcFileSize) > float64(consts.MaxFileUploadSizeMB) {
+		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", consts.MaxFileUploadSizeMB)
 		return r.SendErrorEnvelope(
 			http.StatusRequestEntityTooLarge,
-			fmt.Sprintf("File size is too large. Please upload file lesser than %f MB", app.consts.MaxFileUploadSizeMB),
+			fmt.Sprintf("File size is too large. Please upload file lesser than %d MB", consts.MaxFileUploadSizeMB),
 			nil,
 			envelope.GeneralError,
 		)
 	}
 
-	if !slices.Contains(app.consts.AllowedUploadFileExtensions, "*") && !slices.Contains(app.consts.AllowedUploadFileExtensions, srcExt) {
+	if !slices.Contains(consts.AllowedUploadFileExtensions, "*") && !slices.Contains(consts.AllowedUploadFileExtensions, srcExt) {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "File type not allowed", nil, envelope.InputError)
 	}
 
@@ -94,11 +95,11 @@ func handleMediaUpload(r *fastglue.Request) error {
 		}
 	}()
 
-	// Generate and upload thumbnail and save it's dimensions if it's an image.
+	// Generate and upload thumbnail and store image dimensions in the media meta.
 	var meta = []byte("{}")
 	if slices.Contains(image.Exts, srcExt) {
 		file.Seek(0, 0)
-		thumbFile, err := image.CreateThumb(thumbnailSize, file)
+		thumbFile, err := image.CreateThumb(image.DefThumbSize, file)
 		if err != nil {
 			app.lo.Error("error creating thumb image", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error creating image thumbnail", nil, envelope.GeneralError)
@@ -109,7 +110,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 			return sendErrorEnvelope(r, err)
 		}
 
-		// Store image dimensions in the media meta.
+		// Store image dimensions in media meta, storing dimensions for image previews in future.
 		file.Seek(0, 0)
 		width, height, err := image.GetDimensions(file)
 		if err != nil {
@@ -121,7 +122,6 @@ func handleMediaUpload(r *fastglue.Request) error {
 			"width":  width,
 			"height": height,
 		})
-
 	}
 
 	file.Seek(0, 0)
@@ -133,7 +133,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	}
 
 	// Insert in DB.
-	media, err := app.media.Insert(srcFileName, srcContentType, "" /**content_id**/, linkedModel, disposition, uuid.String(), 0, int(srcFileSize), meta)
+	media, err := app.media.Insert(disposition, srcFileName, srcContentType, "" /**content_id**/, null.NewString(linkedModel, linkedModel != ""), uuid.String(), null.Int{} /**model_id**/, int(srcFileSize), meta)
 	if err != nil {
 		cleanUp = true
 		app.lo.Error("error inserting metadata into database", "error", err)
@@ -145,10 +145,15 @@ func handleMediaUpload(r *fastglue.Request) error {
 // handleServeMedia serves uploaded media.
 func handleServeMedia(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = r.RequestCtx.UserValue("user").(umodels.User)
-		uuid = r.RequestCtx.UserValue("uuid").(string)
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
 	)
+
+	user, err := app.user.Get(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	// Fetch media from DB.
 	media, err := app.media.GetByUUID(strings.TrimPrefix(uuid, thumbPrefix))
@@ -178,8 +183,8 @@ func handleServeMedia(r *fastglue.Request) error {
 	if !allowed {
 		return r.SendErrorEnvelope(http.StatusUnauthorized, "Permission denied", nil, envelope.PermissionError)
 	}
-
-	switch app.consts.UploadProvider {
+	consts := app.consts.Load().(*constants)
+	switch consts.UploadProvider {
 	case "fs":
 		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), uuid))
 	case "s3":
