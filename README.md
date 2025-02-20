@@ -39,4 +39,3 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
    - Backend: `make run-backend`
    - Frontend: `make run-frontend`
 
----
