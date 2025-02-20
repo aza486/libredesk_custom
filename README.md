@@ -28,14 +28,14 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
    cd libredesk
    ```
 
-2. **Configure the Application**:
+2. **Create config file**:
 
    - Copy the sample configuration file `config.toml.sample` to `config.toml`:
     
        ```bash
        cp config.toml.sample config.toml
        ```
-   - Edit the `config.toml` file to configure your database and Redis connection settings.
+   - Edit the `config.toml` file to configure your postgres and redis connection settings.
 
 3. **Run in Development Mode**:
 
