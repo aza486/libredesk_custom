@@ -1,47 +1,44 @@
 <template>
-  <div class="flex flex-col w-full">
+  <div class="flex flex-col h-screen">
     <!-- Header -->
-    <div class="p-2 border-b flex items-center justify-between">
-      <div class="flex items-center space-x-3 pr-5">
-        {{ conversationStore.currentContactName }}
+    <div class="h-12 flex-shrink-0 px-2 border-b flex items-center justify-between">
+      <div>
+        <span v-if="!conversationStore.conversation.loading">
+          {{ conversationStore.currentContactName }}
+        </span>
+        <Skeleton class="w-[130px] h-6" v-else />
       </div>
-      <div class="flex items-center space-x-2">
-        <div>
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <div
-                class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
-              >
-                <span
-                  class="text-secondary font-medium inline-block"
-                  v-if="conversationStore.current?.status"
-                >
-                  {{ conversationStore.current?.status }}
-                </span>
-                <span v-else class="text-secondary font-medium inline-block"> Loading... </span>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem
-                v-for="status in conversationStore.statusOptions"
-                :key="status.value"
-                @click="handleUpdateStatus(status.label)"
-              >
-                {{ status.label }}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <div>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <div
+              class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
+              v-if="!conversationStore.conversation.loading"
+            >
+              <span class="text-secondary font-medium inline-block">
+                {{ conversationStore.current?.status }}
+              </span>
+            </div>
+            <Skeleton class="w-[70px] h-6 rounded-full" v-else />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              v-for="status in conversationStore.statusOptions"
+              :key="status.value"
+              @click="handleUpdateStatus(status.label)"
+            >
+              {{ status.label }}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
 
     <!-- Messages & reply box -->
-    <div>
-      <div class="flex flex-col h-screen">
-        <MessageList class="flex-1 overflow-y-auto" />
-        <div class="sticky bottom-0">
-          <ReplyBox class="h-max" />
-        </div>
+    <div class="flex flex-col flex-grow overflow-hidden">
+      <MessageList class="flex-1 overflow-y-auto" />
+      <div class="sticky bottom-0">
+        <ReplyBox class="h-max" />
       </div>
     </div>
   </div>
@@ -60,6 +57,7 @@ import ReplyBox from './ReplyBox.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { useEmitter } from '@/composables/useEmitter'
+import { Skeleton } from '@/components/ui/skeleton'
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 

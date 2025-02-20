@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center space-x-4 p-4">
+  <div class="flex items-center space-x-4 px-2 h-12">
     <SidebarTrigger class="cursor-pointer w-4 h-4 text-black" />
     <div class="flex-1 flex items-center">
       <Search class="w-5 h-5" />

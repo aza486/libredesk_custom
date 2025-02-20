@@ -47,8 +47,10 @@
         @edit-view="editView"
         @delete-view="deleteView"
       >
-        <PageHeader />
-        <RouterView />
+        <div class="flex flex-col h-screen">
+          <PageHeader />
+          <RouterView class="flex-grow" />
+        </div>
         <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
       </Sidebar>
     </div>

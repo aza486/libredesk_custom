@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col relative h-full">
     <div ref="threadEl" class="flex-1 overflow-y-auto" @scroll="handleScroll">
-      <div class="min-h-full pb-20 px-4">
+      <div class="min-h-full px-4 pb-10">
         <div
           class="text-center mt-3"
           v-if="
@@ -20,11 +20,13 @@
           </Button>
         </div>
 
+        <MessagesSkeleton :count="10" v-if="conversationStore.messages.loading" />
+
         <TransitionGroup
+          v-else
           enter-active-class="animate-slide-in"
           tag="div"
           class="space-y-4"
-          v-if="!conversationStore.messages.loading"
         >
           <div
             v-for="message in conversationStore.conversationMessages"
@@ -43,7 +45,6 @@
             </div>
           </div>
         </TransitionGroup>
-        <MessagesSkeleton :count="20" v-else />
       </div>
     </div>
 

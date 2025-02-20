@@ -1,6 +1,6 @@
 <template>
   <div
-    class="page-content p-4 pr-36"
+    class="overflow-y-auto p-4 pr-36"
     :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
   >
     <Spinner v-if="isLoading" />

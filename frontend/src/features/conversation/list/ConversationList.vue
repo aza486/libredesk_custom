@@ -1,15 +1,13 @@
 <template>
   <div class="h-screen flex flex-col">
     <!-- Header -->
-    <header class="border-b">
-      <div class="flex items-center space-x-4 p-2">
-        <SidebarTrigger class="h-4 w-4" />
-        <span class="text-xl font-semibold text-gray-800">{{ title }}</span>
-      </div>
-    </header>
+    <div class="flex items-center space-x-4 px-2 h-12 border-b shrink-0">
+      <SidebarTrigger class="h-4 w-4" />
+      <span class="text-xl font-semibold text-gray-800">{{ title }}</span>
+    </div>
 
     <!-- Filters -->
-    <div class="bg-white px-2 py-2 flex justify-between items-center">
+    <div class="bg-white p-2 flex justify-between items-center">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
@@ -107,7 +105,7 @@
 
         <!-- Loading Skeleton -->
         <div v-if="isLoading" key="loading" class="space-y-4">
-          <ConversationListItemSkeleton v-for="index in 10" :key="index" />
+          <ConversationListItemSkeleton v-for="index in 5" :key="index" />
         </div>
       </TransitionGroup>
 

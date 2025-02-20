@@ -1,12 +1,12 @@
 <template>
-  <div class="p-5 w-screen h-screen">
+  <div class="h-full">
     <div class="flex flex-col space-y-5">
       <div class="space-y-1">
         <span class="sub-title">Public avatar</span>
         <p class="text-muted-foreground text-xs">Change your avatar here.</p>
       </div>
       <div class="flex space-x-5">
-        <Avatar class="size-28 bg-white">
+        <Avatar class="size-28">
           <AvatarImage :src="userStore.avatar" alt="Cropped Image" />
           <AvatarFallback>{{ userStore.getInitials }}</AvatarFallback>
         </Avatar>
