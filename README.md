@@ -4,6 +4,8 @@ Fully open-source, self-hosted customer support desk. Single binary app.
 
 > This project is currently in **alpha**. Features and APIs may change and are not yet fully tested.
 
+Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live demo**](https://demo.libredesk.io/).
+
 ## Developer Setup
 
 #### Prerequisites
@@ -35,5 +37,3 @@ Fully open-source, self-hosted customer support desk. Single binary app.
    - Frontend: `make run-frontend`
 
 ---
-
-Visit [libredesk.io](https://libredesk.io) for more info.
