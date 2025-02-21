@@ -235,8 +235,8 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-  { path: '/admin/automations', label: 'Automations' },
-  { path: '#', label: breadcrumbPageLabel() }
+  { path: 'automations', label: 'Automations' },
+  { path: '', label: breadcrumbPageLabel() }
 ]
 
 const firstRuleGroup = ref([])
@@ -330,7 +330,7 @@ const handleSave = async (values) => {
       await api.updateAutomationRule(props.id, updatedRule)
     } else {
       await api.createAutomationRule(updatedRule)
-      router.push('/admin/automations')
+      router.push({ name: 'automations' })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Success',

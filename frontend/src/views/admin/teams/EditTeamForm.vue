@@ -23,8 +23,8 @@ const isLoading = ref(false)
 
 const breadcrumbLinks = [
 
-  { path: '/admin/teams/teams', label: 'Teams' },
-  { path: '#', label: 'Edit team' }
+  { path: 'team-list', label: 'Teams' },
+  { path: '', label: 'Edit team' }
 ]
 
 const props = defineProps({

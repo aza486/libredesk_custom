@@ -22,9 +22,8 @@ const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  
-  { path: '/admin/teams/users', label: 'Users' },
-  { path: '#', label: 'Edit user' }
+  { path: 'user-list', label: 'Users' },
+  { path: '', label: 'Edit user' }
 ]
 
 const submitForm = (values) => {

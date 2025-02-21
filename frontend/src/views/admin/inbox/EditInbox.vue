@@ -21,8 +21,8 @@ const formLoading = ref(false)
 const isLoading = ref(false)
 const inbox = ref({})
 const breadcrumbLinks = [
-  { path: '/admin/inboxes', label: 'Inboxes' },
-  { path: '#', label: 'Edit Inbox' }
+  { path: 'inbox-list', label: 'Inboxes' },
+  { path: '', label: 'Edit Inbox' }
 ]
 
 const submitForm = (values) => {
@@ -59,7 +59,7 @@ const updateInbox = async (payload) => {
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not update inbox',
+      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

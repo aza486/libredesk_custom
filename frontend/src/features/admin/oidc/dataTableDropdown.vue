@@ -7,7 +7,9 @@
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="edit(props.role.id)">Edit</DropdownMenuItem>
+      <DropdownMenuItem :as-child="true">
+        <RouterLink :to="{ name: 'edit-sso', params: { id: props.role.id } }">Edit</RouterLink>
+      </DropdownMenuItem>
       <DropdownMenuItem @click="() => (alertOpen = true)">Delete</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -49,12 +51,10 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'vue-router'
 import api from '@/api'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
-const router = useRouter()
 const emit = useEmitter()
 const alertOpen = ref(false)
 
@@ -67,10 +67,6 @@ const props = defineProps({
     })
   }
 })
-
-function edit(id) {
-  router.push({ path: `/admin/oidc/${id}/edit` })
-}
 
 async function handleDelete() {
   await api.deleteOIDC(props.role.id)

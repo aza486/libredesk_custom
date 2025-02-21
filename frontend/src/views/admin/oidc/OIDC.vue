@@ -1,7 +1,7 @@
 <template>
   <AdminPageWithHelp>
     <template #content>
-      <router-view></router-view>
+      <router-view/>
     </template>
 
     <template #help>

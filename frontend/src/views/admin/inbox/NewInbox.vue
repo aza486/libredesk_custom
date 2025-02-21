@@ -82,8 +82,8 @@ const currentStep = ref(1)
 const selectedChannel = ref(null)
 const router = useRouter()
 const breadcrumbLinks = [
-  { path: '/admin/inboxes', label: 'Inboxes' },
-  { path: '#', label: 'New Inbox' }
+  { path: 'inbox-list', label: 'Inboxes' },
+  { path: '', label: 'New Inbox' }
 ]
 
 
@@ -149,7 +149,7 @@ async function createInbox (payload) {
       title: 'Success',
       description: 'Inbox created successfully'
     })
-    router.push('/admin/inboxes')
+    router.push({ name: 'inbox-list' })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Could not create inbox',

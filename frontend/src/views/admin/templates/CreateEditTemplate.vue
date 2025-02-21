@@ -46,7 +46,7 @@ const submitForm = async (values) => {
     } else {
       await api.createTemplate(values)
       toastDescription = 'Template created successfully'
-      router.push('/admin/templates')
+      router.push({ name: 'templates' })
       emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
         model: 'templates'
       })
@@ -71,8 +71,8 @@ const breadCrumLabel = () => {
 }
 
 const breadcrumbLinks = [
-  { path: '/admin/templates', label: 'Templates' },
-  { path: '#', label: breadCrumLabel() }
+  { path: 'templates', label: 'Templates' },
+  { path: '', label: breadCrumLabel() }
 ]
 
 onMounted(async () => {

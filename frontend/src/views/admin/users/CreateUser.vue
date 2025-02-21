@@ -19,8 +19,8 @@ const emitter = useEmitter()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: '/admin/teams/users', label: 'Users' },
-  { path: '#', label: 'Add user' }
+  { path: 'user-list', label: 'Users' },
+  { path: '', label: 'Add user' }
 ]
 
 const onSubmit = (values) => {
@@ -35,7 +35,7 @@ const createNewUser = async (values) => {
       title: 'Success',
       description: 'User created successfully'
     })
-    router.push('/admin/teams/users')
+    router.push({ name: 'user-list' })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',

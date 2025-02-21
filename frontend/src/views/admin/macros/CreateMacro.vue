@@ -22,8 +22,8 @@ const router = useRouter()
 const emit = useEmitter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: '/admin/conversations/macros', label: 'Macros' },
-  { path: '#', label: 'New macro' }
+  { path: 'macro-list', label: 'Macros' },
+  { path: '-', label: 'New macro' }
 ]
 
 const onSubmit = (values) => {
@@ -38,7 +38,7 @@ const createMacro = async (values) => {
       title: 'Success',
       description: 'Macro created successfully'
     })
-    router.push('/admin/conversations/macros')
+    router.push({ name: 'macro-list' })
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',

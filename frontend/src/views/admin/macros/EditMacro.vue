@@ -22,8 +22,8 @@ const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  { path: '/admin/conversations/macros', label: 'Macros' },
-  { path: '#', label: 'Edit macro' }
+  { path: 'macro-list', label: 'Macros' },
+  { path: '', label: 'Edit macro' }
 ]
 
 const submitForm = (values) => {

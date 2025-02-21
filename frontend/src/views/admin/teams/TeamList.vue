@@ -2,7 +2,9 @@
   <Spinner v-if="isLoading" />
   <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
     <div class="flex justify-end mb-5">
-      <Button @click="navigateToAddTeam"> New team </Button>
+      <router-link :to="{ name: 'new-team' }">
+        <Button> New team </Button>
+      </router-link>
     </div>
     <div>
       <DataTable :columns="columns" :data="data" />
@@ -15,7 +17,6 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { handleHTTPError } from '@/utils/http'
 import { columns } from '@/features/admin/teams/TeamsDataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
@@ -23,7 +24,6 @@ import DataTable from '@/components/datatable/DataTable.vue'
 import api from '@/api'
 
 const emitter = useEmitter()
-const router = useRouter()
 const data = ref([])
 const isLoading = ref(false)
 
@@ -41,10 +41,6 @@ const getData = async () => {
   } finally {
     isLoading.value = false
   }
-}
-
-const navigateToAddTeam = () => {
-  router.push('/admin/teams/teams/new')
 }
 
 const listenForRefresh = () => {

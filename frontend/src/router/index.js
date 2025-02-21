@@ -174,6 +174,7 @@ const routes = [
             children: [
               {
                 path: '',
+                name: 'business-hours-list',
                 component: () => import('@/views/admin/business-hours/BusinessHoursList.vue'),
               },
               {
@@ -198,16 +199,19 @@ const routes = [
             children: [
               {
                 path: '',
+                name: 'sla-list',
                 component: () => import('@/views/admin/sla/SLAList.vue'),
               },
               {
                 path: 'new',
+                name: 'new-sla',
                 component: () => import('@/views/admin/sla/CreateEditSLA.vue'),
                 meta: { title: 'New SLA' }
               },
               {
                 path: ':id/edit',
                 props: true,
+                name: 'edit-sla',
                 component: () => import('@/views/admin/sla/CreateEditSLA.vue'),
                 meta: { title: 'Edit SLA' }
               },
@@ -220,6 +224,7 @@ const routes = [
             children: [
               {
                 path: '',
+                name: 'inbox-list',
                 component: () => import('@/views/admin/inbox/InboxList.vue'),
               },
               {
@@ -253,6 +258,7 @@ const routes = [
                 children: [
                   {
                     path: '',
+                    name: 'user-list',
                     component: () => import('@/views/admin/users/UserList.vue'),
                   },
                   {
@@ -276,16 +282,19 @@ const routes = [
                 children: [
                   {
                     path: '',
+                    name: 'team-list',
                     component: () => import('@/views/admin/teams/TeamList.vue'),
                   },
                   {
                     path: 'new',
+                    name: 'new-team',
                     component: () => import('@/views/admin/teams/CreateTeamForm.vue'),
                     meta: { title: 'Create Team' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
+                    name: 'edit-team',
                     component: () => import('@/views/admin/teams/EditTeamForm.vue'),
                     meta: { title: 'Edit Team' }
                   },
@@ -298,16 +307,19 @@ const routes = [
                 children: [
                   {
                     path: '',
+                    name: 'role-list',
                     component: () => import('@/views/admin/roles/RoleList.vue'),
                   },
                   {
                     path: 'new',
+                    name: 'new-role',
                     component: () => import('@/views/admin/roles/NewRole.vue'),
                     meta: { title: 'Create Role' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
+                    name: 'edit-role',
                     component: () => import('@/views/admin/roles/EditRole.vue'),
                     meta: { title: 'Edit Role' }
                   }
@@ -318,17 +330,20 @@ const routes = [
           {
             path: 'automations',
             component: () => import('@/views/admin/automations/Automation.vue'),
+            name: 'automations',
             meta: { title: 'Automations' },
             children: [
               {
                 path: 'new',
                 props: true,
+                name: 'new-automation',
                 component: () => import('@/views/admin/automations/CreateOrEditRule.vue'),
                 meta: { title: 'Create Automation' }
               },
               {
                 path: ':id/edit',
                 props: true,
+                name: 'edit-automation',
                 component: () => import('@/views/admin/automations/CreateOrEditRule.vue'),
                 meta: { title: 'Edit Automation' }
               }
@@ -337,6 +352,7 @@ const routes = [
           {
             path: 'templates',
             component: () => import('@/views/admin/templates/Templates.vue'),
+            name: 'templates',
             meta: { title: 'Templates' },
             children: [
               {
@@ -356,22 +372,26 @@ const routes = [
             ]
           },
           {
-            path: 'oidc',
+            path: 'sso',
             component: () => import('@/views/admin/oidc/OIDC.vue'),
+            name: 'sso',
             meta: { title: 'SSO' },
             children: [
               {
                 path: '',
+                name: 'sso-list',
                 component: () => import('@/views/admin/oidc/OIDCList.vue'),
               },
               {
                 path: ':id/edit',
                 props: true,
+                name: 'edit-sso',
                 component: () => import('@/views/admin/oidc/CreateEditOIDC.vue'),
                 meta: { title: 'Edit SSO' }
               },
               {
                 path: 'new',
+                name: 'new-sso',
                 component: () => import('@/views/admin/oidc/CreateEditOIDC.vue'),
                 meta: { title: 'New SSO' }
               }
@@ -398,6 +418,7 @@ const routes = [
                 children: [
                   {
                     path: '',
+                    name: 'macro-list',
                     component: () => import('@/views/admin/macros/MacroList.vue'),
                   },
                   {

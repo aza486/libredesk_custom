@@ -112,7 +112,7 @@ export const adminNavItems = [
         children: [
             {
                 title: 'SSO',
-                href: '/admin/oidc',
+                href: '/admin/sso',
                 permission: 'oidc:manage'
             }
         ]

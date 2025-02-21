@@ -45,7 +45,7 @@ const submitForm = async (values) => {
                 title: 'Success',
                 description: 'Business hours created successfully',
             })
-            router.push('/admin/business-hours')
+            router.push({ name: 'business-hours-list' })
         }
     } catch (error) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -67,8 +67,8 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-    { path: '/admin/business-hours', label: 'Business hours' },
-    { path: '#', label: breadCrumLabel() }
+    { path: 'business-hours-list', label: 'Business hours' },
+    { path: '', label: breadCrumLabel() }
 ]
 
 onMounted(async () => {

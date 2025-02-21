@@ -19,8 +19,8 @@ const emitter = useEmitter()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: '/admin/teams/roles', label: 'Roles' },
-  { path: '#', label: 'Add role' }
+  { path: 'role-list', label: 'Roles' },
+  { path: '', label: 'New role' }
 ]
 
 const submitForm = async (values) => {
@@ -31,7 +31,7 @@ const submitForm = async (values) => {
       title: 'Success',
       description: 'Role created successfully'
     })
-    router.push('/admin/teams/roles')
+    router.push({ name: 'role-list' })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Could not create role',

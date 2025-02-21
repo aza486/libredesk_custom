@@ -1,7 +1,7 @@
 <template>
   <AdminPageWithHelp>
     <template #content>
-      <div v-if="router.currentRoute.value.path === '/admin/automations'">
+      <div v-if="router.currentRoute.value.name === 'automations'">
         <div class="flex justify-between mb-5">
           <div class="ml-auto">
             <Button @click="newRule">New rule</Button>
@@ -34,6 +34,6 @@ import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
 const router = useRouter()
 const selectedTab = useStorage('automationsTab', 'new_conversation')
 const newRule = () => {
-  router.push({ path: `/admin/automations/new`, query: { type: selectedTab.value } })
+  router.push({ name: 'new-automation', query: { type: selectedTab.value } })
 }
 </script>

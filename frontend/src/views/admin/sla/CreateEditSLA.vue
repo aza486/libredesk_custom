@@ -45,7 +45,7 @@ const submitForm = async (values) => {
                 title: 'Success',
                 description: 'SLA created successfully',
             })
-            router.push('/admin/sla')
+            router.push({ name: 'sla-list' })
         }
     } catch (error) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -67,8 +67,8 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-    { path: '/admin/sla', label: 'SLA' },
-    { path: '#', label: breadCrumLabel() }
+    { path: 'sla-list', label: 'SLA' },
+    { path: '', label: breadCrumLabel() }
 ]
 
 onMounted(async () => {

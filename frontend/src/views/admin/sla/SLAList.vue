@@ -3,7 +3,9 @@
     <div class="flex justify-between mb-5">
       <div></div>
       <div>
-        <Button @click="navigateToNewSLA">New SLA</Button>
+        <router-link :to="{ name: 'new-sla' }">
+          <Button> New SLA </Button>
+        </router-link>
       </div>
     </div>
     <div>
@@ -18,7 +20,6 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import DataTable from '@/components/datatable/DataTable.vue'
 import { columns } from '../../../features/admin/sla/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 
 import { Spinner } from '@/components/ui/spinner'
@@ -27,7 +28,6 @@ import api from '@/api'
 
 const slas = ref([])
 const isLoading = ref(false)
-const router = useRouter()
 const emit = useEmitter()
 
 onMounted(() => {
@@ -51,9 +51,5 @@ const fetchAll = async () => {
   } finally {
     isLoading.value = false
   }
-}
-
-const navigateToNewSLA = () => {
-  router.push('/admin/sla/new')
 }
 </script>
