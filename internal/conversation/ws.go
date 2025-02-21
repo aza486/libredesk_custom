@@ -2,24 +2,26 @@ package conversation
 
 import (
 	"encoding/json"
+	"time"
 
+	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	wsmodels "github.com/abhinavxd/libredesk/internal/ws/models"
 )
 
 // BroadcastNewMessage broadcasts a new message to all users.
-func (m *Manager) BroadcastNewMessage(conversationUUID, content, messageUUID, lastMessageAt, typ string, private bool) {
-	message := wsmodels.Message{
+func (m *Manager) BroadcastNewMessage(message *cmodels.Message) {
+	m.broadcastToUsers([]int{}, wsmodels.Message{
 		Type: wsmodels.MessageTypeNewMessage,
 		Data: map[string]interface{}{
-			"conversation_uuid": conversationUUID,
-			"content":           content,
-			"created_at":        lastMessageAt,
-			"uuid":              messageUUID,
-			"private":           private,
-			"type":              typ,
+			"conversation_uuid": message.ConversationUUID,
+			"content":           message.TextContent,
+			"created_at":        message.CreatedAt.Format(time.RFC3339),
+			"uuid":              message.UUID,
+			"private":           message.Private,
+			"type":              message.Type,
+			"sender_type":       message.SenderType,
 		},
-	}
-	m.broadcastToUsers([]int{}, message)
+	})
 }
 
 // BroadcastMessageUpdate broadcasts a message update to all users.

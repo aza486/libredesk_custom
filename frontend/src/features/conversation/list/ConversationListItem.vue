@@ -39,10 +39,14 @@
 
         <!-- Message preview and unread count -->
         <div class="flex items-start justify-between gap-2">
-          <p class="text-sm text-gray-600 line-clamp-2 flex-1">
-            <Reply class="inline-block w-4 h-4 mr-1.5 text-green-600 flex-shrink-0" />
+          <div class="text-sm text-gray-600 flex items-center gap-1.5 flex-1">
+            <Reply
+              class="text-green-600 flex-shrink-0"
+              size="15"
+              v-if="conversation.last_message_sender === 'agent'"
+            />
             {{ trimmedLastMessage }}
-          </p>
+          </div>
           <div
             v-if="conversation.unread_message_count > 0"
             class="flex items-center justify-center w-6 h-6 bg-green-600 text-white text-xs font-medium rounded-full"

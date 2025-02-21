@@ -399,8 +399,8 @@ func (c *Manager) ActiveUserConversationsCount(userID int) (int, error) {
 }
 
 // UpdateConversationLastMessage updates the last message details for a conversation.
-func (c *Manager) UpdateConversationLastMessage(convesationID int, conversationUUID, lastMessage string, lastMessageAt time.Time) error {
-	if _, err := c.q.UpdateConversationLastMessage.Exec(convesationID, conversationUUID, lastMessage, lastMessageAt); err != nil {
+func (c *Manager) UpdateConversationLastMessage(conversation int, conversationUUID, lastMessage, lastMessageSenderType string, lastMessageAt time.Time) error {
+	if _, err := c.q.UpdateConversationLastMessage.Exec(conversation, conversationUUID, lastMessage, lastMessageSenderType, lastMessageAt); err != nil {
 		c.lo.Error("error updating conversation last message", "error", err)
 		return err
 	}

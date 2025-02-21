@@ -356,10 +356,10 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Update conversation last message details in conversation metadata.
-	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.CreatedAt)
+	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.SenderType, message.CreatedAt)
 
 	// Broadcast new message.
-	m.BroadcastNewMessage(message.ConversationUUID, message.TextContent, message.UUID, message.CreatedAt.Format(time.RFC3339), message.Type, message.Private)
+	m.BroadcastNewMessage(message)
 	return nil
 }
 

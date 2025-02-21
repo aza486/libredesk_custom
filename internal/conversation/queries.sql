@@ -47,6 +47,7 @@ SELECT
     conversations.subject,
     conversations.last_message,
     conversations.last_message_at,
+    conversations.last_message_sender,
     conversations.next_sla_deadline_at,
     conversations.priority_id,
     (
@@ -197,7 +198,7 @@ SET assignee_last_seen_at = now(),
 WHERE uuid = $1;
 
 -- name: update-conversation-last-message
-UPDATE conversations SET last_message = $3, last_message_at = $4 WHERE CASE 
+UPDATE conversations SET last_message = $3, last_message_sender = $4, last_message_at = $5, updated_at = NOW() WHERE CASE 
     WHEN $1 > 0 THEN id = $1
     ELSE uuid = $2
 END

@@ -55,6 +55,7 @@ export class WebSocketClient {
 
       const data = JSON.parse(event.data)
       const handlers = {
+        // On new message, update the message in the conversation list and in the currently opened conversation.
         [WS_EVENT.NEW_MESSAGE]: () => {
           this.convStore.updateConversationList(data.data)
           this.convStore.updateConversationMessage(data.data)

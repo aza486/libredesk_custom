@@ -545,10 +545,12 @@ export const useConversationStore = defineStore('conversation', () => {
     if (listConversation) {
       listConversation.last_message = message.content
       listConversation.last_message_at = message.created_at
+      listConversation.last_message_sender = message.sender_type
       if (listConversation.uuid !== conversation?.data?.uuid) {
         listConversation.unread_message_count += 1
       }
     } else {
+      // Conversation is not in the list, fetch the first page of the conversations list as this updated conversation might be at the top.
       fetchFirstPageConversations()
     }
   }

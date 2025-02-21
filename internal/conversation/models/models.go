@@ -56,6 +56,7 @@ type Conversation struct {
 	CustomAttributes      pq.StringArray  `db:"custom_attributes" json:"custom_attributes"`
 	LastMessageAt         null.Time       `db:"last_message_at" json:"last_message_at"`
 	LastMessage           null.String     `db:"last_message" json:"last_message"`
+	LastMessageSender     null.String     `db:"last_message_sender" json:"last_message_sender"`
 	Contact               umodels.User    `db:"contact" json:"contact"`
 	SLAPolicyID           null.Int        `db:"sla_policy_id" json:"sla_policy_id"`
 	SlaPolicyName         null.String     `db:"sla_policy_name" json:"sla_policy_name"`

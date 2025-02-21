@@ -209,6 +209,7 @@ CREATE TABLE conversations (
 	waiting_since TIMESTAMPTZ NULL,
 	last_message_at TIMESTAMPTZ NULL,
 	last_message TEXT NULL,
+	last_message_sender message_sender_type NULL,
 	next_sla_deadline_at TIMESTAMPTZ NULL,
 	snoozed_until TIMESTAMPTZ NULL
 );
