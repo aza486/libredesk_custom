@@ -512,8 +512,6 @@ INSERT INTO conversation_priorities (name) VALUES
 -- Default conversation statuses
 INSERT INTO conversation_statuses (name) VALUES
 ('Open'),          
-('In Progress'),
-('Waiting'),
 ('Snoozed'),
 ('Resolved'),
 ('Closed');

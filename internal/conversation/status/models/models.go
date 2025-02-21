@@ -4,10 +4,9 @@ import "time"
 
 var DefaultStatuses = []string{
 	"Open",
-	"Replied",
+	"Snoozed",
 	"Resolved",
 	"Closed",
-	"Snoozed",
 }
 
 type Status struct {

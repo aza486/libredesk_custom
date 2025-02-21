@@ -8,8 +8,6 @@ export const CONVERSATION_LIST_TYPE = {
 
 export const CONVERSATION_DEFAULT_STATUSES = {
   OPEN: 'Open',
-  IN_PROGRESS: 'In Progress',
-  WAITING: 'Waiting',
   SNOOZED: 'Snoozed',
   RESOLVED: 'Resolved',
   CLOSED: 'Closed',
