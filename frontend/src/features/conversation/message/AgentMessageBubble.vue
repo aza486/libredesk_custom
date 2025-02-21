@@ -25,12 +25,12 @@
         <MessageAttachmentPreview :attachments="nonInlineAttachments" />
 
         <!-- Spinner for Pending Messages -->
-        <Spinner v-if="message.status === 'pending'" size="w-4 h-4" class="mt-2" />
+        <Spinner v-if="message.status === 'pending'" size="w-4 h-4" />
 
         <!-- Icons -->
         <div class="flex items-center space-x-2 mt-2">
           <Lock :size="10" v-if="isPrivateMessage" class="text-muted-foreground" />
-          <CheckCheck :size="14" v-if="showCheckCheck" class="text-green-500" />
+          <Check :size="14" v-if="showCheckCheck" class="text-green-500" />
           <RotateCcw
             size="10"
             @click="retryMessage(message)"
@@ -69,7 +69,7 @@
 import { computed } from 'vue'
 import { format } from 'date-fns'
 import { useConversationStore } from '@/stores/conversation'
-import { Lock, RotateCcw, CheckCheck } from 'lucide-vue-next'
+import { Lock, RotateCcw, Check } from 'lucide-vue-next'
 import { revertCIDToImageSrc } from '@/utils/strings'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Spinner } from '@/components/ui/spinner'
