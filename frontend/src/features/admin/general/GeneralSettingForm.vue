@@ -1,8 +1,5 @@
 <template>
-  <form
-    @submit="onSubmit"
-    class="space-y-6 w-full"
-  >
+  <form @submit="onSubmit" class="space-y-6 w-full">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
         <FormLabel>Site Name</FormLabel>
@@ -126,22 +123,28 @@
       </FormItem>
     </FormField>
 
-    <FormField name="allowed_file_upload_extensions" v-slot="{ componentField }">
-      <FormItem>
-        <FormLabel>Allowed file upload extensions</FormLabel>
-        <FormControl>
-          <TagsInput v-model="componentField.modelValue">
-            <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">
-              <TagsInputItemText />
-              <TagsInputItemDelete />
-            </TagsInputItem>
-            <TagsInputInput placeholder="jpg" />
-          </TagsInput>
-        </FormControl>
-        <FormDescription>Use `*` to allow any file.</FormDescription>
-        <FormMessage />
-      </FormItem>
-    </FormField>
+  
+      <FormField name="allowed_file_upload_extensions" v-slot="{ componentField, handleChange }">
+        <FormItem>
+          <FormLabel>Allowed file upload extensions</FormLabel>
+          <FormControl>
+            <TagsInput
+              :modelValue="componentField.modelValue"
+              @update:modelValue="handleChange"
+            >
+              <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">
+                <TagsInputItemText />
+                <TagsInputItemDelete />
+              </TagsInputItem>
+              <TagsInputInput placeholder="jpg" />
+            </TagsInput>
+          </FormControl>
+          <FormDescription>Use `*` to allow any file.</FormDescription>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+    
+
     <Button type="submit" :isLoading="formLoading"> {{ submitLabel }} </Button>
   </form>
 </template>

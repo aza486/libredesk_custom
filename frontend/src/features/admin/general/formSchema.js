@@ -35,8 +35,8 @@ export const formSchema = z.object({
     .min(1, {
       message: 'Max upload file size must be at least 1 MB.'
     })
-    .max(30, {
-      message: 'Max upload file size cannot exceed 30 MB.'
+    .max(500, {
+      message: 'Max upload file size cannot exceed 500 MB.'
     }),
   allowed_file_upload_extensions: z.array(z.string()).nullable().default([]).optional()
 })
