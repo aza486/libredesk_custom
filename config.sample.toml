@@ -9,7 +9,7 @@ address = "0.0.0.0:9000"
 socket = ""
 read_timeout = "5s"
 write_timeout = "5s"
-max_body_size = 10000000
+max_body_size = 500000000
 keepalive_timeout = "10s"
 
 # File upload provider.
