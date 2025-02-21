@@ -3,13 +3,15 @@
 
 # Libredesk
 
-Fully open-source, self-hosted customer support desk. Single binary app.
-
-> This project is currently in **alpha**. Features and APIs may change and are not yet fully tested.
+Open source, self-hosted customer support desk. Single binary app.
 
 Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live demo**](https://demo.libredesk.io/).
 
 ![Screenshot_20250220_231723](https://github.com/user-attachments/assets/55e0ec68-b624-4442-8387-6157742da253)
+
+
+> [!CAUTION]
+> This project is currently in **alpha**. Features and APIs may change and are not yet fully tested.
 
 
 ## Developer Setup
@@ -18,8 +20,8 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
 
 - **go**
 - **pnpm**
-- **PostgreSQL >= 13**
-- **Redis**
+- **postgreSQL >= 13**
+- **redis**
 
 1. **Clone the repository**:
 
@@ -37,7 +39,7 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
        ```
    - Edit the `config.toml` file to configure your postgres and redis connection settings.
 
-3. **Run in Development Mode**:
+3. **Run in development mode**:
 
    - Backend: `make run-backend`
    - Frontend: `make run-frontend`
