@@ -23,7 +23,7 @@ const emit = useEmitter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
   { path: 'macro-list', label: 'Macros' },
-  { path: '-', label: 'New macro' }
+  { path: '', label: 'New macro' }
 ]
 
 const onSubmit = (values) => {

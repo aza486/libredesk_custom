@@ -412,7 +412,7 @@ const routes = [
                 meta: { title: 'Statuses' }
               },
               {
-                path: 'Macros',
+                path: 'macros',
                 component: () => import('@/views/admin/macros/Macros.vue'),
                 meta: { title: 'Macros' },
                 children: [
