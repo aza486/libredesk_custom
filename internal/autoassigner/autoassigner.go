@@ -196,10 +196,15 @@ func (e *Engine) assignConversations() error {
 			continue
 		}
 
-		// Check if user has reached the max auto assigned conversations limit.
-		if activeConversationsCount >= e.teamMaxAutoAssignments[conversation.AssignedTeamID.Int] {
-			e.lo.Debug("user has reached max auto assigned conversations limit, skipping auto assignment", "user_id", userID, "user_active_conversations_count", activeConversationsCount, "max_auto_assigned_conversations", e.teamMaxAutoAssignments[conversation.AssignedTeamID.Int])
-			continue
+		teamMaxAutoAssignments := e.teamMaxAutoAssignments[conversation.AssignedTeamID.Int]
+		// Check if user has reached the max auto assigned conversations limit,
+		// If the limit is set to 0, it means there is no limit.
+		if teamMaxAutoAssignments != 0 {
+			if activeConversationsCount >= teamMaxAutoAssignments {
+				e.lo.Debug("user has reached max auto assigned conversations limit, skipping auto assignment", "user_id", userID,
+					"user_active_conversations_count", activeConversationsCount, "max_auto_assigned_conversations", teamMaxAutoAssignments)
+				continue
+			}
 		}
 
 		// Assign conversation to user.
