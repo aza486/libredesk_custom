@@ -120,7 +120,7 @@
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-        <Button type="submit" :disabled="isLoading">{{ submitLabel }}</Button>
+        <Button type="submit" :disabled="isLoading" :isLoading="isLoading">{{ submitLabel }}</Button>
     </form>
 </template>
 
