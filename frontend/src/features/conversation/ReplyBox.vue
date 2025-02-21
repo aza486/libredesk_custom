@@ -120,6 +120,7 @@
             :handleInlineImageUpload="handleInlineImageUpload"
             :isBold="isBold"
             :isItalic="isItalic"
+            :isSending="isSending"
             @toggleBold="toggleBold"
             @toggleItalic="toggleItalic"
             :enableSend="enableSend"
@@ -240,6 +241,7 @@
           :handleInlineImageUpload="handleInlineImageUpload"
           :isBold="isBold"
           :isItalic="isItalic"
+          :isSending="isSending"
           @toggleBold="toggleBold"
           @toggleItalic="toggleItalic"
           :enableSend="enableSend"
@@ -276,6 +278,7 @@ const insertContent = ref(null)
 const setInlineImage = ref(null)
 const clearEditorContent = ref(false)
 const isEditorFullscreen = ref(false)
+const isSending = ref(false)
 const cursorPosition = ref(0)
 const selectedText = ref('')
 const htmlContent = ref('')
@@ -464,6 +467,8 @@ const handleSend = async () => {
 
   isEditorFullscreen.value = false
   try {
+    isSending.value = true
+
     // Send message if there is text content in the editor.
     if (hasTextContent.value) {
       // Replace inline image url with cid.
@@ -517,6 +522,7 @@ const handleSend = async () => {
       description: handleHTTPError(error).message
     })
   } finally {
+    isSending.value = false
     clearEditorContent.value = true
     conversationStore.resetMacro()
     conversationStore.resetMediaFiles()
