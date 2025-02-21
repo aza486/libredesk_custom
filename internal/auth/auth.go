@@ -110,6 +110,16 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 	}, nil
 }
 
+// TestProvider tests the OIDC provider url by doing a discovery on it.
+func (a *Auth) TestProvider(url string) error {
+	_, err := oidc.NewProvider(context.Background(), url)
+	if err != nil {
+		a.logger.Error("error testing oidc provider", "provider_url", url, "error", err)
+		return envelope.NewError(envelope.GeneralError, err.Error(), nil)
+	}
+	return nil
+}
+
 // Reload reloads the auth configuration.
 func (a *Auth) Reload(cfg Config) error {
 	a.mu.Lock()

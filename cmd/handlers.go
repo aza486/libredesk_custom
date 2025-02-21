@@ -37,8 +37,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// OpenID connect single sign-on.
 	g.GET("/api/v1/oidc/enabled", handleGetAllEnabledOIDC)
 	g.GET("/api/v1/oidc", perm(handleGetAllOIDC, "oidc:manage"))
-	g.GET("/api/v1/oidc/{id}", perm(handleGetOIDC, "oidc:manage"))
 	g.POST("/api/v1/oidc", perm(handleCreateOIDC, "oidc:manage"))
+	g.POST("/api/v1/oidc/test", perm(handleTestOIDC, "oidc:manage"))
+	g.GET("/api/v1/oidc/{id}", perm(handleGetOIDC, "oidc:manage"))
 	g.PUT("/api/v1/oidc/{id}", perm(handleUpdateOIDC, "oidc:manage"))
 	g.DELETE("/api/v1/oidc/{id}", perm(handleDeleteOIDC, "oidc:manage"))
 

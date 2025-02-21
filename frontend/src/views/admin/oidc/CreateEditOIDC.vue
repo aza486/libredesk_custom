@@ -38,8 +38,23 @@ const props = defineProps({
 })
 
 const submitForm = async (values) => {
+  // Test the provider first.
   try {
     formLoading.value = true
+    await api.testOIDC({
+      provider_url: values.provider_url
+    })
+  } catch (error) {
+    formLoading.value = false
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+    return
+  }
+
+  try {
     let toastDescription = ''
     if (props.id) {
       if (values.client_secret.includes('•')) {
@@ -47,10 +62,10 @@ const submitForm = async (values) => {
       }
       await api.updateOIDC(props.id, values)
       toastDescription = 'Provider updated successfully'
+      router.push({ name: 'sso-list' })
     } else {
       await api.createOIDC(values)
       toastDescription = 'Provider created successfully'
-      router.push('/admin/oidc')
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Success',
@@ -84,8 +99,8 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-  { path: '/admin/oidc', label: 'OIDC' },
-  { path: '#', label: breadCrumLabel() }
+  { path: 'sso-list', label: 'SSO' },
+  { path: '', label: breadCrumLabel() }
 ]
 
 onMounted(async () => {
