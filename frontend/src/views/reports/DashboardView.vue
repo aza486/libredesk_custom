@@ -113,13 +113,28 @@ const getDashboardCharts = async () => {
       chartData.value.new_conversations = resp.data.data.new_conversations || []
       chartData.value.resolved_conversations = resp.data.data.resolved_conversations || []
       chartData.value.messages_sent = resp.data.data.messages_sent || []
-      chartData.value.processedData = resp.data.data.new_conversations.map((item) => ({
-        date: item.date,
-        'New conversations': item.count,
+
+      // Get all dates from all datasets
+      const allDates = [
+        ...chartData.value.new_conversations.map((item) => item.date),
+        ...chartData.value.resolved_conversations.map((item) => item.date),
+        ...chartData.value.messages_sent.map((item) => item.date)
+      ]
+
+      // Create unique sorted dates
+      const uniqueDates = [...new Set(allDates)].sort((a, b) => new Date(a) - new Date(b))
+
+      // Process data for all dates
+      chartData.value.processedData = uniqueDates.map((date) => ({
+        date,
+        'New conversations':
+          chartData.value.new_conversations.find((item) => item.date === date)?.count || 0,
         'Resolved conversations':
-          resp.data.data.resolved_conversations.find((r) => r.date === item.date)?.count || 0,
-        'Messages sent': resp.data.data.messages_sent.find((r) => r.date === item.date)?.count || 0
+          chartData.value.resolved_conversations.find((item) => item.date === date)?.count || 0,
+        'Messages sent':
+          chartData.value.messages_sent.find((item) => item.date === date)?.count || 0
       }))
+
       chartData.value.status_summary = resp.data.data.status_summary || []
     })
     .catch((error) => {
