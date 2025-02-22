@@ -289,6 +289,7 @@ func (a *Auth) SetCSRFCookie(r *fastglue.Request) error {
 	return nil
 }
 
+// ValidateSession validates the session and returns the user.
 func (a *Auth) ValidateSession(r *fastglue.Request) (models.User, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()

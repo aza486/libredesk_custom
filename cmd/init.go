@@ -98,6 +98,9 @@ func initFlags() {
 		"path to one or more config files (will be merged in order)")
 	f.Bool("version", false, "show current version of the build")
 	f.Bool("install", false, "setup database")
+	f.Bool("idempotent-install", false, "run idempotent installation, i.e., skip installion if schema is already installed useful for the first time setup")
+	f.Bool("yes", false, "skip confirmation prompt")
+	f.Bool("upgrade", false, "upgrade the database schema")
 	f.Bool("set-system-user-password", false, "set password for the system user")
 
 	if err := f.Parse(os.Args[1:]); err != nil {

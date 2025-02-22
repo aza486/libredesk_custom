@@ -1,4 +1,4 @@
-// package colorlog provides logging in color.
+// package colorlog provides ANSI color logging for the terminal.
 package colorlog
 
 import "log"

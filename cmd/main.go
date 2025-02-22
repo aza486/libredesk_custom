@@ -114,7 +114,7 @@ func main() {
 
 	// Installer.
 	if ko.Bool("install") {
-		install(ctx, db, fs)
+		install(ctx, db, fs, ko.Bool("idempotent-install"), !ko.Bool("yes"))
 		os.Exit(0)
 	}
 
@@ -130,7 +130,13 @@ func main() {
 		log.Fatalf("error checking db schema: %v", err)
 	}
 	if !installed {
-		log.Println("Database tables are missing. Use the `--install` flag to set up the database schema.")
+		log.Println("database tables are missing. Use the `--install` flag to set up the database schema.")
+		os.Exit(0)
+	}
+
+	// Upgrade.
+	if ko.Bool("upgrade") {
+		log.Println("no upgrades available")
 		os.Exit(0)
 	}
 

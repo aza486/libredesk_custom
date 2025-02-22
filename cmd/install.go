@@ -4,23 +4,38 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
+	"time"
 
+	"github.com/abhinavxd/libredesk/internal/colorlog"
 	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/stuffbin"
 	"github.com/lib/pq"
 )
 
-// install checks if the schema is already installed, prompts for confirmation, and installs the schema if needed.
-func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem) error {
-	installed, err := checkSchema(db)
+// Install checks if the schema is already installed, prompts for confirmation, and installs the schema if needed.
+// idempotent install skips the installation if the database schema is already installed.
+func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem, idempotentInstall, prompt bool) error {
+	schemaInstalled, err := checkSchema(db)
 	if err != nil {
-		log.Fatalf("error checking db schema: %v", err)
+		log.Fatalf("error checking existing db schema: %v", err)
 	}
-	if installed {
-		fmt.Printf("\033[31m** WARNING: This will wipe your entire database - '%s' **\033[0m\n", ko.String("db.database"))
-		fmt.Print("Continue (y/n)? ")
+
+	// Make sure the system user password is strong enough.
+	password := strings.TrimSpace(os.Getenv("LIBREDESK_SYSTEM_USER_PASSWORD"))
+	if password != "" && !user.IsStrongSystemUserPassword(password) && !schemaInstalled {
+		log.Fatalf("system user password is not strong, %s", user.SystemUserPasswordHint)
+	}
+
+	if !idempotentInstall {
+		log.Println("running first time setup...")
+		colorlog.Red(fmt.Sprintf("WARNING: This will wipe your entire database - '%s'", ko.String("db.database")))
+	}
+
+	if prompt {
+		log.Print("Continue (y/n)? ")
 		var ok string
 		fmt.Scanf("%s", &ok)
 		if !strings.EqualFold(ok, "y") {
@@ -28,15 +43,26 @@ func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem) error {
 		}
 	}
 
+	if idempotentInstall {
+		if schemaInstalled {
+			log.Println("skipping installation as schema is already installed")
+			os.Exit(0)
+		}
+	} else {
+		time.Sleep(5 * time.Second)
+	}
+
+	log.Println("installing database schema...")
+
 	// Install schema.
 	if err := installSchema(db, fs); err != nil {
 		log.Fatalf("error installing schema: %v", err)
 	}
 
-	log.Println("Schema installed successfully")
+	log.Println("database schema installed successfully")
 
 	// Create system user.
-	if err := user.CreateSystemUser(ctx, db); err != nil {
+	if err := user.CreateSystemUser(ctx, password, db); err != nil {
 		log.Fatalf("error creating system user: %v", err)
 	}
 	return nil

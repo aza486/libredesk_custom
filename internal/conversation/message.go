@@ -54,7 +54,7 @@ const (
 )
 
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
-// pending outgoing messages at the specified read interval and pushes them to the outgoing queue.
+// pending outgoing messages at the specified read interval and pushes them to the outgoing queue to be sent.
 func (m *Manager) Run(ctx context.Context, incomingQWorkers, outgoingQWorkers, scanInterval time.Duration) {
 	dbScanner := time.NewTicker(scanInterval)
 	defer dbScanner.Stop()
