@@ -1,12 +1,12 @@
 <template>
-  <div class="flex flex-wrap gap-2 px-2 py-1">
+  <div class="flex flex-wrap">
     <TransitionGroup name="attachment-list" tag="div" class="flex flex-wrap gap-2">
       <div
         v-for="attachment in allAttachments"
         :key="attachment.uuid || attachment.tempId"
-        class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group"
+        class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group px-2 gap-2"
       >
-        <div class="flex items-center space-x-2 px-3 py-2">
+        <div class="flex items-center space-x-1 py-1">
           <span v-if="attachment.loading" class="dot-loader">
             <span class="dot"></span>
             <span class="dot"></span>
@@ -20,22 +20,21 @@
                 class="max-w-[12rem] overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-primary group-hover:text-gray-900"
               >
                 {{ getAttachmentName(attachment.filename) }}
+                <span class="text-xs text-gray-500 ml-1">
+                  {{ formatBytes(attachment.size) }}
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
               <p class="text-sm">{{ attachment.filename }}</p>
             </TooltipContent>
           </Tooltip>
-
-          <span class="text-xs text-gray-500">
-            {{ formatBytes(attachment.size) }}
-          </span>
         </div>
 
         <button
           v-if="!attachment.loading"
           @click.stop="onDelete(attachment.uuid)"
-          class="p-2 text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 rounded transition-colors duration-300 ease-in-out"
+          class="text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 rounded transition-colors duration-300 ease-in-out"
           title="Remove attachment"
         >
           <X size="14" />
@@ -85,13 +84,13 @@ const getAttachmentName = (name) => {
 .attachment-list-move,
 .attachment-list-enter-active,
 .attachment-list-leave-active {
-  transition: all 0.5s ease;
+  transition: all 0.3s ease;
 }
 
 .attachment-list-enter-from,
 .attachment-list-leave-to {
   opacity: 0;
-  transform: translateX(30px);
+  transform: translateX(10px);
 }
 
 .attachment-list-leave-active {
