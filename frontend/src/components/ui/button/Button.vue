@@ -3,6 +3,7 @@ import { Primitive } from 'radix-vue'
 import { buttonVariants } from '.'
 import { cn } from '@/lib/utils'
 import { ref, computed } from 'vue'
+import { DotLoader } from '@/components/ui/loader'
 
 const props = defineProps({
   variant: { type: null, required: false },
@@ -29,11 +30,7 @@ const computedClass = computed(() => {
     :class="computedClass"
     :disabled="isLoading || isDisabled"
   >
-    <span v-if="isLoading" class="dot-loader">
-      <span class="dot"></span>
-      <span class="dot"></span>
-      <span class="dot"></span>
-    </span>
+    <DotLoader v-if="isLoading" />
     <slot v-else />
   </Primitive>
 </template>

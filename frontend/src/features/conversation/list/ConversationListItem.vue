@@ -39,7 +39,7 @@
 
         <!-- Message preview and unread count -->
         <div class="flex items-start justify-between gap-2">
-          <div class="text-sm text-gray-600 flex items-center gap-1.5 flex-1">
+          <div class="text-sm text-gray-600 flex items-center gap-1.5 flex-1 break-all">
             <Reply
               class="text-green-600 flex-shrink-0"
               size="15"

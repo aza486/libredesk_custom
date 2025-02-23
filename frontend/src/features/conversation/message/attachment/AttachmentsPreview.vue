@@ -7,11 +7,7 @@
         class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group px-2 gap-2"
       >
         <div class="flex items-center space-x-1 py-1">
-          <span v-if="attachment.loading" class="dot-loader">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </span>
+          <DotLoader v-if="attachment.loading"/>
           <PaperclipIcon v-else size="16" class="text-gray-500 group-hover:text-primary" />
 
           <Tooltip>
@@ -48,6 +44,7 @@
 import { computed } from 'vue'
 import { formatBytes } from '@/utils/file.js'
 import { X, Paperclip as PaperclipIcon } from 'lucide-vue-next'
+import { DotLoader } from '@/components/ui/loader'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const props = defineProps({
