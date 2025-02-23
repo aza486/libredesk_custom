@@ -36,7 +36,7 @@ frontend-build: install-deps
 .PHONY: run-backend
 run-backend:
 	@echo "→ Running backend..."
-	@go run cmd/*.go
+	CGO_ENABLED=0 go run -ldflags="-s -w -X 'main.buildString=${BUILDSTR}' -X 'main.frontendDir=frontend/dist'" cmd/*.go
 
 # Run the JS frontend server in development mode.
 .PHONY: run-frontend
@@ -51,7 +51,7 @@ run-frontend:
 backend-build: $(STUFFBIN)
 	@echo "→ Building backend..."
 	@CGO_ENABLED=0 go build -a\
-		-ldflags="-X 'main.buildString=${BUILDSTR}' -X 'main.buildDate=${LAST_COMMIT_DATE}' -s -w" \
+		-ldflags="-X 'main.buildString=${BUILDSTR}' -s -w" \
 		-o ${BIN} cmd/*.go
 
 # Main build target: builds both frontend and backend, then stuffs static assets into the binary.

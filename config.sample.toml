@@ -12,7 +12,7 @@ write_timeout = "5s"
 max_body_size = 500000000
 keepalive_timeout = "10s"
 
-# File upload provider to use.
+# File upload provider to use, either `fs` or `s3`.
 [upload]
 provider = "fs"
 
@@ -32,7 +32,7 @@ expiry = "6h"
 
 # Postgres.
 [db]
-# If using docker compose, use the service name as the host.
+# If using docker compose, use the service name as the host. e.g. db
 host = "127.0.0.1"
 port = 5432
 user = "postgres"
@@ -45,7 +45,7 @@ max_lifetime = "300s"
 
 # Redis.
 [redis]
-# If using docker compose, use the service name as the host.
+# If using docker compose, use the service name as the host. e.g. redis
 address = "127.0.0.1:6379"
 password = ""
 db = 0

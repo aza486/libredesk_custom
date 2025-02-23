@@ -1,0 +1,34 @@
+site_name: Libredesk Documentation
+theme:
+  name: material
+  language: en
+  font:
+    text: Source Sans Pro
+    code: Roboto Mono
+    weights: 
+      - 400
+      - 700
+  direction: ltr
+  palette:
+    primary: white
+    accent: red
+  features:
+    - navigation.indexes
+    - navigation.sections
+    - content.code.copy
+  extra:
+    search:
+      language: en
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+
+nav:
+  - Introduction: index.md
+  - Getting Started:
+      - Installation: installation.md
+      - Upgrade: upgrade.md
+  - Developer Setup: developer-setup.md

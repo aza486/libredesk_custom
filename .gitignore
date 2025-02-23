@@ -7,3 +7,4 @@ libredesk.exe
 uploads
 .env
 dist/
+.vscode/
