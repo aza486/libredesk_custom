@@ -50,7 +50,7 @@ builds:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
 
 archives:
-  - formats: tar.gz
+  - format: tar.gz
     name_template: 'libredesk_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if eq .Arch "arm" }}v{{ .Arm }}{{ end }}'
     files:
       - README.md
