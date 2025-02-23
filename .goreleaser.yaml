@@ -88,7 +88,7 @@ dockers:
       - --label=org.opencontainers.image.licenses=AGPL-3.0
     dockerfile: Dockerfile
     extra_files:
-      - config.toml.sample
+      - config.sample.toml
 
   - use: buildx
     goos: linux
@@ -112,7 +112,7 @@ dockers:
       - --label=org.opencontainers.image.licenses=AGPL-3.0
     dockerfile: Dockerfile
     extra_files:
-      - config.toml.sample
+      - config.sample.toml
 
   - use: buildx
     goos: linux
@@ -137,7 +137,7 @@ dockers:
       - --label=org.opencontainers.image.licenses=AGPL-3.0
     dockerfile: Dockerfile
     extra_files:
-      - config.toml.sample
+      - config.sample.toml
 
   - use: buildx
     goos: linux
@@ -162,7 +162,7 @@ dockers:
       - --label=org.opencontainers.image.licenses=AGPL-3.0
     dockerfile: Dockerfile
     extra_files:
-      - config.toml.sample
+      - config.sample.toml
 
 docker_manifests:
   - name_template: "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:latest"
