@@ -44,7 +44,7 @@ And more checkout - [libredesk.io](https://libredesk.io)
 
 ### Docker
 
-The latest image is available on DockerHub at [`libredesk/libredesk:latest`](https://hub.docker.com/r/libredesk/libredesk/tags?page=1&ordering=last_updated&name=latest).
+The latest image is available on DockerHub at [`libredesk/libredesk:latest`](https://hub.docker.com/r/libredesk/libredesk/tags?page=1&ordering=last_updated&name=latest)
 
 ```shell
 # Download the compose file to the current directory.
