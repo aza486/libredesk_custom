@@ -8,7 +8,7 @@ services:
       - "9000:9000"
     environment:
       # If the password is set during first docker-compose up, the system user password will be set to this value.
-      # You can always set system user password later by running `docker exec -it libredesk_app ./libredesk.bin --set-system-user-password`.
+      # You can always set system user password later by running `docker exec -it libredesk_app ./libredesk --set-system-user-password`.
       LIBREDESK_SYSTEM_USER_PASSWORD: ${LIBREDESK_SYSTEM_USER_PASSWORD:-}
     networks:
       - libredesk
@@ -18,7 +18,7 @@ services:
     volumes:
       - ./uploads:/libredesk/uploads:rw 
       - ./config.toml:/libredesk/config.toml
-    command: [sh, -c, "./libredesk.bin --install --idempotent-install --yes --config /libredesk/config.toml && ./libredesk.bin --upgrade --yes --config /libredesk/config.toml && ./libredesk.bin --config /libredesk/config.toml"]
+    command: [sh, -c, "./libredesk --install --idempotent-install --yes --config /libredesk/config.toml && ./libredesk --upgrade --yes --config /libredesk/config.toml && ./libredesk --config /libredesk/config.toml"]
 
   # PostgreSQL database
   db:

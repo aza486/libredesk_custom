@@ -5,7 +5,7 @@ VERSION := $(shell git describe --tags)
 BUILDSTR := ${VERSION} (Commit: ${LAST_COMMIT_DATE} (${LAST_COMMIT}), Build: $(shell date +"%Y-%m-%d %H:%M:%S %z"))
 
 # Binary names and paths
-BIN_LIBREDESK := libredesk.bin
+BIN := libredesk
 FRONTEND_DIR := frontend
 FRONTEND_DIST := ${FRONTEND_DIR}/dist
 STATIC := ${FRONTEND_DIST} i18n schema.sql static
@@ -52,7 +52,7 @@ backend-build: $(STUFFBIN)
 	@echo "→ Building backend..."
 	@CGO_ENABLED=0 go build -a\
 		-ldflags="-X 'main.buildString=${BUILDSTR}' -X 'main.buildDate=${LAST_COMMIT_DATE}' -s -w" \
-		-o ${BIN_LIBREDESK} cmd/*.go
+		-o ${BIN} cmd/*.go
 
 # Main build target: builds both frontend and backend, then stuffs static assets into the binary.
 .PHONY: build
@@ -63,7 +63,7 @@ build: frontend-build backend-build stuff
 .PHONY: stuff
 stuff: $(STUFFBIN)
 	@echo "→ Stuffing static assets into binary..."
-	@$(STUFFBIN) -a stuff -in ${BIN_LIBREDESK} -out ${BIN_LIBREDESK} ${STATIC}
+	@$(STUFFBIN) -a stuff -in ${BIN} -out ${BIN} ${STATIC}
 
 # Build the application in demo mode.
 .PHONY: demo-build
