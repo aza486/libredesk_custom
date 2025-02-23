@@ -43,15 +43,11 @@ jobs:
           go-version: "1.21"
           cache: true
 
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          version: latest
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          args: release --rm-dist
+          version: latest
+          args: release --parallelism 1 --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_ORG: libredesk
