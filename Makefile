@@ -28,7 +28,7 @@ install-deps: $(STUFFBIN)
 
 # Build the frontend for production.
 .PHONY: frontend-build
-frontend-build:
+frontend-build: install-deps
 	@echo "→ Building frontend for production..."
 	@cd ${FRONTEND_DIR} && pnpm build
 
