@@ -28,8 +28,8 @@ import (
 
 const (
 	systemUserEmail       = "System"
-	minSystemUserPassword = 8
-	maxSystemUserPassword = 50
+	minSystemUserPassword = 10
+	maxSystemUserPassword = 72
 	UserTypeAgent         = "agent"
 	UserTypeContact       = "contact"
 )
@@ -42,7 +42,7 @@ var (
 	// GenerateFromPassword is too long (i.e. > 72 bytes).
 	ErrPasswordTooLong = errors.New("password length exceeds 72 bytes")
 
-	 SystemUserPasswordHint = fmt.Sprintf("Password must be %d-%d characters long and contain at least one uppercase letter and one number", minSystemUserPassword, maxSystemUserPassword)
+	SystemUserPasswordHint = fmt.Sprintf("Password must be %d-%d characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.", minSystemUserPassword, maxSystemUserPassword)
 )
 
 // Manager handles user-related operations.
@@ -269,7 +269,7 @@ func (u *Manager) SetResetPasswordToken(id int) (string, error) {
 // ResetPassword sets a new password for a user.
 func (u *Manager) ResetPassword(token, password string) error {
 	if !u.isStrongPassword(password) {
-		return envelope.NewError(envelope.InputError, "Password is not strong enough, " + SystemUserPasswordHint, nil)
+		return envelope.NewError(envelope.InputError, "Password is not strong enough, "+SystemUserPasswordHint, nil)
 	}
 	// Hash password.
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -382,8 +382,11 @@ func IsStrongSystemUserPassword(password string) bool {
 		return false
 	}
 	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
+	hasLowercase := regexp.MustCompile(`[a-z]`).MatchString(password)
 	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
-	return hasUppercase && hasNumber
+	// Matches special characters
+	hasSpecial := regexp.MustCompile(`[\W_]`).MatchString(password)
+	return hasUppercase && hasLowercase && hasNumber && hasSpecial
 }
 
 // promptAndHashPassword handles password input and validation, and returns the hashed password.
