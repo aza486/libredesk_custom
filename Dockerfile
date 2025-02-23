@@ -9,7 +9,7 @@ WORKDIR /libredesk
 
 # Copy necessary files
 COPY libredesk .
-COPY config.toml.sample config.toml
+COPY config.sample.toml config.toml
 
 # Expose port 9000 for the application
 EXPOSE 9000
