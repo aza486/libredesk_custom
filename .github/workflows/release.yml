@@ -43,6 +43,14 @@ jobs:
           go-version: "1.21"
           cache: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
