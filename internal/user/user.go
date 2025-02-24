@@ -335,7 +335,7 @@ func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
 	if err := updateSystemUserPassword(db, hashedPassword); err != nil {
 		return fmt.Errorf("error updating system user password: %v", err)
 	}
-	fmt.Println("password updated successfully.")
+	fmt.Println("password updated successfully. Login with email 'System' and the new password.")
 	return nil
 }
 

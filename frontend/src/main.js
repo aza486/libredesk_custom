@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
+import { useAppSettingsStore } from './stores/appSettings'
 import router from './router'
 import mitt from 'mitt'
 import api from './api'
@@ -38,12 +39,16 @@ async function initApp () {
   const i18n = createI18n(i18nConfig)
   const app = createApp(Root)
   const pinia = createPinia()
+  app.use(pinia)
+
+  // Store app settings in Pinia
+  const settingsStore = useAppSettingsStore()
+  settingsStore.setSettings(settings)
 
   // Add emitter to global properties.
   app.config.globalProperties.emitter = emitter
 
   app.use(router)
-  app.use(pinia)
   app.use(i18n)
   app.mount('#app')
 }

@@ -48,6 +48,7 @@
         @delete-view="deleteView"
       >
         <div class="flex flex-col h-screen">
+          <AppUpdate />
           <PageHeader />
           <RouterView class="flex-grow" />
         </div>
@@ -77,6 +78,7 @@ import { useMacroStore } from '@/stores/macro'
 import { useTagStore } from '@/stores/tag'
 import PageHeader from './components/layout/PageHeader.vue'
 import ViewForm from '@/features/view/ViewForm.vue'
+import AppUpdate from '@/components/update/AppUpdate.vue'
 import api from '@/api'
 import { toast as sooner } from 'vue-sonner'
 import Sidebar from '@/components/sidebar/Sidebar.vue'

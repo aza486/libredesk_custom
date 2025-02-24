@@ -549,7 +549,7 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 		return nil, fmt.Errorf("initializing `%s` inbox: `%s` error : %w", inboxRecord.Channel, inboxRecord.Name, err)
 	}
 
-	log.Printf("`%s` inbox successfully initialized. %d SMTP servers. %d IMAP clients.", inboxRecord.Name, len(config.SMTP), len(config.IMAP))
+	log.Printf("`%s` inbox successfully initialized", inboxRecord.Name)
 
 	return inbox, nil
 }

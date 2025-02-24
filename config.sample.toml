@@ -2,6 +2,7 @@
 [app]
 log_level = "debug"
 env = "dev"
+check_updates = true
 
 # HTTP server.
 [app.server]
@@ -45,7 +46,7 @@ max_lifetime = "300s"
 
 # Redis.
 [redis]
-# If using docker compose, use the service name as the host. e.g. redis
+# If using docker compose, use the service name as the host. e.g. redis:6379
 address = "127.0.0.1:6379"
 password = ""
 db = 0

@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"github.com/abhinavxd/libredesk/internal/ai"
 	auth_ "github.com/abhinavxd/libredesk/internal/auth"
@@ -83,6 +85,10 @@ type App struct {
 	ai            *ai.Manager
 	search        *search.Manager
 	notifier      *notifier.Service
+
+	// Global state that stores data on an available app update.
+	update *AppUpdate
+	sync.Mutex
 }
 
 func main() {
@@ -241,6 +247,11 @@ func main() {
 			log.Fatalf("error starting server: %v", err)
 		}
 	}()
+
+	// Start the app update checker.
+	if ko.Bool("app.check_updates") {
+		go checkUpdates(versionString, time.Hour*24, app)
+	}
 
 	// Wait for shutdown signal.
 	<-ctx.Done()
