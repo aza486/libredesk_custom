@@ -23,3 +23,14 @@ func IsUniqueViolationError(err error) bool {
 	}
 	return false
 }
+
+// IsTableNotExistError checks if the given error is a PostgreSQL table does not exist error (error code 42P01)
+func IsTableNotExistError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if pqErr, ok := err.(*pq.Error); ok {
+		return pqErr.Code == "42P01"
+	}
+	return false
+}

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/colorlog"
+	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/stuffbin"
-	"github.com/lib/pq"
 )
 
 // Install checks if the schema is already installed, prompts for confirmation, and installs the schema if needed.
@@ -76,7 +76,7 @@ func setSystemUserPass(ctx context.Context, db *sqlx.DB) {
 // checkSchema verifies if the DB schema is already installed by querying a table.
 func checkSchema(db *sqlx.DB) (bool, error) {
 	if _, err := db.Exec(`SELECT * FROM settings LIMIT 1`); err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "42P01" {
+		if dbutil.IsTableNotExistError(err) {
 			return false, nil
 		}
 		return false, err

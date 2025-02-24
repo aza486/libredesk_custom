@@ -50,7 +50,8 @@ var (
 	frontendDir = "frontend/dist"
 
 	// Injected at build time.
-	buildString = ""
+	buildString   string
+	versionString string
 )
 
 // App is the global app context which is passed and injected in the http handlers.
@@ -99,9 +100,8 @@ func main() {
 	}
 
 	// Build string injected at build time.
-	if buildString != "" {
-		colorlog.Green("Build: %s", buildString)
-	}
+	colorlog.Green("Build: %s", buildString)
+	colorlog.Green("Version: %s", versionString)
 
 	// Load the config files into Koanf.
 	initConfig(ko)
@@ -136,9 +136,12 @@ func main() {
 
 	// Upgrade.
 	if ko.Bool("upgrade") {
-		log.Println("no upgrades available")
+		upgrade(db, fs, !ko.Bool("yes"))
 		os.Exit(0)
 	}
+
+	// Check for pending upgrade.
+	checkPendingUpgrade(db)
 
 	// Load app settings from DB into the Koanf instance.
 	settings := initSettings(db)
