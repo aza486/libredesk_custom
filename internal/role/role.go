@@ -115,6 +115,15 @@ func (u *Manager) Update(id int, r models.Role) error {
 		return err
 	}
 
+	// Disallow updating `Admin` role, as the main System login requires it.
+	role, err := u.Get(id)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, "Error fetching role", nil)
+	}
+	if role.Name == models.RoleAdmin {
+		return envelope.NewError(envelope.InputError, "Admin role cannot be updated, Please create a new role", nil)
+	}
+
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating role", nil)
