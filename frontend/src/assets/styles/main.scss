@@ -312,3 +312,7 @@ a[data-active='false']:hover {
     opacity: 1;
   }
 }
+
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
