@@ -121,8 +121,8 @@ export class WebSocketClient {
       if (this.socket?.readyState === WebSocket.OPEN) {
         try {
           this.socket.send('ping')
-          if (Date.now() - this.lastPong > 10000) {
-            console.warn('No pong received in 10 seconds, closing connection')
+          if (Date.now() - this.lastPong > 60000) {
+            console.warn('No pong received in 60 seconds, closing connection')
             this.socket.close()
           }
         } catch (e) {
