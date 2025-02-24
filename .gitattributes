@@ -1,1 +1,7 @@
-*.* linguist-language=Go
+# Force Go as main language
+* linguist-language=Go
+
+# Maintain accurate stats
+*.vue linguist-language=Vue
+*.py linguist-language=Python
+*.js linguist-language=JavaScript
