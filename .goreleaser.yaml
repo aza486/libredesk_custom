@@ -24,10 +24,11 @@ builds:
     goarch:
       - amd64
       - arm64
-    binary: "libredesk{{ if eq .Os \"windows\" }}.exe{{ end }}"
-    ldflags: "-s -w -X main.buildString={{ .Version }} (Commit: {{ .Commit }}, Build: {{ .Date }})"
+    binary: 'libredesk{{ if eq .Os "windows" }}.exe{{ end }}'
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
     hooks:
-      post: "make stuff BIN={{ .Path }}"
+      post: make stuff BIN={{ .Path }}
 
   - id: "arm"
     main: ./cmd
@@ -43,11 +44,11 @@ builds:
     goarm:
       - 6
       - 7
-    binary: "libredesk{{ if eq .Os \"windows\" }}.exe{{ end }}"
-    ldflags: "-s -w -X main.buildString={{ .Version }} (Commit: {{ .Commit }}, Build: {{ .Date }})"
+    binary: 'libredesk{{ if eq .Os "windows" }}.exe{{ end }}'
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
     hooks:
-      post: "make stuff BIN={{ .Path }}"
-
+      post: make stuff BIN={{ .Path }}
 
 archives:
   - format: tar.gz
