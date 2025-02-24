@@ -6,7 +6,7 @@
       collapsible
       :default-value="['Actions', 'Information', 'Previous conversations']"
     >
-      <AccordionItem value="Actions" class="border-0 mb-2 mb-2">
+      <AccordionItem value="Actions" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           Actions
         </AccordionTrigger>
