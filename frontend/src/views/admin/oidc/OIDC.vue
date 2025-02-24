@@ -5,7 +5,7 @@
     </template>
 
     <template #help>
-      <p>Configure single sign-on with one or multiple OpenID Connect providers.</p>
+      <p>Configure single sign-on with one or more OpenID Connect providers.</p>
     </template>
   </AdminPageWithHelp>
 </template>

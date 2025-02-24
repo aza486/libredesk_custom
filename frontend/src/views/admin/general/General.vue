@@ -11,10 +11,7 @@
       </div>
     </template>
     <template #help>
-      <p>
-        Configure core helpdesk settings like helpdesk name, timezone, business hours, and more.
-      </p>
-      <p>These settings affect your entire helpdesk system.</p>
+      <p>General settings for your support desk like timezone, working hours, etc.</p>
     </template>
   </AdminPageWithHelp>
 </template>

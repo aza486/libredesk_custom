@@ -6,7 +6,7 @@
 
     <template #help>
       <p>Configure team settings including working hours and SLA policies.</p>
-      <p>Manage agent auto-assignment rules for team efficiency.</p>
+      <p>Manage agent auto-assignment limits and more.</p>
     </template>
   </AdminPageWithHelp>
 </template>

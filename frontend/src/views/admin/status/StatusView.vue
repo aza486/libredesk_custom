@@ -34,7 +34,7 @@
     </template>
 
     <template #help>
-      <p>Add custom conversation statuses to extend default workflow.</p>
+      <p>Create custom conversation statuses to extend default workflow.</p>
     </template>
   </AdminPageWithHelp>
 </template>

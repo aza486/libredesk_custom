@@ -124,7 +124,9 @@
           <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
           {{ isLoading ? 'Loading...' : 'Load more' }}
         </Button>
-        <p v-else class="text-sm text-gray-500">All conversations loaded</p>
+        <p class="text-sm text-gray-500" v-else-if="conversationStore.conversationsList.length > 10">
+          All conversations loaded
+        </p>
       </div>
     </div>
   </div>

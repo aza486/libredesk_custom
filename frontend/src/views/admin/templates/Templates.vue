@@ -35,7 +35,7 @@
 
     <template #help>
       <p>Design templates for customer communications and responses.</p>
-      <p>Configure internal team notification templates.</p>
+      <p>Modify content for internal and external emails.</p>
     </template>
   </AdminPageWithHelp>
 </template>

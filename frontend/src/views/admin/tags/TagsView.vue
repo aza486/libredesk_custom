@@ -32,7 +32,7 @@
     </template>
 
     <template #help>
-      <p>Create and organize tags to categorize conversations.</p>
+      <p>Tags help you categorize your conversations. Create or edit tags here.</p>
     </template>
   </AdminPageWithHelp>
 </template>
