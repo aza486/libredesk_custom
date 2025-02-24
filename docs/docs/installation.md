@@ -20,8 +20,9 @@ The latest image is available on DockerHub at `libredesk/llibredeskistmonk:lates
 The recommended method is to download the [docker-compose.yml](https://github.com/abhinavxd/libredesk/blob/master/docker-compose.yml) file, customize it for your environment and then to simply run `docker compose up -d`.
 
 ```shell
-# Download the compose file to the current directory.
-curl -LO https://github.com/abhinavxd/libredesk/raw/master/docker-compose.yml
+# Download the compose file and the sample config file in the current directory.
+curl -LO https://github.com/abhinavxd/libredesk/raw/main/docker-compose.yml
+curl -LO https://github.com/abhinavxd/libredesk/raw/main/config.sample.toml
 
 # Copy the config.sample.toml to config.toml and edit it as needed.
 cp config.sample.toml config.toml

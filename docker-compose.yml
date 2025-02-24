@@ -1,7 +1,7 @@
 services:
   # Libredesk app
   app:
-    image: libredesk:latest
+    image: libredesk/libredesk:latest
     container_name: libredesk_app
     restart: unless-stopped
     ports:

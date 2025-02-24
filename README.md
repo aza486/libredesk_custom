@@ -47,8 +47,9 @@ And more checkout - [libredesk.io](https://libredesk.io)
 The latest image is available on DockerHub at [`libredesk/libredesk:latest`](https://hub.docker.com/r/libredesk/libredesk/tags?page=1&ordering=last_updated&name=latest)
 
 ```shell
-# Download the compose file to the current directory.
-curl -LO https://github.com/abhinavxd/libredesk/raw/master/docker-compose.yml
+# Download the compose file and sample config file in the current directory.
+curl -LO https://github.com/abhinavxd/libredesk/raw/main/docker-compose.yml
+curl -LO https://github.com/abhinavxd/libredesk/raw/main/config.sample.toml
 
 # Copy the config.sample.toml to config.toml and edit it as needed.
 cp config.sample.toml config.toml
