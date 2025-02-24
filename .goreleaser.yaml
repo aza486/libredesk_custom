@@ -10,7 +10,7 @@ before:
     - make frontend-build
 
 builds:
-  - id: "standard"
+  - id: "universal"
     main: ./cmd
     env:
       - CGO_ENABLED=0
@@ -24,29 +24,13 @@ builds:
     goarch:
       - amd64
       - arm64
-    binary: 'libredesk{{ if eq .Os "windows" }}.exe{{ end }}'
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
-    hooks:
-      post: make stuff BIN={{ .Path }}
-
-  - id: "arm"
-    main: ./cmd
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - freebsd
-      - linux
-      - netbsd
-      - openbsd
-    goarch:
       - arm
     goarm:
       - 6
       - 7
     binary: 'libredesk{{ if eq .Os "windows" }}.exe{{ end }}'
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - -s -w -X "main.buildString={{ .Tag }} ({{ .ShortCommit }} {{ .Date }}, {{ .Os }}/{{ .Arch }})" -X "main.versionString={{ .Tag }}"
     hooks:
       post: make stuff BIN={{ .Path }}
 
@@ -70,7 +54,7 @@ dockers:
     goos: linux
     goarch: amd64
     ids:
-      - standard
+      - universal
     image_templates:
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:latest-amd64"
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:{{ .Tag }}-amd64"
@@ -94,7 +78,7 @@ dockers:
     goos: linux
     goarch: arm64
     ids:
-      - standard
+      - universal
     image_templates:
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:latest-arm64"
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:{{ .Tag }}-arm64"
@@ -119,7 +103,7 @@ dockers:
     goarch: arm
     goarm: 6
     ids:
-      - arm
+      - universal
     image_templates:
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:latest-armv6"
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:{{ .Tag }}-armv6"
@@ -144,7 +128,7 @@ dockers:
     goarch: arm
     goarm: 7
     ids:
-      - arm
+      - universal
     image_templates:
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:latest-armv7"
       - "{{ .Env.DOCKER_ORG }}/{{ .ProjectName }}:{{ .Tag }}-armv7"

@@ -1,8 +1,10 @@
-# Build variables
-LAST_COMMIT := $(shell git rev-parse --short HEAD)
-LAST_COMMIT_DATE := $(shell git show -s --format=%ci ${LAST_COMMIT})
-VERSION := $(shell git describe --tags) 
-BUILDSTR := ${VERSION} (Commit: ${LAST_COMMIT_DATE} (${LAST_COMMIT}), Build: $(shell date +"%Y-%m-%d %H:%M:%S %z"))
+# Try to get the commit hash from 1) git 2) the VERSION file 3) fallback.
+LAST_COMMIT := $(or $(shell git rev-parse --short HEAD 2> /dev/null),$(shell head -n 1 VERSION | grep -oP -m 1 "^[a-z0-9]+$$"), "")
+
+# Try to get the semver from 1) git 2) the VERSION file 3) fallback.
+VERSION := $(or $(LIBREDESK_VERSION),$(shell git describe --tags --abbrev=0 2> /dev/null),$(shell grep -oP 'tag: \Kv\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?' VERSION),"v0.0.0")
+
+BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 
 # Binary names and paths
 BIN := libredesk
@@ -30,13 +32,13 @@ install-deps: $(STUFFBIN)
 .PHONY: frontend-build
 frontend-build: install-deps
 	@echo "→ Building frontend for production..."
-	@cd ${FRONTEND_DIR} && pnpm build
+	@export VITE_APP_VERSION="${VERSION}" && cd ${FRONTEND_DIR} && pnpm build
 
 # Run the Go backend server in development mode.
 .PHONY: run-backend
 run-backend:
 	@echo "→ Running backend..."
-	CGO_ENABLED=0 go run -ldflags="-s -w -X 'main.buildString=${BUILDSTR}' -X 'main.frontendDir=frontend/dist'" cmd/*.go
+	CGO_ENABLED=0 go run -ldflags="-s -w -X 'main.buildString=${BUILDSTR}' -X 'main.versionString=${VERSION}' -X 'main.frontendDir=frontend/dist'" cmd/*.go
 
 # Run the JS frontend server in development mode.
 .PHONY: run-frontend
@@ -44,19 +46,19 @@ run-frontend:
 	@echo "→ Installing frontend dependencies (if not already installed)..."
 	@cd ${FRONTEND_DIR} && pnpm install
 	@echo "→ Running frontend..."
-	@export VUE_APP_VERSION="${VERSION}" && cd ${FRONTEND_DIR} && pnpm dev
+	@export VITE_APP_VERSION="${VERSION}" && cd ${FRONTEND_DIR} && pnpm dev
 
 # Build the backend binary.
-.PHONY: backend-build
-backend-build: $(STUFFBIN)
+.PHONY: build-backend
+build-backend: $(STUFFBIN)
 	@echo "→ Building backend..."
 	@CGO_ENABLED=0 go build -a\
-		-ldflags="-X 'main.buildString=${BUILDSTR}' -s -w" \
+		-ldflags="-X 'main.buildString=${BUILDSTR}' -X 'main.versionString=${VERSION}' -s -w" \
 		-o ${BIN} cmd/*.go
 
 # Main build target: builds both frontend and backend, then stuffs static assets into the binary.
 .PHONY: build
-build: frontend-build backend-build stuff
+build: frontend-build build-backend stuff
 	@echo "→ Build successful. Current version: $(VERSION)"
 
 # Stuff static assets into the binary using stuffbin.

@@ -35,6 +35,7 @@ require (
 	github.com/zerodha/simplesessions/stores/redis/v3 v3.0.0
 	github.com/zerodha/simplesessions/v3 v3.0.0
 	golang.org/x/crypto v0.31.0
+	golang.org/x/mod v0.17.0
 	golang.org/x/oauth2 v0.21.0
 )
 
