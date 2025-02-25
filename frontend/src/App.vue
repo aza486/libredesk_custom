@@ -48,8 +48,13 @@
         @delete-view="deleteView"
       >
         <div class="flex flex-col h-screen">
-          <AppUpdate />
+          <!-- Show app update only in admin routes -->
+          <AppUpdate v-if="route.path.startsWith('/admin')" />
+
+          <!-- Common header for all pages -->
           <PageHeader />
+
+          <!-- Main content -->
           <RouterView class="flex-grow" />
         </div>
         <ViewForm v-model:openDialog="openCreateViewForm" v-model:view="view" />
