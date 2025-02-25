@@ -36,7 +36,6 @@ import (
 	"github.com/abhinavxd/libredesk/internal/team"
 	"github.com/abhinavxd/libredesk/internal/template"
 	"github.com/abhinavxd/libredesk/internal/user"
-	"github.com/abhinavxd/libredesk/internal/ws"
 	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
@@ -162,7 +161,6 @@ func main() {
 		messageOutgoingScanInterval = ko.MustDuration("message.message_outoing_scan_interval")
 		slaEvaluationInterval       = ko.MustDuration("sla.evaluation_interval")
 		lo                          = initLogger(appName)
-		wsHub                       = ws.NewHub()
 		rdb                         = initRedis()
 		constants                   = initConstants()
 		i18n                        = initI18n(fs)
@@ -177,6 +175,7 @@ func main() {
 		team                        = initTeam(db)
 		businessHours               = initBusinessHours(db)
 		user                        = initUser(i18n, db)
+		wsHub                       = initWS(user)
 		notifier                    = initNotifier(user)
 		automation                  = initAutomationEngine(db)
 		sla                         = initSLA(db, team, settings, businessHours)
@@ -193,6 +192,7 @@ func main() {
 	go notifier.Run(ctx)
 	go sla.Run(ctx, slaEvaluationInterval)
 	go media.DeleteUnlinkedMedia(ctx)
+	go user.MonitorAgentAvailability(ctx)
 
 	var app = &App{
 		lo:            lo,

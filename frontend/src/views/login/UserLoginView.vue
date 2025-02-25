@@ -138,12 +138,14 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useEmitter } from '@/composables/useEmitter'
+import { useUserStore } from '@/stores/user'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const emitter = useEmitter()
 const errorMessage = ref('')
 const isLoading = ref(false)
 const router = useRouter()
+const userStore = useUserStore()
 const loginForm = ref({
   email: '',
   password: ''
@@ -207,7 +209,10 @@ const loginAction = () => {
       email: loginForm.value.email,
       password: loginForm.value.password
     })
-    .then(() => {
+    .then((resp) => {
+      if (resp?.data?.data) {
+        userStore.setCurrentUser(resp.data.data)
+      }
       router.push({ name: 'inboxes' })
     })
     .catch((error) => {

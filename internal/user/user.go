@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"log"
 
@@ -61,13 +62,15 @@ type Opts struct {
 // queries contains prepared SQL queries.
 type queries struct {
 	GetUsers              *sqlx.Stmt `query:"get-users"`
-	GetUserCompact        *sqlx.Stmt `query:"get-users-compact"`
+	GetUsersCompact       *sqlx.Stmt `query:"get-users-compact"`
 	GetUser               *sqlx.Stmt `query:"get-user"`
 	GetEmail              *sqlx.Stmt `query:"get-email"`
 	GetPermissions        *sqlx.Stmt `query:"get-permissions"`
-	GetUserByEmail        *sqlx.Stmt `query:"get-user-by-email"`
 	UpdateUser            *sqlx.Stmt `query:"update-user"`
 	UpdateAvatar          *sqlx.Stmt `query:"update-avatar"`
+	UpdateAvailability    *sqlx.Stmt `query:"update-availability"`
+	UpdateLastActiveAt    *sqlx.Stmt `query:"update-last-active-at"`
+	UpdateInactiveOffline *sqlx.Stmt `query:"update-inactive-offline"`
 	SoftDeleteUser        *sqlx.Stmt `query:"soft-delete-user"`
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
@@ -89,22 +92,19 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 	}, nil
 }
 
-// VerifyPassword authenticates a user by email and password.
+// VerifyPassword authenticates an user by email and password.
 func (u *Manager) VerifyPassword(email string, password []byte) (models.User, error) {
 	var user models.User
-
-	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
+	if err := u.q.GetUser.Get(&user, 0, email); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
 		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
 	}
-
 	if err := u.verifyPassword(password, user.Password); err != nil {
 		return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 	}
-
 	return user, nil
 }
 
@@ -125,7 +125,7 @@ func (u *Manager) GetAll() ([]models.User, error) {
 // GetAllCompact returns a compact list of users with limited fields.
 func (u *Manager) GetAllCompact() ([]models.User, error) {
 	var users = make([]models.User, 0)
-	if err := u.q.GetUserCompact.Select(&users); err != nil {
+	if err := u.q.GetUsersCompact.Select(&users); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
 		}
@@ -154,10 +154,10 @@ func (u *Manager) CreateAgent(user *models.User) error {
 	return nil
 }
 
-// Get retrieves a user by ID.
+// Get retrieves an user by ID.
 func (u *Manager) Get(id int) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, id); err != nil {
+	if err := u.q.GetUser.Get(&user, id, ""); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("user not found", "id", id, "error", err)
 			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
@@ -168,10 +168,10 @@ func (u *Manager) Get(id int) (models.User, error) {
 	return user, nil
 }
 
-// GetByEmail retrieves a user by email
+// GetByEmail retrieves an user by email
 func (u *Manager) GetByEmail(email string) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUserByEmail.Get(&user, email); err != nil {
+	if err := u.q.GetUser.Get(&user, 0, email); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
 		}
@@ -195,10 +195,10 @@ func (u *Manager) UpdateAvatar(id int, avatar string) error {
 	return nil
 }
 
-// Update updates a user.
+// Update updates an user.
 func (u *Manager) Update(id int, user models.User) error {
 	var (
-		hashedPassword interface{}
+		hashedPassword any
 		err            error
 	)
 
@@ -221,7 +221,7 @@ func (u *Manager) Update(id int, user models.User) error {
 	return nil
 }
 
-// SoftDelete soft deletes a user.
+// SoftDelete soft deletes an user.
 func (u *Manager) SoftDelete(id int) error {
 	// Disallow if user is system user.
 	systemUser, err := u.GetSystemUser()
@@ -239,7 +239,7 @@ func (u *Manager) SoftDelete(id int) error {
 	return nil
 }
 
-// GetEmail retrieves the email of a user by ID.
+// GetEmail retrieves the email of an user by ID.
 func (u *Manager) GetEmail(id int) (string, error) {
 	var email string
 	if err := u.q.GetEmail.Get(&email, id); err != nil {
@@ -252,7 +252,7 @@ func (u *Manager) GetEmail(id int) (string, error) {
 	return email, nil
 }
 
-// SetResetPasswordToken sets a reset password token for a user and returns the token.
+// SetResetPasswordToken sets a reset password token for an user and returns the token.
 func (u *Manager) SetResetPasswordToken(id int) (string, error) {
 	token, err := stringutil.RandomAlphanumeric(32)
 	if err != nil {
@@ -266,7 +266,7 @@ func (u *Manager) SetResetPasswordToken(id int) (string, error) {
 	return token, nil
 }
 
-// ResetPassword sets a new password for a user.
+// ResetPassword sets a new password for an user.
 func (u *Manager) ResetPassword(token, password string) error {
 	if !u.isStrongPassword(password) {
 		return envelope.NewError(envelope.InputError, "Password is not strong enough, "+SystemUserPasswordHint, nil)
@@ -284,7 +284,7 @@ func (u *Manager) ResetPassword(token, password string) error {
 	return nil
 }
 
-// GetPermissions retrieves the permissions of a user by ID.
+// GetPermissions retrieves the permissions of an user by ID.
 func (u *Manager) GetPermissions(id int) ([]string, error) {
 	var permissions []string
 	if err := u.q.GetPermissions.Select(&permissions, id); err != nil {
@@ -292,6 +292,52 @@ func (u *Manager) GetPermissions(id int) ([]string, error) {
 		return permissions, envelope.NewError(envelope.GeneralError, "Error fetching user permissions", nil)
 	}
 	return permissions, nil
+}
+
+// UpdateAvailability updates the availability status of an user.
+func (u *Manager) UpdateAvailability(id int, status string) error {
+	if _, err := u.q.UpdateAvailability.Exec(id, status); err != nil {
+		u.lo.Error("error updating user availability", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating user availability", nil)
+	}
+	return nil
+}
+
+// UpdateLastActive updates the last active timestamp of an user.
+func (u *Manager) UpdateLastActive(id int) error {
+	if _, err := u.q.UpdateLastActiveAt.Exec(id); err != nil {
+		u.lo.Error("error updating user last active at", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error updating user last active at", nil)
+	}
+	return nil
+}
+
+// MonitorAgentAvailability continuously checks for user activity and sets them offline if inactive for more than 5 minutes.
+func (u *Manager) MonitorAgentAvailability(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			u.markInactiveAgentsOffline()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// markInactiveAgentsOffline sets agents offline if they have been inactive for more than 5 minutes.
+func (u *Manager) markInactiveAgentsOffline() {
+	u.lo.Debug("marking inactive agents offline")
+	if res, err := u.q.UpdateInactiveOffline.Exec(); err != nil {
+		u.lo.Error("error setting users offline", "error", err)
+	} else {
+		rows, _ := res.RowsAffected()
+		if rows > 0 {
+			u.lo.Info("set inactive users offline", "count", rows)
+		}
+	}
+	u.lo.Debug("marked inactive agents offline")
 }
 
 // verifyPassword compares the provided password with the stored password hash.

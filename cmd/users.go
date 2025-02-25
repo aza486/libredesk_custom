@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	maxAvatarSizeMB = 5
+	maxAvatarSizeMB = 20
 )
 
 // handleGetUsers returns all users.
@@ -39,9 +39,7 @@ func handleGetUsers(r *fastglue.Request) error {
 
 // handleGetUsersCompact returns all users in a compact format.
 func handleGetUsersCompact(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
+	var app = r.Context.(*App)
 	agents, err := app.user.GetAllCompact()
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
@@ -64,6 +62,19 @@ func handleGetUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(user)
+}
+
+// handleUpdateUserAvailability updates the current user availability.
+func handleUpdateUserAvailability(r *fastglue.Request) error {
+	var (
+		app    = r.Context.(*App)
+		auser  = r.RequestCtx.UserValue("user").(amodels.User)
+		status = string(r.RequestCtx.PostArgs().Peek("status"))
+	)
+	if err := app.user.UpdateAvailability(auser.ID, status); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope("User availability updated successfully.")
 }
 
 // handleGetCurrentUserTeams returns the teams of a user.
@@ -228,7 +239,7 @@ func handleCreateUser(r *fastglue.Request) error {
 			Provider: notifier.ProviderEmail,
 		}); err != nil {
 			app.lo.Error("error sending notification message", "error", err)
-			return r.SendEnvelope("User created successfully, but error sending welcome email.")
+			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, "User created successfully, but could not send welcome email.", nil))
 		}
 	}
 	return r.SendEnvelope("User created successfully.")

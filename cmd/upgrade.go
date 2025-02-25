@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/migrations"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
@@ -28,7 +29,9 @@ type migFunc struct {
 // migList is the list of available migList ordered by the semver.
 // Each migration is a Go file in internal/migrations named after the semver.
 // The functions are named as: v0.7.0 => migrations.V0_7_0() and are idempotent.
-var migList = []migFunc{}
+var migList = []migFunc{
+	{"v0.3.0", migrations.V0_3_0},
+}
 
 // upgrade upgrades the database to the current version by running SQL migration files
 // for all version from the last known version to the current one.

@@ -13,6 +13,7 @@ DROP TYPE IF EXISTS "automation_execution_mode" CASCADE; CREATE TYPE "automation
 DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "macro_visibility" AS ENUM ('all', 'team', 'user');
 DROP TYPE IF EXISTS "media_disposition" CASCADE; CREATE TYPE "media_disposition" AS ENUM ('inline', 'attachment');
 DROP TYPE IF EXISTS "media_store" CASCADE; CREATE TYPE "media_store" AS ENUM ('s3', 'fs');
+DROP TYPE IF EXISTS "user_availability_status" CASCADE; CREATE TYPE "user_availability_status" AS ENUM ('online', 'away', 'away_manual', 'offline');
 
 -- Sequence to generate reference number for conversations.
 DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
@@ -118,6 +119,8 @@ CREATE TABLE users (
 	custom_attributes JSONB DEFAULT '{}'::jsonb NOT NULL,
     reset_password_token TEXT NULL,
     reset_password_token_expiry TIMESTAMPTZ NULL,
+	availability_status user_availability_status DEFAULT 'offline' NOT NULL,
+	last_active_at TIMESTAMPTZ NULL,
     CONSTRAINT constraint_users_on_country CHECK (LENGTH(country) <= 140),
     CONSTRAINT constraint_users_on_phone_number CHECK (LENGTH(phone_number) <= 20),
     CONSTRAINT constraint_users_on_email_length CHECK (LENGTH(email) <= 320),

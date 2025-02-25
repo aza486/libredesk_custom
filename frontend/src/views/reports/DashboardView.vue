@@ -1,27 +1,29 @@
 <template>
-  <div
-    class="overflow-y-auto p-4 pr-36"
-    :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
-  >
-    <Spinner v-if="isLoading" />
-    <div class="space-y-4">
-      <div class="text-sm text-gray-500 text-right">
-        Last updated: {{ new Date(lastUpdate).toLocaleTimeString() }}
-      </div>
-      <div class="mt-7 flex w-full space-x-4">
-        <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
-        <Card
-          class="w-8/12"
-          title="Agent status"
-          :counts="sampleAgentStatusCounts"
-          :labels="sampleAgentStatusLabels"
-        />
-      </div>
-      <div class="rounded-lg box w-full p-5 bg-white">
-        <LineChart :data="chartData.processedData"></LineChart>
-      </div>
-      <div class="rounded-lg box w-full p-5 bg-white">
-        <BarChart :data="chartData.status_summary"></BarChart>
+  <div class="overflow-y-auto">
+    <div
+      class="p-4 w-[calc(100%-3rem)]"
+      :class="{ 'opacity-50 transition-opacity duration-300': isLoading }"
+    >
+      <Spinner v-if="isLoading" />
+      <div class="space-y-4">
+        <div class="text-sm text-gray-500 text-right">
+          Last updated: {{ new Date(lastUpdate).toLocaleTimeString() }}
+        </div>
+        <div class="mt-7 flex w-full space-x-4">
+          <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
+          <Card
+            class="w-8/12"
+            title="Agent status"
+            :counts="agentStatusCounts"
+            :labels="agentStatusLabels"
+          />
+        </div>
+        <div class="rounded-lg box w-full p-5 bg-white">
+          <LineChart :data="chartData.processedData"></LineChart>
+        </div>
+        <div class="rounded-lg box w-full p-5 bg-white">
+          <BarChart :data="chartData.status_summary"></BarChart>
+        </div>
       </div>
     </div>
   </div>
@@ -52,17 +54,17 @@ const agentCountCardsLabels = {
   pending: 'Pending'
 }
 
-// TODO: Build agent status feature.
-const sampleAgentStatusLabels = {
-  online: 'Online',
-  offline: 'Offline',
-  away: 'Away'
+const agentStatusLabels = {
+  agents_online: 'Online',
+  agents_offline: 'Offline',
+  agents_away: 'Away'
 }
-const sampleAgentStatusCounts = {
-  online: 5,
-  offline: 2,
-  away: 1
-}
+
+const agentStatusCounts = ref({
+  agents_online: 0,
+  agents_offline: 0,
+  agents_away: 0
+})
 
 onMounted(() => {
   getDashboardData()
@@ -96,6 +98,11 @@ const getCardStats = async () => {
     .getOverviewCounts()
     .then((resp) => {
       cardCounts.value = resp.data.data
+      agentStatusCounts.value = {
+        agents_online: cardCounts.value.agents_online,
+        agents_offline: cardCounts.value.agents_offline,
+        agents_away: cardCounts.value.agents_away
+      }
     })
     .catch((error) => {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

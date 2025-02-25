@@ -3,6 +3,7 @@ package main
 import (
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -11,14 +12,20 @@ import (
 func handleLogin(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
-		p        = r.RequestCtx.PostArgs()
-		email    = string(p.Peek("email"))
-		password = p.Peek("password")
+		email    = string(r.RequestCtx.PostArgs().Peek("email"))
+		password = r.RequestCtx.PostArgs().Peek("password")
 	)
 	user, err := app.user.VerifyPassword(email, password)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// Set user availability status to online.
+	if err := app.user.UpdateAvailability(user.ID, umodels.Online); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	user.AvailabilityStatus = umodels.Online
+
 	if err := app.auth.SaveSession(amodels.User{
 		ID:        user.ID,
 		Email:     user.Email.String,

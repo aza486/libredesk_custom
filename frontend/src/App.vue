@@ -81,6 +81,7 @@ import { useTeamStore } from '@/stores/team'
 import { useSlaStore } from '@/stores/sla'
 import { useMacroStore } from '@/stores/macro'
 import { useTagStore } from '@/stores/tag'
+import { useIdleDetection } from '@/composables/useIdleDetection'
 import PageHeader from './components/layout/PageHeader.vue'
 import ViewForm from '@/features/view/ViewForm.vue'
 import AppUpdate from '@/components/update/AppUpdate.vue'
@@ -118,6 +119,8 @@ const view = ref({})
 const openCreateViewForm = ref(false)
 
 initWS()
+useIdleDetection()
+
 onMounted(() => {
   initToaster()
   listenViewRefresh()
@@ -126,8 +129,10 @@ onMounted(() => {
 
 // initialize data stores
 const initStores = async () => {
+  if (!userStore.userID) {
+    await userStore.getCurrentUser()
+  }
   await Promise.allSettled([
-    userStore.getCurrentUser(),
     getUserViews(),
     conversationStore.fetchStatuses(),
     conversationStore.fetchPriorities(),

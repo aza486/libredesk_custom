@@ -15,14 +15,15 @@ export const useUserStore = defineStore('user', () => {
     avatar_url: '',
     email: '',
     teams: [],
-    permissions: []
+    permissions: [],
+    availability_status: 'offline'
   })
   const emitter = useEmitter()
 
   const userID = computed(() => user.value.id)
-  const firstName = computed(() => user.value.first_name)
-  const lastName = computed(() => user.value.last_name)
-  const avatar = computed(() => user.value.avatar_url)
+  const firstName = computed(() => user.value.first_name || '')
+  const lastName = computed(() => user.value.last_name || '')
+  const avatar = computed(() => user.value.avatar_url || '')
   const permissions = computed(() => user.value.permissions || [])
   const email = computed(() => user.value.email)
   const teams = computed(() => user.value.teams || [])
@@ -71,6 +72,10 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const setCurrentUser = (userData) => {
+    user.value = userData
+  }
+
   const setAvatar = (avatarURL) => {
     if (typeof avatarURL !== 'string') {
       console.warn('Avatar URL must be a string')
@@ -81,6 +86,16 @@ export const useUserStore = defineStore('user', () => {
 
   const clearAvatar = () => {
     user.value.avatar_url = ''
+  }
+
+  const updateUserAvailability = async (status, isManual = true) => {
+    try {
+      const apiStatus = status === 'away' && isManual ? 'away_manual' : status
+      await api.updateCurrentUserAvailability({ status: apiStatus })
+      user.value.availability_status = apiStatus
+    } catch (error) {
+      if (error?.response?.status === 401) window.location.href = '/'
+    }
   }
 
   return {
@@ -96,9 +111,11 @@ export const useUserStore = defineStore('user', () => {
     getInitials,
     hasAdminTabPermissions,
     hasReportTabPermissions,
+    setCurrentUser,
     getCurrentUser,
     clearAvatar,
     setAvatar,
+    updateUserAvailability,
     can
   }
 })

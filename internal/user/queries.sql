@@ -20,41 +20,32 @@ SELECT email
 FROM users
 WHERE id = $1 AND deleted_at IS NULL AND type = 'agent';
 
--- name: get-user-by-email
-SELECT u.id, u.email, u.password, u.avatar_url, u.first_name, u.last_name, u.enabled,
-      array_agg(DISTINCT r.name) as roles,
-      array_agg(DISTINCT p) as permissions
-FROM users u
-JOIN user_roles ur ON ur.user_id = u.id 
-JOIN roles r ON r.id = ur.role_id,
-    unnest(r.permissions) p
-WHERE u.email = $1 AND u.deleted_at IS NULL AND u.type = 'agent'
-GROUP BY u.id;
-
 -- name: get-user
 SELECT
-   u.id,
-   u.created_at,
-   u.updated_at,
-   u.enabled,
-   u.email,
-   u.avatar_url,
-   u.first_name,
-   u.last_name,
-   array_agg(DISTINCT r.name) as roles,
-   COALESCE(
-       (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
-        FROM team_members tm
-        JOIN teams t ON tm.team_id = t.id
-        WHERE tm.user_id = u.id),
-       '[]'
-   ) AS teams,
-   array_agg(DISTINCT p) as permissions
+    u.id,
+    u.email,
+    u.password,
+    u.created_at,
+    u.updated_at,
+    u.enabled,
+    u.avatar_url,
+    u.first_name,
+    u.last_name,
+    u.availability_status,
+    array_agg(DISTINCT r.name) as roles,
+    COALESCE(
+         (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
+          FROM team_members tm
+          JOIN teams t ON tm.team_id = t.id
+          WHERE tm.user_id = u.id),
+         '[]'
+    ) AS teams,
+    array_agg(DISTINCT p) as permissions
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id,
-    unnest(r.permissions) p
-WHERE u.id = $1 AND u.deleted_at IS NULL AND u.type = 'agent'
+     unnest(r.permissions) p
+WHERE (u.id = $1 OR u.email = $2) AND u.deleted_at IS NULL AND u.type = 'agent'
 GROUP BY u.id;
 
 -- name: set-user-password
@@ -91,6 +82,22 @@ WHERE id = $1 AND type = 'agent';
 UPDATE users  
 SET avatar_url = $2, updated_at = now()
 WHERE id = $1 AND type = 'agent';
+
+-- name: update-availability
+UPDATE users
+SET availability_status = $2
+WHERE id = $1;
+
+-- name: update-last-active-at
+UPDATE users
+SET last_active_at = now(),
+availability_status = CASE WHEN availability_status = 'offline' THEN 'online' ELSE availability_status END
+WHERE id = $1;
+
+-- name: update-inactive-offline
+UPDATE users
+SET availability_status = 'offline'
+WHERE last_active_at < now() - interval '5 minutes' and availability_status != 'offline';
 
 -- name: get-permissions
 SELECT DISTINCT unnest(r.permissions)

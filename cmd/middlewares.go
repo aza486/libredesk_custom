@@ -43,9 +43,7 @@ func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 // auth makes sure the user is logged in.
 func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
-		var (
-			app = r.Context.(*App)
-		)
+		var app = r.Context.(*App)
 
 		// Validate session and fetch user.
 		userSession, err := app.auth.ValidateSession(r)

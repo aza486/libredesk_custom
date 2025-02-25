@@ -169,6 +169,7 @@ const updateCurrentUser = (data) =>
 const deleteUserAvatar = () => http.delete('/api/v1/users/me/avatar')
 const getCurrentUser = () => http.get('/api/v1/users/me')
 const getCurrentUserTeams = () => http.get('/api/v1/users/me/teams')
+const updateCurrentUserAvailability = (data) => http.put('/api/v1/users/me/availability', data)
 const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
@@ -323,6 +324,7 @@ export default {
   uploadMedia,
   updateAssigneeLastSeen,
   updateUser,
+  updateCurrentUserAvailability,
   updateAutomationRule,
   updateAutomationRuleWeights,
   updateAutomationRulesExecutionMode,

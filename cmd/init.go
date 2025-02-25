@@ -308,6 +308,11 @@ func initCSAT(db *sqlx.DB) *csat.Manager {
 	return m
 }
 
+// initWS inits websocket hub.
+func initWS(user *user.Manager) *ws.Hub {
+	return ws.NewHub(user)
+}
+
 // initTemplates inits template manager.
 func initTemplate(db *sqlx.DB, fs stuffbin.FileSystem, consts *constants) *tmpl.Manager {
 	var (

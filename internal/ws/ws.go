@@ -13,13 +13,20 @@ type Hub struct {
 	// Client ID to WS Client map, user can connect from multiple devices and each device will have a separate client.
 	clients      map[int][]*Client
 	clientsMutex sync.Mutex
+
+	userStore userStore
+}
+
+type userStore interface {
+	UpdateLastActive(userID int) error
 }
 
 // NewHub creates a new websocket hub.
-func NewHub() *Hub {
+func NewHub(userStore userStore) *Hub {
 	return &Hub{
 		clients:      make(map[int][]*Client, 10000),
 		clientsMutex: sync.Mutex{},
+		userStore:    userStore,
 	}
 }
 

@@ -234,7 +234,10 @@ SELECT json_build_object(
     'open', COUNT(*),
     'awaiting_response', COUNT(CASE WHEN c.waiting_since IS NOT NULL THEN 1 END),
     'unassigned', COUNT(CASE WHEN c.assigned_user_id IS NULL THEN 1 END),
-    'pending', COUNT(CASE WHEN c.first_reply_at IS NOT NULL THEN 1 END)
+    'pending', COUNT(CASE WHEN c.first_reply_at IS NOT NULL THEN 1 END),
+    'agents_online', (SELECT COUNT(*) FROM users WHERE availability_status = 'online' AND type = 'agent' AND deleted_at is null),
+    'agents_away', (SELECT COUNT(*) FROM users WHERE availability_status in ('away', 'away_manual') AND type = 'agent' AND deleted_at is null),
+    'agents_offline', (SELECT COUNT(*) FROM users WHERE availability_status = 'offline' AND type = 'agent' AND deleted_at is null)
 )
 FROM conversations c
 INNER JOIN conversation_statuses s ON c.status_id = s.id

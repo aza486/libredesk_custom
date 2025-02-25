@@ -1,5 +1,5 @@
 <template>
-  <ConversationPlaceholder v-if="route.name === 'inbox'" />
+  <ConversationPlaceholder v-if="['inbox', 'team-inbox', 'view-inbox'].includes(route.name)" />
   <router-view />
 </template>
 
