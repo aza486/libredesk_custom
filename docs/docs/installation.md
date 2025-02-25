@@ -15,7 +15,7 @@ Libredesk is a single binary application that requires postgres and redis to run
 
 ## Docker
 
-The latest image is available on DockerHub at `libredesk/llibredeskistmonk:latest`
+The latest image is available on DockerHub at `libredesk/libredesk:latest`
 
 The recommended method is to download the [docker-compose.yml](https://github.com/abhinavxd/libredesk/blob/master/docker-compose.yml) file, customize it for your environment and then to simply run `docker compose up -d`.
 
