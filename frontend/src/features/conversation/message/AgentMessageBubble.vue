@@ -21,7 +21,7 @@
         <!-- Message Content -->
         <div
           v-dompurify-html="messageContent"
-          class="break-words break-all"
+          class="whitespace-pre-wrap break-words overflow-wrap-anywhere"
           :class="{ 'mb-3': message.attachments.length > 0 }"
         />
 
@@ -129,3 +129,9 @@ const retryMessage = (msg) => {
   api.retryMessage(convStore.current.uuid, msg.uuid)
 }
 </script>
+
+<style scoped>
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+</style>
