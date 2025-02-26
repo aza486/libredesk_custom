@@ -1,16 +1,16 @@
 <template>
-  <div class="flex flex-wrap px-2 py-1">
-    <div class="flex flex-wrap gap-2">
+  <div class="flex flex-wrap">
+    <div class="flex flex-wrap">
       <div
         v-for="action in actions"
         :key="action.type"
-        class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group"
+        class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group gap-2 py-1"
       >
-        <div class="flex items-center space-x-2 px-3 py-2">
+        <div class="flex items-center space-x-2 px-2 ">
           <component
             :is="getIcon(action.type)"
             size="16"
-            class="text-primary group-hover:text-primary"
+            class="text-gray-500 text-primary group-hover:text-primary"
           />
           <Tooltip>
             <TooltipTrigger as-child>
@@ -27,7 +27,7 @@
         </div>
         <button
           @click.stop="onRemove(action)"
-          class="p-2 text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 rounded transition-colors duration-300 ease-in-out"
+          class="pr-2 text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 rounded transition-colors duration-300 ease-in-out"
           title="Remove action"
         >
           <X size="14" />

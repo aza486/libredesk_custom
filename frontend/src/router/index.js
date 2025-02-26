@@ -65,7 +65,6 @@ const routes = [
             path: '',
             name: 'team-inbox',
             component: InboxView,
-            props: true,
             meta: { title: 'Team inbox' }
           },
           {
@@ -88,7 +87,6 @@ const routes = [
             path: '',
             name: 'view-inbox',
             component: InboxView,
-            props: true,
             meta: { title: 'View inbox' }
           },
           {
@@ -118,7 +116,6 @@ const routes = [
             path: '',
             name: 'inbox',
             component: InboxView,
-            props: true,
             meta: {
               title: 'Inbox',
               type: route => route.params.type === 'assigned' ? 'My inbox' : route.params.type

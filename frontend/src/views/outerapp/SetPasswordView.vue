@@ -125,18 +125,16 @@ onMounted(() => {
 })
 
 const validateForm = () => {
-  if (!passwordForm.value.password || passwordForm.value.password.length < 8) {
-    errorMessage.value = 'Password must be at least 8 characters long.'
+  if (!passwordForm.value.password) {
+    errorMessage.value = 'Password is required.'
     useTemporaryClass('set-password-container', 'animate-shake')
     return false
   }
-
   if (passwordForm.value.password !== passwordForm.value.confirmPassword) {
     errorMessage.value = 'Passwords do not match.'
     useTemporaryClass('set-password-container', 'animate-shake')
     return false
   }
-
   return true
 }
 
@@ -156,11 +154,6 @@ const setPasswordAction = async () => {
     })
     router.push({ name: 'login' })
   } catch (err) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
-      variant: 'destructive',
-      description: handleHTTPError(err).message
-    })
     errorMessage.value = handleHTTPError(err).message
     useTemporaryClass('set-password-container', 'animate-shake')
   } finally {

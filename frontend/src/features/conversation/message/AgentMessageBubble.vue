@@ -19,7 +19,11 @@
         }"
       >
         <!-- Message Content -->
-        <div v-html="messageContent" :class="{ 'mb-3': message.attachments.length > 0 }"></div>
+        <div
+          v-dompurify-html="messageContent"
+          class="break-words break-all"
+          :class="{ 'mb-3': message.attachments.length > 0 }"
+        />
 
         <!-- Attachments -->
         <MessageAttachmentPreview :attachments="nonInlineAttachments" />

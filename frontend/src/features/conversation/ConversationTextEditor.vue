@@ -1,5 +1,5 @@
 <template>
-  <div class="max-h-[600px] overflow-y-auto">
+  <div class="editor-wrapper h-full overflow-y-auto">
     <BubbleMenu
       :editor="editor"
       :tippy-options="{ duration: 100 }"
@@ -179,13 +179,20 @@ watchEffect(() => {
 
 watch(
   () => props.contentToSet,
-  (newContent) => {
-    if (newContent === '') {
-      editor.value?.commands.clearContent()
-    } else {
-      editor.value?.commands.setContent(newContent, true)
+  (newContentData) => {
+    if (!newContentData) return
+    try {
+      const parsedData = JSON.parse(newContentData)
+      const content = parsedData.content
+      if (content === '') {
+        editor.value?.commands.clearContent()
+      } else {
+        editor.value?.commands.setContent(content, true)
+      }
+      editor.value?.commands.focus()
+    } catch (e) {
+      console.error('Error parsing content data', e)
     }
-    editor.value?.commands.focus()
   }
 )
 
@@ -243,22 +250,26 @@ onUnmounted(() => {
   height: 0;
 }
 
-// Editor height
-.ProseMirror {
-  min-height: 80px !important;
-  max-height: 60% !important;
-  overflow-y: scroll !important;
+// Ensure the parent div has a proper height
+.editor-wrapper div[aria-expanded='false'] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.fullscreen-tiptap-editor {
-  @apply p-0;
-  .ProseMirror {
-    min-height: 600px !important;
-    width: 90%;
-    scrollbar-width: none;
-  }
+// Ensure the editor content has a proper height and breaks words
+.tiptap.ProseMirror {
+  flex: 1;
+  min-height: 70px;
+  overflow-y: auto;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
 }
 
+// Anchor tag styling
 .tiptap {
   a {
     color: #0066cc;

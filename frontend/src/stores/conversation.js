@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, nextTick } from 'vue'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
@@ -110,8 +110,11 @@ export const useConversationStore = defineStore('conversation', () => {
     clearInterval(reRenderInterval)
   }
 
-  function setMacro (macros) {
-    conversation.macro = macros
+  async function setMacro (macro) {
+    // Clear existing macro.
+    conversation.macro = {}
+    await nextTick()
+    conversation.macro = macro
   }
 
   function removeMacroAction (action) {
@@ -229,6 +232,10 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const current = computed(() => {
     return conversation.data || {}
+  })
+
+  const hasConversationOpen = computed(() => {
+    return Object.keys(conversation.data || {}).length > 0
   })
 
   const currentBCC = computed(() => {
@@ -609,8 +616,8 @@ export const useConversationStore = defineStore('conversation', () => {
     Object.assign(conversation, {
       data: null,
       participants: {},
-      macro: {},
       mediaFiles: [],
+      macro: {},
       loading: false,
       errorMessage: ''
     })
@@ -630,6 +637,7 @@ export const useConversationStore = defineStore('conversation', () => {
     conversationsList,
     conversationMessages,
     currentConversationHasMoreMessages,
+    hasConversationOpen,
     current,
     currentContactName,
     currentBCC,

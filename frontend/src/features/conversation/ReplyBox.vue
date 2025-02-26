@@ -3,328 +3,137 @@
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
-        class="max-w-[70%] max-h-[70%] h-[90%] w-full bg-card text-card-foreground px-4 py-4"
+        class="max-w-[70%] max-h-[70%] h-[70%] bg-card text-card-foreground p-4 flex flex-col"
         @escapeKeyDown="isEditorFullscreen = false"
-        hide-close-button="true"
+        :hide-close-button="true"
       >
-        <div v-if="isEditorFullscreen" class="h-full flex flex-col">
-          <!-- Message type toggle -->
-          <div class="flex justify-between items-center border-b border-border pb-4">
-            <Tabs v-model="messageType" class="rounded-lg">
-              <TabsList class="bg-muted p-1 rounded-lg">
-                <TabsTrigger
-                  value="reply"
-                  class="px-3 py-1 rounded-lg transition-colors duration-200"
-                  :class="{ 'bg-background text-foreground': messageType === 'reply' }"
-                >
-                  Reply
-                </TabsTrigger>
-                <TabsTrigger
-                  value="private_note"
-                  class="px-3 py-1 rounded-lg transition-colors duration-200"
-                  :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
-                >
-                  Private note
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <span
-              class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer"
-              variant="ghost"
-              @click="isEditorFullscreen = false"
-            >
-              <Minimize2 size="18" />
-            </span>
-          </div>
-
-          <!-- CC and BCC fields -->
-          <div class="space-y-3 p-4 border-b border-border" v-if="messageType === 'reply'">
-            <div class="flex items-center space-x-2">
-              <label class="w-12 text-sm font-medium text-muted-foreground">CC:</label>
-              <Input
-                type="text"
-                placeholder="Email addresses separated by comma"
-                v-model="cc"
-                class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-                @blur="validateEmails('cc')"
-              />
-              <Button
-                size="sm"
-                @click="hideBcc"
-                class="text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              >
-                {{ showBcc ? 'Remove BCC' : 'BCC' }}
-              </Button>
-            </div>
-            <div v-if="showBcc" class="flex items-center space-x-2">
-              <label class="w-12 text-sm font-medium text-muted-foreground">BCC:</label>
-              <Input
-                type="text"
-                placeholder="Email addresses separated by comma"
-                v-model="bcc"
-                class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-                @blur="validateEmails('bcc')"
-              />
-            </div>
-          </div>
-
-          <div
-            v-if="emailErrors.length > 0"
-            class="mb-4 px-2 py-1 bg-destructive/10 border border-destructive text-destructive rounded"
-          >
-            <p v-for="error in emailErrors" :key="error" class="text-sm">{{ error }}</p>
-          </div>
-
-          <!-- Main Editor -->
-          <div class="flex-grow overflow-y-auto p-2">
-            <Editor
-              v-model:selectedText="selectedText"
-              v-model:isBold="isBold"
-              v-model:isItalic="isItalic"
-              v-model:htmlContent="htmlContent"
-              v-model:textContent="textContent"
-              :placeholder="editorPlaceholder"
-              :aiPrompts="aiPrompts"
-              @aiPromptSelected="handleAiPromptSelected"
-              :contentToSet="contentToSet"
-              @send="handleSend"
-              v-model:cursorPosition="cursorPosition"
-              :clearContent="clearEditorContent"
-              :setInlineImage="setInlineImage"
-              :insertContent="insertContent"
-              class="h-full"
-            />
-          </div>
-
-          <!-- Macro preview -->
-          <MacroActionsPreview
-            v-if="conversationStore.conversation?.macro?.actions?.length > 0"
-            :actions="conversationStore.conversation.macro.actions"
-            :onRemove="conversationStore.removeMacroAction"
-            class="mt-4"
-          />
-
-          <!-- Attachments preview -->
-          <AttachmentsPreview
-            :attachments="attachments"
-            :uploadingFiles="uploadingFiles"
-            :onDelete="handleOnFileDelete"
-            v-if="attachments.length > 0 || uploadingFiles.length > 0"
-            class="mt-4"
-          />
-
-          <!-- Bottom menu bar -->
-          <ReplyBoxBottomMenuBar
-            class="mt-4  pt-4"
-            :handleFileUpload="handleFileUpload"
-            :handleInlineImageUpload="handleInlineImageUpload"
-            :isBold="isBold"
-            :isItalic="isItalic"
-            :isSending="isSending"
-            @toggleBold="toggleBold"
-            @toggleItalic="toggleItalic"
-            :enableSend="enableSend"
-            :handleSend="handleSend"
-            @emojiSelect="handleEmojiSelect"
-          />
-        </div>
+        <ReplyBoxContent
+          v-if="isEditorFullscreen"
+          :isFullscreen="true"
+          :aiPrompts="aiPrompts"
+          :isSending="isSending"
+          :uploadingFiles="uploadingFiles"
+          :clearEditorContent="clearEditorContent"
+          :htmlContent="htmlContent"
+          :textContent="textContent"
+          :selectedText="selectedText"
+          :isBold="isBold"
+          :isItalic="isItalic"
+          :cursorPosition="cursorPosition"
+          :contentToSet="contentToSet"
+          :cc="cc"
+          :bcc="bcc"
+          :emailErrors="emailErrors"
+          :messageType="messageType"
+          :showBcc="showBcc"
+          @update:htmlContent="htmlContent = $event"
+          @update:textContent="textContent = $event"
+          @update:selectedText="selectedText = $event"
+          @update:isBold="isBold = $event"
+          @update:isItalic="isItalic = $event"
+          @update:cursorPosition="cursorPosition = $event"
+          @toggleFullscreen="isEditorFullscreen = false"
+          @update:messageType="messageType = $event"
+          @update:cc="cc = $event"
+          @update:bcc="bcc = $event"
+          @update:showBcc="showBcc = $event"
+          @updateEmailErrors="emailErrors = $event"
+          @send="processSend"
+          @fileUpload="handleFileUpload"
+          @inlineImageUpload="handleInlineImageUpload"
+          @fileDelete="handleOnFileDelete"
+          @aiPromptSelected="handleAiPromptSelected"
+          class="h-full flex-grow"
+        />
       </DialogContent>
     </Dialog>
 
     <!-- Main Editor non-fullscreen -->
-    <div class="bg-card text-card-foreground box px-2 pt-2 m-2">
-      <div v-if="!isEditorFullscreen" class="">
-        <!-- Message type toggle -->
-        <div class="flex justify-between items-center mb-4">
-          <Tabs v-model="messageType" class="rounded-lg">
-            <TabsList class="bg-muted p-1 rounded-lg">
-              <TabsTrigger
-                value="reply"
-                class="px-3 py-1 rounded-lg transition-colors duration-200"
-                :class="{ 'bg-background text-foreground': messageType === 'reply' }"
-              >
-                Reply
-              </TabsTrigger>
-              <TabsTrigger
-                value="private_note"
-                class="px-3 py-1 rounded-lg transition-colors duration-200"
-                :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
-              >
-                Private note
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <span
-            class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer mr-2"
-            variant="ghost"
-            @click="isEditorFullscreen = true"
-          >
-            <Maximize2 size="15" />
-          </span>
-        </div>
-
-        <div class="space-y-3 mb-4" v-if="messageType === 'reply'">
-          <div class="flex items-center space-x-2">
-            <label class="w-12 text-sm font-medium text-muted-foreground">CC:</label>
-            <Input
-              type="text"
-              placeholder="Email addresses separated by comma"
-              v-model="cc"
-              class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-              @blur="validateEmails('cc')"
-            />
-            <Button
-              size="sm"
-              @click="hideBcc"
-              class="text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            >
-              {{ showBcc ? 'Remove BCC' : 'BCC' }}
-            </Button>
-          </div>
-          <div v-if="showBcc" class="flex items-center space-x-2">
-            <label class="w-12 text-sm font-medium text-muted-foreground">BCC:</label>
-            <Input
-              type="text"
-              placeholder="Email addresses separated by comma"
-              v-model="bcc"
-              class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-              @blur="validateEmails('bcc')"
-            />
-          </div>
-        </div>
-
-        <div
-          v-if="emailErrors.length > 0"
-          class="mb-4 px-2 py-1 bg-destructive/10 border border-destructive text-destructive rounded"
-        >
-          <p v-for="error in emailErrors" :key="error" class="text-sm">{{ error }}</p>
-        </div>
-
-        <!-- Main Editor -->
-        <Editor
-          v-model:selectedText="selectedText"
-          v-model:isBold="isBold"
-          v-model:isItalic="isItalic"
-          v-model:htmlContent="htmlContent"
-          v-model:textContent="textContent"
-          :placeholder="editorPlaceholder"
-          :aiPrompts="aiPrompts"
-          @aiPromptSelected="handleAiPromptSelected"
-          :contentToSet="contentToSet"
-          @send="handleSend"
-          v-model:cursorPosition="cursorPosition"
-          :clearContent="clearEditorContent"
-          :setInlineImage="setInlineImage"
-          :insertContent="insertContent"
-        />
-
-        <!-- Macro preview -->
-        <MacroActionsPreview
-          v-if="conversationStore.conversation?.macro?.actions?.length > 0"
-          :actions="conversationStore.conversation.macro.actions"
-          :onRemove="conversationStore.removeMacroAction"
-        />
-
-        <!-- Attachments preview -->
-        <AttachmentsPreview
-          :attachments="attachments"
-          :uploadingFiles="uploadingFiles"
-          :onDelete="handleOnFileDelete"
-          v-if="attachments.length > 0 || uploadingFiles.length > 0"
-          class="mt-4"
-        />
-
-        <!-- Bottom menu bar -->
-        <ReplyBoxBottomMenuBar
-          class="mt-1"
-          :handleFileUpload="handleFileUpload"
-          :handleInlineImageUpload="handleInlineImageUpload"
-          :isBold="isBold"
-          :isItalic="isItalic"
-          :isSending="isSending"
-          @toggleBold="toggleBold"
-          @toggleItalic="toggleItalic"
-          :enableSend="enableSend"
-          :handleSend="handleSend"
-          @emojiSelect="handleEmojiSelect"
-        />
-      </div>
+    <div
+      class="bg-card text-card-foreground box m-2 px-2 pt-2 flex flex-col"
+      v-if="!isEditorFullscreen"
+    >
+      <ReplyBoxContent
+        :isFullscreen="false"
+        :aiPrompts="aiPrompts"
+        :isSending="isSending"
+        :uploadingFiles="uploadingFiles"
+        :clearEditorContent="clearEditorContent"
+        :htmlContent="htmlContent"
+        :textContent="textContent"
+        :selectedText="selectedText"
+        :isBold="isBold"
+        :isItalic="isItalic"
+        :cursorPosition="cursorPosition"
+        :contentToSet="contentToSet"
+        :cc="cc"
+        :bcc="bcc"
+        :emailErrors="emailErrors"
+        :messageType="messageType"
+        :showBcc="showBcc"
+        @update:htmlContent="htmlContent = $event"
+        @update:textContent="textContent = $event"
+        @update:selectedText="selectedText = $event"
+        @update:isBold="isBold = $event"
+        @update:isItalic="isItalic = $event"
+        @update:cursorPosition="cursorPosition = $event"
+        @toggleFullscreen="isEditorFullscreen = true"
+        @update:messageType="messageType = $event"
+        @update:cc="cc = $event"
+        @update:bcc="bcc = $event"
+        @update:showBcc="showBcc = $event"
+        @updateEmailErrors="emailErrors = $event"
+        @send="processSend"
+        @fileUpload="handleFileUpload"
+        @inlineImageUpload="handleInlineImageUpload"
+        @fileDelete="handleOnFileDelete"
+        @aiPromptSelected="handleAiPromptSelected"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
-import { Maximize2, Minimize2 } from 'lucide-vue-next'
 import api from '@/api'
 
-import Editor from './ConversationTextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEmitter } from '@/composables/useEmitter'
-import AttachmentsPreview from '@/features/conversation/message/attachment/AttachmentsPreview.vue'
-import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue'
-import ReplyBoxBottomMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'
+import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
-const insertContent = ref(null)
-const setInlineImage = ref(null)
+
+// Shared state between the two editor components.
 const clearEditorContent = ref(false)
 const isEditorFullscreen = ref(false)
 const isSending = ref(false)
-const cursorPosition = ref(0)
-const selectedText = ref('')
-const htmlContent = ref('')
-const textContent = ref('')
-const contentToSet = ref('')
-const isBold = ref(false)
-const isItalic = ref(false)
 const messageType = ref('reply')
-const showBcc = ref(false)
 const cc = ref('')
 const bcc = ref('')
+const showBcc = ref(false)
 const emailErrors = ref([])
 const aiPrompts = ref([])
 const uploadingFiles = ref([])
-const editorPlaceholder = 'Press Enter to add a new line; Press Ctrl + Enter to send.'
+const htmlContent = ref('')
+const textContent = ref('')
+const selectedText = ref('')
+const isBold = ref(false)
+const isItalic = ref(false)
+const cursorPosition = ref(0)
+const contentToSet = ref('')
 
 onMounted(async () => {
   await fetchAiPrompts()
 })
 
-const hideBcc = () => {
-  showBcc.value = !showBcc.value
-}
-
-watch(
-  () => conversationStore.currentCC,
-  (newVal) => {
-    cc.value = newVal?.join(', ') || ''
-  },
-  { deep: true, immediate: true }
-)
-
-watch(
-  () => conversationStore.currentBCC,
-  (newVal) => {
-    const newBcc = newVal?.join(', ') || ''
-    bcc.value = newBcc
-    if (newBcc.length == 0) {
-      showBcc.value = false
-    } else {
-      showBcc.value = true
-    }
-  },
-  { deep: true, immediate: true }
-)
-
+/**
+ * Fetches AI prompts from the server.
+ */
 const fetchAiPrompts = async () => {
   try {
     const resp = await api.getAiPrompts()
@@ -338,13 +147,22 @@ const fetchAiPrompts = async () => {
   }
 }
 
+/**
+ * Handles the AI prompt selection event.
+ * Sends the selected prompt key and the current text content to the server for completion.
+ * Sets the response as the new content in the editor.
+ * @param {String} key - The key of the selected AI prompt
+ */
 const handleAiPromptSelected = async (key) => {
   try {
     const resp = await api.aiCompletion({
       prompt_key: key,
-      content: selectedText.value
+      content: textContent.value
     })
-    contentToSet.value = resp.data.data.replace(/\n/g, '<br>')
+    contentToSet.value = JSON.stringify({
+      content: resp.data.data.replace(/\n/g, '<br>'),
+      timestamp: Date.now()
+    })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
@@ -354,33 +172,11 @@ const handleAiPromptSelected = async (key) => {
   }
 }
 
-const toggleBold = () => {
-  isBold.value = !isBold.value
-}
-
-const toggleItalic = () => {
-  isItalic.value = !isItalic.value
-}
-
-const attachments = computed(() => {
-  return conversationStore.conversation.mediaFiles.filter(
-    (upload) => upload.disposition === 'attachment'
-  )
-})
-
-const enableSend = computed(() => {
-  return (
-    (textContent.value.trim().length > 0 ||
-      conversationStore.conversation?.macro?.actions?.length > 0) &&
-    emailErrors.value.length === 0 &&
-    !uploadingFiles.value.length
-  )
-})
-
-const hasTextContent = computed(() => {
-  return textContent.value.trim().length > 0
-})
-
+/**
+ * Handles the file upload process when files are selected.
+ * Uploads each file to the server and adds them to the conversation's mediaFiles.
+ * @param {Event} event - The file input change event containing selected files
+ */
 const handleFileUpload = (event) => {
   const files = Array.from(event.target.files)
   uploadingFiles.value = files
@@ -407,6 +203,7 @@ const handleFileUpload = (event) => {
   }
 }
 
+// Inline image upload is not supported yet.
 const handleInlineImageUpload = (event) => {
   for (const file of event.target.files) {
     api
@@ -416,12 +213,13 @@ const handleInlineImageUpload = (event) => {
         linked_model: 'messages'
       })
       .then((resp) => {
-        setInlineImage.value = {
+        const imageData = {
           src: resp.data.data.url,
           alt: resp.data.data.filename,
           title: resp.data.data.uuid
         }
         conversationStore.conversation.mediaFiles.push(resp.data.data)
+        return imageData
       })
       .catch((error) => {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -433,44 +231,23 @@ const handleInlineImageUpload = (event) => {
   }
 }
 
-const validateEmails = (field) => {
-  const emails = field === 'cc' ? cc.value : bcc.value
-  const emailList = emails
-    .split(',')
-    .map((e) => e.trim())
-    .filter((e) => e !== '')
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  const invalidEmails = emailList.filter((email) => !emailRegex.test(email))
+/**
+ * Returns true if the editor has text content.
+ */
+const hasTextContent = computed(() => {
+  return textContent.value.trim().length > 0
+})
 
-  // Remove any existing errors for this field
-  emailErrors.value = emailErrors.value.filter(
-    (error) => !error.startsWith(`Invalid email(s) in ${field.toUpperCase()}`)
-  )
-
-  // Add new error if there are invalid emails
-  if (invalidEmails.length > 0) {
-    emailErrors.value.push(
-      `Invalid email(s) in ${field.toUpperCase()}: ${invalidEmails.join(', ')}`
-    )
-  }
-}
-
-const handleSend = async () => {
-  if (emailErrors.value.length > 0) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
-      variant: 'destructive',
-      description: 'Please correct the email errors before sending.'
-    })
-    return
-  }
-
+/**
+ * Processes the send action.
+ */
+const processSend = async () => {
   isEditorFullscreen.value = false
   try {
     isSending.value = true
 
     // Send message if there is text content in the editor.
-    if (hasTextContent.value) {
+    if (hasTextContent.value > 0) {
       // Replace inline image url with cid.
       const message = transformImageSrcToCID(htmlContent.value)
 
@@ -490,7 +267,7 @@ const handleSend = async () => {
       )
 
       await api.sendMessage(conversationStore.current.uuid, {
-        private: messageType.value === 'private_note',
+        private: messageType.value === 'private',
         message: message,
         attachments: conversationStore.conversation.mediaFiles.map((file) => file.id),
         // Convert email addresses to array and remove empty strings.
@@ -498,7 +275,7 @@ const handleSend = async () => {
           .split(',')
           .map((email) => email.trim())
           .filter((email) => email),
-        bcc: showBcc.value
+        bcc: bcc.value
           ? bcc.value
               .split(',')
               .map((email) => email.trim())
@@ -524,6 +301,7 @@ const handleSend = async () => {
   } finally {
     isSending.value = false
     clearEditorContent.value = true
+    // Reset media and macro in conversation store.
     conversationStore.resetMacro()
     conversationStore.resetMediaFiles()
     emailErrors.value = []
@@ -531,33 +309,64 @@ const handleSend = async () => {
       clearEditorContent.value = false
     })
   }
+  // Update assignee last seen timestamp.
   api.updateAssigneeLastSeen(conversationStore.current.uuid)
 }
 
+/**
+ * Handles the file delete event.
+ * Removes the file from the conversation's mediaFiles.
+ * @param {String} uuid - The UUID of the file to delete
+ */
 const handleOnFileDelete = (uuid) => {
   conversationStore.conversation.mediaFiles = conversationStore.conversation.mediaFiles.filter(
     (item) => item.uuid !== uuid
   )
 }
 
-const handleEmojiSelect = (emoji) => {
-  insertContent.value = undefined
-  // Force reactivity so the user can select the same emoji multiple times
-  nextTick(() => (insertContent.value = emoji))
-}
-
-// Watch for changes in macro content and update editor content.
+/**
+ * Watches for changes in the conversation's macro and updates the editor content with the macro content.
+ */
 watch(
   () => conversationStore.conversation.macro,
   () => {
     // hack: Quill editor adds <p><br></p> replace with <p></p>
+    // Maybe use some other editor that doesn't add this?
     if (conversationStore.conversation?.macro?.message_content) {
-      contentToSet.value = conversationStore.conversation.macro.message_content.replace(
+      const contentToRender = conversationStore.conversation.macro.message_content.replace(
         /<p><br><\/p>/g,
         '<p></p>'
       )
+      // Add timestamp to ensure the watcher detects the change even for identical content,
+      // As user can send the same macro multiple times.
+      contentToSet.value = JSON.stringify({
+        content: contentToRender,
+        timestamp: Date.now()
+      })
     }
   },
   { deep: true }
+)
+
+// Initialize cc and bcc from conversation store
+watch(
+  () => conversationStore.currentCC,
+  (newVal) => {
+    cc.value = newVal?.join(', ') || ''
+  },
+  { deep: true, immediate: true }
+)
+
+watch(
+  () => conversationStore.currentBCC,
+  (newVal) => {
+    const newBcc = newVal?.join(', ') || ''
+    bcc.value = newBcc
+    // Only show BCC field if it has content
+    if (newBcc.length > 0) {
+      showBcc.value = true
+    }
+  },
+  { deep: true, immediate: true }
 )
 </script>

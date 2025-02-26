@@ -6,7 +6,7 @@
         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground p-0"
       >
         <Avatar class="h-8 w-8 rounded-lg relative overflow-visible">
-          <AvatarImage :src="userStore.avatar" alt="Abhinav" />
+          <AvatarImage :src="userStore.avatar" alt="" class="rounded-lg"/>
           <AvatarFallback class="rounded-lg">
             {{ userStore.getInitials }}
           </AvatarFallback>

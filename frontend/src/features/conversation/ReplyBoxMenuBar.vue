@@ -35,7 +35,9 @@
         <Smile class="h-4 w-4" />
       </Toggle>
     </div>
-    <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!enableSend" :isLoading="isSending">Send</Button>
+    <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!enableSend" :isLoading="isSending"
+      >Send</Button
+    >
   </div>
 </template>
 
@@ -52,11 +54,10 @@ const attachmentInput = ref(null)
 const inlineImageInput = ref(null)
 const isEmojiPickerVisible = ref(false)
 const emojiPickerRef = ref(null)
-const emit = defineEmits(['toggleBold', 'toggleItalic', 'emojiSelect'])
+const emit = defineEmits(['emojiSelect'])
 
+// Using defineProps for props that don't need two-way binding
 defineProps({
-  isBold: Boolean,
-  isItalic: Boolean,
   isSending: Boolean,
   enableSend: Boolean,
   handleSend: Function,
@@ -69,7 +70,11 @@ onClickOutside(emojiPickerRef, () => {
 })
 
 const triggerFileUpload = () => {
-  attachmentInput.value.click()
+  if (attachmentInput.value) {
+    // Clear the value to allow the same file to be uploaded again.
+    attachmentInput.value.value = ''
+    attachmentInput.value.click()
+  }
 }
 
 const toggleEmojiPicker = () => {

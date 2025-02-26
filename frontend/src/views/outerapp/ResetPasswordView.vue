@@ -76,8 +76,7 @@
     </main>
 
     <footer class="p-6 text-center">
-      <div class="text-sm text-muted-foreground space-x-4">
-      </div>
+      <div class="text-sm text-muted-foreground space-x-4"></div>
     </footer>
   </div>
 </template>
@@ -93,10 +92,13 @@ import { Button } from '@/components/ui/button'
 import { Error } from '@/components/ui/error'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useEmitter } from '@/composables/useEmitter'
 import { Label } from '@/components/ui/label'
 
 const errorMessage = ref('')
 const isLoading = ref(false)
+const emitter = useEmitter()
 const router = useRouter()
 const resetForm = ref({
   email: ''
@@ -121,16 +123,16 @@ const requestResetAction = async () => {
     await api.resetPassword({
       email: resetForm.value.email
     })
-    toast({
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Reset link sent',
       description: 'Please check your email for the reset link.'
     })
     router.push({ name: 'login' })
   } catch (err) {
-    toast({
-      title: 'Error',
-      description: err.response.data.message,
-      variant: 'destructive'
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Reset link sent',
+      variant: 'destructive',
+      description: handleHTTPError(err).message
     })
     errorMessage.value = handleHTTPError(err).message
     useTemporaryClass('reset-password-container', 'animate-shake')
