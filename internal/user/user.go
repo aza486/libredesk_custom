@@ -277,9 +277,13 @@ func (u *Manager) ResetPassword(token, password string) error {
 		u.lo.Error("error generating bcrypt password", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error setting new password", nil)
 	}
-	if _, err := u.q.ResetPassword.Exec(passwordHash, token); err != nil {
+	rows, err := u.q.ResetPassword.Exec(passwordHash, token)
+	if err != nil {
 		u.lo.Error("error setting new password", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error setting new password", nil)
+	}
+	if count, _ := rows.RowsAffected(); count == 0 {
+		return envelope.NewError(envelope.InputError, "Token is invalid or expired, please try again by requesting a new password reset link", nil)
 	}
 	return nil
 }
