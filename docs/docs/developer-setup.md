@@ -21,7 +21,7 @@ git clone https://github.com/abhinavxd/libredesk.git
 
 ### Running the Dev Environment
 
-1. Run `make run` to start the libredesk backend dev server on `:9000`.
+1. Run `make run-backend` to start the libredesk backend dev server on `:9000`.
 2. Run `make run-frontend` to start the Vue frontend in dev mode using pnpm on `:8000`. Requests are proxied to the backend running on `:9000` check `vite.config.js` for the proxy config.
 
 ---
