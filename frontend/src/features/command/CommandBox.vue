@@ -10,7 +10,7 @@
       <CommandGroup
         heading="Conversations"
         value="conversations"
-        v-if="nestedCommand === null && conversationStore.current"
+        v-if="nestedCommand === null && conversationStore.hasConversationOpen"
       >
         <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')"> Snooze </CommandItem>
         <CommandItem value="conv-resolve" @select="resolveConversation"> Resolve </CommandItem>
@@ -45,7 +45,6 @@
                   :data-index="index"
                   @select="handleApplyMacro(macro)"
                   class="px-3 py-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:text-primary"
-                  :class="{ 'bg-primary/5 text-primary': selectedMacroIndex === index }"
                 >
                   <div class="flex items-center space-x-2 justify-start">
                     <Zap :size="14" class="text-primary" />
@@ -219,7 +218,9 @@ watch([Meta_K, Ctrl_K], ([mac, win]) => {
 const highlightedMacro = ref(null)
 
 function handleApplyMacro(macro) {
-  conversationStore.setMacro(macro)
+  // Create a deep copy.
+  const plainMacro = JSON.parse(JSON.stringify(macro))
+  conversationStore.setMacro(plainMacro)
   handleOpenChange()
 }
 
