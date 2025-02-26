@@ -282,8 +282,10 @@ export const useConversationStore = defineStore('conversation', () => {
   async function fetchMessages (uuid, fetchNextPage = false) {
     // Messages are already cached?
     let hasMessages = messages.data.getAllPagesMessages(uuid)
-    if (hasMessages.length > 0 && !fetchNextPage)
+    if (hasMessages.length > 0 && !fetchNextPage) {
+      markConversationAsRead(uuid)
       return
+    }
 
     // Fetch messages from server.
     messages.loading = true
@@ -293,7 +295,6 @@ export const useConversationStore = defineStore('conversation', () => {
       const response = await api.getConversationMessages(uuid, { page: page, page_size: MESSAGE_LIST_PAGE_SIZE })
       const result = response.data?.data || {}
       const newMessages = result.results || []
-      // Mark conversation as read
       markConversationAsRead(uuid)
       // Cache messages
       messages.data.addMessages(uuid, newMessages, result.page, result.total_pages)
