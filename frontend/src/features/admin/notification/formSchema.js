@@ -51,8 +51,8 @@ export const smtpConfigSchema = z.object({
     auth_protocol: z
         .enum(['plain', 'login', 'cram', 'none'])
         .describe('Authentication protocol'),
-    email_address: z.string().describe('Email address').email().nonempty({
-        message: "Email address is required"
+    email_address: z.string().describe('From email address with name (e.g., "Name <email@example.com>")').nonempty({
+        message: "From email address is required"
     }),
     max_msg_retries: z
         .number({
