@@ -65,6 +65,7 @@
           <Input type="number" placeholder="2" v-bind="componentField" />
         </FormControl>
         <FormMessage />
+        <FormDescription> Maximum concurrent connections to the server. </FormDescription>
       </FormItem>
     </FormField>
 
@@ -76,6 +77,10 @@
           <Input type="text" placeholder="15s" v-bind="componentField" />
         </FormControl>
         <FormMessage />
+        <FormDescription>
+          Time to wait for new activity on a connection before closing it and removing it from the
+          pool (s for second, m for minute)
+        </FormDescription>
       </FormItem>
     </FormField>
 
@@ -87,6 +92,10 @@
           <Input type="text" placeholder="5s" v-bind="componentField" />
         </FormControl>
         <FormMessage />
+        <FormDescription>
+          Time to wait for new activity on a connection before closing it and removing it from the
+          pool (s for second, m for minute, h for hour).
+        </FormDescription>
       </FormItem>
     </FormField>
 
@@ -139,6 +148,7 @@
           <Input type="number" placeholder="2" v-bind="componentField" />
         </FormControl>
         <FormMessage />
+        <FormDescription> Number of times to retry when a message fails. </FormDescription>
       </FormItem>
     </FormField>
 
