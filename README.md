@@ -74,7 +74,7 @@ __________________
 - Run `./libredesk --set-system-user-password` to set the password for the System user.
 - Run `./libredesk` and visit `http://localhost:9000` and login with username `System` and the password you set using the --set-system-user-password command.
 
-See [installation docs](https://libredesk.app/docs/installation)
+See [installation docs](https://libredesk.io/docs/installation)
 __________________
 
 
