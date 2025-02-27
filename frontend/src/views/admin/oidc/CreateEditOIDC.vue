@@ -62,9 +62,9 @@ const submitForm = async (values) => {
       }
       await api.updateOIDC(props.id, values)
       toastDescription = 'Provider updated successfully'
-      router.push({ name: 'sso-list' })
     } else {
       await api.createOIDC(values)
+      router.push({ name: 'sso-list' })
       toastDescription = 'Provider created successfully'
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
