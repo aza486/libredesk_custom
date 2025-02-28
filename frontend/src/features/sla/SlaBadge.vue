@@ -1,32 +1,33 @@
 <template>
   <div v-if="dueAt" class="flex justify-start items-center space-x-2">
-    <TransitionGroup name="fade">
-      <!-- Overdue-->
-      <span v-if="sla?.status === 'overdue'" key="overdue" class="sla-badge box sla-overdue">
-        <AlertCircle size="10" class="text-red-800" />
-        <span class="text-xs text-red-800">{{ label }} Overdue</span>
+    <!-- Overdue-->
+    <span v-if="sla?.status === 'overdue'" key="overdue" class="sla-badge box sla-overdue">
+      <AlertCircle size="12" class="text-red-800" />
+      <span class="sla-text text-red-800"
+        >{{ label }} Overdue
+        <span v-if="showExtra">by {{ sla.value }}</span>
       </span>
+    </span>
 
-      <!-- SLA Hit -->
-      <span
-        v-else-if="sla?.status === 'hit' && showSLAMet"
-        key="sla-hit"
-        class="sla-badge box sla-hit"
-      >
-        <CheckCircle size="10" />
-        <span class="sla-text">{{ label }} SLA met</span>
-      </span>
+    <!-- SLA Hit -->
+    <span
+      v-else-if="sla?.status === 'hit' && showExtra"
+      key="sla-hit"
+      class="sla-badge box sla-hit"
+    >
+      <CheckCircle size="12" />
+      <span class="sla-text">{{ label }} SLA met</span>
+    </span>
 
-      <!-- Remaining -->
-      <span
-        v-else-if="sla?.status === 'remaining'"
-        key="remaining"
-        class="sla-badge box sla-remaining"
-      >
-        <Clock size="10" />
-        <span class="sla-text">{{ label }} {{ sla.value }}</span>
-      </span>
-    </TransitionGroup>
+    <!-- Remaining -->
+    <span
+      v-else-if="sla?.status === 'remaining'"
+      key="remaining"
+      class="sla-badge box sla-remaining"
+    >
+      <Clock size="12" />
+      <span class="sla-text">{{ label }} {{ sla.value }}</span>
+    </span>
   </div>
 </template>
 
@@ -38,12 +39,16 @@ const props = defineProps({
   dueAt: String,
   actualAt: String,
   label: String,
-  showSLAMet: {
+  showExtra: {
     type: Boolean,
     default: true
   }
 })
-const { sla } = useSla(ref(props.dueAt), ref(props.actualAt))
+
+let sla = null
+if (props.dueAt) {
+  sla = useSla(ref(props.dueAt), ref(props.actualAt))
+}
 </script>
 
 <style scoped>
@@ -61,5 +66,9 @@ const { sla } = useSla(ref(props.dueAt), ref(props.actualAt))
 
 .sla-remaining {
   @apply bg-yellow-100 text-yellow-800;
+}
+
+.sla-text {
+  @apply text-[0.65rem];
 }
 </style>

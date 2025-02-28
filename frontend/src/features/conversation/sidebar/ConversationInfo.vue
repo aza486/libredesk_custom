@@ -27,8 +27,10 @@
     <div class="flex justify-start items-center space-x-2">
       <p class="font-medium">First reply at</p>
       <SlaBadge
+        v-if="conversation.first_response_due_at"
         :dueAt="conversation.first_response_due_at"
         :actualAt="conversation.first_reply_at"
+        :key="conversation.uuid"
       />
     </div>
     <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
@@ -43,7 +45,12 @@
   <div class="flex flex-col gap-1 mb-5">
     <div class="flex justify-start items-center space-x-2">
       <p class="font-medium">Resolved at</p>
-      <SlaBadge :dueAt="conversation.resolution_due_at" :actualAt="conversation.resolved_at" />
+      <SlaBadge 
+        v-if="conversation.resolution_due_at"
+        :dueAt="conversation.resolution_due_at"
+        :actualAt="conversation.resolved_at"
+        :key="conversation.uuid"
+      />
     </div>
     <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
     <div v-else>

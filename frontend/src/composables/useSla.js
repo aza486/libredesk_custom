@@ -18,5 +18,5 @@ export function useSla (dueAt, actualAt) {
             clearInterval(intervalId)
         })
     })
-    return { sla, updateSla }
+    return sla
 }
