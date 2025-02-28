@@ -338,7 +338,7 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 
 	// Valid str?
 	if user.AvatarURL.String == "" {
-		return r.SendEnvelope(true)
+		return r.SendEnvelope("Avatar deleted successfully.")
 	}
 
 	fileName := filepath.Base(user.AvatarURL.String)
@@ -347,8 +347,8 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	if err := app.media.Delete(fileName); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	err = app.user.UpdateAvatar(user.ID, "")
-	if err != nil {
+
+	if err = app.user.UpdateAvatar(user.ID, ""); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope("Avatar deleted successfully.")
@@ -363,7 +363,7 @@ func handleResetPassword(r *fastglue.Request) error {
 		email     = string(p.Peek("email"))
 	)
 	if ok && auser.ID > 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "User is already logged in", nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "User is already logged in, Please logout to reset password.", nil, envelope.InputError)
 	}
 
 	if email == "" {
@@ -372,7 +372,8 @@ func handleResetPassword(r *fastglue.Request) error {
 
 	user, err := app.user.GetByEmail(email)
 	if err != nil {
-		return sendErrorEnvelope(r, err)
+		// Send 200 even if user not found, to prevent email enumeration.
+		return r.SendEnvelope("Reset password email sent successfully.")
 	}
 
 	token, err := app.user.SetResetPasswordToken(user.ID)
@@ -396,8 +397,8 @@ func handleResetPassword(r *fastglue.Request) error {
 		Content:  content,
 		Provider: notifier.ProviderEmail,
 	}); err != nil {
-		app.lo.Error("error sending notification message", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending notification message", nil, envelope.GeneralError)
+		app.lo.Error("error sending password reset email", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending password reset email", nil, envelope.GeneralError)
 	}
 
 	return r.SendEnvelope("Reset password email sent successfully.")
