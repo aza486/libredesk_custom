@@ -22,16 +22,14 @@
 
         <MessagesSkeleton :count="10" v-if="conversationStore.messages.loading" />
 
-        <TransitionGroup
-          v-else
-          enter-active-class="animate-slide-in"
-          tag="div"
-          class="space-y-4"
-        >
+        <TransitionGroup v-else enter-active-class="animate-slide-in" tag="div" class="space-y-4">
           <div
-            v-for="message in conversationStore.conversationMessages"
+            v-for="(message, index) in conversationStore.conversationMessages"
             :key="message.uuid"
-            :class="message.type === 'activity' ? 'my-2' : 'my-4'"
+            :class="{
+              'my-2': message.type === 'activity',
+              'pt-4': index === 0
+            }"
           >
             <div v-if="!message.private">
               <ContactMessageBubble :message="message" v-if="message.type === 'incoming'" />
