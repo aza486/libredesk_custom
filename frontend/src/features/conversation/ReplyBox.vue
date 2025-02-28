@@ -267,7 +267,7 @@ const processSend = async () => {
       )
 
       await api.sendMessage(conversationStore.current.uuid, {
-        private: messageType.value === 'private',
+        private: messageType.value === 'private_note',
         message: message,
         attachments: conversationStore.conversation.mediaFiles.map((file) => file.id),
         // Convert email addresses to array and remove empty strings.
