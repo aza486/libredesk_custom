@@ -83,9 +83,9 @@ func checkUpdates(curVersion string, interval time.Duration, app *App) {
 		app.Unlock()
 	}
 
-	// Give a 15 minute buffer after app start in case the admin wants to disable
+	// Give a 5 minute buffer after app start in case the admin wants to disable
 	// update checks entirely and not make a request to upstream.
-	time.Sleep(time.Minute * 15)
+	time.Sleep(time.Minute * 5)
 	fnCheck()
 
 	// Thereafter, check every $interval.

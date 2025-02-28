@@ -250,7 +250,7 @@ func main() {
 
 	// Start the app update checker.
 	if ko.Bool("app.check_updates") {
-		go checkUpdates(versionString, time.Hour*24, app)
+		go checkUpdates(versionString, time.Hour*1, app)
 	}
 
 	// Wait for shutdown signal.
