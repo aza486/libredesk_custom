@@ -1,4 +1,38 @@
 <template>
+  <Dialog :open="openAIKeyPrompt" @update:open="openAIKeyPrompt = false">
+    <DialogContent class="sm:max-w-lg">
+      <DialogHeader class="space-y-2">
+        <DialogTitle>Enter OpenAI API Key</DialogTitle>
+        <DialogDescription>
+          OpenAI API key is not set or invalid. Please enter a valid API key to use AI features.
+        </DialogDescription>
+      </DialogHeader>
+      <Form v-slot="{ handleSubmit }" as="" keep-values :validation-schema="formSchema">
+        <form id="apiKeyForm" @submit="handleSubmit($event, updateProvider)">
+          <FormField v-slot="{ componentField }" name="apiKey">
+            <FormItem>
+              <FormLabel>API Key</FormLabel>
+              <FormControl>
+                <Input type="text" placeholder="Enter your API key" v-bind="componentField" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </form>
+        <DialogFooter>
+          <Button
+            type="submit"
+            form="apiKeyForm"
+            :is-loading="isOpenAIKeyUpdating"
+            :disabled="isOpenAIKeyUpdating"
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </Form>
+    </DialogContent>
+  </Dialog>
+
   <div class="text-foreground bg-background">
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
@@ -98,15 +132,44 @@ import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useUserStore } from '@/stores/user'
 import api from '@/api'
 
 import { useConversationStore } from '@/stores/conversation'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { useEmitter } from '@/composables/useEmitter'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage
+} from '@/components/ui/form'
+import { toTypedSchema } from '@vee-validate/zod'
+import * as z from 'zod'
+
+const formSchema = toTypedSchema(
+  z.object({
+    apiKey: z.string().min(1, 'API key is required')
+  })
+)
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
+const userStore = useUserStore()
+const openAIKeyPrompt = ref(false)
+const isOpenAIKeyUpdating = ref(false)
 
 // Shared state between the two editor components.
 const clearEditorContent = ref(false)
@@ -164,11 +227,39 @@ const handleAiPromptSelected = async (key) => {
       timestamp: Date.now()
     })
   } catch (error) {
+    // Check if user needs to enter OpenAI API key and has permission to do so.
+    if (error.response?.status === 400 && userStore.can('ai:manage')) {
+      openAIKeyPrompt.value = true
+    }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  }
+}
+
+/**
+ * updateProvider updates the OpenAI API key.
+ * @param {Object} values - The form values containing the API key
+ */
+const updateProvider = async (values) => {
+  try {
+    isOpenAIKeyUpdating.value = true
+    await api.updateAIProvider({ api_key: values.apiKey, provider: 'openai' })
+    openAIKeyPrompt.value = false
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Success',
+      description: 'API key saved successfully.'
+    })
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    isOpenAIKeyUpdating.value = false
   }
 }
 

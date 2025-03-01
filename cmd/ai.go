@@ -1,6 +1,14 @@
 package main
 
-import "github.com/zerodha/fastglue"
+import (
+	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/zerodha/fastglue"
+)
+
+type providerUpdateReq struct {
+	Provider string `json:"provider"`
+	APIKey   string `json:"api_key"`
+}
 
 // handleAICompletion handles AI completion requests
 func handleAICompletion(r *fastglue.Request) error {
@@ -26,4 +34,19 @@ func handleGetAIPrompts(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(resp)
+}
+
+// handleUpdateAIProvider updates the AI provider
+func handleUpdateAIProvider(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		req providerUpdateReq
+	)
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Error unmarshalling request", nil))
+	}
+	if err := app.ai.UpdateProvider(req.Provider, req.APIKey); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope("Provider updated successfully")
 }

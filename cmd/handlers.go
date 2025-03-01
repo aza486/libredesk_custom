@@ -174,6 +174,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// AI completion.
 	g.GET("/api/v1/ai/prompts", auth(handleGetAIPrompts))
 	g.POST("/api/v1/ai/completion", auth(handleAICompletion))
+	g.PUT("/api/v1/ai/provider", perm(handleUpdateAIProvider, "ai:manage"))
 
 	// WebSocket.
 	g.GET("/ws", auth(func(r *fastglue.Request) error {

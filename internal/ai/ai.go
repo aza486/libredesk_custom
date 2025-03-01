@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"errors"
 
 	"github.com/abhinavxd/libredesk/internal/ai/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
@@ -16,6 +17,9 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
+
+	ErrInvalidAPIKey = errors.New("invalid API Key")
+	ErrApiKeyNotSet  = errors.New("api Key not set")
 )
 
 // Manager manages LLM providers.
@@ -35,6 +39,7 @@ type queries struct {
 	GetDefaultProvider *sqlx.Stmt `query:"get-default-provider"`
 	GetPrompt          *sqlx.Stmt `query:"get-prompt"`
 	GetPrompts         *sqlx.Stmt `query:"get-prompts"`
+	SetOpenAIKey       *sqlx.Stmt `query:"set-openai-key"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -69,6 +74,14 @@ func (m *Manager) Completion(k string, prompt string) (string, error) {
 
 	response, err := client.SendPrompt(payload)
 	if err != nil {
+		if errors.Is(err, ErrInvalidAPIKey) {
+			m.lo.Error("error invalid API key", "error", err)
+			return "", envelope.NewError(envelope.InputError, "OpenAI API Key is invalid, Please ask your administrator to set it up", nil)
+		}
+		if errors.Is(err, ErrApiKeyNotSet) {
+			m.lo.Error("error API key not set", "error", err)
+			return "", envelope.NewError(envelope.InputError, "OpenAI API Key is not set, Please ask your administrator to set it up", nil)
+		}
 		m.lo.Error("error sending prompt to provider", "error", err)
 		return "", envelope.NewError(envelope.GeneralError, err.Error(), nil)
 	}
@@ -84,6 +97,26 @@ func (m *Manager) GetPrompts() ([]models.Prompt, error) {
 		return nil, envelope.NewError(envelope.GeneralError, "Error fetching prompts", nil)
 	}
 	return prompts, nil
+}
+
+// UpdateProvider updates a provider.
+func (m *Manager) UpdateProvider(provider, apiKey string) error {
+	switch ProviderType(provider) {
+	case ProviderOpenAI:
+		return m.setOpenAIAPIKey(apiKey)
+	default:
+		m.lo.Error("unsupported provider type", "provider", provider)
+		return envelope.NewError(envelope.GeneralError, "Unsupported provider type", nil)
+	}
+}
+
+// setOpenAIAPIKey sets the OpenAI API key in the database.
+func (m *Manager) setOpenAIAPIKey(apiKey string) error {
+	if _, err := m.q.SetOpenAIKey.Exec(apiKey); err != nil {
+		m.lo.Error("error setting OpenAI API key", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error setting OpenAI API key", nil)
+	}
+	return nil
 }
 
 // getPrompt returns a prompt from the database.

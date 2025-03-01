@@ -62,6 +62,9 @@ const (
 
 	// OpenID Connect SSO
 	PermOIDCManage = "oidc:manage"
+
+	// AI
+	PermAIManage = "ai:manage"
 )
 
 var validPermissions = map[string]struct{}{
@@ -93,6 +96,7 @@ var validPermissions = map[string]struct{}{
 	PermGeneralSettingsManage:           {},
 	PermNotificationSettingsManage:      {},
 	PermOIDCManage:                      {},
+	PermAIManage:                        {},
 }
 
 // IsValidPermission returns true if it's a valid permission.

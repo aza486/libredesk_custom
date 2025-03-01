@@ -13,7 +13,11 @@
       <FormItem>
         <FormLabel>Description</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="This role is for all support agents" v-bind="componentField" />
+          <Input
+            type="text"
+            placeholder="This role is for all support agents"
+            v-bind="componentField"
+          />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -24,13 +28,19 @@
     <div v-for="entity in permissions" :key="entity.name" class="box p-4">
       <p class="text-lg mb-5">{{ entity.name }}</p>
       <div class="space-y-4">
-        <FormField v-for="permission in entity.permissions" :key="permission.name" type="checkbox"
-          :name="permission.name">
+        <FormField
+          v-for="permission in entity.permissions"
+          :key="permission.name"
+          type="checkbox"
+          :name="permission.name"
+        >
           <FormItem class="flex flex-col gap-y-5 space-y-0 rounded-lg">
             <div class="flex space-x-3">
               <FormControl>
-                <Checkbox :checked="selectedPermissions.includes(permission.name)"
-                  @update:checked="(newValue) => handleChange(newValue, permission.name)" />
+                <Checkbox
+                  :checked="selectedPermissions.includes(permission.name)"
+                  @update:checked="(newValue) => handleChange(newValue, permission.name)"
+                />
                 <FormLabel>{{ permission.label }}</FormLabel>
               </FormControl>
             </div>
@@ -69,7 +79,7 @@ const props = defineProps({
   },
   isLoading: {
     type: Boolean,
-    required: false,
+    required: false
   }
 })
 
@@ -77,7 +87,7 @@ const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
-      { name: 'conversations:read', label: 'View conversations' },
+      { name: 'conversations:read', label: 'View conversation' },
       { name: 'conversations:read_assigned', label: 'View conversations assigned to me' },
       { name: 'conversations:read_all', label: 'View all conversations' },
       { name: 'conversations:read_unassigned', label: 'View all unassigned conversations' },
@@ -89,7 +99,7 @@ const permissions = ref([
       { name: 'conversations:update_tags', label: 'Add or remove conversation tags' },
       { name: 'messages:read', label: 'View conversation messages' },
       { name: 'messages:write', label: 'Send messages in conversations' },
-      { name: 'view:manage', label: 'Create and manage conversation views' },
+      { name: 'view:manage', label: 'Create and manage conversation views' }
     ]
   },
   {
@@ -110,8 +120,9 @@ const permissions = ref([
       { name: 'reports:manage', label: 'Manage Reports' },
       { name: 'business_hours:manage', label: 'Manage Business Hours' },
       { name: 'sla:manage', label: 'Manage SLA Policies' },
+      { name: 'ai:manage', label: 'Manage AI Features' }
     ]
-  },
+  }
 ])
 
 const selectedPermissions = ref([])

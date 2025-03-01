@@ -536,28 +536,30 @@ VALUES
 	(
 		'Admin',
 		'Role for users who have complete access to everything.',
-		'{general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
+		'{ai:manage,general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
 	);
 
 
 -- Email notification templates
-INSERT INTO public.templates
+INSERT INTO templates
 ("type", body, is_default, "name", subject, is_builtin)
-VALUES('email_notification'::public."template_type", '<p>Hello {{ .agent.full_name }},</p>
+VALUES('email_notification'::template_type, '
+<p>Hi {{ .Agent.FirstName }},</p>
 
 <p>A new conversation has been assigned to you:</p>
 
 <div>
-    Reference number: {{.conversation.reference_number }} <br>
-    Priority: {{.conversation.priority }}<br>
-    Subject: {{.conversation.subject }}
+    Reference number: {{ .Conversation.ReferenceNumber }} <br>
+    Subject: {{ .Conversation.Subject }}
 </div>
 
 <p>
-<a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .conversation.uuid }}">View Conversation</a>
+    <a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .Conversation.UUID }}">View Conversation</a>
 </p>
 
-<div >
+<div>
     Best regards,<br>
     Libredesk
-</div>', false, 'Conversation assigned', 'New conversation assigned to you', true);
+</div>
+
+', false, 'Conversation assigned', 'New conversation assigned to you', true);

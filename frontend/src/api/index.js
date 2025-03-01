@@ -265,6 +265,7 @@ const updateView = (id, data) =>
 const deleteView = (id) => http.delete(`/api/v1/views/me/${id}`)
 const getAiPrompts = () => http.get('/api/v1/ai/prompts')
 const aiCompletion = (data) => http.post('/api/v1/ai/completion', data)
+const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data)
 
 export default {
   login,
@@ -328,6 +329,7 @@ export default {
   updateAutomationRule,
   updateAutomationRuleWeights,
   updateAutomationRulesExecutionMode,
+  updateAIProvider,
   createAutomationRule,
   toggleAutomationRule,
   deleteAutomationRule,

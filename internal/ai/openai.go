@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/valyala/fasthttp"
 	"github.com/zerodha/logf"
 )
 
@@ -28,7 +29,7 @@ func NewOpenAIClient(apiKey string, lo *logf.Logger) *OpenAIClient {
 // SendPrompt sends a prompt to the OpenAI API and returns the response text.
 func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
 	if o.apikey == "" {
-		return "", fmt.Errorf("OpenAI API key is not set, Please ask your administrator to set the key")
+		return "", ErrApiKeyNotSet
 	}
 
 	apiURL := "https://api.openai.com/v1/chat/completions"
@@ -48,7 +49,7 @@ func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
 		return "", fmt.Errorf("marshalling request body: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(bodyBytes))
+	req, err := http.NewRequest(fasthttp.MethodPost, apiURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		o.lo.Error("error creating request", "error", err)
 		return "", fmt.Errorf("error creating request: %w", err)
@@ -65,11 +66,12 @@ func (o *OpenAIClient) SendPrompt(payload PromptPayload) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf("OpenAI API key is invalid, Please ask your administrator to update the key")
+		return "", ErrInvalidAPIKey
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		o.lo.Error("non-ok response received from openai API", "status", resp.Status, "code", resp.StatusCode, "response_text", body)
 		return "", fmt.Errorf("API error: %s, body: %s", resp.Status, body)
 	}
 

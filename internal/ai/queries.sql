@@ -6,3 +6,12 @@ SELECT id, key, title, content FROM ai_prompts where key = $1;
 
 -- name: get-prompts
 SELECT id, key, title FROM ai_prompts order by title;
+
+-- name: set-openai-key
+UPDATE ai_providers 
+SET config = jsonb_set(
+    COALESCE(config, '{}'::jsonb),
+    '{api_key}', 
+    to_jsonb($1::text)
+) 
+WHERE provider = 'openai';

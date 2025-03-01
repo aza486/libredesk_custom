@@ -1,12 +1,12 @@
 <template>
   <div class="flex flex-wrap">
-    <div class="flex flex-wrap">
+    <div class="flex flex-wrap gap-2">
       <div
         v-for="action in actions"
         :key="action.type"
         class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group gap-2 py-1"
       >
-        <div class="flex items-center space-x-2 px-2 ">
+        <div class="flex items-center space-x-2 px-2">
           <component
             :is="getIcon(action.type)"
             size="16"
