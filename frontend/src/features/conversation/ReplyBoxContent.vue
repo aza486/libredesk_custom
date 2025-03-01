@@ -1,5 +1,6 @@
 <template>
-  <div class="flex flex-col h-full max-h-[600px]">
+  <!-- Set fixed width only when not in fullscreen. -->
+  <div class="flex flex-col h-full" :class="{ 'max-h-[600px]': !isFullscreen }">
     <!-- Message type toggle -->
     <div
       class="flex justify-between items-center"
@@ -200,7 +201,8 @@ const emitter = useEmitter()
 
 const insertContent = ref(null)
 const setInlineImage = ref(null)
-const editorPlaceholder = 'Shift + Enter to add a new line. Cmd + Enter to send. Cmd + K to open command bar.'
+const editorPlaceholder =
+  'Shift + Enter to add a new line. Cmd + Enter to send. Cmd + K to open command bar.'
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
