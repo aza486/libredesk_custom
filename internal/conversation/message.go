@@ -203,7 +203,21 @@ func (m *Manager) RenderContentInTemplate(channel string, message *models.Messag
 			m.lo.Error("error fetching conversation", "uuid", message.ConversationUUID, "error", err)
 			return fmt.Errorf("fetching conversation: %w", err)
 		}
-		message.Content, err = m.template.RenderWithBaseTemplate(conversation, message.Content)
+		// Pass conversation and contact data to the template for rendering any placeholders.
+		message.Content, err = m.template.RenderEmailWithTemplate(map[string]any{
+			"Conversation": map[string]any{
+				"ReferenceNumber": conversation.ReferenceNumber,
+				"Subject":         conversation.Subject.String,
+				"Priority":        conversation.Priority.String,
+				"UUID":            conversation.UUID,
+			},
+			"Contact": map[string]any{
+				"FirstName": conversation.Contact.FirstName,
+				"LastName":  conversation.Contact.LastName,
+				"FullName":  conversation.Contact.FullName(),
+				"Email":     conversation.Contact.Email,
+			},
+		}, message.Content)
 		if err != nil {
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
 			return fmt.Errorf("could not render email content using template: %w", err)

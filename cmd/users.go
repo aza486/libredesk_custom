@@ -223,9 +223,9 @@ func handleCreateUser(r *fastglue.Request) error {
 		}
 
 		// Render template and send email.
-		content, err := app.tmpl.RenderTemplate(tmpl.TmplWelcome, map[string]interface{}{
+		content, err := app.tmpl.RenderInMemoryTemplate(tmpl.TmplWelcome, map[string]any{
 			"ResetToken": resetToken,
-			"Email":      user.Email,
+			"Email":      user.Email.String,
 		})
 		if err != nil {
 			app.lo.Error("error rendering template", "error", err)
@@ -382,10 +382,9 @@ func handleResetPassword(r *fastglue.Request) error {
 	}
 
 	// Send email.
-	content, err := app.tmpl.RenderTemplate(tmpl.TmplResetPassword,
-		map[string]string{
-			"ResetToken": token,
-		})
+	content, err := app.tmpl.RenderInMemoryTemplate(tmpl.TmplResetPassword, map[string]string{
+		"ResetToken": token,
+	})
 	if err != nil {
 		app.lo.Error("error rendering template", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error rendering template", nil, envelope.GeneralError)

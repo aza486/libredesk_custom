@@ -1,23 +1,29 @@
 {{ define "welcome" }}
 {{ template "header" . }}
 
-{{ if ne SiteName "" }}
-<p>Welcome to {{ SiteName }}!</p>
-{{ else }}
-<p>Welcome!</p>
-{{ end }}
+<h1 style="text-align: center; margin-top: 0; color: #1f2937;">
+    {{ if ne SiteName "" }}
+    Welcome to {{ SiteName }}
+    {{ else }}
+    Welcome
+    {{ end }}
+</h1>
 
-<p>A new account has been created for you.</p>
+<p>A new account has been created for you with <strong>{{ .Email }}</strong></p>
 
-<p>Your login email is <strong>{{ .Email }}</strong></p>
+<p>To set your password, click the button below:</p>
 
-<p>To set your password, click the link below:</p>
+<p style="color: #ef4444; font-size: 14px; margin-bottom: 16px;">This link will expire in 24 hours.</p>
 
-<p>{{ RootURL }}/set-password?token={{ .ResetToken }}</p>
+<div style="text-align: center; margin: 24px 0;">
+    <a href="{{ RootURL }}/set-password?token={{ .ResetToken }}" class="button">
+        Set Your Password
+    </a>
+</div>
 
-<p>This link will expire in 24 hours.</p>
-
-<p>Once you've set your password, you can log in <a href="{{ RootURL }}">here.</a></p>
+<div style="text-align: center; margin-top: 24px;">
+    <p>After setting your password, <a href="{{ RootURL }}">log in here</a></p>
+</div>
 
 {{ template "footer" . }}
 {{ end }}

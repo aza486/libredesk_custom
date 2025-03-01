@@ -756,8 +756,9 @@ func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation mode
 		return fmt.Errorf("fetching agent: %w", err)
 	}
 
-	content, subject, err := m.template.RenderNamedTemplate(template.TmplConversationAssigned,
-		map[string]interface{}{
+	content, subject, err := m.template.RenderStoredEmailTemplate(template.TmplConversationAssigned,
+		map[string]any{
+			// Kept these lower case keys for backward compatibility.
 			"conversation": map[string]string{
 				"subject":          conversation.Subject.String,
 				"uuid":             conversation.UUID,
@@ -766,6 +767,25 @@ func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation mode
 			},
 			"agent": map[string]string{
 				"full_name": agent.FullName(),
+			},
+			// Following the new structure.
+			"Conversation": map[string]any{
+				"ReferenceNumber": conversation.ReferenceNumber,
+				"Subject":         conversation.Subject.String,
+				"Priority":        conversation.Priority.String,
+				"UUID":            conversation.UUID,
+			},
+			"Agent": map[string]any{
+				"FirstName": agent.FirstName,
+				"LastName":  agent.LastName,
+				"FullName":  agent.FullName(),
+				"Email":     agent.Email,
+			},
+			"Contact": map[string]any{
+				"FirstName": conversation.Contact.FirstName,
+				"LastName":  conversation.Contact.LastName,
+				"FullName":  conversation.Contact.FullName(),
+				"Email":     conversation.Contact.Email,
 			},
 		})
 	if err != nil {

@@ -22,17 +22,19 @@ const (
 	TmplContent = "content"
 )
 
-// RenderWithBaseTemplate merges the given content with the default outgoing email template, if available.
-func (m *Manager) RenderWithBaseTemplate(data any, content string) (string, error) {
+// RenderEmailWithTemplate renders content inside the default outgoing email template.
+func (m *Manager) RenderEmailWithTemplate(data any, content string) (string, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
+
 	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
 		if err == ErrTemplateNotFound {
-			m.lo.Warn("default outgoing email template not found, rendering content any template")
+			m.lo.Warn("default outgoing email template not found, rendering content without any template")
 			return content, nil
 		}
-		return "", err
+		m.lo.Error("error fetching default outgoing email template", "error", err)
+		return "", fmt.Errorf("fetching default outgoing email template: %w", err)
 	}
 
 	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(defaultTmpl.Body)
@@ -58,8 +60,8 @@ func (m *Manager) RenderWithBaseTemplate(data any, content string) (string, erro
 	return rendered.String(), nil
 }
 
-// RenderNamedTemplate fetches a named template from DB and merges it with the default base template, if available.
-func (m *Manager) RenderNamedTemplate(name string, data any) (string, string, error) {
+// RenderStoredEmailTemplate fetches and renders an email template from the database, including subject and body and returns the rendered content.
+func (m *Manager) RenderStoredEmailTemplate(name string, data any) (string, string, error) {
 	tmpl, err := m.getByName(name)
 	if err != nil {
 		if err == ErrTemplateNotFound {
@@ -137,8 +139,9 @@ func (m *Manager) RenderNamedTemplate(name string, data any) (string, string, er
 	return rendered.String(), subject, nil
 }
 
-// RenderTemplate executes a named in-memory template with the provided data.
-func (m *Manager) RenderTemplate(name string, data interface{}) (string, error) {
+// RenderInMemoryTemplate executes an in-memory template with data and returns the rendered content.
+// This is for system emails like reset password and welcome email etc.
+func (m *Manager) RenderInMemoryTemplate(name string, data interface{}) (string, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	var buf bytes.Buffer
