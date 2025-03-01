@@ -333,6 +333,7 @@ const hasTextContent = computed(() => {
  * Processes the send action.
  */
 const processSend = async () => {
+  let hasAPIErrored = false
   isEditorFullscreen.value = false
   try {
     isSending.value = true
@@ -375,30 +376,51 @@ const processSend = async () => {
       })
     }
 
-    // Apply macro if it exists.
+    // Apply macro actions if any.
+    // For macros errors just show toast and clear the editor, as most likely it's the permission error.
     if (conversationStore.conversation?.macro?.actions?.length > 0) {
-      await api.applyMacro(
-        conversationStore.current.uuid,
-        conversationStore.conversation.macro.id,
-        conversationStore.conversation.macro.actions
-      )
+      try {
+        await api.applyMacro(
+          conversationStore.current.uuid,
+          conversationStore.conversation.macro.id,
+          conversationStore.conversation.macro.actions
+        )
+      } catch (error) {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          title: 'Error',
+          variant: 'destructive',
+          description: handleHTTPError(error).message
+        })
+      }
     }
+
   } catch (error) {
+    hasAPIErrored = true
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
   } finally {
+    // If API has NOT errored clear state.
+    if (hasAPIErrored === false) {
+      // Clear editor.
+      clearEditorContent.value = true
+
+      // Clear macro.
+      conversationStore.resetMacro()
+
+      // Clear media files.
+      conversationStore.resetMediaFiles()
+
+      // Clear any email errors.
+      emailErrors.value = []
+
+      nextTick(() => {
+        clearEditorContent.value = false
+      })
+    }
     isSending.value = false
-    clearEditorContent.value = true
-    // Reset media and macro in conversation store.
-    conversationStore.resetMacro()
-    conversationStore.resetMediaFiles()
-    emailErrors.value = []
-    nextTick(() => {
-      clearEditorContent.value = false
-    })
   }
   // Update assignee last seen timestamp.
   api.updateAssigneeLastSeen(conversationStore.current.uuid)
@@ -416,11 +438,12 @@ const handleOnFileDelete = (uuid) => {
 }
 
 /**
- * Watches for changes in the conversation's macro and update the editor content with the macro content.
+ * Watches for changes in the conversation's macro id and update message content.
  */
 watch(
-  () => conversationStore.conversation.macro,
+  () => conversationStore.conversation.macro.id,
   () => {
+    // Setting timestamp, so the same macro can be set again.
     contentToSet.value = JSON.stringify({
       content: conversationStore.conversation.macro.message_content,
       timestamp: Date.now()
