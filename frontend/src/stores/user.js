@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
@@ -6,6 +6,7 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import { adminNavItems, reportsNavItems } from '@/constants/navigation'
 import { filterNavItems } from '@/utils/nav-permissions'
 import api from '@/api'
+import { useStorage } from '@vueuse/core'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref({
@@ -88,11 +89,18 @@ export const useUserStore = defineStore('user', () => {
     user.value.avatar_url = ''
   }
 
+  // Set and watch user availability status in localStorage to sync across tabs
+  const availabilityStatusStorage = useStorage('user_availability_status', user.value.availability_status)
+  watch(availabilityStatusStorage, (newVal) => {
+    user.value.availability_status = newVal
+  })
+
   const updateUserAvailability = async (status, isManual = true) => {
     try {
       const apiStatus = status === 'away' && isManual ? 'away_manual' : status
       await api.updateCurrentUserAvailability({ status: apiStatus })
       user.value.availability_status = apiStatus
+      availabilityStatusStorage.value = apiStatus
     } catch (error) {
       if (error?.response?.status === 401) window.location.href = '/'
     }
