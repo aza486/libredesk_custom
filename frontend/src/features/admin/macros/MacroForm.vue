@@ -31,7 +31,7 @@
       <FormItem>
         <FormLabel> Actions (optional)</FormLabel>
         <FormControl>
-          <ActionBuilder v-bind="componentField" :config="actionConfig" />
+          <ActionBuilder v-model:actions="componentField.modelValue" :config="actionConfig" @update:actions="(value) => componentField.onChange(value)" />
         </FormControl>
         <FormMessage />
       </FormItem>

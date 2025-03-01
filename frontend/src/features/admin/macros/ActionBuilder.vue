@@ -131,7 +131,7 @@ import { SelectTag } from '@/components/ui/select'
 import { useTagStore } from '@/stores/tag'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 
-const model = defineModel({
+const model = defineModel("actions", {
   type: Array,
   required: true,
   default: () => []
