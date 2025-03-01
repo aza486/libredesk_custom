@@ -8,8 +8,8 @@ import MessageCache from '@/utils/conversation-message-cache'
 import api from '@/api'
 
 export const useConversationStore = defineStore('conversation', () => {
-  const CONV_LIST_PAGE_SIZE = 100
-  const MESSAGE_LIST_PAGE_SIZE = 100
+  const CONV_LIST_PAGE_SIZE = 50
+  const MESSAGE_LIST_PAGE_SIZE = 30
   const priorities = ref([])
   const statuses = ref([])
 

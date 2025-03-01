@@ -50,7 +50,7 @@ const (
 	ContentTypeHTML = "html"
 
 	maxLastMessageLen  = 45
-	maxMessagesPerPage = 30
+	maxMessagesPerPage = 100
 )
 
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
