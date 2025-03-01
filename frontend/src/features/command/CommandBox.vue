@@ -58,8 +58,8 @@
                   <div v-if="replyContent" class="space-y-1">
                     <p class="text-xs font-semibold text-primary">Reply Preview</p>
                     <div
-                      class="w-full min-h-200 p-2 bg-muted/50 rounded-md overflow-auto shadow-sm prose-sm"
-                      v-html="replyContent"
+                      class="w-full min-h-200 p-2 bg-muted/50 rounded-md overflow-auto shadow-sm native-html"
+                      v-dompurify-html="replyContent"
                     />
                   </div>
 

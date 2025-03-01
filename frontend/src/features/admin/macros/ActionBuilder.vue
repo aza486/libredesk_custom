@@ -108,19 +108,6 @@
               placeholder="Select tag"
             />
           </div>
-
-          <div
-            v-if="action.type && config.actions[action.type]?.type === 'richtext'"
-            class="pl-0 shadow"
-          >
-            <QuillEditor
-              v-model:content="action.value[0]"
-              theme="snow"
-              contentType="html"
-              @update:content="(value) => updateValue(value, index)"
-              class="h-32 mb-12"
-            />
-          </div>
         </div>
       </div>
     </div>
@@ -139,8 +126,6 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { QuillEditor } from '@vueup/vue-quill'
-import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { SelectTag } from '@/components/ui/select'
 import { useTagStore } from '@/stores/tag'

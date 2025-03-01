@@ -10,7 +10,6 @@
           <div class="flex items-center justify-between">
             <div class="flex gap-5">
               <div class="w-48">
-
                 <!-- Type -->
                 <Select
                   v-model="action.type"
@@ -109,15 +108,13 @@
           </div>
 
           <div
+            class="box p-2 h-96 min-h-96"
             v-if="action.type && conversationActions[action.type]?.type === 'richtext'"
-            class="pl-0 shadow"
           >
-            <QuillEditor
-              theme="snow"
-              v-model:content="action.value[0]"
-              contentType="html"
-              @update:content="(value) => handleValueChange(value, index)"
-              class="h-32 mb-12"
+            <Editor
+              v-model:htmlContent="action.value[0]"
+              @update:htmlContent="(value) => handleEditorChange(value, index)"
+              :placeholder="'Shift + Enter to add new line'"
             />
           </div>
         </div>
@@ -142,12 +139,12 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { QuillEditor } from '@vueup/vue-quill'
-import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { SelectTag } from '@/components/ui/select'
 import { useConversationFilters } from '@/composables/useConversationFilters'
+import { getTextFromHTML } from '@/utils/strings.js'
+import Editor from '@/features/conversation/ConversationTextEditor.vue'
 
 const props = defineProps({
   actions: {
@@ -170,6 +167,16 @@ const handleFieldChange = (value, index) => {
 const handleValueChange = (value, index) => {
   if (typeof value === 'object') {
     value = value.value
+  }
+  actions.value[index].value = [value]
+  emitUpdate(index)
+}
+
+const handleEditorChange = (value, index) => {
+  // If text is empty, set HTML to empty string
+  const textContent = getTextFromHTML(value)
+  if (textContent.length === 0) {
+    value = ''
   }
   actions.value[index].value = [value]
   emitUpdate(index)

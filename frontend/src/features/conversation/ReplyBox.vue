@@ -416,25 +416,15 @@ const handleOnFileDelete = (uuid) => {
 }
 
 /**
- * Watches for changes in the conversation's macro and updates the editor content with the macro content.
+ * Watches for changes in the conversation's macro and update the editor content with the macro content.
  */
 watch(
   () => conversationStore.conversation.macro,
   () => {
-    // hack: Quill editor adds <p><br></p> replace with <p></p>
-    // Maybe use some other editor that doesn't add this?
-    if (conversationStore.conversation?.macro?.message_content) {
-      const contentToRender = conversationStore.conversation.macro.message_content.replace(
-        /<p><br><\/p>/g,
-        '<p></p>'
-      )
-      // Add timestamp to ensure the watcher detects the change even for identical content,
-      // As user can send the same macro multiple times.
-      contentToSet.value = JSON.stringify({
-        content: contentToRender,
-        timestamp: Date.now()
-      })
-    }
+    contentToSet.value = JSON.stringify({
+      content: conversationStore.conversation.macro.message_content,
+      timestamp: Date.now()
+    })
   },
   { deep: true }
 )

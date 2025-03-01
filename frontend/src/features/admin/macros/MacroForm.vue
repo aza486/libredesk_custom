@@ -13,16 +13,25 @@
 
     <FormField v-slot="{ componentField }" name="message_content">
       <FormItem>
-        <FormLabel>Response to be sent when macro is used</FormLabel>
+        <FormLabel>Response to be sent when macro is used (optional)</FormLabel>
         <FormControl>
-          <QuillEditor
-            v-model:content="componentField.modelValue"
-            placeholder="Add a response (optional)"
-            theme="snow"
-            contentType="html"
-            class="h-32 mb-12"
-            @update:content="(value) => componentField.onChange(value)"
-          />
+          <div class="box p-2 h-96 min-h-96">
+            <Editor
+              v-model:htmlContent="componentField.modelValue"
+              @update:htmlContent="(value) => componentField.onChange(value)"
+              :placeholder="'Shift + Enter to add new line'"
+            />
+          </div>
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="actions">
+      <FormItem>
+        <FormLabel> Actions (optional)</FormLabel>
+        <FormControl>
+          <ActionBuilder v-bind="componentField" :config="actionConfig" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -106,16 +115,6 @@
         <FormMessage />
       </FormItem>
     </FormField>
-
-    <FormField v-slot="{ componentField }" name="actions">
-      <FormItem>
-        <FormLabel> Actions </FormLabel>
-        <FormControl>
-          <ActionBuilder v-bind="componentField" :config="actionConfig" />
-        </FormControl>
-        <FormMessage />
-      </FormItem>
-    </FormField>
     <Button type="submit" :isLoading="isLoading">{{ submitLabel }}</Button>
   </form>
 </template>
@@ -133,9 +132,8 @@ import ActionBuilder from '@/features/admin/macros/ActionBuilder.vue'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
+import { getTextFromHTML } from '@/utils/strings.js'
 import { formSchema } from './formSchema.js'
-import { QuillEditor } from '@vueup/vue-quill'
-import '@vueup/vue-quill/dist/vue-quill.snow.css'
 import {
   Select,
   SelectContent,
@@ -145,6 +143,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
+import Editor from '@/features/conversation/ConversationTextEditor.vue'
 
 const { macroActions } = useConversationFilters()
 const formLoading = ref(false)
@@ -181,6 +180,11 @@ const actionConfig = ref({
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
+  // If the text of HTML is empty then set the HTML to empty string
+  const textContent = getTextFromHTML(values.message_content)
+  if (textContent.length === 0) {
+    values.message_content = ''
+  }
   props.submitForm(values)
 })
 

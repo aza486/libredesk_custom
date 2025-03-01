@@ -29,7 +29,7 @@
         <Letter
           :html="sanitizedMessageContent"
           :allowedSchemas="['cid', 'https', 'http']"
-          class="mb-1"
+          class="mb-1 native-html"
           :class="{ 'mb-3': message.attachments.length > 0 }"
         />
 

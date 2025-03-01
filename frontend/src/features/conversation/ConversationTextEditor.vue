@@ -7,7 +7,7 @@
       class="bg-white p-1 box will-change-transform"
     >
       <div class="flex space-x-1 items-center">
-        <DropdownMenu>
+        <DropdownMenu v-if="aiPrompts.length > 0">
           <DropdownMenuTrigger>
             <Button size="sm" variant="ghost" class="flex items-center justify-center">
               <span class="flex items-center">
@@ -30,7 +30,7 @@
         <Button
           size="sm"
           variant="ghost"
-          @click="isBold = !isBold"
+          @click.prevent="isBold = !isBold"
           :active="isBold"
           :class="{ 'bg-gray-200': isBold }"
         >
@@ -39,22 +39,39 @@
         <Button
           size="sm"
           variant="ghost"
-          @click="isItalic = !isItalic"
+          @click.prevent="isItalic = !isItalic"
           :active="isItalic"
           :class="{ 'bg-gray-200': isItalic }"
         >
           <Italic size="14" />
         </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          @click.prevent="toggleBulletList"
+          :class="{ 'bg-gray-200': editor?.isActive('bulletList') }"
+        >
+          <List size="14" />
+        </Button>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          @click.prevent="toggleOrderedList"
+          :class="{ 'bg-gray-200': editor?.isActive('orderedList') }"
+        >
+          <ListOrdered size="14" />
+        </Button>
       </div>
     </BubbleMenu>
-    <EditorContent :editor="editor" />
+    <EditorContent :editor="editor" class="native-html" />
   </div>
 </template>
 
 <script setup>
 import { ref, watch, watchEffect, onUnmounted } from 'vue'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
-import { ChevronDown, Bold, Italic, Bot } from 'lucide-vue-next'
+import { ChevronDown, Bold, Italic, Bot, List, ListOrdered } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -95,28 +112,7 @@ const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
 const editorConfig = {
   extensions: [
     // Lists are unstyled in tailwind, so need to add classes to them.
-    StarterKit.configure({
-      bulletList: {
-        HTMLAttributes: {
-          class: 'list-disc ml-6 my-2'
-        }
-      },
-      orderedList: {
-        HTMLAttributes: {
-          class: 'list-decimal ml-6 my-2'
-        }
-      },
-      listItem: {
-        HTMLAttributes: {
-          class: 'pl-1'
-        }
-      },
-      heading: {
-        HTMLAttributes: {
-          class: 'text-xl font-bold mt-4 mb-2'
-        }
-      }
-    }),
+    StarterKit.configure(),
     Image.configure({ HTMLAttributes: { class: 'inline-image' } }),
     Placeholder.configure({ placeholder: () => props.placeholder }),
     Link
@@ -238,6 +234,18 @@ watch(
 onUnmounted(() => {
   editor.value?.destroy()
 })
+
+const toggleBulletList = () => {
+  if (editor.value) {
+    editor.value.chain().focus().toggleBulletList().run()
+  }
+}
+
+const toggleOrderedList = () => {
+  if (editor.value) {
+    editor.value.chain().focus().toggleOrderedList().run()
+  }
+}
 </script>
 
 <style lang="scss">

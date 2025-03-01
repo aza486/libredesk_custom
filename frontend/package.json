@@ -29,7 +29,6 @@
     "@unovis/ts": "^1.4.4",
     "@unovis/vue": "^1.4.4",
     "@vee-validate/zod": "^4.13.2",
-    "@vueup/vue-quill": "^1.2.0",
     "@vueuse/core": "^12.4.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.0",

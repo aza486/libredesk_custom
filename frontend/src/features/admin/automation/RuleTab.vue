@@ -31,7 +31,7 @@
           </template>
         </draggable>
       </div>
-      <div v-else>
+      <div v-else class="space-y-5">
         <RuleList
           v-for="rule in rules"
           :key="rule.id"

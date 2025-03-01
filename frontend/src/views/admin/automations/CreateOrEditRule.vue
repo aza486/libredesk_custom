@@ -155,6 +155,7 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { SelectTag } from '@/components/ui/select'
+import { OPERATOR } from '@/constants/filterConfig'
 import {
   Select,
   SelectContent,
@@ -315,7 +316,8 @@ const handleSave = async (values) => {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Invalid rules',
       variant: 'destructive',
-      description: 'Make sure you have atleast one action and one rule.'
+      description:
+        'Make sure you have atleast one action and one rule and their values are not empty.'
     })
     return
   }
@@ -347,27 +349,53 @@ const handleSave = async (values) => {
   }
 }
 
-// TODO: Add some vee-validate validations.
+// TODO: Maybe we can do some vee validate magic here.
 const areRulesValid = () => {
+  // Must have groups.
+  if (rule.value.rules[0].groups.length == 0) {
+    return false
+  }
+
+  // At least one group should have at least one rule
+  const group1HasRules = rule.value.rules[0].groups[0].rules.length > 0
+  const group2HasRules = rule.value.rules[0].groups[1].rules.length > 0
+  if (!group1HasRules && !group2HasRules) {
+    return false
+  }
+
+  // For both groups, each rule should have value, operator and field.
+  for (const group of rule.value.rules[0].groups) {
+    for (const rule of group.rules) {
+      if (!rule.field || !rule.operator) {
+        return false
+      }
+      // For 'set' and `not set` operator, value is not required.
+      if (rule.operator !== OPERATOR.SET && rule.operator !== OPERATOR.NOT_SET && !rule.value) {
+        return false
+      }
+    }
+  }
+
   // Must have atleast one action.
   if (rule.value.rules[0].actions.length == 0) {
     return false
   }
 
-  // Must have atleast 1 group.
-  if (rule.value.rules[0].groups.length == 0) {
-    return false
-  }
+  // Make sure each action has value.
+  for (const action of rule.value.rules[0].actions) {
+    // CSAT action does not require value, set dummy value.
+    if (action.type === 'send_csat') {
+      action.value = ['0']
+    }
 
-  // Group should have atleast one rule.
-  if (rule.value.rules[0].groups[0].rules.length == 0) {
-    return false
-  }
+    // Empty array, no value selected.
+    if (action.value.length === 0) {
+      return false
+    }
 
-  // Make sure each rule has all the required fields.
-  for (const group of rule.value.rules[0].groups) {
-    for (const rule of group.rules) {
-      if (!rule.value || !rule.operator || !rule.field) {
+    // Check if all values are present.
+    for (const key in action.value) {
+      if (!action.value[key]) {
         return false
       }
     }

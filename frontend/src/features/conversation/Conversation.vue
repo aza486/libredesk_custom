@@ -38,7 +38,7 @@
     <div class="flex flex-col flex-grow overflow-hidden">
       <MessageList class="flex-1 overflow-y-auto" />
       <div class="sticky bottom-0">
-        <ReplyBox class="h-full" />
+        <ReplyBox />
       </div>
     </div>
   </div>

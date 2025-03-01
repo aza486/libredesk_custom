@@ -200,7 +200,7 @@ const emitter = useEmitter()
 
 const insertContent = ref(null)
 const setInlineImage = ref(null)
-const editorPlaceholder = 'Press Enter to add a new line; Press Ctrl + Enter to send.'
+const editorPlaceholder = 'Shift + Enter to add a new line. Cmd + Enter to send. Cmd + K to open command bar.'
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value

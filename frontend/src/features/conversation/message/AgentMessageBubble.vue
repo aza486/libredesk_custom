@@ -21,7 +21,7 @@
         <!-- Message Content -->
         <div
           v-dompurify-html="messageContent"
-          class="whitespace-pre-wrap break-words overflow-wrap-anywhere"
+          class="whitespace-pre-wrap break-words overflow-wrap-anywhere native-html" 
           :class="{ 'mb-3': message.attachments.length > 0 }"
         />
 
