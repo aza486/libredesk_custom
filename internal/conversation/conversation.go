@@ -787,6 +787,12 @@ func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation mode
 				"FullName":  conversation.Contact.FullName(),
 				"Email":     conversation.Contact.Email,
 			},
+			"Recipient": map[string]any{
+				"FirstName": agent.FirstName,
+				"LastName":  agent.LastName,
+				"FullName":  agent.FullName(),
+				"Email":     agent.Email,
+			},
 		})
 	if err != nil {
 		m.lo.Error("error rendering template", "template", template.TmplConversationAssigned, "conversation_uuid", conversation.UUID, "error", err)

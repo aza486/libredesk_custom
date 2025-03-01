@@ -217,6 +217,12 @@ func (m *Manager) RenderContentInTemplate(channel string, message *models.Messag
 				"FullName":  conversation.Contact.FullName(),
 				"Email":     conversation.Contact.Email,
 			},
+			"Recipient": map[string]any{
+				"FirstName": conversation.Contact.FirstName,
+				"LastName":  conversation.Contact.LastName,
+				"FullName":  conversation.Contact.FullName(),
+				"Email":     conversation.Contact.Email,
+			},
 		}, message.Content)
 		if err != nil {
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
