@@ -1,7 +1,7 @@
 <template>
-  <CommandDialog :open="open" @update:open="handleOpenChange" class="z-[51]">
+  <CommandDialog :open="open" @update:open="handleOpenChange" class="z-[51] !min-w-[50vw] !min-h-[60vh]">
     <CommandInput placeholder="Type a command or search..." @keydown="onInputKeydown" />
-    <CommandList class="!min-h-[400px]">
+    <CommandList class="!min-h-[60vh] !min-w-[50vw]">
       <CommandEmpty>
         <p class="text-muted-foreground">No command available</p>
       </CommandEmpty>
@@ -37,7 +37,7 @@
         <CommandGroup heading="Apply macro" class="pb-2">
           <div class="min-h-[400px] overflow-auto">
             <div class="grid grid-cols-12 gap-3">
-              <div class="col-span-4 border-r border-border/30 pr-2">
+              <div class="col-span-4 pr-2">
                 <CommandItem
                   v-for="(macro, index) in macroStore.macroOptions"
                   :key="macro.value"
@@ -46,14 +46,16 @@
                   @select="handleApplyMacro(macro)"
                   class="px-3 py-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                 >
-                  <div class="flex items-center space-x-2 justify-start">
-                    <Zap :size="14" class="text-primary" />
-                    <span class="text-sm overflow">{{ macro.label }}</span>
+                  <div class="flex items-center gap-2">
+                    <Zap size="14" class="text-primary shrink-0" />
+                    <span class="text-sm truncate w-full break-words whitespace-normal">{{
+                      macro.label
+                    }}</span>
                   </div>
                 </CommandItem>
               </div>
 
-              <div class="col-span-8 pl-2">
+              <div class="col-span-8 pl-2 border-l">
                 <div class="space-y-3 text-xs">
                   <div v-if="replyContent" class="space-y-1">
                     <p class="text-xs font-semibold text-primary">Reply Preview</p>
