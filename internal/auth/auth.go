@@ -90,9 +90,10 @@ func New(cfg Config, rd *redis.Client, logger *logf.Logger) (*Auth, error) {
 		EnableAutoCreate: true,
 		SessionIDLength:  64,
 		Cookie: simplesessions.CookieOptions{
+			Name:       "libredesk_session",
 			IsHTTPOnly: true,
 			IsSecure:   true,
-			Expires:    time.Now().Add(time.Hour * 48),
+			MaxAge:     time.Hour * 9,
 		},
 	})
 
@@ -388,6 +389,7 @@ func simpleSessGetCookieCB(name string, r interface{}) (*http.Cookie, error) {
 		Path:     string(c.Path()),
 		Domain:   string(c.Domain()),
 		Expires:  c.Expire(),
+		MaxAge:   c.MaxAge(),
 		Secure:   c.Secure(),
 		HttpOnly: c.HTTPOnly(),
 		SameSite: http.SameSite(c.SameSite()),
@@ -410,6 +412,7 @@ func simpleSessSetCookieCB(c *http.Cookie, w interface{}) error {
 	fc.SetPath(c.Path)
 	fc.SetDomain(c.Domain)
 	fc.SetExpire(c.Expires)
+	fc.SetMaxAge(int(c.MaxAge))
 	fc.SetSecure(c.Secure)
 	fc.SetHTTPOnly(c.HttpOnly)
 	fc.SetSameSite(fasthttp.CookieSameSite(c.SameSite))
