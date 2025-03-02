@@ -6,7 +6,7 @@
         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground p-0"
       >
         <Avatar class="h-8 w-8 rounded-lg relative overflow-visible">
-          <AvatarImage :src="userStore.avatar" alt="" class="rounded-lg"/>
+          <AvatarImage :src="userStore.avatar" alt="" class="rounded-lg" />
           <AvatarFallback class="rounded-lg">
             {{ userStore.getInitials }}
           </AvatarFallback>
@@ -14,7 +14,9 @@
             class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-background"
             :class="{
               'bg-green-500': userStore.user.availability_status === 'online',
-              'bg-amber-500': userStore.user.availability_status === 'away' || userStore.user.availability_status === 'away_manual',
+              'bg-amber-500':
+                userStore.user.availability_status === 'away' ||
+                userStore.user.availability_status === 'away_manual',
               'bg-gray-400': userStore.user.availability_status === 'offline'
             }"
           ></div>
@@ -47,18 +49,19 @@
         <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm justify-between">
           <span class="text-muted-foreground">Away</span>
           <Switch
-            :checked="userStore.user.availability_status === 'away' || userStore.user.availability_status === 'away_manual'"
+            :checked="
+              userStore.user.availability_status === 'away' ||
+              userStore.user.availability_status === 'away_manual'
+            "
             @update:checked="(val) => userStore.updateUserAvailability(val ? 'away' : 'online')"
           />
         </div>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem>
-          <router-link to="/account" class="flex items-center">
-            <CircleUserRound size="18" class="mr-2" />
-            Account
-          </router-link>
+        <DropdownMenuItem @click.prevent="router.push({ name: 'account' })">
+          <CircleUserRound size="18" class="mr-2" />
+          Account
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
@@ -85,7 +88,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { ChevronsUpDown, CircleUserRound, LogOut } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
+import { useRouter } from 'vue-router'
+
 const userStore = useUserStore()
+const router = useRouter()
 
 const logout = () => {
   window.location.href = '/logout'
