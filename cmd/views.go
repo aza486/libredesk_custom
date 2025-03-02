@@ -46,7 +46,7 @@ func handleCreateUserView(r *fastglue.Request) error {
 	}
 
 	if string(view.Filters) == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty view `Filter`", nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Please provide at least one filter", nil, envelope.InputError)
 	}
 
 	if err := app.view.Create(view.Name, view.Filters, user.ID); err != nil {

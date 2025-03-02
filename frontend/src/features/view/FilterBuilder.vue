@@ -65,6 +65,7 @@
               </template>
 
               <template #selected="{ selected }">
+                <div v-if="!selected">Select value</div>
                 <div v-if="modelFilter.field === 'assigned_user_id'">
                   <div class="flex items-center gap-2">
                     <div v-if="selected" class="flex items-center gap-1">
@@ -76,7 +77,6 @@
                       </Avatar>
                       <span>{{ selected.label }}</span>
                     </div>
-                    <span v-else>Select user</span>
                   </div>
                 </div>
                 <div v-else-if="modelFilter.field === 'assigned_team_id'">
@@ -85,7 +85,6 @@
                       {{ selected.emoji }}
                       <span>{{ selected.label }}</span>
                     </span>
-                    <span v-else>Select team</span>
                   </div>
                 </div>
                 <div v-else-if="selected">
@@ -114,7 +113,7 @@
     </div>
 
     <div class="flex items-center justify-between pt-3">
-      <Button variant="ghost" size="sm" @click.prevent="addFilter" class="text-slate-600">
+      <Button variant="ghost" size="sm" @click="addFilter" class="text-slate-600">
         <Plus class="w-3 h-3 mr-1" /> Add filter
       </Button>
       <div class="flex gap-2" v-if="showButtons">
@@ -159,7 +158,7 @@ const createFilter = () => ({ field: '', operator: '', value: '' })
 
 onMounted(() => {
   if (modelValue.value.length === 0) {
-    modelValue.value.push(createFilter())
+    modelValue.value = [createFilter()]
   }
 })
 
@@ -171,6 +170,8 @@ const getModel = (field) => {
   const fieldConfig = props.fields.find((f) => f.field === field)
   return fieldConfig?.model || ''
 }
+
+// Set model for each filter
 watch(
   () => modelValue.value,
   (filters) => {
@@ -183,8 +184,25 @@ watch(
   { deep: true }
 )
 
-const addFilter = () => modelValue.value.push(createFilter())
-const removeFilter = (index) => modelValue.value.splice(index, 1)
+// Reset operator and value when field changes for a filter at a given index
+watch(
+  () => modelValue.value.map((f) => f.field),
+  (newFields, oldFields) => {
+    newFields.forEach((field, index) => {
+      if (field !== oldFields[index]) {
+        modelValue.value[index].operator = ''
+        modelValue.value[index].value = ''
+      }
+    })
+  }
+)
+
+const addFilter = () => {
+  modelValue.value = [...modelValue.value, createFilter()]
+}
+const removeFilter = (index) => {
+  modelValue.value = modelValue.value.filter((_, i) => i !== index)
+}
 const applyFilters = () => emit('apply', validFilters.value)
 const clearFilters = () => {
   modelValue.value = []

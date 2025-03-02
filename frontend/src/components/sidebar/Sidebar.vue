@@ -18,6 +18,7 @@ import {
   SidebarProvider,
   SidebarRail
 } from '@/components/ui/sidebar'
+import { useAppSettingsStore } from '@/stores/appSettings'
 import {
   ChevronRight,
   EllipsisVertical,
@@ -43,6 +44,7 @@ defineProps({
   userViews: { type: Array, default: () => [] }
 })
 const userStore = useUserStore()
+const settingsStore = useAppSettingsStore()
 const route = useRoute()
 const emit = defineEmits(['createView', 'editView', 'deleteView'])
 
@@ -70,6 +72,8 @@ const isInboxRoute = (path) => {
 }
 
 const sidebarOpen = useStorage('mainSidebarOpen', true)
+const teamInboxOpen = useStorage('teamInboxOpen', true)
+const viewInboxOpen = useStorage('viewInboxOpen', true)
 </script>
 
 <template>
@@ -122,8 +126,12 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
-                <div>
+                <div class="flex items-center justify-between w-full">
                   <span class="font-semibold text-xl">Admin</span>
+                </div>
+                <!-- App version -->
+                <div class="text-xs text-muted-foreground ml-2">
+                  ({{ settingsStore.settings['app.version'] }})
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -269,7 +277,12 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
               </SidebarMenuItem>
 
               <!-- Team Inboxes -->
-              <Collapsible defaultOpen class="group/collapsible" v-if="userTeams.length">
+              <Collapsible
+                defaultOpen
+                class="group/collapsible"
+                v-if="userTeams.length"
+                v-model:open="teamInboxOpen"
+              >
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton asChild>
@@ -301,7 +314,7 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
               </Collapsible>
 
               <!-- Views -->
-              <Collapsible class="group/collapsible" defaultOpen>
+              <Collapsible class="group/collapsible" defaultOpen v-model:open="viewInboxOpen">
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton asChild>
@@ -315,16 +328,13 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
                             class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
                           />
                         </div>
+                        <ChevronRight
+                          class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                          v-if="userViews.length"
+                        />
                       </router-link>
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
-
-                  <SidebarMenuAction>
-                    <ChevronRight
-                      class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                      v-if="userViews.length"
-                    />
-                  </SidebarMenuAction>
 
                   <CollapsibleContent>
                     <SidebarMenuSub v-for="view in userViews" :key="view.id">
@@ -335,25 +345,24 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
                           asChild
                         >
                           <router-link :to="{ name: 'view-inbox', params: { viewID: view.id } }">
-                            <span class="break-all w-24">{{ view.name }}</span>
+                            <span class="break-words w-32 truncate">{{ view.name }}</span>
+                            <SidebarMenuAction :showOnHover="true" class="mr-3">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <EllipsisVertical />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem @click="() => editView(view)">
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem @click="() => deleteView(view)">
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </SidebarMenuAction>
                           </router-link>
                         </SidebarMenuButton>
-
-                        <SidebarMenuAction>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <EllipsisVertical />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem @click="() => editView(view)">
-                                <span>Edit</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem @click="() => deleteView(view)">
-                                <span>Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </SidebarMenuAction>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   </CollapsibleContent>
