@@ -20,6 +20,10 @@ func handleLogin(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	if !user.Enabled {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, "Your account is disabled, please contact administrator", nil))
+	}
+
 	// Set user availability status to online.
 	if err := app.user.UpdateAvailability(user.ID, umodels.Online); err != nil {
 		return sendErrorEnvelope(r, err)

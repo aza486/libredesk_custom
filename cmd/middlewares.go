@@ -96,6 +96,14 @@ func perm(handler fastglue.FastRequestHandler, perm string) fastglue.FastRequest
 			return sendErrorEnvelope(r, err)
 		}
 
+		// Destroy session if user is disabled.
+		if !user.Enabled {
+			if err := app.auth.DestroySession(r); err != nil {
+				app.lo.Error("error destroying session", "error", err)
+			}
+			return r.SendErrorEnvelope(http.StatusUnauthorized, "User account disabled", nil, envelope.PermissionError)
+		}
+
 		// Split the permission string into object and action and enforce it.
 		parts := strings.Split(perm, ":")
 		if len(parts) != 2 {
