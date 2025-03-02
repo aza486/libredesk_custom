@@ -36,8 +36,9 @@ expiry = "6h"
 # If using docker compose, use the service name as the host. e.g. db
 host = "127.0.0.1"
 port = 5432
-user = "postgres"
-password = "postgres"
+# Update the following values with your database credentials.
+user = "libredesk"
+password = "libredesk"
 database = "libredesk"
 ssl_mode = "disable"
 max_open = 30
