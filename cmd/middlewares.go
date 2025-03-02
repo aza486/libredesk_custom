@@ -8,6 +8,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
+	"github.com/zerodha/simplesessions/v3"
 )
 
 // tryAuth is a middleware that attempts to authenticate the user and add them to the context
@@ -129,9 +130,17 @@ func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		// Validate session.
 		user, err := app.auth.ValidateSession(r)
 		if err != nil {
-			app.lo.Error("error validating session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
+			// Session is not valid, destroy it and redirect to login.
+			if err != simplesessions.ErrInvalidSession {
+				app.lo.Error("error validating session", "error", err)
+				return r.SendErrorEnvelope(http.StatusUnauthorized, "Error validating session", nil, envelope.PermissionError)
+			}
+			if err := app.auth.DestroySession(r); err != nil {
+				app.lo.Error("error destroying session", "error", err)
+			}
 		}
+
+		// User is authenticated.
 		if user.ID > 0 {
 			return handler(r)
 		}
@@ -140,7 +149,7 @@ func authPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		if len(nextURI) == 0 {
 			nextURI = r.RequestCtx.RequestURI()
 		}
-		return r.RedirectURI("/", fasthttp.StatusFound, map[string]interface{}{
+		return r.RedirectURI("/", fasthttp.StatusFound, map[string]any{
 			"next": string(nextURI),
 		}, "")
 	}
