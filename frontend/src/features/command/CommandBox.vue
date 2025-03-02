@@ -1,5 +1,9 @@
 <template>
-  <CommandDialog :open="open" @update:open="handleOpenChange" class="z-[51] !min-w-[50vw] !min-h-[60vh]">
+  <CommandDialog
+    :open="open"
+    @update:open="handleOpenChange"
+    class="z-[51] !min-w-[50vw] !min-h-[60vh]"
+  >
     <CommandInput placeholder="Type a command or search..." @keydown="onInputKeydown" />
     <CommandList class="!min-h-[60vh] !min-w-[50vw]">
       <CommandEmpty>
@@ -32,12 +36,12 @@
       </CommandGroup>
 
       <!-- Macros -->
-      <!-- TODO move to a separate component -->
       <div v-if="nestedCommand === 'apply-macro'" class="bg-background">
         <CommandGroup heading="Apply macro" class="pb-2">
           <div class="min-h-[400px] overflow-auto">
             <div class="grid grid-cols-12 gap-3">
-              <div class="col-span-4 pr-2">
+              <!-- Left Column: Macro List (30%) -->
+              <div class="col-span-4 pr-2 border-r">
                 <CommandItem
                   v-for="(macro, index) in macroStore.macroOptions"
                   :key="macro.value"
@@ -55,8 +59,10 @@
                 </CommandItem>
               </div>
 
-              <div class="col-span-8 pl-2 border-l">
+              <!-- Right Column: Macro Details (70%) -->
+              <div class="col-span-8 pl-2">
                 <div class="space-y-3 text-xs">
+                  <!-- Reply Preview -->
                   <div v-if="replyContent" class="space-y-1">
                     <p class="text-xs font-semibold text-primary">Reply Preview</p>
                     <div
@@ -65,6 +71,7 @@
                     />
                   </div>
 
+                  <!-- Actions -->
                   <div v-if="otherActions.length > 0" class="space-y-1">
                     <p class="text-xs font-semibold text-primary">Actions</p>
                     <div class="space-y-1.5 max-w-sm">
@@ -106,6 +113,8 @@
                       </div>
                     </div>
                   </div>
+
+                  <!-- Empty State -->
                   <div
                     v-if="!replyContent && otherActions.length === 0"
                     class="flex items-center justify-center h-20"
@@ -123,7 +132,6 @@
     </CommandList>
 
     <!-- Navigation -->
-    <!-- TODO: Move to a separate component -->
     <div class="mt-2 px-4 py-2 text-xs text-gray-500 flex space-x-4">
       <span><kbd>Enter</kbd> select</span>
       <span><kbd>↑</kbd>/<kbd>↓</kbd> navigate</span>
@@ -133,7 +141,6 @@
   </CommandDialog>
 
   <!-- Date Picker for Custom Snooze -->
-  <!-- TODO: Move to a separate component -->
   <Dialog :open="showDatePicker" @update:open="closeDatePicker">
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
