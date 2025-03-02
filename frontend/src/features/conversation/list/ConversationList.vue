@@ -8,7 +8,8 @@
 
     <!-- Filters -->
     <div class="bg-white p-2 flex justify-between items-center">
-      <DropdownMenu>
+      <!-- Status dropdown-menu, hidden when a view is selected as views are pre-filtered -->
+      <DropdownMenu v-if="!route.params.viewID">
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
             <div>
@@ -28,6 +29,9 @@
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <div v-else></div>
+
+      <!-- Sort dropdown-menu -->
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
@@ -124,7 +128,10 @@
           <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
           {{ isLoading ? 'Loading...' : 'Load more' }}
         </Button>
-        <p class="text-sm text-gray-500" v-else-if="conversationStore.conversationsList.length > 10">
+        <p
+          class="text-sm text-gray-500"
+          v-else-if="conversationStore.conversationsList.length > 10"
+        >
           All conversations loaded
         </p>
       </div>
