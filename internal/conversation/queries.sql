@@ -9,7 +9,7 @@ status_id AS (
    SELECT id FROM conversation_statuses WHERE name = $3
 ),
 reference_number AS (
-   SELECT generate_reference_number($8) as reference_number
+   SELECT generate_reference_number($8) AS reference_number
 )
 INSERT INTO conversations
 (contact_id, contact_channel_id, status_id, inbox_id, last_message, last_message_at, subject, reference_number)
@@ -20,7 +20,10 @@ VALUES(
    $4, 
    $5, 
    $6, 
-   $7, 
+   CASE 
+      WHEN $9 = TRUE THEN CONCAT($7::text, ' [', (SELECT reference_number FROM reference_number), ']')
+      ELSE $7::text
+   END, 
    (SELECT reference_number FROM reference_number)
 )
 RETURNING id, uuid;
@@ -362,13 +365,16 @@ SET assigned_user_id = NULL,
     updated_at = now()
 WHERE assigned_user_id = $1 AND status_id in (SELECT id FROM conversation_statuses WHERE name NOT IN ('Resolved', 'Closed'));
 
+
 -- MESSAGE queries.
--- name: get-latest-received-message-source-id
-SELECT source_id
+-- name: get-message-source-ids
+SELECT 
+    source_id
 FROM conversation_messages
-WHERE conversation_id = $1 and status = 'received'
+WHERE conversation_id = $1
+AND type in ('incoming', 'outgoing')
 ORDER BY id DESC
-LIMIT 1;
+LIMIT $2;
 
 -- name: get-pending-messages
 SELECT

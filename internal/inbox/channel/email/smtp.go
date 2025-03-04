@@ -112,17 +112,17 @@ func (e *Email) Send(m models.Message) error {
 		email.Headers.Set(key, value[0])
 	}
 
-	// Set In-Reply-To and References headers
+	// Set In-Reply-To header
 	if m.InReplyTo != "" {
 		email.Headers.Set(headerInReplyTo, "<"+m.InReplyTo+">")
 	}
 
-	// Set message id if set.
+	// Set message id header
 	if m.SourceID.String != "" {
 		email.Headers.Set(headerMessageID, fmt.Sprintf("<%s>", m.SourceID.String))
 	}
 
-	// Set references message ids
+	// Set references header
 	var references string
 	for _, ref := range m.References {
 		references += "<" + ref + "> "

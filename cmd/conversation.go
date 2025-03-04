@@ -712,6 +712,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 		"", /** last_message **/
 		time.Now(),
 		subject,
+		true, /** append reference number to subject **/
 	)
 	if err != nil {
 		app.lo.Error("error creating conversation", "error", err)
@@ -733,9 +734,6 @@ func handleCreateConversation(r *fastglue.Request) error {
 	if assignedTeamID > 0 {
 		app.conversation.UpdateConversationTeamAssignee(conversationUUID, assignedTeamID, user)
 	}
-
-	// Evaluate automation rules for the new conversation
-	app.automation.EvaluateNewConversationRules(conversationUUID)
 
 	// Send the created conversation back to the client.
 	conversation, err := app.conversation.GetConversation(conversationID, "")

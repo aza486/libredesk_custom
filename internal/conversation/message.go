@@ -178,10 +178,29 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		return
 	}
 
-	// Set message sender and receiver
+	// Set from and to addresses
 	message.From = inbox.FromAddress()
-	message.To, _ = m.GetToAddress(message.ConversationID)
-	message.InReplyTo, _ = m.GetLatestReceivedMessageSourceID(message.ConversationID)
+	message.To, err = m.GetToAddress(message.ConversationID)
+	if handleError(err, "error fetching `to` address") {
+		return
+	}
+
+	// Set "In-Reply-To" and "References" headers, logging any errors but continuing to send the message.
+	// Include only the last 20 messages as references to avoid exceeding header size limits.
+	message.References, err = m.GetMessageSourceIDs(message.ConversationID, 20)
+	if err != nil {
+		m.lo.Error("Error fetching conversation source IDs", "error", err)
+	}
+
+	// References is sorted in DESC i.e newest message first, so reverse it to keep the references in order.
+	stringutil.ReverseSlice(message.References)
+
+	// Remove the current message ID from the references.
+	message.References = stringutil.RemoveItemByValue(message.References, message.SourceID.String)
+
+	if len(message.References) > 0 {
+		message.InReplyTo = message.References[len(message.References)-1]
+	}
 
 	// Send message
 	err = inbox.Send(message)
@@ -388,8 +407,14 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		return err
 	}
 
-	// Update conversation last message details in conversation metadata.
-	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, message.TextContent, message.SenderType, message.CreatedAt)
+	// Hide CSAT message content as it contains a public link to the survey.
+	lastMessage := message.TextContent
+	if message.HasCSAT() {
+		lastMessage = "Please rate your experience with us"
+	}
+
+	// Update conversation last message details in conversation.
+	m.UpdateConversationLastMessage(message.ConversationID, message.ConversationUUID, lastMessage, message.SenderType, message.CreatedAt)
 
 	// Broadcast new message.
 	m.BroadcastNewMessage(message)
@@ -700,7 +725,7 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID, contactC
 		new = true
 		lastMessage := stringutil.HTML2Text(in.Content)
 		lastMessageAt := time.Now()
-		conversationID, conversationUUID, err = m.CreateConversation(contactID, contactChannelID, inboxID, lastMessage, lastMessageAt, in.Subject)
+		conversationID, conversationUUID, err = m.CreateConversation(contactID, contactChannelID, inboxID, lastMessage, lastMessageAt, in.Subject, false /**append reference number to subject**/)
 		if err != nil || conversationID == 0 {
 			return new, err
 		}

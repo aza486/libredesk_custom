@@ -119,6 +119,7 @@ type Message struct {
 	InReplyTo        string                 `json:"-"`
 	Headers          textproto.MIMEHeader   `json:"-"`
 	Media            []mmodels.Media        `db:"-" json:"-"`
+	IsCSAT           bool                   `db:"-" json:"-"`
 	Total            int                    `db:"total" json:"-"`
 }
 
@@ -132,6 +133,16 @@ func (m *Message) CensorCSATContent() {
 		m.Content = "Please rate your experience with us"
 		m.TextContent = m.Content
 	}
+}
+
+// HasCSAT returns true if the message is a CSAT message.
+func (m *Message) HasCSAT() bool {
+	var meta map[string]interface{}
+	if err := json.Unmarshal([]byte(m.Meta), &meta); err != nil {
+		return false
+	}
+	isCsat, _ := meta["is_csat"].(bool)
+	return isCsat
 }
 
 // IncomingMessage links a message with the contact information and inbox id.

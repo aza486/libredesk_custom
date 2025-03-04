@@ -99,7 +99,8 @@ func RemoveEmpty(s []string) []string {
 	return r
 }
 
-// GenerateEmailMessageID generates a RFC-compliant Message-ID for an email.
+// GenerateEmailMessageID generates a RFC-compliant Message-ID for an email, does not include the angle brackets.
+// The client is expected to wrap the returned string in angle brackets.
 func GenerateEmailMessageID(messageID string, fromAddress string) (string, error) {
 	if messageID == "" {
 		return "", fmt.Errorf("messageID cannot be empty")
@@ -140,4 +141,22 @@ func GenerateEmailMessageID(messageID string, fromAddress string) (string, error
 		strings.TrimRight(base64.URLEncoding.EncodeToString(random), "="), // URL-safe base64 without padding
 		domain,
 	), nil
+}
+
+// ReverseSlice reverses a slice of strings in place.
+func ReverseSlice(source []string) {
+	for i, j := 0, len(source)-1; i < j; i, j = i+1, j-1 {
+		source[i], source[j] = source[j], source[i]
+	}
+}
+
+// RemoveItemByValue removes all instances of a value from a slice of strings.
+func RemoveItemByValue(slice []string, value string) []string {
+	result := []string{}
+	for _, v := range slice {
+		if v != value {
+			result = append(result, v)
+		}
+	}
+	return result
 }

@@ -184,7 +184,6 @@ func New(
 
 type queries struct {
 	// Conversation queries.
-	GetLatestReceivedMessageSourceID   *sqlx.Stmt `query:"get-latest-received-message-source-id"`
 	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
 	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
 	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
@@ -219,6 +218,7 @@ type queries struct {
 	GetMessage                         *sqlx.Stmt `query:"get-message"`
 	GetMessages                        string     `query:"get-messages"`
 	GetPendingMessages                 *sqlx.Stmt `query:"get-pending-messages"`
+	GetMessageSourceIDs                *sqlx.Stmt `query:"get-message-source-ids"`
 	GetConversationUUIDFromMessageUUID *sqlx.Stmt `query:"get-conversation-uuid-from-message-uuid"`
 	InsertMessage                      *sqlx.Stmt `query:"insert-message"`
 	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
@@ -227,13 +227,13 @@ type queries struct {
 }
 
 // CreateConversation creates a new conversation and returns its ID and UUID.
-func (c *Manager) CreateConversation(contactID, contactChannelID, inboxID int, lastMessage string, lastMessageAt time.Time, subject string) (int, string, error) {
+func (c *Manager) CreateConversation(contactID, contactChannelID, inboxID int, lastMessage string, lastMessageAt time.Time, subject string, appendRefNumToSubject bool) (int, string, error) {
 	var (
 		id     int
 		uuid   string
 		prefix string
 	)
-	if err := c.q.InsertConversation.QueryRow(contactID, contactChannelID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject, prefix).Scan(&id, &uuid); err != nil {
+	if err := c.q.InsertConversation.QueryRow(contactID, contactChannelID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject, prefix, appendRefNumToSubject).Scan(&id, &uuid); err != nil {
 		c.lo.Error("error inserting new conversation into the DB", "error", err)
 		return id, uuid, err
 	}
@@ -741,17 +741,15 @@ func (m *Manager) GetToAddress(conversationID int) ([]string, error) {
 	return addr, nil
 }
 
-// GetLatestReceivedMessageSourceID returns the last received message source ID.
-func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, error) {
-	var out string
-	if err := m.q.GetLatestReceivedMessageSourceID.Get(&out, conversationID); err != nil {
-		if err == sql.ErrNoRows {
-			return out, nil
-		}
-		m.lo.Error("error fetching message source id", "error", err, "conversation_id", conversationID)
-		return out, err
+// GetMessageSourceIDs retrieves source IDs for messages in a conversation in descending order.
+// So the oldest message will be the last in the list.
+func (m *Manager) GetMessageSourceIDs(conversationID, limit int) ([]string, error) {
+	var refs []string
+	if err := m.q.GetMessageSourceIDs.Select(&refs, conversationID, limit); err != nil {
+		m.lo.Error("error fetching message source IDs", "conversation_id", conversationID, "error", err)
+		return refs, err
 	}
-	return out, nil
+	return refs, nil
 }
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
