@@ -97,7 +97,10 @@ WHERE id = $1;
 -- name: update-inactive-offline
 UPDATE users
 SET availability_status = 'offline'
-WHERE last_active_at < now() - interval '5 minutes' and availability_status != 'offline';
+WHERE 
+type = 'agent' 
+AND (last_active_at IS NULL OR last_active_at < NOW() - INTERVAL '5 minutes')
+AND availability_status != 'offline';
 
 -- name: get-permissions
 SELECT DISTINCT unnest(r.permissions)
