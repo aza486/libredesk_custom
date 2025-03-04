@@ -31,6 +31,7 @@ type migFunc struct {
 // The functions are named as: v0.7.0 => migrations.V0_7_0() and are idempotent.
 var migList = []migFunc{
 	{"v0.3.0", migrations.V0_3_0},
+	{"v0.4.0", migrations.V0_4_0},
 }
 
 // upgrade upgrades the database to the current version by running SQL migration files
