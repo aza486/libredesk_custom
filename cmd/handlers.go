@@ -63,10 +63,12 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/conversations/{uuid}/messages", perm(handleGetMessages, "messages:read"))
 	g.POST("/api/v1/conversations/{cuuid}/messages", perm(handleSendMessage, "messages:write"))
 	g.PUT("/api/v1/conversations/{cuuid}/messages/{uuid}/retry", perm(handleRetryMessage, "messages:write"))
+	g.POST("/api/v1/conversations", perm(handleCreateConversation, "conversations:write"))
 
 	// Search.
 	g.GET("/api/v1/conversations/search", perm(handleSearchConversations, "conversations:read"))
 	g.GET("/api/v1/messages/search", perm(handleSearchMessages, "messages:read"))
+	g.GET("/api/v1/contacts/search", perm(handleSearchContacts, "conversations:write"))
 
 	// Views.
 	g.GET("/api/v1/views/me", perm(handleGetUserViews, "view:manage"))

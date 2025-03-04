@@ -57,7 +57,7 @@ func handleGetUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest,
 			"Invalid user `id`.", nil, envelope.InputError)
 	}
-	user, err := app.user.Get(id)
+	user, err := app.user.GetAgent(id)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -83,7 +83,7 @@ func handleGetCurrentUserTeams(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -101,13 +101,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.Get(auser.ID)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-
-	// Get current user.
-	currentUser, err := app.user.Get(user.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -165,8 +159,8 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		}
 
 		// Delete current avatar.
-		if currentUser.AvatarURL.Valid {
-			fileName := filepath.Base(currentUser.AvatarURL.String)
+		if user.AvatarURL.Valid {
+			fileName := filepath.Base(user.AvatarURL.String)
 			app.media.Delete(fileName)
 		}
 
@@ -316,7 +310,7 @@ func handleGetCurrentUser(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	u, err := app.user.Get(auser.ID)
+	u, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -331,7 +325,7 @@ func handleDeleteAvatar(r *fastglue.Request) error {
 	)
 
 	// Get user
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -370,7 +364,7 @@ func handleResetPassword(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty `email`", nil, envelope.InputError)
 	}
 
-	user, err := app.user.GetByEmail(email)
+	user, err := app.user.GetAgentByEmail(email)
 	if err != nil {
 		// Send 200 even if user not found, to prevent email enumeration.
 		return r.SendEnvelope("Reset password email sent successfully.")

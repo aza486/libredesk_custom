@@ -3,10 +3,14 @@ package stringutil
 
 import (
 	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"net/mail"
 	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/k3a/html2text"
 )
@@ -93,4 +97,47 @@ func RemoveEmpty(s []string) []string {
 		}
 	}
 	return r
+}
+
+// GenerateEmailMessageID generates a RFC-compliant Message-ID for an email.
+func GenerateEmailMessageID(messageID string, fromAddress string) (string, error) {
+	if messageID == "" {
+		return "", fmt.Errorf("messageID cannot be empty")
+	}
+
+	// Parse from address
+	addr, err := mail.ParseAddress(fromAddress)
+	if err != nil {
+		return "", fmt.Errorf("invalid from address: %w", err)
+	}
+
+	// Extract domain with validation
+	parts := strings.Split(addr.Address, "@")
+	if len(parts) != 2 || parts[1] == "" {
+		return "", fmt.Errorf("invalid domain in from address")
+	}
+	domain := parts[1]
+
+	// Generate cryptographic random component
+	random := make([]byte, 8)
+	if _, err := rand.Read(random); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+
+	// Sanitize messageID for email Message-ID
+	cleaner := regexp.MustCompile(`[^\w.-]`) // Allow only alphanum, ., -, _
+	cleanmessageID := cleaner.ReplaceAllString(messageID, "_")
+
+	// Ensure cleaned messageID isn't empty
+	if cleanmessageID == "" {
+		return "", fmt.Errorf("messageID became empty after sanitization")
+	}
+
+	// Build RFC-compliant Message-ID
+	return fmt.Sprintf("%s-%d-%s@%s",
+		cleanmessageID,
+		time.Now().UnixNano(), // Nanosecond precision
+		strings.TrimRight(base64.URLEncoding.EncodeToString(random), "="), // URL-safe base64 without padding
+		domain,
+	), nil
 }

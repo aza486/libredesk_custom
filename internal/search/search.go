@@ -32,6 +32,7 @@ type Opts struct {
 type queries struct {
 	SearchConversations *sqlx.Stmt `query:"search-conversations"`
 	SearchMessages      *sqlx.Stmt `query:"search-messages"`
+	SearchContacts      *sqlx.Stmt `query:"search-contacts"`
 }
 
 // New creates a new search manager
@@ -59,6 +60,16 @@ func (s *Manager) Messages(query string) ([]models.Message, error) {
 	if err := s.q.SearchMessages.Select(&results, query); err != nil {
 		s.lo.Error("error searching messages", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, "Error searching messages", nil)
+	}
+	return results, nil
+}
+
+// Contacts searches contacts based on the query
+func (s *Manager) Contacts(query string) ([]models.Contact, error) {
+	var results = make([]models.Contact, 0)
+	if err := s.q.SearchContacts.Select(&results, query); err != nil {
+		s.lo.Error("error searching contacts", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error searching contacts", nil)
 	}
 	return results, nil
 }

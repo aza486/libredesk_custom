@@ -16,7 +16,7 @@ func handleGetUserViews(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -37,7 +37,7 @@ func handleCreateUserView(r *fastglue.Request) error {
 	if err := r.Decode(&view, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -71,7 +71,7 @@ func handleDeleteUserView(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Empty view `ID`", nil, envelope.InputError)
 	}
 
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -109,7 +109,7 @@ func handleUpdateUserView(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
 
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

@@ -44,3 +44,19 @@ func handleSearchMessages(r *fastglue.Request) error {
 	}
 	return r.SendEnvelope(messages)
 }
+
+// handleSearchContacts searches contacts based on the query.
+func handleSearchContacts(r *fastglue.Request) error {
+	var (
+		app = r.Context.(*App)
+		q   = string(r.RequestCtx.QueryArgs().Peek("query"))
+	)
+	if len(q) < minSearchQueryLength {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Query length should be at least 3 characters", nil))
+	}
+	contacts, err := app.search.Contacts(q)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(contacts)
+}

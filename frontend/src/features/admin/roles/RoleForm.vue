@@ -88,6 +88,7 @@ const permissions = ref([
     name: 'Conversation',
     permissions: [
       { name: 'conversations:read', label: 'View conversation' },
+      { name: 'conversations:write', label: 'Create conversation' },
       { name: 'conversations:read_assigned', label: 'View conversations assigned to me' },
       { name: 'conversations:read_all', label: 'View all conversations' },
       { name: 'conversations:read_unassigned', label: 'View all unassigned conversations' },

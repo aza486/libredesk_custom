@@ -45,7 +45,7 @@ FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id,
      unnest(r.permissions) p
-WHERE (u.id = $1 OR u.email = $2) AND u.deleted_at IS NULL AND u.type = 'agent'
+WHERE (u.id = $1 OR u.email = $2) AND u.type = $3 AND u.deleted_at IS NULL
 GROUP BY u.id;
 
 -- name: set-user-password

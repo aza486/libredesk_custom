@@ -30,7 +30,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		total       = 0
 	)
 
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -70,7 +70,7 @@ func handleGetMessage(r *fastglue.Request) error {
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -105,7 +105,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -133,13 +133,13 @@ func handleSendMessage(r *fastglue.Request) error {
 		req   = messageReq{}
 	)
 
-	user, err := app.user.Get(auser.ID)
+	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Check permission
-	_, err = enforceConversationAccess(app, cuuid, user)
+	conv, err := enforceConversationAccess(app, cuuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -163,7 +163,7 @@ func handleSendMessage(r *fastglue.Request) error {
 			return sendErrorEnvelope(r, err)
 		}
 	} else {
-		if err := app.conversation.SendReply(media, user.ID, cuuid, req.Message, req.CC, req.BCC, map[string]interface{}{}); err != nil {
+		if err := app.conversation.SendReply(media, conv.InboxID, user.ID, cuuid, req.Message, req.CC, req.BCC, map[string]any{} /**meta**/); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 		// Evaluate automation rules.

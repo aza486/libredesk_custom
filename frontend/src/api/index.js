@@ -35,6 +35,7 @@ http.interceptors.request.use((request) => {
 
 const searchConversations = (params) => http.get('/api/v1/conversations/search', { params })
 const searchMessages = (params) => http.get('/api/v1/messages/search', { params })
+const searchContacts = (params) => http.get('/api/v1/contacts/search', { params })
 const resetPassword = (data) => http.post('/api/v1/users/reset-password', data)
 const setPassword = (data) => http.post('/api/v1/users/set-password', data)
 const deleteUser = (id) => http.delete(`/api/v1/users/${id}`)
@@ -174,6 +175,7 @@ const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
 const removeAssignee = (uuid, assignee_type) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}/remove`)
+const createConversation = (data) => http.post('/api/v1/conversations', data)
 const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)
@@ -333,6 +335,7 @@ export default {
   createAutomationRule,
   toggleAutomationRule,
   deleteAutomationRule,
+  createConversation,
   sendMessage,
   retryMessage,
   createUser,
@@ -377,5 +380,6 @@ export default {
   aiCompletion,
   searchConversations,
   searchMessages,
+  searchContacts,
   removeAssignee,
 }

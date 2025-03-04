@@ -46,7 +46,7 @@ defineProps({
 const userStore = useUserStore()
 const settingsStore = useAppSettingsStore()
 const route = useRoute()
-const emit = defineEmits(['createView', 'editView', 'deleteView'])
+const emit = defineEmits(['createView', 'editView', 'deleteView', 'createConversation'])
 
 const openCreateViewDialog = () => {
   emit('createView')
@@ -230,15 +230,27 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <div class="flex items-center justify-between w-full">
                   <div class="font-semibold text-xl">Inbox</div>
                   <div class="ml-auto">
-                    <router-link :to="{ name: 'search' }">
-                      <div class="flex items-center bg-accent p-2 rounded-full">
-                        <Search
-                          class="transition-transform duration-200 hover:scale-110 cursor-pointer"
+                    <div class="flex items-center space-x-2">
+                      <div
+                        class="flex items-center bg-accent p-2 rounded-full cursor-pointer"
+                        @click="emit('createConversation')"
+                      >
+                        <Plus
+                          class="transition-transform duration-200 hover:scale-110"
                           size="15"
                           stroke-width="2.5"
                         />
                       </div>
-                    </router-link>
+                      <router-link :to="{ name: 'search' }">
+                        <div class="flex items-center bg-accent p-2 rounded-full">
+                          <Search
+                            class="transition-transform duration-200 hover:scale-110 cursor-pointer"
+                            size="15"
+                            stroke-width="2.5"
+                          />
+                        </div>
+                      </router-link>
+                    </div>
                   </div>
                 </div>
               </SidebarMenuButton>

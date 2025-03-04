@@ -95,7 +95,7 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 // VerifyPassword authenticates an user by email and password.
 func (u *Manager) VerifyPassword(email string, password []byte) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, 0, email); err != nil {
+	if err := u.q.GetUser.Get(&user, 0, email, UserTypeAgent); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
@@ -154,10 +154,25 @@ func (u *Manager) CreateAgent(user *models.User) error {
 	return nil
 }
 
+// GetAgent retrieves an agent by ID.
+func (u *Manager) GetAgent(id int) (models.User, error) {
+	return u.Get(id, UserTypeAgent)
+}
+
+// GetAgentByEmail retrieves an agent by email.
+func (u *Manager) GetAgentByEmail(email string) (models.User, error) {
+	return u.GetByEmail(email, UserTypeAgent)
+}
+
+// GetContact retrieves a contact by ID.
+func (u *Manager) GetContact(id int) (models.User, error) {
+	return u.Get(id, UserTypeContact)
+}
+
 // Get retrieves an user by ID.
-func (u *Manager) Get(id int) (models.User, error) {
+func (u *Manager) Get(id int, type_ string) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, id, ""); err != nil {
+	if err := u.q.GetUser.Get(&user, id, "", type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("user not found", "id", id, "error", err)
 			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
@@ -169,9 +184,9 @@ func (u *Manager) Get(id int) (models.User, error) {
 }
 
 // GetByEmail retrieves an user by email
-func (u *Manager) GetByEmail(email string) (models.User, error) {
+func (u *Manager) GetByEmail(email, type_ string) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, 0, email); err != nil {
+	if err := u.q.GetUser.Get(&user, 0, email, type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
 		}
@@ -183,7 +198,7 @@ func (u *Manager) GetByEmail(email string) (models.User, error) {
 
 // GetSystemUser retrieves the system user.
 func (u *Manager) GetSystemUser() (models.User, error) {
-	return u.GetByEmail(systemUserEmail)
+	return u.GetByEmail(systemUserEmail, UserTypeAgent)
 }
 
 // UpdateAvatar updates the user avatar.
@@ -332,7 +347,6 @@ func (u *Manager) MonitorAgentAvailability(ctx context.Context) {
 
 // markInactiveAgentsOffline sets agents offline if they have been inactive for more than 5 minutes.
 func (u *Manager) markInactiveAgentsOffline() {
-	u.lo.Debug("marking inactive agents offline")
 	if res, err := u.q.UpdateInactiveOffline.Exec(); err != nil {
 		u.lo.Error("error setting users offline", "error", err)
 	} else {
@@ -341,7 +355,6 @@ func (u *Manager) markInactiveAgentsOffline() {
 			u.lo.Info("set inactive users offline", "count", rows)
 		}
 	}
-	u.lo.Debug("marked inactive agents offline")
 }
 
 // verifyPassword compares the provided password with the stored password hash.

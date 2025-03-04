@@ -313,11 +313,10 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 }
 
 // SendReply inserts a reply message in a conversation.
-func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUID, content string, cc, bcc []string, meta map[string]interface{}) error {
+func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conversationUUID, content string, cc, bcc []string, meta map[string]interface{}) error {
+	// Save cc and bcc as JSON in meta.
 	cc = stringutil.RemoveEmpty(cc)
 	bcc = stringutil.RemoveEmpty(bcc)
-
-	// Save cc and bcc as JSON in meta.
 	if len(cc) > 0 {
 		meta["cc"] = cc
 	}
@@ -328,6 +327,19 @@ func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUI
 	if err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error marshalling message meta", nil)
 	}
+
+	// Generage unique source ID i.e. message-id for email.
+	inbox, err := m.inboxStore.GetDBRecord(inboxID)
+	if err != nil {
+		return err
+	}
+	sourceID, err := stringutil.GenerateEmailMessageID(conversationUUID, inbox.From)
+	if err != nil {
+		m.lo.Error("error generating source message id", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error generating source message id", nil)
+	}
+
+	// Insert Message.
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
@@ -339,6 +351,7 @@ func (m *Manager) SendReply(media []mmodels.Media, senderID int, conversationUUI
 		Private:          false,
 		Media:            media,
 		Meta:             string(metaJSON),
+		SourceID:         null.StringFrom(sourceID),
 	}
 	return m.InsertMessage(&message)
 }
@@ -391,7 +404,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	}
 
 	// Assignment to another user.
-	assignee, err := m.userStore.Get(assigneeID)
+	assignee, err := m.userStore.GetAgent(assigneeID)
 	if err != nil {
 		return err
 	}
@@ -675,11 +688,8 @@ func (m *Manager) findOrCreateConversation(in *models.Message, inboxID, contactC
 		conversationUUID string
 	)
 
-	// Search for existing conversation.
-	sourceIDs := in.References
-	if in.InReplyTo != "" {
-		sourceIDs = append(sourceIDs, in.InReplyTo)
-	}
+	// Search for existing conversation using the in-reply-to and references.
+	sourceIDs := append([]string{in.InReplyTo}, in.References...)
 	conversationID, err = m.findConversationID(sourceIDs)
 	if err != nil && err != errConversationNotFound {
 		return new, err

@@ -16,3 +16,16 @@ SELECT
 FROM conversation_messages m
     JOIN conversations c ON m.conversation_id = c.id
 WHERE m.type != 'activity' and m.text_content ILIKE '%' || $1 || '%';
+
+-- name: search-contacts
+SELECT 
+    id,
+    created_at,
+    first_name,
+    last_name,
+    email
+FROM users
+WHERE type = 'contact'
+AND deleted_at IS NULL
+AND email ILIKE '%' || $1 || '%'
+LIMIT 15;

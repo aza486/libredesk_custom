@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/mail"
 	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
@@ -100,6 +101,11 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, "Error updating settings", nil))
 	}
 
+	// Make sure it's a valid from email address.
+	if _, err := mail.ParseAddress(req.EmailAddress); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid from email address format", nil, envelope.InputError)
+	}
+
 	if req.Password == "" {
 		req.Password = cur.Password
 	}
@@ -107,5 +113,7 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// No reload implemented, so user has to restart the app.
 	return r.SendEnvelope("Settings updated successfully, Please restart the app for changes to take effect.")
 }

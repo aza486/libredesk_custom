@@ -24,6 +24,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/inbox"
+	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
@@ -96,7 +97,7 @@ type teamStore interface {
 }
 
 type userStore interface {
-	Get(int) (umodels.User, error)
+	GetAgent(int) (umodels.User, error)
 	GetSystemUser() (umodels.User, error)
 	CreateContact(user *umodels.User) error
 }
@@ -112,6 +113,7 @@ type mediaStore interface {
 
 type inboxStore interface {
 	Get(int) (inbox.Inbox, error)
+	GetDBRecord(int) (imodels.Inbox, error)
 }
 
 type settingsStore interface {
@@ -207,6 +209,7 @@ type queries struct {
 	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
 	ReOpenConversation                 *sqlx.Stmt `query:"re-open-conversation"`
 	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
+	DeleteConversation                 *sqlx.Stmt `query:"delete-conversation"`
 
 	// Dashboard queries.
 	GetDashboardCharts string `query:"get-dashboard-charts"`
@@ -742,6 +745,9 @@ func (m *Manager) GetToAddress(conversationID int) ([]string, error) {
 func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, error) {
 	var out string
 	if err := m.q.GetLatestReceivedMessageSourceID.Get(&out, conversationID); err != nil {
+		if err == sql.ErrNoRows {
+			return out, nil
+		}
 		m.lo.Error("error fetching message source id", "error", err, "conversation_id", conversationID)
 		return out, err
 	}
@@ -750,7 +756,7 @@ func (m *Manager) GetLatestReceivedMessageSourceID(conversationID int) (string, 
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
 func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation models.Conversation) error {
-	agent, err := m.userStore.Get(userIDs[0])
+	agent, err := m.userStore.GetAgent(userIDs[0])
 	if err != nil {
 		m.lo.Error("error fetching agent", "user_id", userIDs[0], "error", err)
 		return fmt.Errorf("fetching agent: %w", err)
@@ -875,7 +881,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 	case amodels.ActionSendPrivateNote:
 		return m.SendPrivateNote([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0])
 	case amodels.ActionReply:
-		return m.SendReply([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0], nil, nil, nil)
+		return m.SendReply([]mmodels.Media{}, conv.InboxID, user.ID, conv.UUID, action.Value[0], nil, nil, nil)
 	case amodels.ActionSetSLA:
 		slaID, _ := strconv.Atoi(action.Value[0])
 		return m.ApplySLA(conv, slaID, user)
@@ -913,7 +919,16 @@ func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversatio
 	meta := map[string]interface{}{
 		"is_csat": true,
 	}
-	return m.SendReply([]mmodels.Media{}, actorUserID, conversation.UUID, message, nil, nil, meta)
+	return m.SendReply([]mmodels.Media{}, conversation.InboxID, actorUserID, conversation.UUID, message, nil, nil, meta)
+}
+
+// DeleteConversation deletes a conversation.
+func (m *Manager) DeleteConversation(uuid string) error {
+	if _, err := m.q.DeleteConversation.Exec(uuid); err != nil {
+		m.lo.Error("error deleting conversation", "error", err)
+		return envelope.NewError(envelope.GeneralError, "Error deleting conversation", nil)
+	}
+	return nil
 }
 
 // addConversationParticipant adds a user as participant to a conversation.

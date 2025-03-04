@@ -46,6 +46,7 @@
         @create-view="openCreateViewForm = true"
         @edit-view="editView"
         @delete-view="deleteView"
+        @create-conversation="() => openCreateConversationDialog = true"
       >
         <div class="flex flex-col h-screen">
           <!-- Show app update only in admin routes -->
@@ -64,6 +65,9 @@
 
   <!-- Command box -->
   <Command />
+
+  <!-- Create conversation dialog -->
+  <CreateConversation v-model="openCreateConversationDialog" />
 </template>
 
 <script setup>
@@ -89,6 +93,7 @@ import api from '@/api'
 import { toast as sooner } from 'vue-sonner'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
 import Command from '@/features/command/CommandBox.vue'
+import CreateConversation from '@/features/conversation/CreateConversation.vue'
 import { Inbox, Shield, FileLineChart } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import {
@@ -117,6 +122,7 @@ const tagStore = useTagStore()
 const userViews = ref([])
 const view = ref({})
 const openCreateViewForm = ref(false)
+const openCreateConversationDialog = ref(false)
 
 initWS()
 useIdleDetection()

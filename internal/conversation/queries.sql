@@ -521,3 +521,6 @@ SET status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'), snoo
 WHERE uuid = $1 and status_id in (
     SELECT id FROM conversation_statuses WHERE name IN ('Snoozed', 'Closed', 'Resolved')
 )
+
+-- name: delete-conversation
+DELETE FROM conversations WHERE uuid = $1;
