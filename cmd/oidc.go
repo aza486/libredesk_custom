@@ -2,9 +2,11 @@ package main
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/oidc/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -25,6 +27,10 @@ func handleGetAllOIDC(r *fastglue.Request) error {
 	out, err := app.oidc.GetAll()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+	// Replace secrets with dummy values.
+	for i := range out {
+		out[i].ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
 	}
 	return r.SendEnvelope(out)
 }
