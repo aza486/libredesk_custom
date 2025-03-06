@@ -36,8 +36,6 @@ docker exec -it libredesk_app ./libredesk --set-system-user-password
 
 Go to `http://localhost:9000` and login with the email `System` and the password you set using the `--set-system-user-password` command.
 
----
-
 
 ## Compiling from source
 
@@ -46,3 +44,19 @@ To compile the latest unreleased version (`main` branch):
 1. Make sure `go`, `nodejs`, and `pnpm` are installed on your system.
 2. `git clone git@github.com:abhinavxd/libredesk.git`
 3. `cd libredesk && make`. This will generate the `libredesk` binary.
+
+
+## Nginx
+
+Libredesk using websockets for real-time updates. If you are using Nginx, you need to add the following (or similar) configuration to your Nginx configuration file.
+
+```nginx
+location / {
+    proxy_pass http://localhost:9000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+```
