@@ -24,8 +24,9 @@
 </template>
 
 <script setup>
-import { Trash2 } from 'lucide-vue-next';
-import { defineProps, defineEmits } from 'vue';
+import { Trash2 } from 'lucide-vue-next'
+import { defineProps, defineEmits } from 'vue'
+import { Button } from '@/components/ui/button'
 
 defineProps({
     headers: {
@@ -45,9 +46,9 @@ defineProps({
     }
 });
 
-const emit = defineEmits(['deleteItem']);
+const emit = defineEmits(['deleteItem'])
 
 function deleteItem(item) {
-    emit('deleteItem', item);
+    emit('deleteItem', item)
 }
 </script>
