@@ -115,11 +115,13 @@ func (e *Email) Send(m models.Message) error {
 	// Set In-Reply-To header
 	if m.InReplyTo != "" {
 		email.Headers.Set(headerInReplyTo, "<"+m.InReplyTo+">")
+		e.lo.Debug("In-Reply-To header set", "message_id", m.InReplyTo)
 	}
 
 	// Set message id header
 	if m.SourceID.String != "" {
 		email.Headers.Set(headerMessageID, fmt.Sprintf("<%s>", m.SourceID.String))
+		e.lo.Debug("Message-ID header set", "message_id", m.SourceID.String)
 	}
 
 	// Set references header
@@ -127,6 +129,7 @@ func (e *Email) Send(m models.Message) error {
 	for _, ref := range m.References {
 		references += "<" + ref + "> "
 	}
+	e.lo.Debug("References header set", "references", references)
 	email.Headers.Set(headerReferences, references)
 
 	// Set email content

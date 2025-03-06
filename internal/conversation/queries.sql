@@ -372,7 +372,8 @@ SELECT
     source_id
 FROM conversation_messages
 WHERE conversation_id = $1
-AND type in ('incoming', 'outgoing')
+AND type in ('incoming', 'outgoing') and private = false
+and source_id > ''
 ORDER BY id DESC
 LIMIT $2;
 
