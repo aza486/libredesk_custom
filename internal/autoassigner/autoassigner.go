@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -144,6 +145,12 @@ func (e *Engine) populateTeamBalancer() error {
 			e.lo.Error("error fetching team members", "team_id", team.ID, "error", err)
 			continue
 		}
+
+		// Shuffle users to prevent ordering bias, as every app restart will pick the same first user.
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		r.Shuffle(len(users), func(i, j int) {
+			users[i], users[j] = users[j], users[i]
+		})
 
 		for _, user := range users {
 			// Team does not have a balancer pool, create one.
