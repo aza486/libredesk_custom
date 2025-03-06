@@ -61,12 +61,11 @@ func New(teamStore teamStore, conversationStore conversationStore, systemUser um
 		systemUser:             systemUser,
 		lo:                     lo,
 		teamMaxAutoAssignments: make(map[int]int),
+		roundRobinBalancer:     make(map[int]*balance.Balance),
 	}
-	balancer, err := e.populateTeamBalancer()
-	if err != nil {
+	if err := e.populateTeamBalancer(); err != nil {
 		return nil, err
 	}
-	e.roundRobinBalancer = balancer
 	return &e, nil
 }
 
@@ -90,9 +89,11 @@ func (e *Engine) Run(ctx context.Context, autoAssignInterval time.Duration) {
 			if closed {
 				return
 			}
+			// Reload the balancer with latest team and user data.
 			if err := e.reloadBalancer(); err != nil {
 				e.lo.Error("error reloading balancer", "error", err)
 			}
+			// Start assigning conversations.
 			if err := e.assignConversations(); err != nil {
 				e.lo.Error("error assigning conversations", "error", err)
 			}
@@ -117,23 +118,20 @@ func (e *Engine) reloadBalancer() error {
 	e.balanceMu.Lock()
 	defer e.balanceMu.Unlock()
 
-	balancer, err := e.populateTeamBalancer()
+	err := e.populateTeamBalancer()
 	if err != nil {
 		e.lo.Error("error updating team balancer pool", "error", err)
 		return err
 	}
-	e.roundRobinBalancer = balancer
 	return nil
 }
 
 // populateTeamBalancer populates the team balancer pool with the team members.
-func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
-	var (
-		balancer   = make(map[int]*balance.Balance)
-		teams, err = e.teamStore.GetAll()
-	)
+func (e *Engine) populateTeamBalancer() error {
+	var teams, err = e.teamStore.GetAll()
+
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, team := range teams {
@@ -143,21 +141,25 @@ func (e *Engine) populateTeamBalancer() (map[int]*balance.Balance, error) {
 
 		users, err := e.teamStore.GetMembers(team.ID)
 		if err != nil {
-			return nil, err
+			e.lo.Error("error fetching team members", "team_id", team.ID, "error", err)
+			continue
 		}
 
-		// Add users to team's balancer pool.
 		for _, user := range users {
-			if _, ok := balancer[team.ID]; !ok {
-				balancer[team.ID] = balance.NewBalance()
+			// Team does not have a balancer pool, create one.
+			if _, ok := e.roundRobinBalancer[team.ID]; !ok {
+				e.lo.Debug("creating new balancer for team", "team_id", team.ID)
+				e.roundRobinBalancer[team.ID] = balance.NewBalance()
 			}
-			balancer[team.ID].Add(strconv.Itoa(user.ID), 1)
+			// Add user to the team, if user already exists in the balancer pool, it will be ignored.
+			e.roundRobinBalancer[team.ID].Add(strconv.Itoa(user.ID), 1)
+			e.lo.Debug("added user to balancer pool", "team_id", team.ID, "user_id", user.ID)
 		}
 
 		// Set max auto assigned conversations for the team.
 		e.teamMaxAutoAssignments[team.ID] = team.MaxAutoAssignedConversations
 	}
-	return balancer, nil
+	return nil
 }
 
 // assignConversations function fetches conversations that have been assigned to teams but not to any individual user,
