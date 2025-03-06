@@ -235,7 +235,7 @@ func main() {
 		WriteTimeout:         ko.MustDuration("app.server.write_timeout"),
 		MaxRequestBodySize:   ko.MustInt("app.server.max_body_size"),
 		MaxKeepaliveDuration: ko.MustDuration("app.server.keepalive_timeout"),
-		ReadBufferSize:       ko.MustInt("app.server.max_body_size"),
+		ReadBufferSize:       ko.Int("app.server.read_buffer_size"),
 	}
 
 	go func() {

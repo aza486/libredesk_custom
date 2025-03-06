@@ -11,6 +11,7 @@ socket = ""
 read_timeout = "5s"
 write_timeout = "5s"
 max_body_size = 500000000
+read_buffer_size = 4096
 keepalive_timeout = "10s"
 
 # File upload provider to use, either `fs` or `s3`.
