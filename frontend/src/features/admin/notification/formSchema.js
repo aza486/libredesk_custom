@@ -3,7 +3,7 @@ import { isGoDuration } from '@/utils/strings';
 
 export const smtpConfigSchema = z.object({
     enabled: z.boolean().describe('Enabled status').default(false),
-    username: z.string().describe('SMTP username').email().nonempty({
+    username: z.string().describe('SMTP username').nonempty({
         message: "SMTP username is required"
     }),
     host: z.string().describe('SMTP host').nonempty({
