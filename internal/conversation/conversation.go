@@ -452,8 +452,32 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 	if err := c.UpdateAssignee(uuid, teamID, models.AssigneeTypeTeam); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
+
+	// Assignment successful, any errors now are non-critical and can be ignored.
 	if err := c.RecordAssigneeTeamChange(uuid, teamID, actor); err != nil {
-		return envelope.NewError(envelope.GeneralError, "Error recording assignee change", nil)
+		return nil
+	}
+
+	conversation, err := c.GetConversation(0, uuid)
+	if err != nil {
+		return nil
+	}
+
+	// Apply SLA policy if team has changed and the new team has an SLA policy.
+	if conversation.AssignedTeamID.Int != teamID && teamID > 0 {
+		team, err := c.teamStore.Get(teamID)
+		if err != nil {
+			return nil
+		}
+		if team.SLAPolicyID.Int > 0 {
+			systemUser, err := c.userStore.GetSystemUser()
+			if err != nil {
+				return nil
+			}
+			if err := c.ApplySLA(conversation, team.SLAPolicyID.Int, systemUser); err != nil {
+				return nil
+			}
+		}
 	}
 	return nil
 }
