@@ -38,6 +38,7 @@
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
         class="max-w-[70%] max-h-[70%] h-[70%] bg-card text-card-foreground p-4 flex flex-col"
+        :class="{ '!bg-[#FEF1E1]': messageType === 'private_note' }"
         @escapeKeyDown="isEditorFullscreen = false"
         :hide-close-button="true"
       >
@@ -85,6 +86,7 @@
     <!-- Main Editor non-fullscreen -->
     <div
       class="bg-card text-card-foreground box m-2 px-2 pt-2 flex flex-col"
+      :class="{ '!bg-[#FEF1E1]': messageType === 'private_note' }"
       v-if="!isEditorFullscreen"
     >
       <ReplyBoxContent
@@ -393,7 +395,6 @@ const processSend = async () => {
         })
       }
     }
-
   } catch (error) {
     hasAPIErrored = true
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

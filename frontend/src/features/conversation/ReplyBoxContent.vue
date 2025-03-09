@@ -6,7 +6,7 @@
       class="flex justify-between items-center"
       :class="{ 'mb-4': !isFullscreen, 'border-b border-border pb-4': isFullscreen }"
     >
-      <Tabs v-model="messageType" class="rounded-lg">
+      <Tabs v-model="messageType" class="rounded-lg border">
         <TabsList class="bg-muted p-1 rounded-lg">
           <TabsTrigger
             value="reply"
