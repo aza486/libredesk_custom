@@ -79,12 +79,14 @@
       </div>
     </div>
 
-    <Dialog>
+    <Dialog :open="openHolidayForm" @update:open="openHolidayForm = false">
       <div>
         <div class="flex justify-between items-center mb-4">
           <div></div>
           <DialogTrigger as-child>
-            <Button>New holiday</Button>
+            <Button @click="openHolidayForm = true">
+              New holiday
+            </Button>
           </DialogTrigger>
         </div>
       </div>
@@ -198,6 +200,7 @@ const holidayName = ref('')
 const holidayDate = ref(null)
 const selectedDays = ref({})
 const hours = ref({})
+const openHolidayForm = ref(false)
 
 const form = useForm({
   validationSchema: toTypedSchema(formSchema),
@@ -211,6 +214,7 @@ const saveHoliday = () => {
   })
   holidayName.value = ''
   holidayDate.value = null
+  openHolidayForm.value = false
 }
 
 const deleteHoliday = (item) => {
