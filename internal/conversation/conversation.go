@@ -449,22 +449,24 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 
 // UpdateConversationTeamAssignee sets the assignee of a conversation to a specific team and sets the assigned user id to NULL.
 func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error {
+	// Store previous assigned team ID to apply SLA policy if team has changed.
+	conversation, err := c.GetConversation(0, uuid)
+	if err != nil {
+		return err
+	}
+	previousAssignedTeamID := conversation.AssignedTeamID.Int
+
 	if err := c.UpdateAssignee(uuid, teamID, models.AssigneeTypeTeam); err != nil {
 		return envelope.NewError(envelope.GeneralError, "Error updating assignee", nil)
 	}
 
-	// Assignment successful, any errors now are non-critical and can be ignored.
+	// Assignment successful, any errors now are non-critical and can be ignored by returning nil.
 	if err := c.RecordAssigneeTeamChange(uuid, teamID, actor); err != nil {
 		return nil
 	}
 
-	conversation, err := c.GetConversation(0, uuid)
-	if err != nil {
-		return nil
-	}
-
 	// Apply SLA policy if team has changed and the new team has an SLA policy.
-	if conversation.AssignedTeamID.Int != teamID && teamID > 0 {
+	if previousAssignedTeamID != teamID && teamID > 0 {
 		team, err := c.teamStore.Get(teamID)
 		if err != nil {
 			return nil
