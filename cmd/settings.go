@@ -45,6 +45,9 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Bad request", nil, "")
 	}
 
+	// Remove any trailing slash `/` from the root url.
+	req.RootURL = strings.TrimRight(req.RootURL, "/")
+
 	if err := app.setting.Update(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
