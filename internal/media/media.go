@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
@@ -176,8 +177,12 @@ func (m *Manager) GetByModel(modelID int, model string) ([]models.Media, error) 
 func (m *Manager) Delete(name string) error {
 	if err := m.store.Delete(name); err != nil {
 		m.lo.Error("error deleting media from store", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error deleting media from store", nil)
+		// If the file does not exist, ignore the error.
+		if !errors.Is(err, os.ErrNotExist) {
+			return envelope.NewError(envelope.GeneralError, "Error deleting media from store", nil)
+		}
 	}
+	// Delete the media record from the database.
 	if _, err := m.queries.Delete.Exec(name); err != nil {
 		m.lo.Error("error deleting media from db", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error deleting media from DB", nil)
@@ -192,8 +197,8 @@ func (m *Manager) DeleteUnlinkedMedia(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(2 * time.Hour):
-			m.lo.Info("deleting unlinked message media")
+		case <-time.After(12 * time.Hour):
+			m.lo.Info("starting periodic deletion of unlinked media")
 			if err := m.deleteUnlinkedMessageMedia(); err != nil {
 				m.lo.Error("error deleting unlinked media", "error", err)
 			}
@@ -209,8 +214,10 @@ func (m *Manager) deleteUnlinkedMessageMedia() error {
 		return err
 	}
 	for _, mm := range media {
+		m.lo.Debug("deleting media not linked to any message", "media_id", mm.ID)
 		if err := m.Delete(mm.UUID); err != nil {
-			return err
+			m.lo.Error("error deleting unlinked media", "error", err)
+			continue
 		}
 	}
 	return nil
