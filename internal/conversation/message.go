@@ -208,9 +208,16 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		return
 	}
 
-	// Update status and first reply time
+	// Update status of the message.
 	m.UpdateMessageStatus(message.UUID, MessageStatusSent)
-	m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, message.CreatedAt)
+
+	// Update first reply time if the sender is not the system user.
+	// All automated messages are sent by the system user.
+	if systemUser, err := m.userStore.GetSystemUser(); err == nil && message.SenderID != systemUser.ID {
+		m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, time.Now())
+	} else if err != nil {
+		m.lo.Error("error fetching system user for updating first reply time", "error", err)
+	}
 }
 
 // RenderContentInTemplate renders message content in template.
