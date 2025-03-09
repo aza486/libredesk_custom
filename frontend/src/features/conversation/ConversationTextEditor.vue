@@ -62,6 +62,28 @@
         >
           <ListOrdered size="14" />
         </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          @click.prevent="openLinkModal"
+          :class="{ 'bg-gray-200': editor?.isActive('link') }"
+        >
+          <LinkIcon size="14" />
+        </Button>
+        <div v-if="showLinkInput" class="flex space-x-2 p-2 bg-white border rounded-lg">
+          <input
+            v-model="linkUrl"
+            type="text"
+            placeholder="Enter link URL"
+            class="border p-1 text-sm"
+          />
+          <Button size="sm" @click="setLink">
+            <Check size="14" />
+          </Button>
+          <Button size="sm" @click="unsetLink">
+            <X size="14" />
+          </Button>
+        </div>
       </div>
     </BubbleMenu>
     <EditorContent :editor="editor" class="native-html" />
@@ -71,7 +93,17 @@
 <script setup>
 import { ref, watch, watchEffect, onUnmounted } from 'vue'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
-import { ChevronDown, Bold, Italic, Bot, List, ListOrdered } from 'lucide-vue-next'
+import {
+  ChevronDown,
+  Bold,
+  Italic,
+  Bot,
+  List,
+  ListOrdered,
+  Link as LinkIcon,
+  Check,
+  X
+} from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -90,6 +122,8 @@ const htmlContent = defineModel('htmlContent')
 const isBold = defineModel('isBold')
 const isItalic = defineModel('isItalic')
 const cursorPosition = defineModel('cursorPosition', { default: 0 })
+const showLinkInput = ref(false)
+const linkUrl = ref('')
 
 const props = defineProps({
   placeholder: String,
@@ -245,6 +279,27 @@ const toggleOrderedList = () => {
   if (editor.value) {
     editor.value.chain().focus().toggleOrderedList().run()
   }
+}
+
+const openLinkModal = () => {
+  if (editor.value?.isActive('link')) {
+    linkUrl.value = editor.value.getAttributes('link').href
+  } else {
+    linkUrl.value = ''
+  }
+  showLinkInput.value = true
+}
+
+const setLink = () => {
+  if (linkUrl.value) {
+    editor.value?.chain().focus().extendMarkRange('link').setLink({ href: linkUrl.value }).run()
+  }
+  showLinkInput.value = false
+}
+
+const unsetLink = () => {
+  editor.value?.chain().focus().unsetLink().run()
+  showLinkInput.value = false
 }
 </script>
 
