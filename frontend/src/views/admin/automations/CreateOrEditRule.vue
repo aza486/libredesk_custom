@@ -71,12 +71,13 @@
             </FormField>
 
             <div :class="{ hidden: form.values.type !== 'conversation_update' }">
-              <FormField v-slot="{ componentField }" name="events">
+              <FormField v-slot="{ componentField, handleChange }" name="events">
                 <FormItem>
                   <FormLabel>Events</FormLabel>
                   <FormControl>
                     <SelectTag
-                      v-bind="componentField"
+                      v-model="componentField.modelValue"
+                      @update:modelValue="handleChange"
                       :items="conversationEvents || []"
                       placeholder="Select events"
                     >

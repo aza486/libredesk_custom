@@ -30,23 +30,21 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="teams">
+    <FormField v-slot="{ componentField , handleChange }" name="teams">
       <FormItem v-auto-animate>
         <FormLabel>Teams</FormLabel>
         <FormControl>
-          <SelectTag :items="teamNames" placeholder="Select teams" v-bind="componentField">
-          </SelectTag>
+          <SelectTag :items="teamNames" placeholder="Select teams" v-model="componentField.modelValue" @update:modelValue="handleChange"/>
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="roles">
+    <FormField v-slot="{ componentField, handleChange }" name="roles">
       <FormItem v-auto-animate>
         <FormLabel>Roles</FormLabel>
         <FormControl>
-          <SelectTag :items="roleNames" placeholder="Select roles" v-bind="componentField">
-          </SelectTag>
+          <SelectTag :items="roleNames" placeholder="Select roles" v-model="componentField.modelValue" @update:modelValue="handleChange"/>
         </FormControl>
         <FormMessage />
       </FormItem>
