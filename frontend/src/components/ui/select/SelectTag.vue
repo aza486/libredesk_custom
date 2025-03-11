@@ -65,7 +65,6 @@ import {
 } from 'radix-vue'
 import { computed, ref } from 'vue'
 import { useField } from 'vee-validate'
-import { onClickOutside } from '@vueuse/core'
 
 const tags = defineModel({
   required: false,
@@ -95,11 +94,6 @@ const { handleBlur } = useField(() => props.name, undefined, {
 const open = ref(false)
 const searchTerm = ref('')
 const comboboxRef = ref(null)
-
-// Close dropdown when clicking outside
-onClickOutside(comboboxRef, () => {
-  open.value = false
-})
 
 const filteredOptions = computed(() => props.items.filter((item) => !tags.value.includes(item)))
 
