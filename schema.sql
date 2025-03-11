@@ -14,6 +14,7 @@ DROP TYPE IF EXISTS "macro_visibility" CASCADE; CREATE TYPE "macro_visibility" A
 DROP TYPE IF EXISTS "media_disposition" CASCADE; CREATE TYPE "media_disposition" AS ENUM ('inline', 'attachment');
 DROP TYPE IF EXISTS "media_store" CASCADE; CREATE TYPE "media_store" AS ENUM ('s3', 'fs');
 DROP TYPE IF EXISTS "user_availability_status" CASCADE; CREATE TYPE "user_availability_status" AS ENUM ('online', 'away', 'away_manual', 'offline');
+DROP TYPE IF EXISTS "applied_sla_status" CASCADE; CREATE TYPE "applied_sla_status" AS ENUM ('pending', 'breached', 'met', 'partially_met');
 
 -- Sequence to generate reference number for conversations.
 DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
@@ -431,6 +432,8 @@ CREATE TABLE applied_slas (
 	created_at TIMESTAMPTZ DEFAULT NOW(),
 	updated_at TIMESTAMPTZ DEFAULT NOW(),
 
+	status applied_sla_status DEFAULT 'pending' NOT NULL,
+
 	-- Conversation / SLA policy maybe deleted but for reports the applied SLA should remain.
 	conversation_id BIGINT REFERENCES conversations(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
 	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
@@ -443,6 +446,7 @@ CREATE TABLE applied_slas (
 	resolution_met_at TIMESTAMPTZ NULL
 );
 CREATE INDEX index_applied_slas_on_conversation_id ON applied_slas(conversation_id);
+CREATE INDEX index_applied_slas_on_status ON applied_slas(status);
 
 DROP TABLE IF EXISTS ai_providers CASCADE;
 CREATE TABLE ai_providers (
