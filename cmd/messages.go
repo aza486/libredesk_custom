@@ -150,7 +150,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	for _, id := range req.Attachments {
-		m, err := app.media.Get(id)
+		m, err := app.media.Get(id, "")
 		if err != nil {
 			app.lo.Error("error fetching media", "error", err)
 			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error fetching media", nil, envelope.GeneralError)
@@ -168,11 +168,6 @@ func handleSendMessage(r *fastglue.Request) error {
 		}
 		// Evaluate automation rules.
 		app.automation.EvaluateConversationUpdateRules(cuuid, models.EventConversationMessageOutgoing)
-	}
-
-	// Reopen if snoozed/closed/resolved regardless of automation rules - this is the default behavior
-	if err := app.conversation.ReOpenConversation(cuuid, user); err != nil {
-		return sendErrorEnvelope(r, err)
 	}
 
 	return r.SendEnvelope("Message sent successfully")
