@@ -63,12 +63,21 @@ SELECT
     ) t
     ) as unread_message_count,
     conversation_statuses.name as status,
-    conversation_priorities.name as priority
+    conversation_priorities.name as priority,
+    as_latest.first_response_deadline_at,
+    as_latest.resolution_deadline_at,
+    as_latest.status as sla_status
     FROM conversations
     JOIN users ON contact_id = users.id
     JOIN inboxes ON inbox_id = inboxes.id  
     LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
     LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
+    LEFT JOIN LATERAL (
+        SELECT first_response_deadline_at, resolution_deadline_at, status
+        FROM applied_slas 
+        WHERE conversation_id = conversations.id 
+        ORDER BY created_at DESC LIMIT 1
+    ) as_latest ON true
 WHERE 1=1 %s
 
 -- name: get-conversation
@@ -124,7 +133,10 @@ SELECT
    ct.avatar_url as "contact.avatar_url",
    ct.phone_number as "contact.phone_number",
    COALESCE(lr.cc, '[]'::jsonb) as cc,
-   COALESCE(lr.bcc, '[]'::jsonb) as bcc
+   COALESCE(lr.bcc, '[]'::jsonb) as bcc,
+   as_latest.first_response_deadline_at,
+   as_latest.resolution_deadline_at,
+   as_latest.status as sla_status
 FROM conversations c
 JOIN users ct ON c.contact_id = ct.id
 LEFT JOIN sla_policies sla ON c.sla_policy_id = sla.id
@@ -132,6 +144,12 @@ LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
 LEFT JOIN last_reply lr ON lr.conversation_id = c.id
+LEFT JOIN LATERAL (
+    SELECT first_response_deadline_at, resolution_deadline_at, status
+    FROM applied_slas 
+    WHERE conversation_id = c.id 
+    ORDER BY created_at DESC LIMIT 1
+) as_latest ON true
 WHERE 
    ($1 > 0 AND c.id = $1)
    OR 
@@ -179,10 +197,10 @@ WHERE uuid = $1;
 -- name: update-conversation-status
 UPDATE conversations
 SET status_id = (SELECT id FROM conversation_statuses WHERE name = $2),
-    resolved_at = CASE WHEN $2 = 'Resolved' THEN NOW() ELSE resolved_at END,
+    resolved_at = CASE WHEN $2 IN ('Resolved', 'Closed') THEN NOW() ELSE resolved_at END,
     closed_at = CASE WHEN $2 = 'Closed' THEN NOW() ELSE closed_at END,
     snoozed_until = CASE WHEN $2 = 'Snoozed' THEN $3::timestamptz ELSE NULL END,
-    updated_at = now()
+    updated_at = NOW()
 WHERE uuid = $1;
 
 -- name: get-user-active-conversations-count
@@ -522,11 +540,12 @@ SET
 WHERE uuid = $1;
 
 -- name: re-open-conversation
+-- Open conversation if it is not already open.
 UPDATE conversations
 SET status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'), snoozed_until = NULL,
     updated_at = now()
 WHERE uuid = $1 and status_id in (
-    SELECT id FROM conversation_statuses WHERE name IN ('Snoozed', 'Closed', 'Resolved')
+    SELECT id FROM conversation_statuses WHERE name NOT IN ('Open')
 )
 
 -- name: delete-conversation
