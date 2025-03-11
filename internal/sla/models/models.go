@@ -28,6 +28,9 @@ type AppliedSLA struct {
 	ResolutionDeadlineAt    time.Time `db:"resolution_deadline_at"`
 	FirstResponseBreachedAt null.Time `db:"first_response_breached_at"`
 	ResolutionBreachedAt    null.Time `db:"resolution_breached_at"`
-	FirstResponseAt         null.Time `db:"first_response_at"`
-	ResolvedAt              null.Time `db:"resolved_at"`
+	FirstResponseMetAt      null.Time `db:"first_response_met_at"`
+	ResolutionMetAt         null.Time `db:"resolution_met_at"`
+
+	ConversationFirstResponseAt null.Time `db:"conversation_first_response_at"`
+	ConversationResolvedAt      null.Time `db:"conversation_resolved_at"`
 }

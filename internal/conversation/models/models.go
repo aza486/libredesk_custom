@@ -61,10 +61,11 @@ type Conversation struct {
 	SLAPolicyID           null.Int        `db:"sla_policy_id" json:"sla_policy_id"`
 	SlaPolicyName         null.String     `db:"sla_policy_name" json:"sla_policy_name"`
 	NextSLADeadlineAt     null.Time       `db:"next_sla_deadline_at" json:"next_sla_deadline_at"`
+	FirstResponseDueAt    null.Time       `db:"first_response_deadline_at" json:"first_response_deadline_at"`
+	ResolutionDueAt       null.Time       `db:"resolution_deadline_at" json:"resolution_deadline_at"`
+	SLAStatus             null.String     `db:"sla_status" json:"sla_status"`
 	BCC                   json.RawMessage `db:"bcc" json:"bcc"`
 	CC                    json.RawMessage `db:"cc" json:"cc"`
-	FirstResponseDueAt    null.Time       `db:"-" json:"first_response_due_at"`
-	ResolutionDueAt       null.Time       `db:"-" json:"resolution_due_at"`
 	PreviousConversations []Conversation  `db:"-" json:"previous_conversations"`
 	Total                 int             `db:"total" json:"-"`
 }

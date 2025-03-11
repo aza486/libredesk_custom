@@ -57,15 +57,15 @@
 
         <div class="flex items-center mt-2 space-x-2">
           <SlaBadge
-            v-if="conversation.first_response_due_at"
-            :dueAt="conversation.first_response_due_at"
+            v-if="conversation.first_response_deadline_at"
+            :dueAt="conversation.first_response_deadline_at"
             :actualAt="conversation.first_reply_at"
             :label="'FRD'"
             :showExtra="false"
           />
           <SlaBadge
-            v-if="conversation.resolution_due_at"
-            :dueAt="conversation.resolution_due_at"
+            v-if="conversation.resolution_deadline_at"
+            :dueAt="conversation.resolution_deadline_at"
             :actualAt="conversation.resolved_at"
             :label="'RD'"
             :showExtra="false"

@@ -2,7 +2,6 @@ package sla
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -78,7 +77,8 @@ type queries struct {
 	GetPendingSLAs     *sqlx.Stmt `query:"get-pending-slas"`
 	UpdateBreach       *sqlx.Stmt `query:"update-breach"`
 	UpdateMet          *sqlx.Stmt `query:"update-met"`
-	GetLatestDeadlines *sqlx.Stmt `query:"get-latest-sla-deadlines"`
+	SetNextSLADeadline *sqlx.Stmt `query:"set-next-sla-deadline"`
+	UpdateSLAStatus    *sqlx.Stmt `query:"update-sla-status"`
 }
 
 // New creates a new SLA manager.
@@ -254,23 +254,14 @@ func (m *Manager) ApplySLA(startTime time.Time, conversationID, assignedTeamID, 
 	return sla, nil
 }
 
-// GetLatestDeadlines returns the latest deadlines for a conversation.
-func (m *Manager) GetLatestDeadlines(conversationID int) (time.Time, time.Time, error) {
-	var first, resolution time.Time
-	err := m.q.GetLatestDeadlines.QueryRow(conversationID).Scan(&first, &resolution)
-	if err == sql.ErrNoRows {
-		return first, resolution, nil
-	}
-	return first, resolution, err
-}
-
 // Run starts the SLA evaluation loop and evaluates pending SLAs.
 func (m *Manager) Run(ctx context.Context, evalInterval time.Duration) {
-	m.wg.Add(1)
-	defer m.wg.Done()
-
 	ticker := time.NewTicker(evalInterval)
-	defer ticker.Stop()
+	m.wg.Add(1)
+	defer func() {
+		m.wg.Done()
+		ticker.Stop()
+	}()
 
 	for {
 		select {
@@ -315,23 +306,30 @@ func (m *Manager) evaluatePendingSLAs(ctx context.Context) error {
 
 // evaluateSLA evaluates an SLA policy on an applied SLA.
 func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
-	now := time.Now()
+	m.lo.Debug("evaluating SLA", "conversation_id", sla.ConversationID, "applied_sla_id", sla.ID)
 	checkDeadline := func(deadline time.Time, metAt null.Time, slaType string) error {
 		if deadline.IsZero() {
+			m.lo.Debug("deadline zero, skipping checking the deadline")
 			return nil
 		}
+
+		now := time.Now()
 		if !metAt.Valid && now.After(deadline) {
+			m.lo.Debug("SLA breached as current time is after deadline", "deadline", deadline, "now", now, "sla_type", slaType)
 			if _, err := m.q.UpdateBreach.Exec(sla.ID, slaType); err != nil {
 				return fmt.Errorf("updating SLA breach: %w", err)
 			}
 			return nil
 		}
+
 		if metAt.Valid {
 			if metAt.Time.After(deadline) {
+				m.lo.Debug("SLA breached as met_at is after deadline", "deadline", deadline, "met_at", metAt.Time, "sla_type", slaType)
 				if _, err := m.q.UpdateBreach.Exec(sla.ID, slaType); err != nil {
 					return fmt.Errorf("updating SLA breach: %w", err)
 				}
 			} else {
+				m.lo.Debug("SLA type met", "deadline", deadline, "met_at", metAt.Time, "sla_type", slaType)
 				if _, err := m.q.UpdateMet.Exec(sla.ID, slaType); err != nil {
 					return fmt.Errorf("updating SLA met: %w", err)
 				}
@@ -340,11 +338,31 @@ func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
 		return nil
 	}
 
-	if err := checkDeadline(sla.FirstResponseDeadlineAt, sla.FirstResponseAt, SLATypeFirstResponse); err != nil {
-		return err
+	// If first response is not breached and not met, check the deadline and set them.
+	if !sla.FirstResponseBreachedAt.Valid && !sla.FirstResponseMetAt.Valid {
+		m.lo.Debug("checking deadline", "deadline", sla.FirstResponseDeadlineAt, "met_at", sla.ConversationFirstResponseAt.Time, "sla_type", SLATypeFirstResponse)
+		if err := checkDeadline(sla.FirstResponseDeadlineAt, sla.ConversationFirstResponseAt, SLATypeFirstResponse); err != nil {
+			return err
+		}
 	}
-	if err := checkDeadline(sla.ResolutionDeadlineAt, sla.ResolvedAt, SLATypeResolution); err != nil {
-		return err
+
+	// If resolution is not breached and not met, check the deadine and set them.
+	if !sla.ResolutionBreachedAt.Valid && !sla.ResolutionMetAt.Valid {
+		m.lo.Debug("checking deadline", "deadline", sla.ResolutionDeadlineAt, "met_at", sla.ConversationResolvedAt.Time, "sla_type", SLATypeResolution)
+		if err := checkDeadline(sla.ResolutionDeadlineAt, sla.ConversationResolvedAt, SLATypeResolution); err != nil {
+			return err
+		}
 	}
+
+	// Update the conversation next SLA deadline.
+	if _, err := m.q.SetNextSLADeadline.Exec(sla.ConversationID); err != nil {
+		return fmt.Errorf("setting conversation next SLA deadline: %w", err)
+	}
+
+	// Update status of applied SLA.
+	if _, err := m.q.UpdateSLAStatus.Exec(sla.ID); err != nil {
+		return fmt.Errorf("updating applied SLA status: %w", err)
+	}
+
 	return nil
 }
