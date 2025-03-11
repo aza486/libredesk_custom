@@ -47,14 +47,14 @@ export const isGoHourMinuteDuration = (value) => {
 }
 
 const template = document.createElement('template')
-export function getTextFromHTML(htmlString) {
-    try {
-        template.innerHTML = htmlString
-        const text = template.content.textContent || template.content.innerText || ''
-        template.innerHTML = ''
-        return text.trim()
-    } catch (error) {
-        console.error('Error converting HTML to text:', error)
-        return ''
-    }
+export function getTextFromHTML (htmlString) {
+  try {
+    template.innerHTML = htmlString
+    const text = template.content.textContent || template.content.innerText || ''
+    template.innerHTML = ''
+    return text.trim()
+  } catch (error) {
+    console.error('Error converting HTML to text:', error)
+    return ''
+  }
 }

@@ -17,7 +17,10 @@ RETURNING id;
 -- name: get-media
 SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", disposition
 FROM media
-WHERE id = $1;
+WHERE 
+   ($1 > 0 AND id = $1)
+   OR
+   ($2 != '' AND uuid = $2::uuid)
 
 -- name: get-media-by-uuid
 SELECT id, created_at, "uuid", store, filename, content_type, model_id, model_type, "size", disposition
@@ -48,4 +51,4 @@ WHERE model_type = 'messages'
   AND created_at < NOW() - INTERVAL '1 day';
 
 -- name: content-id-exists
-SELECT EXISTS(SELECT 1 FROM media WHERE content_id = $1);
+SELECT uuid FROM media WHERE content_id = $1;

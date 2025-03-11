@@ -105,13 +105,13 @@ func (m *Manager) Insert(disposition null.String, fileName, contentType, content
 	if err := m.queries.Insert.QueryRow(m.store.Name(), fileName, contentType, fileSize, meta, modelID, modelType, disposition, contentID, uuid).Scan(&id); err != nil {
 		m.lo.Error("error inserting media", "error", err)
 	}
-	return m.Get(id)
+	return m.Get(id, "")
 }
 
 // Get retrieves the media record by its ID and returns the media.
-func (m *Manager) Get(id int) (models.Media, error) {
+func (m *Manager) Get(id int, uuid string) (models.Media, error) {
 	var media models.Media
-	if err := m.queries.Get.Get(&media, id); err != nil {
+	if err := m.queries.Get.Get(&media, id, uuid); err != nil {
 		m.lo.Error("error fetching media", "error", err)
 		return media, envelope.NewError(envelope.GeneralError, "Error fetching media", nil)
 	}
@@ -119,28 +119,17 @@ func (m *Manager) Get(id int) (models.Media, error) {
 	return media, nil
 }
 
-// GetByUUID retrieves a media record by the uuid.
-func (m *Manager) GetByUUID(uuid string) (models.Media, error) {
-	var media models.Media
-	if err := m.queries.GetByUUID.Get(&media, uuid); err != nil {
+// ContentIDExists checks if a content_id exists in the database and returns the UUID of the media file.
+func (m *Manager) ContentIDExists(contentID string) (bool, string, error) {
+	var uuid string
+	if err := m.queries.ContentIDExists.Get(&uuid, contentID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return media, envelope.NewError(envelope.GeneralError, "File not found", nil)
+			return false, "", nil
 		}
-		m.lo.Error("error fetching media", "error", err)
-		return media, envelope.NewError(envelope.GeneralError, "Error fetching media", nil)
+		m.lo.Error("error checking if content_id exists", "error", err)
+		return false, "", fmt.Errorf("checking if content_id exists: %w", err)
 	}
-	media.URL = m.store.GetURL(uuid)
-	return media, nil
-}
-
-// ContentIDExists returns true if a media file with the given content ID exists.
-func (m *Manager) ContentIDExists(contentID string) (bool, error) {
-	var exists bool
-	if err := m.queries.ContentIDExists.Get(&exists, contentID); err != nil {
-		m.lo.Error("error checking media existence", "error", err)
-		return false, fmt.Errorf("checking media existence: %w", err)
-	}
-	return exists, nil
+	return true, uuid, nil
 }
 
 // GetBlob retrieves the raw binary content of a media file by its name.

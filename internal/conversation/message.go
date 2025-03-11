@@ -570,22 +570,25 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 		return err
 	}
 
-	// Evaluate automation rules for this conversation.
+	// Evaluate automation rules for new conversation.
 	if isNewConversation {
 		m.automation.EvaluateNewConversationRules(in.Message.ConversationUUID)
-	} else {
-		m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)
-		// Reopen conversation if it's closed, snoozed, or resolved.
-		systemUser, err := m.userStore.GetSystemUser()
-		if err != nil {
-			m.lo.Error("error fetching system user", "error", err)
-			return fmt.Errorf("error fetching system user for reopening conversation: %w", err)
-		}
-		if err := m.ReOpenConversation(in.Message.ConversationUUID, systemUser); err != nil {
-			m.lo.Error("error reopening conversation", "error", err)
-			return fmt.Errorf("error reopening conversation: %w", err)
-		}
+		return nil
 	}
+
+	// Reopen conversation if it's not Open.
+	systemUser, err := m.userStore.GetSystemUser()
+	if err != nil {
+		m.lo.Error("error fetching system user", "error", err)
+		return fmt.Errorf("error fetching system user for reopening conversation: %w", err)
+	}
+	if err := m.ReOpenConversation(in.Message.ConversationUUID, systemUser); err != nil {
+		m.lo.Error("error reopening conversation", "error", err)
+		return fmt.Errorf("error reopening conversation: %w", err)
+	}
+
+	// Trigger automations on incoming message event.
+	m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)
 	return nil
 }
 
@@ -655,7 +658,7 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 	return sqlQuery, pageSize, qArgs, nil
 }
 
-// uploadMessageAttachments uploads attachments for a message.
+// uploadMessageAttachments uploads all attachments for a message.
 func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 	if len(message.Attachments) == 0 {
 		return nil
@@ -663,28 +666,42 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) []error {
 
 	var uploadErr []error
 	for _, attachment := range message.Attachments {
-		// Check if this attachment already exists by the content ID.
-		if attachment.ContentID != "" {
-			exists, err := m.mediaStore.ContentIDExists(attachment.ContentID)
+		// Check if this attachment already exists by the content ID, as inline images can be repeated across conversations.
+		contentID := attachment.ContentID
+		if contentID != "" {
+			// Make content ID MORE unique by prefixing it with the conversation UUID, as content id is not globally unique practically,
+			// different messages can have the same content ID, I do not have the message ID at this point, so I am using sticking with the conversation UUID
+			// to make it more unique.
+			contentID = message.ConversationUUID + "_" + contentID
+
+			exists, uuid, err := m.mediaStore.ContentIDExists(contentID)
 			if err != nil {
-				m.lo.Error("error checking media existence by content ID", "content_id", attachment.ContentID, "error", err)
-				continue
+				m.lo.Error("error checking media existence by content ID", "content_id", contentID, "error", err)
 			}
+
+			// This attachment already exists, replace the cid:content_id with the media relative url, not using absolute path as the root path can change.
 			if exists {
-				m.lo.Debug("attachment with content ID already exists", "content_id", attachment.ContentID)
+				m.lo.Debug("attachment with content ID already exists replacing content ID with media relative URL", "content_id", contentID, "media_uuid", uuid)
+				message.Content = strings.ReplaceAll(message.Content, fmt.Sprintf("cid:%s", attachment.ContentID), "/uploads/"+uuid)
 				continue
 			}
+
+			// Attachment does not exist, replace the content ID with the new more unique content ID.
+			message.Content = strings.ReplaceAll(message.Content, fmt.Sprintf("cid:%s", attachment.ContentID), fmt.Sprintf("cid:%s", contentID))
 		}
 
-		m.lo.Debug("uploading message attachment", "name", attachment.Name, "content_id", attachment.ContentID, "size", attachment.Size)
-
-		// Sanitize filename and upload.
+		// Sanitize filename.
 		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
+
+		m.lo.Debug("uploading message attachment", "name", attachment.Name, "content_id", contentID, "size", attachment.Size, "content_type", attachment.ContentType,
+			"content_id", contentID, "disposition", attachment.Disposition)
+
+		// Upload and insert entry in media table.
 		attachReader := bytes.NewReader(attachment.Content)
 		media, err := m.mediaStore.UploadAndInsert(
 			attachment.Name,
 			attachment.ContentType,
-			attachment.ContentID,
+			contentID,
 			/** Linking media to message happens later **/
 			null.String{}, /** modelType */
 			null.Int{},    /** modelID **/

@@ -106,7 +106,7 @@ type mediaStore interface {
 	GetBlob(name string) ([]byte, error)
 	Attach(id int, model string, modelID int) error
 	GetByModel(id int, model string) ([]mmodels.Media, error)
-	ContentIDExists(contentID string) (bool, error)
+	ContentIDExists(contentID string) (bool, string, error)
 	Upload(fileName, contentType string, content io.ReadSeeker) (string, error)
 	UploadAndInsert(fileName, contentType, contentID string, modelType null.String, modelID null.Int, content io.ReadSeeker, fileSize int, disposition null.String, meta []byte) (mmodels.Media, error)
 }
@@ -476,6 +476,12 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 			if err != nil {
 				return nil
 			}
+
+			// Fetch the conversation again to get the updated assignee details.
+			conversation, err := c.GetConversation(0, uuid)
+			if err != nil {
+				return nil
+			}
 			if err := c.ApplySLA(conversation, team.SLAPolicyID.Int, systemUser); err != nil {
 				return nil
 			}
@@ -566,8 +572,15 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 		return envelope.NewError(envelope.GeneralError, "Error recording status change", nil)
 	}
 
-	// Broadcast update using WS
+	// Broadcast updates using websocket.
 	c.BroadcastConversationUpdate(uuid, "status", status)
+	if status == models.StatusResolved {
+		c.BroadcastConversationUpdate(uuid, "resolved_at", time.Now().Format(time.RFC3339))
+	}
+	if status == models.StatusClosed {
+		c.BroadcastConversationUpdate(uuid, "closed_at", time.Now().Format(time.RFC3339))
+		c.BroadcastConversationUpdate(uuid, "resolved_at", time.Now().Format(time.RFC3339))
+	}
 	return nil
 }
 

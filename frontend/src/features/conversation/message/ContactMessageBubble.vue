@@ -28,7 +28,7 @@
         <!-- Message Text -->
         <Letter
           :html="sanitizedMessageContent"
-          :allowedSchemas="['cid', 'https', 'http']"
+          :allowedSchemas="['cid', 'https', 'http', 'mailto']"
           class="mb-1 native-html"
           :class="{ 'mb-3': message.attachments.length > 0 }"
         />
@@ -72,6 +72,7 @@ import { useConversationStore } from '@/stores/conversation'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Letter } from 'vue-letter'
+import { useAppSettingsStore } from '@/stores/appSettings'
 import MessageAttachmentPreview from '@/features/conversation/message/attachment/MessageAttachmentPreview.vue'
 
 const props = defineProps({
@@ -79,18 +80,26 @@ const props = defineProps({
 })
 
 const convStore = useConversationStore()
+const settingsStore = useAppSettingsStore()
 const showQuotedText = ref(false)
 
 const getAvatar = computed(() => {
   return convStore.current?.contact?.avatar_url || ''
 })
-
 const sanitizedMessageContent = computed(() => {
-  const content = props.message.content || ''
-  return props.message.attachments.reduce(
+  let content = props.message.content || ''
+  const baseUrl = settingsStore.settings['app.root_url']
+
+  // Replace CID with URL for inline attachments from the message.
+  content = props.message.attachments.reduce(
     (acc, { content_id, url }) => acc.replace(new RegExp(`cid:${content_id}`, 'g'), url),
     content
   )
+
+  // Add base URL to all img src starting with /uploads/ as vue-letter does not allow relative URLs.
+  content = content.replace(/src="\/uploads\//g, `src="${baseUrl}/uploads/`)
+
+  return content
 })
 
 const hasQuotedContent = computed(() => sanitizedMessageContent.value.includes('<blockquote'))

@@ -156,7 +156,7 @@ func handleServeMedia(r *fastglue.Request) error {
 	}
 
 	// Fetch media from DB.
-	media, err := app.media.GetByUUID(strings.TrimPrefix(uuid, thumbPrefix))
+	media, err := app.media.Get(0, strings.TrimPrefix(uuid, thumbPrefix))
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
