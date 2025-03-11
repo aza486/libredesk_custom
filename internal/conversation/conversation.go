@@ -574,13 +574,6 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 
 	// Broadcast updates using websocket.
 	c.BroadcastConversationUpdate(uuid, "status", status)
-	if status == models.StatusResolved {
-		c.BroadcastConversationUpdate(uuid, "resolved_at", time.Now().Format(time.RFC3339))
-	}
-	if status == models.StatusClosed {
-		c.BroadcastConversationUpdate(uuid, "closed_at", time.Now().Format(time.RFC3339))
-		c.BroadcastConversationUpdate(uuid, "resolved_at", time.Now().Format(time.RFC3339))
-	}
 	return nil
 }
 

@@ -197,9 +197,9 @@ WHERE uuid = $1;
 -- name: update-conversation-status
 UPDATE conversations
 SET status_id = (SELECT id FROM conversation_statuses WHERE name = $2),
-    resolved_at = CASE WHEN $2 IN ('Resolved', 'Closed') THEN NOW() ELSE resolved_at END,
-    closed_at = CASE WHEN $2 = 'Closed' THEN NOW() ELSE closed_at END,
-    snoozed_until = CASE WHEN $2 = 'Snoozed' THEN $3::timestamptz ELSE NULL END,
+    resolved_at = COALESCE(resolved_at, CASE WHEN $2 IN ('Resolved', 'Closed') THEN NOW() END),
+    closed_at = COALESCE(closed_at, CASE WHEN $2 = 'Closed' THEN NOW() END),
+    snoozed_until = CASE WHEN $2 = 'Snoozed' THEN $3::timestamptz ELSE snoozed_until END,
     updated_at = NOW()
 WHERE uuid = $1;
 
