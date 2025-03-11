@@ -64,7 +64,7 @@ func (e *Email) processMailbox(ctx context.Context, cfg IMAPConfig) error {
 	}
 
 	// TODO: Set value from config.
-	since := time.Now().Add(-24 * time.Hour)
+	since := time.Now().Add(-48 * time.Hour)
 
 	searchData, err := e.searchMessages(client, since)
 	if err != nil {
@@ -235,15 +235,58 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 }
 
-// processFullMessage processes the full email message.
+// extractAllHTMLParts extracts all HTML parts from the given enmime part by traversing the tree.
+func extractAllHTMLParts(part *enmime.Part) []string {
+	var htmlParts []string
+
+	// Check current part
+	if strings.HasPrefix(part.ContentType, "text/html") && len(part.Content) > 0 {
+		htmlParts = append(htmlParts, string(part.Content))
+	}
+
+	// Process children recursively
+	for child := part.FirstChild; child != nil; child = child.NextSibling {
+		childParts := extractAllHTMLParts(child)
+		htmlParts = append(htmlParts, childParts...)
+	}
+
+	return htmlParts
+}
+
 func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, incomingMsg models.IncomingMessage) error {
 	envelope, err := enmime.ReadEnvelope(item.Literal)
 	if err != nil {
-		e.lo.Error("error parsing email envelope", "error", err, "envelope_errors", envelope.Errors)
+		e.lo.Error("error parsing email envelope", "error", err, "message_id", incomingMsg.Message.SourceID.String)
+		for _, err := range envelope.Errors {
+			e.lo.Error("error parsing email envelope. envelope_error: ", "error", err.Error(), "message_id", incomingMsg.Message.SourceID.String)
+		}
 		return fmt.Errorf("parsing email envelope: %w", err)
 	}
 
-	if len(envelope.HTML) > 0 {
+	// Log envelope errors.
+	for _, err := range envelope.Errors {
+		e.lo.Error("error parsing email envelope", "error", err.Error(), "message_id", incomingMsg.Message.SourceID.String)
+	}
+
+	// Extract all HTML content by traversing the tree
+	var allHTML strings.Builder
+	if envelope.Root != nil {
+		htmlParts := extractAllHTMLParts(envelope.Root)
+		if len(htmlParts) > 0 {
+			allHTML.WriteString("<div>")
+			for _, part := range htmlParts {
+				allHTML.WriteString(part)
+			}
+			allHTML.WriteString("</div>")
+		}
+	}
+
+	// Set message content - prioritize combined HTML
+	if allHTML.Len() > 0 {
+		incomingMsg.Message.Content = allHTML.String()
+		incomingMsg.Message.ContentType = conversation.ContentTypeHTML
+		e.lo.Debug("extracted HTML content from parts", "message_id", incomingMsg.Message.SourceID.String, "content", incomingMsg.Message.Content)
+	} else if len(envelope.HTML) > 0 {
 		incomingMsg.Message.Content = envelope.HTML
 		incomingMsg.Message.ContentType = conversation.ContentTypeHTML
 	} else if len(envelope.Text) > 0 {
@@ -251,7 +294,10 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 		incomingMsg.Message.ContentType = conversation.ContentTypeText
 	}
 
-	// Remove the angle brackets from the In-Reply-To and References headers.
+	e.lo.Debug("envelope HTML content", "message_id", incomingMsg.Message.SourceID.String, "content", incomingMsg.Message.Content)
+	e.lo.Debug("envelope text content", "message_id", incomingMsg.Message.SourceID.String, "content", envelope.Text)
+
+	// Clean headers
 	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envelope.GetHeader("In-Reply-To"), "<", ""), ">", "")
 	references := strings.Fields(envelope.GetHeader("References"))
 	for i, ref := range references {
@@ -261,6 +307,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 	incomingMsg.Message.InReplyTo = inReplyTo
 	incomingMsg.Message.References = references
 
+	// Process attachments
 	for _, att := range envelope.Attachments {
 		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, attachment.Attachment{
 			Name:        att.FileName,
@@ -271,17 +318,27 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 			Disposition: attachment.DispositionAttachment,
 		})
 	}
+
+	// Process inlines - treat ones without ContentID as regular attachments
 	for _, inline := range envelope.Inlines {
+		disposition := attachment.DispositionInline
+		if inline.ContentID == "" {
+			disposition = attachment.DispositionAttachment
+		}
+
 		incomingMsg.Message.Attachments = append(incomingMsg.Message.Attachments, attachment.Attachment{
 			Name:        inline.FileName,
 			Content:     inline.Content,
 			ContentType: inline.ContentType,
 			ContentID:   inline.ContentID,
 			Size:        len(inline.Content),
-			Disposition: attachment.DispositionInline,
+			Disposition: disposition,
 		})
 	}
-	e.lo.Debug("enqueuing incoming email message for inserting in DB", "message_id", incomingMsg.Message.SourceID.String, "attachments", len(envelope.Attachments), "inlines", len(envelope.Inlines))
+
+	e.lo.Debug("enqueuing incoming email message", "message_id", incomingMsg.Message.SourceID.String,
+		"attachments", len(envelope.Attachments), "inline_attachments", len(envelope.Inlines))
+
 	if err := e.messageStore.EnqueueIncoming(incomingMsg); err != nil {
 		return err
 	}
