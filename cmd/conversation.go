@@ -38,13 +38,6 @@ func handleGetAllConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Set deadlines for SLA if conversation has a policy
-	for i := range conversations {
-		if conversations[i].SLAPolicyID.Int != 0 {
-			setSLADeadlines(app, &conversations[i])
-		}
-	}
-
 	return r.SendEnvelope(envelope.PageResults{
 		Results:    conversations,
 		Total:      total,
@@ -74,13 +67,6 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Set deadlines for SLA if conversation has a policy
-	for i := range conversations {
-		if conversations[i].SLAPolicyID.Int != 0 {
-			setSLADeadlines(app, &conversations[i])
-		}
-	}
-
 	return r.SendEnvelope(envelope.PageResults{
 		Results:    conversations,
 		Total:      total,
@@ -108,13 +94,6 @@ func handleGetUnassignedConversations(r *fastglue.Request) error {
 	}
 	if len(conversations) > 0 {
 		total = conversations[0].Total
-	}
-
-	// Set deadlines for SLA if conversation has a policy
-	for i := range conversations {
-		if conversations[i].SLAPolicyID.Int != 0 {
-			setSLADeadlines(app, &conversations[i])
-		}
 	}
 
 	return r.SendEnvelope(envelope.PageResults{
@@ -188,13 +167,6 @@ func handleGetViewConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Set deadlines for SLA if conversation has a policy
-	for i := range conversations {
-		if conversations[i].SLAPolicyID.Int != 0 {
-			setSLADeadlines(app, &conversations[i])
-		}
-	}
-
 	return r.SendEnvelope(envelope.PageResults{
 		Results:    conversations,
 		Total:      total,
@@ -240,13 +212,6 @@ func handleGetTeamUnassignedConversations(r *fastglue.Request) error {
 		total = conversations[0].Total
 	}
 
-	// Set deadlines for SLA if conversation has a policy
-	for i := range conversations {
-		if conversations[i].SLAPolicyID.Int != 0 {
-			setSLADeadlines(app, &conversations[i])
-		}
-	}
-
 	return r.SendEnvelope(envelope.PageResults{
 		Results:    conversations,
 		Total:      total,
@@ -272,10 +237,6 @@ func handleGetConversation(r *fastglue.Request) error {
 	conv, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-
-	if conv.SLAPolicyID.Int != 0 {
-		setSLADeadlines(app, conv)
 	}
 
 	prev, _ := app.conversation.GetContactConversations(conv.ContactID)
@@ -566,21 +527,6 @@ func enforceConversationAccess(app *App, uuid string, user umodels.User) (*cmode
 		return nil, envelope.NewError(envelope.PermissionError, "Permission denied", nil)
 	}
 	return &conversation, nil
-}
-
-// setSLADeadlines gets the latest SLA deadlines for a conversation and sets them.
-func setSLADeadlines(app *App, conversation *cmodels.Conversation) error {
-	if conversation.ID < 1 {
-		return nil
-	}
-	first, resolution, err := app.sla.GetLatestDeadlines(conversation.ID)
-	if err != nil {
-		app.lo.Error("error getting SLA deadlines", "id", conversation.ID, "error", err)
-		return err
-	}
-	conversation.FirstResponseDueAt = null.NewTime(first, first != time.Time{})
-	conversation.ResolutionDueAt = null.NewTime(resolution, resolution != time.Time{})
-	return nil
 }
 
 // handleRemoveUserAssignee removes the user assigned to a conversation.
