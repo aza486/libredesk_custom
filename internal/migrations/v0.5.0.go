@@ -46,54 +46,64 @@ func V0_5_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
+	// Update tls_type for IMAP
 	_, err = db.Exec(`
 		UPDATE inboxes
-		SET config = 
-			CASE 
-				WHEN config#>'{imap,0,tls_type}' IS NULL 
-				THEN jsonb_set(config, '{imap,0,tls_type}', '"tls"') 
-				ELSE config 
-			END,
-			
-			config = 
-			CASE 
-				WHEN config#>'{imap,0,tls_skip_verify}' IS NULL 
-				THEN jsonb_set(config, '{imap,0,tls_skip_verify}', 'false') 
-				ELSE config 
-			END,
-
-			config = 
-			CASE 
-				WHEN config#>'{imap,0,scan_inbox_since}' IS NULL 
-				THEN jsonb_set(config, '{imap,0,scan_inbox_since}', '"48h"') 
-				ELSE config 
-			END,
-
-			config = 
-			CASE 
-				WHEN config#>'{smtp,0,tls_type}' IS NULL 
-				THEN jsonb_set(config, '{smtp,0,tls_type}', '"starttls"') 
-				ELSE config 
-			END,
-
-			config = 
-			CASE 
-				WHEN config#>'{smtp,0,tls_skip_verify}' IS NULL 
-				THEN jsonb_set(config, '{smtp,0,tls_skip_verify}', 'false') 
-				ELSE config 
-			END,
-
-			config = 
-			CASE 
-				WHEN config#>'{smtp,0,hello_hostname}' IS NULL 
-				THEN jsonb_set(config, '{smtp,0,hello_hostname}', '""') 
-				ELSE config 
-			END
-		WHERE config->'imap' IS NOT NULL OR config->'smtp' IS NOT NULL;
+		SET config = jsonb_set(config, '{imap,0,tls_type}', '"tls"', true)
+		WHERE config->'imap' IS NOT NULL AND config#>'{imap,0,tls_type}' IS NULL;
 	`)
 	if err != nil {
 		return err
 	}
 
+	// Update tls_skip_verify for IMAP
+	_, err = db.Exec(`
+		UPDATE inboxes
+		SET config = jsonb_set(config, '{imap,0,tls_skip_verify}', 'false', true)
+		WHERE config->'imap' IS NOT NULL AND config#>'{imap,0,tls_skip_verify}' IS NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Update scan_inbox_since for IMAP
+	_, err = db.Exec(`
+		UPDATE inboxes
+		SET config = jsonb_set(config, '{imap,0,scan_inbox_since}', '"48h"', true)
+		WHERE config->'imap' IS NOT NULL AND config#>'{imap,0,scan_inbox_since}' IS NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Update tls_type for SMTP
+	_, err = db.Exec(`
+		UPDATE inboxes
+		SET config = jsonb_set(config, '{smtp,0,tls_type}', '"starttls"', true)
+		WHERE config->'smtp' IS NOT NULL AND config#>'{smtp,0,tls_type}' IS NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Update tls_skip_verify for SMTP
+	_, err = db.Exec(`
+		UPDATE inboxes
+		SET config = jsonb_set(config, '{smtp,0,tls_skip_verify}', 'false', true)
+		WHERE config->'smtp' IS NOT NULL AND config#>'{smtp,0,tls_skip_verify}' IS NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Update hello_hostname for SMTP
+	_, err = db.Exec(`
+		UPDATE inboxes
+		SET config = jsonb_set(config, '{smtp,0,hello_hostname}', '""', true)
+		WHERE config->'smtp' IS NOT NULL AND config#>'{smtp,0,hello_hostname}' IS NULL;
+	`)
+	if err != nil {
+		return err
+	}
 	return nil
 }
