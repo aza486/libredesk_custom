@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	_ "time/tzdata"
+
 	"github.com/abhinavxd/libredesk/internal/ai"
 	auth_ "github.com/abhinavxd/libredesk/internal/auth"
 	"github.com/abhinavxd/libredesk/internal/authz"
