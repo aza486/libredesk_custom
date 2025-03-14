@@ -23,6 +23,9 @@ type EmailNotification struct {
 	AuthProtocol  string `json:"notification.email.auth_protocol" db:"notification.email.auth_protocol"`
 	EmailAddress  string `json:"notification.email.email_address" db:"notification.email.email_address"`
 	MaxMsgRetries int    `json:"notification.email.max_msg_retries" db:"notification.email.max_msg_retries"`
+	TLSType       string `json:"notification.email.tls_type" db:"notification.email.tls_type"`
+	TLSSkipVerify bool   `json:"notification.email.tls_skip_verify" db:"notification.email.tls_skip_verify"`
+	HelloHostname string `json:"notification.email.hello_hostname" db:"notification.email.hello_hostname"`
 	Enabled       bool   `json:"notification.email.enabled" db:"notification.email.enabled"`
 }
 

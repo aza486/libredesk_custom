@@ -66,5 +66,8 @@ export const smtpConfigSchema = z.object({
             message: 'Max message retries must be at most 100.'
         })
         .describe('Maximum message retries')
-        .default(2)
+        .default(2),
+    hello_hostname: z.string().optional(),
+    tls_type: z.enum(['none', 'starttls', 'tls']),
+    tls_skip_verify: z.boolean().optional(),
 });

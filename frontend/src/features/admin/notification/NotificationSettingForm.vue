@@ -152,6 +152,55 @@
       </FormItem>
     </FormField>
 
+    <!-- HELO Hostname Field -->
+    <FormField v-slot="{ componentField }" name="hello_hostname">
+      <FormItem>
+        <FormLabel>HELO Hostname</FormLabel>
+        <FormControl>
+          <Input type="text" placeholder="smtp.example.com" v-bind="componentField" />
+        </FormControl>
+        <FormDescription>
+          The hostname to use in the HELO/EHLO command. If not set, defaults to localhost.
+        </FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <!-- TLS Type Field -->
+    <FormField v-slot="{ componentField }" name="tls_type">
+      <FormItem>
+        <FormLabel>TLS</FormLabel>
+        <FormControl>
+          <Select v-bind="componentField" v-model="componentField.modelValue">
+            <SelectTrigger>
+              <SelectValue placeholder="Select a TLS type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="none">Off</SelectItem>
+                <SelectItem value="tls">SSL/TLS</SelectItem>
+                <SelectItem value="starttls">STARTTLS</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <!-- Skip TLS Verification Field -->
+    <FormField v-slot="{ componentField, handleChange }" name="tls_skip_verify">
+      <FormItem class="flex flex-row items-center justify-between box p-4">
+        <div class="space-y-0.5">
+          <FormLabel class="text-base">Skip TLS Verification</FormLabel>
+          <FormDescription> Skip hostname check on the TLS certificate. </FormDescription>
+        </div>
+        <FormControl>
+          <Switch :checked="componentField.modelValue" @update:checked="handleChange" />
+        </FormControl>
+      </FormItem>
+    </FormField>
+
     <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
@@ -179,6 +228,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 
