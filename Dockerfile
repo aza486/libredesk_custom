@@ -2,7 +2,7 @@
 FROM alpine:latest
 
 # Install necessary packages
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates tzdata
 
 # Set the working directory to /libredesk
 WORKDIR /libredesk
