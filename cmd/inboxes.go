@@ -75,7 +75,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	}
 
 	if err := reloadInboxes(app); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes, Please restart the app if the issue persists", nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error reloading inboxes, Please restart the app.", nil, envelope.GeneralError)
 	}
 
 	return r.SendEnvelope(inbox)

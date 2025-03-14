@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -19,15 +20,22 @@ import (
 )
 
 const (
-	DefaultReadInterval = time.Duration(5 * time.Minute)
+	defaultReadInterval   = time.Duration(5 * time.Minute)
+	defaultScanInboxSince = time.Duration(48 * time.Hour)
 )
 
 // ReadIncomingMessages reads and processes incoming messages from an IMAP server based on the provided configuration.
 func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error {
 	readInterval, err := time.ParseDuration(cfg.ReadInterval)
 	if err != nil {
-		e.lo.Warn("could not parse IMAP read interval, using the default read interval", "interval", cfg.ReadInterval, "inbox_id", e.Identifier(), "error", err)
-		readInterval = DefaultReadInterval
+		e.lo.Warn("could not parse IMAP read interval, using the default read interval of 5 minutes", "interval", cfg.ReadInterval, "inbox_id", e.Identifier(), "error", err)
+		readInterval = defaultReadInterval
+	}
+
+	scanInboxSince, err := time.ParseDuration(cfg.ScanInboxSince)
+	if err != nil {
+		e.lo.Warn("could not parse IMAP scan inbox since duration, using the default value of 48 hours", "interval", cfg.ScanInboxSince, "inbox_id", e.Identifier(), "error", err)
+		scanInboxSince = defaultScanInboxSince
 	}
 
 	readTicker := time.NewTicker(readInterval)
@@ -38,23 +46,49 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 		case <-ctx.Done():
 			return nil
 		case <-readTicker.C:
-			e.lo.Debug("processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
-			if err := e.processMailbox(ctx, cfg); err != nil && err != context.Canceled {
-				e.lo.Error("error processing mailbox", "error", err)
+			// If the ticker interval is too short, it may trigger while the previous `processMailbox` call is still running,
+			// leading to overlapping executions or delays in handling context cancellation, check if the context is already done.
+			if ctx.Err() != nil {
+				return nil
 			}
-			e.lo.Debug("finished processing emails from mailbox", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+
+			e.lo.Debug("scanning emails", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+			if err := e.processMailbox(ctx, scanInboxSince, cfg); err != nil && err != context.Canceled {
+				e.lo.Error("error scanning emails", "error", err)
+			}
+			e.lo.Debug("finished scanning emails", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 		}
 	}
 }
 
 // processMailbox processes emails in the specified mailbox.
-func (e *Email) processMailbox(ctx context.Context, cfg IMAPConfig) error {
-	client, err := imapclient.DialTLS(cfg.Host+":"+fmt.Sprint(cfg.Port), &imapclient.Options{})
-	if err != nil {
-		return fmt.Errorf("error connecting to IMAP server: %w", err)
-	}
-	defer client.Logout()
+func (e *Email) processMailbox(ctx context.Context, scanInboxSince time.Duration, cfg IMAPConfig) error {
+	var (
+		client *imapclient.Client
+		err    error
+	)
 
+	address := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	imapOptions := &imapclient.Options{
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: cfg.TLSSkipVerify,
+		},
+	}
+	switch cfg.TLSType {
+	case "none":
+		client, err = imapclient.DialInsecure(address, imapOptions)
+	case "starttls":
+		client, err = imapclient.DialStartTLS(address, imapOptions)
+	case "tls":
+		client, err = imapclient.DialTLS(address, imapOptions)
+	default:
+		return fmt.Errorf("unknown IMAP TLS type: %q", cfg.TLSType)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to connect to IMAP server: %w", err)
+	}
+
+	defer client.Logout()
 	if err := client.Login(cfg.Username, cfg.Password).Wait(); err != nil {
 		return fmt.Errorf("error logging in to the IMAP server: %w", err)
 	}
@@ -63,15 +97,18 @@ func (e *Email) processMailbox(ctx context.Context, cfg IMAPConfig) error {
 		return fmt.Errorf("error selecting mailbox: %w", err)
 	}
 
-	// TODO: Set value from config.
-	since := time.Now().Add(-48 * time.Hour)
+	// Scan emails since the specified duration.
+	since := time.Now().Add(-scanInboxSince)
 
-	searchData, err := e.searchMessages(client, since)
+	e.lo.Debug("searching emails", "since", since, "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+
+	// Search for messages in the mailbox.
+	searchResults, err := e.searchMessages(client, since)
 	if err != nil {
 		return fmt.Errorf("error searching messages: %w", err)
 	}
 
-	return e.fetchAndProcessMessages(ctx, client, searchData, e.Identifier())
+	return e.fetchAndProcessMessages(ctx, client, searchResults, e.Identifier())
 }
 
 // searchMessages searches for messages in the specified time range.
@@ -90,11 +127,11 @@ func (e *Email) searchMessages(client *imapclient.Client, since time.Time) (*ima
 }
 
 // fetchAndProcessMessages fetches and processes messages based on the search results.
-func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.Client, searchData *imap.SearchData, inboxID int) error {
+func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.Client, searchResults *imap.SearchData, inboxID int) error {
 	seqSet := imap.SeqSet{}
-	seqSet.AddRange(searchData.Min, searchData.Max)
+	seqSet.AddRange(searchResults.Min, searchResults.Max)
 
-	// Fetch only envelope, body is fetch later.
+	// Fetch only envelope, body is fetch later if the message is new.
 	fetchOptions := &imap.FetchOptions{
 		Envelope: true,
 	}
@@ -263,7 +300,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 		return fmt.Errorf("parsing email envelope: %w", err)
 	}
 
-	// Log envelope errors.
+	// Log any envelope errors.
 	for _, err := range envelope.Errors {
 		e.lo.Error("error parsing email envelope", "error", err.Error(), "message_id", incomingMsg.Message.SourceID.String)
 	}

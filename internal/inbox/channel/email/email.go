@@ -34,12 +34,15 @@ type SMTPConfig struct {
 
 // IMAPConfig holds IMAP client credentials and configuration.
 type IMAPConfig struct {
-	Host         string `json:"host"`
-	Port         int    `json:"port"`
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	Mailbox      string `json:"mailbox"`
-	ReadInterval string `json:"read_interval"`
+	Host           string `json:"host"`
+	Port           int    `json:"port"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	Mailbox        string `json:"mailbox"`
+	ReadInterval   string `json:"read_interval"`
+	ScanInboxSince string `json:"scan_inbox_since"`
+	TLSType        string `json:"tls_type"`
+	TLSSkipVerify  bool   `json:"tls_skip_verify"`
 }
 
 // Email represents the email inbox with multiple SMTP servers and IMAP clients.

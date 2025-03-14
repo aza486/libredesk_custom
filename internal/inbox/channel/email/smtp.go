@@ -49,7 +49,7 @@ func NewSmtpPool(configs []SMTPConfig) ([]*smtppool.Pool, error) {
 			}
 
 			// SSL/TLS, not STARTTLS
-			if cfg.TLSType == "TLS" {
+			if cfg.TLSType == "tls" {
 				cfg.Opt.SSL = true
 			}
 		}
