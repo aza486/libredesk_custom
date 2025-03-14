@@ -508,6 +508,9 @@ VALUES
     ('notification.email.idle_timeout', '"5s"'::jsonb),
     ('notification.email.wait_timeout', '"5s"'::jsonb),
     ('notification.email.auth_protocol', '"plain"'::jsonb),
+	('notification.email.tls_type', '"starttls"'::jsonb),
+	('notification.email.tls_skip_verify', 'false'::jsonb),
+	('notification.email.hello_hostname', '""'::jsonb),
     ('notification.email.email_address', '"admin@yourcompany.com"'::jsonb),
     ('notification.email.max_msg_retries', '3'::jsonb),
     ('notification.email.enabled', 'false'::jsonb);

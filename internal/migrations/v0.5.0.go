@@ -34,5 +34,66 @@ func V0_5_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
+	_, err = db.Exec(`
+		INSERT INTO settings (key, value)
+		VALUES 
+			('notification.email.tls_type', '"starttls"'::jsonb),
+			('notification.email.tls_skip_verify', 'false'::jsonb),
+			('notification.email.hello_hostname', '""'::jsonb)
+		ON CONFLICT (key) DO NOTHING;
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		UPDATE inboxes
+		SET config = 
+			CASE 
+				WHEN config#>'{imap,0,tls_type}' IS NULL 
+				THEN jsonb_set(config, '{imap,0,tls_type}', '"tls"') 
+				ELSE config 
+			END,
+			
+			config = 
+			CASE 
+				WHEN config#>'{imap,0,tls_skip_verify}' IS NULL 
+				THEN jsonb_set(config, '{imap,0,tls_skip_verify}', 'false') 
+				ELSE config 
+			END,
+
+			config = 
+			CASE 
+				WHEN config#>'{imap,0,scan_inbox_since}' IS NULL 
+				THEN jsonb_set(config, '{imap,0,scan_inbox_since}', '"48h"') 
+				ELSE config 
+			END,
+
+			config = 
+			CASE 
+				WHEN config#>'{smtp,0,tls_type}' IS NULL 
+				THEN jsonb_set(config, '{smtp,0,tls_type}', '"starttls"') 
+				ELSE config 
+			END,
+
+			config = 
+			CASE 
+				WHEN config#>'{smtp,0,tls_skip_verify}' IS NULL 
+				THEN jsonb_set(config, '{smtp,0,tls_skip_verify}', 'false') 
+				ELSE config 
+			END,
+
+			config = 
+			CASE 
+				WHEN config#>'{smtp,0,hello_hostname}' IS NULL 
+				THEN jsonb_set(config, '{smtp,0,hello_hostname}', '""') 
+				ELSE config 
+			END
+		WHERE config->'imap' IS NOT NULL OR config->'smtp' IS NOT NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
