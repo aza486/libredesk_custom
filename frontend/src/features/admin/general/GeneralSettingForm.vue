@@ -41,14 +41,14 @@
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem v-for="timezone in timezones" :key="timezone" :value="timezone">
-                  {{ timezone }}
+                <SelectItem v-for="(value, label) in timeZones" :key="value" :value="value">
+                  {{ label }}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Default timezone.</FormDescription>
+        <FormDescription>Default timezone for your desk.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -70,7 +70,7 @@
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Default business hours.</FormDescription>
+        <FormDescription>Default business hours for your desk.</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -81,7 +81,7 @@
         <FormControl>
           <Input type="text" placeholder="Root URL" v-bind="field" />
         </FormControl>
-        <FormDescription>Root URL of the app.</FormDescription>
+        <FormDescription>Root URL of the app.(No trailing slash)</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -123,27 +123,22 @@
       </FormItem>
     </FormField>
 
-  
-      <FormField name="allowed_file_upload_extensions" v-slot="{ componentField, handleChange }">
-        <FormItem>
-          <FormLabel>Allowed file upload extensions</FormLabel>
-          <FormControl>
-            <TagsInput
-              :modelValue="componentField.modelValue"
-              @update:modelValue="handleChange"
-            >
-              <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">
-                <TagsInputItemText />
-                <TagsInputItemDelete />
-              </TagsInputItem>
-              <TagsInputInput placeholder="jpg" />
-            </TagsInput>
-          </FormControl>
-          <FormDescription>Use `*` to allow any file.</FormDescription>
-          <FormMessage />
-        </FormItem>
-      </FormField>
-    
+    <FormField name="allowed_file_upload_extensions" v-slot="{ componentField, handleChange }">
+      <FormItem>
+        <FormLabel>Allowed file upload extensions</FormLabel>
+        <FormControl>
+          <TagsInput :modelValue="componentField.modelValue" @update:modelValue="handleChange">
+            <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">
+              <TagsInputItemText />
+              <TagsInputItemDelete />
+            </TagsInputItem>
+            <TagsInputInput placeholder="jpg" />
+          </TagsInput>
+        </FormControl>
+        <FormDescription>Use `*` to allow any file.</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
     <Button type="submit" :isLoading="formLoading"> {{ submitLabel }} </Button>
   </form>
@@ -182,10 +177,10 @@ import { Input } from '@/components/ui/input'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { timeZones } from '@/constants/timezones.js'
 import api from '@/api'
 
 const emitter = useEmitter()
-const timezones = Intl.supportedValuesOf('timeZone')
 const businessHours = ref({})
 const formLoading = ref(false)
 const props = defineProps({

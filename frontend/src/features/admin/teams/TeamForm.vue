@@ -75,8 +75,8 @@
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem v-for="timezone in timezones" :key="timezone" :value="timezone">
-                  {{ timezone }}
+                <SelectItem v-for="(value, label) in timeZones" :key="value" :value="value">
+                  {{ label }}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
@@ -145,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
@@ -174,14 +174,13 @@ import EmojiPicker from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'
 import { handleHTTPError } from '@/utils/http'
 import { useSlaStore } from '@/stores/sla'
+import { timeZones } from '@/constants/timezones.js'
 import api from '@/api'
 
 const emitter = useEmitter()
 const slaStore = useSlaStore()
-const timezones = computed(() => Intl.supportedValuesOf('timeZone'))
 const assignmentTypes = ['Round robin', 'Manual']
 const businessHours = ref([])
-const slaPolicies = ref([])
 
 const props = defineProps({
   initialValues: { type: Object, required: false },
