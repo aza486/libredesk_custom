@@ -5,9 +5,13 @@ WHERE u.email != 'System' AND u.deleted_at IS NULL AND u.type = 'agent'
 ORDER BY u.updated_at DESC;
 
 -- name: soft-delete-user
-UPDATE users
-SET deleted_at = now(), updated_at = now()
-WHERE id = $1 AND type = 'agent';
+WITH soft_delete AS (
+    UPDATE users
+    SET deleted_at = now(), updated_at = now()
+    WHERE id = $1 AND type = 'agent'
+    RETURNING id
+)
+DELETE FROM team_members WHERE user_id IN (SELECT id FROM soft_delete);
 
 -- name: get-users-compact
 SELECT u.id, u.first_name, u.last_name, u.enabled, u.avatar_url

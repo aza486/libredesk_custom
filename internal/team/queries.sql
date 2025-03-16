@@ -15,7 +15,7 @@ SELECT u.id, t.id as team_id
 FROM users u
 JOIN team_members tm ON tm.user_id = u.id
 JOIN teams t ON t.id = tm.team_id
-WHERE t.id = $1;
+WHERE t.id = $1 AND u.deleted_at IS NULL AND u.type = 'agent' AND u.enabled = true;
 
 -- name: insert-team
 INSERT INTO teams (name, timezone, conversation_assignment_type, business_hours_id, sla_policy_id, emoji, max_auto_assigned_conversations) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;

@@ -129,8 +129,7 @@ func (e *Engine) reloadBalancer() error {
 
 // populateTeamBalancer populates the team balancer pool with the team members.
 func (e *Engine) populateTeamBalancer() error {
-	var teams, err = e.teamStore.GetAll()
-
+	teams, err := e.teamStore.GetAll()
 	if err != nil {
 		return err
 	}
@@ -147,23 +146,43 @@ func (e *Engine) populateTeamBalancer() error {
 		}
 
 		// Shuffle users to prevent ordering bias, as every app restart will pick the same first user.
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		r.Shuffle(len(users), func(i, j int) {
+		rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(len(users), func(i, j int) {
 			users[i], users[j] = users[j], users[i]
 		})
 
+		// Initialize team balancer if missing
+		if _, exists := e.roundRobinBalancer[team.ID]; !exists {
+			e.lo.Debug("creating new balancer for team", "team_id", team.ID)
+			e.roundRobinBalancer[team.ID] = balance.NewBalance()
+		}
+
+		balancer := e.roundRobinBalancer[team.ID]
+		existingUsers := make(map[string]struct{})
+
 		for _, user := range users {
-			// Team does not have a balancer pool, create one.
-			if _, ok := e.roundRobinBalancer[team.ID]; !ok {
-				e.lo.Debug("creating new balancer for team", "team_id", team.ID)
-				e.roundRobinBalancer[team.ID] = balance.NewBalance()
+			uid := strconv.Itoa(user.ID)
+			existingUsers[uid] = struct{}{}
+			if err := balancer.Add(uid, 1); err != nil {
+				if err != balance.ErrDuplicateID {
+					e.lo.Error("error adding user to balancer pool", "team_id", team.ID, "user_id", user.ID, "error", err)
+				}
+				continue
 			}
-			// Add user to the team, if user already exists in the balancer pool, it will be ignored.
-			e.roundRobinBalancer[team.ID].Add(strconv.Itoa(user.ID), 1)
 			e.lo.Debug("added user to balancer pool", "team_id", team.ID, "user_id", user.ID)
 		}
 
-		// Set max auto assigned conversations for the team.
+		// Remove users no longer in the team
+		for _, item := range balancer.Items() {
+			if _, exists := existingUsers[item.ID]; !exists {
+				if err := balancer.Remove(item.ID); err != nil {
+					e.lo.Error("error removing user from balancer pool", "team_id", team.ID, "user_id", item.ID, "error", err)
+				} else {
+					e.lo.Debug("removed user from balancer pool", "team_id", team.ID, "user_id", item.ID)
+				}
+			}
+		}
+
+		// Set max auto assigned conversations for the team
 		e.teamMaxAutoAssignments[team.ID] = team.MaxAutoAssignedConversations
 	}
 	return nil
