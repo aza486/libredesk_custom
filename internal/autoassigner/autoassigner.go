@@ -172,12 +172,12 @@ func (e *Engine) populateTeamBalancer() error {
 		}
 
 		// Remove users no longer in the team
-		for _, item := range balancer.Items() {
-			if _, exists := existingUsers[item.ID]; !exists {
-				if err := balancer.Remove(item.ID); err != nil {
-					e.lo.Error("error removing user from balancer pool", "team_id", team.ID, "user_id", item.ID, "error", err)
+		for _, id := range balancer.ItemIDs() {
+			if _, exists := existingUsers[id]; !exists {
+				if err := balancer.Remove(id); err != nil {
+					e.lo.Error("error removing user from balancer pool", "team_id", team.ID, "user_id", id, "error", err)
 				} else {
-					e.lo.Debug("removed user from balancer pool", "team_id", team.ID, "user_id", item.ID)
+					e.lo.Debug("removed user from balancer pool", "team_id", team.ID, "user_id", id)
 				}
 			}
 		}
