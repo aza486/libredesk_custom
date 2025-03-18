@@ -24,7 +24,7 @@ require (
 	github.com/knadh/smtppool v1.1.0
 	github.com/knadh/stuffbin v1.3.0
 	github.com/lib/pq v1.10.9
-	github.com/mr-karan/balance v0.0.0-20230131075323-e0d55eb3e4b9
+	github.com/mr-karan/balance v0.0.0-20250317053523-d32c6ade6cf1
 	github.com/redis/go-redis/v9 v9.5.4
 	github.com/rhnvrm/simples3 v0.8.4
 	github.com/spf13/pflag v1.0.5
