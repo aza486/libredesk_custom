@@ -30,9 +30,10 @@ type Opts struct {
 
 // queries contains all the prepared queries
 type queries struct {
-	SearchConversations *sqlx.Stmt `query:"search-conversations"`
-	SearchMessages      *sqlx.Stmt `query:"search-messages"`
-	SearchContacts      *sqlx.Stmt `query:"search-contacts"`
+	SearchConversationsByRefNum       *sqlx.Stmt `query:"search-conversations-by-reference-number"`
+	SearchConversationsByContactEmail *sqlx.Stmt `query:"search-conversations-by-contact-email"`
+	SearchMessages                    *sqlx.Stmt `query:"search-messages"`
+	SearchContacts                    *sqlx.Stmt `query:"search-contacts"`
 }
 
 // New creates a new search manager
@@ -46,12 +47,18 @@ func New(opts Opts) (*Manager, error) {
 
 // Conversations searches conversations based on the query
 func (s *Manager) Conversations(query string) ([]models.Conversation, error) {
-	var results = make([]models.Conversation, 0)
-	if err := s.q.SearchConversations.Select(&results, query); err != nil {
+	var refNumResults = make([]models.Conversation, 0)
+	if err := s.q.SearchConversationsByRefNum.Select(&refNumResults, query); err != nil {
 		s.lo.Error("error searching conversations", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, "Error searching conversations", nil)
 	}
-	return results, nil
+
+	var emailResults = make([]models.Conversation, 0)
+	if err := s.q.SearchConversationsByContactEmail.Select(&emailResults, query); err != nil {
+		s.lo.Error("error searching conversations", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, "Error searching conversations", nil)
+	}
+	return append(refNumResults, emailResults...), nil
 }
 
 // Messages searches messages based on the query

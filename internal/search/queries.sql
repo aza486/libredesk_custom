@@ -1,4 +1,4 @@
--- name: search-conversations
+-- name: search-conversations-by-reference-number
 SELECT
     conversations.created_at,
     conversations.uuid,
@@ -6,6 +6,18 @@ SELECT
     conversations.subject
 FROM conversations
 WHERE reference_number::text = $1;
+
+-- name: search-conversations-by-contact-email
+SELECT
+    conversations.created_at,
+    conversations.uuid,
+    conversations.reference_number,
+    conversations.subject
+FROM conversations
+JOIN users ON conversations.contact_id = users.id
+WHERE users.email = $1
+ORDER BY conversations.created_at DESC
+LIMIT 1000;
 
 -- name: search-messages
 SELECT

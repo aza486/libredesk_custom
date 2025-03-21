@@ -28,7 +28,7 @@
         <div v-else class="mt-16 text-center">
           <h2 class="text-2xl font-semibold text-primary mb-4">Search conversations</h2>
           <p class="text-lg text-muted-foreground">
-            Search by reference number, messages, or any keywords related to your conversations.
+            Search by reference number, contact email address or messages in conversations.
           </p>
         </div>
       </div>
