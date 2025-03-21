@@ -155,12 +155,12 @@ const routes = [
       {
         path: '/admin',
         name: 'admin',
-        redirect: '/admin/general',
         component: AdminLayout,
         meta: { title: 'Admin' },
         children: [
           {
             path: 'general',
+            name: 'general',
             component: () => import('@/views/admin/general/General.vue'),
             meta: { title: 'General' }
           },

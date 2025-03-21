@@ -16,7 +16,9 @@
                 </SidebarMenuItem>
                 <SidebarMenuItem v-if="userStore.hasAdminTabPermissions">
                   <SidebarMenuButton asChild :isActive="route.path.startsWith('/admin')">
-                    <router-link :to="{ name: 'admin' }">
+                    <router-link
+                      :to="{ name: userStore.can('general_settings:manage') ? 'general' : 'admin' }"
+                    >
                       <Shield />
                     </router-link>
                   </SidebarMenuButton>
@@ -46,7 +48,7 @@
         @create-view="openCreateViewForm = true"
         @edit-view="editView"
         @delete-view="deleteView"
-        @create-conversation="() => openCreateConversationDialog = true"
+        @create-conversation="() => (openCreateConversationDialog = true)"
       >
         <div class="flex flex-col h-screen">
           <!-- Show app update only in admin routes -->
