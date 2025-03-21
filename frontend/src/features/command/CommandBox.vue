@@ -2,7 +2,7 @@
   <CommandDialog
     :open="open"
     @update:open="handleOpenChange"
-    class="z-[51] !min-w-[50vw] !min-h-[60vh]"
+    class="transform-gpu z-[51] !min-w-[50vw] !min-h-[60vh]"
   >
     <CommandInput placeholder="Type a command or search..." @keydown="onInputKeydown" />
     <CommandList class="!min-h-[60vh] !min-w-[50vw]">
