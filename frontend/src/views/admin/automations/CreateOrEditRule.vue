@@ -78,7 +78,7 @@
                     <SelectTag
                       v-model="componentField.modelValue"
                       @update:modelValue="handleChange"
-                      :items="conversationEvents || []"
+                      :items="conversationEventOptions"
                       placeholder="Select events"
                     >
                     </SelectTag>
@@ -205,13 +205,13 @@ const rule = ref({
   ]
 })
 
-const conversationEvents = [
-  'conversation.user.assigned',
-  'conversation.team.assigned',
-  'conversation.priority.change',
-  'conversation.status.change',
-  'conversation.message.outgoing',
-  'conversation.message.incoming'
+const conversationEventOptions = [
+  { label: 'User assigned', value: 'conversation.user.assigned' },
+  { label: 'Team assigned', value: 'conversation.team.assigned' },
+  { label: 'Priority change', value: 'conversation.priority.change' },
+  { label: 'Status change', value: 'conversation.status.change' },
+  { label: 'Outgoing message', value: 'conversation.message.outgoing' },
+  { label: 'Incoming message', value: 'conversation.message.incoming' }
 ]
 
 const props = defineProps({

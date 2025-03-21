@@ -34,7 +34,7 @@
       <FormItem v-auto-animate>
         <FormLabel>Teams</FormLabel>
         <FormControl>
-          <SelectTag :items="teamNames" placeholder="Select teams" v-model="componentField.modelValue" @update:modelValue="handleChange"/>
+          <SelectTag :items="teamOptions" placeholder="Select teams" v-model="componentField.modelValue" @update:modelValue="handleChange"/>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -44,7 +44,7 @@
       <FormItem v-auto-animate>
         <FormLabel>Roles</FormLabel>
         <FormControl>
-          <SelectTag :items="roleNames" placeholder="Select roles" v-model="componentField.modelValue" @update:modelValue="handleChange"/>
+          <SelectTag :items="roleOptions" placeholder="Select roles" v-model="componentField.modelValue" @update:modelValue="handleChange"/>
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -140,8 +140,8 @@ onMounted(async () => {
   }
 })
 
-const teamNames = computed(() => teams.value.map((team) => team.name))
-const roleNames = computed(() => roles.value.map((role) => role.name))
+const teamOptions = computed(() => teams.value.map((team) => ({ label: team.name, value: team.name })))
+const roleOptions = computed(() => roles.value.map((role) => ({ label: role.name, value: role.name })))
 
 const form = useForm({
   validationSchema: toTypedSchema(userFormSchema)

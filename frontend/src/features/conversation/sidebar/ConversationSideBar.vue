@@ -117,7 +117,7 @@
           <SelectTag
             v-if="conversationStore.current"
             v-model="conversationStore.current.tags"
-            :items="tags"
+            :items="tags.map((tag) => ({ label: tag, value: tag }))"
             placeholder="Select tags"
           />
         </AccordionContent>

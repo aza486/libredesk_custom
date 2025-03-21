@@ -104,7 +104,7 @@
           <div v-if="action.type && config.actions[action.type]?.type === 'tag'">
             <SelectTag
               v-model="action.value"
-              :items="tagsStore.tagNames"
+              :items="tagsStore.tagNames.map((tag) => ({ label: tag, value: tag }))"
               placeholder="Select tag"
             />
           </div>
