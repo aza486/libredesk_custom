@@ -15,7 +15,8 @@ SELECT
     m.text_content
 FROM conversation_messages m
     JOIN conversations c ON m.conversation_id = c.id
-WHERE m.type != 'activity' and m.text_content ILIKE '%' || $1 || '%';
+WHERE m.type != 'activity' and m.text_content ILIKE '%' || $1 || '%'
+LIMIT 30;
 
 -- name: search-contacts
 SELECT 
