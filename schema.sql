@@ -516,7 +516,7 @@ VALUES
     ('app.favicon_url', '"http://localhost:9000/favicon.ico"'::jsonb),
     ('app.max_file_upload_size', '20'::jsonb),
     ('app.allowed_file_upload_extensions', '["*"]'::jsonb),
-	('app.timezone', '"Asia/Calcutta"'::jsonb),
+	('app.timezone', '"Asia/Kolkata"'::jsonb),
 	('app.business_hours_id', '""'::jsonb),
     ('notification.email.username', '"admin@yourcompany.com"'::jsonb),
     ('notification.email.host', '"smtp.gmail.com"'::jsonb),
