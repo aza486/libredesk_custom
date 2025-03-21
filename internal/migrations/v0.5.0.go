@@ -158,5 +158,90 @@ func V0_5_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
+	_, err = db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM templates WHERE "name" = 'SLA breach warning') THEN
+				INSERT INTO templates
+					("type", body, is_default, "name", subject, is_builtin)
+					VALUES (
+					'email_notification'::template_type,
+					'
+
+					<p>This is a notification that the SLA for conversation {{ .Conversation.ReferenceNumber }} is approaching the SLA deadline for {{ .SLA.Metric }}.</p>
+
+					<p>
+					Details:<br>
+					- Conversation reference number: {{ .Conversation.ReferenceNumber }}<br>
+					- Metric: {{ .SLA.Metric }}<br>
+					- Due in: {{ .SLA.DueIn }}
+					</p>
+
+					<p>
+						<a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .Conversation.UUID }}">View Conversation</a>
+					</p>
+
+
+					<p>
+					Best regards,<br>
+					Libredesk
+					</p>
+
+					',
+					false,
+					'SLA breach warning',
+					'SLA Alert: Conversation {{ .Conversation.ReferenceNumber }} is approaching SLA deadline for {{ .SLA.Metric }}',
+					true
+				);
+			END IF;
+		END$$;
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM templates WHERE "name" = 'SLA breached') THEN
+				INSERT INTO templates
+					("type", body, is_default, "name", subject, is_builtin)
+					VALUES (
+					'email_notification'::template_type,
+					'
+					<p>This is an urgent alert that the SLA for conversation {{ .Conversation.ReferenceNumber }} has been breached for {{ .SLA.Metric }}. Please take immediate action.</p>
+
+					<p>
+					Details:<br>
+					- Conversation reference number: {{ .Conversation.ReferenceNumber }}<br>
+					- Metric: {{ .SLA.Metric }}<br>
+					- Overdue by: {{ .SLA.OverdueBy }}
+					</p>
+
+					<p>
+						<a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .Conversation.UUID }}">View Conversation</a>
+					</p>
+
+
+					<p>
+					Best regards,<br>
+					Libredesk
+					</p>
+
+					',
+					false,
+					'SLA breached',
+					'Urgent: SLA Breach for Conversation {{ .Conversation.ReferenceNumber }} for {{ .SLA.Metric }}',
+					true
+					);
+
+			END IF;
+		END$$;
+	`)
+	if err != nil {
+		return err
+	}
+
+
 	return nil
 }
