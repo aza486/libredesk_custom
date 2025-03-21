@@ -105,5 +105,58 @@ func V0_5_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 	if err != nil {
 		return err
 	}
+
+	// Add notifications column to sla_policies
+	_, err = db.Exec(`
+		ALTER TABLE sla_policies 
+			ADD COLUMN IF NOT EXISTS notifications JSONB DEFAULT '[]'::jsonb NOT NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sla_metric') THEN
+				CREATE TYPE "sla_metric" AS ENUM ('first_response', 'resolution');
+			END IF;
+		END$$;
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sla_notification_type') THEN
+				CREATE TYPE "sla_notification_type" AS ENUM ('warning', 'breach');
+			END IF;
+		END$$;
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS scheduled_sla_notifications (
+			id BIGSERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			applied_sla_id BIGINT NOT NULL REFERENCES applied_slas(id) ON DELETE CASCADE,
+			metric sla_metric NOT NULL,
+			notification_type sla_notification_type NOT NULL,
+			recipients TEXT[] NOT NULL,
+			send_at TIMESTAMPTZ NOT NULL,
+			processed_at TIMESTAMPTZ
+		);
+		CREATE INDEX IF NOT EXISTS index_scheduled_sla_notifications_on_send_at ON scheduled_sla_notifications(send_at);
+		CREATE INDEX IF NOT EXISTS index_scheduled_sla_notifications_on_processed_at ON scheduled_sla_notifications(processed_at);
+	`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
