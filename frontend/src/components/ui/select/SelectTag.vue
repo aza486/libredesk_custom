@@ -1,16 +1,19 @@
 <template>
-  <TagsInput v-model="tags" class="px-0 gap-0">
+  <TagsInput v-model="tags" class="px-0 gap-0" :displayValue="getLabel">
+    <!-- Tags visible to the user -->
     <div class="flex gap-2 flex-wrap items-center px-3">
-      <TagsInputItem v-for="tag in tags" :key="tag" :value="tag">
-        <TagsInputItemText>{{ tag }}</TagsInputItemText>
+      <TagsInputItem v-for="tagValue in tags" :key="tagValue" :value="tagValue">
+        <TagsInputItemText/>
         <TagsInputItemDelete />
       </TagsInputItem>
     </div>
+
+    <!-- Combobox for selecting new tags -->
     <ComboboxRoot
-      ref="comboboxRef"
       :model-value="tags"
       v-model:open="open"
       v-model:search-term="searchTerm"
+      :filterFunction="filterFunc"
       class="w-full"
     >
       <ComboboxAnchor as-child>
@@ -29,15 +32,15 @@
             position="popper"
             class="w-[--radix-popper-anchor-width] rounded-md mt-2 border bg-popover text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
           >
-            <CommandEmpty />
+            <CommandEmpty> No results found </CommandEmpty>
             <CommandGroup>
               <CommandItem
                 v-for="item in filteredOptions"
-                :key="item"
-                :value="item"
+                :key="item.value"
+                :value="item.value"
                 @select="handleSelect"
               >
-                {{ item }}
+                {{ item.label }}
               </CommandItem>
             </CommandGroup>
           </CommandList>
@@ -83,7 +86,8 @@ const props = defineProps({
   },
   items: {
     type: Array,
-    required: true
+    required: true,
+    validator: (value) => value.every((item) => 'label' in item && 'value' in item)
   }
 })
 
@@ -93,20 +97,36 @@ const { handleBlur } = useField(() => props.name, undefined, {
 
 const open = ref(false)
 const searchTerm = ref('')
-const comboboxRef = ref(null)
 
-const filteredOptions = computed(() => props.items.filter((item) => !tags.value.includes(item)))
+// Get all options that are not already selected and match the search term
+const filteredOptions = computed(() => {
+  return props.items.filter(
+    (item) =>
+      !tags.value.includes(item.value) &&
+      item.label.toLowerCase().includes(searchTerm.value.toLowerCase())
+  )
+})
+
+const getLabel = (value) => {
+  const item = props.items.find((item) => item.value === value)
+  return item?.label || value
+}
 
 const handleSelect = (event) => {
-  if (event.detail.value) {
+  const selectedValue = event.detail.value
+  if (selectedValue) {
+    tags.value = [...tags.value, selectedValue]
     searchTerm.value = ''
-    const newTags = [...tags.value]
-    newTags.push(event.detail.value)
-    tags.value = newTags
   }
 
   if (filteredOptions.value.length === 0) {
     open.value = false
   }
+}
+
+// Custom filter function to filter items based on the search term
+const filterFunc = (remainingItemValues, term) => {
+  const remainingItems = props.items.filter((item) => remainingItemValues.includes(item.value))
+  return remainingItems.filter((item) => item.label.toLowerCase().includes(term.toLowerCase())).map(item => item.value)
 }
 </script>
