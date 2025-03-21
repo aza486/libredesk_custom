@@ -82,8 +82,16 @@ const deleteBusinessHours = (id) => http.delete(`/api/v1/business-hours/${id}`)
 
 const getAllSLAs = () => http.get('/api/v1/sla')
 const getSLA = (id) => http.get(`/api/v1/sla/${id}`)
-const createSLA = (data) => http.post('/api/v1/sla', data)
-const updateSLA = (id, data) => http.put(`/api/v1/sla/${id}`, data)
+const createSLA = (data) => http.post('/api/v1/sla', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const updateSLA = (id, data) => http.put(`/api/v1/sla/${id}`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const deleteSLA = (id) => http.delete(`/api/v1/sla/${id}`)
 const createOIDC = (data) =>
   http.post('/api/v1/oidc', data, {

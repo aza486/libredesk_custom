@@ -1,19 +1,17 @@
 -- name: get-sla-policy
-SELECT * FROM sla_policies WHERE id = $1;
+SELECT id, name, description, first_response_time, resolution_time, notifications, created_at, updated_at FROM sla_policies WHERE id = $1;
 
 -- name: get-all-sla-policies
-SELECT * FROM sla_policies ORDER BY updated_at DESC;
+SELECT id, name, created_at, updated_at FROM sla_policies ORDER BY updated_at DESC;
 
 -- name: insert-sla-policy
 INSERT INTO sla_policies (
    name,
    description, 
    first_response_time,
-   resolution_time
-) VALUES ($1, $2, $3, $4);
-
--- name: delete-sla-policy
-DELETE FROM sla_policies WHERE id = $1;
+   resolution_time,
+   notifications
+) VALUES ($1, $2, $3, $4, $5);
 
 -- name: update-sla-policy
 UPDATE sla_policies SET
@@ -21,30 +19,33 @@ UPDATE sla_policies SET
    description = $3,
    first_response_time = $4,
    resolution_time = $5,
+   notifications = $6,
    updated_at = NOW()
 WHERE id = $1;
 
+-- name: delete-sla-policy
+DELETE FROM sla_policies WHERE id = $1;
+
 -- name: apply-sla
 WITH new_sla AS (
- INSERT INTO applied_slas (
-   conversation_id,
-   sla_policy_id,
-   first_response_deadline_at,
-   resolution_deadline_at
- ) VALUES ($1, $2, $3, $4)
- RETURNING conversation_id
+  INSERT INTO applied_slas (
+    conversation_id,
+    sla_policy_id,
+    first_response_deadline_at,
+    resolution_deadline_at
+  ) VALUES ($1, $2, $3, $4)
+  RETURNING conversation_id, id
 )
-UPDATE conversations 
+UPDATE conversations c
 SET sla_policy_id = $2,
-next_sla_deadline_at = LEAST(
-   NULLIF($3, NULL),
-   NULLIF($4, NULL)
-)
-WHERE id IN (SELECT conversation_id FROM new_sla);
+    next_sla_deadline_at = LEAST($3, $4)
+FROM new_sla ns
+WHERE c.id = ns.conversation_id
+RETURNING ns.id;
 
 -- name: get-pending-slas
 -- Get all the applied SLAs (applied to a conversation) that are pending
-SELECT a.id, a.first_response_deadline_at, c.first_reply_at as conversation_first_response_at,
+SELECT a.id, a.first_response_deadline_at, c.first_reply_at as conversation_first_response_at, a.sla_policy_id,
 a.resolution_deadline_at, c.resolved_at as conversation_resolved_at, c.id as conversation_id, a.first_response_met_at, a.resolution_met_at, a.first_response_breached_at, a.resolution_breached_at
 FROM applied_slas a 
 JOIN conversations c ON a.conversation_id = c.id and c.sla_policy_id = a.sla_policy_id
@@ -90,3 +91,45 @@ SET
   END,
   updated_at = NOW()
 WHERE applied_slas.id = $1;
+
+-- name: insert-scheduled-sla-notification
+INSERT INTO scheduled_sla_notifications (
+   applied_sla_id,
+   metric,
+   notification_type,
+   recipients,
+   send_at
+) VALUES ($1, $2, $3, $4, $5);
+
+-- name: get-scheduled-sla-notifications
+SELECT id, created_at, updated_at, applied_sla_id, metric, notification_type, recipients, send_at, processed_at
+FROM scheduled_sla_notifications
+WHERE send_at <= NOW() AND processed_at IS NULL;
+
+-- name: get-applied-sla
+SELECT a.id,
+   a.created_at,
+   a.updated_at,
+   a.conversation_id,
+   a.sla_policy_id,
+   a.first_response_deadline_at,
+   a.resolution_deadline_at,
+   a.first_response_met_at,
+   a.resolution_met_at,
+   a.first_response_breached_at,
+   a.resolution_breached_at,
+   a.status,
+   c.first_reply_at as conversation_first_response_at,
+   c.resolved_at as conversation_resolved_at,
+   c.uuid as conversation_uuid,
+   c.reference_number as conversation_reference_number,
+   c.subject as conversation_subject,
+   c.assigned_user_id as conversation_assigned_user_id
+FROM applied_slas a inner join conversations c on a.conversation_id = c.id
+WHERE a.id = $1;
+
+-- name: mark-notification-processed
+UPDATE scheduled_sla_notifications
+SET processed_at = NOW(),
+      updated_at = NOW()
+WHERE id = $1;

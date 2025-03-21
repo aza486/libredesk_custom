@@ -15,6 +15,8 @@ DROP TYPE IF EXISTS "media_disposition" CASCADE; CREATE TYPE "media_disposition"
 DROP TYPE IF EXISTS "media_store" CASCADE; CREATE TYPE "media_store" AS ENUM ('s3', 'fs');
 DROP TYPE IF EXISTS "user_availability_status" CASCADE; CREATE TYPE "user_availability_status" AS ENUM ('online', 'away', 'away_manual', 'offline');
 DROP TYPE IF EXISTS "applied_sla_status" CASCADE; CREATE TYPE "applied_sla_status" AS ENUM ('pending', 'breached', 'met', 'partially_met');
+DROP TYPE IF EXISTS "sla_metric" CASCADE; CREATE TYPE "sla_metric" AS ENUM ('first_response', 'resolution');
+DROP TYPE IF EXISTS "sla_notification_type" CASCADE; CREATE TYPE "sla_notification_type" AS ENUM ('warning', 'breach');
 
 -- Sequence to generate reference number for conversations.
 DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
@@ -36,6 +38,7 @@ CREATE TABLE sla_policies (
 	description TEXT NULL,
 	first_response_time TEXT NOT NULL,
 	resolution_time TEXT NOT NULL,
+	notifications JSONB DEFAULT '[]'::jsonb NOT NULL,
 	CONSTRAINT constraint_sla_policies_on_name CHECK (length(name) <= 140),
 	CONSTRAINT constraint_sla_policies_on_description CHECK (length(description) <= 300)
 );
@@ -448,6 +451,21 @@ CREATE TABLE applied_slas (
 CREATE INDEX index_applied_slas_on_conversation_id ON applied_slas(conversation_id);
 CREATE INDEX index_applied_slas_on_status ON applied_slas(status);
 
+DROP TABLE IF EXISTS scheduled_sla_notifications CASCADE;
+CREATE TABLE scheduled_sla_notifications (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  applied_sla_id BIGINT NOT NULL REFERENCES applied_slas(id) ON DELETE CASCADE,
+  metric sla_metric NOT NULL,
+  notification_type sla_notification_type NOT NULL,
+  recipients TEXT[] NOT NULL,
+  send_at TIMESTAMPTZ NOT NULL,
+  processed_at TIMESTAMPTZ
+);
+CREATE INDEX index_scheduled_sla_notifications_on_send_at ON scheduled_sla_notifications(send_at);
+CREATE INDEX index_scheduled_sla_notifications_on_processed_at ON scheduled_sla_notifications(processed_at);
+
 DROP TABLE IF EXISTS ai_providers CASCADE;
 CREATE TABLE ai_providers (
 	id SERIAL PRIMARY KEY,
@@ -552,8 +570,6 @@ VALUES
 INSERT INTO templates
 ("type", body, is_default, "name", subject, is_builtin)
 VALUES('email_notification'::template_type, '
-<p>Hi {{ .Agent.FirstName }},</p>
-
 <p>A new conversation has been assigned to you:</p>
 
 <div>
@@ -571,3 +587,66 @@ VALUES('email_notification'::template_type, '
 </div>
 
 ', false, 'Conversation assigned', 'New conversation assigned to you', true);
+
+INSERT INTO templates
+("type", body, is_default, "name", subject, is_builtin)
+VALUES (
+  'email_notification'::template_type,
+  '
+
+<p>This is a notification that the SLA for conversation {{ .Conversation.ReferenceNumber }} is approaching the SLA deadline for {{ .SLA.Metric }}.</p>
+
+<p>
+  Details:<br>
+  - Conversation reference number: {{ .Conversation.ReferenceNumber }}<br>
+  - Metric: {{ .SLA.Metric }}<br>
+  - Due in: {{ .SLA.DueIn }}
+</p>
+
+<p>
+    <a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .Conversation.UUID }}">View Conversation</a>
+</p>
+
+
+<p>
+  Best regards,<br>
+  Libredesk
+</p>
+
+',
+  false,
+  'SLA breach warning',
+  'SLA Alert: Conversation {{ .Conversation.ReferenceNumber }} is approaching SLA deadline for {{ .SLA.Metric }}',
+  true
+);
+
+INSERT INTO templates
+("type", body, is_default, "name", subject, is_builtin)
+VALUES (
+  'email_notification'::template_type,
+  '
+<p>This is an urgent alert that the SLA for conversation {{ .Conversation.ReferenceNumber }} has been breached for {{ .SLA.Metric }}. Please take immediate action.</p>
+
+<p>
+  Details:<br>
+  - Conversation reference number: {{ .Conversation.ReferenceNumber }}<br>
+  - Metric: {{ .SLA.Metric }}<br>
+  - Overdue by: {{ .SLA.OverdueBy }}
+</p>
+
+<p>
+    <a href="{{ RootURL }}/inboxes/assigned/conversation/{{ .Conversation.UUID }}">View Conversation</a>
+</p>
+
+
+<p>
+  Best regards,<br>
+  Libredesk
+</p>
+
+',
+  false,
+  'SLA breached',
+  'Urgent: SLA Breach for Conversation {{ .Conversation.ReferenceNumber }} for {{ .SLA.Metric }}',
+  true
+);

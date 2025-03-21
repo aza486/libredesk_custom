@@ -12,10 +12,6 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
-var (
-	slaReqFields = map[string][2]int{"name": {1, 255}, "description": {1, 255}, "first_response_time": {1, 255}, "resolution_time": {1, 255}}
-)
-
 // initHandlers initializes the HTTP routes and handlers for the application.
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Authentication.
@@ -169,8 +165,8 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// SLA.
 	g.GET("/api/v1/sla", perm(handleGetSLAs, "sla:manage"))
 	g.GET("/api/v1/sla/{id}", perm(handleGetSLA, "sla:manage"))
-	g.POST("/api/v1/sla", perm(fastglue.ReqLenRangeParams(handleCreateSLA, slaReqFields), "sla:manage"))
-	g.PUT("/api/v1/sla/{id}", perm(fastglue.ReqLenRangeParams(handleUpdateSLA, slaReqFields), "sla:manage"))
+	g.POST("/api/v1/sla", perm(handleCreateSLA, "sla:manage"))
+	g.PUT("/api/v1/sla/{id}", perm(handleUpdateSLA, "sla:manage"))
 	g.DELETE("/api/v1/sla/{id}", perm(handleDeleteSLA, "sla:manage"))
 
 	// AI completion.

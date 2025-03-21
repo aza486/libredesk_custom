@@ -12,6 +12,8 @@ import (
 const (
 	// Built-in templates names stored in the database.
 	TmplConversationAssigned = "Conversation assigned"
+	TmplSLABreachWarning     = "SLA breach warning"
+	TmplSLABreached          = "SLA breached"
 
 	// Built-in templates fetched from memory stored in `static` directory.
 	TmplResetPassword = "reset-password"

@@ -160,3 +160,25 @@ func RemoveItemByValue(slice []string, value string) []string {
 	}
 	return result
 }
+
+// FormatDuration formats a duration as a string.
+func FormatDuration(d time.Duration, includeSeconds bool) string {
+	d = d.Round(time.Second)
+	h := int64(d.Hours())
+	d -= time.Duration(h) * time.Hour
+	m := int64(d.Minutes())
+	d -= time.Duration(m) * time.Minute
+	s := int64(d.Seconds())
+
+	var parts []string
+	if h > 0 {
+		parts = append(parts, fmt.Sprintf("%d hours", h))
+	}
+	if m >= 0 {
+		parts = append(parts, fmt.Sprintf("%d minutes", m))
+	}
+	if s > 0 && includeSeconds {
+		parts = append(parts, fmt.Sprintf("%d seconds", s))
+	}
+	return strings.Join(parts, " ")
+}

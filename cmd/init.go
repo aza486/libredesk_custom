@@ -283,12 +283,12 @@ func initBusinessHours(db *sqlx.DB) *businesshours.Manager {
 }
 
 // initSLA inits SLA manager.
-func initSLA(db *sqlx.DB, teamManager *team.Manager, settings *setting.Manager, businessHours *businesshours.Manager) *sla.Manager {
+func initSLA(db *sqlx.DB, teamManager *team.Manager, settings *setting.Manager, businessHours *businesshours.Manager, notifier *notifier.Service, template *tmpl.Manager, userManager *user.Manager) *sla.Manager {
 	var lo = initLogger("sla")
 	m, err := sla.New(sla.Opts{
 		DB: db,
 		Lo: lo,
-	}, teamManager, settings, businessHours)
+	}, teamManager, settings, businessHours, notifier, template, userManager)
 	if err != nil {
 		log.Fatalf("error initializing SLA manager: %v", err)
 	}
@@ -496,13 +496,13 @@ func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conv
 }
 
 // initNotifier initializes the notifier service with available providers.
-func initNotifier(userStore notifier.UserStore) *notifier.Service {
+func initNotifier() *notifier.Service {
 	smtpCfg := email.SMTPConfig{}
 	if err := ko.UnmarshalWithConf("notification.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		log.Fatalf("error unmarshalling email notification provider config: %v", err)
 	}
 
-	emailNotifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, userStore, emailnotifier.Opts{
+	emailNotifier, err := emailnotifier.New([]email.SMTPConfig{smtpCfg}, emailnotifier.Opts{
 		Lo:        initLogger("email-notifier"),
 		FromEmail: ko.String("notification.email.email_address"),
 	})
