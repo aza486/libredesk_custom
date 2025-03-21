@@ -138,8 +138,6 @@ const getDashboardCharts = async () => {
           chartData.value.new_conversations.find((item) => item.date === date)?.count || 0,
         'Resolved conversations':
           chartData.value.resolved_conversations.find((item) => item.date === date)?.count || 0,
-        'Messages sent':
-          chartData.value.messages_sent.find((item) => item.date === date)?.count || 0
       }))
 
       chartData.value.status_summary = resp.data.data.status_summary || []

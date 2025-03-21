@@ -1,5 +1,5 @@
 <template>
-  <LineChart :data="data" index="date" :categories="['New conversations', 'Resolved conversations', 'Messages sent']"
+  <LineChart :data="data" index="date" :categories="['New conversations', 'Resolved conversations']"
     :x-formatter="xFormatter" :y-formatter="yFormatter" />
 </template>
 

@@ -311,26 +311,10 @@ status_summary AS (
         GROUP BY 
             s.name
     ) agg
-),
-messages_sent as (
-    SELECT json_agg(row_to_json(agg)) AS data
-    FROM (
-        SELECT
-            TO_CHAR(created_at::date, 'YYYY-MM-DD') AS date,
-            COUNT(*) AS count
-        FROM
-            conversation_messages c
-        WHERE status = 'sent' AND 1=1 %s
-        GROUP BY
-            date
-        ORDER BY
-            date
-    ) agg
 )
 SELECT json_build_object(
     'new_conversations', (SELECT data FROM new_conversations),
     'resolved_conversations', (SELECT data FROM resolved_conversations),
-    'messages_sent', (SELECT data FROM messages_sent),
     'status_summary', (SELECT data FROM status_summary)
 ) AS result;
 
