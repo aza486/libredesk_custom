@@ -17,6 +17,8 @@ const (
 type Message struct {
 	// Recipients of the message
 	UserIDs []int
+	// Email addresses of the recipients
+	RecipientEmails []string
 	// Subject of the message
 	Subject string
 	// Body of the message
@@ -31,16 +33,6 @@ type Message struct {
 	AltContent string
 	// Additional email headers
 	Headers map[string][]string
-}
-
-// UserEmailFetcher defines the interface for fetching user email addresses.
-type UserEmailFetcher interface {
-	GetEmail(id int) (string, error)
-}
-
-// UserStore defines the interface for the user store.
-type UserStore interface {
-	UserEmailFetcher
 }
 
 // Notifier defines the interface for sending notifications through various providers.

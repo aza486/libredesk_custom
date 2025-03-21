@@ -17,7 +17,6 @@ type Email struct {
 	lo        *logf.Logger
 	from      string
 	smtpPools []*smtppool.Pool
-	userStore notifier.UserStore
 }
 
 // Opts contains options for creating a new Email sender.
@@ -27,7 +26,7 @@ type Opts struct {
 }
 
 // New initializes a new Email sender.
-func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, opts Opts) (*Email, error) {
+func New(smtpConfig []email.SMTPConfig, opts Opts) (*Email, error) {
 	pools, err := email.NewSmtpPool(smtpConfig)
 	if err != nil {
 		return nil, err
@@ -36,37 +35,18 @@ func New(smtpConfig []email.SMTPConfig, userStore notifier.UserStore, opts Opts)
 		lo:        opts.Lo,
 		smtpPools: pools,
 		from:      opts.FromEmail,
-		userStore: userStore,
 	}, nil
 }
 
 // Send sends a notification message via email.
 func (e *Email) Send(msg notifier.Message) error {
-	recipientEmails, err := e.getUserEmails(msg.UserIDs)
-	if err != nil {
-		return err
-	}
-	emailMessage := e.prepareEmail(msg.Subject, msg.Content, recipientEmails, msg)
+	emailMessage := e.prepareEmail(msg.Subject, msg.Content, msg.RecipientEmails, msg)
 	return e.send(emailMessage)
 }
 
 // Name returns the name of the provider.
 func (e *Email) Name() string {
 	return notifier.ProviderEmail
-}
-
-// getUserEmails fetches email addresses for specified user IDs.
-func (e *Email) getUserEmails(userIDs []int) ([]string, error) {
-	var recipientEmails []string
-	for _, userID := range userIDs {
-		userEmail, err := e.userStore.GetEmail(userID)
-		if err != nil {
-			e.lo.Error("error fetching user email", "user_id", userID, "error", err)
-			continue
-		}
-		recipientEmails = append(recipientEmails, userEmail)
-	}
-	return recipientEmails, nil
 }
 
 // send sends an email message.

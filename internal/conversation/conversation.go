@@ -835,10 +835,10 @@ func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation mode
 		return fmt.Errorf("rendering template: %w", err)
 	}
 	nm := notifier.Message{
-		UserIDs:  userIDs,
-		Subject:  subject,
-		Content:  content,
-		Provider: notifier.ProviderEmail,
+		RecipientEmails: []string{agent.Email.String},
+		Subject:         subject,
+		Content:         content,
+		Provider:        notifier.ProviderEmail,
 	}
 	if err := m.notifier.Send(nm); err != nil {
 		m.lo.Error("error sending notification message", "error", err)

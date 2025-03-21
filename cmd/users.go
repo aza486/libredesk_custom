@@ -227,10 +227,10 @@ func handleCreateUser(r *fastglue.Request) error {
 		}
 
 		if err := app.notifier.Send(notifier.Message{
-			UserIDs:  []int{user.ID},
-			Subject:  "Welcome",
-			Content:  content,
-			Provider: notifier.ProviderEmail,
+			RecipientEmails: []string{user.Email.String},
+			Subject:         "Welcome",
+			Content:         content,
+			Provider:        notifier.ProviderEmail,
 		}); err != nil {
 			app.lo.Error("error sending notification message", "error", err)
 			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, "User created successfully, but could not send welcome email.", nil))
@@ -385,10 +385,10 @@ func handleResetPassword(r *fastglue.Request) error {
 	}
 
 	if err := app.notifier.Send(notifier.Message{
-		UserIDs:  []int{user.ID},
-		Subject:  "Reset Password",
-		Content:  content,
-		Provider: notifier.ProviderEmail,
+		RecipientEmails: []string{user.Email.String},
+		Subject:         "Reset Password",
+		Content:         content,
+		Provider:        notifier.ProviderEmail,
 	}); err != nil {
 		app.lo.Error("error sending password reset email", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error sending password reset email", nil, envelope.GeneralError)
