@@ -31,12 +31,11 @@ func (m *Manager) RenderEmailWithTemplate(data any, content string) (string, err
 
 	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
-		if err == ErrTemplateNotFound {
-			m.lo.Warn("default outgoing email template not found, rendering content without any template")
-			return content, nil
-		}
 		m.lo.Error("error fetching default outgoing email template", "error", err)
-		return "", fmt.Errorf("fetching default outgoing email template: %w", err)
+	}
+
+	if defaultTmpl.Body == "" {
+		defaultTmpl.Body = `{{ template "content" . }}`
 	}
 
 	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(defaultTmpl.Body)
@@ -72,18 +71,6 @@ func (m *Manager) RenderStoredEmailTemplate(name string, data any) (string, stri
 		return "", "", err
 	}
 
-	executeContentTemplate := func(tmplBody string) (string, error) {
-		var sb strings.Builder
-		t, err := template.New(name).Funcs(m.funcMap).Parse(tmplBody)
-		if err != nil {
-			return "", fmt.Errorf("parsing content template: %w", err)
-		}
-		if err := t.Execute(&sb, data); err != nil {
-			return "", fmt.Errorf("executing content template: %w", err)
-		}
-		return sb.String(), nil
-	}
-
 	executeSubjectTemplate := func(subject string) (string, error) {
 		var sb strings.Builder
 		subjectTmpl, err := template.New("subject").Funcs(m.funcMap).Parse(subject)
@@ -98,19 +85,11 @@ func (m *Manager) RenderStoredEmailTemplate(name string, data any) (string, stri
 
 	defaultTmpl, err := m.getDefaultOutgoingEmailTemplate()
 	if err != nil {
-		if err == ErrTemplateNotFound {
-			m.lo.Warn("default outgoing email template not found, rendering content any template")
-			content, err := executeContentTemplate(tmpl.Body)
-			if err != nil {
-				return "", "", err
-			}
-			subject, err := executeSubjectTemplate(tmpl.Subject.String)
-			if err != nil {
-				return "", "", err
-			}
-			return content, subject, nil
-		}
-		return "", "", err
+		m.lo.Error("error fetching default outgoing email template", "error", err)
+	}
+
+	if defaultTmpl.Body == "" {
+		defaultTmpl.Body = `{{ template "content" . }}`
 	}
 
 	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(defaultTmpl.Body)
