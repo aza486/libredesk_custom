@@ -175,7 +175,7 @@ func (u *Manager) Get(id int, type_ string) (models.User, error) {
 	if err := u.q.GetUser.Get(&user, id, "", type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("user not found", "id", id, "error", err)
-			return user, envelope.NewError(envelope.GeneralError, "User not found", nil)
+			return user, envelope.NewError(envelope.NotFoundError, "User not found", nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
 		return user, envelope.NewError(envelope.GeneralError, "Error fetching user", nil)
