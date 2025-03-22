@@ -348,6 +348,9 @@ func (m *Manager) SendNotification(scheduledNotification models.ScheduledSLANoti
 		agent, err := m.userStore.GetAgent(recipientID)
 		if err != nil {
 			m.lo.Error("error fetching agent for SLA notification", "recipient_id", recipientID, "error", err)
+			if _, err := m.q.MarkNotificationProcessed.Exec(scheduledNotification.ID); err != nil {
+				m.lo.Error("error marking notification as processed", "error", err)
+			}
 			continue
 		}
 
