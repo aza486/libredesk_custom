@@ -115,6 +115,10 @@ import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
 
 const selectedText = defineModel('selectedText', { default: '' })
 const textContent = defineModel('textContent')
@@ -143,13 +147,58 @@ const emitPrompt = (key) => emit('aiPromptSelected', key)
 
 const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
 
+// To preseve the table styling in emails, need to set the table style inline.
+// Created these custom extensions to set the table style inline.
+const CustomTable = Table.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        parseHTML: (element) =>
+          (element.getAttribute('style') || '') + ' border: 1px solid #dee2e6 !important; width: 100%; margin:0; table-layout: fixed; border-collapse: collapse; position:relative; border-radius: 0.25rem;'
+      }
+    }
+  }
+})
+
+const CustomTableCell = TableCell.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        parseHTML: (element) =>
+          (element.getAttribute('style') || '') +
+          ' border: 1px solid #dee2e6 !important; box-sizing: border-box !important; min-width: 1em !important; padding: 6px 8px !important; vertical-align: top !important;'
+      }
+    }
+  }
+})
+
+const CustomTableHeader = TableHeader.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        parseHTML: (element) =>
+          (element.getAttribute('style') || '') +
+          ' background-color: #f8f9fa !important; color: #212529 !important; font-weight: bold !important; text-align: left !important; border: 1px solid #dee2e6 !important; padding: 6px 8px !important;'
+      }
+    }
+  }
+})
+
 const editorConfig = {
   extensions: [
-    // Lists are unstyled in tailwind, so need to add classes to them.
     StarterKit.configure(),
     Image.configure({ HTMLAttributes: { class: 'inline-image' } }),
     Placeholder.configure({ placeholder: () => props.placeholder }),
-    Link
+    Link,
+    CustomTable.configure({
+      resizable: false
+    }),
+    TableRow,
+    CustomTableCell,
+    CustomTableHeader
   ],
   autofocus: true,
   editorProps: {
@@ -332,8 +381,14 @@ const unsetLink = () => {
   max-width: 100%;
 }
 
-// Anchor tag styling
 .tiptap {
+  // Table styling
+  .tableWrapper {
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  // Anchor tag styling
   a {
     color: #0066cc;
     cursor: pointer;
