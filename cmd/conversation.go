@@ -366,20 +366,14 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 	if priority == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid `priority`", nil, envelope.InputError)
 	}
-	conversation, err := app.conversation.GetConversation(0, uuid)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
+
 	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
+	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
-	}
-	if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 	if err := app.conversation.UpdateConversationPriority(uuid, 0 /**priority_id**/, priority, user); err != nil {
 		return sendErrorEnvelope(r, err)
@@ -387,6 +381,7 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 
 	// Evaluate automation rules.
 	app.automation.EvaluateConversationUpdateRules(uuid, models.EventConversationPriorityChange)
+
 	return r.SendEnvelope("Priority updated successfully")
 }
 
@@ -467,20 +462,14 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		app.lo.Error("error unmarshalling tags JSON", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Error unmarshalling tags JSON", nil, envelope.GeneralError)
 	}
-	conversation, err := app.conversation.GetConversation(0, uuid)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
 
 	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
-	if allowed, err := app.authz.EnforceConversationAccess(user, conversation); err != nil {
+	_, err = enforceConversationAccess(app, uuid, user)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
-	} else if !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
 	}
 
 	if err := app.conversation.UpsertConversationTags(uuid, tagNames, user); err != nil {
