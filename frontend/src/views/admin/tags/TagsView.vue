@@ -60,16 +60,17 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { formSchema } from '../../../features/admin/tags/formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 
 const isLoading = ref(false)
 const tags = ref([])
-const emit = useEmitter()
+const emitter = useEmitter()
 const dialogOpen = ref(false)
 
 onMounted(() => {
   getTags()
-  emit.on(EMITTER_EVENTS.REFRESH_LIST, (data) => {
+  emitter.on(EMITTER_EVENTS.REFRESH_LIST, (data) => {
     if (data?.model === 'tags') getTags()
   })
 })
@@ -91,8 +92,16 @@ const onSubmit = form.handleSubmit(async (values) => {
     await api.createTag(values)
     dialogOpen.value = false
     getTags()
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Success',
+      description: 'Tag created successfully'
+    })
   } catch (error) {
-    console.error('Failed to create tag:', error)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      title: 'Error',
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     isLoading.value = false
   }
