@@ -191,7 +191,7 @@
                           value: 'assigned_user'
                         })
                       "
-                      placeholder="Search or select..."
+                      placeholder="Start typing to search..."
                       v-model="componentField.modelValue"
                       @update:modelValue="handleChange"
                       class="w-full hover:border-foreground/30"
