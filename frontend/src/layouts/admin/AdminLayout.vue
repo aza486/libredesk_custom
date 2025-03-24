@@ -3,7 +3,7 @@
     <div class="p-6 sm:p-8 min-h-full flex flex-col">
       <div
         class="flex flex-col items-center justify-center flex-grow"
-        v-if="$route.path === '/admin'"
+        v-if="$route.name === 'admin'"
       >
         <div>Select a section from the sidebar</div>
       </div>
