@@ -205,8 +205,10 @@ func handleCreateUser(r *fastglue.Request) error {
 	}
 
 	// Upsert user teams.
-	if err := app.team.UpsertUserTeams(user.ID, user.Teams.Names()); err != nil {
-		return sendErrorEnvelope(r, err)
+	if len(user.Teams) > 0 {
+		if err := app.team.UpsertUserTeams(user.ID, user.Teams.Names()); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
 	}
 
 	if user.SendWelcomeEmail {

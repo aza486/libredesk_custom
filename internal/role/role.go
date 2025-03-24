@@ -134,7 +134,7 @@ func (u *Manager) Update(id int, r models.Role) error {
 // validatePermissions returns true if all given permissions are valid
 func (u *Manager) validatePermissions(permissions []string) error {
 	if len(permissions) == 0 {
-		return envelope.NewError(envelope.InputError, "Permissions cannot be empty", nil)
+		return envelope.NewError(envelope.InputError, "Select at least one permission", nil)
 	}
 	for _, perm := range permissions {
 		if !amodels.IsValidPermission(perm) {
