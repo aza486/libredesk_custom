@@ -32,7 +32,7 @@
           <CodeEditor
             v-model="componentField.modelValue"
             @update:modelValue="handleChange"
-          ></CodeEditor>
+          />
         </FormControl>
         <FormDescription v-if="isOutgoingTemplate">
           {{ `Make sure the template has \{\{ template "content" . \}\} only once.` }}

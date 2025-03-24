@@ -84,7 +84,7 @@
                     </SelectTag>
                   </FormControl>
                   <FormDescription>Evaluate rule on these events.</FormDescription>
-                  <FormMessage></FormMessage>
+                  <FormMessage />
                 </FormItem>
               </FormField>
             </div>

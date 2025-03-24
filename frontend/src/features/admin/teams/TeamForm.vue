@@ -57,8 +57,8 @@
           <Input type="number" placeholder="0" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          Maximum number of active conversations that can be auto-assigned to an agent at once.
-          Conversations in "Resolved" or "Closed" states do not count toward this limit. Set to 0
+          Maximum number of conversations that can be auto-assigned to an agent,
+          conversations in "Resolved" or "Closed" states do not count toward this limit. Set to 0
           for unlimited.
         </FormDescription>
         <FormMessage />
