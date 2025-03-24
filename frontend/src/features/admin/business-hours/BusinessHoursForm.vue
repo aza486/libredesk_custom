@@ -31,11 +31,11 @@
           <RadioGroup v-bind="componentField">
             <div class="flex flex-col space-y-2">
               <div class="flex items-center space-x-3">
-                <RadioGroupItem id="r1" value="true" />
+                <RadioGroupItem id="r1" :value="true" />
                 <Label for="r1">Always open (24x7)</Label>
               </div>
               <div class="flex items-center space-x-3">
-                <RadioGroupItem id="r2" value="false" />
+                <RadioGroupItem id="r2" :value="false" />
                 <Label for="r2">Custom business hours</Label>
               </div>
             </div>
@@ -45,48 +45,55 @@
       </FormItem>
     </FormField>
 
-    <div v-if="form.values.is_always_open === 'false'">
-      <div>
-        <div v-for="day in WEEKDAYS" :key="day" class="flex items-center justify-between space-y-2">
-          <div class="flex items-center space-x-3">
-            <Checkbox
-              :id="day"
-              :checked="!!selectedDays[day]"
-              @update:checked="handleDayToggle(day, $event)"
-            />
-            <Label :for="day" class="font-medium text-gray-800">{{ day }}</Label>
-          </div>
-          <div class="flex space-x-2 items-center">
-            <div class="flex flex-col items-start">
-              <Input
-                type="time"
-                :value="hours[day]?.open || '09:00'"
-                @update:modelValue="(val) => updateHours(day, 'open', val)"
-                :disabled="!selectedDays[day]"
-              />
+    <FormField name="hours">
+      <div v-if="form.values.is_always_open === false">
+        <FormItem>
+          <div>
+            <div
+              v-for="day in WEEKDAYS"
+              :key="day"
+              class="flex items-center justify-between space-y-2"
+            >
+              <div class="flex items-center space-x-3">
+                <Checkbox
+                  :id="day"
+                  :checked="!!selectedDays[day]"
+                  @update:checked="handleDayToggle(day, $event)"
+                />
+                <Label :for="day" class="font-medium text-gray-800">{{ day }}</Label>
+              </div>
+              <div class="flex space-x-2 items-center">
+                <div class="flex flex-col items-start">
+                  <Input
+                    type="time"
+                    :modelValue="hours[day]?.open || '09:00'"
+                    @update:modelValue="(val) => updateHours(day, 'open', val)"
+                    :disabled="!selectedDays[day]"
+                  />
+                </div>
+                <span class="text-gray-500">to</span>
+                <div class="flex flex-col items-start">
+                  <Input
+                    type="time"
+                    :modelValue="hours[day]?.close || '17:00'"
+                    @update:modelValue="(val) => updateHours(day, 'close', val)"
+                    :disabled="!selectedDays[day]"
+                  />
+                </div>
+              </div>
             </div>
-            <span class="text-gray-500">to</span>
-            <div class="flex flex-col items-start">
-              <Input
-                type="time"
-                :value="hours[day]?.close || '17:00'"
-                @update:modelValue="(val) => updateHours(day, 'close', val)"
-                :disabled="!selectedDays[day]"
-              />
-            </div>
           </div>
-        </div>
+          <FormMessage />
+        </FormItem>
       </div>
-    </div>
+    </FormField>
 
     <Dialog :open="openHolidayForm" @update:open="openHolidayForm = false">
       <div>
         <div class="flex justify-between items-center mb-4">
           <div></div>
           <DialogTrigger as-child>
-            <Button @click="openHolidayForm = true">
-              New holiday
-            </Button>
+            <Button @click="openHolidayForm = true"> New holiday </Button>
           </DialogTrigger>
         </div>
       </div>
@@ -237,6 +244,9 @@ const handleDayToggle = (day, checked) => {
     delete newHours[day]
     hours.value = newHours
   }
+
+  // Sync with form values
+  form.setFieldValue('hours', { ...hours.value })
 }
 
 const updateHours = (day, type, value) => {
@@ -244,10 +254,12 @@ const updateHours = (day, type, value) => {
     hours.value[day] = { open: '09:00', close: '17:00' }
   }
   hours.value[day][type] = value
+
+  // Sync with form values
+  form.setFieldValue('hours', { ...hours.value })
 }
 
 const onSubmit = form.handleSubmit((values) => {
-  values.is_always_open = values.is_always_open === 'true'
   const businessHours =
     values.is_always_open === true
       ? {}
@@ -259,6 +271,7 @@ const onSubmit = form.handleSubmit((values) => {
           }, {})
   const finalValues = {
     ...values,
+    is_always_open: values.is_always_open,
     hours: businessHours,
     holidays: holidays
   }
@@ -273,8 +286,7 @@ watch(
       return
     }
     // Set business hours if provided
-    newValues.is_always_open = newValues.is_always_open.toString()
-    if (newValues.is_always_open === 'false') {
+    if (newValues.is_always_open === false) {
       hours.value = newValues.hours || {}
       selectedDays.value = Object.keys(hours.value).reduce((acc, day) => {
         acc[day] = true
