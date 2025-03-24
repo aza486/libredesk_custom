@@ -252,6 +252,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 		return err
 	}
 
+	// Preserve existing passwords if update has empty password
 	switch current.Channel {
 	case "email":
 		var currentCfg struct {
@@ -300,6 +301,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 		inbox.Config = updatedConfig
 	}
 
+	// Update the inbox in the DB.
 	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.Enabled); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error updating inbox", nil)

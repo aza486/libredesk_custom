@@ -106,7 +106,7 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 
 	// Make sure it's a valid from email address.
 	if _, err := mail.ParseAddress(req.EmailAddress); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid from email address format", nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid from email address format, make sure it's a valid email address in the format `Name <mail@example.com>`", nil, envelope.InputError)
 	}
 
 	if req.Password == "" {

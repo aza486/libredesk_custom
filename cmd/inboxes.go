@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/mail"
 	"strconv"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
@@ -36,14 +37,18 @@ func handleGetInbox(r *fastglue.Request) error {
 
 func handleCreateInbox(r *fastglue.Request) error {
 	var (
-		app = r.Context.(*App)
-		inb = imodels.Inbox{}
+		app   = r.Context.(*App)
+		inbox = imodels.Inbox{}
 	)
-	if err := r.Decode(&inb, "json"); err != nil {
+	if err := r.Decode(&inbox, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
-	err := app.inbox.Create(inb)
-	if err != nil {
+
+	if err := app.inbox.Create(inbox); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	if err := validateInbox(inbox); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -69,6 +74,11 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	if err := r.Decode(&inbox, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "decode failed", err.Error(), envelope.InputError)
 	}
+
+	if err := validateInbox(inbox); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	err = app.inbox.Update(id, inbox)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, "Could not update inbox.", nil, envelope.GeneralError)
@@ -81,6 +91,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 	return r.SendEnvelope(inbox)
 }
 
+// handleToggleInbox toggles an inbox
 func handleToggleInbox(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -102,6 +113,7 @@ func handleToggleInbox(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleDeleteInbox deletes an inbox
 func handleDeleteInbox(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
@@ -117,4 +129,25 @@ func handleDeleteInbox(r *fastglue.Request) error {
 	}
 
 	return r.SendEnvelope(true)
+}
+
+// validateInbox validates the inbox
+func validateInbox(inbox imodels.Inbox) error {
+	// Make sure it's a valid from email address.
+	if _, err := mail.ParseAddress(inbox.From); err != nil {
+		return envelope.NewError(envelope.InputError, "Invalid from email address format, make sure it's a valid email address in the format `Name <mail@example.com>`", nil)
+	}
+
+	if len(inbox.Config) == 0 {
+		return envelope.NewError(envelope.InputError, "Empty config provided for inbox", nil)
+	}
+
+	if inbox.Name == "" {
+		return envelope.NewError(envelope.InputError, "Empty name provided for inbox", nil)
+	}
+
+	if inbox.Channel == "" {
+		return envelope.NewError(envelope.InputError, "Empty channel provided for inbox", nil)
+	}
+	return nil
 }
