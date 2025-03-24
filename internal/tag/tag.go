@@ -63,6 +63,9 @@ func (t *Manager) GetAll() ([]models.Tag, error) {
 // Create creates a new tag.
 func (t *Manager) Create(name string) error {
 	if _, err := t.q.InsertTag.Exec(name); err != nil {
+		if dbutil.IsUniqueViolationError(err) {
+			return envelope.NewError(envelope.ConflictError, "Tag already exists", nil)
+		}
 		t.lo.Error("error inserting tag", "error", err)
 		return envelope.NewError(envelope.GeneralError, "Error creating tag", nil)
 	}
