@@ -4,7 +4,7 @@
             <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                    <Input type="text" placeholder="billing, order" v-bind="componentField" />
+                    <Input type="text" placeholder="billing" v-bind="componentField" />
                 </FormControl>
                 <FormDescription></FormDescription>
                 <FormMessage />
