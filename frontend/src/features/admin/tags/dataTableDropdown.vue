@@ -34,7 +34,8 @@
       <AlertDialogHeader>
         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
         <AlertDialogDescription>
-          This action cannot be undone. This will permanently the tag.
+          This action cannot be undone. This will permanently delete the tag and
+          <strong>remove it from all conversations.</strong>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
@@ -75,7 +76,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogTitle
 } from '@/components/ui/alert-dialog'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
@@ -84,7 +85,7 @@ import api from '@/api/index.js'
 
 const dialogOpen = ref(false)
 const alertOpen = ref(false)
-const emit = useEmitter()
+const emitter = useEmitter()
 
 const props = defineProps({
   tag: {
@@ -103,6 +104,10 @@ const form = useForm({
 
 const onSubmit = form.handleSubmit(async (values) => {
   await api.updateTag(props.tag.id, values)
+  emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+    title: 'Success',
+    description: 'Tag updated successfully'
+  })
   dialogOpen.value = false
   emitRefreshTagsList()
 })
@@ -118,7 +123,7 @@ const deleteTag = async () => {
 }
 
 const emitRefreshTagsList = () => {
-  emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
+  emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
     model: 'tags'
   })
 }
