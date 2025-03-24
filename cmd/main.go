@@ -108,7 +108,6 @@ func main() {
 
 	// Build string injected at build time.
 	colorlog.Green("Build: %s", buildString)
-	colorlog.Green("Version: %s", versionString)
 
 	// Load the config files into Koanf.
 	initConfig(ko)
