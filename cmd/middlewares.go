@@ -172,7 +172,7 @@ func notAuthPage(handler fastglue.FastRequestHandler) fastglue.FastRequestHandle
 		user, err := app.auth.ValidateSession(r)
 		if err != nil {
 			app.lo.Error("error validating session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session", nil, envelope.PermissionError)
+			return r.SendErrorEnvelope(http.StatusUnauthorized, "Invalid or expired session, clear cookies and try again", nil, envelope.PermissionError)
 		}
 
 		if user.ID != 0 {
