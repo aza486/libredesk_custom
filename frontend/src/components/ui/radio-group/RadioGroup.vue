@@ -4,8 +4,8 @@ import { RadioGroupRoot, useForwardPropsEmits } from 'radix-vue'
 import { cn } from '@/lib/utils'
 
 const props = defineProps({
-  modelValue: { type: String, required: false },
-  defaultValue: { type: String, required: false },
+  modelValue: { type: [String, Boolean], required: false },
+  defaultValue: { type: [String, Boolean], required: false },
   disabled: { type: Boolean, required: false },
   name: { type: String, required: false },
   required: { type: Boolean, required: false },
