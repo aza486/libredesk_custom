@@ -441,10 +441,8 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: (to) => {
-      // TODO: Remove this alert and redirect to 404 page
-      alert(`Redirecting to overview from: ${to.fullPath}`)
-      return '/reports/overview'
+    redirect: () => {
+      return '/inboxes/assigned'
     }
   }
 ]
