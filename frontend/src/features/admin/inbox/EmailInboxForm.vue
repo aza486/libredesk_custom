@@ -14,7 +14,7 @@
 
     <FormField v-slot="{ componentField }" name="from">
       <FormItem>
-        <FormLabel>From Address</FormLabel>
+        <FormLabel>From Email Address</FormLabel>
         <FormControl>
           <Input
             type="text"
