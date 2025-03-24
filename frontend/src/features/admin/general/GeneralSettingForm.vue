@@ -81,7 +81,7 @@
         <FormControl>
           <Input type="text" placeholder="Root URL" v-bind="field" />
         </FormControl>
-        <FormDescription>Root URL of the app.(No trailing slash)</FormDescription>
+        <FormDescription>Root URL of the app. (No trailing slash)</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
