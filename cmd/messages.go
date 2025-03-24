@@ -48,11 +48,14 @@ func handleGetMessages(r *fastglue.Request) error {
 
 	for i := range messages {
 		total = messages[i].Total
+		// Populate attachment URLs
 		for j := range messages[i].Attachments {
 			messages[i].Attachments[j].URL = app.media.GetURL(messages[i].Attachments[j].UUID)
 		}
+		// Redact CSAT survey link
 		messages[i].CensorCSATContent()
 	}
+
 	return r.SendEnvelope(envelope.PageResults{
 		Total:      total,
 		Results:    messages,
@@ -116,8 +119,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	err = app.conversation.MarkMessageAsPending(uuid)
-	if err != nil {
+	if err = app.conversation.MarkMessageAsPending(uuid); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
