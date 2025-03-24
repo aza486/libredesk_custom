@@ -84,7 +84,7 @@
         <FormItem>
           <FormLabel>Mailbox</FormLabel>
           <FormControl>
-            <Input type="text" placeholder="INBOX" v-bind="componentField" />
+            <Input type="text" placeholder="INBOX" v-bind="componentField" :defaultValue="'INBOX'" />
           </FormControl>
           <FormDescription>
             Mailbox (folder) to scan for incoming emails. Default is INBOX (usually no need to
