@@ -49,10 +49,9 @@ func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem, idempoten
 			os.Exit(0)
 		}
 	} else {
+		log.Println("installing database schema...")
 		time.Sleep(5 * time.Second)
 	}
-
-	log.Println("installing database schema...")
 
 	// Install schema.
 	if err := installSchema(db, fs); err != nil {

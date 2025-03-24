@@ -435,7 +435,7 @@ func CreateSystemUser(ctx context.Context, password string, db *sqlx.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to create system user: %v", err)
 	}
-	log.Print("system user created successfully")
+	log.Print("system user created successfully. Use command 'libredesk --set-system-user-password' to set the password and login with email 'System'.")
 	return nil
 }
 
