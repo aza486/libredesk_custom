@@ -188,7 +188,7 @@ func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
 			return rule, envelope.NewError(envelope.InputError, "Rule not found.", nil)
 		}
 		e.lo.Error("error fetching rule", "error", err)
-		return rule, envelope.NewError(envelope.GeneralError, "Error fetching automation rule.", nil)
+		return rule, envelope.NewError(envelope.GeneralError, "Error fetching automation rule", nil)
 	}
 	return rule, nil
 }
@@ -197,7 +197,7 @@ func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
 func (e *Engine) ToggleRule(id int) error {
 	if _, err := e.q.ToggleRule.Exec(id); err != nil {
 		e.lo.Error("error toggling rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error toggling automation rule.", nil)
+		return envelope.NewError(envelope.GeneralError, "Error toggling automation rule", nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -206,9 +206,12 @@ func (e *Engine) ToggleRule(id int) error {
 
 // UpdateRule updates an existing rule.
 func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
-	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, pq.Array(rule.Events), rule.Rules, rule.Enabled); err != nil {
+	if rule.Events == nil {
+		rule.Events = pq.StringArray{}
+	}
+	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules, rule.Enabled); err != nil {
 		e.lo.Error("error updating rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error updating automation rule.", nil)
+		return envelope.NewError(envelope.GeneralError, "Error updating automation rule", nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -217,9 +220,12 @@ func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
 
 // CreateRule creates a new rule.
 func (e *Engine) CreateRule(rule models.RuleRecord) error {
-	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, pq.Array(rule.Events), rule.Rules); err != nil {
+	if rule.Events == nil {
+		rule.Events = pq.StringArray{}
+	}
+	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules); err != nil {
 		e.lo.Error("error creating rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error creating automation rule.", nil)
+		return envelope.NewError(envelope.GeneralError, "Error creating automation rule", nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -230,7 +236,7 @@ func (e *Engine) CreateRule(rule models.RuleRecord) error {
 func (e *Engine) DeleteRule(id int) error {
 	if _, err := e.q.DeleteRule.Exec(id); err != nil {
 		e.lo.Error("error deleting rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, "Error deleting automation rule.", nil)
+		return envelope.NewError(envelope.GeneralError, "Error deleting automation rule", nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
