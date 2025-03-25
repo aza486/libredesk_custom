@@ -72,3 +72,9 @@ stuff: $(STUFFBIN)
 demo-build:
 	@echo "→ Building in demo mode..."
 	@export VITE_DEMO_BUILD="true" && $(MAKE) build
+
+# Run tests.
+.PHONY: test
+test:
+	@echo "→ Running tests..."
+	go test ./...
