@@ -22,8 +22,6 @@ type BusinessHours struct {
 
 // WorkingHours represents the working hours for a specific day.
 type WorkingHours struct {
-	OpenAllDay   bool   `json:"open_all_day"`
-	ClosedAllDay bool   `json:"closed_all_day"`
 	Open         string `json:"open"`
 	Close        string `json:"close"`
 }
