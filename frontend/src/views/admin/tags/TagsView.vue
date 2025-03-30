@@ -7,17 +7,17 @@
           <div class="flex justify-end mb-4 w-full">
             <Dialog v-model:open="dialogOpen">
               <DialogTrigger as-child>
-                <Button class="ml-auto">New Tag</Button>
+                <Button class="ml-auto">{{ t('admin.conversation_tags.new') }}</Button>
               </DialogTrigger>
               <DialogContent class="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle class="mb-1">Create new tag</DialogTitle>
-                  <DialogDescription>Set tag name. Click save when you're done.</DialogDescription>
+                  <DialogTitle class="mb-1">{{ t('admin.conversation_tags.new') }}</DialogTitle>
+                  <DialogDescription>{{ t('admin.conversation_tags.new.description') }}</DialogDescription>
                 </DialogHeader>
                 <TagsForm @submit.prevent="onSubmit">
                   <template #footer>
                     <DialogFooter class="mt-10">
-                      <Button type="submit">Save changes</Button>
+                      <Button type="submit">{{ t('globals.buttons.save') }}</Button>
                     </DialogFooter>
                   </template>
                 </TagsForm>
@@ -26,7 +26,7 @@
           </div>
         </div>
         <div>
-          <DataTable :columns="columns" :data="tags" />
+          <DataTable :columns="createColumns(t)" :data="tags" />
         </div>
       </div>
     </template>
@@ -42,7 +42,7 @@ import { ref, onMounted } from 'vue'
 import DataTable from '@/components/datatable/DataTable.vue'
 import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
 import { Spinner } from '@/components/ui/spinner'
-import { columns } from '@/features/admin/tags/dataTableColumns.js'
+import { createColumns } from '@/features/admin/tags/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 
 import TagsForm from '@/features/admin/tags/TagsForm.vue'
@@ -57,12 +57,14 @@ import {
 } from '@/components/ui/dialog'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from '../../../features/admin/tags/formSchema.js'
+import { createFormSchema } from '../../../features/admin/tags/formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { handleHTTPError } from '@/utils/http'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
+const { t } = useI18n()
 const isLoading = ref(false)
 const tags = ref([])
 const emitter = useEmitter()
@@ -76,7 +78,7 @@ onMounted(() => {
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const getTags = async () => {
@@ -93,12 +95,10 @@ const onSubmit = form.handleSubmit(async (values) => {
     dialogOpen.value = false
     getTags()
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Tag created successfully'
+      description: t('admin.conversation_tags.created')
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

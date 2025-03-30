@@ -2,7 +2,7 @@
     <form>
         <FormField v-slot="{ componentField }" name="name">
             <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>{{$t('form.field.name')}}</FormLabel>
                 <FormControl>
                     <Input type="text" placeholder="billing" v-bind="componentField" />
                 </FormControl>

@@ -1,46 +1,47 @@
 <template>
+  <!--- Dropdown menu for tag actions -->
   <Dialog v-model:open="dialogOpen">
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
         <Button variant="ghost" class="w-8 h-8 p-0">
-          <span class="sr-only">Open menu</span>
+          <span class="sr-only"></span>
           <MoreHorizontal class="w-4 h-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem> Edit </DropdownMenuItem>
+          <DropdownMenuItem> {{t('globals.buttons.edit')}} </DropdownMenuItem>
         </DialogTrigger>
-        <DropdownMenuItem @click="openAlertDialog"> Delete </DropdownMenuItem>
+        <DropdownMenuItem @click="openAlertDialog"> {{t('globals.buttons.delete')}} </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>Edit tag</DialogTitle>
-        <DialogDescription> Change the tag name. Click save when you're done. </DialogDescription>
+        <DialogTitle>{{t('admin.conversation_tags.edit')}}</DialogTitle>
+        <DialogDescription> {{t('admin.conversation_tags.edit.description')}} </DialogDescription>
       </DialogHeader>
       <TagsForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit"> Save changes </Button>
+            <Button type="submit"> {{t('globals.buttons.save')}} </Button>
           </DialogFooter>
         </template>
       </TagsForm>
     </DialogContent>
   </Dialog>
 
+  <!-- Alert dialog for delete confirmation -->
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+        <AlertDialogTitle>{{t('admin.conversation_tags.delete_confirmation_title')}}</AlertDialogTitle>
         <AlertDialogDescription>
-          This action cannot be undone. This will permanently delete the tag and
-          <strong>remove it from all conversations.</strong>
+          {{t('admin.conversation_tags.delete_confirmation')}}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="deleteTag">Delete</AlertDialogAction>
+        <AlertDialogCancel>{{t('globals.buttons.cancel')}}</AlertDialogCancel>
+        <AlertDialogAction @click="deleteTag">{{t('globals.buttons.delete')}}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
@@ -58,7 +59,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import {
   Dialog,
   DialogContent,
@@ -81,8 +82,10 @@ import {
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import TagsForm from './TagsForm.vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/index.js'
 
+const { t } = useI18n()
 const dialogOpen = ref(false)
 const alertOpen = ref(false)
 const emitter = useEmitter()
@@ -99,14 +102,13 @@ const props = defineProps({
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t)),
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
   await api.updateTag(props.tag.id, values)
   emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-    title: 'Success',
-    description: 'Tag updated successfully'
+    description: t('admin.conversation_tags.updated'),
   })
   dialogOpen.value = false
   emitRefreshTagsList()
