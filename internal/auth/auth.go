@@ -44,7 +44,7 @@ type Provider struct {
 	ClientSecret string
 }
 
-// Config stores multiple OIDC provider configurations
+// Config holds OIDC providers and cookies security settings
 type Config struct {
 	Providers     []Provider
 	SecureCookies bool
