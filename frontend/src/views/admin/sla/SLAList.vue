@@ -4,13 +4,13 @@
       <div></div>
       <div>
         <router-link :to="{ name: 'new-sla' }">
-          <Button> New SLA </Button>
+          <Button> {{ t('admin.sla.new') }} </Button>
         </router-link>
       </div>
     </div>
     <div>
       <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="slas" />
+      <DataTable :columns="createColumns(t)" :data="slas" />
     </div>
   </div>
 </template>
@@ -18,14 +18,15 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import DataTable from '@/components/datatable/DataTable.vue'
-import { columns } from '../../../features/admin/sla/dataTableColumns.js'
+import { createColumns } from '@/features/admin/sla/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import { useEmitter } from '@/composables/useEmitter'
-
+import { useI18n } from 'vue-i18n'
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
+const { t } = useI18n()
 const slas = ref([])
 const isLoading = ref(false)
 const emit = useEmitter()

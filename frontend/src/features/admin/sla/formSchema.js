@@ -1,22 +1,22 @@
 import * as z from 'zod'
 import { isGoHourMinuteDuration } from '@/utils/strings'
 
-export const formSchema = z.object({
+export const createFormSchema = (t) => z.object({
     name: z
         .string()
-        .min(1, { message: 'Name is required' })
-        .max(255, { message: 'Name must be at most 255 characters.' }),
+        .min(1, { message: t('admin.sla.name.valid') })
+        .max(255, { message: t('admin.sla.name.valid') }),
     description: z
         .string()
-        .min(1, { message: 'Description is required' })
-        .max(255, { message: 'Description must be at most 255 characters.' }),
+        .min(1, { message: t('admin.sla.description.valid') })
+        .max(255, { message: t('admin.sla.description.valid') }),
     first_response_time: z.string().refine(isGoHourMinuteDuration, {
         message:
-            'Invalid duration format. Should be a number followed by h (hours), m (minutes).'
+            t('globals.messages.goHourMinuteDuration'),
     }),
     resolution_time: z.string().refine(isGoHourMinuteDuration, {
         message:
-            'Invalid duration format. Should be a number followed by h (hours), m (minutes).'
+            t('globals.messages.goHourMinuteDuration'),
     }),
     notifications: z
         .array(
@@ -27,7 +27,7 @@ export const formSchema = z.object({
                     time_delay: z.string().optional(),
                     recipients: z
                         .array(z.string())
-                        .min(1, { message: 'At least one recipient is required' })
+                        .min(1, { message: t('globals.messages.atleastOneRecipient') })
                 })
                 .superRefine((obj, ctx) => {
                     if (obj.time_delay_type !== 'immediately') {
@@ -35,14 +35,14 @@ export const formSchema = z.object({
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
                                 message:
-                                    'Delay is required',
+                                    t('admin.sla.delay.required'),
                                 path: ['time_delay']
                             })
                         } else if (!isGoHourMinuteDuration(obj.time_delay)) {
                             ctx.addIssue({
                                 code: z.ZodIssueCode.custom,
                                 message:
-                                    'Invalid duration format. Should be a number followed by h (hours), m (minutes).',
+                                    t('globals.messages.goHourMinuteDuration'),
                                 path: ['time_delay']
                             })
                         }

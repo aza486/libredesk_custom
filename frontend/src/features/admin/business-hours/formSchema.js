@@ -2,14 +2,14 @@ import * as z from 'zod'
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
 
-export const formSchema = z.object({
-    name: z.string().min(1, 'Name is required.'),
-    description: z.string().min(1, 'Description is required.'),
+export const createFormSchema = (t) => z.object({
+    name: z.string().min(1, t('form.error.name.required')),
+    description: z.string().min(1, t('form.error.description.required')),
     is_always_open: z.boolean().default(true),
     hours: z.record(
         z.object({
-            open: z.string().regex(timeRegex, 'Invalid time format (HH:mm)'),
-            close: z.string().regex(timeRegex, 'Invalid time format (HH:mm)')
+            open: z.string().regex(timeRegex, t('form.error.time.invalid')),
+            close: z.string().regex(timeRegex, t('form.error.time.invalid')),
         })
     ).optional()
 }).superRefine((data, ctx) => {
@@ -17,7 +17,7 @@ export const formSchema = z.object({
         if (!data.hours || Object.keys(data.hours).length === 0) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: 'Business hours are required',
+                message: t('admin.business_hours.hours.required'),
                 path: ['hours']
             })
         } else {
@@ -25,7 +25,7 @@ export const formSchema = z.object({
                 if (!data.hours[day].open || !data.hours[day].close) {
                     ctx.addIssue({
                         code: z.ZodIssueCode.custom,
-                        message: 'Open and close times are required for each day.',
+                        message: t('admin.business_hours.open_close.required'),
                         path: ['hours', day]
                     })
                 }

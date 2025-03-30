@@ -1,42 +1,43 @@
 import * as z from 'zod'
 
-export const formSchema = z.object({
+export const createFormSchema = (t) => z.object({
   site_name: z
     .string({
-      required_error: 'Site name is required.'
+      required_error: t('admin.general.site_name.required'),
     })
     .min(1, {
-      message: 'Site name must be at least 1 characters.'
+      message: t('admin.general.site_name.min'),
     }),
   lang: z.string().optional(),
   timezone: z.string().optional(),
   business_hours_id: z.string().optional(),
   logo_url: z.string().url({
-    message: 'Logo URL must be a valid URL.'
-  }).url().optional(),
+    message: t('admin.general.logo_url.valid'),
+  }).or(z.literal(''))
+    .optional(),
   root_url: z
     .string({
-      required_error: 'Root URL is required.'
+      required_error: t('admin.general.root_url.required')
     })
     .url({
-      message: 'Root URL must be a valid URL.'
+      message: t('admin.general.root_url.valid')
     }).url(),
   favicon_url: z
     .string({
-      required_error: 'Favicon URL is required.'
+      required_error: t('admin.general.favicon_url.required')
     })
     .url({
-      message: 'Favicon URL must be a valid URL.'
+      message: t('admin.general.favicon_url.valid')
     }).url(),
   max_file_upload_size: z
     .number({
-      required_error: 'Max upload file size is required.'
+      required_error: t('admin.general.max_allowed_file_upload_size.required')
     })
     .min(1, {
-      message: 'Max upload file size must be at least 1 MB.'
+      message: t('admin.general.max_allowed_file_upload_size.valid')
     })
     .max(500, {
-      message: 'Max upload file size cannot exceed 500 MB.'
+      message: t('admin.general.max_allowed_file_upload_size.valid')
     }),
   allowed_file_upload_extensions: z.array(z.string()).nullable().default([]).optional()
 })

@@ -17,7 +17,9 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const businessHours = ref({})
 const emitter = useEmitter()
 const isLoading = ref(false)
@@ -36,20 +38,17 @@ const submitForm = async (values) => {
         if (props.id) {
             await api.updateBusinessHours(props.id, values)
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-                title: 'Success',
-                description: 'Business hours updated successfully',
+                description: t('admin.business_hours.updated'),
             })
         } else {
             await api.createBusinessHours(values)
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-                title: 'Success',
-                description: 'Business hours created successfully',
+                description: t('admin.business_hours.created'),
             })
             router.push({ name: 'business-hours-list' })
         }
     } catch (error) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-            title: 'Could not save business hours',
             variant: 'destructive',
             description: handleHTTPError(error).message
         })
@@ -59,7 +58,7 @@ const submitForm = async (values) => {
 }
 
 const breadCrumLabel = () => {
-    return props.id ? 'Edit' : 'New'
+    return props.id ? t('globals.buttons.edit') : t('globals.buttons.new')
 }
 
 const isNewForm = computed(() => {
@@ -67,7 +66,7 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-    { path: 'business-hours-list', label: 'Business hours' },
+    { path: 'business-hours-list', label: t('admin.business_hours') },
     { path: '', label: breadCrumLabel() }
 ]
 
@@ -79,7 +78,6 @@ onMounted(async () => {
             businessHours.value = resp.data.data
         } catch (error) {
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-                title: 'Could not fetch business hours',
                 variant: 'destructive',
                 description: handleHTTPError(error).message
             })

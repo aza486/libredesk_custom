@@ -5,19 +5,21 @@
         <Card class="bg-card border border-border shadow-xl rounded-xl">
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-3xl font-bold text-foreground">Set New Password</CardTitle>
-              <p class="text-muted-foreground">Please enter your new password twice to confirm.</p>
+              <CardTitle class="text-3xl font-bold text-foreground">{{
+                t('auth.setNewPassword')
+              }}</CardTitle>
+              <p class="text-muted-foreground">{{ t('auth.enterNewPasswordTwice') }}</p>
             </div>
 
             <form @submit.prevent="setPasswordAction" class="space-y-4">
               <div class="space-y-2">
-                <Label for="password" class="text-sm font-medium text-foreground"
-                  >New Password</Label
-                >
+                <Label for="password" class="text-sm font-medium text-foreground">{{
+                  t('auth.newPassword')
+                }}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter new password"
+                  :placeholder="t('auth.enterNewPassword')"
                   v-model="passwordForm.password"
                   :class="{ 'border-destructive': passwordHasError }"
                   class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
@@ -25,13 +27,13 @@
               </div>
 
               <div class="space-y-2">
-                <Label for="confirmPassword" class="text-sm font-medium text-foreground"
-                  >Confirm Password</Label
-                >
+                <Label for="confirmPassword" class="text-sm font-medium text-foreground">{{
+                  t('auth.confirmPassword')
+                }}</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Confirm new password"
+                  :placeholder="t('auth.confirmNewPassword')"
                   v-model="passwordForm.confirmPassword"
                   :class="{ 'border-destructive': confirmPasswordHasError }"
                   class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
@@ -64,9 +66,9 @@
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Setting password...
+                  {{ t('auth.settingPassword') }}
                 </span>
-                <span v-else>Set New Password</span>
+                <span v-else>{{ t('auth.setNewPassword') }}</span>
               </Button>
             </form>
 
@@ -80,10 +82,6 @@
         </Card>
       </div>
     </main>
-
-    <footer class="p-6 text-center">
-      <div class="text-sm text-muted-foreground space-x-4"></div>
-    </footer>
   </div>
 </template>
 
@@ -100,7 +98,9 @@ import { Error } from '@/components/ui/error'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const errorMessage = ref('')
 const isLoading = ref(false)
 const router = useRouter()
@@ -126,12 +126,12 @@ onMounted(() => {
 
 const validateForm = () => {
   if (!passwordForm.value.password) {
-    errorMessage.value = 'Password is required.'
+    errorMessage.value = t('auth.passwordRequired')
     useTemporaryClass('set-password-container', 'animate-shake')
     return false
   }
   if (passwordForm.value.password !== passwordForm.value.confirmPassword) {
-    errorMessage.value = 'Passwords do not match.'
+    errorMessage.value = t('auth.passwordsDoNotMatch')
     useTemporaryClass('set-password-container', 'animate-shake')
     return false
   }
@@ -150,7 +150,7 @@ const setPasswordAction = async () => {
       password: passwordForm.value.password
     })
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: 'You can now login with your new password.'
+      description: t('auth.passwordSetSuccess')
     })
     router.push({ name: 'login' })
   } catch (err) {
