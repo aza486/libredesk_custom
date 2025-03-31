@@ -15,7 +15,7 @@
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ t('admin.sla.delete_confirmation_title') }}</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
           {{ t('admin.sla.delete_confirmation') }}
         </AlertDialogDescription>

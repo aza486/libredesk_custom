@@ -1,34 +1,48 @@
 import * as z from 'zod'
 
-export const userFormSchema = z.object({
+export const createFormSchema = (t) => z.object({
   first_name: z
     .string({
-      required_error: 'First name is required.'
+      required_error: t('globals.messages.required'),
     })
     .min(2, {
-      message: 'First name must be at least 2 characters.'
+      message: t('form.error.minmax', {
+        min: 2,
+        max: 50,
+      })
+    })
+    .max(50, {
+      message: t('form.error.minmax', {
+        min: 2,
+        max: 50,
+      })
     }),
 
   last_name: z.string().optional(),
 
   email: z
     .string({
-      required_error: 'Email is required.'
+      required_error: t('globals.messages.required'),
     })
     .email({
-      message: 'Invalid email address.'
+      message: t('globals.messages.invalidEmailAddress'),
     }),
 
   send_welcome_email: z.boolean().optional(),
 
   teams: z.array(z.string()).default([]),
 
-  roles: z.array(z.string()).min(1, 'Please select at least one role.'),
+  roles: z.array(z.string()).min(1, t('globals.messages.pleaseSelectAtLeastOne', {
+    name: t('globals.entities.role')
+  })),
 
   new_password: z
     .string()
-    .regex(/^$|^(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,50}$/, {
-      message: 'Password must be between 8 and 50 characters long, contain at least one uppercase letter and one number.'
+    .regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{10,72}$/, {
+      message: t('globals.messages.strongPassword', {
+        min: 10,
+        max: 72,
+      })
     })
     .optional(),
   enabled: z.boolean().optional().default(true)

@@ -34,7 +34,7 @@
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{t('admin.conversation_tags.delete_confirmation_title')}}</AlertDialogTitle>
+        <AlertDialogTitle>{{t('globals.messages.areYouAbsolutelySure')}}</AlertDialogTitle>
         <AlertDialogDescription>
           {{t('admin.conversation_tags.delete_confirmation')}}
         </AlertDialogDescription>

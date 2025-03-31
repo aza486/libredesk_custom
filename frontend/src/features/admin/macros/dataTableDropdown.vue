@@ -17,7 +17,7 @@
   <AlertDialog :open="isDeleteOpen" @update:open="isDeleteOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ $t('admin.macro.delete_confirmation_title') }}</AlertDialogTitle>
+        <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
           {{ $t('admin.macro.delete_confirmation') }}
         </AlertDialogDescription>

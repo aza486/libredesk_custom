@@ -2,11 +2,11 @@ import { h } from 'vue'
 import UserDataTableDropDown from '@/features/admin/users/dataTableDropdown.vue'
 import { format } from 'date-fns'
 
-export const columns = [
+export const createColumns = (t) => [
   {
     accessorKey: 'first_name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'First name')
+      return h('div', { class: 'text-center' }, t('form.field.firstName'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('first_name'))
@@ -15,7 +15,7 @@ export const columns = [
   {
     accessorKey: 'last_name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Last name')
+      return h('div', { class: 'text-center' }, t('form.field.lastName'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('last_name'))
@@ -24,16 +24,16 @@ export const columns = [
   {
     accessorKey: 'enabled',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Enabled')
+      return h('div', { class: 'text-center' }, t('form.field.enabled'))
     },
     cell: function ({ row }) {
-      return h('div', { class: 'text-center font-medium' }, row.getValue('enabled') ? 'Yes' : 'No')
+      return h('div', { class: 'text-center font-medium' }, row.getValue('enabled') ? t('globals.messages.yes') : t('globals.messages.no'))
     }
   },
   {
     accessorKey: 'email',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Email')
+      return h('div', { class: 'text-center' }, t('form.field.email'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('email'))
@@ -42,7 +42,7 @@ export const columns = [
   {
     accessorKey: 'created_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Created at')
+      return h('div', { class: 'text-center' }, t('form.field.createdAt'))
     },
     cell: function ({ row }) {
       return h(
@@ -55,7 +55,7 @@ export const columns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Updated at')
+      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
     },
     cell: function ({ row }) {
       return h(

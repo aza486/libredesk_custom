@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"></Spinner>
+  <Spinner v-if="isLoading"/>
   <UserForm :initialValues="user" :submitForm="submitForm" :isLoading="formLoading" v-else />
 </template>
 
@@ -15,15 +15,22 @@ import { handleHTTPError } from '@/utils/http'
 import UserForm from '@/features/admin/users/UserForm.vue'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
+import { useI18n } from 'vue-i18n'
 
 const user = ref({})
+const { t } = useI18n()
 const isLoading = ref(false)
 const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  { path: 'user-list', label: 'Users' },
-  { path: '', label: 'Edit user' }
+  { path: 'user-list', label: t('globals.entities.user', 2) },
+  {
+    path: '',
+    label: t('globals.messages.edit', {
+      name: t('globals.entities.user', 1)
+    })
+  }
 ]
 
 const submitForm = (values) => {
@@ -35,12 +42,12 @@ const updateUser = async (payload) => {
     formLoading.value = true
     await api.updateUser(user.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: "Success",
-      description: "User updated successfully"
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.entities.user', 1)
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -56,7 +63,6 @@ onMounted(async () => {
     user.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

@@ -136,7 +136,7 @@
                   {{
                     holidayDate && !isNaN(new Date(holidayDate).getTime())
                       ? format(new Date(holidayDate), 'MMMM dd, yyyy')
-                      : t('form.field.pick_a_date')
+                      : t('form.field.pickDate')
                   }}
                 </Button>
               </PopoverTrigger>

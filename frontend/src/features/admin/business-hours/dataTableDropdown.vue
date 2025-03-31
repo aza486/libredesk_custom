@@ -20,7 +20,7 @@
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>
-          {{ t('admin.business_hours.delete_confirmation_title') }}
+          {{ t('globals.messages.areYouAbsolutelySure') }}
         </AlertDialogTitle>
         <AlertDialogDescription>
           {{ t('admin.business_hours.delete_confirmation') }}

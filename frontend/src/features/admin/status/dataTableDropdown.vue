@@ -42,7 +42,7 @@
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>
-          {{ $t('admin.conversation_status.delete_confirmation_title') }}</AlertDialogTitle
+          {{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle
         >
         <AlertDialogDescription>
           {{ $t('admin.conversation_status.delete_confirmation') }}

@@ -13,14 +13,21 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
+const { t } = useI18n()
 const emitter = useEmitter()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: 'user-list', label: 'Users' },
-  { path: '', label: 'Add user' }
+  { path: 'user-list', label: t('globals.entities.user', 2) },
+  {
+    path: '',
+    label: t('globals.messages.new', {
+      name: t('globals.entities.user', 1)
+    })
+  }
 ]
 
 const onSubmit = (values) => {
@@ -32,13 +39,13 @@ const createNewUser = async (values) => {
     formLoading.value = true
     await api.createUser(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'User created successfully'
+      description: t('globals.messages.createdSuccessfully', {
+        name: t('globals.entities.user', 1)
+      })
     })
     router.push({ name: 'user-list' })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
