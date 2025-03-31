@@ -53,10 +53,10 @@ func handleUpdateGeneralSettings(r *fastglue.Request) error {
 	}
 	// Reload the settings and templates.
 	if err := reloadSettings(app); err != nil {
-		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("app.couldNotReload", "name", app.i18n.T("globals.entities.setting")), nil)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.couldNotReload", "name", app.i18n.T("globals.entities.setting")), nil)
 	}
 	if err := reloadTemplates(app); err != nil {
-		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("app.couldNotReload", "name", app.i18n.T("globals.entities.setting")), nil)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.couldNotReload", "name", app.i18n.T("globals.entities.setting")), nil)
 	}
 	return r.SendEnvelope(true)
 }
