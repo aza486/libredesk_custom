@@ -2,8 +2,8 @@
   <div class="h-full">
     <div class="flex flex-col space-y-5">
       <div class="space-y-1">
-        <span class="sub-title">Public avatar</span>
-        <p class="text-muted-foreground text-xs">Change your avatar here.</p>
+        <span class="sub-title">{{ $t('account.publicAvatar') }}</span>
+        <p class="text-muted-foreground text-xs">{{ $t('account.changeAvatar') }}</p>
       </div>
       <div class="flex space-x-5">
         <Avatar class="size-28">
@@ -16,21 +16,25 @@
             ref="uploadInput"
             type="file"
             hidden
-            accept="image/jpg, image/jpeg, image/png, image/gif"
+            accept="image/jpg, image/jpeg, image/png"
             @change="selectFile"
           />
-          <Button class="w-28" @click="selectAvatar"> Choose a file... </Button>
-          <Button class="w-28" @click="removeAvatar" variant="destructive">Remove avatar</Button>
+          <Button class="w-28" @click="selectAvatar"> {{ $t('account.chooseAFile') }} </Button>
+          <Button class="w-28" @click="removeAvatar" variant="destructive">
+            {{ $t('account.removeAvatar') }}
+          </Button>
         </div>
       </div>
 
-      <Button class="w-28" @click="saveUser" size="sm" :isLoading="isSaving">Save Changes</Button>
+      <Button class="w-28" @click="saveUser" size="sm" :isLoading="isSaving">
+        {{ $t('globals.buttons.save_changes') }}
+      </Button>
 
       <!-- Cropped dialog -->
       <Dialog :open="showCropper">
         <DialogContent class="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle class="text-xl">Crop avatar</DialogTitle>
+            <DialogTitle class="text-xl">{{ $t('account.cropAvatar') }}</DialogTitle>
           </DialogHeader>
 
           <VuePictureCropper
@@ -44,8 +48,10 @@
             :options="{ viewMode: 1, dragMode: 'crop', aspectRatio: 1 }"
           />
           <DialogFooter class="sm:justify-end">
-            <Button variant="secondary" @click="closeDialog"> Close </Button>
-            <Button @click="getResult">Save</Button>
+            <Button variant="secondary" @click="closeDialog">
+              {{ $t('globals.buttons.close') }}
+            </Button>
+            <Button @click="getResult">{{ $t('globals.buttons.save') }}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -69,9 +75,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const isSaving = ref(false)
 const userStore = useUserStore()
 const uploadInput = ref(null)
@@ -117,12 +125,12 @@ const saveUser = async () => {
     isSaving.value = true
     await api.updateCurrentUser(formData)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Profile updated successfully'
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.entities.profile')
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -137,12 +145,10 @@ const removeAvatar = async () => {
     await api.deleteUserAvatar()
     userStore.clearAvatar()
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Avatar removed'
+      description: t('account.avatarRemoved')
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

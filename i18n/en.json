@@ -52,6 +52,7 @@
   "globals.entities.hour": "Hour | Hours",
   "globals.entities.day": "Day | Days",
   "globals.entities.filter": "Filter | Filters",
+  "globals.entities.profile": "Profile | Profiles",
   "globals.messages.adjustFilters": "Try adjusting your filters",
   "globals.messages.errorUploadingFile": "Error uploading file",
   "globals.messages.errorUpdating": "Error updating {name}",
@@ -538,6 +539,7 @@
   "globals.buttons.saving": "Saving...",
   "globals.buttons.back": "Back",
   "globals.buttons.edit": "Edit",
+  "globals.buttons.close": "Close",
   "globals.buttons.new": "New",
   "globals.buttons.apply": "Apply",
   "globals.buttons.reset": "Reset",
@@ -570,5 +572,11 @@
   "view.form.name.length": "View name should be between 2 and 30 characters.",
   "view.form.filter.required": "Filter required.",
   "view.form.filter.selectAtLeastOne": "Select at least one filter.",
-  "view.form.filter.partiallyFilled": "Please make sure you've filled the filter fields correctly."
+  "view.form.filter.partiallyFilled": "Please make sure you've filled the filter fields correctly.",
+  "account.changeAvatar": "Change your avatar here.",
+  "account.publicAvatar": "Public avatar",
+  "account.chooseAFile": "Choose a file...",
+  "account.removeAvatar": "Remove avatar",
+  "account.cropAvatar": "Crop avatar",
+  "account.avatarRemoved": "Avatar removed"
 }
