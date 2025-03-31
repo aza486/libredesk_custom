@@ -1,16 +1,16 @@
 import * as z from 'zod';
 
-export const formSchema = z
+export const createFormSchema = (t) => z
     .object({
         name: z.string({
-            required_error: 'Rule name is required.',
+            required_error: t('globals.messages.required'),
         }),
         description: z.string({
-            required_error: 'Rule description is required.',
+            required_error: t('globals.messages.required'),
         }),
         enabled: z.boolean().default(true),
         type: z.string({
-            required_error: 'Rule type is required.',
+            required_error: t('globals.messages.required'),
         }),
         events: z.array(z.string()).optional(),
     })
@@ -18,7 +18,9 @@ export const formSchema = z
         if (data.type === 'conversation_update' && (!data.events || data.events.length === 0)) {
             ctx.addIssue({
                 path: ['events'],
-                message: 'Please select at least one event.',
+                message: t('globals.messages.pleaseSelectAtLeastOne', {
+                    name: t('globals.entities.event')
+                }),
                 code: z.ZodIssueCode.custom,
             });
         }

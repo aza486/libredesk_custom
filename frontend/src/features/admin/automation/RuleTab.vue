@@ -15,8 +15,10 @@
           }}</SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="first_match">Execute the first matching rule</SelectItem>
-          <SelectItem value="all">Execute all matching rules</SelectItem>
+          <SelectItem value="first_match">{{
+            $t('admin.automation.executeFirstMatchingRule')
+          }}</SelectItem>
+          <SelectItem value="all">{{ $t('admin.automation.executeAllMatchingRules') }}</SelectItem>
         </SelectContent>
       </Select>
     </div>

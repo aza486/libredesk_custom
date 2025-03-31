@@ -4,11 +4,15 @@
       <div v-if="router.currentRoute.value.name === 'automations'">
         <div class="flex justify-between mb-5">
           <div class="ml-auto">
-            <Button @click="newRule">New rule</Button>
+            <Button @click="newRule">{{
+              $t('globals.messages.new', {
+                name: $t('globals.entities.rule')
+              })
+            }}</Button>
           </div>
         </div>
         <div v-if="selectedTab">
-          <AutomationTabs v-model="selectedTab" />
+          <AutomationTabs v-model:automationsTab="selectedTab" />
         </div>
       </div>
       <router-view />

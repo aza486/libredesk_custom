@@ -20,7 +20,7 @@
                   <Checkbox :checked="value" @update:checked="handleChange" />
                 </FormControl>
                 <div class="space-y-1 leading-none">
-                  <FormLabel> Enabled </FormLabel>
+                  <FormLabel> {{ $t('form.field.enabled') }} </FormLabel>
                   <FormMessage />
                 </div>
               </FormItem>
@@ -28,22 +28,24 @@
 
             <FormField v-slot="{ field }" name="name">
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>{{ $t('form.field.name') }}</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="My new rule" v-bind="field" />
+                  <Input type="text" placeholder="" v-bind="field" />
                 </FormControl>
-                <FormDescription>Name for the rule.</FormDescription>
+                <FormDescription>{{ $t('admin.automation.name.description') }}</FormDescription>
                 <FormMessage />
               </FormItem>
             </FormField>
 
             <FormField v-slot="{ field }" name="description">
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel>{{ $t('form.field.description') }}</FormLabel>
                 <FormControl>
-                  <Input type="text" placeholder="Description for new rule" v-bind="field" />
+                  <Input type="text" placeholder="" v-bind="field" />
                 </FormControl>
-                <FormDescription>Description for the rule.</FormDescription>
+                <FormDescription>{{
+                  $t('admin.automation.description.description')
+                }}</FormDescription>
                 <FormMessage />
               </FormItem>
             </FormField>
@@ -54,18 +56,28 @@
                 <FormControl>
                   <Select v-bind="componentField" @update:modelValue="handleInput">
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a type" />
+                      <SelectValue :placeholder="t('form.field.selectType')" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="new_conversation"> New conversation </SelectItem>
-                        <SelectItem value="conversation_update"> Conversation update </SelectItem>
-                        <SelectItem value="time_trigger"> Time trigger </SelectItem>
+                        <SelectItem value="new_conversation">
+                          {{ $t('admin.automation.newConversation') }}
+                        </SelectItem>
+                        <SelectItem value="conversation_update">
+                          {{ $t('admin.automation.conversationUpdate') }}
+                        </SelectItem>
+                        <SelectItem value="time_trigger">
+                          {{ $t('admin.automation.timeTriggers') }}
+                        </SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </FormControl>
-                <FormDescription>Type of rule.</FormDescription>
+                <FormDescription>{{
+                  $t('globals.messages.typeOf', {
+                    name: $t('globals.entities.rule')
+                  })
+                }}</FormDescription>
                 <FormMessage />
               </FormItem>
             </FormField>
@@ -73,24 +85,26 @@
             <div :class="{ hidden: form.values.type !== 'conversation_update' }">
               <FormField v-slot="{ componentField, handleChange }" name="events">
                 <FormItem>
-                  <FormLabel>Events</FormLabel>
+                  <FormLabel>{{ $t('globals.entities.event', 2) }}</FormLabel>
                   <FormControl>
                     <SelectTag
                       v-model="componentField.modelValue"
                       @update:modelValue="handleChange"
                       :items="conversationEventOptions"
-                      placeholder="Select events"
+                      :placeholder="t('form.fields.selectEvents')"
                     >
                     </SelectTag>
                   </FormControl>
-                  <FormDescription>Evaluate rule on these events.</FormDescription>
+                  <FormDescription>{{
+                    $t('admin.automation.evaluateRuleOnTheseEvents')
+                  }}</FormDescription>
                   <FormMessage />
                 </FormItem>
               </FormField>
             </div>
           </div>
 
-          <p class="font-semibold">Match these rules</p>
+          <p class="font-semibold">{{ $t('admin.automation.matchTheseRules') }}</p>
 
           <RuleBox
             :ruleGroup="firstRuleGroup"
@@ -107,13 +121,13 @@
                 :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
                 @click.prevent="toggleGroupOperator('AND')"
               >
-                AND
+                {{ $t('admin.automation.and') }}
               </Button>
               <Button
                 :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
                 @click.prevent="toggleGroupOperator('OR')"
               >
-                OR
+                {{ $t('admin.automation.or') }}
               </Button>
             </div>
           </div>
@@ -126,7 +140,7 @@
             :type="form.values.type"
             :groupIndex="1"
           />
-          <p class="font-semibold">Perform these actions</p>
+          <p class="font-semibold">{{ $t('admin.automation.performTheseActions') }}</p>
 
           <ActionBox
             :actions="getActions()"
@@ -134,7 +148,7 @@
             @add-action="handleAddAction"
             @remove-action="handleRemoveAction"
           />
-          <Button type="submit" :isLoading="isLoading">Save</Button>
+          <Button type="submit" :isLoading="isLoading">{{ $t('globals.buttons.save') }}</Button>
         </div>
       </form>
     </div>
@@ -151,12 +165,13 @@ import api from '@/api'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from '@/features/admin/automation/formSchema.js'
+import { createFormSchema } from '@/features/admin/automation/formSchema.js'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { SelectTag } from '@/components/ui/select'
 import { OPERATOR } from '@/constants/filterConfig'
+import { useI18n } from 'vue-i18n'
 import {
   Select,
   SelectContent,
@@ -179,6 +194,7 @@ import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 
 const isLoading = ref(false)
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const emitter = useEmitter()
@@ -206,12 +222,12 @@ const rule = ref({
 })
 
 const conversationEventOptions = [
-  { label: 'User assigned', value: 'conversation.user.assigned' },
-  { label: 'Team assigned', value: 'conversation.team.assigned' },
-  { label: 'Priority change', value: 'conversation.priority.change' },
-  { label: 'Status change', value: 'conversation.status.change' },
-  { label: 'Outgoing message', value: 'conversation.message.outgoing' },
-  { label: 'Incoming message', value: 'conversation.message.incoming' }
+  { label: t('admin.automation.event.user.assigned'), value: 'conversation.user.assigned' },
+  { label: t('admin.automation.event.team.assigned'), value: 'conversation.team.assigned' },
+  { label: t('admin.automation.event.priority.change'), value: 'conversation.priority.change' },
+  { label: t('admin.automation.event.status.change'), value: 'conversation.status.change' },
+  { label: t('admin.automation.event.message.outgoing'), value: 'conversation.message.outgoing' },
+  { label: t('admin.automation.event.message.incoming'), value: 'conversation.message.incoming' }
 ]
 
 const props = defineProps({
@@ -222,8 +238,13 @@ const props = defineProps({
 })
 
 const breadcrumbPageLabel = () => {
-  if (props.id > 0) return 'Edit rule'
-  return 'New rule'
+  if (props.id > 0)
+    return t('globals.messages.edit', {
+      name: t('globals.entities.rule')
+    })
+  return t('globals.messages.new', {
+    name: t('globals.entities.rule')
+  })
 }
 
 const formTitle = computed(() => {
@@ -237,7 +258,7 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-  { path: 'automations', label: 'Automations' },
+  { path: 'automations', label: t('admin.automation') },
   { path: '', label: breadcrumbPageLabel() }
 ]
 
@@ -305,7 +326,7 @@ const handleRemoveAction = (index) => {
 }
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
@@ -315,10 +336,8 @@ const onSubmit = form.handleSubmit(async (values) => {
 const handleSave = async (values) => {
   if (!areRulesValid()) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Invalid rules',
       variant: 'destructive',
-      description:
-        'Make sure you have atleast one action and one rule and their values are not empty.'
+      description: t('admin.automation.invalid')
     })
     return
   }
@@ -336,12 +355,12 @@ const handleSave = async (values) => {
       router.push({ name: 'automations' })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Rule saved successfully'
+      description: t('globals.messages.savedSuccessfully', {
+        name: t('globals.entities.rule')
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not save rule',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -416,7 +435,6 @@ onMounted(async () => {
       form.setValues(resp.data.data)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not fetch rule',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
