@@ -50,6 +50,9 @@ func handleCreateTemplate(r *fastglue.Request) error {
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
 	}
+	if req.Name == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
+	}
 	if err := app.tmpl.Create(req); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -69,6 +72,9 @@ func handleUpdateTemplate(r *fastglue.Request) error {
 	}
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+	}
+	if req.Name == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 	if err = app.tmpl.Update(id, req); err != nil {
 		return sendErrorEnvelope(r, err)

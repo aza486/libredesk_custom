@@ -69,7 +69,7 @@ const submitForm = async (values) => {
     )
     await api.updateEmailNotificationSettings(updatedValues)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.notifications.restartApp')
+      description: t('admin.notification.restartApp')
     })
     await getNotificationSettings()
   } catch (error) {

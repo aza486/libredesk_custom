@@ -2,11 +2,11 @@ import { h } from 'vue'
 import dropdown from './dataTableDropdown.vue'
 import { format } from 'date-fns'
 
-export const outgoingEmailTemplatesColumns = [
+export const createOutgoingEmailTableColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -14,7 +14,7 @@ export const outgoingEmailTemplatesColumns = [
   },
   {
     accessorKey: 'is_default',
-    header: () => h('div', { class: 'text-center' }, 'Default'),
+    header: () => h('div', { class: 'text-center' }, t('form.field.default')),
     cell: ({ row }) => {
       const isDefault = row.getValue('is_default')
 
@@ -30,7 +30,7 @@ export const outgoingEmailTemplatesColumns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Updated at')
+      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))
@@ -53,11 +53,11 @@ export const outgoingEmailTemplatesColumns = [
 ]
 
 
-export const emailNotificationTemplates = [
+export const createEmailNotificationTableColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -67,7 +67,7 @@ export const emailNotificationTemplates = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Updated at')
+      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))
