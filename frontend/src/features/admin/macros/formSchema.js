@@ -1,17 +1,17 @@
 import * as z from 'zod'
 import { getTextFromHTML } from '@/utils/strings.js'
 
-const actionSchema = z.array(
+const actionSchema = (t) => z.array(
   z.object({
-    type: z.string().min(1, 'Action type required'),
-    value: z.array(z.string().min(1, 'Action value required')).min(1, 'Action value required'),
+    type: z.string().min(1, t('admin.macro.actionTypeRequired')),
+    value: z.array(z.string().min(1, t('admin.macro.actionValueRequired'))),
   })
 )
 
-export const formSchema = z.object({
-  name: z.string().min(1, 'Macro name is required'),
+export const createFormSchema = (t) => z.object({
+  name: z.string().min(1, t('form.error.name.required')),
   message_content: z.string().optional(),
-  actions: actionSchema.optional().default([]), // Default to empty array if not provided
+  actions: actionSchema(t).optional().default([]),
   visibility: z.enum(['all', 'team', 'user']),
   team_id: z.string().nullable().optional(),
   user_id: z.string().nullable().optional(),
@@ -26,7 +26,7 @@ export const formSchema = z.object({
       return hasMessageContent || hasValidActions
     },
     {
-      message: 'Either message content or actions are required',
+      message: t('admin.macro.messageOrActionRequired'),
       // Field path to highlight
       path: ['message_content'],
     }
@@ -45,7 +45,7 @@ export const formSchema = z.object({
       return true
     },
     {
-      message: 'team is required when visibility is "team", and user is required when visibility is "user"',
+      message: t('admin.macro.teamOrUserRequired'),
       // Field path to highlight
       path: ['visibility'],
     }

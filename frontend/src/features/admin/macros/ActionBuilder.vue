@@ -77,7 +77,7 @@
                           </Avatar>
                           <span>{{ selected.label }}</span>
                         </div>
-                        <span v-else>Select user</span>
+                        <span v-else>{{ $t('admin.macro.visibility.selectUser') }}</span>
                       </div>
                     </div>
                     <div v-else-if="action.type === 'assign_team'">
@@ -86,13 +86,15 @@
                           {{ selected.emoji }}
                           <span>{{ selected.label }}</span>
                         </span>
-                        <span v-else>Select team</span>
+                        <span v-else>
+                          {{ $t('admin.macro.visibility.selectTeam') }}
+                        </span>
                       </div>
                     </div>
                     <div v-else-if="selected">
                       {{ selected.label }}
                     </div>
-                    <div v-else>Select</div>
+                    <div v-else>{{ $t('form.field.select') }}</div>
                   </template>
                 </ComboBox>
               </div>
@@ -131,7 +133,7 @@ import { SelectTag } from '@/components/ui/select'
 import { useTagStore } from '@/stores/tag'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 
-const model = defineModel("actions", {
+const model = defineModel('actions', {
   type: Array,
   required: true,
   default: () => []

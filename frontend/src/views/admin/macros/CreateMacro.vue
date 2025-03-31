@@ -2,10 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <MacroForm
-    :submitForm="onSubmit"
-    :isLoading="formLoading"
-  />
+  <MacroForm :submitForm="onSubmit" :isLoading="formLoading" />
 </template>
 
 <script setup>
@@ -16,14 +13,16 @@ import { handleHTTPError } from '@/utils/http'
 import { useRouter } from 'vue-router'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const router = useRouter()
 const emit = useEmitter()
+const { t } = useI18n()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: 'macro-list', label: 'Macros' },
-  { path: '', label: 'New macro' }
+  { path: 'macro-list', label: t('admin.macro') },
+  { path: '', label: t('admin.macro.new') }
 ]
 
 const onSubmit = (values) => {
@@ -35,13 +34,11 @@ const createMacro = async (values) => {
     formLoading.value = true
     await api.createMacro(values)
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Macro created successfully'
+      description: t('admin.macro.created')
     })
     router.push({ name: 'macro-list' })
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

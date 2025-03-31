@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"></Spinner>
+  <Spinner v-if="isLoading"/>
   <MacroForm :initialValues="macro" :submitForm="submitForm" :isLoading="formLoading" v-else />
 </template>
 
@@ -14,16 +14,18 @@ import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import MacroForm from '@/features/admin/macros/MacroForm.vue'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
+import { useI18n } from 'vue-i18n'
 import { Spinner } from '@/components/ui/spinner'
 
 const macro = ref({})
+const { t } = useI18n()
 const isLoading = ref(false)
 const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  { path: 'macro-list', label: 'Macros' },
-  { path: '', label: 'Edit macro' }
+  { path: 'macro-list', label: t('admin.macro') },
+  { path: '', label: t('admin.macro.edit') }
 ]
 
 const submitForm = (values) => {
@@ -35,12 +37,10 @@ const updateMacro = async (payload) => {
     formLoading.value = true
     await api.updateMacro(macro.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Macro updated successfully'
+      description: t('admin.macro.updated')
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not update macro',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -56,7 +56,6 @@ onMounted(async () => {
     macro.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
