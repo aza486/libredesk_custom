@@ -1,13 +1,6 @@
 <template>
   <div class="max-w-5xl mx-auto p-6 bg-background min-h-screen">
-    <div v-if="isEmptyResults" class="text-center py-16 rounded-lg">
-      <SearchXIcon class="h-20 w-20 text-muted-foreground mx-auto mb-6" />
-      <h2 class="text-2xl font-bold text-foreground mb-3">No results found</h2>
-      <p class="text-muted-foreground text-lg max-w-md mx-auto">
-        We couldn't find any matches. Try adjusting your search query.
-      </p>
-    </div>
-    <div v-else class="space-y-8">
+    <div class="space-y-8">
       <div
         v-for="(items, type) in results"
         :key="type"
@@ -18,7 +11,9 @@
         </h2>
 
         <div v-if="items.length === 0" class="p-6 text-muted-foreground">
-          No {{ type }} found
+          {{ $t('search.noResults', {
+            name: type
+          }) }}
         </div>
 
         <div class="divide-y divide-border">
@@ -82,19 +77,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { SearchXIcon, ChevronRightIcon, ClockIcon } from 'lucide-vue-next'
+import { ChevronRightIcon, ClockIcon } from 'lucide-vue-next'
 import { format, parseISO } from 'date-fns'
 
-const props = defineProps({
+defineProps({
   results: {
     type: Object,
     required: true
   }
-})
-
-const isEmptyResults = computed(() => {
-  return Object.values(props.results).every((arr) => arr.length === 0)
 })
 
 const formatDate = (dateString) => {

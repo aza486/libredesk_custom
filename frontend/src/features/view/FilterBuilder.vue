@@ -9,7 +9,7 @@
         <!-- Field -->
         <Select v-model="modelFilter.field">
           <SelectTrigger class="bg-transparent hover:bg-slate-100 w-full">
-            <SelectValue placeholder="Field" />
+            <SelectValue :placeholder="t('form.field.selectField')" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -23,7 +23,7 @@
         <!-- Operator -->
         <Select v-model="modelFilter.operator" v-if="modelFilter.field">
           <SelectTrigger class="bg-transparent hover:bg-slate-100 w-full">
-            <SelectValue placeholder="Operator" />
+            <SelectValue :placeholder="t('form.field.selectOperator')" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -41,7 +41,7 @@
               v-if="getFieldOptions(modelFilter).length > 0"
               v-model="modelFilter.value"
               :items="getFieldOptions(modelFilter)"
-              placeholder="Select"
+              :placeholder="t('form.field.select')"
             >
               <template #item="{ item }">
                 <div v-if="modelFilter.field === 'assigned_user_id'">
@@ -65,7 +65,7 @@
               </template>
 
               <template #selected="{ selected }">
-                <div v-if="!selected">Select value</div>
+                <div v-if="!selected">{{ $t('form.field.selectValue') }}</div>
                 <div v-if="modelFilter.field === 'assigned_user_id'">
                   <div class="flex items-center gap-2">
                     <div v-if="selected" class="flex items-center gap-1">
@@ -96,7 +96,7 @@
               v-else
               v-model="modelFilter.value"
               class="bg-transparent hover:bg-slate-100"
-              placeholder="Value"
+              :placeholder="t('form.field.value')"
               type="text"
             />
           </template>
@@ -114,11 +114,16 @@
 
     <div class="flex items-center justify-between pt-3">
       <Button variant="ghost" size="sm" @click="addFilter" class="text-slate-600">
-        <Plus class="w-3 h-3 mr-1" /> Add filter
+        <Plus class="w-3 h-3 mr-1" />
+        {{
+          $t('globals.messages.add', {
+            name: $t('globals.entities.filter')
+          })
+        }}
       </Button>
       <div class="flex gap-2" v-if="showButtons">
-        <Button variant="ghost" @click="clearFilters">Reset</Button>
-        <Button @click="applyFilters">Apply</Button>
+        <Button variant="ghost" @click="clearFilters">{{ $t('globals.buttons.reset') }}</Button>
+        <Button @click="applyFilters">{{ $t('globals.buttons.apply') }}</Button>
       </div>
     </div>
   </div>
@@ -138,6 +143,7 @@ import { Plus, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { useI18n } from 'vue-i18n'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 
 const props = defineProps({
@@ -150,7 +156,7 @@ const props = defineProps({
     default: true
   }
 })
-
+const { t } = useI18n()
 const emit = defineEmits(['apply', 'clear'])
 const modelValue = defineModel('modelValue', { required: false, default: () => [] })
 

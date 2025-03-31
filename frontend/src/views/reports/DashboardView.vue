@@ -7,7 +7,7 @@
       <Spinner v-if="isLoading" />
       <div class="space-y-4">
         <div class="text-sm text-gray-500 text-right">
-          Last updated: {{ new Date(lastUpdate).toLocaleTimeString() }}
+          {{ $t('report.lastUpdated') }}: {{ new Date(lastUpdate).toLocaleTimeString() }}
         </div>
         <div class="mt-7 flex w-full space-x-4">
           <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
@@ -19,10 +19,10 @@
           />
         </div>
         <div class="rounded-lg box w-full p-5 bg-white">
-          <LineChart :data="chartData.processedData"></LineChart>
+          <LineChart :data="chartData.processedData" />
         </div>
         <div class="rounded-lg box w-full p-5 bg-white">
-          <BarChart :data="chartData.status_summary"></BarChart>
+          <BarChart :data="chartData.status_summary" />
         </div>
       </div>
     </div>
@@ -38,9 +38,11 @@ import Card from '@/features/reports/DashboardCard.vue'
 import LineChart from '@/features/reports/DashboardLineChart.vue'
 import BarChart from '@/features/reports/DashboardBarChart.vue'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const isLoading = ref(false)
 const cardCounts = ref({})
 const chartData = ref({})
@@ -48,16 +50,16 @@ const lastUpdate = ref(new Date())
 let updateInterval
 
 const agentCountCardsLabels = {
-  open: 'Total',
-  awaiting_response: 'Awaiting Response',
-  unassigned: 'Unassigned',
-  pending: 'Pending'
+  open: t('report.open'),
+  awaiting_response: t('report.awaiting_response'),
+  unassigned: t('report.unassigned'),
+  pending: t('report.pending')
 }
 
 const agentStatusLabels = {
-  agents_online: 'Online',
-  agents_offline: 'Offline',
-  agents_away: 'Away'
+  agents_online: t('user.online'),
+  agents_offline: t('user.offline'),
+  agents_away: t('user.away')
 }
 
 const agentStatusCounts = ref({
@@ -106,7 +108,6 @@ const getCardStats = async () => {
     })
     .catch((error) => {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -134,17 +135,16 @@ const getDashboardCharts = async () => {
       // Process data for all dates
       chartData.value.processedData = uniqueDates.map((date) => ({
         date,
-        'New conversations':
+        [t('report.chart.newConversations')]:
           chartData.value.new_conversations.find((item) => item.date === date)?.count || 0,
-        'Resolved conversations':
-          chartData.value.resolved_conversations.find((item) => item.date === date)?.count || 0,
+        [t('report.chart.resolvedConversations')]:
+          chartData.value.resolved_conversations.find((item) => item.date === date)?.count || 0
       }))
 
       chartData.value.status_summary = resp.data.data.status_summary || []
     })
     .catch((error) => {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })

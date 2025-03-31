@@ -6,7 +6,7 @@
       <Separator orientation="vertical" />
       <Input
         v-model="model"
-        placeholder="Search"
+        :placeholder="t('search.search')"
         class="w-full border-none shadow-none focus:ring-0 focus:ring-offset-0"
       />
     </div>
@@ -19,7 +19,9 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Search } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 const model = defineModel(() => '')
+const { t } = useI18n()
 </script>
 
 <style scoped>

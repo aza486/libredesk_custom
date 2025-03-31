@@ -5,7 +5,7 @@
         class="flex flex-col items-center justify-center flex-grow"
         v-if="$route.name === 'admin'"
       >
-        <div>Select a section from the sidebar</div>
+        <div>{{ $t('admin.empty') }}</div>
       </div>
       <router-view class="flex-grow" />
     </div>

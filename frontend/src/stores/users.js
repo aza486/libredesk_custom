@@ -20,7 +20,6 @@ export const useUsersStore = defineStore('users', () => {
             users.value = response?.data?.data || []
         } catch (error) {
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-                title: 'Error',
                 variant: 'destructive',
                 description: handleHTTPError(error).message
             })
