@@ -91,7 +91,7 @@
                       v-model="componentField.modelValue"
                       @update:modelValue="handleChange"
                       :items="conversationEventOptions"
-                      :placeholder="t('form.fields.selectEvents')"
+                      :placeholder="t('form.field.selectEvents')"
                     >
                     </SelectTag>
                   </FormControl>

@@ -19,7 +19,7 @@
             <Editor
               v-model:htmlContent="componentField.modelValue"
               @update:htmlContent="(value) => componentField.onChange(value)"
-              :placeholder="t('admin.macro.message_content.placeholder')"
+              :placeholder="t('editor.placeholder')"
             />
           </div>
         </FormControl>

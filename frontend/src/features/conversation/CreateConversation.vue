@@ -2,17 +2,17 @@
   <Dialog :open="dialogOpen" @update:open="dialogOpen = false">
     <DialogContent class="max-w-5xl w-full h-[90vh] flex flex-col">
       <DialogHeader>
-        <DialogTitle>New Conversation</DialogTitle>
+        <DialogTitle>{{ $t('conversation.newConversation') }}</DialogTitle>
       </DialogHeader>
       <form @submit="createConversation" class="flex flex-col flex-1 overflow-hidden">
         <div class="flex-1 space-y-4 pr-1 overflow-y-auto pb-2">
           <FormField name="contact_email">
             <FormItem class="relative">
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{{ $t('form.field.email') }}</FormLabel>
               <FormControl>
                 <Input
                   type="email"
-                  placeholder="Search contact by email or type new email"
+                  :placeholder="t('conversation.searchContact')"
                   v-model="emailQuery"
                   @input="handleSearchContacts"
                   autocomplete="off"
@@ -38,9 +38,9 @@
 
           <FormField v-slot="{ componentField }" name="first_name">
             <FormItem>
-              <FormLabel>First Name</FormLabel>
+              <FormLabel>{{ $t('form.field.firstName') }}</FormLabel>
               <FormControl>
-                <Input type="text" placeholder="First Name" v-bind="componentField" required />
+                <Input type="text" placeholder="" v-bind="componentField" required />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -48,9 +48,9 @@
 
           <FormField v-slot="{ componentField }" name="last_name">
             <FormItem>
-              <FormLabel>Last Name</FormLabel>
+              <FormLabel>{{ $t('form.field.lastName') }}</FormLabel>
               <FormControl>
-                <Input type="text" placeholder="Last Name" v-bind="componentField" required />
+                <Input type="text" placeholder="" v-bind="componentField" required />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -58,9 +58,9 @@
 
           <FormField v-slot="{ componentField }" name="subject">
             <FormItem>
-              <FormLabel>Subject</FormLabel>
+              <FormLabel>{{ $t('form.field.subject') }}</FormLabel>
               <FormControl>
-                <Input type="text" placeholder="Subject" v-bind="componentField" required />
+                <Input type="text" placeholder="" v-bind="componentField" required />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -68,11 +68,11 @@
 
           <FormField v-slot="{ componentField }" name="inbox_id">
             <FormItem>
-              <FormLabel>Inbox</FormLabel>
+              <FormLabel>{{ $t('form.field.inbox') }}</FormLabel>
               <FormControl>
                 <Select v-bind="componentField">
                   <SelectTrigger>
-                    <SelectValue placeholder="Select an inbox" />
+                    <SelectValue :placeholder="t('form.field.selectInbox')" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -94,13 +94,12 @@
           <!-- Set assigned team -->
           <FormField v-slot="{ componentField }" name="team_id">
             <FormItem>
-              <FormLabel>Assign team (optional)</FormLabel>
+              <FormLabel>{{ $t('form.field.assignTeamOptional') }}</FormLabel>
               <FormControl>
                 <ComboBox
                   v-bind="componentField"
                   :items="[{ value: 'none', label: 'None' }, ...teamStore.options]"
-                  placeholder="Search team"
-                  defaultLabel="Assign team"
+                  :placeholder="t('form.field.selectTeam')"
                 >
                   <template #item="{ item }">
                     <div class="flex items-center gap-3 py-2">
@@ -118,11 +117,13 @@
                   </template>
 
                   <template #selected="{ selected }">
-                    <div class="flex items-center gap-3" v-if="selected">
-                      <div class="w-7 h-7 flex items-center justify-center">
+                    <div class="flex items-center gap-3">
+                      <div class="w-7 h-7 flex items-center justify-center" v-if="selected">
                         {{ selected?.emoji }}
                       </div>
-                      <span class="text-sm">{{ selected?.label || 'Select team' }}</span>
+                      <span class="text-sm">{{
+                        selected?.label || t('form.field.selectTeam')
+                      }}</span>
                     </div>
                   </template>
                 </ComboBox>
@@ -134,13 +135,12 @@
           <!-- Set assigned agent -->
           <FormField v-slot="{ componentField }" name="agent_id">
             <FormItem>
-              <FormLabel>Assign agent (optional)</FormLabel>
+              <FormLabel>{{ $t('form.field.assignAgentOptional') }}</FormLabel>
               <FormControl>
                 <ComboBox
                   v-bind="componentField"
                   :items="[{ value: 'none', label: 'None' }, ...uStore.options]"
-                  placeholder="Search agent"
-                  defaultLabel="Assign agent"
+                  :placeholder="t('form.field.selectAgent')"
                 >
                   <template #item="{ item }">
                     <div class="flex items-center gap-3 py-2">
@@ -176,7 +176,9 @@
                           }}
                         </AvatarFallback>
                       </Avatar>
-                      <span class="text-sm">{{ selected?.label || 'Assign agent' }}</span>
+                      <span class="text-sm">{{
+                        selected?.label || t('form.field.selectAgent')
+                      }}</span>
                     </div>
                   </template>
                 </ComboBox>
@@ -191,13 +193,13 @@
             class="flex-1 min-h-0 flex flex-col"
           >
             <FormItem class="flex flex-col flex-1">
-              <FormLabel>Message</FormLabel>
+              <FormLabel>{{ $t('form.field.message') }}</FormLabel>
               <FormControl class="flex-1 min-h-0 flex flex-col">
                 <div class="flex-1 min-h-0 flex flex-col">
                   <Editor
                     v-model:htmlContent="componentField.modelValue"
                     @update:htmlContent="(value) => componentField.onChange(value)"
-                    :placeholder="'Shift + Enter to add new line'"
+                    :placeholder="t('editor.placeholder')"
                     class="w-full flex-1 overflow-y-auto p-2 min-h-[200px] box"
                   />
                 </div>
@@ -208,7 +210,9 @@
         </div>
 
         <DialogFooter class="mt-4 pt-2 border-t shrink-0">
-          <Button type="submit" :disabled="loading" :isLoading="loading"> Submit </Button>
+          <Button type="submit" :disabled="loading" :isLoading="loading">
+            {{ $t('globals.buttons.submit') }}
+          </Button>
         </DialogFooter>
       </form>
     </DialogContent>
@@ -247,6 +251,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { useI18n } from 'vue-i18n'
 import Editor from '@/features/conversation/ConversationTextEditor.vue'
 import api from '@/api'
 
@@ -256,6 +261,7 @@ const dialogOpen = defineModel({
 })
 
 const inboxStore = useInboxStore()
+const { t } = useI18n()
 const uStore = useUsersStore()
 const teamStore = useTeamStore()
 const emitter = useEmitter()
@@ -265,16 +271,26 @@ const emailQuery = ref('')
 let timeoutId = null
 
 const formSchema = z.object({
-  subject: z.string().min(3, 'Subject must be at least 3 characters'),
-  content: z.string().min(1, 'Message cannot be empty'),
+  subject: z.string().min(
+    3,
+    t('form.error.min', {
+      min: 3
+    })
+  ),
+  content: z.string().min(
+    1,
+    t('globals.messages.cannotBeEmpty', {
+      name: t('globals.entities.message')
+    })
+  ),
   inbox_id: z.any().refine((val) => inboxStore.options.some((option) => option.value === val), {
-    message: 'Inbox is required'
+    message: t('globals.messages.required')
   }),
   team_id: z.any().optional(),
   agent_id: z.any().optional(),
-  contact_email: z.string().email('Invalid email address'),
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required')
+  contact_email: z.string().email(t('globals.messages.invalidEmailAddress')),
+  first_name: z.string().min(1, t('globals.messages.required')),
+  last_name: z.string().min(1, t('globals.messages.required'))
 })
 
 const form = useForm({
@@ -310,7 +326,6 @@ const handleSearchContacts = async () => {
       searchResults.value = [...resp.data.data]
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -335,7 +350,6 @@ const createConversation = form.handleSubmit(async (values) => {
     emailQuery.value = ''
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

@@ -2,18 +2,22 @@
   <Dialog :open="openAIKeyPrompt" @update:open="openAIKeyPrompt = false">
     <DialogContent class="sm:max-w-lg">
       <DialogHeader class="space-y-2">
-        <DialogTitle>Enter OpenAI API Key</DialogTitle>
+        <DialogTitle>{{ $t('ai.enterOpenAIAPIKey') }}</DialogTitle>
         <DialogDescription>
-          OpenAI API key is not set or invalid. Please enter a valid API key to use AI features.
+          {{
+            $t('ai.apiKey.description', {
+              provider: 'OpenAI'
+            })
+          }}
         </DialogDescription>
       </DialogHeader>
       <Form v-slot="{ handleSubmit }" as="" keep-values :validation-schema="formSchema">
         <form id="apiKeyForm" @submit="handleSubmit($event, updateProvider)">
           <FormField v-slot="{ componentField }" name="apiKey">
             <FormItem>
-              <FormLabel>API Key</FormLabel>
+              <FormLabel>{{ $t('globals.entities.apiKey') }}</FormLabel>
               <FormControl>
-                <Input type="text" placeholder="Enter your API key" v-bind="componentField" />
+                <Input type="text" placeholder="sk-am1RLw7XUWGX.." v-bind="componentField" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -26,7 +30,7 @@
             :is-loading="isOpenAIKeyUpdating"
             :disabled="isOpenAIKeyUpdating"
           >
-            Save
+            {{ $t('globals.buttons.save') }}
           </Button>
         </DialogFooter>
       </Form>
@@ -136,7 +140,7 @@ import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useUserStore } from '@/stores/user'
 import api from '@/api'
-
+import { useI18n } from 'vue-i18n'
 import { useConversationStore } from '@/stores/conversation'
 import { Button } from '@/components/ui/button'
 import {
@@ -167,6 +171,7 @@ const formSchema = toTypedSchema(
   })
 )
 
+const { t } = useI18n()
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const userStore = useUserStore()
@@ -205,7 +210,6 @@ const fetchAiPrompts = async () => {
     aiPrompts.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -234,7 +238,6 @@ const handleAiPromptSelected = async (key) => {
       openAIKeyPrompt.value = true
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -251,12 +254,12 @@ const updateProvider = async (values) => {
     await api.updateAIProvider({ api_key: values.apiKey, provider: 'openai' })
     openAIKeyPrompt.value = false
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'API key saved successfully.'
+      description: t('globals.messages.savedSuccessfully', {
+        name: t('globals.entities.apiKey')
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -288,7 +291,6 @@ const handleFileUpload = (event) => {
       .catch((error) => {
         uploadingFiles.value = uploadingFiles.value.filter((f) => f.name !== file.name)
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          title: 'Error',
           variant: 'destructive',
           description: handleHTTPError(error).message
         })
@@ -316,7 +318,6 @@ const handleInlineImageUpload = (event) => {
       })
       .catch((error) => {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          title: 'Error',
           variant: 'destructive',
           description: handleHTTPError(error).message
         })
@@ -398,7 +399,6 @@ const processSend = async () => {
   } catch (error) {
     hasAPIErrored = true
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

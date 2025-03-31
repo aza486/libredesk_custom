@@ -40,23 +40,27 @@
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem @click="handleSortChange('oldest')">Oldest activity</DropdownMenuItem>
-          <DropdownMenuItem @click="handleSortChange('newest')">Newest activity</DropdownMenuItem>
-          <DropdownMenuItem @click="handleSortChange('started_first')"
-            >Started first</DropdownMenuItem
-          >
-          <DropdownMenuItem @click="handleSortChange('started_last')"
-            >Started last</DropdownMenuItem
-          >
-          <DropdownMenuItem @click="handleSortChange('waiting_longest')"
-            >Waiting longest</DropdownMenuItem
-          >
-          <DropdownMenuItem @click="handleSortChange('next_sla_target')"
-            >Next SLA target</DropdownMenuItem
-          >
-          <DropdownMenuItem @click="handleSortChange('priority_first')"
-            >Priority first</DropdownMenuItem
-          >
+          <DropdownMenuItem @click="handleSortChange('oldest')">
+            {{ $t('conversation.sort.oldestActivity') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('newest')">
+            {{ $t('conversation.sort.newestActivity') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('started_first')">
+            {{ $t('conversation.sort.startedFirst') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('started_last')">
+            {{ $t('conversation.sort.startedLast') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('waiting_longest')">
+            {{ $t('conversation.sort.waitingLongest') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('next_sla_target')">
+            {{ $t('conversation.sort.nextSLATarget') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('priority_first')">
+            {{ $t('conversation.sort.priorityFirst') }}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -67,8 +71,8 @@
         v-if="!hasConversations && !hasErrored && !isLoading"
         key="empty"
         class="px-4 py-8"
-        title="No conversations found"
-        message="Try adjusting filters"
+        :title="t('conversation.noConversationsFound')"
+        :message="t('conversation.tryAdjustingFilters')"
         :icon="MessageCircleQuestion"
       />
 
@@ -77,7 +81,7 @@
         v-if="conversationStore.conversations.errorMessage"
         key="error"
         class="px-4 py-8"
-        title="Could not fetch conversations"
+        :title="t('conversation.couldNotFetch')"
         :message="conversationStore.conversations.errorMessage"
         :icon="MessageCircleWarning"
       />
@@ -126,13 +130,13 @@
           class="transition-all duration-200 ease-in-out transform hover:scale-105"
         >
           <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
-          {{ isLoading ? 'Loading...' : 'Load more' }}
+          {{ isLoading ? t('globals.entities.loading') : t('globals.entities.loadMore') }}
         </Button>
         <p
           class="text-sm text-gray-500"
           v-else-if="conversationStore.conversationsList.length > 10"
         >
-          All conversations loaded
+          {{ $t('conversation.allLoaded') }}
         </p>
       </div>
     </div>
@@ -154,11 +158,13 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import EmptyList from '@/features/conversation/list/ConversationEmptyList.vue'
 import ConversationListItem from '@/features/conversation/list/ConversationListItem.vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ConversationListItemSkeleton from '@/features/conversation/list/ConversationListItemSkeleton.vue'
 
 const conversationStore = useConversationStore()
 const route = useRoute()
 let reFetchInterval = ref(null)
+const { t } = useI18n()
 
 const title = computed(() => {
   const typeValue = route.meta?.type?.(route)

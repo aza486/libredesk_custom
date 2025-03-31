@@ -16,7 +16,7 @@
             class="transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-105 active:scale-95"
           >
             <RefreshCw size="17" class="mr-2" />
-            Load more
+            {{ $t('globals.entities.loadMore') }}
           </Button>
         </div>
 

@@ -114,7 +114,7 @@
             <Editor
               v-model:htmlContent="action.value[0]"
               @update:htmlContent="(value) => handleEditorChange(value, index)"
-              :placeholder="t('admin.macro.message_content.placeholder')"
+              :placeholder="t('editor.placeholder')"
             />
           </div>
         </div>

@@ -40,7 +40,7 @@
         <Skeleton class="w-32 h-4" />
       </span>
       <span v-else>
-        {{ conversation?.contact?.phone_number || 'Not available' }}
+        {{ conversation?.contact?.phone_number || t('conversation.sidebar.notAvailable') }}
       </span>
     </div>
   </div>
@@ -55,8 +55,10 @@ import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useConversationStore } from '@/stores/conversation'
 import { Skeleton } from '@/components/ui/skeleton'
+import {useI18n} from 'vue-i18n'
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const conversation = computed(() => conversationStore.current)
+const { t } = useI18n()
 </script>
