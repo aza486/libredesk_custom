@@ -1,11 +1,11 @@
 import { h } from 'vue'
 import dropdown from './dataTableDropdown.vue'
 
-export const columns = [
+export const createColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -14,7 +14,7 @@ export const columns = [
   {
     accessorKey: 'description',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Description')
+      return h('div', { class: 'text-center' }, t('form.field.description'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('description'))

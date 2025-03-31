@@ -13,14 +13,21 @@ import api from '@/api'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: 'role-list', label: 'Roles' },
-  { path: '', label: 'New role' }
+  { path: 'role-list', label: t('globals.entities.role', 2) },
+  {
+    path: '',
+    label: t('globals.messages.new', {
+      name: t('globals.entities.role')
+    })
+  }
 ]
 
 const submitForm = async (values) => {
@@ -28,13 +35,13 @@ const submitForm = async (values) => {
     formLoading.value = true
     await api.createRole(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Role created successfully'
+      description: t('globals.messages.createdSuccessfully', {
+        name: t('globals.entities.role')
+      })
     })
     router.push({ name: 'role-list' })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not create role',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
