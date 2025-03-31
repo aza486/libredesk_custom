@@ -18,7 +18,9 @@
         <tr>
           <td :colspan="headers.length + 1" class="px-6 py-12 text-center">
             <div class="flex flex-col items-center space-y-4">
-              <span class="text-md text-gray-500"> No records found. </span>
+              <span class="text-md text-gray-500">
+                {{ $t('globals.messages.noResultsFound') }}
+              </span>
             </div>
           </td>
         </tr>

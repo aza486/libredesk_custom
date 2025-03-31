@@ -3,7 +3,7 @@
     v-if="appSettingsStore.settings['app.update']?.update?.is_new"
     class="p-2 mb-2 border-b bg-secondary text-secondary-foreground"
   >
-    A new update is available:
+    {{ $t('update.newUpdateAvailable') }}:
     {{ appSettingsStore.settings['app.update'].update.release_version }} ({{
       appSettingsStore.settings['app.update'].update.release_date
     }})
@@ -14,7 +14,7 @@
       noreferrer
       class="underline ml-2"
     >
-      View details
+      {{ $t('globals.messages.viewDetails') }}
     </a>
   </div>
 </template>
