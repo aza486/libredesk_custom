@@ -1,28 +1,28 @@
 <template>
-    <form>
-        <FormField v-slot="{ componentField }" name="name">
-            <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                    <Input type="text" placeholder="Spam" v-bind="componentField" />
-                </FormControl>
-                <FormDescription></FormDescription>
-                <FormMessage />
-            </FormItem>
-        </FormField>
-        <!-- Form submit button slot -->
-        <slot name="footer"></slot>
-    </form>
+  <form>
+    <FormField v-slot="{ componentField }" name="name">
+      <FormItem>
+        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+        <FormControl>
+          <Input type="text" placeholder="Spam" v-bind="componentField" />
+        </FormControl>
+        <FormDescription/>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+    <!-- Form submit button slot -->
+    <slot name="footer"></slot>
+  </form>
 </template>
 
 <script setup>
 import {
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 </script>

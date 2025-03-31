@@ -1,40 +1,44 @@
 <template>
-  <Spinner v-if="isLoading" />
-  <AdminPageWithHelp>
-    <template #content>
-      <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
-        <div class="flex justify-between mb-5">
-          <div class="flex justify-end mb-4 w-full">
-            <Dialog v-model:open="dialogOpen">
-              <DialogTrigger as-child>
-                <Button class="ml-auto">{{ t('admin.conversation_tags.new') }}</Button>
-              </DialogTrigger>
-              <DialogContent class="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle class="mb-1">{{ t('admin.conversation_tags.new') }}</DialogTitle>
-                  <DialogDescription>{{ t('admin.conversation_tags.new.description') }}</DialogDescription>
-                </DialogHeader>
-                <TagsForm @submit.prevent="onSubmit">
-                  <template #footer>
-                    <DialogFooter class="mt-10">
-                      <Button type="submit">{{ t('globals.buttons.save') }}</Button>
-                    </DialogFooter>
-                  </template>
-                </TagsForm>
-              </DialogContent>
-            </Dialog>
+  <div>
+    <Spinner v-if="isLoading" />
+    <AdminPageWithHelp>
+      <template #content>
+        <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
+          <div class="flex justify-between mb-5">
+            <div class="flex justify-end mb-4 w-full">
+              <Dialog v-model:open="dialogOpen">
+                <DialogTrigger as-child>
+                  <Button class="ml-auto">{{ t('admin.conversation_tags.new') }}</Button>
+                </DialogTrigger>
+                <DialogContent class="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle class="mb-1">{{ t('admin.conversation_tags.new') }}</DialogTitle>
+                    <DialogDescription>{{
+                      t('admin.conversation_tags.new.description')
+                    }}</DialogDescription>
+                  </DialogHeader>
+                  <TagsForm @submit.prevent="onSubmit">
+                    <template #footer>
+                      <DialogFooter class="mt-10">
+                        <Button type="submit">{{ t('globals.buttons.save') }}</Button>
+                      </DialogFooter>
+                    </template>
+                  </TagsForm>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          <div>
+            <DataTable :columns="createColumns(t)" :data="tags" />
           </div>
         </div>
-        <div>
-          <DataTable :columns="createColumns(t)" :data="tags" />
-        </div>
-      </div>
-    </template>
+      </template>
 
-    <template #help>
-      <p>Tags help you categorize your conversations. Create or edit tags here.</p>
-    </template>
-  </AdminPageWithHelp>
+      <template #help>
+        <p>Tags help you categorize your conversations. Create or edit tags here.</p>
+      </template>
+    </AdminPageWithHelp>
+  </div>
 </template>
 
 <script setup>

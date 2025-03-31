@@ -7,29 +7,31 @@
           class="w-8 h-8 p-0"
           v-if="!CONVERSATION_DEFAULT_STATUSES_LIST.includes(props.status.name)"
         >
-          <span class="sr-only">Open menu</span>
+          <span class="sr-only"></span>
           <MoreHorizontal class="w-4 h-4" />
         </Button>
         <div v-else class="w-8 h-8 p-0 invisible"></div>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem> Edit </DropdownMenuItem>
+          <DropdownMenuItem> {{ $t('globals.buttons.edit') }} </DropdownMenuItem>
         </DialogTrigger>
-        <DropdownMenuItem @click="() => (alertOpen = true)"> Delete </DropdownMenuItem>
+        <DropdownMenuItem @click="() => (alertOpen = true)">
+          {{ $t('globals.buttons.delete') }}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>Edit status</DialogTitle>
+        <DialogTitle>{{ $t('admin.conversation_status.edit') }}</DialogTitle>
         <DialogDescription>
-          Change the status name. Click save when you're done.
+          {{ $t('admin.conversation_status.name.description') }}
         </DialogDescription>
       </DialogHeader>
       <StatusForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit">Save changes</Button>
+            <Button type="submit" :isLoading="isLoading" :disabled="isLoading">{{ $t('globals.buttons.save') }}</Button>
           </DialogFooter>
         </template>
       </StatusForm>
@@ -39,14 +41,18 @@
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete Status</AlertDialogTitle>
+        <AlertDialogTitle>
+          {{ $t('admin.conversation_status.delete_confirmation_title') }}</AlertDialogTitle
+        >
         <AlertDialogDescription>
-          This action cannot be undone. This will permanently delete the status.
+          {{ $t('admin.conversation_status.delete_confirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">{{
+          $t('globals.buttons.delete')
+        }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
@@ -74,7 +80,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import StatusForm from './StatusForm.vue'
 import {
   Dialog,
@@ -89,8 +95,11 @@ import { CONVERSATION_DEFAULT_STATUSES_LIST } from '@/constants/conversation.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useI18n } from 'vue-i18n'
 import api from '@/api/index.js'
 
+const { t } = useI18n()
+const isLoading = ref(false)
 const dialogOpen = ref(false)
 const alertOpen = ref(false)
 const emit = useEmitter()
@@ -103,26 +112,38 @@ const props = defineProps({
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
-  await api.updateStatus(props.status.id, values)
-  dialogOpen.value = false
-  emitRefreshStatusList()
+  isLoading.value = true
+  try {
+    await api.updateStatus(props.status.id, values)
+    dialogOpen.value = false
+    emitRefreshStatusList()
+  } catch (error) {
+    emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    isLoading.value = false
+  }
 })
 
 const handleDelete = async () => {
+  isLoading.value = true
   try {
     await api.deleteStatus(props.status.id)
     alertOpen.value = false
     emitRefreshStatusList()
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
+  } finally {
+    isLoading.value = false
   }
 }
 

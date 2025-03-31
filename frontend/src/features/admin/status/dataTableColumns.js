@@ -2,11 +2,11 @@ import { h } from 'vue'
 import dropdown from './dataTableDropdown.vue'
 import { format } from 'date-fns'
 
-export const columns = [
+export const createColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -15,7 +15,7 @@ export const columns = [
   {
     accessorKey: 'created_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Created at')
+      return h('div', { class: 'text-center' }, t('form.field.createdAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('created_at'), 'PPpp'))

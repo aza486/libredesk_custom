@@ -3,6 +3,7 @@ package status
 
 import (
 	"embed"
+	"fmt"
 	"slices"
 
 	"github.com/abhinavxd/libredesk/internal/conversation/status/models"
@@ -16,6 +17,10 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
+)
+
+const (
+	maxStatusNameLength = 25
 )
 
 // Manager handles changes to statuses.
@@ -66,6 +71,9 @@ func (m *Manager) GetAll() ([]models.Status, error) {
 
 // Create creates a new status.
 func (m *Manager) Create(name string) error {
+	if err := m.validateStatusName(name); err != nil {
+		return err
+	}
 	if _, err := m.q.InsertStatus.Exec(name); err != nil {
 		m.lo.Error("error inserting status", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", m.i18n.T("globals.entities.status")), nil)
@@ -87,7 +95,7 @@ func (m *Manager) Delete(id int) error {
 
 	if _, err := m.q.DeleteStatus.Exec(id); err != nil {
 		if dbutil.IsForeignKeyError(err) {
-			return envelope.NewError(envelope.InputError, m.i18n.T("converstionStatus.cannotBeDeleted"), nil)
+			return envelope.NewError(envelope.InputError, m.i18n.T("conversationStatus.alreadyInUse"), nil)
 		}
 		m.lo.Error("error deleting status", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", m.i18n.T("globals.entities.status")), nil)
@@ -97,6 +105,9 @@ func (m *Manager) Delete(id int) error {
 
 // Update updates a status by id.
 func (m *Manager) Update(id int, name string) error {
+	if err := m.validateStatusName(name); err != nil {
+		return err
+	}
 	// Disallow updating of default statuses.
 	status, err := m.Get(id)
 	if err != nil {
@@ -122,4 +133,15 @@ func (m *Manager) Get(id int) (models.Status, error) {
 		return status, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.entities.status")), nil)
 	}
 	return status, nil
+}
+
+// validateStatusName checks if the status name is valid.
+func (m *Manager) validateStatusName(name string) error {
+	if len(name) == 0 {
+		return envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.empty", "name", "`name`"), nil)
+	}
+	if len(name) > maxStatusNameLength {
+		return envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.tooLong", "name", m.i18n.T("globals.entities.status"), "max", fmt.Sprintf("%d", maxStatusNameLength)), nil)
+	}
+	return nil
 }
