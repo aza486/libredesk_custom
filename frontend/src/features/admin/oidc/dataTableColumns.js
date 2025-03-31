@@ -2,11 +2,11 @@ import { h } from 'vue'
 import dropdown from './dataTableDropdown.vue'
 import { format } from 'date-fns'
 
-export const columns = [
+export const createColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -15,7 +15,7 @@ export const columns = [
   {
     accessorKey: 'provider',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Provider')
+      return h('div', { class: 'text-center' }, t('form.field.provider'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('provider'))
@@ -23,16 +23,16 @@ export const columns = [
   },
   {
     accessorKey: 'enabled',
-    header: () => h('div', { class: 'text-center' }, 'Enabled'),
+    header: () => h('div', { class: 'text-center' }, t('form.field.enabled')),
     cell: ({ row }) => {
       const enabled = row.getValue('enabled')
-      return h('div', { class: 'text-center' }, enabled ? 'Yes' : 'No')
+      return h('div', { class: 'text-center' }, enabled ? t('globals.messages.yes') : t('globals.messages.no'))
     }
   },
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Updated at')
+      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

@@ -5,12 +5,16 @@
       <div></div>
       <div>
         <RouterLink :to="{ name: 'new-sso' }">
-          <Button>New SSO</Button>
+          <Button>{{
+            $t('globals.messages.new', {
+              name: $t('globals.entities.sso')
+            })
+          }}</Button>
         </RouterLink>
       </div>
     </div>
     <div>
-      <DataTable :columns="columns" :data="oidc" />
+      <DataTable :columns="createColumns(t)" :data="oidc" />
     </div>
   </div>
 </template>
@@ -18,15 +22,16 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import DataTable from '@/components/datatable/DataTable.vue'
-import { columns } from '@/features/admin/oidc/dataTableColumns.js'
+import { createColumns } from '@/features/admin/oidc/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 import { useEmitter } from '@/composables/useEmitter'
-
+import { useI18n } from 'vue-i18n'
 import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
 const oidc = ref([])
+const { t } = useI18n()
 const isLoading = ref(false)
 const emit = useEmitter()
 
