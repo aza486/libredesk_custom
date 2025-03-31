@@ -4,7 +4,7 @@
     <div class="flex justify-between mb-5">
       <div></div>
       <router-link :to="{ name: 'new-inbox' }">
-        <Button>New Inbox</Button>
+        <Button>{{ $t('admin.inbox.new') }}</Button>
       </router-link>
     </div>
     <div>
@@ -23,11 +23,12 @@ import DataTable from '@/components/datatable/DataTable.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { useRouter } from 'vue-router'
-
+import { useI18n } from 'vue-i18n'
 import { format } from 'date-fns'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/api'
 
+const { t } = useI18n()
 const router = useRouter()
 const emitter = useEmitter()
 const isLoading = ref(false)
@@ -44,7 +45,6 @@ const getInboxes = async () => {
     data.value = response.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -58,7 +58,7 @@ const columns = [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -67,7 +67,7 @@ const columns = [
   {
     accessorKey: 'channel',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Channel')
+      return h('div', { class: 'text-center' }, t('form.field.channel'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('channel'))
@@ -75,7 +75,7 @@ const columns = [
   },
   {
     accessorKey: 'enabled',
-    header: () => h('div', { class: 'text-center' }, 'Enabled'),
+    header: () => h('div', { class: 'text-center' }, t('form.field.enabled')),
     cell: ({ row }) => {
       const enabled = row.getValue('enabled')
       return h('div', { class: 'text-center' }, enabled ? 'Yes' : 'No')
@@ -84,7 +84,7 @@ const columns = [
   {
     accessorKey: 'created_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Created at')
+      return h('div', { class: 'text-center' }, t('form.field.createdAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('created_at'), 'PPpp'))
@@ -93,7 +93,7 @@ const columns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Updated at')
+      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

@@ -71,7 +71,7 @@
     "globals.messages.couldNotReload": "No se pudo recargar {name}. Por favor, reinicia la aplicación",
     "globals.messages.invalid": "{name} inválido",
     "globals.messages.disabled": "{name} está deshabilitado",
-    "globals.messages.required": "{name} requerido",
+    "globals.messages.fieldRequired": "{name} requerido",
     "globals.messages.errorReadingFile": "Error al leer el archivo",
     "globals.messages.fileTypeisNotAnImage": "El tipo de archivo no es una imagen",
     "globals.messages.notFound": "{name} no encontrado",

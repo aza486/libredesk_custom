@@ -586,19 +586,19 @@ func handleCreateConversation(r *fastglue.Request) error {
 	)
 	// Validate required fields
 	if inboxID <= 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.required", "name", "`inbox_id`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.fieldRequired", "name", "`inbox_id`"), nil, envelope.InputError)
 	}
 	if strings.TrimSpace(subject) == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.required", "name", "`subject`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.fieldRequired", "name", "`subject`"), nil, envelope.InputError)
 	}
 	if strings.TrimSpace(content) == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.required", "name", "`content`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.fieldRequired", "name", "`content`"), nil, envelope.InputError)
 	}
 	if strings.TrimSpace(email) == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.required", "name", "`contact_email`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.fieldRequired", "name", "`contact_email`"), nil, envelope.InputError)
 	}
 	if firstName == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.required", "name", "`first_name`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.fieldRequired", "name", "`first_name`"), nil, envelope.InputError)
 	}
 
 	user, err := app.user.GetAgent(auser.ID)

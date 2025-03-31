@@ -15,8 +15,10 @@ import { Spinner } from '@/components/ui/spinner'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { useI18n } from 'vue-i18n'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const formLoading = ref(false)
 const isLoading = ref(false)
 const inbox = ref({})
@@ -41,7 +43,7 @@ const submitForm = (values) => {
   }
 
   // Set dummy SMTP passwords to empty strings
-  payload.config.smtp.forEach(smtp => {
+  payload.config.smtp.forEach((smtp) => {
     if (smtp.password?.includes('•')) {
       smtp.password = ''
     }
@@ -54,12 +56,10 @@ const updateInbox = async (payload) => {
     isLoading.value = true
     await api.updateInbox(inbox.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Inbox updated succcessfully'
+      description: t('admin.inbox.updated')
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -84,7 +84,6 @@ onMounted(async () => {
     inbox.value = inboxData
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
