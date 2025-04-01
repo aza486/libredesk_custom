@@ -7,7 +7,7 @@
       </div>
       <div v-else-if="error" class="mt-8 text-center space-y-4">
         <p class="text-lg text-destructive">{{ error }}</p>
-        <Button @click="handleSearch"> {{ $t('search.tryAgain') }} </Button>
+        <Button @click="handleSearch"> {{ $t('globals.terms.tryAgain') }} </Button>
       </div>
 
       <div v-else>

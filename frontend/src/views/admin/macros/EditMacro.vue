@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"/>
+  <Spinner v-if="isLoading" />
   <MacroForm :initialValues="macro" :submitForm="submitForm" :isLoading="formLoading" v-else />
 </template>
 
@@ -24,8 +24,8 @@ const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  { path: 'macro-list', label: t('admin.macro') },
-  { path: '', label: t('admin.macro.edit') }
+  { path: 'macro-list', label: t('globals.terms.macro', 2) },
+  { path: '', label: t('globals.messages.edit', { name: t('globals.terms.macro') }) }
 ]
 
 const submitForm = (values) => {
@@ -37,7 +37,9 @@ const updateMacro = async (payload) => {
     formLoading.value = true
     await api.updateMacro(macro.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.macro.updated')
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.macro')
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

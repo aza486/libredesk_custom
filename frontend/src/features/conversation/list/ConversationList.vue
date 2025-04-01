@@ -130,7 +130,7 @@
           class="transition-all duration-200 ease-in-out transform hover:scale-105"
         >
           <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
-          {{ isLoading ? t('globals.entities.loading') : t('globals.entities.loadMore') }}
+          {{ isLoading ? t('globals.terms.loading') : t('globals.terms.loadMore') }}
         </Button>
         <p
           class="text-sm text-gray-500"

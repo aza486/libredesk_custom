@@ -156,7 +156,7 @@ func handleGetViewConversations(r *fastglue.Request) error {
 
 	// No lists found, user doesn't have access to any conversations.
 	if len(lists) == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.T("authz.permissionDenied"), nil, envelope.PermissionError)
+		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.denied", "name", "{globals.terms.permission}"), nil, envelope.PermissionError)
 	}
 
 	conversations, err := app.conversation.GetViewConversationsList(user.ID, user.Teams.IDs(), lists, order, orderBy, string(view.Filters), page, pageSize)
@@ -460,7 +460,7 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 
 	if err := json.Unmarshal(tagJSON, &tagNames); err != nil {
 		app.lo.Error("error unmarshalling tags JSON", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	user, err := app.user.GetAgent(auser.ID)
@@ -624,7 +624,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 		InboxID:         inboxID,
 	}
 	if err := app.user.CreateContact(&contact); err != nil {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.contact}"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.contact}"), nil))
 	}
 
 	// Create conversation
@@ -639,7 +639,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 	)
 	if err != nil {
 		app.lo.Error("error creating conversation", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.conversation}"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.conversation}"), nil))
 	}
 
 	// Send reply to the created conversation.
@@ -648,7 +648,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 		if err := app.conversation.DeleteConversation(conversationUUID); err != nil {
 			app.lo.Error("error deleting conversation", "error", err)
 		}
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorSending", "name", "{globals.entities.conversation}"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorSending", "name", "{globals.terms.conversation}"), nil))
 	}
 
 	// Assign the conversation to the agent or team.

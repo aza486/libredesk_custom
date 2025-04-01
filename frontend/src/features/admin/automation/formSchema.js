@@ -19,7 +19,7 @@ export const createFormSchema = (t) => z
             ctx.addIssue({
                 path: ['events'],
                 message: t('globals.messages.pleaseSelectAtLeastOne', {
-                    name: t('globals.entities.event')
+                    name: t('globals.terms.event')
                 }),
                 code: z.ZodIssueCode.custom,
             });

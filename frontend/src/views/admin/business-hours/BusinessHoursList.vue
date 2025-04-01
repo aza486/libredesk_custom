@@ -5,7 +5,11 @@
       <div>
         <router-link :to="{ name: 'new-business-hours' }">
           <Button>
-            {{ $t('admin.business_hours.new') }}
+            {{
+              $t('globals.messages.new', {
+                name: $t('globals.terms.businessHour')
+              })
+            }}
           </Button>
         </router-link>
       </div>

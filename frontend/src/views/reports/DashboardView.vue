@@ -7,7 +7,7 @@
       <Spinner v-if="isLoading" />
       <div class="space-y-4">
         <div class="text-sm text-gray-500 text-right">
-          {{ $t('report.lastUpdated') }}: {{ new Date(lastUpdate).toLocaleTimeString() }}
+          {{ $t('globals.terms.lastUpdated') }}: {{ new Date(lastUpdate).toLocaleTimeString() }}
         </div>
         <div class="mt-7 flex w-full space-x-4">
           <Card title="Open conversations" :counts="cardCounts" :labels="agentCountCardsLabels" />
@@ -50,16 +50,16 @@ const lastUpdate = ref(new Date())
 let updateInterval
 
 const agentCountCardsLabels = {
-  open: t('report.open'),
-  awaiting_response: t('report.awaiting_response'),
-  unassigned: t('report.unassigned'),
-  pending: t('report.pending')
+  open: t('globals.terms.open'),
+  awaiting_response: t('globals.terms.awaitingResponse'),
+  unassigned: t('globals.terms.unassigned'),
+  pending: t('globals.terms.pending')
 }
 
 const agentStatusLabels = {
-  agents_online: t('user.online'),
-  agents_offline: t('user.offline'),
-  agents_away: t('user.away')
+  agents_online: t('globals.terms.online'),
+  agents_offline: t('globals.terms.offline'),
+  agents_away: t('globals.terms.away')
 }
 
 const agentStatusCounts = ref({

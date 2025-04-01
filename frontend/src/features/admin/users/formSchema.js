@@ -33,7 +33,7 @@ export const createFormSchema = (t) => z.object({
   teams: z.array(z.string()).default([]),
 
   roles: z.array(z.string()).min(1, t('globals.messages.pleaseSelectAtLeastOne', {
-    name: t('globals.entities.role')
+    name: t('globals.terms.role')
   })),
 
   new_password: z

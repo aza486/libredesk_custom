@@ -13,9 +13,13 @@
 
             <form @submit.prevent="setPasswordAction" class="space-y-4">
               <div class="space-y-2">
-                <Label for="password" class="text-sm font-medium text-foreground">{{
-                  t('auth.newPassword')
-                }}</Label>
+                <Label for="password" class="text-sm font-medium text-foreground">
+                  {{
+                    t('globals.messages.new', {
+                      name: t('globals.terms.password')
+                    })
+                  }}
+                </Label>
                 <Input
                   id="password"
                   type="password"

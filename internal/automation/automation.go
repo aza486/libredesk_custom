@@ -179,7 +179,7 @@ func (e *Engine) GetAllRules(typ []byte) ([]models.RuleRecord, error) {
 	var rules = make([]models.RuleRecord, 0)
 	if err := e.q.GetAll.Select(&rules, typ); err != nil {
 		e.lo.Error("error fetching rules", "error", err)
-		return rules, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorFetching", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return rules, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorFetching", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	return rules, nil
 }
@@ -189,10 +189,10 @@ func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
 	var rule models.RuleRecord
 	if err := e.q.GetRule.Get(&rule, id); err != nil {
 		if err == sql.ErrNoRows {
-			return rule, envelope.NewError(envelope.InputError, e.i18n.Ts("globals.messages.notFound", "name", e.i18n.Ts("globals.entities.rule")), nil)
+			return rule, envelope.NewError(envelope.InputError, e.i18n.Ts("globals.messages.notFound", "name", e.i18n.Ts("globals.terms.rule")), nil)
 		}
 		e.lo.Error("error fetching rule", "error", err)
-		return rule, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorFetching", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return rule, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorFetching", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	return rule, nil
 }
@@ -201,7 +201,7 @@ func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
 func (e *Engine) ToggleRule(id int) error {
 	if _, err := e.q.ToggleRule.Exec(id); err != nil {
 		e.lo.Error("error toggling rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -215,7 +215,7 @@ func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
 	}
 	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules, rule.Enabled); err != nil {
 		e.lo.Error("error updating rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -229,7 +229,7 @@ func (e *Engine) CreateRule(rule models.RuleRecord) error {
 	}
 	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules); err != nil {
 		e.lo.Error("error creating rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorCreating", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorCreating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -240,7 +240,7 @@ func (e *Engine) CreateRule(rule models.RuleRecord) error {
 func (e *Engine) DeleteRule(id int) error {
 	if _, err := e.q.DeleteRule.Exec(id); err != nil {
 		e.lo.Error("error deleting rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorDeleting", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorDeleting", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
@@ -252,7 +252,7 @@ func (e *Engine) UpdateRuleWeights(weights map[int]int) error {
 	for id, weight := range weights {
 		if _, err := e.q.UpdateRuleWeight.Exec(id, weight); err != nil {
 			e.lo.Error("error updating rule weight", "error", err)
-			return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.entities.rule")), nil)
+			return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 		}
 	}
 	// Reload rules.
@@ -264,7 +264,7 @@ func (e *Engine) UpdateRuleWeights(weights map[int]int) error {
 func (e *Engine) UpdateRuleExecutionMode(ruleType, mode string) error {
 	if _, err := e.q.UpdateRuleExecutionMode.Exec(ruleType, mode); err != nil {
 		e.lo.Error("error updating rule execution mode", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.entities.rule")), nil)
+		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()

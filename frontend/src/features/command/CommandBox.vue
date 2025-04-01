@@ -12,7 +12,7 @@
 
       <!-- Commands requiring a conversation to be open -->
       <CommandGroup
-        :heading="t('globals.entities.conversation', 2)"
+        :heading="t('globals.terms.conversation', 2)"
         value="conversations"
         v-if="nestedCommand === null && conversationStore.hasConversationOpen"
       >
@@ -29,22 +29,22 @@
 
       <CommandGroup v-if="nestedCommand === 'snooze'" heading="Snooze for">
         <CommandItem value="1 hour" @select="handleSnooze(60)">
-          1 {{ $t('globals.entities.hour') }}
+          1 {{ $t('globals.terms.hour') }}
         </CommandItem>
         <CommandItem value="3 hours" @select="handleSnooze(180)"
-          >3 {{ $t('globals.entities.hour', 2) }}</CommandItem
+          >3 {{ $t('globals.terms.hour', 2) }}</CommandItem
         >
         <CommandItem value="6 hours" @select="handleSnooze(360)">
-          6 {{ $t('globals.entities.hour', 2) }}
+          6 {{ $t('globals.terms.hour', 2) }}
         </CommandItem>
         <CommandItem value="12 hours" @select="handleSnooze(720)">
-          12 {{ $t('globals.entities.hour', 2) }}
+          12 {{ $t('globals.terms.hour', 2) }}
         </CommandItem>
         <CommandItem value="1 day" @select="handleSnooze(1440)">
-          1 {{ $t('globals.entities.day') }}
+          1 {{ $t('globals.terms.day') }}
         </CommandItem>
         <CommandItem value="2 days" @select="handleSnooze(2880)">
-          2 {{ $t('globals.entities.day', 2) }}
+          2 {{ $t('globals.terms.day', 2) }}
         </CommandItem>
         <CommandItem value="pick date & time" @select="showCustomDialog">
           {{ $t('globals.messages.pickDateAndTime') }}
@@ -92,7 +92,7 @@
                   <!-- Actions -->
                   <div v-if="otherActions.length > 0" class="space-y-1">
                     <p class="text-xs font-semibold text-primary">
-                      {{ $t('globals.entities.action', 2) }}
+                      {{ $t('globals.terms.action', 2) }}
                     </p>
                     <div class="space-y-1.5 max-w-sm">
                       <div
@@ -256,11 +256,11 @@ function handleApplyMacro(macro) {
 
 const getActionLabel = computed(() => (action) => {
   const prefixes = {
-    assign_user: t('globals.messages.assign_user'),
-    assign_team: t('globals.messages.assign_team'),
-    set_status: t('globals.messages.set_status'),
-    set_priority: t('globals.messages.set_priority'),
-    set_tags: t('globals.messages.set_tags')
+    assign_user: t('globals.messages.assignUser'),
+    assign_team: t('globals.messages.assignTeam'),
+    set_status: t('globals.messages.setStatus'),
+    set_priority: t('globals.messages.setPriority'),
+    set_tags: t('globals.messages.setTags')
   }
   return `${prefixes[action.type]}: ${action.display_value.length > 0 ? action.display_value.join(', ') : action.value.join(', ')}`
 })

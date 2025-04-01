@@ -4,7 +4,7 @@
       <FormItem v-auto-animate>
         <FormLabel>{{ $t('form.field.name') }}</FormLabel>
         <FormControl>
-          <Input type="text" :placeholder="t('globals.entities.agent')" v-bind="componentField" />
+          <Input type="text" :placeholder="t('globals.terms.agent')" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -96,15 +96,15 @@ const permissions = ref([
     permissions: [
       { name: 'conversations:read', label: t('admin.role.conversations.read') },
       { name: 'conversations:write', label: t('admin.role.conversations.write') },
-      { name: 'conversations:read_assigned', label: t('admin.role.conversations.read_assigned') },
-      { name: 'conversations:read_all', label: t('admin.role.conversations.read_all') },
-      { name: 'conversations:read_unassigned', label: t('admin.role.conversations.read_unassigned') },
-      { name: 'conversations:read_team_inbox', label: t('admin.role.conversations.read_team_inbox') },
-      { name: 'conversations:update_user_assignee', label: t('admin.role.conversations.update_user_assignee') },
-      { name: 'conversations:update_team_assignee', label: t('admin.role.conversations.update_team_assignee') },
-      { name: 'conversations:update_priority', label: t('admin.role.conversations.update_priority') },
-      { name: 'conversations:update_status', label: t('admin.role.conversations.update_status') },
-      { name: 'conversations:update_tags', label: t('admin.role.conversations.update_tags') },
+      { name: 'conversations:read_assigned', label: t('admin.role.conversations.readAssigned') },
+      { name: 'conversations:read_all', label: t('admin.role.conversations.readAll') },
+      { name: 'conversations:read_unassigned', label: t('admin.role.conversations.readUnassigned') },
+      { name: 'conversations:read_team_inbox', label: t('admin.role.conversations.readTeamInbox') },
+      { name: 'conversations:update_user_assignee', label: t('admin.role.conversations.updateUserAssignee') },
+      { name: 'conversations:update_team_assignee', label: t('admin.role.conversations.updateTeamAssignee') },
+      { name: 'conversations:update_priority', label: t('admin.role.conversations.updatePriority') },
+      { name: 'conversations:update_status', label: t('admin.role.conversations.updateStatus') },
+      { name: 'conversations:update_tags', label: t('admin.role.conversations.updateTags') },
       { name: 'messages:read', label: t('admin.role.messages.read') },
       { name: 'messages:write', label: t('admin.role.messages.write') },
       { name: 'view:manage', label: t('admin.role.view.manage') }
@@ -113,8 +113,8 @@ const permissions = ref([
   {
     name: 'Admin settings',
     permissions: [
-      { name: 'general_settings:manage', label: t('admin.role.general_settings.manage') },
-      { name: 'notification_settings:manage', label: t('admin.role.notification_settings.manage') },
+      { name: 'general_settings:manage', label: t('admin.role.generalSettings.manage') },
+      { name: 'notification_settings:manage', label: t('admin.role.notificationSettings.manage') },
       { name: 'status:manage', label: t('admin.role.status.manage') },
       { name: 'oidc:manage', label: t('admin.role.oidc.manage') },
       { name: 'tags:manage', label: t('admin.role.tags.manage') },
@@ -126,7 +126,7 @@ const permissions = ref([
       { name: 'roles:manage', label: t('admin.role.roles.manage') },
       { name: 'templates:manage', label: t('admin.role.templates.manage') },
       { name: 'reports:manage', label: t('admin.role.reports.manage') },
-      { name: 'business_hours:manage', label: t('admin.role.business_hours.manage') },
+      { name: 'business_hours:manage', label: t('admin.role.businessHours.manage') },
       { name: 'sla:manage', label: t('admin.role.sla.manage') },
       { name: 'ai:manage', label: t('admin.role.ai.manage') }
     ]

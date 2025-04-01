@@ -61,7 +61,11 @@
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="new_conversation">
-                          {{ $t('admin.automation.newConversation') }}
+                          {{
+                            $t('globals.messages.new', {
+                              name: $t('globals.terms.conversation')
+                            })
+                          }}
                         </SelectItem>
                         <SelectItem value="conversation_update">
                           {{ $t('admin.automation.conversationUpdate') }}
@@ -75,7 +79,7 @@
                 </FormControl>
                 <FormDescription>{{
                   $t('globals.messages.typeOf', {
-                    name: $t('globals.entities.rule')
+                    name: $t('globals.terms.rule')
                   })
                 }}</FormDescription>
                 <FormMessage />
@@ -85,7 +89,7 @@
             <div :class="{ hidden: form.values.type !== 'conversation_update' }">
               <FormField v-slot="{ componentField, handleChange }" name="events">
                 <FormItem>
-                  <FormLabel>{{ $t('globals.entities.event', 2) }}</FormLabel>
+                  <FormLabel>{{ $t('globals.terms.event', 2) }}</FormLabel>
                   <FormControl>
                     <SelectTag
                       v-model="componentField.modelValue"
@@ -240,10 +244,10 @@ const props = defineProps({
 const breadcrumbPageLabel = () => {
   if (props.id > 0)
     return t('globals.messages.edit', {
-      name: t('globals.entities.rule')
+      name: t('globals.terms.rule')
     })
   return t('globals.messages.new', {
-    name: t('globals.entities.rule')
+    name: t('globals.terms.rule')
   })
 }
 
@@ -258,7 +262,7 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-  { path: 'automations', label: t('admin.automation') },
+  { path: 'automations', label: t('globals.terms.automation') },
   { path: '', label: breadcrumbPageLabel() }
 ]
 
@@ -356,7 +360,7 @@ const handleSave = async (values) => {
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.savedSuccessfully', {
-        name: t('globals.entities.rule')
+        name: t('globals.terms.rule')
       })
     })
   } catch (error) {

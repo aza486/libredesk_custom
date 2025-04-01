@@ -45,12 +45,12 @@ const submitForm = async (values) => {
     if (props.id) {
       await api.updateTemplate(props.id, values)
       toastDescription = t('globals.messages.updatedSuccessfully', {
-        name: t('globals.entities.template')
+        name: t('globals.terms.template')
       })
     } else {
       await api.createTemplate(values)
       toastDescription = t('globals.messages.createdSuccessfully', {
-        name: t('globals.entities.template')
+        name: t('globals.terms.template')
       })
       router.push({ name: 'templates' })
       emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
@@ -75,7 +75,7 @@ const breadCrumLabel = () => {
 }
 
 const breadcrumbLinks = [
-  { path: 'templates', label: t('globals.entities.template') },
+  { path: 'templates', label: t('globals.terms.template') },
   { path: '', label: breadCrumLabel() }
 ]
 

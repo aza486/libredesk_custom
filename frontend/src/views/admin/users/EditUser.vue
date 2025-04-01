@@ -24,11 +24,11 @@ const formLoading = ref(false)
 const emitter = useEmitter()
 
 const breadcrumbLinks = [
-  { path: 'user-list', label: t('globals.entities.user', 2) },
+  { path: 'user-list', label: t('globals.terms.user', 2) },
   {
     path: '',
     label: t('globals.messages.edit', {
-      name: t('globals.entities.user', 1)
+      name: t('globals.terms.user', 1)
     })
   }
 ]
@@ -43,7 +43,7 @@ const updateUser = async (payload) => {
     await api.updateUser(user.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.updatedSuccessfully', {
-        name: t('globals.entities.user', 1)
+        name: t('globals.terms.user', 1)
       })
     })
   } catch (error) {

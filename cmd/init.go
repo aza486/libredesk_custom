@@ -677,9 +677,10 @@ func initOIDC(db *sqlx.DB, settings *setting.Manager, i18n *i18n.I18n) *oidc.Man
 
 // initI18n inits i18n.
 func initI18n(fs stuffbin.FileSystem) *i18n.I18n {
-	file, err := fs.Get("i18n/" + cmp.Or(ko.String("app.lang"), defLang) + ".json")
+	fileName := cmp.Or(ko.String("app.lang"), defLang)
+	file, err := fs.Get("i18n/" + fileName + ".json")
 	if err != nil {
-		log.Fatalf("error reading i18n language file: %v", err)
+		log.Fatalf("error reading i18n language file `%s` : %v", fileName, err)
 	}
 	i18n, err := i18n.New(file.ReadBytes())
 	if err != nil {

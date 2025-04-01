@@ -6,7 +6,7 @@
         <Button>
           {{
             $t('globals.messages.new', {
-              name: $t('globals.entities.role')
+              name: $t('globals.terms.role')
             })
           }}
         </Button>

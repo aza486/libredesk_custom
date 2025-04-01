@@ -23,14 +23,14 @@ func handleGetMacros(r *fastglue.Request) error {
 	for i, m := range macros {
 		var actions []autoModels.RuleAction
 		if err := json.Unmarshal(m.Actions, &actions); err != nil {
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.macroAction}"), nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), nil, envelope.GeneralError)
 		}
 		// Set display values for actions as the value field can contain DB IDs
 		if err := setDisplayValues(app, actions); err != nil {
 			app.lo.Warn("error setting display values", "error", err)
 		}
 		if macros[i].Actions, err = json.Marshal(actions); err != nil {
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.macroAction}"), nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), nil, envelope.GeneralError)
 		}
 	}
 	return r.SendEnvelope(macros)
@@ -53,14 +53,14 @@ func handleGetMacro(r *fastglue.Request) error {
 
 	var actions []autoModels.RuleAction
 	if err := json.Unmarshal(macro.Actions, &actions); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.macroAction}"), nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), nil, envelope.GeneralError)
 	}
 	// Set display values for actions as the value field can contain DB IDs
 	if err := setDisplayValues(app, actions); err != nil {
 		app.lo.Warn("error setting display values", "error", err)
 	}
 	if macro.Actions, err = json.Marshal(actions); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.macroAction}"), nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), nil, envelope.GeneralError)
 	}
 
 	return r.SendEnvelope(macro)
@@ -74,7 +74,7 @@ func handleCreateMacro(r *fastglue.Request) error {
 	)
 
 	if err := r.Decode(&macro, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if err := validateMacro(app, macro); err != nil {
@@ -150,7 +150,7 @@ func handleApplyMacro(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	if allowed, err := app.authz.EnforceConversationAccess(user, conversation); err != nil || !allowed {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, app.i18n.T("authz.permissionDenied"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, app.i18n.Ts("globals.messages.denied", "name", "{globals.terms.permission}"), nil))
 	}
 
 	macro, err := app.macro.Get(id)
@@ -161,7 +161,7 @@ func handleApplyMacro(r *fastglue.Request) error {
 	// Decode incoming actions.
 	if err := r.Decode(&incomingActions, "json"); err != nil {
 		app.lo.Error("error unmashalling incoming actions", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.macroAction}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), err.Error(), envelope.InputError)
 	}
 
 	// Make sure no duplicate action types are present.
@@ -277,7 +277,7 @@ func validateMacro(app *App, macro models.Macro) error {
 
 	var act []autoModels.RuleAction
 	if err := json.Unmarshal(macro.Actions, &act); err != nil {
-		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.macroAction}"), nil)
+		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), nil)
 	}
 	for _, a := range act {
 		if len(a.Value) == 0 {

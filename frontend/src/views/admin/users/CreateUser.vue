@@ -21,11 +21,11 @@ const emitter = useEmitter()
 const router = useRouter()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: 'user-list', label: t('globals.entities.user', 2) },
+  { path: 'user-list', label: t('globals.terms.user', 2) },
   {
     path: '',
     label: t('globals.messages.new', {
-      name: t('globals.entities.user', 1)
+      name: t('globals.terms.user', 1)
     })
   }
 ]
@@ -40,7 +40,7 @@ const createNewUser = async (values) => {
     await api.createUser(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.createdSuccessfully', {
-        name: t('globals.entities.user', 1)
+        name: t('globals.terms.user', 1)
       })
     })
     router.push({ name: 'user-list' })

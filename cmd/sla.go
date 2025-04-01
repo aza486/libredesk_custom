@@ -47,7 +47,7 @@ func handleCreateSLA(r *fastglue.Request) error {
 	)
 
 	if err := r.Decode(&sla, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if err := validateSLA(app, &sla); err != nil {
@@ -74,7 +74,7 @@ func handleUpdateSLA(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&sla, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if err := validateSLA(app, &sla); err != nil {

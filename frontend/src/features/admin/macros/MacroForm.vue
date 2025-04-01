@@ -13,7 +13,7 @@
 
     <FormField v-slot="{ componentField }" name="message_content">
       <FormItem>
-        <FormLabel>{{ t('admin.macro.message_content') }}</FormLabel>
+        <FormLabel>{{ t('admin.macro.messageContent') }}</FormLabel>
         <FormControl>
           <div class="box p-2 h-96 min-h-96">
             <Editor
@@ -52,8 +52,8 @@
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="all">{{ t('admin.macro.visibility.all') }}</SelectItem>
-                <SelectItem value="team">{{ t('admin.macro.visibility.team') }}</SelectItem>
-                <SelectItem value="user">{{ t('admin.macro.visibility.user') }}</SelectItem>
+                <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
+                <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -64,12 +64,12 @@
 
     <FormField v-if="form.values.visibility === 'team'" v-slot="{ componentField }" name="team_id">
       <FormItem>
-        <FormLabel>{{ t('admin.macro.visibility.user') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
         <FormControl>
           <ComboBox
             v-bind="componentField"
             :items="tStore.options"
-            :placeholder="t('admin.macro.visibility.selectTeam')"
+            :placeholder="t('form.field.selectTeam')"
           >
             <template #item="{ item }">
               <div class="flex items-center gap-2 ml-2">
@@ -83,7 +83,7 @@
                   {{ selected.emoji }}
                   <span>{{ selected.label }}</span>
                 </span>
-                <span v-else>{{ t('admin.macro.visibility.selectTeam') }}</span>
+                <span v-else>{{ t('form.field.selectTeam') }}</span>
               </div>
             </template>
           </ComboBox>
@@ -94,17 +94,17 @@
 
     <FormField v-if="form.values.visibility === 'user'" v-slot="{ componentField }" name="user_id">
       <FormItem>
-        <FormLabel>{{ t('admin.macro.visibility.user') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
         <FormControl>
           <ComboBox
             v-bind="componentField"
             :items="uStore.options"
-            :placeholder="t('admin.macro.visibility.selectUser')"
+            :placeholder="t('form.field.selectUser')"
           >
             <template #item="{ item }">
               <div class="flex items-center gap-2 ml-2">
                 <Avatar class="w-7 h-7">
-                  <AvatarImage :src="item.avatar_url" :alt="item.label.slice(0, 2)" />
+                  <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                   <AvatarFallback>{{ item.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
                 </Avatar>
                 <span>{{ item.label }}</span>
@@ -114,12 +114,12 @@
               <div class="flex items-center gap-2">
                 <div v-if="selected" class="flex items-center gap-2">
                   <Avatar class="w-7 h-7">
-                    <AvatarImage :src="selected.avatar_url" :alt="selected.label.slice(0, 2)" />
+                    <AvatarImage :src="selected.avatar_url || ''" :alt="selected.label.slice(0, 2)" />
                     <AvatarFallback>{{ selected.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
                   </Avatar>
                   <span>{{ selected.label }}</span>
                 </div>
-                <span v-else>{{ t('admin.macro.visibility.selectUser') }}</span>
+                <span v-else>{{ t('form.field.selectUser') }}</span>
               </div>
             </template>
           </ComboBox>
@@ -194,9 +194,9 @@ const form = useForm({
 
 const actionConfig = ref({
   actions: macroActions,
-  typePlaceholder: t('admin.macro.visibility.selectActionType'),
-  valuePlaceholder: t('admin.macro.visibility.selectValue'),
-  addButtonText: t('admin.macro.visibility.addNewAction')
+  typePlaceholder: t('form.field.selectActionType'),
+  valuePlaceholder: t('form.field.selectValue'),
+  addButtonText: t('form.field.addNewAction')
 })
 
 const onSubmit = form.handleSubmit(async (values) => {

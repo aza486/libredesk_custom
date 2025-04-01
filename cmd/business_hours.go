@@ -36,7 +36,7 @@ func handleGetBusinessHour(r *fastglue.Request) error {
 		if err == businessHours.ErrBusinessHoursNotFound {
 			return r.SendErrorEnvelope(fasthttp.StatusNotFound, err.Error(), nil, envelope.NotFoundError)
 		}
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.businessHour}"), nil, "")
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.businessHour}"), nil, "")
 	}
 	return r.SendEnvelope(businessHour)
 }
@@ -48,7 +48,7 @@ func handleCreateBusinessHours(r *fastglue.Request) error {
 		businessHours = models.BusinessHours{}
 	)
 	if err := r.Decode(&businessHours, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	if businessHours.Name == "" {
@@ -88,7 +88,7 @@ func handleUpdateBusinessHours(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 	if err := r.Decode(&businessHours, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 	if businessHours.Name == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "business hour `Name`"), nil, envelope.InputError)

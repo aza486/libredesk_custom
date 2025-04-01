@@ -58,10 +58,10 @@ func (m *Manager) Get(id int) (models.Macro, error) {
 	macro := models.Macro{}
 	if err := m.q.Get.Get(&macro, id); err != nil {
 		if err == sql.ErrNoRows {
-			return macro, envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.macro}"), nil)
+			return macro, envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.macro}"), nil)
 		}
 		m.lo.Error("error getting macro", "error", err)
-		return macro, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.macro}"), nil)
+		return macro, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.macro}"), nil)
 	}
 	return macro, nil
 }
@@ -71,7 +71,7 @@ func (m *Manager) Create(name, messageContent string, userID, teamID *int, visib
 	_, err := m.q.Create.Exec(name, messageContent, userID, teamID, visibility, actions)
 	if err != nil {
 		m.lo.Error("error creating macro", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.macro}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.macro}"), nil)
 	}
 	return nil
 }
@@ -81,10 +81,10 @@ func (m *Manager) Update(id int, name, messageContent string, userID, teamID *in
 	result, err := m.q.Update.Exec(id, name, messageContent, userID, teamID, visibility, actions)
 	if err != nil {
 		m.lo.Error("error updating macro", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.macro}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.macro}"), nil)
 	}
 	if rows, _ := result.RowsAffected(); rows == 0 {
-		return envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.macro}"), nil)
+		return envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.macro}"), nil)
 	}
 	return nil
 }
@@ -95,7 +95,7 @@ func (m *Manager) GetAll() ([]models.Macro, error) {
 	err := m.q.GetAll.Select(&macros)
 	if err != nil {
 		m.lo.Error("error fetching macros", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.P("globals.entities.macro")), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.P("globals.terms.macro")), nil)
 	}
 	return macros, nil
 }
@@ -105,10 +105,10 @@ func (m *Manager) Delete(id int) error {
 	result, err := m.q.Delete.Exec(id)
 	if err != nil {
 		m.lo.Error("error deleting macro", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.macro}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.macro}"), nil)
 	}
 	if rows, _ := result.RowsAffected(); rows == 0 {
-		return envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.macro}"), nil)
+		return envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.macro}"), nil)
 	}
 	return nil
 }

@@ -1,13 +1,19 @@
 <template>
   <Tabs default-value="new_conversation" v-model="selectedTab">
     <TabsList class="grid w-full grid-cols-3 mb-5">
-      <TabsTrigger value="new_conversation">{{
-        $t('admin.automation.newConversation')
-      }}</TabsTrigger>
-      <TabsTrigger value="conversation_update">{{
-        $t('admin.automation.conversationUpdate')
-      }}</TabsTrigger>
-      <TabsTrigger value="time_trigger">{{ $t('admin.automation.timeTriggers') }}</TabsTrigger>
+      <TabsTrigger value="new_conversation">
+        {{
+          $t('globals.messages.new', {
+            name: $t('globals.terms.conversation')
+          })
+        }}
+      </TabsTrigger>
+      <TabsTrigger value="conversation_update">
+        {{ $t('admin.automation.conversationUpdate') }}
+      </TabsTrigger>
+      <TabsTrigger value="time_trigger">
+        {{ $t('admin.automation.timeTriggers') }}
+      </TabsTrigger>
     </TabsList>
     <TabsContent value="new_conversation">
       <RuleTab

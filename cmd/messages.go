@@ -148,14 +148,14 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	if err := r.Decode(&req, "json"); err != nil {
 		app.lo.Error("error unmarshalling message request", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	for _, id := range req.Attachments {
 		m, err := app.media.Get(id, "")
 		if err != nil {
 			app.lo.Error("error fetching media", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.media}"), nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.media}"), nil, envelope.GeneralError)
 		}
 		media = append(media, m)
 	}

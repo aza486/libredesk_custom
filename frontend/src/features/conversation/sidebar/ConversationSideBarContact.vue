@@ -3,8 +3,7 @@
     <div class="flex justify-between items-start">
       <Avatar class="size-20">
         <AvatarImage
-          :src="conversation?.contact?.avatar_url"
-          v-if="conversation?.contact?.avatar_url"
+          :src="conversation?.contact?.avatar_url || ''"
         />
         <AvatarFallback>
           {{ conversation?.contact?.first_name?.toUpperCase().substring(0, 2) }}

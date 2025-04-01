@@ -39,7 +39,6 @@
   </div>
 </template>
 
-
 <script setup>
 import { FlexRender, getCoreRowModel, useVueTable } from '@tanstack/vue-table'
 import { useI18n } from 'vue-i18n'
@@ -65,13 +64,19 @@ const props = defineProps({
 })
 
 // Set the default value for emptyText if it's empty
-const emptyText = computed(() => props.emptyText || t('globals.messages.noResultsFound'))
+const emptyText = computed(
+  () =>
+    props.emptyText ||
+    t('globals.messages.noResults', {
+      name: t('globals.terms.result', 2)
+    })
+)
 
 const table = useVueTable({
-  get data () {
+  get data() {
     return props.data
   },
-  get columns () {
+  get columns() {
     return props.columns
   },
   getCoreRowModel: getCoreRowModel()

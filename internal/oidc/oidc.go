@@ -69,11 +69,11 @@ func (o *Manager) Get(id int, includeSecret bool) (models.OIDC, error) {
 	var oidc models.OIDC
 	if err := o.q.GetOIDC.Get(&oidc, id); err != nil {
 		if err == sql.ErrNoRows {
-			return oidc, envelope.NewError(envelope.NotFoundError, o.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.oidcProvider}"), nil)
+			return oidc, envelope.NewError(envelope.NotFoundError, o.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.oidcProvider}"), nil)
 		}
 
 		o.lo.Error("error fetching oidc", "error", err)
-		return oidc, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.oidcProvider}"), nil)
+		return oidc, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.oidcProvider}"), nil)
 	}
 	// Set logo and redirect URL.
 	oidc.SetProviderLogo()
@@ -94,7 +94,7 @@ func (o *Manager) GetAll() ([]models.OIDC, error) {
 	var oidc = make([]models.OIDC, 0)
 	if err := o.q.GetAllOIDC.Select(&oidc); err != nil {
 		o.lo.Error("error fetching oidc", "error", err)
-		return oidc, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.oidcProvider}"), nil)
+		return oidc, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.oidcProvider}"), nil)
 	}
 
 	// Get root URL of the app.
@@ -116,7 +116,7 @@ func (o *Manager) GetAllEnabled() ([]models.OIDC, error) {
 	var oidc = make([]models.OIDC, 0)
 	if err := o.q.GetAllEnabled.Select(&oidc); err != nil {
 		o.lo.Error("error fetching oidc", "error", err)
-		return oidc, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.oidcProvider}"), nil)
+		return oidc, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.oidcProvider}"), nil)
 	}
 	for i := range oidc {
 		oidc[i].SetProviderLogo()
@@ -128,7 +128,7 @@ func (o *Manager) GetAllEnabled() ([]models.OIDC, error) {
 func (o *Manager) Create(oidc models.OIDC) error {
 	if _, err := o.q.InsertOIDC.Exec(oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret); err != nil {
 		o.lo.Error("error inserting oidc", "error", err)
-		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.oidcProvider}"), nil)
+		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.oidcProvider}"), nil)
 	}
 	return nil
 }
@@ -144,7 +144,7 @@ func (o *Manager) Update(id int, oidc models.OIDC) error {
 	}
 	if _, err := o.q.UpdateOIDC.Exec(id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Enabled); err != nil {
 		o.lo.Error("error updating oidc", "error", err)
-		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.oidcProvider}"), nil)
+		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.oidcProvider}"), nil)
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func (o *Manager) Update(id int, oidc models.OIDC) error {
 func (o *Manager) Delete(id int) error {
 	if _, err := o.q.DeleteOIDC.Exec(id); err != nil {
 		o.lo.Error("error deleting oidc", "error", err)
-		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.oidcProvider}"), nil)
+		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.oidcProvider}"), nil)
 	}
 	return nil
 }

@@ -41,7 +41,7 @@
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectLabel>{{ $t('globals.entities.conversation') }}</SelectLabel>
+                  <SelectLabel>{{ $t('globals.terms.conversation') }}</SelectLabel>
                   <SelectItem v-for="(field, key) in currentFilters" :key="key" :value="key">
                     {{ field.label }}
                   </SelectItem>
@@ -100,7 +100,7 @@
                   <template #item="{ item }">
                     <div class="flex items-center gap-2 ml-2">
                       <Avatar v-if="rule.field === 'assigned_user'" class="w-7 h-7">
-                        <AvatarImage :src="item.avatar_url ?? ''" :alt="item.label.slice(0, 2)" />
+                        <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                         <AvatarFallback>
                           {{ item.label.slice(0, 2).toUpperCase() }}
                         </AvatarFallback>
@@ -189,7 +189,7 @@
         <Button variant="outline" size="sm" @click.prevent="addCondition">
           {{
             $t('globals.messages.add', {
-              name: $t('globals.entities.condition')
+              name: $t('globals.terms.condition')
             })
           }}
         </Button>

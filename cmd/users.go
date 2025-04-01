@@ -108,7 +108,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 	form, err := r.RequestCtx.MultipartForm()
 	if err != nil {
 		app.lo.Error("error parsing form data", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.GeneralError)
 	}
 
 	files, ok := form.File["files"]
@@ -119,7 +119,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		file, err := fileHeader.Open()
 		if err != nil {
 			app.lo.Error("error reading uploaded", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.entities.file}"), nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
 		}
 		defer file.Close()
 
@@ -154,7 +154,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
 		if err != nil {
 			app.lo.Error("error uploading file", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("globals.messages.errorUploadingFile"), nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
 		}
 
 		// Delete current avatar.
@@ -167,7 +167,7 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 		path, err := stringutil.GetPathFromURL(media.URL)
 		if err != nil {
 			app.lo.Debug("error getting path from URL", "url", media.URL, "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("globals.messages.errorUploadingFile"), nil, envelope.GeneralError)
+			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
 		}
 		if err := app.user.UpdateAvatar(user.ID, path); err != nil {
 			return sendErrorEnvelope(r, err)
@@ -183,7 +183,7 @@ func handleCreateUser(r *fastglue.Request) error {
 		user = models.User{}
 	)
 	if err := r.Decode(&user, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	if user.Email.String == "" {
@@ -248,11 +248,11 @@ func handleUpdateUser(r *fastglue.Request) error {
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.entities.user} `id`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.user} `id`"), nil, envelope.InputError)
 	}
 
 	if err := r.Decode(&user, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	if user.Email.String == "" {
@@ -287,7 +287,7 @@ func handleDeleteUser(r *fastglue.Request) error {
 		id, err = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
 	if err != nil || id == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.entities.user} `id`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.user} `id`"), nil, envelope.InputError)
 	}
 
 	// Soft delete user.

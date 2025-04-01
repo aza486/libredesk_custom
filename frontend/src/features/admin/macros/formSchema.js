@@ -9,7 +9,7 @@ const actionSchema = (t) => z.array(
 )
 
 export const createFormSchema = (t) => z.object({
-  name: z.string().min(1, t('form.error.name.required')),
+  name: z.string().min(1, t('globals.messages.required')),
   message_content: z.string().optional(),
   actions: actionSchema(t).optional().default([]),
   visibility: z.enum(['all', 'team', 'user']),

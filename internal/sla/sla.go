@@ -129,10 +129,10 @@ func (m *Manager) Get(id int) (models.SLAPolicy, error) {
 	var sla models.SLAPolicy
 	if err := m.q.GetSLA.Get(&sla, id); err != nil {
 		if err == sql.ErrNoRows {
-			return sla, envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.sla}"), nil)
+			return sla, envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.sla}"), nil)
 		}
 		m.lo.Error("error fetching SLA", "error", err)
-		return sla, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.sla}"), nil)
+		return sla, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.sla}"), nil)
 	}
 	return sla, nil
 }
@@ -142,7 +142,7 @@ func (m *Manager) GetAll() ([]models.SLAPolicy, error) {
 	var slas = make([]models.SLAPolicy, 0)
 	if err := m.q.GetAllSLA.Select(&slas); err != nil {
 		m.lo.Error("error fetching SLAs", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.P("globals.entities.sla")), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.P("globals.terms.sla")), nil)
 	}
 	return slas, nil
 }
@@ -151,7 +151,7 @@ func (m *Manager) GetAll() ([]models.SLAPolicy, error) {
 func (m *Manager) Create(name, description string, firstResponseTime, resolutionTime string, notifications models.SlaNotifications) error {
 	if _, err := m.q.InsertSLA.Exec(name, description, firstResponseTime, resolutionTime, notifications); err != nil {
 		m.lo.Error("error inserting SLA", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.sla}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.sla}"), nil)
 	}
 	return nil
 }
@@ -160,7 +160,7 @@ func (m *Manager) Create(name, description string, firstResponseTime, resolution
 func (m *Manager) Update(id int, name, description string, firstResponseTime, resolutionTime string, notifications models.SlaNotifications) error {
 	if _, err := m.q.UpdateSLA.Exec(id, name, description, firstResponseTime, resolutionTime, notifications); err != nil {
 		m.lo.Error("error updating SLA", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.sla}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.sla}"), nil)
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func (m *Manager) Update(id int, name, description string, firstResponseTime, re
 func (m *Manager) Delete(id int) error {
 	if _, err := m.q.DeleteSLA.Exec(id); err != nil {
 		m.lo.Error("error deleting SLA", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.sla}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.sla}"), nil)
 	}
 	return nil
 }
@@ -234,7 +234,7 @@ func (m *Manager) ApplySLA(startTime time.Time, conversationID, assignedTeamID, 
 		deadlines.Resolution,
 	).Scan(&appliedSLAID); err != nil {
 		m.lo.Error("error applying SLA", "error", err)
-		return sla, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorApplying", "name", "{globals.entities.sla}"), nil)
+		return sla, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorApplying", "name", "{globals.terms.sla}"), nil)
 	}
 
 	sla, err = m.Get(slaPolicyID)

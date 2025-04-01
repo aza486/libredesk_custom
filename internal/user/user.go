@@ -98,7 +98,7 @@ func (u *Manager) VerifyPassword(email string, password []byte) (models.User, er
 			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
+		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
 	if err := u.verifyPassword(password, user.Password); err != nil {
 		return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
@@ -114,7 +114,7 @@ func (u *Manager) GetAll() ([]models.User, error) {
 			return users, nil
 		}
 		u.lo.Error("error fetching users from db", "error", err)
-		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.entities.user")), nil)
+		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.terms.user")), nil)
 	}
 
 	return users, nil
@@ -128,7 +128,7 @@ func (u *Manager) GetAllCompact() ([]models.User, error) {
 			return users, nil
 		}
 		u.lo.Error("error fetching users from db", "error", err)
-		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.entities.user")), nil)
+		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.terms.user")), nil)
 	}
 
 	return users, nil
@@ -139,7 +139,7 @@ func (u *Manager) CreateAgent(user *models.User) error {
 	password, err := u.generatePassword()
 	if err != nil {
 		u.lo.Error("error generating password", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
 	}
 	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
 	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
@@ -147,7 +147,7 @@ func (u *Manager) CreateAgent(user *models.User) error {
 			return envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
 		}
 		u.lo.Error("error creating user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }
@@ -173,10 +173,10 @@ func (u *Manager) Get(id int, type_ string) (models.User, error) {
 	if err := u.q.GetUser.Get(&user, id, "", type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("user not found", "id", id, "error", err)
-			return user, envelope.NewError(envelope.NotFoundError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.user}"), nil)
+			return user, envelope.NewError(envelope.NotFoundError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.user}"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
+		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
 	return user, nil
 }
@@ -186,10 +186,10 @@ func (u *Manager) GetByEmail(email, type_ string) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUser.Get(&user, 0, email, type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.user}"), nil)
+			return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.user}"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
-		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.user}"), nil)
+		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
 	return user, nil
 }
@@ -203,7 +203,7 @@ func (u *Manager) GetSystemUser() (models.User, error) {
 func (u *Manager) UpdateAvatar(id int, avatar string) error {
 	if _, err := u.q.UpdateAvatar.Exec(id, null.NewString(avatar, avatar != "")); err != nil {
 		u.lo.Error("error updating user avatar", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }
@@ -222,14 +222,14 @@ func (u *Manager) Update(id int, user models.User) error {
 		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)
 		if err != nil {
 			u.lo.Error("error generating bcrypt password", "error", err)
-			return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.user}"), nil)
+			return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 		}
 		u.lo.Debug("setting new password for user", "user_id", id)
 	}
 
 	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled); err != nil {
 		u.lo.Error("error updating user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }
@@ -247,7 +247,7 @@ func (u *Manager) SoftDelete(id int) error {
 
 	if _, err := u.q.SoftDeleteUser.Exec(id); err != nil {
 		u.lo.Error("error deleting user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }
@@ -275,12 +275,12 @@ func (u *Manager) ResetPassword(token, password string) error {
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		u.lo.Error("error generating bcrypt password", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("user.errorUpdatingPassword"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.password}"), nil)
 	}
 	rows, err := u.q.ResetPassword.Exec(passwordHash, token)
 	if err != nil {
 		u.lo.Error("error setting new password", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("user.errorUpdatingPassword"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.password}"), nil)
 	}
 	if count, _ := rows.RowsAffected(); count == 0 {
 		return envelope.NewError(envelope.InputError, u.i18n.T("user.resetPasswordTokenExpired"), nil)
@@ -292,7 +292,7 @@ func (u *Manager) ResetPassword(token, password string) error {
 func (u *Manager) UpdateAvailability(id int, status string) error {
 	if _, err := u.q.UpdateAvailability.Exec(id, status); err != nil {
 		u.lo.Error("error updating user availability", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }

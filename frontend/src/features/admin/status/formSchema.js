@@ -2,7 +2,7 @@ import * as z from 'zod'
 export const createFormSchema = (t) => z.object({
   name: z
     .string({
-      required_error: t('form.error.name.required'),
+      required_error: t('globals.messages.required'),
     })
     .min(1, {
       message: t('form.error.minmax', {

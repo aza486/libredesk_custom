@@ -139,10 +139,10 @@ func (m *Manager) GetDBRecord(id int) (imodels.Inbox, error) {
 	var inbox imodels.Inbox
 	if err := m.queries.GetInbox.Get(&inbox, id); err != nil {
 		if err == sql.ErrNoRows {
-			return inbox, envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.inbox}"), nil)
+			return inbox, envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.inbox}"), nil)
 		}
 		m.lo.Error("error fetching inbox", "error", err)
-		return inbox, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.inbox}"), nil)
+		return inbox, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.inbox}"), nil)
 	}
 	return inbox, nil
 }
@@ -152,7 +152,7 @@ func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 	var inboxes = make([]imodels.Inbox, 0)
 	if err := m.queries.GetAll.Select(&inboxes); err != nil {
 		m.lo.Error("error fetching inboxes", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.P("globals.entities.inbox")), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.P("globals.terms.inbox")), nil)
 	}
 	return inboxes, nil
 }
@@ -161,7 +161,7 @@ func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 func (m *Manager) Create(inbox imodels.Inbox) error {
 	if _, err := m.queries.InsertInbox.Exec(inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.inbox}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.inbox}"), nil)
 	}
 	return nil
 }
@@ -263,14 +263,14 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 
 		if err := json.Unmarshal(current.Config, &currentCfg); err != nil {
 			m.lo.Error("error unmarshalling current config", "id", id, "error", err)
-			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.config}"), nil)
+			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.config}"), nil)
 		}
 		if len(inbox.Config) == 0 {
-			return envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.empty", "name", "{globals.entities.config}"), nil)
+			return envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.empty", "name", "{globals.terms.config}"), nil)
 		}
 		if err := json.Unmarshal(inbox.Config, &updateCfg); err != nil {
 			m.lo.Error("error unmarshalling update config", "id", id, "error", err)
-			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.config}"), nil)
+			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.config}"), nil)
 		}
 
 		if len(updateCfg.IMAP) == 0 {
@@ -305,7 +305,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 	// Update the inbox in the DB.
 	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.Enabled); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.inbox}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.inbox}"), nil)
 	}
 
 	return nil
@@ -315,7 +315,7 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 func (m *Manager) Toggle(id int) error {
 	if _, err := m.queries.Toggle.Exec(id); err != nil {
 		m.lo.Error("error toggling inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.inbox}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.inbox}"), nil)
 	}
 	return nil
 }
@@ -324,7 +324,7 @@ func (m *Manager) Toggle(id int) error {
 func (m *Manager) SoftDelete(id int) error {
 	if _, err := m.queries.SoftDelete.Exec(id); err != nil {
 		m.lo.Error("error deleting inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.inbox}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.inbox}"), nil)
 	}
 	return nil
 }

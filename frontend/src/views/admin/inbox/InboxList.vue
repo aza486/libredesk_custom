@@ -4,7 +4,13 @@
     <div class="flex justify-between mb-5">
       <div></div>
       <router-link :to="{ name: 'new-inbox' }">
-        <Button>{{ $t('admin.inbox.new') }}</Button>
+        <Button>
+          {{
+            $t('globals.messages.new', {
+              name: $t('globals.terms.inbox')
+            })
+          }}
+        </Button>
       </router-link>
     </div>
     <div>

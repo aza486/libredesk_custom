@@ -68,7 +68,7 @@ func (m *Manager) Completion(k string, prompt string) (string, error) {
 	client, err := m.getDefaultProviderClient()
 	if err != nil {
 		m.lo.Error("error getting provider client", "error", err)
-		return "", envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.entities.provider")), nil)
+		return "", envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.terms.provider")), nil)
 	}
 
 	payload := PromptPayload{
@@ -98,7 +98,7 @@ func (m *Manager) GetPrompts() ([]models.Prompt, error) {
 	var prompts = make([]models.Prompt, 0)
 	if err := m.q.GetPrompts.Select(&prompts); err != nil {
 		m.lo.Error("error fetching prompts", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.entities.template")), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.terms.template")), nil)
 	}
 	return prompts, nil
 }
@@ -110,7 +110,7 @@ func (m *Manager) UpdateProvider(provider, apiKey string) error {
 		return m.setOpenAIAPIKey(apiKey)
 	default:
 		m.lo.Error("unsupported provider type", "provider", provider)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.invalid", "name", m.i18n.Ts("globals.entities.provider")), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.invalid", "name", m.i18n.Ts("globals.terms.provider")), nil)
 	}
 }
 
@@ -129,10 +129,10 @@ func (m *Manager) getPrompt(k string) (string, error) {
 	if err := m.q.GetPrompt.Get(&p, k); err != nil {
 		if err == sql.ErrNoRows {
 			m.lo.Error("error prompt not found", "key", k)
-			return "", envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.notFound", "name", m.i18n.Ts("globals.entities.template")), nil)
+			return "", envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.notFound", "name", m.i18n.Ts("globals.terms.template")), nil)
 		}
 		m.lo.Error("error fetching prompt", "error", err)
-		return "", envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.entities.template")), nil)
+		return "", envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.terms.template")), nil)
 	}
 	return p.Content, nil
 }
@@ -143,7 +143,7 @@ func (m *Manager) getDefaultProviderClient() (ProviderClient, error) {
 
 	if err := m.q.GetDefaultProvider.Get(&p); err != nil {
 		m.lo.Error("error fetching provider details", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.entities.provider")), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.terms.provider")), nil)
 	}
 
 	switch ProviderType(p.Provider) {
@@ -153,11 +153,11 @@ func (m *Manager) getDefaultProviderClient() (ProviderClient, error) {
 		}{}
 		if err := json.Unmarshal([]byte(p.Config), &config); err != nil {
 			m.lo.Error("error parsing provider config", "error", err)
-			return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", m.i18n.Ts("globals.entities.provider")), nil)
+			return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", m.i18n.Ts("globals.terms.provider")), nil)
 		}
 		return NewOpenAIClient(config.APIKey, m.lo), nil
 	default:
 		m.lo.Error("unsupported provider type", "provider", p.Provider)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.invalid", "name", m.i18n.Ts("globals.entities.provider")), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.invalid", "name", m.i18n.Ts("globals.terms.provider")), nil)
 	}
 }

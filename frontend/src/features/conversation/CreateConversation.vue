@@ -2,7 +2,13 @@
   <Dialog :open="dialogOpen" @update:open="dialogOpen = false">
     <DialogContent class="max-w-5xl w-full h-[90vh] flex flex-col">
       <DialogHeader>
-        <DialogTitle>{{ $t('conversation.newConversation') }}</DialogTitle>
+        <DialogTitle>
+          {{
+            $t('globals.messages.new', {
+              name: $t('globals.terms.conversation')
+            })
+          }}
+        </DialogTitle>
       </DialogHeader>
       <form @submit="createConversation" class="flex flex-col flex-1 overflow-hidden">
         <div class="flex-1 space-y-4 pr-1 overflow-y-auto pb-2">
@@ -146,7 +152,7 @@
                     <div class="flex items-center gap-3 py-2">
                       <Avatar class="w-8 h-8">
                         <AvatarImage
-                          :src="item.value === 'none' ? '/default-avatar.png' : item.avatar_url"
+                          :src="item.value === 'none' ? '' : item.avatar_url || ''"
                           :alt="item.value === 'none' ? 'N' : item.label.slice(0, 2)"
                         />
                         <AvatarFallback>
@@ -163,8 +169,8 @@
                         <AvatarImage
                           :src="
                             selected?.value === 'none'
-                              ? '/default-avatar.png'
-                              : selected?.avatar_url
+                              ? ''
+                              : selected?.avatar_url || ''
                           "
                           :alt="selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)"
                         />
@@ -234,7 +240,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { z } from 'zod'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ref, defineModel, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
@@ -280,7 +286,7 @@ const formSchema = z.object({
   content: z.string().min(
     1,
     t('globals.messages.cannotBeEmpty', {
-      name: t('globals.entities.message')
+      name: t('globals.terms.message')
     })
   ),
   inbox_id: z.any().refine((val) => inboxStore.options.some((option) => option.value === val), {

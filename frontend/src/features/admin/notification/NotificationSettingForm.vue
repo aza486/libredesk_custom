@@ -60,25 +60,25 @@
     <!-- Max Connections Field -->
     <FormField v-slot="{ componentField }" name="max_conns">
       <FormItem>
-        <FormLabel>{{ $t('admin.inbox.max_connections') }}</FormLabel>
+        <FormLabel>{{ $t('admin.inbox.maxConnections') }}</FormLabel>
         <FormControl>
           <Input type="number" placeholder="2" v-bind="componentField" />
         </FormControl>
         <FormMessage />
-        <FormDescription>{{ $t('admin.inbox.max_connections.description') }} </FormDescription>
+        <FormDescription>{{ $t('admin.inbox.maxConnections.description') }} </FormDescription>
       </FormItem>
     </FormField>
 
     <!-- Idle Timeout Field -->
     <FormField v-slot="{ componentField }" name="idle_timeout">
       <FormItem>
-        <FormLabel>{{ $t('admin.inbox.idle_timeout') }}</FormLabel>
+        <FormLabel>{{ $t('admin.inbox.idleTimeout') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="15s" v-bind="componentField" />
         </FormControl>
         <FormMessage />
         <FormDescription>
-          {{ $t('admin.inbox.idle_timeout.description') }}
+          {{ $t('admin.inbox.idleTimeout.description') }}
         </FormDescription>
       </FormItem>
     </FormField>
@@ -86,13 +86,13 @@
     <!-- Wait Timeout Field -->
     <FormField v-slot="{ componentField }" name="wait_timeout">
       <FormItem>
-        <FormLabel>{{ $t('admin.inbox.wait_timeout') }}</FormLabel>
+        <FormLabel>{{ $t('admin.inbox.waitTimeout') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="5s" v-bind="componentField" />
         </FormControl>
         <FormMessage />
         <FormDescription>
-          {{ $t('admin.inbox.wait_timeout.description') }}
+          {{ $t('admin.inbox.waitTimeout.description') }}
         </FormDescription>
       </FormItem>
     </FormField>
@@ -100,11 +100,11 @@
     <!-- Authentication Protocol Field -->
     <FormField v-slot="{ componentField }" name="auth_protocol">
       <FormItem>
-        <FormLabel>{{ $t('admin.inbox.auth_protocol') }}</FormLabel>
+        <FormLabel>{{ $t('admin.inbox.authProtocol') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField" v-model="componentField.modelValue">
             <SelectTrigger>
-              <SelectValue :placeholder="t('admin.inbox.auth_protocol.description')" />
+              <SelectValue :placeholder="t('admin.inbox.authProtocol.description')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -123,40 +123,40 @@
     <!-- Email Address Field -->
     <FormField v-slot="{ componentField }" name="email_address">
       <FormItem>
-        <FormLabel>{{ $t('form.field.from_email_address') }}</FormLabel>
+        <FormLabel>{{ $t('form.field.fromEmailAddress') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
-            :placeholder="t('admin.inbox.from_email_address.placeholder')"
+            :placeholder="t('admin.inbox.fromEmailAddress.placeholder')"
             v-bind="componentField"
           />
         </FormControl>
         <FormMessage />
-        <FormDescription> {{ $t('admin.inbox.from_email_address.description') }}</FormDescription>
+        <FormDescription> {{ $t('admin.inbox.fromEmailAddress.description') }}</FormDescription>
       </FormItem>
     </FormField>
 
     <!-- Max Message Retries Field -->
     <FormField v-slot="{ componentField }" name="max_msg_retries">
       <FormItem>
-        <FormLabel>{{ $t('admin.inbox.max_retries') }}</FormLabel>
+        <FormLabel>{{ $t('admin.inbox.maxRetries') }}</FormLabel>
         <FormControl>
           <Input type="number" placeholder="3" v-bind="componentField" />
         </FormControl>
         <FormMessage />
-        <FormDescription> {{ $t('admin.inbox.max_retries.description') }} </FormDescription>
+        <FormDescription> {{ $t('admin.inbox.maxRetries.description') }} </FormDescription>
       </FormItem>
     </FormField>
 
     <!-- HELO Hostname Field -->
     <FormField v-slot="{ componentField }" name="hello_hostname">
       <FormItem>
-        <FormLabel>{{ $t('admin.inbox.helo_hostname') }}</FormLabel>
+        <FormLabel>{{ $t('admin.inbox.heloHostname') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          {{ $t('admin.inbox.helo_hostname.description') }}
+          {{ $t('admin.inbox.heloHostname.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>

@@ -5,7 +5,7 @@
       <router-link :to="{ name: 'new-user' }">
         <Button>{{
           $t('globals.messages.new', {
-            name: $t('globals.entities.user', 1)
+            name: $t('globals.terms.user', 1)
           })
         }}</Button>
       </router-link>

@@ -22,12 +22,12 @@
 
     <FormField v-slot="{ componentField }" name="first_response_time">
       <FormItem>
-        <FormLabel>{{ t('admin.sla.first_response_time') }}</FormLabel>
+        <FormLabel>{{ t('admin.sla.firstResponseTime') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="6h" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.sla.first_response_time.description') }}
+          {{ t('admin.sla.firstResponseTime.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -35,11 +35,11 @@
 
     <FormField v-slot="{ componentField }" name="resolution_time">
       <FormItem>
-        <FormLabel>{{ t('admin.sla.resolution_time') }}</FormLabel>
+        <FormLabel>{{ t('admin.sla.resolutionTime') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="24h" v-bind="componentField" />
         </FormControl>
-        <FormDescription>{{ t('admin.sla.resolution_time.description') }} </FormDescription>
+        <FormDescription>{{ t('admin.sla.resolutionTime.description') }} </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -49,20 +49,20 @@
       <div class="flex items-center justify-between pb-3 border-b">
         <div class="space-y-1">
           <h3 class="text-lg font-semibold text-foreground">
-            {{ t('admin.sla.alert_configuration') }}
+            {{ t('admin.sla.alertConfiguration') }}
           </h3>
           <p class="text-sm text-muted-foreground">
-            {{ t('admin.sla.alert_configuration.description') }}
+            {{ t('admin.sla.alertConfiguration.description') }}
           </p>
         </div>
         <div class="flex gap-2">
           <Button type="button" variant="outline" size="sm" @click="addNotification('breach')">
             <Plus class="w-4 h-4 mr-2" />
-            {{ t('admin.sla.add_breach_alert') }}
+            {{ t('admin.sla.addBreachAlert') }}
           </Button>
           <Button type="button" variant="outline" size="sm" @click="addNotification('warning')">
             <Plus class="w-4 h-4 mr-2" />
-            {{ t('admin.sla.add_warning_alert') }}
+            {{ t('admin.sla.addWarningAlert') }}
           </Button>
         </div>
       </div>
@@ -123,7 +123,7 @@
                   <FormItem>
                     <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                       <Clock class="w-4 h-4 text-muted-foreground" />
-                      {{ t('admin.sla.trigger_timing') }}
+                      {{ t('admin.sla.triggerTiming') }}
                     </FormLabel>
                     <FormControl>
                       <Select v-bind="componentField" class="hover:border-foreground/30">
@@ -133,10 +133,10 @@
                         <SelectContent>
                           <SelectGroup>
                             <SelectItem value="immediately" class="focus:bg-accent">
-                              {{ t('admin.sla.immediately_on_breach') }}
+                              {{ t('admin.sla.immediatelyOnBreach') }}
                             </SelectItem>
                             <SelectItem value="after" class="focus:bg-accent">
-                              {{ t('admin.sla.after_specific_duration') }}
+                              {{ t('admin.sla.afterSpecificDuration') }}
                             </SelectItem>
                           </SelectGroup>
                         </SelectContent>
@@ -149,12 +149,12 @@
                   <FormItem v-if="shouldShowTimeDelay(index)">
                     <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                       <Hourglass class="w-4 h-4 text-muted-foreground" />
-                      {{ notification.type === 'warning' ? t('admin.sla.advance_warning') : t('admin.sla.follow_up_delay') }}
+                      {{ notification.type === 'warning' ? t('admin.sla.advanceWarning') : t('admin.sla.followUpDelay') }}
                     </FormLabel>
                     <FormControl>
                       <Select v-bind="componentField" class="hover:border-foreground/30">
                         <SelectTrigger class="w-full">
-                          <SelectValue :placeholder="t('admin.sla.select_duration')" />
+                          <SelectValue :placeholder="t('admin.sla.selectDuration')" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -185,7 +185,7 @@
                 <FormItem>
                   <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                     <Users class="w-4 h-4 text-muted-foreground" />
-                    {{ t('admin.sla.notification_recipients') }}
+                    {{ t('admin.sla.notificationRecipients') }}
                   </FormLabel>
                   <FormControl>
                     <SelectTag
@@ -215,7 +215,7 @@
         class="flex flex-col items-center justify-center p-8 space-y-3 rounded-xl bg-muted/30 border border-dashed"
       >
         <Bell class="w-8 h-8 text-muted-foreground" />
-        <p class="text-sm text-muted-foreground">{{ t('admin.sla.no_notifications_configured') }}</p>
+        <p class="text-sm text-muted-foreground">{{ t('admin.sla.noNotificationsConfigured') }}</p>
       </div>
     </div>
 

@@ -93,7 +93,7 @@ func (m *Manager) Update(s interface{}) error {
 		m.lo.Error("error marshalling settings", "error", err)
 		return envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.setting}"),
+			m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.setting}"),
 			nil,
 		)
 	}
@@ -102,7 +102,7 @@ func (m *Manager) Update(s interface{}) error {
 		m.lo.Error("error updating settings", "error", err)
 		return envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.setting}"),
+			m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.setting}"),
 			nil,
 		)
 	}
@@ -116,7 +116,7 @@ func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 		m.lo.Error("error fetching settings", "prefix", prefix, "error", err)
 		return b, envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.setting}"),
+			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.setting}"),
 			nil,
 		)
 	}
@@ -130,7 +130,7 @@ func (m *Manager) Get(key string) (types.JSONText, error) {
 		m.lo.Error("error fetching setting", "key", key, "error", err)
 		return b, envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.setting}"),
+			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.setting}"),
 			nil,
 		)
 	}
@@ -144,7 +144,7 @@ func (m *Manager) GetAppRootURL() (string, error) {
 		m.lo.Error("error fetching root URL", "error", err)
 		return "", envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.appRootURL}"),
+			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.appRootURL}"),
 			nil,
 		)
 	}

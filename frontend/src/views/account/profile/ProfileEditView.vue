@@ -27,7 +27,7 @@
       </div>
 
       <Button class="w-28" @click="saveUser" size="sm" :isLoading="isSaving">
-        {{ $t('globals.buttons.save_changes') }}
+        {{ $t('globals.buttons.saveChanges') }}
       </Button>
 
       <!-- Cropped dialog -->
@@ -126,7 +126,7 @@ const saveUser = async () => {
     await api.updateCurrentUser(formData)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.updatedSuccessfully', {
-        name: t('globals.entities.profile')
+        name: t('globals.terms.profile')
       })
     })
   } catch (error) {

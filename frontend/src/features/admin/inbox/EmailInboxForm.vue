@@ -14,16 +14,16 @@
 
     <FormField v-slot="{ componentField }" name="from">
       <FormItem>
-        <FormLabel>{{ $t('form.field.from_email_address') }}</FormLabel>
+        <FormLabel>{{ $t('form.field.fromEmailAddress') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
-            :placeholder="t('admin.inbox.from_email_address.placeholder')"
+            :placeholder="t('admin.inbox.fromEmailAddress.placeholder')"
             v-bind="componentField"
           />
         </FormControl>
         <FormDescription>
-          {{ $t('admin.inbox.from_email_address.description') }}
+          {{ $t('admin.inbox.fromEmailAddress.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -45,10 +45,10 @@
     <FormField v-slot="{ componentField, handleChange }" name="csat_enabled">
       <FormItem class="flex flex-row items-center justify-between box p-4">
         <div class="space-y-0.5">
-          <FormLabel class="text-base">{{ $t('admin.inbox.csat_surveys') }}</FormLabel>
+          <FormLabel class="text-base">{{ $t('admin.inbox.csatSurveys') }}</FormLabel>
           <FormDescription>
-            {{ $t('admin.inbox.csat_surveys.description_1') }}<br />
-            {{ $t('admin.inbox.csat_surveys.description_2') }}
+            {{ $t('admin.inbox.csatSurveys.description_1') }}<br />
+            {{ $t('admin.inbox.csatSurveys.description_2') }}
           </FormDescription>
         </div>
         <FormControl>
@@ -59,7 +59,7 @@
 
     <!-- IMAP Section -->
     <div class="box p-4 space-y-4">
-      <h3 class="font-semibold">{{ $t('admin.inbox.imap_configuration') }}</h3>
+      <h3 class="font-semibold">{{ $t('admin.inbox.imapConfig') }}</h3>
 
       <FormField v-slot="{ componentField }" name="imap.host">
         <FormItem>
@@ -134,19 +134,19 @@
               </SelectContent>
             </Select>
           </FormControl>
-          <FormDescription>{{ $t('admin.inbox.imap_tls.description') }}</FormDescription>
+          <FormDescription>{{ $t('admin.inbox.imap.tls.description') }}</FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField }" name="imap.read_interval">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.imap_scan_interval') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.imapScanInterval') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="5m" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            {{ $t('admin.inbox.imap_scan_interval.description') }}
+            {{ $t('admin.inbox.imapScanInterval.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -154,12 +154,12 @@
 
       <FormField v-slot="{ componentField }" name="imap.scan_inbox_since">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.imap_scan_inbox_since') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.imapScanInboxSince') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="48h" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            {{ $t('admin.inbox.imap_scan_inbox_since.description') }}
+            {{ $t('admin.inbox.imapScanInboxSince.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -182,7 +182,7 @@
 
     <!-- SMTP Section -->
     <div class="box p-4 space-y-4">
-      <h3 class="font-semibold">{{ $t('admin.inbox.smtp_configuration') }}</h3>
+      <h3 class="font-semibold">{{ $t('admin.inbox.smtpConfig') }}</h3>
 
       <FormField v-slot="{ componentField }" name="smtp.host">
         <FormItem>
@@ -226,12 +226,12 @@
 
       <FormField v-slot="{ componentField }" name="smtp.max_conns">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.max_connections') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.maxConnections') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="10" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            {{ $t('admin.inbox.max_connections.description') }}
+            {{ $t('admin.inbox.maxConnections.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -239,23 +239,23 @@
 
       <FormField v-slot="{ componentField }" name="smtp.max_msg_retries">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.max_retries') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.maxRetries') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="3" v-bind="componentField" />
           </FormControl>
-          <FormDescription>{{ $t('admin.inbox.max_retries.description') }} </FormDescription>
+          <FormDescription>{{ $t('admin.inbox.maxRetries.description') }} </FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField }" name="smtp.idle_timeout">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.idle_timeout') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.idleTimeout') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="25s" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            {{ $t('admin.inbox.idle_timeout.description') }}
+            {{ $t('admin.inbox.idleTimeout.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -263,12 +263,12 @@
 
       <FormField v-slot="{ componentField }" name="smtp.wait_timeout">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.wait_timeout') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.waitTimeout') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="60s" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            {{ $t('admin.inbox.wait_timeout.description') }}
+            {{ $t('admin.inbox.waitTimeout.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -276,7 +276,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.auth_protocol">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.auth_protocol') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.authProtocol') }}</FormLabel>
           <FormControl>
             <Select v-bind="componentField">
               <SelectTrigger>
@@ -290,7 +290,7 @@
               </SelectContent>
             </Select>
           </FormControl>
-          <FormDescription> {{ $t('admin.inbox.auth_protocol.description') }} </FormDescription>
+          <FormDescription> {{ $t('admin.inbox.authProtocol.description') }} </FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
@@ -317,12 +317,12 @@
 
       <FormField v-slot="{ componentField }" name="smtp.hello_hostname">
         <FormItem>
-          <FormLabel>{{ $t('admin.inbox.helo_hostname') }}</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.heloHostname') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            {{ $t('admin.inbox.helo_hostname.description') }}
+            {{ $t('admin.inbox.heloHostname.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>

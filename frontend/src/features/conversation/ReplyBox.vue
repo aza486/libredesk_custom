@@ -15,7 +15,7 @@
         <form id="apiKeyForm" @submit="handleSubmit($event, updateProvider)">
           <FormField v-slot="{ componentField }" name="apiKey">
             <FormItem>
-              <FormLabel>{{ $t('globals.entities.apiKey') }}</FormLabel>
+              <FormLabel>{{ $t('globals.terms.apiKey') }}</FormLabel>
               <FormControl>
                 <Input type="text" placeholder="sk-am1RLw7XUWGX.." v-bind="componentField" />
               </FormControl>
@@ -255,7 +255,7 @@ const updateProvider = async (values) => {
     openAIKeyPrompt.value = false
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.savedSuccessfully', {
-        name: t('globals.entities.apiKey')
+        name: t('globals.terms.apiKey')
       })
     })
   } catch (error) {

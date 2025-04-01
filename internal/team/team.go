@@ -72,7 +72,7 @@ func (u *Manager) GetAll() ([]models.Team, error) {
 			return teams, nil
 		}
 		u.lo.Error("error fetching teams", "error", err)
-		return teams, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.team}"), nil)
+		return teams, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.team}"), nil)
 	}
 	return teams, nil
 }
@@ -85,7 +85,7 @@ func (u *Manager) GetAllCompact() ([]models.Team, error) {
 			return teams, nil
 		}
 		u.lo.Error("error fetching teams", "error", err)
-		return teams, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.team}"), nil)
+		return teams, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.team}"), nil)
 	}
 	return teams, nil
 }
@@ -96,10 +96,10 @@ func (u *Manager) Get(id int) (models.Team, error) {
 	if err := u.q.GetTeam.Get(&team, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("team not found", "id", id, "error", err)
-			return team, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.team}"), nil)
+			return team, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.team}"), nil)
 		}
 		u.lo.Error("error fetching team", "id", id, "error", err)
-		return team, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.team}"), nil)
+		return team, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.team}"), nil)
 	}
 	return team, nil
 }
@@ -108,10 +108,10 @@ func (u *Manager) Get(id int) (models.Team, error) {
 func (u *Manager) Create(name, timezone, conversationAssignmentType string, businessHrsID, slaPolicyID null.Int, emoji string, maxAutoAssignedConversations int) error {
 	if _, err := u.q.InsertTeam.Exec(name, timezone, conversationAssignmentType, businessHrsID, slaPolicyID, emoji, maxAutoAssignedConversations); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.entities.team}"), nil)
+			return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.team}"), nil)
 		}
 		u.lo.Error("error inserting team", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.team}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.team}"), nil)
 	}
 	return nil
 }
@@ -120,7 +120,7 @@ func (u *Manager) Create(name, timezone, conversationAssignmentType string, busi
 func (u *Manager) Update(id int, name, timezone, conversationAssignmentType string, businessHrsID, slaPolicyID null.Int, emoji string, maxAutoAssignedConversations int) error {
 	if _, err := u.q.UpdateTeam.Exec(id, name, timezone, conversationAssignmentType, businessHrsID, slaPolicyID, emoji, maxAutoAssignedConversations); err != nil {
 		u.lo.Error("error updating team", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.team}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.team}"), nil)
 	}
 	return nil
 }
@@ -129,7 +129,7 @@ func (u *Manager) Update(id int, name, timezone, conversationAssignmentType stri
 func (u *Manager) Delete(id int) error {
 	if _, err := u.q.DeleteTeam.Exec(id); err != nil {
 		u.lo.Error("error deleting team", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.team}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.team}"), nil)
 	}
 	return nil
 }
@@ -142,7 +142,7 @@ func (u *Manager) GetUserTeams(userID int) ([]models.Team, error) {
 			return teams, nil
 		}
 		u.lo.Error("error fetching teams", "user_id", userID, "error", err)
-		return teams, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.team}"), nil)
+		return teams, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.team}"), nil)
 	}
 	return teams, nil
 }
@@ -151,7 +151,7 @@ func (u *Manager) GetUserTeams(userID int) ([]models.Team, error) {
 func (u *Manager) UpsertUserTeams(id int, teamNames []string) error {
 	if _, err := u.q.UpsertUserTeams.Exec(id, pq.Array(teamNames)); err != nil {
 		u.lo.Error("error updating user teams", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.team}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.team}"), nil)
 	}
 	return nil
 }
@@ -161,7 +161,7 @@ func (u *Manager) UserBelongsToTeam(teamID, userID int) (bool, error) {
 	var exists bool
 	if err := u.q.UserBelongsToTeam.Get(&exists, teamID, userID); err != nil {
 		u.lo.Error("error fetching team members", "team_id", teamID, "user_id", userID, "error", err)
-		return false, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.team}"), nil)
+		return false, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.team}"), nil)
 	}
 	return exists, nil
 }

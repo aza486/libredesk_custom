@@ -63,7 +63,7 @@ func (u *Manager) GetAll() ([]models.Role, error) {
 	var roles = make([]models.Role, 0)
 	if err := u.q.GetAll.Select(&roles); err != nil {
 		u.lo.Error("error fetching roles", "error", err)
-		return roles, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.role}"), nil)
+		return roles, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.role}"), nil)
 	}
 	return roles, nil
 }
@@ -73,10 +73,10 @@ func (u *Manager) Get(id int) (models.Role, error) {
 	var role = models.Role{}
 	if err := u.q.Get.Get(&role, id); err != nil {
 		if err == sql.ErrNoRows {
-			return role, envelope.NewError(envelope.NotFoundError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.role}"), nil)
+			return role, envelope.NewError(envelope.NotFoundError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.role}"), nil)
 		}
 		u.lo.Error("error fetching role", "error", err)
-		return role, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.role}"), nil)
+		return role, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.role}"), nil)
 	}
 	return role, nil
 }
@@ -90,12 +90,12 @@ func (u *Manager) Delete(id int) error {
 	}
 	for _, r := range models.DefaultRoles {
 		if role.Name == r {
-			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorDeleting", "name", "default {globals.entities.role}"), nil)
+			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorDeleting", "name", "default {globals.terms.role}"), nil)
 		}
 	}
 	if _, err := u.q.Delete.Exec(id); err != nil {
 		u.lo.Error("error deleting role", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.role}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.role}"), nil)
 	}
 	return nil
 }
@@ -107,10 +107,10 @@ func (u *Manager) Create(r models.Role) error {
 	}
 	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.entities.role}"), nil)
+			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.role}"), nil)
 		}
 		u.lo.Error("error inserting role", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.role}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.role}"), nil)
 	}
 	return nil
 }
@@ -127,12 +127,12 @@ func (u *Manager) Update(id int, r models.Role) error {
 		return err
 	}
 	if role.Name == models.RoleAdmin {
-		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorUpdating", "name", "Admin {globals.entities.role}"), nil)
+		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorUpdating", "name", "Admin {globals.terms.role}"), nil)
 	}
 
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.role}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.role}"), nil)
 	}
 	return nil
 }
@@ -140,7 +140,7 @@ func (u *Manager) Update(id int, r models.Role) error {
 // validatePermissions returns true if all given permissions are valid
 func (u *Manager) validatePermissions(permissions []string) error {
 	if len(permissions) == 0 {
-		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.entities.permission")), nil)
+		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
 	}
 	for _, perm := range permissions {
 		if !amodels.IsValidPermission(perm) {

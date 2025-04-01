@@ -11,7 +11,7 @@
         </h2>
 
         <div v-if="items.length === 0" class="p-6 text-muted-foreground">
-          {{ $t('search.noResults', {
+          {{ $t('globals.messages.noResults', {
             name: type
           }) }}
         </div>

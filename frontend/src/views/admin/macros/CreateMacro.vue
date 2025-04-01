@@ -21,8 +21,13 @@ const emit = useEmitter()
 const { t } = useI18n()
 const formLoading = ref(false)
 const breadcrumbLinks = [
-  { path: 'macro-list', label: t('admin.macro') },
-  { path: '', label: t('admin.macro.new') }
+  { path: 'macro-list', label: t('globals.terms.macro', 2) },
+  {
+    path: '',
+    label: t('globals.messages.new', {
+      name: t('globals.terms.macro')
+    })
+  }
 ]
 
 const onSubmit = (values) => {
@@ -34,7 +39,9 @@ const createMacro = async (values) => {
     formLoading.value = true
     await api.createMacro(values)
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.macro.created')
+      description: t('globals.messages.createdSuccessfully', {
+        name: t('globals.terms.macro')
+      })
     })
     router.push({ name: 'macro-list' })
   } catch (error) {

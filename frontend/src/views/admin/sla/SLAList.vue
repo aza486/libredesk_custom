@@ -4,7 +4,13 @@
       <div></div>
       <div>
         <router-link :to="{ name: 'new-sla' }">
-          <Button> {{ t('admin.sla.new') }} </Button>
+          <Button>
+            {{
+              t('globals.messages.new', {
+                name: t('globals.terms.slaPolicy')
+              })
+            }}
+          </Button>
         </router-link>
       </div>
     </div>

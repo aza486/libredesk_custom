@@ -54,7 +54,7 @@ func handleLogin(r *fastglue.Request) error {
 func handleLogout(r *fastglue.Request) error {
 	var app = r.Context.(*App)
 	if err := app.auth.DestroySession(r); err != nil {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorDestroying", "name", "{globals.entities.session}"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorDestroying", "name", "{globals.terms.session}"), nil))
 	}
 	// Add no-cache headers.
 	r.RequestCtx.Response.Header.Add("Cache-Control",

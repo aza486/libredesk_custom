@@ -26,7 +26,7 @@ func handleCreateTag(r *fastglue.Request) error {
 		tag = tmodels.Tag{}
 	)
 	if err := r.Decode(&tag, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if tag.Name == "" {
@@ -69,7 +69,7 @@ func handleUpdateTag(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&tag, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if tag.Name == "" {

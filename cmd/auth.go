@@ -63,17 +63,17 @@ func handleOIDCCallback(r *fastglue.Request) error {
 	sessionState, err := app.auth.GetSessionValue(r, oidcStateSessKey)
 	if err != nil {
 		app.lo.Error("error getting state from session", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.session}"), nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.session}"), nil, envelope.GeneralError)
 	}
 	if state != sessionState {
-		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.mismatch", "name", "{globals.entities.state}"), nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.mismatch", "name", "{globals.terms.state}"), nil, envelope.GeneralError)
 	}
 
 	_, claims, err := app.auth.ExchangeOIDCToken(r.RequestCtx, providerID, code)
 	if err != nil {
 		app.lo.Error("error exchanging oidc token", "error", err)
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
-			app.i18n.T("oidc.errorExchangingToken"), nil, envelope.GeneralError)
+			app.i18n.T("globals.messages.errorExchangingToken"), nil, envelope.GeneralError)
 	}
 
 	// Lookup the user by email and set the session.
@@ -89,7 +89,7 @@ func handleOIDCCallback(r *fastglue.Request) error {
 		LastName:  user.LastName,
 	}, r); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
-			app.i18n.Ts("globals.messages.errorSaving", "name", "{globals.entities.session}"), nil, envelope.GeneralError)
+			app.i18n.Ts("globals.messages.errorSaving", "name", "{globals.terms.session}"), nil, envelope.GeneralError)
 	}
 
 	return r.Redirect("/", fasthttp.StatusFound, nil, "")

@@ -35,7 +35,7 @@ func handleCreateUserView(r *fastglue.Request) error {
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 	if err := r.Decode(&view, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
@@ -72,7 +72,7 @@ func handleDeleteUserView(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	if view.UserID != user.ID {
-		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.T("authz.permissionDenied"), nil, envelope.PermissionError)
+		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.denied", "name", "{globals.terms.permission}"), nil, envelope.PermissionError)
 	}
 	if err = app.view.Delete(id); err != nil {
 		return sendErrorEnvelope(r, err)
@@ -92,7 +92,7 @@ func handleUpdateUserView(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 	if err := r.Decode(&view, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 	user, err := app.user.GetAgent(auser.ID)
 	if err != nil {
@@ -109,7 +109,7 @@ func handleUpdateUserView(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	if v.UserID != user.ID {
-		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.T("authz.permissionDenied"), nil, envelope.PermissionError)
+		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.denied", "name", "{globals.terms.permission}"), nil, envelope.PermissionError)
 	}
 	if err = app.view.Update(id, view.Name, view.Filters); err != nil {
 		return sendErrorEnvelope(r, err)

@@ -53,13 +53,13 @@ func (s *Manager) Conversations(query string) ([]models.Conversation, error) {
    var refNumResults = make([]models.Conversation, 0)
    if err := s.q.SearchConversationsByRefNum.Select(&refNumResults, query); err != nil {
    	s.lo.Error("error searching conversations", "error", err)
-   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.entities.conversation")), nil)
+   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.terms.conversation")), nil)
    }
 
    var emailResults = make([]models.Conversation, 0)
    if err := s.q.SearchConversationsByContactEmail.Select(&emailResults, query); err != nil {
    	s.lo.Error("error searching conversations", "error", err)
-   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.entities.conversation")), nil)
+   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.terms.conversation")), nil)
    }
    return append(refNumResults, emailResults...), nil
 }
@@ -69,7 +69,7 @@ func (s *Manager) Messages(query string) ([]models.Message, error) {
    var results = make([]models.Message, 0)
    if err := s.q.SearchMessages.Select(&results, query); err != nil {
    	s.lo.Error("error searching messages", "error", err)
-   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.entities.message")), nil)
+   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.terms.message")), nil)
    }
    return results, nil
 }
@@ -79,7 +79,7 @@ func (s *Manager) Contacts(query string) ([]models.Contact, error) {
    var results = make([]models.Contact, 0)
    if err := s.q.SearchContacts.Select(&results, query); err != nil {
    	s.lo.Error("error searching contacts", "error", err)
-   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.entities.contact")), nil)
+   	return nil, envelope.NewError(envelope.GeneralError, s.i18n.Ts("globals.messages.errorSearching", "name", s.i18n.Ts("globals.terms.contact")), nil)
    }
    return results, nil
 }

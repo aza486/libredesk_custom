@@ -10,7 +10,9 @@
         >
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-3xl font-bold text-foreground">{{ t('globals.app.name') }}</CardTitle>
+              <CardTitle class="text-3xl font-bold text-foreground">{{
+                t('globals.app.name')
+              }}</CardTitle>
               <p class="text-muted-foreground">{{ t('auth.signIn') }}</p>
             </div>
 
@@ -48,7 +50,7 @@
             <form @submit.prevent="loginAction" class="space-y-4">
               <div class="space-y-2">
                 <Label for="email" class="text-sm font-medium text-foreground">{{
-                  t('auth.email')
+                  t('globals.terms.email')
                 }}</Label>
                 <Input
                   id="email"

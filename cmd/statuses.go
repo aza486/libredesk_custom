@@ -26,7 +26,7 @@ func handleCreateStatus(r *fastglue.Request) error {
 		status = cmodels.Status{}
 	)
 	if err := r.Decode(&status, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if status.Name == "" {
@@ -67,7 +67,7 @@ func handleUpdateStatus(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&status, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), err.Error(), envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
 	if status.Name == "" {

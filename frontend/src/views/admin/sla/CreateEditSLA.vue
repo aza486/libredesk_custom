@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"/>
+  <Spinner v-if="isLoading" />
   <SLAForm
     :initial-values="slaData"
     :submitForm="submitForm"
@@ -42,12 +42,16 @@ const submitForm = async (values) => {
     if (props.id) {
       await api.updateSLA(props.id, values)
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        description: t('admin.sla.updated')
+        description: t('globals.messages.updatedSuccessfully', {
+          name: t('globals.terms.slaPolicy')
+        })
       })
     } else {
       await api.createSLA(values)
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        description: t('admin.sla.created')
+        description: t('globals.messages.createdSuccessfully', {
+          name: t('globals.terms.slaPolicy')
+        })
       })
       router.push({ name: 'sla-list' })
     }
@@ -66,7 +70,7 @@ const breadCrumLabel = () => {
 }
 
 const breadcrumbLinks = [
-  { path: 'sla-list', label: t('admin.sla') },
+  { path: 'sla-list', label: t('globals.terms.sla') },
   { path: '', label: breadCrumLabel() }
 ]
 

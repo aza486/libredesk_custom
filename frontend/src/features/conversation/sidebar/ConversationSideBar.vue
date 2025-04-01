@@ -11,6 +11,8 @@
           {{ $t('conversation.sidebar.action', 2) }}
         </AccordionTrigger>
         <AccordionContent class="space-y-4 p-4">
+
+          <!-- Agent assignment -->
           <ComboBox
             v-model="assignedUserID"
             :items="[{ value: 'none', label: 'None' }, ...usersStore.options]"
@@ -21,7 +23,7 @@
               <div class="flex items-center gap-3 py-2">
                 <Avatar class="w-8 h-8">
                   <AvatarImage
-                    :src="item.value === 'none' ? '/default-avatar.png' : item.avatar_url"
+                    :src="item.value === 'none' ? '' : item.avatar_url || ''"
                     :alt="item.value === 'none' ? 'N' : item.label.slice(0, 2)"
                   />
                   <AvatarFallback>
@@ -36,7 +38,7 @@
               <div class="flex items-center gap-3">
                 <Avatar class="w-7 h-7" v-if="selected">
                   <AvatarImage
-                    :src="selected?.value === 'none' ? '/default-avatar.png' : selected?.avatar_url"
+                    :src="selected?.value === 'none' ? '' : selected?.avatar_url || ''"
                     :alt="selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)"
                   />
                   <AvatarFallback>
@@ -50,6 +52,7 @@
             </template>
           </ComboBox>
 
+          <!-- Team assignment -->
           <ComboBox
             v-model="assignedTeamID"
             :items="[{ value: 'none', label: 'None' }, ...teamsStore.options]"
@@ -81,6 +84,7 @@
             </template>
           </ComboBox>
 
+          <!-- Priority assignment -->
           <ComboBox
             v-model="priorityID"
             :items="priorityOptions"

@@ -57,7 +57,7 @@
                   <template #item="{ item }">
                     <div class="flex items-center gap-2 ml-2">
                       <Avatar v-if="action.type === 'assign_user'" class="w-7 h-7">
-                        <AvatarImage :src="item.avatar_url ?? ''" :alt="item.label.slice(0, 2)" />
+                        <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                         <AvatarFallback>
                           {{ item.label.slice(0, 2).toUpperCase() }}
                         </AvatarFallback>
@@ -123,7 +123,7 @@
     <div>
       <Button variant="outline" @click.prevent="addAction">{{
         $t('globals.messages.add', {
-          name: $t('globals.entities.action')
+          name: $t('globals.terms.action')
         })
       }}</Button>
     </div>

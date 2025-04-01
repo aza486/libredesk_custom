@@ -10,20 +10,26 @@
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem> {{t('globals.buttons.edit')}} </DropdownMenuItem>
+          <DropdownMenuItem> {{ t('globals.buttons.edit') }} </DropdownMenuItem>
         </DialogTrigger>
-        <DropdownMenuItem @click="openAlertDialog"> {{t('globals.buttons.delete')}} </DropdownMenuItem>
+        <DropdownMenuItem @click="openAlertDialog">
+          {{ t('globals.buttons.delete') }}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>{{t('admin.conversation_tags.edit')}}</DialogTitle>
-        <DialogDescription> {{t('admin.conversation_tags.edit.description')}} </DialogDescription>
+        <DialogTitle>{{
+          t('globals.messages.edit', {
+            name: t('globals.terms.tag')
+          })
+        }}</DialogTitle>
+        <DialogDescription> {{ t('admin.conversationTags.edit.description') }} </DialogDescription>
       </DialogHeader>
       <TagsForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit"> {{t('globals.buttons.save')}} </Button>
+            <Button type="submit"> {{ t('globals.buttons.save') }} </Button>
           </DialogFooter>
         </template>
       </TagsForm>
@@ -34,14 +40,14 @@
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{t('globals.messages.areYouAbsolutelySure')}}</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{t('admin.conversation_tags.delete_confirmation')}}
+          {{ t('admin.conversationTags.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{t('globals.buttons.cancel')}}</AlertDialogCancel>
-        <AlertDialogAction @click="deleteTag">{{t('globals.buttons.delete')}}</AlertDialogAction>
+        <AlertDialogCancel>{{ t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="deleteTag">{{ t('globals.buttons.delete') }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
@@ -102,13 +108,13 @@ const props = defineProps({
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(createFormSchema(t)),
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
   await api.updateTag(props.tag.id, values)
   emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-    description: t('admin.conversation_tags.updated'),
+    description: t('admin.conversationTags.updated')
   })
   dialogOpen.value = false
   emitRefreshTagsList()

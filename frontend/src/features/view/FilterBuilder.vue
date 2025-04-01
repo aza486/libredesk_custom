@@ -47,7 +47,7 @@
                 <div v-if="modelFilter.field === 'assigned_user_id'">
                   <div class="flex items-center gap-1">
                     <Avatar class="w-6 h-6">
-                      <AvatarImage :src="item.avatar_url" :alt="item.label.slice(0, 2)" />
+                      <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                       <AvatarFallback>{{ item.label.slice(0, 2).toUpperCase() }} </AvatarFallback>
                     </Avatar>
                     <span>{{ item.label }}</span>
@@ -70,7 +70,7 @@
                   <div class="flex items-center gap-2">
                     <div v-if="selected" class="flex items-center gap-1">
                       <Avatar class="w-6 h-6">
-                        <AvatarImage :src="selected.avatar_url" :alt="selected.label.slice(0, 2)" />
+                        <AvatarImage :src="selected.avatar_url || ''" :alt="selected.label.slice(0, 2)" />
                         <AvatarFallback>{{
                           selected.label.slice(0, 2).toUpperCase()
                         }}</AvatarFallback>
@@ -117,7 +117,7 @@
         <Plus class="w-3 h-3 mr-1" />
         {{
           $t('globals.messages.add', {
-            name: $t('globals.entities.filter')
+            name: $t('globals.terms.filter')
           })
         }}
       </Button>

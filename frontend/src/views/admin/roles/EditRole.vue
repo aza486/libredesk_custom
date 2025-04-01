@@ -55,7 +55,7 @@ const submitForm = async (values) => {
     await api.updateRole(props.id, values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.updatedSuccessfully', {
-        name: t('globals.entities.role')
+        name: t('globals.terms.role')
       })
     })
   } catch (error) {

@@ -3,8 +3,8 @@ import * as z from 'zod'
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
 
 export const createFormSchema = (t) => z.object({
-    name: z.string().min(1, t('form.error.name.required')),
-    description: z.string().min(1, t('form.error.description.required')),
+    name: z.string().min(1, t('globals.messages.required')),
+    description: z.string().min(1, t('globals.messages.required')),
     is_always_open: z.boolean().default(true),
     hours: z.record(
         z.object({

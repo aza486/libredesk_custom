@@ -3,7 +3,13 @@
   <div :class="{ 'transition-opacity duration-300 opacity-50': formLoading }">
     <div class="flex justify-end mb-5">
       <router-link :to="{ name: 'new-macro' }">
-        <Button> {{ $t('admin.macro.new') }} </Button>
+        <Button>
+          {{
+            $t('globals.messages.new', {
+              name: $t('globals.terms.macro')
+            })
+          }}
+        </Button>
       </router-link>
     </div>
     <div>

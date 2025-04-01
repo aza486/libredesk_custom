@@ -17,7 +17,9 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('admin.sla.delete_confirmation') }}
+          {{ t('globals.messages.delete', {
+            name: t('globals.terms.slaPolicy')
+          }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

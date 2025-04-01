@@ -63,13 +63,13 @@ const submitForm = async (values) => {
       }
       await api.updateOIDC(props.id, values)
       toastDescription = t('globals.messages.updatedSuccessfully', {
-        name: t('globals.entities.provider')
+        name: t('globals.terms.provider')
       })
     } else {
       await api.createOIDC(values)
       router.push({ name: 'sso-list' })
       toastDescription = t('globals.messages.createdSuccessfully', {
-        name: t('globals.entities.provider')
+        name: t('globals.terms.provider')
       })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -95,7 +95,7 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-  { path: 'sso-list', label: t('globals.entities.sso') },
+  { path: 'sso-list', label: t('globals.terms.sso') },
   { path: '', label: breadCrumLabel() }
 ]
 

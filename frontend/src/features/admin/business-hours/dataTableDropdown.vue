@@ -23,7 +23,7 @@
           {{ t('globals.messages.areYouAbsolutelySure') }}
         </AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('admin.business_hours.delete_confirmation') }}
+          {{ t('admin.businessHours.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

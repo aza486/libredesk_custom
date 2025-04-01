@@ -214,7 +214,7 @@ func serveIndexPage(r *fastglue.Request) error {
 	// Serve the index.html file from the embedded filesystem.
 	file, err := app.fs.Get(path.Join(frontendDir, "index.html"))
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.file}"), nil, envelope.NotFoundError)
+		return r.SendErrorEnvelope(http.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.file}"), nil, envelope.NotFoundError)
 	}
 	r.RequestCtx.Response.Header.Set("Content-Type", "text/html")
 	r.RequestCtx.SetBody(file.ReadBytes())
@@ -236,7 +236,7 @@ func serveStaticFiles(r *fastglue.Request) error {
 
 	file, err := app.fs.Get(filePath)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.file}"), nil, envelope.NotFoundError)
+		return r.SendErrorEnvelope(http.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.file}"), nil, envelope.NotFoundError)
 	}
 
 	// Set the appropriate Content-Type based on the file extension.
@@ -261,7 +261,7 @@ func serveFrontendStaticFiles(r *fastglue.Request) error {
 	finalPath := filepath.Join(frontendDir, filePath)
 	file, err := app.fs.Get(finalPath)
 	if err != nil {
-		return r.SendErrorEnvelope(http.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", "{globals.entities.file}"), nil, envelope.NotFoundError)
+		return r.SendErrorEnvelope(http.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.file}"), nil, envelope.NotFoundError)
 	}
 
 	// Set the appropriate Content-Type based on the file extension.

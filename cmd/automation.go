@@ -59,7 +59,7 @@ func handleUpdateAutomationRule(r *fastglue.Request) error {
 	}
 
 	if err := r.Decode(&rule, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	if err = app.automation.UpdateRule(id, rule); err != nil {
@@ -75,7 +75,7 @@ func handleCreateAutomationRule(r *fastglue.Request) error {
 		rule = amodels.RuleRecord{}
 	)
 	if err := r.Decode(&rule, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 	if err := app.automation.CreateRule(rule); err != nil {
 		return sendErrorEnvelope(r, err)
@@ -106,7 +106,7 @@ func handleUpdateAutomationRuleWeights(r *fastglue.Request) error {
 		weights = make(map[int]int)
 	)
 	if err := r.Decode(&weights, "json"); err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.entities.request}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 	err := app.automation.UpdateRuleWeights(weights)
 	if err != nil {

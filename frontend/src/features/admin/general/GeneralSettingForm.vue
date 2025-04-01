@@ -2,12 +2,12 @@
   <form @submit="onSubmit" class="space-y-6 w-full">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
-        <FormLabel>{{ t('admin.general.site_name') }}</FormLabel>
+        <FormLabel>{{ t('admin.general.siteName') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.general.site_name.description') }}
+          {{ t('admin.general.siteName.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -24,7 +24,7 @@
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="en"> English </SelectItem>
-                <SelectItem value="es"> Spanish </SelectItem>
+                <SelectItem value="mr"> Marathi </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -65,12 +65,12 @@
     <FormField v-slot="{ componentField }" name="business_hours_id">
       <FormItem>
         <FormLabel>
-          {{ t('admin.general.business_hours') }}
+          {{ t('globals.terms.businessHour', 2) }}
         </FormLabel>
         <FormControl>
           <Select v-bind="componentField">
             <SelectTrigger>
-              <SelectValue :placeholder="t('admin.general.business_hours.placeholder')" />
+              <SelectValue :placeholder="t('admin.general.businessHours.placeholder')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -82,7 +82,7 @@
           </Select>
         </FormControl>
         <FormDescription>
-          {{ t('admin.general.business_hours.description') }}
+          {{ t('admin.general.businessHours.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -91,13 +91,13 @@
     <FormField v-slot="{ field }" name="root_url">
       <FormItem>
         <FormLabel>
-          {{ t('admin.general.root_url') }}
+          {{ t('admin.general.rootURL') }}
         </FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.general.root_url.description') }}
+          {{ t('admin.general.rootURL.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -105,22 +105,22 @@
 
     <FormField v-slot="{ field }" name="favicon_url" :value="props.initialValues.favicon_url">
       <FormItem>
-        <FormLabel>{{ t('admin.general.favicon_url') }}</FormLabel>
+        <FormLabel>{{ t('admin.general.faviconURL') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
-        <FormDescription>{{ t('admin.general.favicon_url.description') }}</FormDescription>
+        <FormDescription>{{ t('admin.general.faviconURL.description') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ field }" name="logo_url" :value="props.initialValues.logo_url">
       <FormItem>
-        <FormLabel>{{ t('admin.general.logo_url') }}</FormLabel>
+        <FormLabel>{{ t('admin.general.logoURL') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
-        <FormDescription>{{ t('admin.general.logo_url.description') }}</FormDescription>
+        <FormDescription>{{ t('admin.general.logoURL.description') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -132,13 +132,13 @@
     >
       <FormItem>
         <FormLabel>
-          {{ t('admin.general.max_allowed_file_upload_size') }}
+          {{ t('admin.general.maxAllowedFileUploadSize') }}
         </FormLabel>
         <FormControl>
           <Input type="number" placeholder="10" v-bind="field" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.general.max_allowed_file_upload_size.description') }}
+          {{ t('admin.general.maxAllowedFileUploadSize.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -147,7 +147,7 @@
     <FormField name="allowed_file_upload_extensions" v-slot="{ componentField, handleChange }">
       <FormItem>
         <FormLabel>
-          {{ t('admin.general.allowed_file_upload_extensions') }}
+          {{ t('admin.general.allowedFileUploadExtensions') }}
         </FormLabel>
         <FormControl>
           <TagsInput :modelValue="componentField.modelValue" @update:modelValue="handleChange">
@@ -159,7 +159,7 @@
           </TagsInput>
         </FormControl>
         <FormDescription>
-          {{ t('admin.general.allowed_file_upload_extensions.description') }}
+          {{ t('admin.general.allowedFileUploadExtensions.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -232,7 +232,7 @@ const props = defineProps({
 
 const submitLabel = props.submitLabel || t('globals.buttons.save')
 const form = useForm({
-  validationSchema: toTypedSchema(createFormSchema(t)),
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 onMounted(() => {
@@ -252,7 +252,7 @@ const fetchBusinessHours = async () => {
     if (error.response.status === 403) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
-        description: t('admin.business_hours.unauthorized')
+        description: t('admin.businessHours.unauthorized')
       })
     } else {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -268,7 +268,9 @@ const onSubmit = form.handleSubmit(async (values) => {
     formLoading.value = true
     await props.submitForm(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.general.updated')
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.setting', 2)
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

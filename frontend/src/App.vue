@@ -166,7 +166,7 @@ const deleteView = async (view) => {
     emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'view' })
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.deletedSuccessfully', {
-        name: t('globals.entities.view')
+        name: t('globals.terms.view')
       })
     })
   } catch (err) {

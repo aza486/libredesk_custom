@@ -56,7 +56,9 @@ const updateInbox = async (payload) => {
     isLoading.value = true
     await api.updateInbox(inbox.value.id, payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.inbox.updated')
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.inbox')
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

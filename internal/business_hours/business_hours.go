@@ -75,7 +75,7 @@ func (m *Manager) GetAll() ([]models.BusinessHours, error) {
 	var hours = make([]models.BusinessHours, 0)
 	if err := m.q.GetAllBusinessHours.Select(&hours); err != nil {
 		m.lo.Error("error fetching business hours", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.entities.businessHour}"), nil)
+		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.businessHour}"), nil)
 	}
 	return hours, nil
 }
@@ -84,7 +84,7 @@ func (m *Manager) GetAll() ([]models.BusinessHours, error) {
 func (m *Manager) Create(name string, description null.String, isAlwaysOpen bool, workingHrs, holidays types.JSONText) error {
 	if _, err := m.q.InsertBusinessHours.Exec(name, description, isAlwaysOpen, workingHrs, holidays); err != nil {
 		m.lo.Error("error inserting business hours", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.entities.businessHour}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.businessHour}"), nil)
 	}
 	return nil
 }
@@ -93,10 +93,10 @@ func (m *Manager) Create(name string, description null.String, isAlwaysOpen bool
 func (m *Manager) Delete(id int) error {
 	if _, err := m.q.DeleteBusinessHours.Exec(id); err != nil {
 		if dbutil.IsForeignKeyError(err) {
-			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.businessHour}"), nil)
+			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.businessHour}"), nil)
 		}
 		m.lo.Error("error deleting business hours", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.entities.businessHour}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.businessHour}"), nil)
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func (m *Manager) Delete(id int) error {
 func (m *Manager) Update(id int, name string, description null.String, isAlwaysOpen bool, workingHrs, holidays types.JSONText) error {
 	if _, err := m.q.UpdateBusinessHours.Exec(id, name, description, isAlwaysOpen, workingHrs, holidays); err != nil {
 		m.lo.Error("error updating business hours", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.entities.businessHour}"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.businessHour}"), nil)
 	}
 	return nil
 }

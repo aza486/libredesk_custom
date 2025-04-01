@@ -73,17 +73,17 @@ const getDisplayValue = (action) => {
 const getTooltip = (action) => {
   switch (action.type) {
     case 'assign_team':
-      return `${t('globals.messages.assign_team')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.assignTeam')}: ${getDisplayValue(action)}`
     case 'assign_user':
-      return `${t('globals.messages.assign_user')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.assignUser')}: ${getDisplayValue(action)}`
     case 'set_status':
-      return `${t('globals.messages.set_status')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.setStatus')}: ${getDisplayValue(action)}`
     case 'set_priority':
-      return `${t('globals.messages.set_priority')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.setPriority')}: ${getDisplayValue(action)}`
     case 'set_tags':
-      return `${t('globals.messages.set_tags')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.setTags')}: ${getDisplayValue(action)}`
     default:
-      return `${t('globals.entities.action')}: ${action.type}, ${t('globals.entities.value')}: ${getDisplayValue(action)}`
+      return `${t('globals.terms.action')}: ${action.type}, ${t('globals.terms.value')}: ${getDisplayValue(action)}`
   }
 }
 </script>

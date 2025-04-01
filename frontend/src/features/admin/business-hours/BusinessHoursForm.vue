@@ -27,18 +27,18 @@
     <FormField v-slot="{ componentField }" name="is_always_open">
       <FormItem>
         <FormLabel>
-          {{ t('admin.business_hours.set_business_hours') }}
+          {{ t('admin.businessHours.setBusinessHours') }}
         </FormLabel>
         <FormControl>
           <RadioGroup v-bind="componentField">
             <div class="flex flex-col space-y-2">
               <div class="flex items-center space-x-3">
                 <RadioGroupItem id="r1" :value="true" />
-                <Label for="r1">{{ t('admin.business_hours.always_open_24_7') }}</Label>
+                <Label for="r1">{{ t('admin.businessHours.alwaysOpen24x7') }}</Label>
               </div>
               <div class="flex items-center space-x-3">
                 <RadioGroupItem id="r2" :value="false" />
-                <Label for="r2">{{ t('admin.business_hours.custom_business_hours') }}</Label>
+                <Label for="r2">{{ t('admin.businessHours.customBusinessHours') }}</Label>
               </div>
             </div>
           </RadioGroup>
@@ -96,7 +96,11 @@
           <div></div>
           <DialogTrigger as-child>
             <Button @click="openHolidayForm = true">
-              {{ t('admin.business_hours.new_holiday') }}
+              {{
+                t('globals.messages.new', {
+                  name: t('globals.terms.holiday')
+                })
+              }}
             </Button>
           </DialogTrigger>
         </div>
@@ -110,7 +114,11 @@
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {{ t('admin.business_hours.new_holiday') }}
+            {{
+              t('globals.messages.new', {
+                name: t('globals.terms.holiday')
+              })
+            }}
           </DialogTitle>
           <DialogDescription />
         </DialogHeader>
@@ -148,7 +156,7 @@
         </div>
         <DialogFooter>
           <Button :disabled="!holidayName || !holidayDate" @click="saveHoliday">
-            {{ t('globals.buttons.save_changes') }}
+            {{ t('globals.buttons.saveChanges') }}
           </Button>
         </DialogFooter>
       </DialogContent>

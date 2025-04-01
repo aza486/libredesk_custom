@@ -23,15 +23,23 @@
     </DropdownMenu>
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>{{ $t('admin.conversation_status.edit') }}</DialogTitle>
+        <DialogTitle>
+          {{
+            $t('globals.messages.edit', {
+              name: $t('globals.terms.status')
+            })
+          }}
+        </DialogTitle>
         <DialogDescription>
-          {{ $t('admin.conversation_status.name.description') }}
+          {{ $t('admin.conversationStatus.name.description') }}
         </DialogDescription>
       </DialogHeader>
       <StatusForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit" :isLoading="isLoading" :disabled="isLoading">{{ $t('globals.buttons.save') }}</Button>
+            <Button type="submit" :isLoading="isLoading" :disabled="isLoading">{{
+              $t('globals.buttons.save')
+            }}</Button>
           </DialogFooter>
         </template>
       </StatusForm>
@@ -41,11 +49,9 @@
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>
-          {{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle
-        >
+        <AlertDialogTitle> {{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.conversation_status.delete_confirmation') }}
+          {{ $t('admin.conversationStatus.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

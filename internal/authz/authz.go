@@ -102,7 +102,7 @@ func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmo
 		allowed, err := e.Enforce(user, "conversations", action)
 		if err != nil {
 			e.lo.Error("error enforcing permission", "user_id", user.ID, "conversation_id", conversation.ID, "error", err)
-			return false, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorChecking", "name", "{globals.entities.permission}"), nil)
+			return false, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorChecking", "name", "{globals.terms.permission}"), nil)
 		}
 		if !allowed {
 			e.lo.Debug("permission denied", "user_id", user.ID, "action", action, "conversation_id", conversation.ID)
@@ -150,10 +150,10 @@ func (e *Enforcer) EnforceMediaAccess(user umodels.User, model string) (bool, er
 		allowed, err := e.Enforce(user, model, "read")
 		if err != nil {
 			e.lo.Error("error enforcing permission", "user_id", user.ID, "model", model, "error", err)
-			return false, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorChecking", "name", "{globals.entities.permission}"), nil)
+			return false, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorChecking", "name", "{globals.terms.permission}"), nil)
 		}
 		if !allowed {
-			return false, envelope.NewError(envelope.UnauthorizedError, e.i18n.T("authz.permissionDenied"), nil)
+			return false, envelope.NewError(envelope.UnauthorizedError, e.i18n.Ts("globals.messages.denied", "name", "{globals.terms.permission}"), nil)
 		}
 	default:
 		return true, nil

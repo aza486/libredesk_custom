@@ -6,7 +6,7 @@
           <div class="ml-auto">
             <Button @click="newRule">{{
               $t('globals.messages.new', {
-                name: $t('globals.entities.rule')
+                name: $t('globals.terms.rule')
               })
             }}</Button>
           </div>

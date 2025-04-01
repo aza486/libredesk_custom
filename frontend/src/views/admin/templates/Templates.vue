@@ -14,7 +14,7 @@
                 >
                   {{
                     $t('globals.messages.new', {
-                      name: $t('globals.entities.template')
+                      name: $t('globals.terms.template')
                     })
                   }}
                 </Button>

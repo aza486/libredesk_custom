@@ -8,13 +8,25 @@
             <div class="flex justify-end mb-4 w-full">
               <Dialog v-model:open="dialogOpen">
                 <DialogTrigger as-child>
-                  <Button class="ml-auto">{{ $t('admin.conversation_status.new') }}</Button>
+                  <Button class="ml-auto">
+                    {{
+                      $t('globals.messages.new', {
+                        name: $t('globals.terms.status')
+                      })
+                    }}
+                  </Button>
                 </DialogTrigger>
                 <DialogContent class="sm:max-w-[425px]">
                   <DialogHeader>
-                    <DialogTitle>{{ $t('admin.conversation_status.new') }}</DialogTitle>
+                    <DialogTitle>
+                      {{
+                        $t('globals.messages.new', {
+                          name: $t('globals.terms.status')
+                        })
+                      }}
+                    </DialogTitle>
                     <DialogDescription>
-                      {{ $t('admin.conversation_status.name.description') }}
+                      {{ $t('admin.conversationStatus.name.description') }}
                     </DialogDescription>
                   </DialogHeader>
                   <StatusForm @submit.prevent="onSubmit">

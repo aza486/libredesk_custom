@@ -107,8 +107,8 @@ const currentStep = ref(1)
 const selectedChannel = ref(null)
 const router = useRouter()
 const breadcrumbLinks = [
-  { path: 'inbox-list', label: t('admin.inbox') },
-  { path: '', label: t('admin.inbox.new') }
+  { path: 'inbox-list', label: t('globals.terms.inbox', 2) },
+  { path: '', label: t('globals.messages.new', { name: t('globals.terms.inbox') }) }
 ]
 
 const steps = [
@@ -135,7 +135,7 @@ const selectEmailChannel = () => {
 
 const channels = [
   {
-    title: t('admin.inbox.email'),
+    title: t('globals.terms.email'),
     subTitle: t('admin.inbox.createEmailInbox'),
     onClick: selectEmailChannel,
     icon: Mail
@@ -170,7 +170,9 @@ async function createInbox(payload) {
     isLoading.value = true
     await api.createInbox(payload)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.inbox.created')
+      description: t('globals.messages.createdSuccessfully', {
+        name: t('globals.terms.inbox')
+      })
     })
     router.push({ name: 'inbox-list' })
   } catch (error) {
