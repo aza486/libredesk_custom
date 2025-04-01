@@ -106,7 +106,7 @@ func New(cfg Config, i18n *i18n.I18n, rd *redis.Client, logger *logf.Logger) (*A
 
 	return &Auth{
 		cfg:       cfg,
-		i18n:      cfg.I18n,
+		i18n:      i18n,
 		oauthCfgs: oauthCfgs,
 		verifiers: verifiers,
 		sess:      sess,
