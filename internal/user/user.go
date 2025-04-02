@@ -43,7 +43,7 @@ var (
 	// GenerateFromPassword is too long (i.e. > 72 bytes).
 	ErrPasswordTooLong = errors.New("password length exceeds 72 bytes")
 
-	SystemUserPasswordHint = fmt.Sprintf("Password must be %d-%d characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.", minSystemUserPassword, maxSystemUserPassword)
+	PasswordHint = fmt.Sprintf("Password must be %d-%d characters long should contain at least one uppercase letter, one lowercase letter, one number, and one special character.", minSystemUserPassword, maxSystemUserPassword)
 )
 
 // Manager handles user-related operations.
@@ -216,8 +216,8 @@ func (u *Manager) Update(id int, user models.User) error {
 	)
 
 	if user.NewPassword != "" {
-		if !u.isStrongPassword(user.NewPassword) {
-			return envelope.NewError(envelope.InputError, SystemUserPasswordHint, nil)
+		if IsStrongPassword(user.NewPassword) {
+			return envelope.NewError(envelope.InputError, PasswordHint, nil)
 		}
 		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)
 		if err != nil {
@@ -268,8 +268,8 @@ func (u *Manager) SetResetPasswordToken(id int) (string, error) {
 
 // ResetPassword sets a new password for an user.
 func (u *Manager) ResetPassword(token, password string) error {
-	if !u.isStrongPassword(password) {
-		return envelope.NewError(envelope.InputError, "Password is not strong enough, "+SystemUserPasswordHint, nil)
+	if !IsStrongPassword(password) {
+		return envelope.NewError(envelope.InputError, "Password is not strong enough, "+PasswordHint, nil)
 	}
 	// Hash password.
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -352,16 +352,6 @@ func (u *Manager) generatePassword() ([]byte, error) {
 	return bytes, nil
 }
 
-// isStrongPassword checks if the password meets the required strength.
-func (u *Manager) isStrongPassword(password string) bool {
-	if len(password) < minSystemUserPassword || len(password) > maxSystemUserPassword {
-		return false
-	}
-	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
-	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
-	return hasUppercase && hasNumber
-}
-
 // ChangeSystemUserPassword updates the system user's password with a newly prompted one.
 func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
 	// Prompt for password and get hashed password
@@ -415,8 +405,8 @@ func CreateSystemUser(ctx context.Context, password string, db *sqlx.DB) error {
 	return nil
 }
 
-// IsStrongSystemUserPassword checks if the password meets the required strength for system user.
-func IsStrongSystemUserPassword(password string) bool {
+// IsStrongPassword checks if the password meets the required strength for system user.
+func IsStrongPassword(password string) bool {
 	if len(password) < minSystemUserPassword || len(password) > maxSystemUserPassword {
 		return false
 	}
@@ -435,14 +425,14 @@ func promptAndHashPassword(ctx context.Context) ([]byte, error) {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			fmt.Printf("Please set System user password (%s): ", SystemUserPasswordHint)
+			fmt.Printf("Please set System user password (%s): ", PasswordHint)
 			buffer := make([]byte, 256)
 			n, err := os.Stdin.Read(buffer)
 			if err != nil {
 				return nil, fmt.Errorf("error reading input: %v", err)
 			}
 			password := strings.TrimSpace(string(buffer[:n]))
-			if IsStrongSystemUserPassword(password) {
+			if IsStrongPassword(password) {
 				// Hash the password using bcrypt.
 				hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 				if err != nil {
