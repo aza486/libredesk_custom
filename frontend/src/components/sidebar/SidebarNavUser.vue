@@ -36,7 +36,7 @@
       <DropdownMenuLabel class="p-0 font-normal space-y-1">
         <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
           <Avatar class="h-8 w-8 rounded-lg">
-            <AvatarImage :src="userStore.avatar" alt="Abhinav" />
+            <AvatarImage :src="userStore.avatar" alt="U" />
             <AvatarFallback class="rounded-lg">
               {{ userStore.getInitials }}
             </AvatarFallback>
@@ -47,7 +47,9 @@
           </div>
         </div>
         <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm justify-between">
-          <span class="text-muted-foreground">Away</span>
+          <span class="text-muted-foreground">
+            {{ t('navigation.away') }}
+          </span>
           <Switch
             :checked="
               userStore.user.availability_status === 'away' ||
@@ -61,19 +63,20 @@
       <DropdownMenuGroup>
         <DropdownMenuItem @click.prevent="router.push({ name: 'account' })">
           <CircleUserRound size="18" class="mr-2" />
-          Account
+          {{ t('navigation.account') }}
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuItem @click="logout">
         <LogOut size="18" class="mr-2" />
-        Log out
+        {{ t('navigation.logout') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,6 +95,7 @@ import { useRouter } from 'vue-router'
 
 const userStore = useUserStore()
 const router = useRouter()
+const { t } = useI18n()
 
 const logout = () => {
   window.location.href = '/logout'

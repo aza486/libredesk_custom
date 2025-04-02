@@ -1,12 +1,12 @@
 import * as z from 'zod';
 
-export const formSchema = z
+export const createFormSchema = (t) => z
   .object({
     name: z.string({
-      required_error: 'Template name is required.',
+      required_error: t('globals.messages.required'),
     }),
     body: z.string({
-      required_error: 'Template content is required.',
+      required_error: t('globals.messages.required'),
     }),
     type: z.string().optional(),
     subject: z.string().optional(),
@@ -16,7 +16,7 @@ export const formSchema = z
     if (data.type !== 'email_outgoing' && !data.subject) {
       ctx.addIssue({
         path: ['subject'],
-        message: 'Subject is required.',
+        message: t('globals.messages.required'),
         code: z.ZodIssueCode.custom,
       });
     }

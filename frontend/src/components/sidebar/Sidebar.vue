@@ -37,6 +37,7 @@ import {
 import { filterNavItems } from '@/utils/nav-permissions'
 import { useStorage } from '@vueuse/core'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 
 defineProps({
@@ -46,6 +47,7 @@ defineProps({
 const userStore = useUserStore()
 const settingsStore = useAppSettingsStore()
 const route = useRoute()
+const { t } = useI18n()
 const emit = defineEmits(['createView', 'editView', 'deleteView', 'createConversation'])
 
 const openCreateViewDialog = () => {
@@ -95,7 +97,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild>
                 <div>
-                  <span class="font-semibold text-xl">Reports</span>
+                  <span class="font-semibold text-xl">
+                    {{ t('navigation.reports') }}
+                  </span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -105,10 +109,10 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem v-for="item in filteredReportsNavItems" :key="item.title">
+              <SidebarMenuItem v-for="item in filteredReportsNavItems" :key="item.titleKey">
                 <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
                   <router-link :to="item.href">
-                    <span>{{ item.title }}</span>
+                    <span>{{ t(item.titleKey) }}</span>
                   </router-link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -127,7 +131,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
                 <div class="flex items-center justify-between w-full">
-                  <span class="font-semibold text-xl">Admin</span>
+                  <span class="font-semibold text-xl">
+                    {{ t('navigation.admin') }}
+                  </span>
                 </div>
                 <!-- App version -->
                 <div class="text-xs text-muted-foreground ml-2">
@@ -141,14 +147,14 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.title">
+              <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.titleKey">
                 <SidebarMenuButton
                   v-if="!item.children"
                   :isActive="isActiveParent(item.href)"
                   asChild
                 >
                   <router-link :to="item.href">
-                    <span>{{ item.title }}</span>
+                    <span>{{ t(item.titleKey) }}</span>
                   </router-link>
                 </SidebarMenuButton>
 
@@ -159,7 +165,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 >
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton :isActive="isActiveParent(item.href)">
-                      <span>{{ item.title }}</span>
+                      <span>{{ t(item.titleKey) }}</span>
                       <ChevronRight
                         class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
                       />
@@ -167,10 +173,10 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      <SidebarMenuSubItem v-for="child in item.children" :key="child.title">
+                      <SidebarMenuSubItem v-for="child in item.children" :key="child.titleKey">
                         <SidebarMenuButton size="sm" :isActive="isActiveParent(child.href)" asChild>
                           <router-link :to="child.href">
-                            <span>{{ child.title }}</span>
+                            <span>{{ t(child.titleKey) }}</span>
                           </router-link>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
@@ -193,7 +199,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild>
                 <div>
-                  <span class="font-semibold text-xl">Account</span>
+                  <span class="font-semibold text-xl">
+                    {{ t('navigation.account') }}
+                  </span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -203,10 +211,10 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem v-for="item in accountNavItems" :key="item.title">
+              <SidebarMenuItem v-for="item in accountNavItems" :key="item.titleKey">
                 <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
                   <router-link :to="item.href">
-                    <span>{{ item.title }}</span>
+                    <span>{{ t(item.titleKey) }}</span>
                   </router-link>
                 </SidebarMenuButton>
                 <SidebarMenuAction>
@@ -228,7 +236,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <div class="flex items-center justify-between w-full">
-                  <div class="font-semibold text-xl">Inbox</div>
+                  <div class="font-semibold text-xl">
+                    <span>{{ t('navigation.inbox') }}</span>
+                  </div>
                   <div class="ml-auto">
                     <div class="flex items-center space-x-2">
                       <div
@@ -265,7 +275,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/assigned')">
                   <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
                     <CircleUserRound />
-                    <span>My inbox</span>
+                    <span>{{ t('navigation.myInbox') }}</span>
                   </router-link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -274,7 +284,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/unassigned')">
                   <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
                     <UserSearch />
-                    <span>Unassigned</span>
+                    <span>
+                      {{ t('navigation.unassigned') }}
+                    </span>
                   </router-link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -283,7 +295,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/all')">
                   <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
                     <UsersRound />
-                    <span>All</span>
+                    <span>
+                      {{ t('navigation.all') }}
+                    </span>
                   </router-link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -300,7 +314,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                     <SidebarMenuButton asChild>
                       <router-link to="#">
                         <!-- <Users /> -->
-                        <span>Team inboxes</span>
+                        <span>
+                          {{ t('navigation.teamInboxes') }}
+                        </span>
                         <ChevronRight
                           class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
                         />
@@ -332,7 +348,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                     <SidebarMenuButton asChild>
                       <router-link to="#">
                         <!-- <SlidersHorizontal /> -->
-                        <span>Views</span>
+                        <span>
+                          {{ t('navigation.views') }}
+                        </span>
                         <div>
                           <Plus
                             size="18"
@@ -365,10 +383,10 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
                                   <DropdownMenuItem @click="() => editView(view)">
-                                    <span>Edit</span>
+                                    <span>{{ t('globals.buttons.edit') }}</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem @click="() => deleteView(view)">
-                                    <span>Delete</span>
+                                    <span>{{ t('globals.buttons.delete') }}</span>
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>

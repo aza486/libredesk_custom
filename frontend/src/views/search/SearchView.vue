@@ -7,7 +7,7 @@
       </div>
       <div v-else-if="error" class="mt-8 text-center space-y-4">
         <p class="text-lg text-destructive">{{ error }}</p>
-        <Button @click="handleSearch"> Try again </Button>
+        <Button @click="handleSearch"> {{ $t('globals.terms.tryAgain') }} </Button>
       </div>
 
       <div v-else>
@@ -15,7 +15,11 @@
           v-if="searchPerformed && totalResults === 0"
           class="mt-8 text-center text-muted-foreground"
         >
-          No results found for "{{ searchQuery }}". Try a different search term.
+          {{
+            $t('search.noResultsForQuery', {
+              query: searchQuery
+            })
+          }}
         </p>
         <SearchResults v-else-if="searchPerformed" :results="results" class="h-full" />
 
@@ -23,12 +27,20 @@
           v-else-if="searchQuery.length > 0 && searchQuery.length < MIN_SEARCH_LENGTH"
           class="mt-8 text-center text-muted-foreground"
         >
-          Please enter at least {{ MIN_SEARCH_LENGTH }} characters to search.
+          {{
+            $t('search.minQueryLength', {
+              length: MIN_SEARCH_LENGTH
+            })
+          }}
         </p>
         <div v-else class="mt-16 text-center">
-          <h2 class="text-2xl font-semibold text-primary mb-4">Search conversations</h2>
+          <h2 class="text-2xl font-semibold text-primary mb-4">
+            {{ $t('search.searchConversations') }}
+          </h2>
           <p class="text-lg text-muted-foreground">
-            Search by reference number, contact email address or messages in conversations.
+            {{
+              $t('search.searchBy')
+            }}
           </p>
         </div>
       </div>

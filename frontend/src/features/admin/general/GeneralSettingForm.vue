@@ -2,42 +2,49 @@
   <form @submit="onSubmit" class="space-y-6 w-full">
     <FormField v-slot="{ field }" name="site_name">
       <FormItem>
-        <FormLabel>Site Name</FormLabel>
+        <FormLabel>{{ t('admin.general.siteName') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Site Name" v-bind="field" />
+          <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
-        <FormDescription>Enter the site name</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.siteName.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ componentField }" name="lang">
       <FormItem>
-        <FormLabel>Language</FormLabel>
+        <FormLabel>{{ t('admin.general.language') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField" :modelValue="componentField.modelValue">
             <SelectTrigger>
-              <SelectValue placeholder="Select a language" />
+              <SelectValue :placeholder="t('admin.general.language.placeholder')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="en"> English </SelectItem>
+                <SelectItem value="mr"> Marathi </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Select language for the app.</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.language.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ componentField }" name="timezone">
       <FormItem>
-        <FormLabel>Timezone</FormLabel>
+        <FormLabel>
+          {{ t('admin.general.timezone') }}
+        </FormLabel>
         <FormControl>
           <Select v-bind="componentField">
             <SelectTrigger>
-              <SelectValue placeholder="Select a timezone" />
+              <SelectValue :placeholder="t('admin.general.timezone.placeholder')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -48,18 +55,22 @@
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Default timezone for your desk.</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.timezone.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ componentField }" name="business_hours_id">
       <FormItem>
-        <FormLabel>Business hours</FormLabel>
+        <FormLabel>
+          {{ t('globals.terms.businessHour', 2) }}
+        </FormLabel>
         <FormControl>
           <Select v-bind="componentField">
             <SelectTrigger>
-              <SelectValue placeholder="Select business hours" />
+              <SelectValue :placeholder="t('admin.general.businessHours.placeholder')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -70,40 +81,46 @@
             </SelectContent>
           </Select>
         </FormControl>
-        <FormDescription>Default business hours for your desk.</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.businessHours.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ field }" name="root_url">
       <FormItem>
-        <FormLabel>Root URL</FormLabel>
+        <FormLabel>
+          {{ t('admin.general.rootURL') }}
+        </FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Root URL" v-bind="field" />
+          <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
-        <FormDescription>Root URL of the app. (No trailing slash)</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.rootURL.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ field }" name="favicon_url" :value="props.initialValues.favicon_url">
       <FormItem>
-        <FormLabel>Favicon URL</FormLabel>
+        <FormLabel>{{ t('admin.general.faviconURL') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Favicon URL" v-bind="field" />
+          <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
-        <FormDescription>Favicon URL for the app.</FormDescription>
+        <FormDescription>{{ t('admin.general.faviconURL.description') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ field }" name="logo_url" :value="props.initialValues.logo_url">
       <FormItem>
-        <FormLabel>Logo URL</FormLabel>
+        <FormLabel>{{ t('admin.general.logoURL') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Logo URL" v-bind="field" />
+          <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
-        <FormDescription>Logo URL for the app.</FormDescription>
+        <FormDescription>{{ t('admin.general.logoURL.description') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -114,18 +131,24 @@
       :value="props.initialValues.max_file_upload_size"
     >
       <FormItem>
-        <FormLabel>Max allowed file upload size</FormLabel>
+        <FormLabel>
+          {{ t('admin.general.maxAllowedFileUploadSize') }}
+        </FormLabel>
         <FormControl>
           <Input type="number" placeholder="10" v-bind="field" />
         </FormControl>
-        <FormDescription>In megabytes.</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.maxAllowedFileUploadSize.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField name="allowed_file_upload_extensions" v-slot="{ componentField, handleChange }">
       <FormItem>
-        <FormLabel>Allowed file upload extensions</FormLabel>
+        <FormLabel>
+          {{ t('admin.general.allowedFileUploadExtensions') }}
+        </FormLabel>
         <FormControl>
           <TagsInput :modelValue="componentField.modelValue" @update:modelValue="handleChange">
             <TagsInputItem v-for="item in componentField.modelValue" :key="item" :value="item">
@@ -135,7 +158,9 @@
             <TagsInputInput placeholder="jpg" />
           </TagsInput>
         </FormControl>
-        <FormDescription>Use `*` to allow any file.</FormDescription>
+        <FormDescription>
+          {{ t('admin.general.allowedFileUploadExtensions.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -149,7 +174,7 @@ import { watch, ref, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import {
   FormControl,
   FormField,
@@ -178,9 +203,11 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { timeZones } from '@/constants/timezones.js'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const businessHours = ref({})
 const formLoading = ref(false)
 const props = defineProps({
@@ -195,7 +222,7 @@ const props = defineProps({
   submitLabel: {
     type: String,
     required: false,
-    default: () => 'Submit'
+    default: ''
   },
   isLoading: {
     type: Boolean,
@@ -203,8 +230,9 @@ const props = defineProps({
   }
 })
 
+const submitLabel = props.submitLabel || t('globals.buttons.save')
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 onMounted(() => {
@@ -223,13 +251,11 @@ const fetchBusinessHours = async () => {
     // If unauthorized (no permission), show a toast message.
     if (error.response.status === 403) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Unauthorized',
         variant: 'destructive',
-        description: 'You do not have permission to view business hours.'
+        description: t('admin.businessHours.unauthorized')
       })
     } else {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not fetch business hours',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -242,12 +268,12 @@ const onSubmit = form.handleSubmit(async (values) => {
     formLoading.value = true
     await props.submitForm(values)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Settings updated successfully'
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.setting', 2)
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

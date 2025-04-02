@@ -4,34 +4,50 @@
     @update:open="handleOpenChange"
     class="transform-gpu z-[51] !min-w-[50vw] !min-h-[60vh]"
   >
-    <CommandInput placeholder="Type a command or search..." @keydown="onInputKeydown" />
+    <CommandInput :placeholder="t('command.typeCmdOrSearch')" @keydown="onInputKeydown" />
     <CommandList class="!min-h-[60vh] !min-w-[50vw]">
       <CommandEmpty>
-        <p class="text-muted-foreground">No command available</p>
+        <p class="text-muted-foreground">{{ $t('command.noCommandAvailable') }}</p>
       </CommandEmpty>
 
       <!-- Commands requiring a conversation to be open -->
       <CommandGroup
-        heading="Conversations"
+        :heading="t('globals.terms.conversation', 2)"
         value="conversations"
         v-if="nestedCommand === null && conversationStore.hasConversationOpen"
       >
-        <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')"> Snooze </CommandItem>
-        <CommandItem value="conv-resolve" @select="resolveConversation"> Resolve </CommandItem>
+        <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
+          {{ $t('globals.messages.snooze') }}
+        </CommandItem>
+        <CommandItem value="conv-resolve" @select="resolveConversation">
+          {{ $t('globals.messages.resolve') }}
+        </CommandItem>
         <CommandItem value="apply-macro" @select="setNestedCommand('apply-macro')">
-          Apply macro
+          {{ $t('globals.messages.applyMacro') }}
         </CommandItem>
       </CommandGroup>
 
       <CommandGroup v-if="nestedCommand === 'snooze'" heading="Snooze for">
-        <CommandItem value="1 hour" @select="handleSnooze(60)">1 hour</CommandItem>
-        <CommandItem value="3 hours" @select="handleSnooze(180)">3 hours</CommandItem>
-        <CommandItem value="6 hours" @select="handleSnooze(360)">6 hours</CommandItem>
-        <CommandItem value="12 hours" @select="handleSnooze(720)">12 hours</CommandItem>
-        <CommandItem value="1 day" @select="handleSnooze(1440)">1 day</CommandItem>
-        <CommandItem value="2 days" @select="handleSnooze(2880)">2 days</CommandItem>
+        <CommandItem value="1 hour" @select="handleSnooze(60)">
+          1 {{ $t('globals.terms.hour') }}
+        </CommandItem>
+        <CommandItem value="3 hours" @select="handleSnooze(180)"
+          >3 {{ $t('globals.terms.hour', 2) }}</CommandItem
+        >
+        <CommandItem value="6 hours" @select="handleSnooze(360)">
+          6 {{ $t('globals.terms.hour', 2) }}
+        </CommandItem>
+        <CommandItem value="12 hours" @select="handleSnooze(720)">
+          12 {{ $t('globals.terms.hour', 2) }}
+        </CommandItem>
+        <CommandItem value="1 day" @select="handleSnooze(1440)">
+          1 {{ $t('globals.terms.day') }}
+        </CommandItem>
+        <CommandItem value="2 days" @select="handleSnooze(2880)">
+          2 {{ $t('globals.terms.day', 2) }}
+        </CommandItem>
         <CommandItem value="pick date & time" @select="showCustomDialog">
-          Pick date & time
+          {{ $t('globals.messages.pickDateAndTime') }}
         </CommandItem>
       </CommandGroup>
 
@@ -64,7 +80,9 @@
                 <div class="space-y-3 text-xs">
                   <!-- Reply Preview -->
                   <div v-if="replyContent" class="space-y-1">
-                    <p class="text-xs font-semibold text-primary">Reply Preview</p>
+                    <p class="text-xs font-semibold text-primary">
+                      {{ $t('command.replyPreview') }}
+                    </p>
                     <div
                       class="w-full min-h-200 p-2 bg-muted/50 rounded-md overflow-auto shadow-sm native-html"
                       v-dompurify-html="replyContent"
@@ -73,7 +91,9 @@
 
                   <!-- Actions -->
                   <div v-if="otherActions.length > 0" class="space-y-1">
-                    <p class="text-xs font-semibold text-primary">Actions</p>
+                    <p class="text-xs font-semibold text-primary">
+                      {{ $t('globals.terms.action', 2) }}
+                    </p>
                     <div class="space-y-1.5 max-w-sm">
                       <div
                         v-for="action in otherActions"
@@ -120,7 +140,7 @@
                     class="flex items-center justify-center h-20"
                   >
                     <p class="text-xs text-muted-foreground italic">
-                      Select a macro to view details
+                      {{ $t('command.selectAMacro') }}
                     </p>
                   </div>
                 </div>
@@ -133,10 +153,10 @@
 
     <!-- Navigation -->
     <div class="mt-2 px-4 py-2 text-xs text-gray-500 flex space-x-4">
-      <span><kbd>Enter</kbd> select</span>
-      <span><kbd>↑</kbd>/<kbd>↓</kbd> navigate</span>
-      <span><kbd>Esc</kbd> close</span>
-      <span><kbd>Backspace</kbd> parent</span>
+      <span> {{ $t('command.enterToSelect') }}</span>
+      <span> {{ $t('command.navigateWithArrows') }}</span>
+      <span> {{ $t('command.closeWithEsc') }}</span>
+      <span> {{ $t('command.backspaceToParent') }}</span>
     </div>
   </CommandDialog>
 
@@ -144,14 +164,14 @@
   <Dialog :open="showDatePicker" @update:open="closeDatePicker">
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>Pick Snooze Time</DialogTitle>
+        <DialogTitle>{{ $t('command.pickSnoozeTime') }}</DialogTitle>
       </DialogHeader>
       <div class="grid gap-4 py-4">
         <Popover>
           <PopoverTrigger as-child>
             <Button variant="outline" class="w-full justify-start text-left font-normal">
               <CalendarIcon class="mr-2 h-4 w-4" />
-              {{ selectedDate ? selectedDate : 'Pick a date' }}
+              {{ selectedDate ? selectedDate : t('form.field.pickDate') }}
             </Button>
           </PopoverTrigger>
           <PopoverContent class="w-auto p-0">
@@ -159,12 +179,12 @@
           </PopoverContent>
         </Popover>
         <div class="grid gap-2">
-          <Label>Time</Label>
+          <Label>{{ $t('form.field.time') }}</Label>
           <Input type="time" v-model="selectedTime" />
         </div>
       </div>
       <DialogFooter>
-        <Button @click="handleCustomSnooze">Snooze</Button>
+        <Button @click="handleCustomSnooze">{{ $t('globals.messages.snooze') }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -200,10 +220,11 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useI18n } from 'vue-i18n'
 
 const conversationStore = useConversationStore()
 const macroStore = useMacroStore()
-
+const { t } = useI18n()
 const open = ref(false)
 const emitter = useEmitter()
 const nestedCommand = ref(null)
@@ -235,11 +256,11 @@ function handleApplyMacro(macro) {
 
 const getActionLabel = computed(() => (action) => {
   const prefixes = {
-    assign_user: 'Assign to user',
-    assign_team: 'Assign to team',
-    set_status: 'Set status',
-    set_priority: 'Set priority',
-    set_tags: 'Set tags'
+    assign_user: t('globals.messages.assignUser'),
+    assign_team: t('globals.messages.assignTeam'),
+    set_status: t('globals.messages.setStatus'),
+    set_priority: t('globals.messages.setPriority'),
+    set_tags: t('globals.messages.setTags')
   }
   return `${prefixes[action.type]}: ${action.display_value.length > 0 ? action.display_value.join(', ') : action.value.join(', ')}`
 })
@@ -292,7 +313,7 @@ function handleCustomSnooze() {
   const diffMinutes = Math.floor((snoozeDate - new Date()) / (1000 * 60))
 
   if (diffMinutes <= 0) {
-    alert('Select a future time')
+    alert(t('globals.messages.selectAFutureTime'))
     return
   }
   handleSnooze(diffMinutes)

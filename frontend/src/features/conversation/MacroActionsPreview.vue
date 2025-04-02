@@ -40,6 +40,7 @@
 <script setup>
 import { X, Users, User, MessageSquare, Tags, Flag } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useI18n } from 'vue-i18n'
 
 defineProps({
   actions: {
@@ -52,6 +53,7 @@ defineProps({
   }
 })
 
+const { t } = useI18n()
 const getIcon = (type) =>
   ({
     assign_team: Users,
@@ -71,17 +73,17 @@ const getDisplayValue = (action) => {
 const getTooltip = (action) => {
   switch (action.type) {
     case 'assign_team':
-      return `Assign to team: ${getDisplayValue(action)}`
+      return `${t('globals.messages.assignTeam')}: ${getDisplayValue(action)}`
     case 'assign_user':
-      return `Assign to user: ${getDisplayValue(action)}`
+      return `${t('globals.messages.assignUser')}: ${getDisplayValue(action)}`
     case 'set_status':
-      return `Set status to: ${getDisplayValue(action)}`
+      return `${t('globals.messages.setStatus')}: ${getDisplayValue(action)}`
     case 'set_priority':
-      return `Set priority to: ${getDisplayValue(action)}`
+      return `${t('globals.messages.setPriority')}: ${getDisplayValue(action)}`
     case 'set_tags':
-      return `Set tags: ${getDisplayValue(action)}`
+      return `${t('globals.messages.setTags')}: ${getDisplayValue(action)}`
     default:
-      return `Action: ${action.type}, Value: ${getDisplayValue(action)}`
+      return `${t('globals.terms.action')}: ${action.type}, ${t('globals.terms.value')}: ${getDisplayValue(action)}`
   }
 }
 </script>

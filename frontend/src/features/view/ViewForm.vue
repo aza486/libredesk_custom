@@ -2,26 +2,29 @@
   <Dialog :open="openDialog" @update:open="openDialog = false">
     <DialogContent class="min-w-[40%] min-h-[30%]">
       <DialogHeader class="space-y-1">
-        <DialogTitle>{{ view?.id ? 'Edit' : 'Create' }} view</DialogTitle>
+        <DialogTitle
+          >{{ view?.id ? $t('globals.buttons.edit') : $t('globals.buttons.create') }}
+          view
+        </DialogTitle>
         <DialogDescription>
-          Create and save custom filter views for quick access to your conversations.
+          {{ $t('view.form.description') }}
         </DialogDescription>
       </DialogHeader>
       <form @submit.prevent="onSubmit">
         <div class="grid gap-4 py-4">
           <FormField v-slot="{ componentField }" name="name">
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>{{ $t('form.field.name') }}</FormLabel>
               <FormControl>
                 <Input
                   id="name"
                   class="col-span-3"
-                  placeholder="Name"
+                  placeholder=""
                   v-bind="componentField"
                   @keydown.enter.prevent="onSubmit"
                 />
               </FormControl>
-              <FormDescription>Enter an unique name for your view.</FormDescription>
+              <FormDescription>{{ $t('view.form.name.description') }}</FormDescription>
               <FormMessage />
             </FormItem>
           </FormField>
@@ -35,14 +38,14 @@
                   v-bind="componentField"
                 />
               </FormControl>
-              <FormDescription> Set one or more filters to customize view.</FormDescription>
+              <FormDescription> {{ $t('view.form.filters.description') }}</FormDescription>
               <FormMessage />
             </FormItem>
           </FormField>
         </div>
         <DialogFooter>
           <Button type="submit" :disabled="isSubmitting" :isLoading="isSubmitting">
-            {{ isSubmitting ? 'Saving...' : 'Save changes' }}
+            {{ isSubmitting ? t('globals.buttons.saving') : t('globals.buttons.save') }}
           </Button>
         </DialogFooter>
       </form>
@@ -78,14 +81,15 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
 import { OPERATOR } from '@/constants/filterConfig.js'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import api from '@/api'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const openDialog = defineModel('openDialog', { required: false, default: false })
 const view = defineModel('view', { required: false, default: {} })
 const isSubmitting = ref(false)
-
 const { conversationsListFilters } = useConversationFilters()
 
 const filterFields = computed(() =>
@@ -103,22 +107,19 @@ const formSchema = toTypedSchema(
     id: z.number().optional(),
     name: z
       .string()
-      .min(2, { message: 'Name must be at least 2 characters.' })
-      .max(30, { message: 'Name cannot exceed 30 characters.' }),
+      .min(2, { message: t('view.form.name.length') })
+      .max(30, { message: t('view.form.name.length') }),
     filters: z
       .array(
         z.object({
-          model: z.string({ required_error: 'Filter required' }),
-          field: z.string({ required_error: 'Filter required' }),
-          operator: z.string({ required_error: 'Filter required' }),
+          model: z.string({ required_error: t('view.form.filter.required') }),
+          field: z.string({ required_error: t('view.form.filter.required') }),
+          operator: z.string({ required_error: t('view.form.filter.required') }),
           value: z.union([z.string(), z.number(), z.boolean()]).optional()
         })
       )
       .default([])
-      .refine(
-        (filters) => filters.length > 0,
-        { message: 'Please add at least one filter.' }
-      )
+      .refine((filters) => filters.length > 0, { message: t('view.form.filter.selectAtLeastOne') })
       .refine(
         (filters) =>
           filters.every(
@@ -129,7 +130,7 @@ const formSchema = toTypedSchema(
               ([OPERATOR.SET, OPERATOR.NOT_SET].includes(f.operator) || f.value)
           ),
         {
-          message: "Please make sure you've filled the filter fields correctly."
+          message: t('view.form.filter.partiallyFilled')
         }
       )
   })
@@ -161,7 +162,6 @@ const onSubmit = async () => {
     form.resetForm()
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

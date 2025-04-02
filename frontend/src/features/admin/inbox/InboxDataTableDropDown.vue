@@ -2,31 +2,39 @@
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="w-8 h-8 p-0">
-        <span class="sr-only">Open menu</span>
+        <span class="sr-only"></span>
         <MoreHorizontal class="w-4 h-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="editInbox(props.inbox.id)">Edit</DropdownMenuItem>
-      <DropdownMenuItem @click="() => (alertOpen = true)">Delete</DropdownMenuItem>
+      <DropdownMenuItem @click="editInbox(props.inbox.id)">{{
+        $t('globals.buttons.edit')
+      }}</DropdownMenuItem>
+      <DropdownMenuItem @click="() => (alertOpen = true)">{{
+        $t('globals.buttons.delete')
+      }}</DropdownMenuItem>
       <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-if="props.inbox.enabled">
-        Disable
+        {{ $t('globals.buttons.disable') }}
       </DropdownMenuItem>
-      <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-else>Enable</DropdownMenuItem>
+      <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-else>{{
+        $t('globals.buttons.enable')
+      }}</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete Inbox</AlertDialogTitle>
+        <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          This action cannot be undone. This will permanently delete the inbox.
+          {{ $t('admin.inbox.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">{{
+          $t('globals.buttons.delete')
+        }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

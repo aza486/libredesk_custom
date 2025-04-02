@@ -2,30 +2,35 @@
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="w-8 h-8 p-0">
-        <span class="sr-only">Open menu</span>
+        <span class="sr-only"></span>
         <MoreHorizontal class="w-4 h-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem :as-child="true">
-        <RouterLink :to="{ name: 'edit-sso', params: { id: props.role.id } }">Edit</RouterLink>
+        <RouterLink :to="{ name: 'edit-sso', params: { id: props.role.id } }">
+          {{ $t('globals.buttons.edit') }}
+        </RouterLink>
       </DropdownMenuItem>
-      <DropdownMenuItem @click="() => (alertOpen = true)">Delete</DropdownMenuItem>
+      <DropdownMenuItem @click="() => (alertOpen = true)">{{
+        $t('globals.buttons.delete')
+      }}</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete OIDC Provider</AlertDialogTitle>
+        <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          This action cannot be undone. This will permanently delete the OIDC provider
-          configuration.
+          {{ $t('admin.sso.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">
+          {{ $t('globals.buttons.delete') }}
+        </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

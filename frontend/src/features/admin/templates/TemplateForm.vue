@@ -2,11 +2,11 @@
   <form @submit.prevent="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
-            placeholder="Template name"
+            placeholder=""
             v-bind="componentField"
             :disabled="!isOutgoingTemplate"
           />
@@ -17,9 +17,9 @@
 
     <FormField v-slot="{ componentField }" name="subject" v-if="!isOutgoingTemplate">
       <FormItem>
-        <FormLabel>Subject</FormLabel>
+        <FormLabel>{{ $t('form.field.subject') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Subject for email" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -27,15 +27,16 @@
 
     <FormField v-slot="{ componentField, handleChange }" name="body">
       <FormItem>
-        <FormLabel>Body</FormLabel>
+        <FormLabel>{{ $t('form.field.body') }}</FormLabel>
         <FormControl>
-          <CodeEditor
-            v-model="componentField.modelValue"
-            @update:modelValue="handleChange"
-          />
+          <CodeEditor v-model="componentField.modelValue" @update:modelValue="handleChange" />
         </FormControl>
         <FormDescription v-if="isOutgoingTemplate">
-          {{ `Make sure the template has \{\{ template "content" . \}\} only once.` }}
+          {{
+            $t('admin.template.makeSureTemplateHasContent', {
+              content: '\u007b\u007b template "content" . \u007d\u007d'
+            })
+          }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -46,10 +47,10 @@
         <FormControl>
           <div class="flex items-center space-x-2">
             <Checkbox :checked="value" @update:checked="handleChange" />
-            <Label>Is default</Label>
+            <Label>{{ $t('form.field.isDefault') }}</Label>
           </div>
         </FormControl>
-        <FormDescription>You can have only one default outgoing email template.</FormDescription>
+        <FormDescription>{{ $t('admin.template.onlyOneDefaultOutgoingTemplate') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -63,7 +64,7 @@ import { watch, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import {
   FormControl,
@@ -77,6 +78,8 @@ import { Input } from '@/components/ui/input'
 import CodeEditor from '@/components/editor/CodeEditor.vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { useI18n } from 'vue-i18n'
+
 const props = defineProps({
   initialValues: {
     type: Object,
@@ -89,16 +92,21 @@ const props = defineProps({
   submitLabel: {
     type: String,
     required: false,
-    default: () => 'Save'
+    default: () => ''
   },
   isLoading: {
     type: Boolean,
     required: false
   }
 })
+const { t } = useI18n()
+
+const submitLabel = computed(() => {
+  return props.submitLabel || t('globals.buttons.save')
+})
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema),
+  validationSchema: toTypedSchema(createFormSchema(t)),
   initialValues: props.initialValues
 })
 

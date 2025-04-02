@@ -2,11 +2,11 @@
   <form @submit="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="provider">
       <FormItem>
-        <FormLabel>Provider</FormLabel>
+        <FormLabel>{{ $t('form.field.provider') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField">
             <SelectTrigger>
-              <SelectValue placeholder="Select a provider" />
+              <SelectValue :placeholder="t('form.field.selectProvider')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -22,7 +22,7 @@
 
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Google" v-bind="componentField" />
         </FormControl>
@@ -32,9 +32,9 @@
 
     <FormField v-slot="{ componentField }" name="provider_url">
       <FormItem v-auto-animate>
-        <FormLabel>Provider URL</FormLabel>
+        <FormLabel>{{ $t('form.field.providerURL') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Provider URL" v-bind="componentField" />
+          <Input type="text" placeholder="https://accounts.google.com" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -42,9 +42,9 @@
 
     <FormField v-slot="{ componentField }" name="client_id">
       <FormItem v-auto-animate>
-        <FormLabel>Client ID</FormLabel>
+        <FormLabel>{{ $t('form.field.clientID') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Client ID" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -52,9 +52,9 @@
 
     <FormField v-slot="{ componentField }" name="client_secret">
       <FormItem v-auto-animate>
-        <FormLabel>Client Secret</FormLabel>
+        <FormLabel>{{ $t('form.field.clientSecret') }}</FormLabel>
         <FormControl>
-          <Input type="password" placeholder="Client Secret" v-bind="componentField" />
+          <Input type="password" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -62,11 +62,11 @@
 
     <FormField v-slot="{ componentField }" name="redirect_uri" v-if="!isNewForm">
       <FormItem v-auto-animate>
-        <FormLabel>Callback URL</FormLabel>
+        <FormLabel>{{ $t('form.field.callbackURL') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Redirect URL" v-bind="componentField" readonly />
+          <Input type="text" placeholder="" v-bind="componentField" readonly />
         </FormControl>
-        <FormDescription>Set this URI for callback.</FormDescription>
+        <FormDescription>{{ $t('admin.sso.setThisUrlForCallback') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -76,10 +76,9 @@
         <FormControl>
           <div class="flex items-center space-x-2">
             <Checkbox :checked="value" @update:checked="handleChange" />
-            <Label>Enabled</Label>
+            <Label>{{ $t('form.field.enabled') }}</Label>
           </div>
         </FormControl>
-        <FormDescription></FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -93,10 +92,11 @@ import { watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { oidcLoginFormSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
+import { useI18n } from 'vue-i18n'
 import {
   FormControl,
   FormField,
@@ -127,7 +127,7 @@ const props = defineProps({
   submitLabel: {
     type: String,
     required: false,
-    default: () => 'Save'
+    default: () => ''
   },
   isNewForm: {
     type: Boolean
@@ -137,9 +137,12 @@ const props = defineProps({
     required: false
   }
 })
+const { t } = useI18n()
+
+const submitLabel = props.submitLabel || t('globals.buttons.save')
 
 const form = useForm({
-  validationSchema: toTypedSchema(oidcLoginFormSchema)
+  validationSchema: toTypedSchema(createFormSchema(t)),
 })
 
 const onSubmit = form.handleSubmit((values) => {

@@ -3,8 +3,7 @@
     <div class="flex justify-between items-start">
       <Avatar class="size-20">
         <AvatarImage
-          :src="conversation?.contact?.avatar_url"
-          v-if="conversation?.contact?.avatar_url"
+          :src="conversation?.contact?.avatar_url || ''"
         />
         <AvatarFallback>
           {{ conversation?.contact?.first_name?.toUpperCase().substring(0, 2) }}
@@ -40,7 +39,7 @@
         <Skeleton class="w-32 h-4" />
       </span>
       <span v-else>
-        {{ conversation?.contact?.phone_number || 'Not available' }}
+        {{ conversation?.contact?.phone_number || t('conversation.sidebar.notAvailable') }}
       </span>
     </div>
   </div>
@@ -55,8 +54,10 @@ import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useConversationStore } from '@/stores/conversation'
 import { Skeleton } from '@/components/ui/skeleton'
+import {useI18n} from 'vue-i18n'
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const conversation = computed(() => conversationStore.current)
+const { t } = useI18n()
 </script>

@@ -97,6 +97,7 @@ import Sidebar from '@/components/sidebar/Sidebar.vue'
 import Command from '@/features/command/CommandBox.vue'
 import CreateConversation from '@/features/conversation/CreateConversation.vue'
 import { Inbox, Shield, FileLineChart } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import {
   Sidebar as ShadcnSidebar,
@@ -125,6 +126,7 @@ const userViews = ref([])
 const view = ref({})
 const openCreateViewForm = ref(false)
 const openCreateConversationDialog = ref(false)
+const { t } = useI18n()
 
 initWS()
 useIdleDetection()
@@ -163,8 +165,9 @@ const deleteView = async (view) => {
     await api.deleteView(view.id)
     emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'view' })
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'View deleted successfully'
+      description: t('globals.messages.deletedSuccessfully', {
+        name: t('globals.terms.view')
+      })
     })
   } catch (err) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -181,7 +184,6 @@ const getUserViews = async () => {
     userViews.value = response.data.data
   } catch (err) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(err).message
     })

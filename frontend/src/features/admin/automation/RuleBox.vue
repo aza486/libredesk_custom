@@ -8,11 +8,17 @@
       >
         <div class="flex items-center space-x-2">
           <RadioGroupItem value="OR" />
-          <Label>Match <b>ANY</b> of below.</Label>
+          <Label
+            >{{ $t('admin.automation.match') }} <b>{{ $t('admin.automation.any') }}</b>
+            {{ $t('admin.automation.below') }}.</Label
+          >
         </div>
         <div class="flex items-center space-x-2">
           <RadioGroupItem value="AND" />
-          <Label>Match <b>ALL</b> of below.</Label>
+          <Label
+            >{{ $t('admin.automation.match') }} <b>{{ $t('admin.automation.all') }}</b>
+            {{ $t('admin.automation.below') }}.</Label
+          >
         </div>
       </RadioGroup>
     </div>
@@ -31,11 +37,11 @@
               @update:modelValue="(value) => handleFieldChange(value, index)"
             >
               <SelectTrigger class="w-56">
-                <SelectValue placeholder="Select field" />
+                <SelectValue :placeholder="t('form.field.selectField')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectLabel>Conversation</SelectLabel>
+                  <SelectLabel>{{ $t('globals.terms.conversation') }}</SelectLabel>
                   <SelectItem v-for="(field, key) in currentFilters" :key="key" :value="key">
                     {{ field.label }}
                   </SelectItem>
@@ -49,7 +55,7 @@
               @update:modelValue="(value) => handleOperatorChange(value, index)"
             >
               <SelectTrigger class="w-56">
-                <SelectValue placeholder="Select operator" />
+                <SelectValue :placeholder="t('form.field.selectOperator')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
@@ -69,7 +75,7 @@
               <!-- Plain text input -->
               <Input
                 type="text"
-                placeholder="Set value"
+                :placeholder="t('form.field.setValue')"
                 v-if="inputType(index) === 'text'"
                 v-model="rule.value"
                 @update:modelValue="(value) => handleValueChange(value, index)"
@@ -78,7 +84,7 @@
               <!-- Number input -->
               <Input
                 type="number"
-                placeholder="Set value"
+                :placeholder="t('form.field.setValue')"
                 v-if="inputType(index) === 'number'"
                 v-model="rule.value"
                 @update:modelValue="(value) => handleValueChange(value, index)"
@@ -94,7 +100,7 @@
                   <template #item="{ item }">
                     <div class="flex items-center gap-2 ml-2">
                       <Avatar v-if="rule.field === 'assigned_user'" class="w-7 h-7">
-                        <AvatarImage :src="item.avatar_url ?? ''" :alt="item.label.slice(0, 2)" />
+                        <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                         <AvatarFallback>
                           {{ item.label.slice(0, 2).toUpperCase() }}
                         </AvatarFallback>
@@ -112,7 +118,7 @@
                         {{ selected.emoji }}
                         <span>{{ selected.label }}</span>
                       </div>
-                      <span v-else>Select team</span>
+                      <span v-else>{{ $t('form.field.selectTeam') }}</span>
                     </div>
 
                     <div
@@ -131,10 +137,10 @@
                         </Avatar>
                         <span>{{ selected.label }}</span>
                       </div>
-                      <span v-else>Select user</span>
+                      <span v-else>{{ $t('form.field.selectUser') }}</span>
                     </div>
                     <span v-else>
-                      <span v-if="!selected"> Select</span>
+                      <span v-if="!selected"> {{ $t('form.field.select') }}</span>
                       <span v-else>{{ selected.label }} </span>
                     </span>
                   </template>
@@ -155,9 +161,11 @@
                     <TagsInputItemText />
                     <TagsInputItemDelete />
                   </TagsInputItem>
-                  <TagsInputInput placeholder="Select values" />
+                  <TagsInputInput :placeholder="t('form.field.selectValue')" />
                 </TagsInput>
-                <p class="text-xs text-gray-500 mt-1">Press enter to select a value</p>
+                <p class="text-xs text-gray-500 mt-1">
+                  {{ $t('globals.messages.pressEnterToSelectAValue') }}
+                </p>
               </div>
             </div>
 
@@ -173,12 +181,18 @@
               :defaultChecked="rule.case_sensitive_match"
               @update:checked="(value) => handleCaseSensitiveCheck(value, index)"
             />
-            <label> Case sensitive match </label>
+            <label> {{ $t('globals.messages.caseSensitiveMatch') }} </label>
           </div>
         </div>
       </div>
       <div>
-        <Button variant="outline" size="sm" @click.prevent="addCondition">Add condition</Button>
+        <Button variant="outline" size="sm" @click.prevent="addCondition">
+          {{
+            $t('globals.messages.add', {
+              name: $t('globals.terms.condition')
+            })
+          }}
+        </Button>
       </div>
     </div>
   </div>
@@ -210,6 +224,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { useI18n } from 'vue-i18n'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 
 const props = defineProps({
@@ -230,6 +245,7 @@ const props = defineProps({
 const { conversationFilters, newConversationFilters } = useConversationFilters()
 const { ruleGroup } = toRefs(props)
 const emit = defineEmits(['update-group', 'add-condition', 'remove-condition'])
+const { t } = useI18n()
 
 // Computed property to get the correct filters based on type
 const currentFilters = computed(() => {

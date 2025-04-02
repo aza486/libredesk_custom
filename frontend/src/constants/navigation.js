@@ -1,6 +1,6 @@
 export const reportsNavItems = [
     {
-        title: 'Overview',
+        titleKey: 'navigation.overview',
         href: '/reports/overview',
         permission: 'reports:manage'
     }
@@ -8,110 +8,110 @@ export const reportsNavItems = [
 
 export const adminNavItems = [
     {
-        title: 'Workspace',
+        titleKey: 'navigation.workspace',
         children: [
             {
-                title: 'General',
+                titleKey: 'navigation.generalSettings',
                 href: '/admin/general',
                 permission: 'general_settings:manage'
             },
             {
-                title: 'Business Hours',
+                titleKey: 'navigation.businessHours',
                 href: '/admin/business-hours',
                 permission: 'business_hours:manage'
             },
             {
-                title: 'SLA',
+                titleKey: 'navigation.slaPolicies',
                 href: '/admin/sla',
                 permission: 'sla:manage'
             }
         ]
     },
     {
-        title: 'Conversations',
+        titleKey: 'navigation.conversations',
         children: [
             {
-                title: 'Tags',
+                titleKey: 'navigation.tags',
                 href: '/admin/conversations/tags',
                 permission: 'tags:manage'
             },
             {
-                title: 'Macros',
+                titleKey: 'navigation.macros',
                 href: '/admin/conversations/macros',
                 permission: 'macros:manage'
             },
             {
-                title: 'Statuses',
+                titleKey: 'navigation.statuses',
                 href: '/admin/conversations/statuses',
                 permission: 'status:manage'
             }
         ]
     },
     {
-        title: 'Inboxes',
+        titleKey: 'navigation.inboxes',
         children: [
             {
-                title: 'Inboxes',
+                titleKey: 'navigation.inboxes',
                 href: '/admin/inboxes',
                 permission: 'inboxes:manage'
             }
         ]
     },
     {
-        title: 'Teammates',
+        titleKey: 'navigation.teammates',
         children: [
             {
-                title: 'Users',
+                titleKey: 'navigation.users',
                 href: '/admin/teams/users',
                 permission: 'users:manage'
             },
             {
-                title: 'Teams',
+                titleKey: 'navigation.teams',
                 href: '/admin/teams/teams',
                 permission: 'teams:manage'
             },
             {
-                title: 'Roles',
+                titleKey: 'navigation.roles',
                 href: '/admin/teams/roles',
                 permission: 'roles:manage'
             }
         ]
     },
     {
-        title: 'Automations',
+        titleKey: 'navigation.automations',
         children: [
             {
-                title: 'Automations',
+                titleKey: 'navigation.automations',
                 href: '/admin/automations',
                 permission: 'automations:manage'
             }
         ]
     },
     {
-        title: 'Notifications',
+        titleKey: 'navigation.notifications',
         children: [
             {
-                title: 'Email',
+                titleKey: 'navigation.email',
                 href: '/admin/notification',
                 permission: 'notification_settings:manage'
             }
         ]
     },
     {
-        title: 'Templates',
+        titleKey: 'navigation.templates',
         children: [
             {
-                title: 'Templates',
+                titleKey: 'navigation.templates',
                 href: '/admin/templates',
                 permission: 'templates:manage'
             }
         ]
     },
     {
-        title: 'Security',
+        titleKey: 'navigation.security',
         children: [
             {
-                title: 'SSO',
+                titleKey: 'navigation.sso',
                 href: '/admin/sso',
                 permission: 'oidc:manage'
             }
@@ -121,7 +121,7 @@ export const adminNavItems = [
 
 export const accountNavItems = [
     {
-        title: 'Profile',
+        titleKey: 'navigation.profile',
         href: '/account/profile',
         description: 'Update your profile'
     }

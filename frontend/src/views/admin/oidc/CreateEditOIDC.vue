@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"></Spinner>
+  <Spinner v-if="isLoading" />
   <OIDCForm
     :initial-values="oidc"
     :submitForm="submitForm"
@@ -21,9 +21,11 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { handleHTTPError } from '@/utils/http'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const { t } = useI18n()
 const oidc = ref({
   provider: 'Google'
 })
@@ -47,7 +49,6 @@ const submitForm = async (values) => {
   } catch (error) {
     formLoading.value = false
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -61,37 +62,32 @@ const submitForm = async (values) => {
         values.client_secret = ''
       }
       await api.updateOIDC(props.id, values)
-      toastDescription = 'Provider updated successfully'
+      toastDescription = t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.provider')
+      })
     } else {
       await api.createOIDC(values)
       router.push({ name: 'sso-list' })
-      toastDescription = 'Provider created successfully'
+      toastDescription = t('globals.messages.createdSuccessfully', {
+        name: t('globals.terms.provider')
+      })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       title: 'Success',
       description: toastDescription
     })
   } catch (error) {
-    if (props.id) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error reloading OIDC providers',
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
-    } else {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
-    }
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   } finally {
     formLoading.value = false
   }
 }
 
 const breadCrumLabel = () => {
-  return props.id ? 'Edit' : 'New'
+  return props.id ? t('globals.buttons.edit') : t('globals.buttons.new')
 }
 
 const isNewForm = computed(() => {
@@ -99,7 +95,7 @@ const isNewForm = computed(() => {
 })
 
 const breadcrumbLinks = [
-  { path: 'sso-list', label: 'SSO' },
+  { path: 'sso-list', label: t('globals.terms.sso') },
   { path: '', label: breadCrumLabel() }
 ]
 
@@ -111,7 +107,6 @@ onMounted(async () => {
       oidc.value = resp.data.data
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })

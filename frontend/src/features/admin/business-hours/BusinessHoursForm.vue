@@ -2,9 +2,11 @@
   <form @submit="onSubmit" class="space-y-8">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>
+          {{ t('form.field.name') }}
+        </FormLabel>
         <FormControl>
-          <Input type="text" placeholder="General working hours" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -12,13 +14,11 @@
 
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
-        <FormLabel>Description</FormLabel>
+        <FormLabel>
+          {{ t('form.field.description') }}
+        </FormLabel>
         <FormControl>
-          <Input
-            type="text"
-            placeholder="General working hours for my company"
-            v-bind="componentField"
-          />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -26,17 +26,19 @@
 
     <FormField v-slot="{ componentField }" name="is_always_open">
       <FormItem>
-        <FormLabel> Set business hours </FormLabel>
+        <FormLabel>
+          {{ t('admin.businessHours.setBusinessHours') }}
+        </FormLabel>
         <FormControl>
           <RadioGroup v-bind="componentField">
             <div class="flex flex-col space-y-2">
               <div class="flex items-center space-x-3">
                 <RadioGroupItem id="r1" :value="true" />
-                <Label for="r1">Always open (24x7)</Label>
+                <Label for="r1">{{ t('admin.businessHours.alwaysOpen24x7') }}</Label>
               </div>
               <div class="flex items-center space-x-3">
                 <RadioGroupItem id="r2" :value="false" />
-                <Label for="r2">Custom business hours</Label>
+                <Label for="r2">{{ t('admin.businessHours.customBusinessHours') }}</Label>
               </div>
             </div>
           </RadioGroup>
@@ -93,28 +95,40 @@
         <div class="flex justify-between items-center mb-4">
           <div></div>
           <DialogTrigger as-child>
-            <Button @click="openHolidayForm = true"> New holiday </Button>
+            <Button @click="openHolidayForm = true">
+              {{
+                t('globals.messages.new', {
+                  name: t('globals.terms.holiday')
+                })
+              }}
+            </Button>
           </DialogTrigger>
         </div>
       </div>
       <SimpleTable
-        :headers="['Name', 'Date']"
+        :headers="[t('form.field.name'), t('form.field.date')]"
         :keys="['name', 'date']"
         :data="holidays"
         @deleteItem="deleteHoliday"
       />
       <DialogContent class="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>New holiday</DialogTitle>
-          <DialogDescription> </DialogDescription>
+          <DialogTitle>
+            {{
+              t('globals.messages.new', {
+                name: t('globals.terms.holiday')
+              })
+            }}
+          </DialogTitle>
+          <DialogDescription />
         </DialogHeader>
         <div class="grid gap-4 py-4">
           <div class="grid grid-cols-4 items-center gap-4">
-            <Label for="holiday_name" class="text-right"> Name </Label>
+            <Label for="holiday_name" class="text-right"> {{ t('form.field.name') }} </Label>
             <Input id="holiday_name" v-model="holidayName" class="col-span-3" />
           </div>
           <div class="grid grid-cols-4 items-center gap-4">
-            <Label for="date" class="text-right"> Date </Label>
+            <Label for="date" class="text-right"> {{ t('form.field.date') }} </Label>
             <Popover>
               <PopoverTrigger as-child>
                 <Button
@@ -130,7 +144,7 @@
                   {{
                     holidayDate && !isNaN(new Date(holidayDate).getTime())
                       ? format(new Date(holidayDate), 'MMMM dd, yyyy')
-                      : 'Pick a date'
+                      : t('form.field.pickDate')
                   }}
                 </Button>
               </PopoverTrigger>
@@ -142,7 +156,7 @@
         </div>
         <DialogFooter>
           <Button :disabled="!holidayName || !holidayDate" @click="saveHoliday">
-            Save changes
+            {{ t('globals.buttons.saveChanges') }}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -152,11 +166,11 @@
 </template>
 
 <script setup>
-import { ref, watch, reactive } from 'vue'
+import { ref, watch, reactive, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -168,6 +182,7 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { WEEKDAYS } from '@/constants/date'
 import { Calendar as CalendarIcon } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import SimpleTable from '@/components/table/SimpleTable.vue'
 import {
   Dialog,
@@ -191,7 +206,7 @@ const props = defineProps({
   submitLabel: {
     type: String,
     required: false,
-    default: () => 'Save'
+    default: () => ''
   },
   isNewForm: {
     type: Boolean
@@ -202,15 +217,20 @@ const props = defineProps({
   }
 })
 
+const submitLabel = computed(() => {
+  return props.submitLabel || t('globals.buttons.save')
+})
+
 let holidays = reactive([])
 const holidayName = ref('')
 const holidayDate = ref(null)
 const selectedDays = ref({})
 const hours = ref({})
 const openHolidayForm = ref(false)
+const { t } = useI18n()
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema),
+  validationSchema: toTypedSchema(createFormSchema(t)),
   initialValues: props.initialValues
 })
 

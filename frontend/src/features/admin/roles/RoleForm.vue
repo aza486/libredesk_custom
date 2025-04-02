@@ -2,20 +2,20 @@
   <form @submit.prevent="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Agent" v-bind="componentField" />
+          <Input type="text" :placeholder="t('globals.terms.agent')" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
-        <FormLabel>Description</FormLabel>
+        <FormLabel>{{ $t('form.field.description') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
-            placeholder="This role is for all support agents"
+            :placeholder="t('admin.role.roleForAllSupportAgents')"
             v-bind="componentField"
           />
         </FormControl>
@@ -23,7 +23,7 @@
       </FormItem>
     </FormField>
 
-    <p class="text-base">Set permissions for this role</p>
+    <p class="text-base">{{ $t('admin.role.setPermissionsForThisRole') }}</p>
 
     <div v-for="entity in permissions" :key="entity.name" class="box p-4">
       <p class="text-lg mb-5">{{ entity.name }}</p>
@@ -53,15 +53,16 @@
 </template>
 
 <script setup>
-import { watch, ref } from 'vue'
+import { watch, ref, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   initialValues: {
@@ -75,7 +76,7 @@ const props = defineProps({
   submitLabel: {
     type: String,
     required: false,
-    default: () => 'Submit'
+    default: () => ''
   },
   isLoading: {
     type: Boolean,
@@ -83,45 +84,51 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
+
+const submitLabel = computed(() => {
+  return props.submitLabel || t('globals.buttons.save')
+})
+
 const permissions = ref([
   {
     name: 'Conversation',
     permissions: [
-      { name: 'conversations:read', label: 'View conversation' },
-      { name: 'conversations:write', label: 'Create conversation' },
-      { name: 'conversations:read_assigned', label: 'View conversations assigned to me' },
-      { name: 'conversations:read_all', label: 'View all conversations' },
-      { name: 'conversations:read_unassigned', label: 'View all unassigned conversations' },
-      { name: 'conversations:read_team_inbox', label: 'View conversations in team inbox' },
-      { name: 'conversations:update_user_assignee', label: 'Assign conversations to users' },
-      { name: 'conversations:update_team_assignee', label: 'Assign conversations to teams' },
-      { name: 'conversations:update_priority', label: 'Change conversation priority' },
-      { name: 'conversations:update_status', label: 'Change conversation status' },
-      { name: 'conversations:update_tags', label: 'Add or remove conversation tags' },
-      { name: 'messages:read', label: 'View conversation messages' },
-      { name: 'messages:write', label: 'Send messages in conversations' },
-      { name: 'view:manage', label: 'Create and manage conversation views' }
+      { name: 'conversations:read', label: t('admin.role.conversations.read') },
+      { name: 'conversations:write', label: t('admin.role.conversations.write') },
+      { name: 'conversations:read_assigned', label: t('admin.role.conversations.readAssigned') },
+      { name: 'conversations:read_all', label: t('admin.role.conversations.readAll') },
+      { name: 'conversations:read_unassigned', label: t('admin.role.conversations.readUnassigned') },
+      { name: 'conversations:read_team_inbox', label: t('admin.role.conversations.readTeamInbox') },
+      { name: 'conversations:update_user_assignee', label: t('admin.role.conversations.updateUserAssignee') },
+      { name: 'conversations:update_team_assignee', label: t('admin.role.conversations.updateTeamAssignee') },
+      { name: 'conversations:update_priority', label: t('admin.role.conversations.updatePriority') },
+      { name: 'conversations:update_status', label: t('admin.role.conversations.updateStatus') },
+      { name: 'conversations:update_tags', label: t('admin.role.conversations.updateTags') },
+      { name: 'messages:read', label: t('admin.role.messages.read') },
+      { name: 'messages:write', label: t('admin.role.messages.write') },
+      { name: 'view:manage', label: t('admin.role.view.manage') }
     ]
   },
   {
     name: 'Admin settings',
     permissions: [
-      { name: 'general_settings:manage', label: 'Manage General Settings' },
-      { name: 'notification_settings:manage', label: 'Manage Notification Settings' },
-      { name: 'status:manage', label: 'Manage Conversation Statuses' },
-      { name: 'oidc:manage', label: 'Manage SSO Configuration' },
-      { name: 'tags:manage', label: 'Manage Tags' },
-      { name: 'macros:manage', label: 'Manage Macros' },
-      { name: 'users:manage', label: 'Manage Users' },
-      { name: 'teams:manage', label: 'Manage Teams' },
-      { name: 'automations:manage', label: 'Manage Automations' },
-      { name: 'inboxes:manage', label: 'Manage Inboxes' },
-      { name: 'roles:manage', label: 'Manage Roles' },
-      { name: 'templates:manage', label: 'Manage Templates' },
-      { name: 'reports:manage', label: 'Manage Reports' },
-      { name: 'business_hours:manage', label: 'Manage Business Hours' },
-      { name: 'sla:manage', label: 'Manage SLA Policies' },
-      { name: 'ai:manage', label: 'Manage AI Features' }
+      { name: 'general_settings:manage', label: t('admin.role.generalSettings.manage') },
+      { name: 'notification_settings:manage', label: t('admin.role.notificationSettings.manage') },
+      { name: 'status:manage', label: t('admin.role.status.manage') },
+      { name: 'oidc:manage', label: t('admin.role.oidc.manage') },
+      { name: 'tags:manage', label: t('admin.role.tags.manage') },
+      { name: 'macros:manage', label: t('admin.role.macros.manage') },
+      { name: 'users:manage', label: t('admin.role.users.manage') },
+      { name: 'teams:manage', label: t('admin.role.teams.manage') },
+      { name: 'automations:manage', label: t('admin.role.automations.manage') },
+      { name: 'inboxes:manage', label: t('admin.role.inboxes.manage') },
+      { name: 'roles:manage', label: t('admin.role.roles.manage') },
+      { name: 'templates:manage', label: t('admin.role.templates.manage') },
+      { name: 'reports:manage', label: t('admin.role.reports.manage') },
+      { name: 'business_hours:manage', label: t('admin.role.businessHours.manage') },
+      { name: 'sla:manage', label: t('admin.role.sla.manage') },
+      { name: 'ai:manage', label: t('admin.role.ai.manage') }
     ]
   }
 ])
@@ -129,7 +136,7 @@ const permissions = ref([
 const selectedPermissions = ref([])
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema),
+  validationSchema: toTypedSchema(createFormSchema(t)),
   initialValues: props.initialValues
 })
 

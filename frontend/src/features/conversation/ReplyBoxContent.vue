@@ -13,14 +13,14 @@
             class="px-3 py-1 rounded-lg transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'reply' }"
           >
-            Reply
+            {{ $t('replyBox.reply') }}
           </TabsTrigger>
           <TabsTrigger
             value="private_note"
             class="px-3 py-1 rounded-lg transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
           >
-            Private note
+            {{ $t('replyBox.privateNote') }}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -46,7 +46,7 @@
         <label class="w-12 text-sm font-medium text-muted-foreground">CC:</label>
         <Input
           type="text"
-          placeholder="Email addresses separated by comma"
+          :placeholder="t('replyBox.emailAddresess')"
           v-model="cc"
           class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
           @blur="validateEmails('cc')"
@@ -63,7 +63,7 @@
         <label class="w-12 text-sm font-medium text-muted-foreground">BCC:</label>
         <Input
           type="text"
-          placeholder="Email addresses separated by comma"
+          :placeholder="t('replyBox.emailAddresess')"
           v-model="bcc"
           class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
           @blur="validateEmails('bcc')"
@@ -146,6 +146,7 @@ import { useEmitter } from '@/composables/useEmitter'
 import AttachmentsPreview from '@/features/conversation/message/attachment/AttachmentsPreview.vue'
 import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue'
 import ReplyBoxMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'
+import { useI18n } from 'vue-i18n'
 
 // Define models for two-way binding
 const messageType = defineModel('messageType', { default: 'reply' })
@@ -198,11 +199,11 @@ const emit = defineEmits([
 
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
+const { t } = useI18n()
 
 const insertContent = ref(null)
 const setInlineImage = ref(null)
-const editorPlaceholder =
-  'Shift + Enter to add a new line. Cmd + Enter to send. Cmd + K to open command bar.'
+const editorPlaceholder = t('replyBox.editor.placeholder')
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
@@ -255,13 +256,13 @@ const validateEmails = (field) => {
 
   // Remove any existing errors for this field
   emailErrors.value = emailErrors.value.filter(
-    (error) => !error.startsWith(`Invalid email(s) in ${field.toUpperCase()}`)
+    (error) => !error.startsWith(`${t('replyBox.invalidEmailsIn')} ${field.toUpperCase()}`)
   )
 
   // Add new error if there are invalid emails
   if (invalidEmails.length > 0) {
     emailErrors.value.push(
-      `Invalid email(s) in ${field.toUpperCase()}: ${invalidEmails.join(', ')}`
+      `${t('replyBox.invalidEmailsIn')} ${field.toUpperCase()}: ${invalidEmails.join(', ')}`
     )
   }
 }
@@ -274,9 +275,8 @@ const handleSend = async () => {
   validateEmails('bcc')
   if (emailErrors.value.length > 0) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
-      description: 'Please correct the email errors before sending.'
+      description: t('replyBox.correctEmailErrors')
     })
     return
   }

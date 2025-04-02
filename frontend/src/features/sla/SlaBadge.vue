@@ -3,9 +3,9 @@
     <!-- Overdue-->
     <span v-if="sla?.status === 'overdue'" key="overdue" class="sla-badge box sla-overdue">
       <AlertCircle size="12" class="text-red-800" />
-      <span class="sla-text text-red-800"
-        >{{ label }} Overdue
-        <span v-if="showExtra">by {{ sla.value }}</span>
+      <span class="sla-text text-red-800">
+        <span v-if="!showExtra">{{ label }} {{ $t('sla.overdue') }}</span>
+        <span v-else>{{ label }} {{ $t('sla.overdueBy') }} {{ sla.value }} </span>
       </span>
     </span>
 
@@ -16,7 +16,7 @@
       class="sla-badge box sla-hit"
     >
       <CheckCircle size="12" />
-      <span class="sla-text">{{ label }} SLA met</span>
+      <span class="sla-text">{{ label }} {{ $t('sla.met') }}</span>
     </span>
 
     <!-- Remaining -->

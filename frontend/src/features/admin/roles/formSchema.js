@@ -1,20 +1,26 @@
 import * as z from 'zod'
 
-export const formSchema = z.object({
+export const createFormSchema = (t) => z.object({
   name: z
     .string({
-      required_error: 'Name is required.'
+      required_error: t('globals.messages.required'),
     })
     .min(2, {
-      message: 'First name must be at least 2 characters.'
+      message: t('form.error.minmax', { min: 2, max: 50 })
+    })
+    .max(50, {
+      message: t('form.error.minmax', { min: 2, max: 50 })
     }),
 
   description: z
     .string({
-      required_error: 'Description is required.'
+      required_error: t('globals.messages.required'),
     })
     .min(2, {
-      message: 'First name must be at least 2 characters.'
+      message: t('form.error.minmax', { min: 2, max: 300 })
+    })
+    .max(300, {
+      message: t('form.error.minmax', { min: 2, max: 300 })
     }),
   permissions: z.array(z.string()).optional()
 })

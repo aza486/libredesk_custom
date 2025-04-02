@@ -1,20 +1,24 @@
 import * as z from 'zod'
 
-export const oidcLoginFormSchema = z.object({
+export const createFormSchema = (t) => z.object({
   disabled: z.boolean().optional(),
   name: z.string({
-    required_error: 'Name is required.'
+    required_error: t('globals.messages.required'),
   }),
   provider: z.string().optional(),
   provider_url: z
     .string({
-      required_error: 'Provider URL is required.'
+      required_error: t('globals.messages.required'),
     })
     .url({
-      message: 'Provider URL must be a valid URL.'
+      message: t('form.error.validUrl'),
     }),
-  client_id: z.string(),
-  client_secret: z.string(),
+  client_id: z.string({
+    required_error: t('globals.messages.required'),
+  }),
+  client_secret: z.string({
+    required_error: t('globals.messages.required'),
+  }),
   redirect_uri: z.string().readonly().optional(),
   enabled: z.boolean().default(true).optional(),
 })

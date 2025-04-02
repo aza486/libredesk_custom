@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"></Spinner>
+  <Spinner v-if="isLoading"/>
   <TemplateForm
     :initial-values="template"
     :submitForm="submitForm"
@@ -20,9 +20,11 @@ import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useI18n } from 'vue-i18n'
 import { useEmitter } from '@/composables/useEmitter'
 
 const template = ref({})
+const { t } = useI18n()
 const isLoading = ref(false)
 const formLoading = ref(false)
 const emitter = useEmitter()
@@ -42,22 +44,24 @@ const submitForm = async (values) => {
     let toastDescription = ''
     if (props.id) {
       await api.updateTemplate(props.id, values)
-      toastDescription = 'Template updated successfully'
+      toastDescription = t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.template')
+      })
     } else {
       await api.createTemplate(values)
-      toastDescription = 'Template created successfully'
+      toastDescription = t('globals.messages.createdSuccessfully', {
+        name: t('globals.terms.template')
+      })
       router.push({ name: 'templates' })
       emitter.emit(EMITTER_EVENTS.REFRESH_LIST, {
         model: 'templates'
       })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
       description: toastDescription
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -67,11 +71,11 @@ const submitForm = async (values) => {
 }
 
 const breadCrumLabel = () => {
-  return props.id ? 'Edit' : 'New'
+  return props.id ? t('globals.buttons.edit') : t('globals.buttons.new')
 }
 
 const breadcrumbLinks = [
-  { path: 'templates', label: 'Templates' },
+  { path: 'templates', label: t('globals.terms.template') },
   { path: '', label: breadCrumLabel() }
 ]
 
@@ -83,7 +87,6 @@ onMounted(async () => {
       template.value = resp.data.data
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })

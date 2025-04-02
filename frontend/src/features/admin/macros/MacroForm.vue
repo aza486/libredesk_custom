@@ -3,9 +3,9 @@
   <form @submit="onSubmit" class="space-y-6 w-full" :class="{ 'opacity-50': formLoading }">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>{{ t('form.field.name') }} </FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Macro name" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -13,13 +13,13 @@
 
     <FormField v-slot="{ componentField }" name="message_content">
       <FormItem>
-        <FormLabel>Response to be sent when macro is used (optional)</FormLabel>
+        <FormLabel>{{ t('admin.macro.messageContent') }}</FormLabel>
         <FormControl>
           <div class="box p-2 h-96 min-h-96">
             <Editor
               v-model:htmlContent="componentField.modelValue"
               @update:htmlContent="(value) => componentField.onChange(value)"
-              :placeholder="'Shift + Enter to add new line'"
+              :placeholder="t('editor.placeholder')"
             />
           </div>
         </FormControl>
@@ -29,9 +29,13 @@
 
     <FormField v-slot="{ componentField }" name="actions">
       <FormItem>
-        <FormLabel> Actions (optional)</FormLabel>
+        <FormLabel> {{ t('admin.macro.actions') }}</FormLabel>
         <FormControl>
-          <ActionBuilder v-model:actions="componentField.modelValue" :config="actionConfig" @update:actions="(value) => componentField.onChange(value)" />
+          <ActionBuilder
+            v-model:actions="componentField.modelValue"
+            :config="actionConfig"
+            @update:actions="(value) => componentField.onChange(value)"
+          />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -39,7 +43,7 @@
 
     <FormField v-slot="{ componentField }" name="visibility">
       <FormItem>
-        <FormLabel>Visibility</FormLabel>
+        <FormLabel>{{ t('admin.macro.visibility') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField">
             <SelectTrigger>
@@ -47,9 +51,9 @@
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="team">Team</SelectItem>
-                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="all">{{ t('admin.macro.visibility.all') }}</SelectItem>
+                <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
+                <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -60,9 +64,13 @@
 
     <FormField v-if="form.values.visibility === 'team'" v-slot="{ componentField }" name="team_id">
       <FormItem>
-        <FormLabel>Team</FormLabel>
+        <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
         <FormControl>
-          <ComboBox v-bind="componentField" :items="tStore.options" placeholder="Select team">
+          <ComboBox
+            v-bind="componentField"
+            :items="tStore.options"
+            :placeholder="t('form.field.selectTeam')"
+          >
             <template #item="{ item }">
               <div class="flex items-center gap-2 ml-2">
                 <span>{{ item.emoji }}</span>
@@ -75,7 +83,7 @@
                   {{ selected.emoji }}
                   <span>{{ selected.label }}</span>
                 </span>
-                <span v-else>Select team</span>
+                <span v-else>{{ t('form.field.selectTeam') }}</span>
               </div>
             </template>
           </ComboBox>
@@ -86,13 +94,17 @@
 
     <FormField v-if="form.values.visibility === 'user'" v-slot="{ componentField }" name="user_id">
       <FormItem>
-        <FormLabel>User</FormLabel>
+        <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
         <FormControl>
-          <ComboBox v-bind="componentField" :items="uStore.options" placeholder="Select user">
+          <ComboBox
+            v-bind="componentField"
+            :items="uStore.options"
+            :placeholder="t('form.field.selectUser')"
+          >
             <template #item="{ item }">
               <div class="flex items-center gap-2 ml-2">
                 <Avatar class="w-7 h-7">
-                  <AvatarImage :src="item.avatar_url" :alt="item.label.slice(0, 2)" />
+                  <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                   <AvatarFallback>{{ item.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
                 </Avatar>
                 <span>{{ item.label }}</span>
@@ -102,12 +114,12 @@
               <div class="flex items-center gap-2">
                 <div v-if="selected" class="flex items-center gap-2">
                   <Avatar class="w-7 h-7">
-                    <AvatarImage :src="selected.avatar_url" :alt="selected.label.slice(0, 2)" />
+                    <AvatarImage :src="selected.avatar_url || ''" :alt="selected.label.slice(0, 2)" />
                     <AvatarFallback>{{ selected.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
                   </Avatar>
                   <span>{{ selected.label }}</span>
                 </div>
-                <span v-else>Select user</span>
+                <span v-else>{{ t('form.field.selectUser') }}</span>
               </div>
             </template>
           </ComboBox>
@@ -120,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { Button } from '@/components/ui/button'
@@ -133,7 +145,7 @@ import { useConversationFilters } from '@/composables/useConversationFilters'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
 import { getTextFromHTML } from '@/utils/strings.js'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import {
   Select,
   SelectContent,
@@ -143,9 +155,11 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
+import { useI18n } from 'vue-i18n'
 import Editor from '@/features/conversation/ConversationTextEditor.vue'
 
 const { macroActions } = useConversationFilters()
+const { t } = useI18n()
 const formLoading = ref(false)
 const uStore = useUsersStore()
 const tStore = useTeamStore()
@@ -160,7 +174,7 @@ const props = defineProps({
   },
   submitLabel: {
     type: String,
-    default: 'Submit'
+    default: ''
   },
   isLoading: {
     type: Boolean,
@@ -168,15 +182,21 @@ const props = defineProps({
   }
 })
 
+const submitLabel = computed(() => {
+  return (
+    props.submitLabel ||
+    (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
+  )
+})
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const actionConfig = ref({
   actions: macroActions,
-  typePlaceholder: 'Select action type',
-  valuePlaceholder: 'Select value',
-  addButtonText: 'Add new action'
+  typePlaceholder: t('form.field.selectActionType'),
+  valuePlaceholder: t('form.field.selectValue'),
+  addButtonText: t('form.field.addNewAction')
 })
 
 const onSubmit = form.handleSubmit(async (values) => {

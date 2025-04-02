@@ -1,49 +1,65 @@
 <template>
-  <Spinner v-if="isLoading" />
-  <AdminPageWithHelp>
-    <template #content>
-      <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
-        <div class="flex justify-between mb-5">
-          <div class="flex justify-end mb-4 w-full">
-            <Dialog v-model:open="dialogOpen">
-              <DialogTrigger as-child>
-                <Button class="ml-auto">New Status</Button>
-              </DialogTrigger>
-              <DialogContent class="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>New status</DialogTitle>
-                  <DialogDescription
-                    >Set status name. Click save when you're done.</DialogDescription
-                  >
-                </DialogHeader>
-                <StatusForm @submit.prevent="onSubmit">
-                  <template #footer>
-                    <DialogFooter class="mt-10">
-                      <Button type="submit">Save changes</Button>
-                    </DialogFooter>
-                  </template>
-                </StatusForm>
-              </DialogContent>
-            </Dialog>
+  <div>
+    <Spinner v-if="isLoading" />
+    <AdminPageWithHelp>
+      <template #content>
+        <div :class="{ 'transition-opacity duration-300 opacity-50': isLoading }">
+          <div class="flex justify-between mb-5">
+            <div class="flex justify-end mb-4 w-full">
+              <Dialog v-model:open="dialogOpen">
+                <DialogTrigger as-child>
+                  <Button class="ml-auto">
+                    {{
+                      $t('globals.messages.new', {
+                        name: $t('globals.terms.status')
+                      })
+                    }}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent class="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {{
+                        $t('globals.messages.new', {
+                          name: $t('globals.terms.status')
+                        })
+                      }}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {{ $t('admin.conversationStatus.name.description') }}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <StatusForm @submit.prevent="onSubmit">
+                    <template #footer>
+                      <DialogFooter class="mt-10">
+                        <Button type="submit" :isLoading="isLoading" :disabled="isLoading">{{
+                          $t('globals.buttons.save')
+                        }}</Button>
+                      </DialogFooter>
+                    </template>
+                  </StatusForm>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+          <div>
+            <DataTable :columns="createColumns(t)" :data="statuses" />
           </div>
         </div>
-        <div>
-          <DataTable :columns="columns" :data="statuses" />
-        </div>
-      </div>
-    </template>
+      </template>
 
-    <template #help>
-      <p>Create custom conversation statuses to extend default workflow.</p>
-    </template>
-  </AdminPageWithHelp>
+      <template #help>
+        <p>Create custom conversation statuses to extend default workflow.</p>
+      </template>
+    </AdminPageWithHelp>
+  </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import DataTable from '@/components/datatable/DataTable.vue'
 import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
-import { columns } from '../../../features/admin/status/dataTableColumns.js'
+import { createColumns } from '@/features/admin/status/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
 
 import { Spinner } from '@/components/ui/spinner'
@@ -59,11 +75,13 @@ import {
 } from '@/components/ui/dialog'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from '../../../features/admin/status/formSchema.js'
+import { createFormSchema } from '@/features/admin/status/formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
+const { t } = useI18n()
 const isLoading = ref(false)
 const statuses = ref([])
 const emit = useEmitter()
@@ -77,7 +95,7 @@ onMounted(() => {
 })
 
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const getStatuses = async () => {

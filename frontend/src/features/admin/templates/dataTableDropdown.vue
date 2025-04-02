@@ -2,17 +2,19 @@
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="w-8 h-8 p-0">
-        <span class="sr-only">Open menu</span>
+        <span class="sr-only"></span>
         <MoreHorizontal class="w-4 h-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="editTemplate(props.template.id)">Edit</DropdownMenuItem>
+      <DropdownMenuItem @click="editTemplate(props.template.id)">{{
+        $t('globals.buttons.edit')
+      }}</DropdownMenuItem>
       <DropdownMenuItem
         @click="() => (alertOpen = true)"
         v-if="props.template.type !== 'email_notification'"
       >
-        Delete
+        {{ $t('globals.buttons.delete') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -20,14 +22,18 @@
   <AlertDialog :open="alertOpen" @update:open="alertOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete Template</AlertDialogTitle>
+        <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          This action cannot be undone. This will permanently delete the template.
+          {{ $t('admin.template.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+        <AlertDialogCancel>
+          {{ $t('globals.buttons.cancel') }}
+        </AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">
+          {{ $t('globals.buttons.delete') }}
+        </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
@@ -86,7 +92,6 @@ const handleDelete = async () => {
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

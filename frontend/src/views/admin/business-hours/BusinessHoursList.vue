@@ -4,13 +4,19 @@
       <div></div>
       <div>
         <router-link :to="{ name: 'new-business-hours' }">
-          <Button>New business hour</Button>
+          <Button>
+            {{
+              $t('globals.messages.new', {
+                name: $t('globals.terms.businessHour')
+              })
+            }}
+          </Button>
         </router-link>
       </div>
     </div>
     <div>
-      <Spinner v-if="isLoading"></Spinner>
-      <DataTable :columns="columns" :data="businessHours" />
+      <Spinner v-if="isLoading" />
+      <DataTable :columns="createColumns(t)" :data="businessHours" />
     </div>
   </div>
 </template>
@@ -21,10 +27,12 @@ import DataTable from '@/components/datatable/DataTable.vue'
 import { Button } from '@/components/ui/button'
 import { useEmitter } from '@/composables/useEmitter'
 import { Spinner } from '@/components/ui/spinner'
-import { columns } from '@/features/admin/business-hours/dataTableColumns.js'
+import { useI18n } from 'vue-i18n'
+import { createColumns } from '@/features/admin/business-hours/dataTableColumns.js'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import api from '@/api'
 
+const { t } = useI18n()
 const businessHours = ref([])
 const isLoading = ref(false)
 const emit = useEmitter()

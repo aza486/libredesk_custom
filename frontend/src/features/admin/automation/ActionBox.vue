@@ -16,7 +16,7 @@
                   @update:modelValue="(value) => handleFieldChange(value, index)"
                 >
                   <SelectTrigger class="m-auto">
-                    <SelectValue placeholder="Select action" />
+                    <SelectValue :placeholder="t('form.field.selectAction')" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -40,7 +40,7 @@
                 <SelectTag
                   v-model="action.value"
                   :items="tagsStore.tagNames.map((tag) => ({ label: tag, value: tag }))"
-                  placeholder="Select tag"
+                  :placeholder="t('form.field.selectTag')"
                 />
               </div>
 
@@ -51,13 +51,13 @@
                 <ComboBox
                   v-model="action.value[0]"
                   :items="conversationActions[action.type]?.options"
-                  placeholder="Select"
+                  :placeholder="t('form.field.select')"
                   @select="handleValueChange($event, index)"
                 >
                   <template #item="{ item }">
                     <div class="flex items-center gap-2 ml-2">
                       <Avatar v-if="action.type === 'assign_user'" class="w-7 h-7">
-                        <AvatarImage :src="item.avatar_url ?? ''" :alt="item.label.slice(0, 2)" />
+                        <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                         <AvatarFallback>
                           {{ item.label.slice(0, 2).toUpperCase() }}
                         </AvatarFallback>
@@ -75,7 +75,7 @@
                         {{ selected.emoji }}
                         <span>{{ selected.label }}</span>
                       </div>
-                      <span v-else>Select team</span>
+                      <span v-else>{{ $t('form.field.selectTeam') }}</span>
                     </div>
 
                     <div v-else-if="action.type === 'assign_user'" class="flex items-center gap-2">
@@ -91,10 +91,10 @@
                         </Avatar>
                         <span>{{ selected.label }}</span>
                       </div>
-                      <span v-else>Select user</span>
+                      <span v-else>{{ $t('form.field.selectUser') }}</span>
                     </div>
                     <span v-else>
-                      <span v-if="!selected"> Select</span>
+                      <span v-if="!selected"> {{ $t('form.field.select') }}</span>
                       <span v-else>{{ selected.label }} </span>
                     </span>
                   </template>
@@ -114,14 +114,18 @@
             <Editor
               v-model:htmlContent="action.value[0]"
               @update:htmlContent="(value) => handleEditorChange(value, index)"
-              :placeholder="'Shift + Enter to add new line'"
+              :placeholder="t('editor.placeholder')"
             />
           </div>
         </div>
       </div>
     </div>
     <div>
-      <Button variant="outline" @click.prevent="addAction">Add action</Button>
+      <Button variant="outline" @click.prevent="addAction">{{
+        $t('globals.messages.add', {
+          name: $t('globals.terms.action')
+        })
+      }}</Button>
     </div>
   </div>
 </template>
@@ -144,6 +148,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { SelectTag } from '@/components/ui/select'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 import { getTextFromHTML } from '@/utils/strings.js'
+import { useI18n } from 'vue-i18n'
 import Editor from '@/features/conversation/ConversationTextEditor.vue'
 
 const props = defineProps({
@@ -154,6 +159,7 @@ const props = defineProps({
 })
 
 const { actions } = toRefs(props)
+const { t } = useI18n()
 const emit = defineEmits(['update-actions', 'add-action', 'remove-action'])
 const tagsStore = useTagStore()
 const { conversationActions } = useConversationFilters()

@@ -2,27 +2,31 @@
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <Button variant="ghost" class="w-8 h-8 p-0">
-        <span class="sr-only">Open menu</span>
+        <span class="sr-only"></span>
         <MoreHorizontal class="w-4 h-4" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="editMacro">Edit</DropdownMenuItem>
-      <DropdownMenuItem @click="() => (isDeleteOpen = true)">Delete</DropdownMenuItem>
+      <DropdownMenuItem @click="editMacro">{{ $t('globals.buttons.edit') }}</DropdownMenuItem>
+      <DropdownMenuItem @click="() => (isDeleteOpen = true)">
+        {{ $t('globals.buttons.delete') }}
+      </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 
   <AlertDialog :open="isDeleteOpen" @update:open="isDeleteOpen = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete Macro</AlertDialogTitle>
+        <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          Are you sure you want to delete this macro? This action cannot be undone.
+          {{ $t('admin.macro.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancel</AlertDialogCancel>
-        <AlertDialogAction @click="handleDelete">Delete</AlertDialogAction>
+        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">{{
+          $t('globals.buttons.delete')
+        }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

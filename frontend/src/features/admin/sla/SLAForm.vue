@@ -2,9 +2,9 @@
   <form @submit="onSubmit" class="space-y-8">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>{{ t('form.field.name') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="SLA Name" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -12,9 +12,9 @@
 
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
-        <FormLabel>Description</FormLabel>
+        <FormLabel>{{ t('form.field.description') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Describe the SLA" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -22,12 +22,12 @@
 
     <FormField v-slot="{ componentField }" name="first_response_time">
       <FormItem>
-        <FormLabel>First response time</FormLabel>
+        <FormLabel>{{ t('admin.sla.firstResponseTime') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="6h" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          Duration in hours or minutes to respond to a conversation.
+          {{ t('admin.sla.firstResponseTime.description') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -35,11 +35,11 @@
 
     <FormField v-slot="{ componentField }" name="resolution_time">
       <FormItem>
-        <FormLabel>Resolution time</FormLabel>
+        <FormLabel>{{ t('admin.sla.resolutionTime') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="24h" v-bind="componentField" />
         </FormControl>
-        <FormDescription> Duration in hours or minutes to resolve a conversation. </FormDescription>
+        <FormDescription>{{ t('admin.sla.resolutionTime.description') }} </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -48,17 +48,21 @@
     <div class="space-y-6">
       <div class="flex items-center justify-between pb-3 border-b">
         <div class="space-y-1">
-          <h3 class="text-lg font-semibold text-foreground">Alert Configuration</h3>
-          <p class="text-sm text-muted-foreground">Set up notification triggers and recipients</p>
+          <h3 class="text-lg font-semibold text-foreground">
+            {{ t('admin.sla.alertConfiguration') }}
+          </h3>
+          <p class="text-sm text-muted-foreground">
+            {{ t('admin.sla.alertConfiguration.description') }}
+          </p>
         </div>
         <div class="flex gap-2">
           <Button type="button" variant="outline" size="sm" @click="addNotification('breach')">
             <Plus class="w-4 h-4 mr-2" />
-            Add Breach
+            {{ t('admin.sla.addBreachAlert') }}
           </Button>
           <Button type="button" variant="outline" size="sm" @click="addNotification('warning')">
             <Plus class="w-4 h-4 mr-2" />
-            Add Warning
+            {{ t('admin.sla.addWarningAlert') }}
           </Button>
         </div>
       </div>
@@ -89,7 +93,7 @@
               </span>
               <div>
                 <div class="font-medium text-foreground">
-                  {{ notification.type === 'warning' ? 'Warning' : 'Breach' }} Notification
+                  {{ notification.type === 'warning' ? t('admin.sla.warning') : t('admin.sla.breach') }} {{ t('admin.sla.notification') }}
                 </div>
                 <p class="text-xs text-muted-foreground">
                   {{ notification.type === 'warning' ? 'Pre-breach alert' : 'Post-breach action' }}
@@ -119,7 +123,7 @@
                   <FormItem>
                     <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                       <Clock class="w-4 h-4 text-muted-foreground" />
-                      Trigger Timing
+                      {{ t('admin.sla.triggerTiming') }}
                     </FormLabel>
                     <FormControl>
                       <Select v-bind="componentField" class="hover:border-foreground/30">
@@ -129,10 +133,10 @@
                         <SelectContent>
                           <SelectGroup>
                             <SelectItem value="immediately" class="focus:bg-accent">
-                              Immediately on breach
+                              {{ t('admin.sla.immediatelyOnBreach') }}
                             </SelectItem>
                             <SelectItem value="after" class="focus:bg-accent">
-                              After specific duration
+                              {{ t('admin.sla.afterSpecificDuration') }}
                             </SelectItem>
                           </SelectGroup>
                         </SelectContent>
@@ -145,12 +149,12 @@
                   <FormItem v-if="shouldShowTimeDelay(index)">
                     <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                       <Hourglass class="w-4 h-4 text-muted-foreground" />
-                      {{ notification.type === 'warning' ? 'Advance Warning' : 'Follow-up Delay' }}
+                      {{ notification.type === 'warning' ? t('admin.sla.advanceWarning') : t('admin.sla.followUpDelay') }}
                     </FormLabel>
                     <FormControl>
                       <Select v-bind="componentField" class="hover:border-foreground/30">
                         <SelectTrigger class="w-full">
-                          <SelectValue placeholder="Select duration..." />
+                          <SelectValue :placeholder="t('admin.sla.selectDuration')" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -181,7 +185,7 @@
                 <FormItem>
                   <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                     <Users class="w-4 h-4 text-muted-foreground" />
-                    Notification Recipients
+                    {{ t('admin.sla.notificationRecipients') }}
                   </FormLabel>
                   <FormControl>
                     <SelectTag
@@ -191,7 +195,7 @@
                           value: 'assigned_user'
                         })
                       "
-                      placeholder="Start typing to search..."
+                      :placeholder="t('globals.messages.startTypingToSearch')"
                       v-model="componentField.modelValue"
                       @update:modelValue="handleChange"
                       class="w-full hover:border-foreground/30"
@@ -211,7 +215,7 @@
         class="flex flex-col items-center justify-center p-8 space-y-3 rounded-xl bg-muted/30 border border-dashed"
       >
         <Bell class="w-8 h-8 text-muted-foreground" />
-        <p class="text-sm text-muted-foreground">No active notifications configured</p>
+        <p class="text-sm text-muted-foreground">{{ t('admin.sla.noNotificationsConfigured') }}</p>
       </div>
     </div>
 
@@ -222,10 +226,10 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, computed } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema'
+import { createFormSchema } from './formSchema'
 import { Button } from '@/components/ui/button'
 import { X, Plus, Timer, CircleAlert, Users, Clock, Hourglass, Bell } from 'lucide-vue-next'
 import { useUsersStore } from '@/stores/users'
@@ -245,6 +249,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { useI18n } from 'vue-i18n'
 import { SelectTag } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 
@@ -259,7 +264,7 @@ const props = defineProps({
   },
   submitLabel: {
     type: String,
-    default: 'Save'
+    default: ''
   },
   isLoading: {
     type: Boolean,
@@ -268,7 +273,9 @@ const props = defineProps({
 })
 
 const usersStore = useUsersStore()
-
+const submitLabel = computed(() => {
+  return props.submitLabel || (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
+})
 const delayDurations = [
   '5m',
   '10m',
@@ -289,8 +296,9 @@ const delayDurations = [
   '12h'
 ]
 
+const { t } = useI18n()
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema),
+  validationSchema: toTypedSchema(createFormSchema(t)),
   initialValues: {
     name: '',
     description: '',
@@ -307,7 +315,7 @@ const shouldShowTimeDelay = (index) => {
 }
 
 const addNotification = (type) => {
-  const notifications = [...form.values.notifications || []]
+  const notifications = [...(form.values.notifications || [])]
   notifications.push({
     type: type,
     time_delay_type: type === 'warning' ? 'before' : 'immediately',
@@ -320,7 +328,6 @@ const addNotification = (type) => {
 const removeNotification = (index) => {
   const notifications = [...form.values.notifications]
   notifications.splice(index, 1)
-  console.log("Notifications", notifications)
   form.setFieldValue('notifications', notifications)
 }
 

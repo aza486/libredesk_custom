@@ -5,12 +5,15 @@
         <Card
           class="bg-card border border-border shadow-xl rounded-xl"
           :class="{ 'animate-shake': shakeCard }"
+          id="login-container"
           ref="cardRef"
         >
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-3xl font-bold text-foreground">Libredesk</CardTitle>
-              <p class="text-muted-foreground">Sign in to your account</p>
+              <CardTitle class="text-3xl font-bold text-foreground">{{
+                t('globals.app.name')
+              }}</CardTitle>
+              <p class="text-muted-foreground">{{ t('auth.signIn') }}</p>
             </div>
 
             <div v-if="enabledOIDCProviders.length" class="space-y-4">
@@ -37,18 +40,22 @@
                   <span class="w-full border-t border-border"></span>
                 </div>
                 <div class="relative flex justify-center text-xs uppercase">
-                  <span class="px-2 text-muted-foreground bg-card">Or continue with</span>
+                  <span class="px-2 text-muted-foreground bg-card">{{
+                    t('auth.orContinueWith')
+                  }}</span>
                 </div>
               </div>
             </div>
 
             <form @submit.prevent="loginAction" class="space-y-4">
               <div class="space-y-2">
-                <Label for="email" class="text-sm font-medium text-foreground">Email</Label>
+                <Label for="email" class="text-sm font-medium text-foreground">{{
+                  t('globals.terms.email')
+                }}</Label>
                 <Input
                   id="email"
                   type="text"
-                  placeholder="Enter your email"
+                  :placeholder="t('auth.enterEmail')"
                   v-model.trim="loginForm.email"
                   :class="{ 'border-destructive': emailHasError }"
                   class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
@@ -56,11 +63,13 @@
               </div>
 
               <div class="space-y-2">
-                <Label for="password" class="text-sm font-medium text-foreground">Password</Label>
+                <Label for="password" class="text-sm font-medium text-foreground">{{
+                  t('auth.password')
+                }}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  :placeholder="t('auth.enterPassword')"
                   v-model="loginForm.password"
                   :class="{ 'border-destructive': passwordHasError }"
                   class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
@@ -72,7 +81,7 @@
                   to="/reset-password"
                   class="text-sm text-primary hover:text-primary/80 transition-all duration-200 ease-in-out"
                 >
-                  Forgot password?
+                  {{ t('auth.forgotPassword') }}
                 </router-link>
               </div>
 
@@ -102,9 +111,9 @@
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Logging in...
+                  {{ t('auth.loggingIn') }}
                 </span>
-                <span v-else>Sign in</span>
+                <span v-else>{{ t('auth.signInButton') }}</span>
               </Button>
             </form>
 
@@ -118,10 +127,6 @@
         </Card>
       </div>
     </main>
-
-    <footer class="p-6 text-center">
-      <div class="text-sm text-muted-foreground space-x-4"></div>
-    </footer>
   </div>
 </template>
 
@@ -139,13 +144,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useEmitter } from '@/composables/useEmitter'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
 const emitter = useEmitter()
+const { t } = useI18n()
 const errorMessage = ref('')
 const isLoading = ref(false)
 const router = useRouter()
 const userStore = useUserStore()
+const shakeCard = ref(false)
 const loginForm = ref({
   email: '',
   password: ''
@@ -173,7 +181,6 @@ const fetchOIDCProviders = async () => {
     oidcProviders.value = resp.data.data
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

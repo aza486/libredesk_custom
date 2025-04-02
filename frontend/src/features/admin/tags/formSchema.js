@@ -1,11 +1,11 @@
 import * as z from 'zod'
 
-export const formSchema = z.object({
+export const createFormSchema = (t) => z.object({
   name: z
     .string({
-      required_error: 'Tag name is required.'
+      required_error: t('globals.messages.required'),
     })
     .min(3, {
-      message: 'Tag name must be at least 3 characters.'
+      message: t('admin.conversationTags.name.valid'),
     })
 })

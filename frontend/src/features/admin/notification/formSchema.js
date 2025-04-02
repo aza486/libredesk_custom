@@ -1,71 +1,55 @@
 import * as z from 'zod';
 import { isGoDuration } from '@/utils/strings';
 
-export const smtpConfigSchema = z.object({
-    enabled: z.boolean().describe('Enabled status').default(false),
-    username: z.string().describe('SMTP username').nonempty({
-        message: "SMTP username is required"
+export const createFormSchema = (t) => z.object({
+    enabled: z.boolean().default(false),
+    username: z.string().nonempty({
+        message: t('globals.messages.required')
     }),
-    host: z.string().describe('SMTP host').nonempty({
-        message: "SMTP host is required"
+    host: z.string().nonempty({
+        message: t('globals.messages.required')
     }),
     port: z
         .number({
-            invalid_type_error: 'Port must be a number.',
-            required_error: 'Port is required.'
+            invalid_type_error: t('globals.messages.invalidPortNumber'),
+            required_error: t('globals.messages.required')
         })
-        .min(1, {
-            message: 'Port must be at least 1.'
-        })
-        .max(65535, {
-            message: 'Port must be at most 65535.'
-        })
-        .describe('SMTP port')
+        .min(1, { message: t('form.error.minmaxNumber', { min: 1, max: 65535 }) })
+        .max(65535, { message: t('form.error.minmaxNumber', { min: 1, max: 65535 }) })
         .default(587),
-    password: z.string().describe('SMTP password').nonempty({
-        message: "SMTP password is required"
+    password: z.string().nonempty({
+        message: t('globals.messages.required')
     }),
     max_conns: z
         .number({
-            invalid_type_error: 'Must be a number.',
-            required_error: 'Maximum connections is required.'
+            invalid_type_error: t('globals.messages.mustBeNumber'),
+            required_error: t('globals.messages.required')
         })
-        .min(1, {
-            message: 'Maximum connections must be at least 1.'
-        })
-        .describe('Maximum concurrent connections'),
+        .min(1, { message: t('form.error.minmaxNumber', { min: 1, max: 1000 }) })
+        .max(1000, { message: t('form.error.minmaxNumber', { min: 1, max: 1000 }) }),
     idle_timeout: z
         .string()
-        .describe('Idle timeout duration')
         .refine(isGoDuration, {
-            message: 'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).'
+            message: t('globals.messages.goDuration')
         })
         .default('15s'),
     wait_timeout: z
         .string()
-        .describe('Wait timeout duration')
         .refine(isGoDuration, {
-            message: 'Invalid duration format. Should be a number followed by s (seconds), m (minutes), or h (hours).'
+            message: t('globals.messages.goDuration')
         })
         .default('5s'),
-    auth_protocol: z
-        .enum(['plain', 'login', 'cram', 'none'])
-        .describe('Authentication protocol'),
-    email_address: z.string().describe('From email address with name (e.g., "Name <email@example.com>")').nonempty({
-        message: "From email address is required"
+    auth_protocol: z.enum(['plain', 'login', 'cram', 'none']),
+    email_address: z.string().nonempty({
+        message: t('globals.messages.required')
     }),
     max_msg_retries: z
         .number({
-            invalid_type_error: 'Must be a number.',
-            required_error: 'Maximum message retries is required.'
+            invalid_type_error: t('globals.messages.mustBeNumber'),
+            required_error: t('globals.messages.required')
         })
-        .min(0, {
-            message: 'Max message retries must be at least 0.'
-        })
-        .max(100, {
-            message: 'Max message retries must be at most 100.'
-        })
-        .describe('Maximum message retries')
+        .min(0, { message: t('form.error.minmaxNumber', { min: 0, max: 1000 }) })
+        .max(1000, { message: t('form.error.minmaxNumber', { min: 0, max: 1000 }) })
         .default(2),
     hello_hostname: z.string().optional(),
     tls_type: z.enum(['none', 'starttls', 'tls']),

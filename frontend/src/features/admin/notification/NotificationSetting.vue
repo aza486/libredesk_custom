@@ -21,7 +21,7 @@
 import { ref, onMounted } from 'vue'
 import api from '@/api'
 import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
-
+import { useI18n } from 'vue-i18n'
 import NotificationsForm from './NotificationSettingForm.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
@@ -29,6 +29,7 @@ import { handleHTTPError } from '@/utils/http'
 import { Spinner } from '@/components/ui/spinner'
 
 const initialValues = ref({})
+const { t } = useI18n()
 const isLoading = ref(false)
 const emitter = useEmitter()
 
@@ -48,7 +49,6 @@ const getNotificationSettings = async () => {
     )
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -67,15 +67,13 @@ const submitForm = async (values) => {
         return [`notification.email.${key}`, value]
       })
     )
-    const resp = await api.updateEmailNotificationSettings(updatedValues)
+    await api.updateEmailNotificationSettings(updatedValues)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: resp.data.data
+      description: t('admin.notification.restartApp')
     })
     await getNotificationSettings()
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

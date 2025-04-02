@@ -8,21 +8,22 @@
     >
       <AccordionItem value="Actions" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
-          Actions
+          {{ $t('conversation.sidebar.action', 2) }}
         </AccordionTrigger>
         <AccordionContent class="space-y-4 p-4">
+
+          <!-- Agent assignment -->
           <ComboBox
             v-model="assignedUserID"
             :items="[{ value: 'none', label: 'None' }, ...usersStore.options]"
-            placeholder="Search agent"
-            defaultLabel="Assign agent"
+            :placeholder="t('form.field.selectAgent')"
             @select="selectAgent"
           >
             <template #item="{ item }">
               <div class="flex items-center gap-3 py-2">
                 <Avatar class="w-8 h-8">
                   <AvatarImage
-                    :src="item.value === 'none' ? '/default-avatar.png' : item.avatar_url"
+                    :src="item.value === 'none' ? '' : item.avatar_url || ''"
                     :alt="item.value === 'none' ? 'N' : item.label.slice(0, 2)"
                   />
                   <AvatarFallback>
@@ -37,7 +38,7 @@
               <div class="flex items-center gap-3">
                 <Avatar class="w-7 h-7" v-if="selected">
                   <AvatarImage
-                    :src="selected?.value === 'none' ? '/default-avatar.png' : selected?.avatar_url"
+                    :src="selected?.value === 'none' ? '' : selected?.avatar_url || ''"
                     :alt="selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)"
                   />
                   <AvatarFallback>
@@ -46,16 +47,16 @@
                     }}
                   </AvatarFallback>
                 </Avatar>
-                <span class="text-sm">{{ selected?.label || 'Assign agent' }}</span>
+                <span class="text-sm">{{ selected?.label || t('form.field.assignAgent') }}</span>
               </div>
             </template>
           </ComboBox>
 
+          <!-- Team assignment -->
           <ComboBox
             v-model="assignedTeamID"
             :items="[{ value: 'none', label: 'None' }, ...teamsStore.options]"
-            placeholder="Search team"
-            defaultLabel="Assign team"
+            :placeholder="t('form.field.selectTeam')"
             @select="selectTeam"
           >
             <template #item="{ item }">
@@ -74,20 +75,20 @@
             </template>
 
             <template #selected="{ selected }">
-              <div class="flex items-center gap-3" v-if="selected">
-                <div class="w-7 h-7 flex items-center justify-center">
+              <div class="flex items-center gap-3">
+                <div class="w-7 h-7 flex items-center justify-center" v-if="selected">
                   {{ selected?.emoji }}
                 </div>
-                <span class="text-sm">{{ selected?.label || 'Select team' }}</span>
+                <span class="text-sm">{{ selected?.label || t('form.field.assignTeam') }}</span>
               </div>
             </template>
           </ComboBox>
 
+          <!-- Priority assignment -->
           <ComboBox
             v-model="priorityID"
             :items="priorityOptions"
-            :defaultLabel="'Select priority'"
-            placeholder="Select priority"
+            :placeholder="t('form.field.selectPriority')"
             @select="selectPriority"
           >
             <template #item="{ item }">
@@ -109,7 +110,7 @@
                 >
                   <component :is="getPriorityIcon(selected?.value)" size="14" />
                 </div>
-                <span class="text-sm">{{ selected?.label || 'Select priority' }}</span>
+                <span class="text-sm">{{ selected?.label || t('form.field.selectPriority') }}</span>
               </div>
             </template>
           </ComboBox>
@@ -118,14 +119,14 @@
             v-if="conversationStore.current"
             v-model="conversationStore.current.tags"
             :items="tags.map((tag) => ({ label: tag, value: tag }))"
-            placeholder="Select tags"
+            :placeholder="t('form.field.selectTag', 2)"
           />
         </AccordionContent>
       </AccordionItem>
 
       <AccordionItem value="Information" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
-          Information
+          {{ $t('conversation.sidebar.information') }}
         </AccordionTrigger>
         <AccordionContent class="p-4">
           <ConversationInfo />
@@ -134,7 +135,7 @@
 
       <AccordionItem value="Previous conversations" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
-          Previous conversations
+          {{ $t('conversation.sidebar.previousConvo') }}
         </AccordionTrigger>
         <AccordionContent class="p-4">
           <div
@@ -144,7 +145,7 @@
             "
             class="text-center text-sm text-muted-foreground py-4"
           >
-            No previous conversations
+            {{ $t('conversation.sidebar.noPreviousConvo') }}
           </div>
           <div v-else class="space-y-3">
             <router-link
@@ -201,6 +202,7 @@ import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { CircleAlert, SignalLow, SignalMedium, SignalHigh, Users } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const emitter = useEmitter()
@@ -208,6 +210,7 @@ const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamsStore = useTeamStore()
 const tags = ref([])
+const { t } = useI18n()
 let isConversationChange = false
 
 // Watch for changes in the current conversation and set the flag
@@ -264,7 +267,6 @@ const fetchTags = async () => {
     tags.value = resp.data.data.map((item) => item.name)
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Error',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })

@@ -5,7 +5,6 @@
         <GeneralSettingForm
           :submitForm="submitForm"
           :initial-values="initialValues"
-          submitLabel="Save"
         />
         <Spinner v-if="isLoading" />
       </div>
@@ -21,7 +20,6 @@ import { ref, onMounted } from 'vue'
 import { Spinner } from '@/components/ui/spinner'
 import GeneralSettingForm from '@/features/admin/general/GeneralSettingForm.vue'
 import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
-
 import api from '@/api'
 
 const initialValues = ref({})

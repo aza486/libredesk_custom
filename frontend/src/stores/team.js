@@ -20,7 +20,6 @@ export const useTeamStore = defineStore('team', () => {
             teams.value = response?.data?.data || []
         } catch (error) {
             emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-                title: 'Error',
                 variant: 'destructive',
                 description: handleHTTPError(error).message
             })

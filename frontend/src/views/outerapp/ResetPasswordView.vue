@@ -5,19 +5,21 @@
         <Card class="bg-card border border-border shadow-xl rounded-xl">
           <CardContent class="p-8 space-y-6">
             <div class="space-y-2 text-center">
-              <CardTitle class="text-3xl font-bold text-foreground">Reset Password</CardTitle>
-              <p class="text-muted-foreground">
-                Enter your email to receive a password reset link.
-              </p>
+              <CardTitle class="text-3xl font-bold text-foreground">{{
+                t('auth.resetPassword')
+              }}</CardTitle>
+              <p class="text-muted-foreground">{{ t('auth.enterEmailForReset') }}</p>
             </div>
 
             <form @submit.prevent="requestResetAction" class="space-y-4">
               <div class="space-y-2">
-                <Label for="email" class="text-sm font-medium text-foreground">Email</Label>
+                <Label for="email" class="text-sm font-medium text-foreground">{{
+                  t('globals.terms.email')
+                }}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email address"
+                  :placeholder="t('auth.enterEmail')"
                   v-model.trim="resetForm.email"
                   :class="{ 'border-destructive': emailHasError }"
                   class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
@@ -50,9 +52,9 @@
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Sending...
+                  {{ t('auth.sending') }}
                 </span>
-                <span v-else>Send Reset Link</span>
+                <span v-else>{{ t('auth.sendResetLink') }}</span>
               </Button>
             </form>
 
@@ -67,17 +69,14 @@
               <router-link
                 to="/"
                 class="text-sm text-primary hover:text-primary/80 transition-all duration-200 ease-in-out"
-                >Back to Login</router-link
               >
+                {{ t('auth.backToLogin') }}
+              </router-link>
             </div>
           </CardContent>
         </Card>
       </div>
     </main>
-
-    <footer class="p-6 text-center">
-      <div class="text-sm text-muted-foreground space-x-4"></div>
-    </footer>
   </div>
 </template>
 
@@ -95,8 +94,10 @@ import { Input } from '@/components/ui/input'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { Label } from '@/components/ui/label'
+import { useI18n } from 'vue-i18n'
 
 const errorMessage = ref('')
+const { t } = useI18n()
 const isLoading = ref(false)
 const emitter = useEmitter()
 const router = useRouter()

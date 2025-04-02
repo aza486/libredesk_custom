@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"></Spinner>
+  <Spinner v-if="isLoading" />
   <SLAForm
     :initial-values="slaData"
     :submitForm="submitForm"
@@ -20,8 +20,10 @@ import { Spinner } from '@/components/ui/spinner'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
+import { useI18n } from 'vue-i18n'
 import { handleHTTPError } from '@/utils/http'
 
+const { t } = useI18n()
 const slaData = ref({})
 const emitter = useEmitter()
 const isLoading = ref(false)
@@ -40,20 +42,21 @@ const submitForm = async (values) => {
     if (props.id) {
       await api.updateSLA(props.id, values)
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Success',
-        description: 'SLA updated successfully'
+        description: t('globals.messages.updatedSuccessfully', {
+          name: t('globals.terms.slaPolicy')
+        })
       })
     } else {
       await api.createSLA(values)
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Success',
-        description: 'SLA created successfully'
+        description: t('globals.messages.createdSuccessfully', {
+          name: t('globals.terms.slaPolicy')
+        })
       })
       router.push({ name: 'sla-list' })
     }
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Could not save SLA',
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
@@ -63,11 +66,11 @@ const submitForm = async (values) => {
 }
 
 const breadCrumLabel = () => {
-  return props.id ? 'Edit' : 'New'
+  return props.id ? t('globals.buttons.edit') : t('globals.buttons.new')
 }
 
 const breadcrumbLinks = [
-  { path: 'sla-list', label: 'SLA' },
+  { path: 'sla-list', label: t('globals.terms.sla') },
   { path: '', label: breadCrumLabel() }
 ]
 
@@ -79,7 +82,6 @@ onMounted(async () => {
       slaData.value = resp.data.data
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Could not fetch SLA',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })

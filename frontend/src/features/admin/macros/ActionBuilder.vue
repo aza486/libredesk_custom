@@ -43,7 +43,7 @@
                     <div v-if="action.type === 'assign_user'">
                       <div class="flex items-center flex-1 gap-2 ml-2">
                         <Avatar class="w-7 h-7">
-                          <AvatarImage :src="item.avatar_url" :alt="item.label.slice(0, 2)" />
+                          <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
                           <AvatarFallback
                             >{{ item.label.slice(0, 2).toUpperCase() }}
                           </AvatarFallback>
@@ -68,7 +68,7 @@
                         <div v-if="selected" class="flex items-center gap-2">
                           <Avatar class="w-7 h-7">
                             <AvatarImage
-                              :src="selected.avatar_url"
+                              :src="selected.avatar_url || ''"
                               :alt="selected.label.slice(0, 2)"
                             />
                             <AvatarFallback>{{
@@ -77,7 +77,7 @@
                           </Avatar>
                           <span>{{ selected.label }}</span>
                         </div>
-                        <span v-else>Select user</span>
+                        <span v-else>{{ $t('form.field.selectUser') }}</span>
                       </div>
                     </div>
                     <div v-else-if="action.type === 'assign_team'">
@@ -86,13 +86,15 @@
                           {{ selected.emoji }}
                           <span>{{ selected.label }}</span>
                         </span>
-                        <span v-else>Select team</span>
+                        <span v-else>
+                          {{ $t('form.field.selectTeam') }}
+                        </span>
                       </div>
                     </div>
                     <div v-else-if="selected">
                       {{ selected.label }}
                     </div>
-                    <div v-else>Select</div>
+                    <div v-else>{{ $t('form.field.select') }}</div>
                   </template>
                 </ComboBox>
               </div>
@@ -131,7 +133,7 @@ import { SelectTag } from '@/components/ui/select'
 import { useTagStore } from '@/stores/tag'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 
-const model = defineModel("actions", {
+const model = defineModel('actions', {
   type: Array,
   required: true,
   default: () => []

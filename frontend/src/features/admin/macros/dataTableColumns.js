@@ -2,11 +2,11 @@ import { h } from 'vue'
 import dropdown from './dataTableDropdown.vue'
 import { format } from 'date-fns'
 
-export const columns = [
+export const createColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Name')
+      return h('div', { class: 'text-center' }, t('form.field.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -15,7 +15,7 @@ export const columns = [
   {
     accessorKey: 'visibility',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Visibility')
+      return h('div', { class: 'text-center' }, t('admin.macro.visibility'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, row.getValue('visibility'))
@@ -24,7 +24,7 @@ export const columns = [
   {
     accessorKey: 'usage_count',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Usage')
+      return h('div', { class: 'text-center' }, t('form.field.usage'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, row.getValue('usage_count'))
@@ -33,7 +33,7 @@ export const columns = [
   {
     accessorKey: 'created_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Created at')
+      return h('div', { class: 'text-center' }, t('form.field.createdAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('created_at'), 'PPpp'))
@@ -42,7 +42,7 @@ export const columns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Updated at')
+      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

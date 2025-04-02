@@ -39,7 +39,7 @@
           @click="toggleQuote"
           class="text-xs cursor-pointer text-muted-foreground px-2 py-1 w-max hover:bg-muted hover:text-primary rounded-md transition-all"
         >
-          {{ showQuotedText ? 'Hide quoted text' : 'Show quoted text' }}
+          {{ showQuotedText ? t('conversation.hideQuotedText') : t('conversation.showQuotedText') }}
         </div>
 
         <!-- Attachments -->
@@ -73,6 +73,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Letter } from 'vue-letter'
 import { useAppSettingsStore } from '@/stores/appSettings'
+import { useI18n } from 'vue-i18n'
 import MessageAttachmentPreview from '@/features/conversation/message/attachment/MessageAttachmentPreview.vue'
 
 const props = defineProps({
@@ -82,6 +83,7 @@ const props = defineProps({
 const convStore = useConversationStore()
 const settingsStore = useAppSettingsStore()
 const showQuotedText = ref(false)
+const { t } = useI18n()
 
 const getAvatar = computed(() => {
   return convStore.current?.contact?.avatar_url || ''

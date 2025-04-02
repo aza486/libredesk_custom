@@ -3,26 +3,28 @@
     <!-- Basic Fields -->
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>Name</FormLabel>
+        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
         <FormControl>
-          <Input type="text" placeholder="Inbox name" v-bind="componentField" />
+          <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
-        <FormDescription> Enter the name of the inbox. </FormDescription>
+        <FormDescription> {{ $t('admin.inbox.name.description') }} </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
 
     <FormField v-slot="{ componentField }" name="from">
       <FormItem>
-        <FormLabel>From Email Address</FormLabel>
+        <FormLabel>{{ $t('form.field.fromEmailAddress') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
-            placeholder="My Support <support@example.com>"
+            :placeholder="t('admin.inbox.fromEmailAddress.placeholder')"
             v-bind="componentField"
           />
         </FormControl>
-        <FormDescription> Enter the from email address. </FormDescription>
+        <FormDescription>
+          {{ $t('admin.inbox.fromEmailAddress.description') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -31,8 +33,8 @@
     <FormField v-slot="{ componentField, handleChange }" name="enabled">
       <FormItem class="flex flex-row items-center justify-between box p-4">
         <div class="space-y-0.5">
-          <FormLabel class="text-base">Enabled</FormLabel>
-          <FormDescription>Enable scanning inbox and sending emails</FormDescription>
+          <FormLabel class="text-base">{{ $t('form.field.enabled') }}</FormLabel>
+          <FormDescription>{{ $t('admin.inbox.enabled.description') }}</FormDescription>
         </div>
         <FormControl>
           <Switch :checked="componentField.modelValue" @update:checked="handleChange" />
@@ -43,11 +45,10 @@
     <FormField v-slot="{ componentField, handleChange }" name="csat_enabled">
       <FormItem class="flex flex-row items-center justify-between box p-4">
         <div class="space-y-0.5">
-          <FormLabel class="text-base">CSAT Surveys</FormLabel>
-          <FormDescription
-            >Send customer satisfaction surveys when conversation is marked as resolved. <br />
-            For better control on when to send surveys, disable this option and create an automation
-            rule to send surveys.
+          <FormLabel class="text-base">{{ $t('admin.inbox.csatSurveys') }}</FormLabel>
+          <FormDescription>
+            {{ $t('admin.inbox.csatSurveys.description_1') }}<br />
+            {{ $t('admin.inbox.csatSurveys.description_2') }}
           </FormDescription>
         </div>
         <FormControl>
@@ -58,7 +59,7 @@
 
     <!-- IMAP Section -->
     <div class="box p-4 space-y-4">
-      <h3 class="font-semibold">IMAP Configuration</h3>
+      <h3 class="font-semibold">{{ $t('admin.inbox.imapConfig') }}</h3>
 
       <FormField v-slot="{ componentField }" name="imap.host">
         <FormItem>
@@ -72,7 +73,7 @@
 
       <FormField v-slot="{ componentField }" name="imap.port">
         <FormItem>
-          <FormLabel>Port</FormLabel>
+          <FormLabel>{{ $t('form.field.port') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="993" v-bind="componentField" />
           </FormControl>
@@ -82,13 +83,16 @@
 
       <FormField v-slot="{ componentField }" name="imap.mailbox">
         <FormItem>
-          <FormLabel>Mailbox</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.mailbox') }}</FormLabel>
           <FormControl>
-            <Input type="text" placeholder="INBOX" v-bind="componentField" :defaultValue="'INBOX'" />
+            <Input
+              type="text"
+              placeholder="INBOX"
+              v-bind="componentField"
+            />
           </FormControl>
           <FormDescription>
-            Mailbox (folder) to scan for incoming emails. Default is INBOX (usually no need to
-            change).
+            {{ $t('admin.inbox.mailbox.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -96,9 +100,9 @@
 
       <FormField v-slot="{ componentField }" name="imap.username">
         <FormItem>
-          <FormLabel>Username</FormLabel>
+          <FormLabel>{{ $t('form.field.username') }}</FormLabel>
           <FormControl>
-            <Input type="text" placeholder="user@example.com" v-bind="componentField" />
+            <Input type="text" placeholder="inbox@example.com" v-bind="componentField" />
           </FormControl>
           <FormMessage />
         </FormItem>
@@ -106,7 +110,7 @@
 
       <FormField v-slot="{ componentField }" name="imap.password">
         <FormItem>
-          <FormLabel>Password</FormLabel>
+          <FormLabel>{{ $t('form.field.password') }}</FormLabel>
           <FormControl>
             <Input type="password" placeholder="••••••••" v-bind="componentField" />
           </FormControl>
@@ -120,7 +124,7 @@
           <FormControl>
             <Select v-bind="componentField">
               <SelectTrigger>
-                <SelectValue placeholder="Select TLS" />
+                <SelectValue :placeholder="t('form.field.selectTLS')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">OFF</SelectItem>
@@ -129,19 +133,19 @@
               </SelectContent>
             </Select>
           </FormControl>
-          <FormDescription>Choose the encryption method for IMAP.</FormDescription>
+          <FormDescription>{{ $t('admin.inbox.imap.tls.description') }}</FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField }" name="imap.read_interval">
         <FormItem>
-          <FormLabel>Scan Interval</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.imapScanInterval') }}</FormLabel>
           <FormControl>
-            <Input type="text" placeholder="120s" v-bind="componentField" />
+            <Input type="text" placeholder="5m" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            Interval to scan the inbox for new emails. Format: 120s, 1m, 1h
+            {{ $t('admin.inbox.imapScanInterval.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -149,14 +153,12 @@
 
       <FormField v-slot="{ componentField }" name="imap.scan_inbox_since">
         <FormItem>
-          <FormLabel>Scan Inbox Since</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.imapScanInboxSince') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="48h" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            To improve performance in large helpdesks with high email volume, this limits scans to
-            emails received since the specified duration (e.g., `2h`, `48h`) by subtracting it from
-            the current time.
+            {{ $t('admin.inbox.imapScanInboxSince.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -165,8 +167,10 @@
       <FormField v-slot="{ componentField, handleChange }" name="imap.tls_skip_verify">
         <FormItem class="flex flex-row items-center justify-between box p-4">
           <div class="space-y-0.5">
-            <FormLabel class="text-base">Skip TLS Verification</FormLabel>
-            <FormDescription> Skip hostname check on the TLS certificate. </FormDescription>
+            <FormLabel class="text-base">{{ $t('admin.inbox.skipTLSVerification') }}</FormLabel>
+            <FormDescription>
+              {{ $t('admin.inbox.skipTLSVerification.description') }}
+            </FormDescription>
           </div>
           <FormControl>
             <Switch :checked="componentField.modelValue" @update:checked="handleChange" />
@@ -177,11 +181,11 @@
 
     <!-- SMTP Section -->
     <div class="box p-4 space-y-4">
-      <h3 class="font-semibold">SMTP Configuration</h3>
+      <h3 class="font-semibold">{{ $t('admin.inbox.smtpConfig') }}</h3>
 
       <FormField v-slot="{ componentField }" name="smtp.host">
         <FormItem>
-          <FormLabel>Host</FormLabel>
+          <FormLabel>{{ $t('form.field.host') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="smtp.gmail.com" v-bind="componentField" />
           </FormControl>
@@ -191,7 +195,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.port">
         <FormItem>
-          <FormLabel>Port</FormLabel>
+          <FormLabel>{{ $t('form.field.port') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="587" v-bind="componentField" />
           </FormControl>
@@ -201,7 +205,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.username">
         <FormItem>
-          <FormLabel>Username</FormLabel>
+          <FormLabel>{{ $t('form.field.username') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="user@example.com" v-bind="componentField" />
           </FormControl>
@@ -211,7 +215,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.password">
         <FormItem>
-          <FormLabel>Password</FormLabel>
+          <FormLabel>{{ $t('form.field.password') }}</FormLabel>
           <FormControl>
             <Input type="password" placeholder="••••••••" v-bind="componentField" />
           </FormControl>
@@ -221,12 +225,12 @@
 
       <FormField v-slot="{ componentField }" name="smtp.max_conns">
         <FormItem>
-          <FormLabel>Max Connections</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.maxConnections') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="10" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            Maximum number of concurrent connections to the server.
+            {{ $t('admin.inbox.maxConnections.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -234,24 +238,23 @@
 
       <FormField v-slot="{ componentField }" name="smtp.max_msg_retries">
         <FormItem>
-          <FormLabel>Max Retries</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.maxRetries') }}</FormLabel>
           <FormControl>
-            <Input type="number" placeholder="3s" v-bind="componentField" />
+            <Input type="number" placeholder="3" v-bind="componentField" />
           </FormControl>
-          <FormDescription> Number of times to retry when a message fails. </FormDescription>
+          <FormDescription>{{ $t('admin.inbox.maxRetries.description') }} </FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField }" name="smtp.idle_timeout">
         <FormItem>
-          <FormLabel>Idle Timeout</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.idleTimeout') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="25s" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            IdleTimeout is the maximum time to wait for new activity on a connection before closing
-            it and removing it from the pool.
+            {{ $t('admin.inbox.idleTimeout.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -259,15 +262,12 @@
 
       <FormField v-slot="{ componentField }" name="smtp.wait_timeout">
         <FormItem>
-          <FormLabel>Wait Timeout</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.waitTimeout') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="60s" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            PoolWaitTimeout is the maximum time to wait to obtain a connection from a pool before
-            timing out. This may happen when all open connections are busy sending e-mails and
-            they're not returning to the pool fast enough. This is also the timeout used when
-            creating new SMTP connections.
+            {{ $t('admin.inbox.waitTimeout.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -275,7 +275,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.auth_protocol">
         <FormItem>
-          <FormLabel>Auth Protocol</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.authProtocol') }}</FormLabel>
           <FormControl>
             <Select v-bind="componentField">
               <SelectTrigger>
@@ -289,14 +289,14 @@
               </SelectContent>
             </Select>
           </FormControl>
-          <FormDescription> Authentication protocol to use. </FormDescription>
+          <FormDescription> {{ $t('admin.inbox.authProtocol.description') }} </FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField }" name="smtp.tls_type">
         <FormItem>
-          <FormLabel>TLS</FormLabel>
+          <FormLabel>{{ t('admin.inbox.tls') }}</FormLabel>
           <FormControl>
             <Select v-bind="componentField">
               <SelectTrigger>
@@ -309,19 +309,19 @@
               </SelectContent>
             </Select>
           </FormControl>
-          <FormDescription> TLS/SSL encryption, STARTTLS is commonly used. </FormDescription>
+          <FormDescription> {{ $t('admin.inbox.tls.description') }} </FormDescription>
           <FormMessage />
         </FormItem>
       </FormField>
 
       <FormField v-slot="{ componentField }" name="smtp.hello_hostname">
         <FormItem>
-          <FormLabel>HELO Hostname</FormLabel>
+          <FormLabel>{{ $t('admin.inbox.heloHostname') }}</FormLabel>
           <FormControl>
-            <Input type="text" placeholder="smtp.example.com" v-bind="componentField" />
+            <Input type="text" placeholder="" v-bind="componentField" />
           </FormControl>
           <FormDescription>
-            The hostname to use in the HELO/EHLO command. If not set, defaults to localhost.
+            {{ $t('admin.inbox.heloHostname.description') }}
           </FormDescription>
           <FormMessage />
         </FormItem>
@@ -330,8 +330,10 @@
       <FormField v-slot="{ componentField, handleChange }" name="smtp.tls_skip_verify">
         <FormItem class="flex flex-row items-center justify-between box p-4">
           <div class="space-y-0.5">
-            <FormLabel class="text-base">Skip TLS Verification</FormLabel>
-            <FormDescription> Skip hostname check on the TLS certificate. </FormDescription>
+            <FormLabel class="text-base">{{ $t('admin.inbox.skipTLSVerification') }}</FormLabel>
+            <FormDescription>
+              {{ $t('admin.inbox.skipTLSVerification.description') }}
+            </FormDescription>
           </div>
           <FormControl>
             <Switch :checked="componentField.modelValue" @update:checked="handleChange" />
@@ -341,16 +343,16 @@
     </div>
 
     <Button type="submit" :is-loading="isLoading" :disabled="isLoading">
-      {{ props.submitLabel }}
+      {{ submitLabel }}
     </Button>
   </form>
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, computed } from 'vue'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
-import { formSchema } from './formSchema.js'
+import { createFormSchema } from './formSchema.js'
 import {
   FormControl,
   FormField,
@@ -369,6 +371,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
   initialValues: {
@@ -381,7 +384,7 @@ const props = defineProps({
   },
   submitLabel: {
     type: String,
-    default: 'Submit'
+    default: ''
   },
   isLoading: {
     type: Boolean,
@@ -389,8 +392,44 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const form = useForm({
-  validationSchema: toTypedSchema(formSchema)
+  validationSchema: toTypedSchema(createFormSchema(t)),
+  initialValues: {
+    name: '',
+    from: '',
+    enabled: false,
+    csat_enabled: false,
+    imap: {
+      host: 'imap.gmail.com',
+      port: 993,
+      mailbox: 'INBOX',
+      username: '',
+      password: '',
+      tls_type: 'none',
+      read_interval: '5m',
+      scan_inbox_since: '48h',
+      tls_skip_verify: false
+    },
+    smtp: {
+      host: 'smtp.gmail.com',
+      port: 587,
+      username: '',
+      password: '',
+      max_conns: 10,
+      max_msg_retries: 3,
+      idle_timeout: '25s',
+      wait_timeout: '60s',
+      auth_protocol: 'login',
+      tls_type: 'none',
+      hello_hostname: '',
+      tls_skip_verify: false
+    }
+  }
+})
+
+const submitLabel = computed(() => {
+  return props.submitLabel || t('globals.buttons.save')
 })
 
 const onSubmit = form.handleSubmit(async (values) => {

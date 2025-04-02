@@ -65,7 +65,6 @@ export const useUserStore = defineStore('user', () => {
     } catch (error) {
       if (error.response?.status !== 401) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          title: 'Could not fetch current user',
           variant: 'destructive',
           description: handleHTTPError(error).message
         })
