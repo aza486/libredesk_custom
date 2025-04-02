@@ -91,7 +91,7 @@ func handleUpdateBusinessHours(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 	if businessHours.Name == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "business hour `Name`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`name`"), nil, envelope.InputError)
 	}
 	if err := app.businessHours.Update(id, businessHours.Name, businessHours.Description, businessHours.IsAlwaysOpen, businessHours.Hours, businessHours.Holidays); err != nil {
 		return sendErrorEnvelope(r, err)
