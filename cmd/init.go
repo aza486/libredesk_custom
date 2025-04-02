@@ -678,6 +678,7 @@ func initOIDC(db *sqlx.DB, settings *setting.Manager, i18n *i18n.I18n) *oidc.Man
 // initI18n inits i18n.
 func initI18n(fs stuffbin.FileSystem) *i18n.I18n {
 	fileName := cmp.Or(ko.String("app.lang"), defLang)
+	log.Printf("loading i18n language file: %s", fileName)
 	file, err := fs.Get("i18n/" + fileName + ".json")
 	if err != nil {
 		log.Fatalf("error reading i18n language file `%s` : %v", fileName, err)

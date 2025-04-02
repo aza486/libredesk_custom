@@ -36,7 +36,7 @@ func handleOIDCLogin(r *fastglue.Request) error {
 		oidcStateSessKey: state,
 	}); err != nil {
 		app.lo.Error("error saving state in session", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("user.errorSavingSession"), nil, envelope.GeneralError)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorSaving", "name", "{globals.terms.session}"), nil, envelope.GeneralError)
 	}
 
 	authURL, err := app.auth.LoginURL(providerID, state)
