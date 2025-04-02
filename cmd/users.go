@@ -229,7 +229,7 @@ func handleCreateUser(r *fastglue.Request) error {
 
 		if err := app.notifier.Send(notifier.Message{
 			RecipientEmails: []string{user.Email.String},
-			Subject:         "Welcome",
+			Subject:         "Welcome to Libredesk",
 			Content:         content,
 			Provider:        notifier.ProviderEmail,
 		}); err != nil {
