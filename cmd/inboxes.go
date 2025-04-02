@@ -126,11 +126,9 @@ func handleDeleteInbox(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
 	if err := reloadInboxes(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.couldNotReload", "name", "{globals.terms.inbox}"), nil, envelope.GeneralError)
 	}
-
 	return r.SendEnvelope(true)
 }
 
@@ -140,17 +138,14 @@ func validateInbox(app *App, inbox imodels.Inbox) error {
 	if _, err := mail.ParseAddress(inbox.From); err != nil {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalidFromAddress"), nil)
 	}
-
 	if len(inbox.Config) == 0 {
-		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.inbox} config"), nil)
+		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "config"), nil)
 	}
-
 	if inbox.Name == "" {
-		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.inbox} name"), nil)
+		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "name"), nil)
 	}
-
 	if inbox.Channel == "" {
-		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.inbox} channel"), nil)
+		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "channel"), nil)
 	}
 	return nil
 }

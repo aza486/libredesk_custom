@@ -648,7 +648,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 		if err := app.conversation.DeleteConversation(conversationUUID); err != nil {
 			app.lo.Error("error deleting conversation", "error", err)
 		}
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorSending", "name", "{globals.terms.conversation}"), nil))
+		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorSending", "name", "{globals.terms.message}"), nil))
 	}
 
 	// Assign the conversation to the agent or team.

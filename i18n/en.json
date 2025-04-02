@@ -539,7 +539,7 @@
   "account.avatarRemoved": "Avatar removed",
   "conversation.resolveWithoutAssignee": "Cannot resolve the conversation without an assigned user, Please assign a user before attempting to resolve",
   "conversation.notMemberOfTeam": "You're not a member of this team, Please refresh the page and try again",
-  "conversation.viewPermissionDenied": "You do not have access to view this view",
+  "conversation.viewPermissionDenied": "You do not have access to this view",
   "conversation.errorGeneratingMessageID": "Error generating message ID",
   "conversation.invalidSnoozeDuration": "Invalid snooze duration",
   "conversation.errorUnassigningOpenConversations": "Error unassigning open conversations",

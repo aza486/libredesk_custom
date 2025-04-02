@@ -411,7 +411,7 @@ func handleSetPassword(r *fastglue.Request) error {
 	}
 
 	if password == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`password`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.password}"), nil, envelope.InputError)
 	}
 
 	if err := app.user.ResetPassword(token, password); err != nil {

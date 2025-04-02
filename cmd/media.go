@@ -76,7 +76,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 		app.lo.Error("error: uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", consts.MaxFileUploadSizeMB)
 		return r.SendErrorEnvelope(
 			fasthttp.StatusRequestEntityTooLarge,
-			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprint(consts.MaxFileUploadSizeMB), "unit", "MB"),
+			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", consts.MaxFileUploadSizeMB)),
 			nil,
 			envelope.GeneralError,
 		)
