@@ -89,7 +89,6 @@
               type="text"
               placeholder="INBOX"
               v-bind="componentField"
-              :defaultValue="'INBOX'"
             />
           </FormControl>
           <FormDescription>
@@ -396,6 +395,37 @@ const props = defineProps({
 const { t } = useI18n()
 const form = useForm({
   validationSchema: toTypedSchema(createFormSchema(t)),
+  initialValues: {
+    name: '',
+    from: '',
+    enabled: false,
+    csat_enabled: false,
+    imap: {
+      host: 'imap.gmail.com',
+      port: 993,
+      mailbox: 'INBOX',
+      username: '',
+      password: '',
+      tls_type: 'none',
+      read_interval: '5m',
+      scan_inbox_since: '48h',
+      tls_skip_verify: false
+    },
+    smtp: {
+      host: 'smtp.gmail.com',
+      port: 587,
+      username: '',
+      password: '',
+      max_conns: 10,
+      max_msg_retries: 3,
+      idle_timeout: '25s',
+      wait_timeout: '60s',
+      auth_protocol: 'login',
+      tls_type: 'none',
+      hello_hostname: '',
+      tls_skip_verify: false
+    }
+  }
 })
 
 const submitLabel = computed(() => {
