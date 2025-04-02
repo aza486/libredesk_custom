@@ -52,7 +52,7 @@ func handleCreateBusinessHours(r *fastglue.Request) error {
 	}
 
 	if businessHours.Name == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.entitites.name}"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
 	if err := app.businessHours.Create(businessHours.Name, businessHours.Description, businessHours.IsAlwaysOpen, businessHours.Hours, businessHours.Holidays); err != nil {
