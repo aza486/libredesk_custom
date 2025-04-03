@@ -46,17 +46,27 @@
             <span class="truncate text-xs">{{ userStore.email }}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm justify-between">
-          <span class="text-muted-foreground">
-            {{ t('navigation.away') }}
-          </span>
-          <Switch
-            :checked="
-              userStore.user.availability_status === 'away' ||
-              userStore.user.availability_status === 'away_manual'
-            "
-            @update:checked="(val) => userStore.updateUserAvailability(val ? 'away' : 'online')"
-          />
+        <div class="space-y-2">
+          <template
+            v-for="(item, index) in [
+              {
+                label: t('navigation.away'),
+                checked: userStore.user.availability_status === 'away_manual',
+                action: (val) => userStore.updateUserAvailability(val ? 'away' : 'online')
+              },
+              {
+                label: t('navigation.reassign_replies'),
+                checked: userStore.user.reassign_replies,
+                action: (val) => userStore.toggleAssignReplies(val)
+              }
+            ]"
+            :key="index"
+          >
+            <div class="flex items-center gap-2 px-1 text-left text-sm justify-between">
+              <span class="text-muted-foreground">{{ item.label }}</span>
+              <Switch :checked="item.checked" @update:checked="item.action" />
+            </div>
+          </template>
         </div>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />

@@ -31,6 +31,7 @@ SELECT
     u.first_name,
     u.last_name,
     u.availability_status,
+    u.reassign_replies,
     array_agg(DISTINCT r.name) as roles,
     COALESCE(
          (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
@@ -135,3 +136,8 @@ INSERT INTO contact_channels (contact_id, inbox_id, identifier)
 VALUES ((SELECT id FROM contact), $6, $7)
 ON CONFLICT (contact_id, inbox_id) DO UPDATE SET updated_at = now()
 RETURNING contact_id, id;
+
+-- name: set-reassign-replies
+UPDATE users
+SET reassign_replies = $2
+WHERE id = $1;

@@ -524,13 +524,25 @@ SET
 WHERE uuid = $1;
 
 -- name: re-open-conversation
--- Open conversation if it is not already open.
+-- Open conversation if it is not already open and remove the assigned user if the user has reassign_replies set to true.
 UPDATE conversations
-SET status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'), snoozed_until = NULL,
-    updated_at = now()
-WHERE uuid = $1 and status_id in (
+SET 
+  status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'),
+  snoozed_until = NULL,
+  updated_at = now(),
+  assigned_user_id = CASE
+    WHEN EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = conversations.assigned_user_id 
+        AND users.reassign_replies = TRUE
+    ) THEN NULL
+    ELSE assigned_user_id
+  END
+WHERE 
+  uuid = $1
+  AND status_id IN (
     SELECT id FROM conversation_statuses WHERE name NOT IN ('Open')
-)
+  )
 
 -- name: delete-conversation
 DELETE FROM conversations WHERE uuid = $1;

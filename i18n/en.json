@@ -236,6 +236,7 @@
   "navigation.views": "Views",
   "navigation.edit": "Edit",
   "navigation.delete": "Delete",
+  "navigation.reassign_replies": "Reassign replies",
   "form.field.name": "Name",
   "form.field.inbox": "Inbox",
   "form.field.provider": "Provider",

@@ -8,7 +8,14 @@ import (
 	"github.com/volatiletech/null/v9"
 )
 
-var (
+const (
+	SystemUserEmail = "System"
+
+	// User types
+	UserTypeAgent   = "agent"
+	UserTypeContact = "contact"
+
+	// User availability statuses
 	Online     = "online"
 	Offline    = "offline"
 	Away       = "away"
@@ -28,6 +35,7 @@ type User struct {
 	AvatarURL          null.String    `db:"avatar_url" json:"avatar_url"`
 	Enabled            bool           `db:"enabled" json:"enabled"`
 	Password           string         `db:"password" json:"-"`
+	ReassignReplies    bool           `db:"reassign_replies" json:"reassign_replies"`
 	Roles              pq.StringArray `db:"roles" json:"roles"`
 	Permissions        pq.StringArray `db:"permissions" json:"permissions"`
 	Meta               pq.StringArray `db:"meta" json:"meta"`

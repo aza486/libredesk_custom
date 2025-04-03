@@ -98,6 +98,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/users/me", auth(handleUpdateCurrentUser))
 	g.GET("/api/v1/users/me/teams", auth(handleGetCurrentUserTeams))
 	g.PUT("/api/v1/users/me/availability", auth(handleUpdateUserAvailability))
+	g.PUT("/api/v1/users/me/reassign-replies/toggle", auth(handleToggleReassignReplies))
 	g.DELETE("/api/v1/users/me/avatar", auth(handleDeleteAvatar))
 	g.GET("/api/v1/users/compact", auth(handleGetUsersCompact))
 	g.GET("/api/v1/users", perm(handleGetUsers, "users:manage"))

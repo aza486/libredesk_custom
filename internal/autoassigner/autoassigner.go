@@ -64,16 +64,12 @@ func New(teamStore teamStore, conversationStore conversationStore, systemUser um
 		teamMaxAutoAssignments: make(map[int]int),
 		roundRobinBalancer:     make(map[int]*balance.Balance),
 	}
-	if err := e.populateTeamBalancer(); err != nil {
-		return nil, err
-	}
 	return &e, nil
 }
 
 // Run initiates the conversation assignment process and is to be invoked as a goroutine.
 // This function continuously assigns unassigned conversations to agents at regular intervals.
 func (e *Engine) Run(ctx context.Context, autoAssignInterval time.Duration) {
-	time.Sleep(2 * time.Second)
 	ticker := time.NewTicker(autoAssignInterval)
 	defer ticker.Stop()
 
@@ -159,8 +155,14 @@ func (e *Engine) populateTeamBalancer() error {
 
 		balancer := e.roundRobinBalancer[team.ID]
 		existingUsers := make(map[string]struct{})
-
 		for _, user := range users {
+			// Skip user if availability status is `away_manual`
+			if user.AvailabilityStatus == umodels.AwayManual {
+				e.lo.Debug("skipping user with away_manual status", "user_id", user.ID)
+				continue
+			}
+
+			// Add user to the balancer pool
 			uid := strconv.Itoa(user.ID)
 			existingUsers[uid] = struct{}{}
 			if err := balancer.Add(uid, 1); err != nil {
@@ -227,7 +229,7 @@ func (e *Engine) assignConversations() error {
 
 		teamMaxAutoAssignments := e.teamMaxAutoAssignments[conversation.AssignedTeamID.Int]
 		// Check if user has reached the max auto assigned conversations limit,
-		// If the limit is set to 0, it means there is no limit.
+		// 0 is unlimited.
 		if teamMaxAutoAssignments != 0 {
 			if activeConversationsCount >= teamMaxAutoAssignments {
 				e.lo.Debug("user has reached max auto assigned conversations limit, skipping auto assignment", "user_id", userID,

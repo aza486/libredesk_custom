@@ -236,6 +236,7 @@
     "navigation.views": "दृश्ये",
     "navigation.edit": "संपादित करा",
     "navigation.delete": "हटवा",
+    "navigation.reassign_replies": "प्रतिसाद पुन्हा नियुक्त करा",
     "form.field.name": "नाव",
     "form.field.inbox": "इनबॉक्स",
     "form.field.provider": "प्रदाता",

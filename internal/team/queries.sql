@@ -11,7 +11,7 @@ SELECT id, emoji, created_at, updated_at, name, conversation_assignment_type, ti
 SELECT id, emoji, name, conversation_assignment_type, timezone, business_hours_id, sla_policy_id, max_auto_assigned_conversations from teams where id = $1;
 
 -- name: get-team-members
-SELECT u.id, t.id as team_id
+SELECT u.id, t.id as team_id, u.availability_status, u.reassign_replies
 FROM users u
 JOIN team_members tm ON tm.user_id = u.id
 JOIN teams t ON t.id = tm.team_id
