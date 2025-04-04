@@ -125,6 +125,7 @@ CREATE TABLE users (
     reset_password_token_expiry TIMESTAMPTZ NULL,
 	availability_status user_availability_status DEFAULT 'offline' NOT NULL,
 	last_active_at TIMESTAMPTZ NULL,
+	last_login_at TIMESTAMPTZ NULL,
 	reassign_replies BOOL DEFAULT FALSE NOT NULL,
     CONSTRAINT constraint_users_on_country CHECK (LENGTH(country) <= 140),
     CONSTRAINT constraint_users_on_phone_number CHECK (LENGTH(phone_number) <= 20),

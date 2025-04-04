@@ -14,5 +14,12 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 	if err != nil {
 		return err
 	}
+
+	_, err = db.Exec(`
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ NULL;
+	`)
+	if err != nil {
+		return err
+	}
 	return nil
 }

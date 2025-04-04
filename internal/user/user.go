@@ -64,6 +64,7 @@ type queries struct {
 	UpdateAvailability    *sqlx.Stmt `query:"update-availability"`
 	UpdateLastActiveAt    *sqlx.Stmt `query:"update-last-active-at"`
 	UpdateInactiveOffline *sqlx.Stmt `query:"update-inactive-offline"`
+	UpdateLastLoginAt     *sqlx.Stmt `query:"update-last-login-at"`
 	SoftDeleteUser        *sqlx.Stmt `query:"soft-delete-user"`
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
@@ -225,6 +226,15 @@ func (u *Manager) Update(id int, user models.User) error {
 
 	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled); err != nil {
 		u.lo.Error("error updating user", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+	}
+	return nil
+}
+
+// UpdateLastLoginAt updates the last login timestamp of an user.
+func (u *Manager) UpdateLastLoginAt(id int) error {
+	if _, err := u.q.UpdateLastLoginAt.Exec(id); err != nil {
+		u.lo.Error("error updating user last login at", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil

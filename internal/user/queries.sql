@@ -24,6 +24,7 @@ SELECT
     u.id,
     u.email,
     u.password,
+    u.type,
     u.created_at,
     u.updated_at,
     u.enabled,
@@ -32,6 +33,8 @@ SELECT
     u.last_name,
     u.availability_status,
     u.reassign_replies,
+    u.last_active_at,
+    u.last_login_at,
     array_agg(DISTINCT r.name) as roles,
     COALESCE(
          (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
@@ -140,4 +143,10 @@ RETURNING contact_id, id;
 -- name: set-reassign-replies
 UPDATE users
 SET reassign_replies = $2
+WHERE id = $1;
+
+-- name: update-last-login-at
+UPDATE users
+SET last_login_at = now(),
+updated_at = now()
 WHERE id = $1;

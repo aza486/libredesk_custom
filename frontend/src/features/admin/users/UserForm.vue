@@ -1,5 +1,59 @@
 <template>
-  <form @submit.prevent="onSubmit" class="space-y-6">
+  <form @submit.prevent="onSubmit" class="space-y-8">
+
+    <!-- Summary Section -->
+    <div class="bg-muted/30 box py-6 px-3">
+      <div class="flex items-start gap-6">
+        <Avatar class="w-20 h-20">
+          <AvatarImage :src="props.initialValues.avatar_url" :alt="Avatar" />
+          <AvatarFallback>
+            {{ getInitials(props.initialValues.first_name, props.initialValues.last_name) }}
+          </AvatarFallback>
+        </Avatar>
+
+        <div class="space-y-4 flex-2">
+          <div class="flex items-center gap-3">
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ props.initialValues.first_name }} {{ props.initialValues.last_name }}
+            </h3>
+            <Badge :class="['p-1 rounded-full text-xs font-medium', availabilityStatus.color]">
+              {{ availabilityStatus.text }}
+            </Badge>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-6">
+            <div class="flex items-center gap-2">
+              <Clock class="w-5 h-5 text-gray-400" />
+              <div>
+                <p class="text-sm text-gray-500">{{ $t('form.field.lastActive') }}</p>
+                <p class="text-sm font-medium text-gray-700">
+                  {{
+                    props.initialValues.last_active_at
+                      ? format(new Date(props.initialValues.last_active_at), 'PPpp')
+                      : 'N/A'
+                  }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <LogIn class="w-5 h-5 text-gray-400" />
+              <div>
+                <p class="text-sm text-gray-500"> {{ $t('form.field.lastLogin') }}</p>
+                <p class="text-sm font-medium text-gray-700">
+                  {{
+                    props.initialValues.last_login_at
+                      ? format(new Date(props.initialValues.last_login_at), 'PPpp')
+                      : 'N/A'
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Fields -->
     <FormField v-slot="{ field }" name="first_name">
       <FormItem v-auto-animate>
         <FormLabel>{{ $t('form.field.firstName') }}</FormLabel>
@@ -94,6 +148,23 @@
       </FormItem>
     </FormField>
 
+    <FormField
+      v-slot="{ value, handleChange }"
+      type="checkbox"
+      name="reassign_replies"
+      v-if="!isNewForm"
+    >
+      <FormItem class="flex flex-row items-start gap-x-3 space-y-0">
+        <FormControl>
+          <Checkbox :checked="value" @update:checked="handleChange" />
+        </FormControl>
+        <div class="space-y-1 leading-none">
+          <FormLabel> {{ $t('navigation.reassign_replies') }} </FormLabel>
+          <FormMessage />
+        </div>
+      </FormItem>
+    </FormField>
+
     <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
@@ -107,10 +178,14 @@ import { createFormSchema } from './formSchema.js'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { vAutoAnimate } from '@formkit/auto-animate/vue'
+import { Badge } from '@/components/ui/badge'
+import { Clock, LogIn } from 'lucide-vue-next'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { SelectTag } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { useI18n } from 'vue-i18n'
+import { format } from 'date-fns'
 import api from '@/api'
 
 const props = defineProps({
@@ -151,6 +226,13 @@ onMounted(async () => {
   }
 })
 
+const availabilityStatus = computed(() => {
+  const status = form.values.availability_status
+  if (status === 'online') return { text: 'Online', color: 'bg-green-500' }
+  if (status === 'away' || status === 'away_manual') return { text: 'Away', color: 'bg-yellow-500' }
+  return { text: 'Offline', color: 'bg-gray-400' }
+})
+
 const teamOptions = computed(() =>
   teams.value.map((team) => ({ label: team.name, value: team.name }))
 )
@@ -166,6 +248,13 @@ const onSubmit = form.handleSubmit((values) => {
   values.teams = values.teams.map((team) => ({ name: team }))
   props.submitForm(values)
 })
+
+const getInitials = (firstName, lastName) => {
+  if (!firstName && !lastName) return ''
+  if (!firstName) return lastName.charAt(0).toUpperCase()
+  if (!lastName) return firstName.charAt(0).toUpperCase()
+  return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`
+}
 
 watch(
   () => props.initialValues,
