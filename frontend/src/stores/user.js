@@ -17,7 +17,7 @@ export const useUserStore = defineStore('user', () => {
     email: '',
     teams: [],
     permissions: [],
-    availability_status: 'offline'
+    availability_status: 'offline',
   })
   const emitter = useEmitter()
 

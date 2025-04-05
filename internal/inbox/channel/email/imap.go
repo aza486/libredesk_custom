@@ -9,9 +9,7 @@ import (
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/attachment"
-	"github.com/abhinavxd/libredesk/internal/conversation"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
-	"github.com/abhinavxd/libredesk/internal/user"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
@@ -210,7 +208,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		SourceChannel:   null.NewString(e.Channel(), true),
 		SourceChannelID: null.NewString(env.From[0].Addr(), true),
 		Email:           null.NewString(env.From[0].Addr(), true),
-		Type:            user.UserTypeContact,
+		Type:            umodels.UserTypeContact,
 	}
 
 	// Set CC addresses in meta.
@@ -230,10 +228,10 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	incomingMsg := models.IncomingMessage{
 		Message: models.Message{
 			Channel:    e.Channel(),
-			SenderType: conversation.SenderTypeContact,
-			Type:       conversation.MessageIncoming,
+			SenderType: models.SenderTypeContact,
+			Type:       models.MessageIncoming,
 			InboxID:    inboxID,
-			Status:     conversation.MessageStatusReceived,
+			Status:     models.MessageStatusReceived,
 			Subject:    env.Subject,
 			SourceID:   null.StringFrom(env.MessageID),
 			Meta:       string(meta),
@@ -324,14 +322,14 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 	// Set message content - prioritize combined HTML
 	if allHTML.Len() > 0 {
 		incomingMsg.Message.Content = allHTML.String()
-		incomingMsg.Message.ContentType = conversation.ContentTypeHTML
+		incomingMsg.Message.ContentType = models.ContentTypeHTML
 		e.lo.Debug("extracted HTML content from parts", "message_id", incomingMsg.Message.SourceID.String, "content", incomingMsg.Message.Content)
 	} else if len(envelope.HTML) > 0 {
 		incomingMsg.Message.Content = envelope.HTML
-		incomingMsg.Message.ContentType = conversation.ContentTypeHTML
+		incomingMsg.Message.ContentType = models.ContentTypeHTML
 	} else if len(envelope.Text) > 0 {
 		incomingMsg.Message.Content = envelope.Text
-		incomingMsg.Message.ContentType = conversation.ContentTypeText
+		incomingMsg.Message.ContentType = models.ContentTypeText
 	}
 
 	e.lo.Debug("envelope HTML content", "message_id", incomingMsg.Message.SourceID.String, "content", incomingMsg.Message.Content)
