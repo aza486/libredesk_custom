@@ -68,7 +68,6 @@ type queries struct {
 	SoftDeleteUser        *sqlx.Stmt `query:"soft-delete-user"`
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
-	SetReassignReplies    *sqlx.Stmt `query:"set-reassign-replies"`
 	ResetPassword         *sqlx.Stmt `query:"reset-password"`
 	InsertAgent           *sqlx.Stmt `query:"insert-agent"`
 	InsertContact         *sqlx.Stmt `query:"insert-contact"`
