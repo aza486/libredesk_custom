@@ -16,10 +16,11 @@ const (
 	UserTypeContact = "contact"
 
 	// User availability statuses
-	Online     = "online"
-	Offline    = "offline"
-	Away       = "away"
-	AwayManual = "away_manual"
+	Online             = "online"
+	Offline            = "offline"
+	Away               = "away"
+	AwayManual         = "away_manual"
+	AwayAndReassigning = "away_and_reassigning"
 )
 
 type User struct {
@@ -37,7 +38,6 @@ type User struct {
 	Password           string         `db:"password" json:"-"`
 	LastActiveAt       null.Time      `db:"last_active_at" json:"last_active_at"`
 	LastLoginAt        null.Time      `db:"last_login_at" json:"last_login_at"`
-	ReassignReplies    bool           `db:"reassign_replies" json:"reassign_replies"`
 	Roles              pq.StringArray `db:"roles" json:"roles"`
 	Permissions        pq.StringArray `db:"permissions" json:"permissions"`
 	Meta               pq.StringArray `db:"meta" json:"meta"`

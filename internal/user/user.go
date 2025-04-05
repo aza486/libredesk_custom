@@ -224,7 +224,7 @@ func (u *Manager) Update(id int, user models.User) error {
 		u.lo.Debug("setting new password for user", "user_id", id)
 	}
 
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled); err != nil {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled, user.AvailabilityStatus); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
@@ -298,15 +298,6 @@ func (u *Manager) ResetPassword(token, password string) error {
 func (u *Manager) UpdateAvailability(id int, status string) error {
 	if _, err := u.q.UpdateAvailability.Exec(id, status); err != nil {
 		u.lo.Error("error updating user availability", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
-	}
-	return nil
-}
-
-// ToggleReassignReplies toggles the reassign replies status of an user.
-func (u *Manager) ToggleReassignReplies(id int, reassign bool) error {
-	if _, err := u.q.SetReassignReplies.Exec(id, reassign); err != nil {
-		u.lo.Error("error updating user reassign replies", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil

@@ -18,7 +18,6 @@ export const useUserStore = defineStore('user', () => {
     teams: [],
     permissions: [],
     availability_status: 'offline',
-    reassign_replies: false
   })
   const emitter = useEmitter()
 
@@ -106,22 +105,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  const toggleAssignReplies = async (enabled) => {
-    const prev = user.value.reassign_replies
-    user.value.reassign_replies = enabled
-    try {
-      await api.toggleReassignReplies({
-        enabled: enabled
-      })
-    } catch (error) {
-      user.value.reassign_replies = prev
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
-    }
-  }
-
   return {
     user,
     userID,
@@ -140,7 +123,6 @@ export const useUserStore = defineStore('user', () => {
     clearAvatar,
     setAvatar,
     updateUserAvailability,
-    toggleAssignReplies,
     can
   }
 })

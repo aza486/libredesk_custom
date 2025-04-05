@@ -534,7 +534,7 @@ SET
     WHEN EXISTS (
       SELECT 1 FROM users 
       WHERE users.id = conversations.assigned_user_id 
-        AND users.reassign_replies = TRUE
+        AND users.availability_status = 'away_and_reassigning'
     ) THEN NULL
     ELSE assigned_user_id
   END

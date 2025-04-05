@@ -76,19 +76,6 @@ func handleUpdateUserAvailability(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleToggleReassignReplies toggles the reassign replies setting for the current user.
-func handleToggleReassignReplies(r *fastglue.Request) error {
-	var (
-		app     = r.Context.(*App)
-		auser   = r.RequestCtx.UserValue("user").(amodels.User)
-		enabled = r.RequestCtx.PostArgs().GetBool("enabled")
-	)
-	if err := app.user.ToggleReassignReplies(auser.ID, enabled); err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(true)
-}
-
 // handleGetCurrentUserTeams returns the teams of a user.
 func handleGetCurrentUserTeams(r *fastglue.Request) error {
 	var (

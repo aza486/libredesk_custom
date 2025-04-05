@@ -78,6 +78,7 @@ SET first_name = COALESCE($2, first_name),
  avatar_url = COALESCE($6, avatar_url), 
  password = COALESCE($7, password),
  enabled = COALESCE($8, enabled),
+ availability_status = COALESCE($9, availability_status),
  updated_at = now()
 WHERE id = $1 AND type = 'agent';
 
