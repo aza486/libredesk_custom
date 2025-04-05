@@ -65,7 +65,7 @@
           </div>
           <!-- Reassign Replies Switch is checked with 'away_and_reassigning' -->
           <div class="flex items-center gap-2 px-1 text-left text-sm justify-between">
-            <span class="text-muted-foreground">{{ t('navigation.reassign_replies') }}</span>
+            <span class="text-muted-foreground">{{ t('navigation.reassignReplies') }}</span>
             <Switch
               :checked="userStore.user.availability_status === 'away_and_reassigning'"
               @update:checked="

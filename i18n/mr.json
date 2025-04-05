@@ -237,7 +237,7 @@
     "navigation.views": "दृश्ये",
     "navigation.edit": "संपादित करा",
     "navigation.delete": "हटवा",
-    "navigation.reassign_replies": "प्रतिसाद पुन्हा नियुक्त करा",
+    "navigation.reassignReplies": "प्रतिसाद पुन्हा नियुक्त करा",
     "form.field.name": "नाव",
     "form.field.awayReassigning": "दूर आणि पुन्हा नियुक्त करत आहे",
     "form.field.select": "{name} निवडा",
