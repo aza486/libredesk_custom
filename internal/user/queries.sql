@@ -32,7 +32,6 @@ SELECT
     u.first_name,
     u.last_name,
     u.availability_status,
-    u.reassign_replies,
     u.last_active_at,
     u.last_login_at,
     array_agg(DISTINCT r.name) as roles,
@@ -140,11 +139,6 @@ INSERT INTO contact_channels (contact_id, inbox_id, identifier)
 VALUES ((SELECT id FROM contact), $6, $7)
 ON CONFLICT (contact_id, inbox_id) DO UPDATE SET updated_at = now()
 RETURNING contact_id, id;
-
--- name: set-reassign-replies
-UPDATE users
-SET reassign_replies = $2
-WHERE id = $1;
 
 -- name: update-last-login-at
 UPDATE users

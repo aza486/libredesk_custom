@@ -524,7 +524,7 @@ SET
 WHERE uuid = $1;
 
 -- name: re-open-conversation
--- Open conversation if it is not already open and remove the assigned user if the user has reassign_replies set to true.
+-- Open conversation if it is not already open and unset the assigned user if they are away and reassigning.
 UPDATE conversations
 SET 
   status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'),
