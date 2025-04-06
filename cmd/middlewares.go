@@ -11,8 +11,8 @@ import (
 	"github.com/zerodha/simplesessions/v3"
 )
 
-// tryAuth is a middleware that attempts to authenticate the user and add them to the context
-// but doesn't enforce authentication. Handlers can check if user exists in context optionally.
+// tryAuth attempts to authenticate the user and add them to the context but doesn't enforce authentication.
+// Handlers can check if user exists in context optionally.
 func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		app := r.Context.(*App)
@@ -41,7 +41,7 @@ func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	}
 }
 
-// auth makes sure the user is logged in.
+// auth validates the session and adds the user to the request context.
 func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var app = r.Context.(*App)
@@ -69,7 +69,8 @@ func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	}
 }
 
-// perm does session validation, CSRF, and permission enforcement.
+// perm matches the CSRF token and checks if the user has the required permission to access the endpoint.
+// and sets the user in the request context.
 func perm(handler fastglue.FastRequestHandler, perm string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var (

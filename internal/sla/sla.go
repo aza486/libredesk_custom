@@ -272,6 +272,7 @@ func (m *Manager) Run(ctx context.Context, evalInterval time.Duration) {
 
 // SendNotifications picks scheduled SLA notifications from the database and sends them to agents as emails.
 func (m *Manager) SendNotifications(ctx context.Context) error {
+	time.Sleep(10 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():

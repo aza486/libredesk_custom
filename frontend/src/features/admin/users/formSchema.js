@@ -45,5 +45,6 @@ export const createFormSchema = (t) => z.object({
       })
     })
     .optional(),
-  enabled: z.boolean().optional().default(true)
+  enabled: z.boolean().optional().default(true),
+  availability_status: z.string().optional().default('offline'),
 })

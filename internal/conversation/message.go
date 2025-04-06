@@ -26,30 +26,6 @@ import (
 )
 
 const (
-	MessageIncoming = "incoming"
-	MessageOutgoing = "outgoing"
-	MessageActivity = "activity"
-
-	SenderTypeAgent   = "agent"
-	SenderTypeContact = "contact"
-
-	MessageStatusPending  = "pending"
-	MessageStatusSent     = "sent"
-	MessageStatusFailed   = "failed"
-	MessageStatusReceived = "received"
-
-	ActivityStatusChange       = "status_change"
-	ActivityPriorityChange     = "priority_change"
-	ActivityAssignedUserChange = "assigned_user_change"
-	ActivityAssignedTeamChange = "assigned_team_change"
-	ActivitySelfAssign         = "self_assign"
-	ActivityTagChange          = "tag_change"
-	ActivitySLASet             = "sla_set"
-
-	ContentTypeText = "text"
-	ContentTypeHTML = "html"
-
-	maxLastMessageLen  = 45
 	maxMessagesPerPage = 100
 )
 
@@ -154,7 +130,7 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	handleError := func(err error, errorMsg string) bool {
 		if err != nil {
 			m.lo.Error(errorMsg, "error", err, "message_id", message.ID)
-			m.UpdateMessageStatus(message.UUID, MessageStatusFailed)
+			m.UpdateMessageStatus(message.UUID, models.MessageStatusFailed)
 			return true
 		}
 		return false
@@ -166,7 +142,7 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		return
 	}
 
-	// Render content in template
+	// Render content  template
 	if err := m.RenderContentInTemplate(inbox.Channel(), &message); err != nil {
 		handleError(err, "error rendering content in template")
 		return
@@ -209,7 +185,7 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	}
 
 	// Update status of the message.
-	m.UpdateMessageStatus(message.UUID, MessageStatusSent)
+	m.UpdateMessageStatus(message.UUID, models.MessageStatusSent)
 
 	// Update first reply time if the sender is not the system user.
 	// All automated messages are sent by the system user.
@@ -315,7 +291,7 @@ func (m *Manager) UpdateMessageStatus(uuid string, status string) error {
 
 // MarkMessageAsPending updates message status to `Pending`, so if it's a outgoing message it can be picked up again by a worker.
 func (m *Manager) MarkMessageAsPending(uuid string) error {
-	if err := m.UpdateMessageStatus(uuid, MessageStatusPending); err != nil {
+	if err := m.UpdateMessageStatus(uuid, models.MessageStatusPending); err != nil {
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorSending", "name", "{globals.terms.message}"), nil)
 	}
 	return nil
@@ -327,11 +303,11 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
-		Type:             MessageOutgoing,
-		SenderType:       SenderTypeAgent,
-		Status:           MessageStatusSent,
+		Type:             models.MessageOutgoing,
+		SenderType:       models.SenderTypeAgent,
+		Status:           models.MessageStatusSent,
 		Content:          content,
-		ContentType:      ContentTypeHTML,
+		ContentType:      models.ContentTypeHTML,
 		Private:          true,
 		Media:            media,
 	}
@@ -369,11 +345,11 @@ func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conver
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
-		Type:             MessageOutgoing,
-		SenderType:       SenderTypeAgent,
-		Status:           MessageStatusPending,
+		Type:             models.MessageOutgoing,
+		SenderType:       models.SenderTypeAgent,
+		Status:           models.MessageStatusPending,
 		Content:          content,
-		ContentType:      ContentTypeHTML,
+		ContentType:      models.ContentTypeHTML,
 		Private:          false,
 		Media:            media,
 		Meta:             string(metaJSON),
@@ -386,7 +362,7 @@ func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conver
 func (m *Manager) InsertMessage(message *models.Message) error {
 	// Private message is always sent.
 	if message.Private {
-		message.Status = MessageStatusSent
+		message.Status = models.MessageStatusSent
 	}
 
 	// Handle empty meta.
@@ -432,7 +408,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID int, actor umodels.User) error {
 	// Self assignment.
 	if assigneeID == actor.ID {
-		return m.InsertConversationActivity(ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
+		return m.InsertConversationActivity(models.ActivitySelfAssign, conversationUUID, actor.FullName(), actor)
 	}
 
 	// Assignment to another user.
@@ -440,7 +416,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	if err != nil {
 		return err
 	}
-	return m.InsertConversationActivity(ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
+	return m.InsertConversationActivity(models.ActivityAssignedUserChange, conversationUUID, assignee.FullName(), actor)
 }
 
 // RecordAssigneeTeamChange records an activity for a team assignee change.
@@ -449,27 +425,27 @@ func (m *Manager) RecordAssigneeTeamChange(conversationUUID string, teamID int, 
 	if err != nil {
 		return err
 	}
-	return m.InsertConversationActivity(ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
+	return m.InsertConversationActivity(models.ActivityAssignedTeamChange, conversationUUID, team.Name, actor)
 }
 
 // RecordPriorityChange records an activity for a priority change.
 func (m *Manager) RecordPriorityChange(priority, conversationUUID string, actor umodels.User) error {
-	return m.InsertConversationActivity(ActivityPriorityChange, conversationUUID, priority, actor)
+	return m.InsertConversationActivity(models.ActivityPriorityChange, conversationUUID, priority, actor)
 }
 
 // RecordStatusChange records an activity for a status change.
 func (m *Manager) RecordStatusChange(status, conversationUUID string, actor umodels.User) error {
-	return m.InsertConversationActivity(ActivityStatusChange, conversationUUID, status, actor)
+	return m.InsertConversationActivity(models.ActivityStatusChange, conversationUUID, status, actor)
 }
 
 // RecordSLASet records an activity for an SLA set.
 func (m *Manager) RecordSLASet(conversationUUID string, slaName string, actor umodels.User) error {
-	return m.InsertConversationActivity(ActivitySLASet, conversationUUID, slaName, actor)
+	return m.InsertConversationActivity(models.ActivitySLASet, conversationUUID, slaName, actor)
 }
 
 // RecordTagChange records an activity for a tag change.
 func (m *Manager) RecordTagChange(conversationUUID string, tag string, actor umodels.User) error {
-	return m.InsertConversationActivity(ActivityTagChange, conversationUUID, tag, actor)
+	return m.InsertConversationActivity(models.ActivityTagChange, conversationUUID, tag, actor)
 }
 
 // InsertConversationActivity inserts an activity message.
@@ -481,14 +457,14 @@ func (m *Manager) InsertConversationActivity(activityType, conversationUUID, new
 	}
 
 	message := models.Message{
-		Type:             MessageActivity,
-		Status:           MessageStatusSent,
+		Type:             models.MessageActivity,
+		Status:           models.MessageStatusSent,
 		Content:          content,
-		ContentType:      ContentTypeText,
+		ContentType:      models.ContentTypeText,
 		ConversationUUID: conversationUUID,
 		Private:          true,
 		SenderID:         actor.ID,
-		SenderType:       SenderTypeAgent,
+		SenderType:       models.SenderTypeAgent,
 	}
 
 	if err := m.InsertMessage(&message); err != nil {
@@ -512,19 +488,19 @@ func (m *Manager) getConversationUUIDFromMessageUUID(uuid string) (string, error
 func (m *Manager) getMessageActivityContent(activityType, newValue, actorName string) (string, error) {
 	var content = ""
 	switch activityType {
-	case ActivityAssignedUserChange:
+	case models.ActivityAssignedUserChange:
 		content = fmt.Sprintf("Assigned to %s by %s", newValue, actorName)
-	case ActivityAssignedTeamChange:
+	case models.ActivityAssignedTeamChange:
 		content = fmt.Sprintf("Assigned to %s team by %s", newValue, actorName)
-	case ActivitySelfAssign:
+	case models.ActivitySelfAssign:
 		content = fmt.Sprintf("%s self-assigned this conversation", actorName)
-	case ActivityPriorityChange:
+	case models.ActivityPriorityChange:
 		content = fmt.Sprintf("%s set priority to %s", actorName, newValue)
-	case ActivityStatusChange:
+	case models.ActivityStatusChange:
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
-	case ActivityTagChange:
+	case models.ActivityTagChange:
 		content = fmt.Sprintf("%s added tag %s", actorName, newValue)
-	case ActivitySLASet:
+	case models.ActivitySLASet:
 		content = fmt.Sprintf("%s set %s SLA", actorName, newValue)
 	default:
 		return "", fmt.Errorf("invalid activity type %s", activityType)

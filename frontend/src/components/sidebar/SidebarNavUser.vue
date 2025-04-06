@@ -16,7 +16,8 @@
               'bg-green-500': userStore.user.availability_status === 'online',
               'bg-amber-500':
                 userStore.user.availability_status === 'away' ||
-                userStore.user.availability_status === 'away_manual',
+                userStore.user.availability_status === 'away_manual' ||
+                userStore.user.availability_status === 'away_and_reassigning',
               'bg-gray-400': userStore.user.availability_status === 'offline'
             }"
           ></div>
@@ -46,17 +47,35 @@
             <span class="truncate text-xs">{{ userStore.email }}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm justify-between">
-          <span class="text-muted-foreground">
-            {{ t('navigation.away') }}
-          </span>
-          <Switch
-            :checked="
-              userStore.user.availability_status === 'away' ||
-              userStore.user.availability_status === 'away_manual'
-            "
-            @update:checked="(val) => userStore.updateUserAvailability(val ? 'away' : 'online')"
-          />
+        <div class="space-y-2">
+          <!-- Away switch is checked with 'away_manual' or 'away_and_reassigning' -->
+          <div class="flex items-center gap-2 px-1 text-left text-sm justify-between">
+            <span class="text-muted-foreground">{{ t('navigation.away') }}</span>
+            <Switch
+              :checked="
+                ['away_manual', 'away_and_reassigning'].includes(userStore.user.availability_status)
+              "
+              @update:checked="
+                (val) => {
+                  const newStatus = val ? 'away_manual' : 'online'
+                  userStore.updateUserAvailability(newStatus)
+                }
+              "
+            />
+          </div>
+          <!-- Reassign Replies Switch is checked with 'away_and_reassigning' -->
+          <div class="flex items-center gap-2 px-1 text-left text-sm justify-between">
+            <span class="text-muted-foreground">{{ t('navigation.reassignReplies') }}</span>
+            <Switch
+              :checked="userStore.user.availability_status === 'away_and_reassigning'"
+              @update:checked="
+                (val) => {
+                  const newStatus = val ? 'away_and_reassigning' : 'away_manual'
+                  userStore.updateUserAvailability(newStatus)
+                }
+              "
+            />
+          </div>
         </div>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />

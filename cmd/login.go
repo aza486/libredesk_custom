@@ -47,6 +47,12 @@ func handleLogin(r *fastglue.Request) error {
 		app.lo.Error("error setting csrf cookie", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorSaving", "name", "{globals.terms.session}"), nil))
 	}
+
+	// Update last login time.
+	if err := app.user.UpdateLastLoginAt(user.ID); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	return r.SendEnvelope(user)
 }
 

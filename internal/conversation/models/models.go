@@ -26,6 +26,29 @@ var (
 	AssignedConversations       = "assigned"
 	UnassignedConversations     = "unassigned"
 	TeamUnassignedConversations = "team_unassigned"
+
+	MessageIncoming = "incoming"
+	MessageOutgoing = "outgoing"
+	MessageActivity = "activity"
+
+	SenderTypeAgent   = "agent"
+	SenderTypeContact = "contact"
+
+	MessageStatusPending  = "pending"
+	MessageStatusSent     = "sent"
+	MessageStatusFailed   = "failed"
+	MessageStatusReceived = "received"
+
+	ActivityStatusChange       = "status_change"
+	ActivityPriorityChange     = "priority_change"
+	ActivityAssignedUserChange = "assigned_user_change"
+	ActivityAssignedTeamChange = "assigned_team_change"
+	ActivitySelfAssign         = "self_assign"
+	ActivityTagChange          = "tag_change"
+	ActivitySLASet             = "sla_set"
+
+	ContentTypeText = "text"
+	ContentTypeHTML = "html"
 )
 
 type Conversation struct {

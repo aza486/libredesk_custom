@@ -24,6 +24,7 @@ SELECT
     u.id,
     u.email,
     u.password,
+    u.type,
     u.created_at,
     u.updated_at,
     u.enabled,
@@ -31,6 +32,8 @@ SELECT
     u.first_name,
     u.last_name,
     u.availability_status,
+    u.last_active_at,
+    u.last_login_at,
     array_agg(DISTINCT r.name) as roles,
     COALESCE(
          (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
@@ -74,6 +77,7 @@ SET first_name = COALESCE($2, first_name),
  avatar_url = COALESCE($6, avatar_url), 
  password = COALESCE($7, password),
  enabled = COALESCE($8, enabled),
+ availability_status = COALESCE($9, availability_status),
  updated_at = now()
 WHERE id = $1 AND type = 'agent';
 
@@ -135,3 +139,9 @@ INSERT INTO contact_channels (contact_id, inbox_id, identifier)
 VALUES ((SELECT id FROM contact), $6, $7)
 ON CONFLICT (contact_id, inbox_id) DO UPDATE SET updated_at = now()
 RETURNING contact_id, id;
+
+-- name: update-last-login-at
+UPDATE users
+SET last_login_at = now(),
+updated_at = now()
+WHERE id = $1;

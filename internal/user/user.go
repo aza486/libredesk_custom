@@ -27,23 +27,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	systemUserEmail       = "System"
-	minSystemUserPassword = 10
-	maxSystemUserPassword = 72
-	UserTypeAgent         = "agent"
-	UserTypeContact       = "contact"
-)
-
 var (
 	//go:embed queries.sql
 	efs embed.FS
+
+	minPassword = 10
+	maxPassword = 72
 
 	// ErrPasswordTooLong is returned when the password passed to
 	// GenerateFromPassword is too long (i.e. > 72 bytes).
 	ErrPasswordTooLong = errors.New("password length exceeds 72 bytes")
 
-	PasswordHint = fmt.Sprintf("Password must be %d-%d characters long should contain at least one uppercase letter, one lowercase letter, one number, and one special character.", minSystemUserPassword, maxSystemUserPassword)
+	PasswordHint = fmt.Sprintf("Password must be %d-%d characters long should contain at least one uppercase letter, one lowercase letter, one number, and one special character.", minPassword, maxPassword)
 )
 
 // Manager handles user-related operations.
@@ -69,6 +64,7 @@ type queries struct {
 	UpdateAvailability    *sqlx.Stmt `query:"update-availability"`
 	UpdateLastActiveAt    *sqlx.Stmt `query:"update-last-active-at"`
 	UpdateInactiveOffline *sqlx.Stmt `query:"update-inactive-offline"`
+	UpdateLastLoginAt     *sqlx.Stmt `query:"update-last-login-at"`
 	SoftDeleteUser        *sqlx.Stmt `query:"soft-delete-user"`
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
@@ -93,7 +89,7 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 // VerifyPassword authenticates an user by email and password.
 func (u *Manager) VerifyPassword(email string, password []byte) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, 0, email, UserTypeAgent); err != nil {
+	if err := u.q.GetUser.Get(&user, 0, email, models.UserTypeAgent); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, envelope.NewError(envelope.InputError, u.i18n.T("user.invalidEmailPassword"), nil)
 		}
@@ -154,17 +150,17 @@ func (u *Manager) CreateAgent(user *models.User) error {
 
 // GetAgent retrieves an agent by ID.
 func (u *Manager) GetAgent(id int) (models.User, error) {
-	return u.Get(id, UserTypeAgent)
+	return u.Get(id, models.UserTypeAgent)
 }
 
 // GetAgentByEmail retrieves an agent by email.
 func (u *Manager) GetAgentByEmail(email string) (models.User, error) {
-	return u.GetByEmail(email, UserTypeAgent)
+	return u.GetByEmail(email, models.UserTypeAgent)
 }
 
 // GetContact retrieves a contact by ID.
 func (u *Manager) GetContact(id int) (models.User, error) {
-	return u.Get(id, UserTypeContact)
+	return u.Get(id, models.UserTypeContact)
 }
 
 // Get retrieves an user by ID.
@@ -196,7 +192,7 @@ func (u *Manager) GetByEmail(email, type_ string) (models.User, error) {
 
 // GetSystemUser retrieves the system user.
 func (u *Manager) GetSystemUser() (models.User, error) {
-	return u.GetByEmail(systemUserEmail, UserTypeAgent)
+	return u.GetByEmail(models.SystemUserEmail, models.UserTypeAgent)
 }
 
 // UpdateAvatar updates the user avatar.
@@ -227,8 +223,17 @@ func (u *Manager) Update(id int, user models.User) error {
 		u.lo.Debug("setting new password for user", "user_id", id)
 	}
 
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled); err != nil {
+	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled, user.AvailabilityStatus); err != nil {
 		u.lo.Error("error updating user", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+	}
+	return nil
+}
+
+// UpdateLastLoginAt updates the last login timestamp of an user.
+func (u *Manager) UpdateLastLoginAt(id int) error {
+	if _, err := u.q.UpdateLastLoginAt.Exec(id); err != nil {
+		u.lo.Error("error updating user last login at", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
@@ -397,7 +402,7 @@ func CreateSystemUser(ctx context.Context, password string, db *sqlx.DB) error {
 		SELECT sys_user.id, roles.id 
 		FROM sys_user, roles 
 		WHERE roles.name = $6`,
-		systemUserEmail, UserTypeAgent, "System", "", hashedPassword, rmodels.RoleAdmin)
+		models.SystemUserEmail, models.UserTypeAgent, "System", "", hashedPassword, rmodels.RoleAdmin)
 	if err != nil {
 		return fmt.Errorf("failed to create system user: %v", err)
 	}
@@ -407,7 +412,7 @@ func CreateSystemUser(ctx context.Context, password string, db *sqlx.DB) error {
 
 // IsStrongPassword checks if the password meets the required strength for system user.
 func IsStrongPassword(password string) bool {
-	if len(password) < minSystemUserPassword || len(password) > maxSystemUserPassword {
+	if len(password) < minPassword || len(password) > maxPassword {
 		return false
 	}
 	hasUppercase := regexp.MustCompile(`[A-Z]`).MatchString(password)
@@ -447,7 +452,7 @@ func promptAndHashPassword(ctx context.Context) ([]byte, error) {
 
 // updateSystemUserPassword updates the password of the system user in the database.
 func updateSystemUserPassword(db *sqlx.DB, hashedPassword []byte) error {
-	_, err := db.Exec(`UPDATE users SET password = $1 WHERE email = $2`, hashedPassword, systemUserEmail)
+	_, err := db.Exec(`UPDATE users SET password = $1 WHERE email = $2`, hashedPassword, models.SystemUserEmail)
 	if err != nil {
 		return fmt.Errorf("failed to update system user password: %v", err)
 	}
