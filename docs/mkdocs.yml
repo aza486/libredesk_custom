@@ -31,4 +31,6 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Upgrade: upgrade.md
+  - Advanced Configuration:
+      - SSO: sso.md
   - Developer Setup: developer-setup.md
