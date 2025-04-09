@@ -62,11 +62,23 @@ func BuildPaginatedQuery(baseQuery string, existingArgs []any, opts PaginationOp
 	}
 
 	if opts.OrderBy != "" {
+		// Validate OrderBy.
+		parts := strings.Split(opts.OrderBy, ".")
+		if len(parts) != 2 {
+			return "", nil, fmt.Errorf("invalid OrderBy format: %s", opts.OrderBy)
+		}
+		model, field := parts[0], parts[1]
+
+		modelFields, ok := allowedFields[model]
+		if !ok || !slices.Contains(modelFields, field) {
+			return "", nil, fmt.Errorf("invalid OrderBy field: %s", opts.OrderBy)
+		}
+
 		order := strings.ToUpper(opts.Order)
 		if order != "" && order != ASC && order != DESC {
 			return "", nil, fmt.Errorf("invalid order direction: %s", opts.Order)
 		}
-		query += fmt.Sprintf(" ORDER BY %s %s NULLS LAST", opts.OrderBy, order)
+		query += fmt.Sprintf(" ORDER BY %s.%s %s NULLS LAST", model, field, order)
 	}
 
 	offset := (opts.Page - 1) * opts.PageSize
