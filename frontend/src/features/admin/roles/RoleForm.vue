@@ -92,17 +92,29 @@ const submitLabel = computed(() => {
 
 const permissions = ref([
   {
-    name: 'Conversation',
+    name: t('globals.terms.conversation'),
     permissions: [
       { name: 'conversations:read', label: t('admin.role.conversations.read') },
       { name: 'conversations:write', label: t('admin.role.conversations.write') },
       { name: 'conversations:read_assigned', label: t('admin.role.conversations.readAssigned') },
       { name: 'conversations:read_all', label: t('admin.role.conversations.readAll') },
-      { name: 'conversations:read_unassigned', label: t('admin.role.conversations.readUnassigned') },
+      {
+        name: 'conversations:read_unassigned',
+        label: t('admin.role.conversations.readUnassigned')
+      },
       { name: 'conversations:read_team_inbox', label: t('admin.role.conversations.readTeamInbox') },
-      { name: 'conversations:update_user_assignee', label: t('admin.role.conversations.updateUserAssignee') },
-      { name: 'conversations:update_team_assignee', label: t('admin.role.conversations.updateTeamAssignee') },
-      { name: 'conversations:update_priority', label: t('admin.role.conversations.updatePriority') },
+      {
+        name: 'conversations:update_user_assignee',
+        label: t('admin.role.conversations.updateUserAssignee')
+      },
+      {
+        name: 'conversations:update_team_assignee',
+        label: t('admin.role.conversations.updateTeamAssignee')
+      },
+      {
+        name: 'conversations:update_priority',
+        label: t('admin.role.conversations.updatePriority')
+      },
       { name: 'conversations:update_status', label: t('admin.role.conversations.updateStatus') },
       { name: 'conversations:update_tags', label: t('admin.role.conversations.updateTags') },
       { name: 'messages:read', label: t('admin.role.messages.read') },
@@ -111,7 +123,7 @@ const permissions = ref([
     ]
   },
   {
-    name: 'Admin settings',
+    name: t('globals.terms.admin'),
     permissions: [
       { name: 'general_settings:manage', label: t('admin.role.generalSettings.manage') },
       { name: 'notification_settings:manage', label: t('admin.role.notificationSettings.manage') },
@@ -130,6 +142,10 @@ const permissions = ref([
       { name: 'sla:manage', label: t('admin.role.sla.manage') },
       { name: 'ai:manage', label: t('admin.role.ai.manage') }
     ]
+  },
+  {
+    name: t('globals.terms.contact'),
+    permissions: [{ name: 'contacts:manage', label: t('admin.role.contacts.manage') }]
   }
 ])
 

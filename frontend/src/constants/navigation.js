@@ -61,8 +61,8 @@ export const adminNavItems = [
         titleKey: 'navigation.teammates',
         children: [
             {
-                titleKey: 'navigation.users',
-                href: '/admin/teams/users',
+                titleKey: 'navigation.agents',
+                href: '/admin/teams/agents',
                 permission: 'users:manage'
             },
             {

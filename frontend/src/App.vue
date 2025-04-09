@@ -15,7 +15,7 @@
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/contacts')">
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/contacts')" v-if="userStore.can('contacts:manage')">
                     <router-link :to="{ name: 'contacts' }">
                       <BookUser />
                     </router-link>

@@ -108,7 +108,8 @@ func (u *Manager) VerifyPassword(email string, password []byte) (models.User, er
 
 // GetAllAgents returns a list of all agents.
 func (u *Manager) GetAgents() ([]models.User, error) {
-	return u.GetAllUsers(1, 999999999, models.UserTypeAgent, "updated_at", "desc", "")
+	// Some dirty hack.
+	return u.GetAllUsers(1, 999999999, models.UserTypeAgent, "desc", "users.updated_at", "")
 }
 
 // GetAllContacts returns a list of all contacts.
@@ -132,18 +133,24 @@ func (u *Manager) GetAllUsers(page, pageSize int, userType, order, orderBy strin
 		u.lo.Error("error creating user list query", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
-	var users = make([]models.User, 0)
-	tx, err := u.db.BeginTxx(context.Background(), nil)
-	defer tx.Rollback()
 
+	// Start a read-only txn.
+	tx, err := u.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly: true,
+	})
 	if err != nil {
-		u.lo.Error("error preparing get users query", "error", err)
+		u.lo.Error("error starting read-only transaction", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
+	defer tx.Rollback()
+
+	// Execute query
+	var users = make([]models.User, 0)
 	if err := tx.Select(&users, query, qArgs...); err != nil {
 		u.lo.Error("error fetching users", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
+
 	return users, nil
 }
 
@@ -361,7 +368,7 @@ func (u *Manager) makeUserListQuery(page, pageSize int, typ, order, orderBy, fil
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
-		"users": {"email"},
+		"users": {"email", "created_at", "updated_at"},
 	})
 }
 

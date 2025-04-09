@@ -261,26 +261,26 @@ const routes = [
             meta: { title: 'Teams' },
             children: [
               {
-                path: 'users',
-                component: () => import('@/views/admin/users/Users.vue'),
-                meta: { title: 'Users' },
+                path: 'agents',
+                component: () => import('@/views/admin/agents/Agents.vue'),
+                meta: { title: 'Agents' },
                 children: [
                   {
                     path: '',
-                    name: 'user-list',
-                    component: () => import('@/views/admin/users/UserList.vue'),
+                    name: 'agent-list',
+                    component: () => import('@/views/admin/agents/AgentList.vue'),
                   },
                   {
                     path: 'new',
-                    name: 'new-user',
-                    component: () => import('@/views/admin/users/CreateUser.vue'),
-                    meta: { title: 'Create User' }
+                    name: 'new-agent',
+                    component: () => import('@/views/admin/agents/CreateAgent.vue'),
+                    meta: { title: 'Create agent' }
                   },
                   {
                     path: ':id/edit',
                     props: true,
-                    component: () => import('@/views/admin/users/EditUser.vue'),
-                    meta: { title: 'Edit User' }
+                    component: () => import('@/views/admin/agents/EditAgent.vue'),
+                    meta: { title: 'Edit agent' }
                   },
                 ]
               },

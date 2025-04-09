@@ -64,5 +64,16 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 	if err != nil {
 		return err
 	}
+
+	// Add `contacts:manage` permission to Admin role
+	_, err = db.Exec(`
+		UPDATE roles 
+		SET permissions = array_append(permissions, 'contacts:manage')
+		WHERE name = 'Admin' AND NOT ('contacts:manage' = ANY(permissions));
+	`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

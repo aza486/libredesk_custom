@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/volatiletech/null/v9"
@@ -64,6 +65,11 @@ func handleUpdateContact(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 
+	contact, err := app.user.GetContact(id, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	form, err := r.RequestCtx.MultipartForm()
 	if err != nil {
 		app.lo.Error("error parsing form data", "error", err)
@@ -95,66 +101,53 @@ func handleUpdateContact(r *fastglue.Request) error {
 	if v, ok := form.Value["enabled"]; ok && len(v) > 0 {
 		enabled = string(v[0]) == "true"
 	}
+	avatarURL := ""
+	if v, ok := form.Value["avatar_url"]; ok && len(v) > 0 {
+		avatarURL = string(v[0])
+	}
 
-	user := models.User{
+	// Validate mandatory fields.
+	if email == "" || !stringutil.ValidEmail(email) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`email`"), nil, envelope.InputError)
+	}
+	if firstName == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`first_name`"), nil, envelope.InputError)
+	}
+
+	// Another contact with same new email?
+	existingContact, _ := app.user.GetContact(0, email)
+	if existingContact.ID > 0 && existingContact.ID != id {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("contact.alreadyExistsWithEmail"), nil, envelope.InputError)
+	}
+
+	contactToUpdate := models.User{
 		FirstName:              firstName,
 		LastName:               lastName,
 		Email:                  null.StringFrom(email),
-		PhoneNumber:            null.StringFrom(phoneNumber),
-		PhoneNumberCallingCode: null.StringFrom(phoneNumberCallingCode),
+		AvatarURL:              null.NewString(avatarURL, avatarURL != ""),
+		PhoneNumber:            null.NewString(phoneNumber, phoneNumber != ""),
+		PhoneNumberCallingCode: null.NewString(phoneNumberCallingCode, phoneNumberCallingCode != ""),
 		Enabled:                enabled,
 	}
 
-	if err := app.user.UpdateContact(id, user); err != nil {
+	if err := app.user.UpdateContact(id, contactToUpdate); err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	// Delete avatar?
+	if avatarURL == "" && contact.AvatarURL.Valid {
+		fileName := filepath.Base(contact.AvatarURL.String)
+		app.media.Delete(fileName)
+		contact.AvatarURL.Valid = false
+		contact.AvatarURL.String = ""
 	}
 
 	// Upload avatar?
 	files, ok := form.File["files"]
 	if ok && len(files) > 0 {
-		contact, err := app.user.GetContact(id, "")
-		if err != nil {
+		if err := uploadUserAvatar(r, &contact, files); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-		if err := uploadUserAvatar(r, &contact, files); err != nil {
-			app.lo.Error("error uploading avatar", "error", err)
-			return err
-		}
-	}
-	return r.SendEnvelope(true)
-}
-
-// handleDeleteContactAvatar deletes contact avatar from storage and database.
-func handleDeleteContactAvatar(r *fastglue.Request) error {
-	var (
-		app   = r.Context.(*App)
-		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-	)
-
-	if id <= 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
-	}
-
-	// Get user
-	contact, err := app.user.GetContact(id, "")
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-
-	// Valid str?
-	if contact.AvatarURL.String == "" {
-		return r.SendEnvelope(true)
-	}
-
-	fileName := filepath.Base(contact.AvatarURL.String)
-
-	// Delete file from the store.
-	if err := app.media.Delete(fileName); err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-
-	if err = app.user.UpdateAvatar(contact.ID, ""); err != nil {
-		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
 }

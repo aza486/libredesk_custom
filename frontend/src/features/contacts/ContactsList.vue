@@ -18,18 +18,18 @@
           </PopoverTrigger>
           <PopoverContent class="w-[200px] p-4 flex flex-col gap-4">
             <!-- order by field -->
-            <Select v-model="orderByField" @update:model-value="fetchContactsDebounced">
+            <Select v-model="orderByField" @update:model-value="fetchContacts">
               <SelectTrigger class="h-8 w-full">
                 <SelectValue :placeholder="orderByField" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem :value="'created_at'">Created at</SelectItem>
-                <SelectItem :value="'email'">Email</SelectItem>
+                <SelectItem :value="'users.created_at'">Created at</SelectItem>
+                <SelectItem :value="'users.email'">Email</SelectItem>
               </SelectContent>
             </Select>
 
             <!-- order by direction -->
-            <Select v-model="orderByDirection" @update:model-value="fetchContactsDebounced">
+            <Select v-model="orderByDirection" @update:model-value="fetchContacts">
               <SelectTrigger class="h-8 w-full">
                 <SelectValue :placeholder="orderByDirection" />
               </SelectTrigger>
@@ -194,7 +194,7 @@ const page = ref(1)
 const perPage = ref(15)
 const totalPages = ref(0)
 const searchTerm = ref('')
-const orderByField = ref('created_at')
+const orderByField = ref('users.created_at')
 const orderByDirection = ref('desc')
 const emitter = useEmitter()
 
@@ -258,16 +258,16 @@ const getInitials = (firstName, lastName) => {
 
 const goToPage = (newPage) => {
   page.value = newPage
-  fetchContactsDebounced()
+  fetchContacts()
 }
 
 const handlePerPageChange = (newPerPage) => {
   page.value = 1
   perPage.value = newPerPage
-  fetchContactsDebounced()
+  fetchContacts()
 }
 
 onMounted(() => {
-  fetchContactsDebounced()
+  fetchContacts()
 })
 </script>

@@ -110,11 +110,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/agents/set-password", tryAuth(handleSetPassword))
 
 	// Contacts.
-	// TODO: Add permission checks for contacts.
-	g.GET("/api/v1/contacts", handleGetContacts)
-	g.GET("/api/v1/contacts/{id}", handleGetContact)
-	g.PUT("/api/v1/contacts/{id}", handleUpdateContact)
-	g.DELETE("/api/v1/contacts/{id}/avatar", handleDeleteContactAvatar)
+	g.GET("/api/v1/contacts", perm(handleGetContacts, "contacts:manage"))
+	g.GET("/api/v1/contacts/{id}", perm(handleGetContact, "contacts:manage"))
+	g.PUT("/api/v1/contacts/{id}", perm(handleUpdateContact, "contacts:manage"))
 
 	// Teams.
 	g.GET("/api/v1/teams/compact", auth(handleGetTeamsCompact))

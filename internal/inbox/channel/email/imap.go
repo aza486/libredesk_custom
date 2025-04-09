@@ -50,11 +50,10 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 				return nil
 			}
 
-			e.lo.Debug("scanning emails", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 			if err := e.processMailbox(ctx, scanInboxSince, cfg); err != nil && err != context.Canceled {
-				e.lo.Error("error scanning emails", "error", err)
+				e.lo.Error("error searching emails", "error", err)
 			}
-			e.lo.Debug("finished scanning emails", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+			e.lo.Debug("email search complete", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 		}
 	}
 }

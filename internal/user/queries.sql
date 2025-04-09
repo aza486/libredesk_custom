@@ -1,5 +1,5 @@
 -- name: get-users
-SELECT COUNT(*) OVER() as total, users.id, users.type, users.created_at, users.updated_at, users.first_name, users.last_name, users.email, users.enabled
+SELECT COUNT(*) OVER() as total, users.id, users.avatar_url, users.type, users.created_at, users.updated_at, users.first_name, users.last_name, users.email, users.enabled
 FROM users
 WHERE users.email != 'System' AND users.deleted_at IS NULL AND type = $1
 
@@ -165,7 +165,7 @@ UPDATE users
 SET first_name = COALESCE($2, first_name),
     last_name = COALESCE($3, last_name),
     email = COALESCE($4, email),
-    avatar_url = COALESCE($5, avatar_url), 
+    avatar_url = $5,
     phone_number = COALESCE($6, phone_number),
     phone_number_calling_code = COALESCE($7, phone_number_calling_code),
     enabled = COALESCE($8, enabled),

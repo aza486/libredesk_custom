@@ -12,7 +12,13 @@
 
           <div class="flex flex-col space-y-2">
             <!-- Avatar with upload-->
-            <AvatarUpload @upload="onUpload" @remove="onRemove" :src="contact.avatar_url" :initials="getInitials" />
+            <AvatarUpload
+              @upload="onUpload"
+              @remove="onRemove"
+              :src="contact.avatar_url"
+              :initials="getInitials"
+              :label="t('globals.buttons.upload')"
+            />
 
             <div>
               <h2 class="text-2xl font-bold text-gray-900">
@@ -21,14 +27,15 @@
             </div>
 
             <div class="text-xs text-gray-500">
-              Created on
+              {{ $t('form.field.createdOn') }}
               {{ contact.created_at ? format(new Date(contact.created_at), 'PPP') : 'N/A' }}
             </div>
 
-            <div class="w-30">
+            <div class="w-30 pt-3">
               <Button
                 :variant="contact.enabled ? 'destructive' : 'outline'"
                 @click="showBlockConfirmation = true"
+                size="sm"
               >
                 <ShieldOffIcon v-if="contact.enabled" size="18" class="mr-2" />
                 <ShieldCheckIcon v-else size="18" class="mr-2" />
@@ -68,6 +75,12 @@
                   </FormField>
                 </div>
               </div>
+
+              <FormField v-slot="{ componentField }" name="avatar_url">
+                <FormControl>
+                  <Input v-bind="componentField" type="hidden" />
+                </FormControl>
+              </FormField>
 
               <div class="flex flex-wrap gap-6">
                 <div class="flex-1">
@@ -121,13 +134,18 @@
                     </FormField>
 
                     <div class="flex-1">
-                      <FormField v-slot="{ componentField }" name="phone_number" class="flex-1">
-                        <FormItem class="flex flex-col">
-                          <FormLabel class="sr-only">{{ t('form.field.phoneNumber') }}</FormLabel>
+                      <FormField v-slot="{ componentField }" name="phone_number">
+                        <FormItem class="relative">
                           <FormControl>
-                            <Input type="text" v-bind="componentField" class="rounded-l-none" />
+                            <!-- Input field -->
+                            <Input
+                              type="tel"
+                              v-bind="componentField"
+                              class="rounded-l-none"
+                              inputmode="numeric"
+                            />
+                            <FormMessage class="absolute top-full mt-1 text-sm" />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       </FormField>
                     </div>
@@ -223,7 +241,7 @@ const formLoading = ref(false)
 const contact = ref(null)
 const showBlockConfirmation = ref(false)
 const form = useForm({
-  validationSchema: toTypedSchema(createFormSchema(t))
+  validationSchema: toTypedSchema(createFormSchema(t)),
 })
 
 const allCountries = countries.map((country) => ({
@@ -308,11 +326,11 @@ async function onUpload(file) {
     formData.append('phone_number', form.values.phone_number)
     formData.append('phone_number_calling_code', form.values.phone_number_calling_code)
     formData.append('enabled', form.values.enabled)
-
     const { data } = await api.updateContact(contact.value.id, formData)
     contact.value.avatar_url = data.avatar_url
     form.setFieldValue('avatar_url', data.avatar_url)
     emitToast(t('globals.messages.updatedSuccessfully', { name: t('globals.terms.avatar') }))
+    fetchContact()
   } catch (err) {
     showError(err)
   } finally {
@@ -320,17 +338,10 @@ async function onUpload(file) {
   }
 }
 
-function onRemove() {
-  try {
-    formLoading.value = true
-    contact.value.avatar_url = null
-    form.setFieldValue('avatar_url', null)
-    emitToast(t('globals.messages.removedSuccessfully', { name: t('globals.terms.avatar') }))
-  } catch (err) {
-    showError(err)
-  } finally {
-    formLoading.value = false
-  }
+async function onRemove() {
+  contact.value.avatar_url = null
+  form.setFieldValue('avatar_url', null)
+  await onUpload(null)
 }
 
 function emitToast(description) {

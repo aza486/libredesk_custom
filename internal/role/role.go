@@ -90,7 +90,7 @@ func (u *Manager) Delete(id int) error {
 	}
 	for _, r := range models.DefaultRoles {
 		if role.Name == r {
-			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorDeleting", "name", "default {globals.terms.role}"), nil)
+			return envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
 		}
 	}
 	if _, err := u.q.Delete.Exec(id); err != nil {
@@ -127,7 +127,7 @@ func (u *Manager) Update(id int, r models.Role) error {
 		return err
 	}
 	if role.Name == models.RoleAdmin {
-		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorUpdating", "name", "Admin {globals.terms.role}"), nil)
+		return envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
 	}
 
 	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"mime/multipart"
-	"net/http"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -23,7 +22,7 @@ import (
 )
 
 const (
-	maxAvatarSizeMB = 5
+	maxAvatarSizeMB = 2
 )
 
 // handleGetAgents returns all agents.
@@ -117,7 +116,7 @@ func handleUpdateCurrentAgent(r *fastglue.Request) error {
 	// Upload avatar?
 	if ok && len(files) > 0 {
 		if err := uploadUserAvatar(r, &agent, files); err != nil {
-			return err
+			return sendErrorEnvelope(r, err)
 		}
 	}
 	return r.SendEnvelope(true)
@@ -382,7 +381,7 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 	file, err := fileHeader.Open()
 	if err != nil {
 		app.lo.Error("error opening uploaded file", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.terms.file}"), nil)
 	}
 	defer file.Close()
 
@@ -393,17 +392,16 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
 
 	if !slices.Contains(image.Exts, srcExt) {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.fileTypeisNotAnImage"), nil, envelope.InputError)
+		return envelope.NewError(envelope.InputError, app.i18n.T("globals.messages.fileTypeisNotAnImage"), nil)
 	}
 
 	// Check file size
 	if bytesToMegabytes(srcFileSize) > maxAvatarSizeMB {
 		app.lo.Error("error uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", maxAvatarSizeMB)
-		return r.SendErrorEnvelope(
-			http.StatusRequestEntityTooLarge,
+		return envelope.NewError(
+			envelope.InputError,
 			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", maxAvatarSizeMB)),
 			nil,
-			envelope.GeneralError,
 		)
 	}
 
@@ -417,7 +415,7 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 	media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
 	if err != nil {
 		app.lo.Error("error uploading file", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil)
 	}
 
 	// Delete current avatar.
@@ -430,7 +428,7 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 	path, err := stringutil.GetPathFromURL(media.URL)
 	if err != nil {
 		app.lo.Debug("error getting path from URL", "url", media.URL, "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil)
 	}
 	fmt.Println("path", path)
 	if err := app.user.UpdateAvatar(user.ID, path); err != nil {
