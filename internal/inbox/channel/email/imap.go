@@ -186,14 +186,25 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		e.lo.Warn("no sender received for email", "message_id", env.MessageID)
 		return nil
 	}
+	var fromAddr = env.From[0].Addr()
 
+	// Check if the message already exists in the database.
+	// If it does, ignore it.
 	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if err != nil {
 		e.lo.Error("error checking if message exists", "message_id", env.MessageID)
 		return fmt.Errorf("checking if message exists in DB: %w", err)
 	}
-
 	if exists {
+		return nil
+	}
+
+	// Check if contact with this email is blocked / disabed, if so, ignore the message.
+	if contact, err := e.userStore.GetContact(0, fromAddr); err != nil {
+		e.lo.Error("error checking if user is blocked", "email", fromAddr, "error", err)
+		return fmt.Errorf("checking if user is blocked: %w", err)
+	} else if !contact.Enabled {
+		e.lo.Debug("contact is blocked, ignoring message", "email", fromAddr)
 		return nil
 	}
 
@@ -206,8 +217,8 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		FirstName:       firstName,
 		LastName:        lastName,
 		SourceChannel:   null.NewString(e.Channel(), true),
-		SourceChannelID: null.NewString(env.From[0].Addr(), true),
-		Email:           null.NewString(env.From[0].Addr(), true),
+		SourceChannelID: null.NewString(fromAddr, true),
+		Email:           null.NewString(fromAddr, true),
 		Type:            umodels.UserTypeContact,
 	}
 

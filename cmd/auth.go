@@ -77,7 +77,7 @@ func handleOIDCCallback(r *fastglue.Request) error {
 	}
 
 	// Lookup the user by email and set the session.
-	user, err := app.user.GetAgentByEmail(claims.Email)
+	user, err := app.user.GetAgent(0, claims.Email)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

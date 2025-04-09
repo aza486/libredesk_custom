@@ -97,7 +97,7 @@ type teamStore interface {
 }
 
 type userStore interface {
-	GetAgent(int) (umodels.User, error)
+	GetAgent(int, string) (umodels.User, error)
 	GetSystemUser() (umodels.User, error)
 	CreateContact(user *umodels.User) error
 }
@@ -706,7 +706,7 @@ func (m *Manager) GetMessageSourceIDs(conversationID, limit int) ([]string, erro
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
 func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation models.Conversation) error {
-	agent, err := m.userStore.GetAgent(userIDs[0])
+	agent, err := m.userStore.GetAgent(userIDs[0], "")
 	if err != nil {
 		m.lo.Error("error fetching agent", "user_id", userIDs[0], "error", err)
 		return fmt.Errorf("fetching agent: %w", err)

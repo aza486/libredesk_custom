@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -22,33 +23,33 @@ import (
 )
 
 const (
-	maxAvatarSizeMB = 20
+	maxAvatarSizeMB = 5
 )
 
-// handleGetUsers returns all users.
-func handleGetUsers(r *fastglue.Request) error {
+// handleGetAgents returns all agents.
+func handleGetAgents(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	agents, err := app.user.GetAll()
+	agents, err := app.user.GetAgents()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(agents)
 }
 
-// handleGetUsersCompact returns all users in a compact format.
-func handleGetUsersCompact(r *fastglue.Request) error {
+// handleGetAgentsCompact returns all agents in a compact format.
+func handleGetAgentsCompact(r *fastglue.Request) error {
 	var app = r.Context.(*App)
-	agents, err := app.user.GetAllCompact()
+	agents, err := app.user.GetAgentsCompact()
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(agents)
 }
 
-// handleGetUser returns a user.
-func handleGetUser(r *fastglue.Request) error {
+// handleGetAgent returns an agent.
+func handleGetAgent(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
@@ -56,15 +57,15 @@ func handleGetUser(r *fastglue.Request) error {
 	if err != nil || id <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
-	user, err := app.user.GetAgent(id)
+	agent, err := app.user.GetAgent(id, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(user)
+	return r.SendEnvelope(agent)
 }
 
-// handleUpdateUserAvailability updates the current user availability.
-func handleUpdateUserAvailability(r *fastglue.Request) error {
+// handleUpdateAgentAvailability updates the current agent availability.
+func handleUpdateAgentAvailability(r *fastglue.Request) error {
 	var (
 		app    = r.Context.(*App)
 		auser  = r.RequestCtx.UserValue("user").(amodels.User)
@@ -76,31 +77,31 @@ func handleUpdateUserAvailability(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleGetCurrentUserTeams returns the teams of a user.
-func handleGetCurrentUserTeams(r *fastglue.Request) error {
+// handleGetCurrentAgentTeams returns the teams of an agent.
+func handleGetCurrentAgentTeams(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.GetAgent(auser.ID)
+	agent, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	teams, err := app.team.GetUserTeams(user.ID)
+	teams, err := app.team.GetUserTeams(agent.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(teams)
 }
 
-// handleUpdateCurrentUser updates the current user.
-func handleUpdateCurrentUser(r *fastglue.Request) error {
+// handleUpdateCurrentAgent updates the current agent.
+func handleUpdateCurrentAgent(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.GetAgent(auser.ID)
+	agent, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -115,69 +116,15 @@ func handleUpdateCurrentUser(r *fastglue.Request) error {
 
 	// Upload avatar?
 	if ok && len(files) > 0 {
-		fileHeader := files[0]
-		file, err := fileHeader.Open()
-		if err != nil {
-			app.lo.Error("error reading uploaded", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
-		}
-		defer file.Close()
-
-		// Sanitize filename.
-		srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
-		srcContentType := fileHeader.Header.Get("Content-Type")
-		srcFileSize := fileHeader.Size
-		srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
-
-		if !slices.Contains(image.Exts, srcExt) {
-			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.fileTypeisNotAnImage"), nil, envelope.InputError)
-		}
-
-		// Check file size
-		if bytesToMegabytes(srcFileSize) > maxAvatarSizeMB {
-			app.lo.Error("error uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", maxAvatarSizeMB)
-			return r.SendErrorEnvelope(
-				http.StatusRequestEntityTooLarge,
-				app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", maxAvatarSizeMB)),
-				nil,
-				envelope.GeneralError,
-			)
-		}
-
-		// Reset ptr.
-		file.Seek(0, 0)
-		linkedModel := null.StringFrom(mmodels.ModelUser)
-		linkedID := null.IntFrom(user.ID)
-		disposition := null.NewString("", false)
-		contentID := ""
-		meta := []byte("{}")
-		media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
-		if err != nil {
-			app.lo.Error("error uploading file", "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
-		}
-
-		// Delete current avatar.
-		if user.AvatarURL.Valid {
-			fileName := filepath.Base(user.AvatarURL.String)
-			app.media.Delete(fileName)
-		}
-
-		// Save file path.
-		path, err := stringutil.GetPathFromURL(media.URL)
-		if err != nil {
-			app.lo.Debug("error getting path from URL", "url", media.URL, "error", err)
-			return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
-		}
-		if err := app.user.UpdateAvatar(user.ID, path); err != nil {
-			return sendErrorEnvelope(r, err)
+		if err := uploadUserAvatar(r, &agent, files); err != nil {
+			return err
 		}
 	}
 	return r.SendEnvelope(true)
 }
 
-// handleCreateUser creates a new user.
-func handleCreateUser(r *fastglue.Request) error {
+// handleCreateAgent creates a new agent.
+func handleCreateAgent(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		user = models.User{}
@@ -240,15 +187,15 @@ func handleCreateUser(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleUpdateUser updates a user.
-func handleUpdateUser(r *fastglue.Request) error {
+// handleUpdateAgent updates an agent.
+func handleUpdateAgent(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		user = models.User{}
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.user} `id`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`id`"), nil, envelope.InputError)
 	}
 
 	if err := r.Decode(&user, "json"); err != nil {
@@ -267,12 +214,12 @@ func handleUpdateUser(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`first_name`"), nil, envelope.InputError)
 	}
 
-	// Update user.
-	if err = app.user.Update(id, user); err != nil {
+	// Update agent.
+	if err = app.user.UpdateAgent(id, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Upsert user teams.
+	// Upsert agent teams.
 	if err := app.team.UpsertUserTeams(id, user.Teams.Names()); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -280,18 +227,24 @@ func handleUpdateUser(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleDeleteUser soft deletes a user.
-func handleDeleteUser(r *fastglue.Request) error {
+// handleDeleteAgent soft deletes an agent.
+func handleDeleteAgent(r *fastglue.Request) error {
 	var (
 		app     = r.Context.(*App)
 		id, err = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		auser   = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 	if err != nil || id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.user} `id`"), nil, envelope.InputError)
 	}
 
+	// Disallow if self-deleting.
+	if id == auser.ID {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("user.userCannotDeleteSelf"), nil, envelope.InputError)
+	}
+
 	// Soft delete user.
-	if err = app.user.SoftDelete(id); err != nil {
+	if err = app.user.SoftDeleteAgent(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -300,54 +253,54 @@ func handleDeleteUser(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope("User deleted successfully.")
+	return r.SendEnvelope(true)
 }
 
-// handleGetCurrentUser returns the current logged in user.
-func handleGetCurrentUser(r *fastglue.Request) error {
+// handleGetCurrentAgent returns the current logged in agent.
+func handleGetCurrentAgent(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	u, err := app.user.GetAgent(auser.ID)
+	u, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(u)
 }
 
-// handleDeleteAvatar deletes a user avatar.
-func handleDeleteAvatar(r *fastglue.Request) error {
+// handleDeleteCurrentAgentAvatar deletes the current agent's avatar.
+func handleDeleteCurrentAgentAvatar(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
 	// Get user
-	user, err := app.user.GetAgent(auser.ID)
+	agent, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Valid str?
-	if user.AvatarURL.String == "" {
-		return r.SendEnvelope("Avatar deleted successfully.")
+	if agent.AvatarURL.String == "" {
+		return r.SendEnvelope(true)
 	}
 
-	fileName := filepath.Base(user.AvatarURL.String)
+	fileName := filepath.Base(agent.AvatarURL.String)
 
 	// Delete file from the store.
 	if err := app.media.Delete(fileName); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err = app.user.UpdateAvatar(user.ID, ""); err != nil {
+	if err = app.user.UpdateAvatar(agent.ID, ""); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
 }
 
-// handleResetPassword generates a reset password token and sends an email to the user.
+// handleResetPassword generates a reset password token and sends an email to the agent.
 func handleResetPassword(r *fastglue.Request) error {
 	var (
 		app       = r.Context.(*App)
@@ -363,13 +316,13 @@ func handleResetPassword(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`email`"), nil, envelope.InputError)
 	}
 
-	user, err := app.user.GetAgentByEmail(email)
+	agent, err := app.user.GetAgent(0, email)
 	if err != nil {
 		// Send 200 even if user not found, to prevent email enumeration.
 		return r.SendEnvelope("Reset password email sent successfully.")
 	}
 
-	token, err := app.user.SetResetPasswordToken(user.ID)
+	token, err := app.user.SetResetPasswordToken(agent.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -384,7 +337,7 @@ func handleResetPassword(r *fastglue.Request) error {
 	}
 
 	if err := app.notifier.Send(notifier.Message{
-		RecipientEmails: []string{user.Email.String},
+		RecipientEmails: []string{agent.Email.String},
 		Subject:         "Reset Password",
 		Content:         content,
 		Provider:        notifier.ProviderEmail,
@@ -399,14 +352,14 @@ func handleResetPassword(r *fastglue.Request) error {
 // handleSetPassword resets the password with the provided token.
 func handleSetPassword(r *fastglue.Request) error {
 	var (
-		app      = r.Context.(*App)
-		user, ok = r.RequestCtx.UserValue("user").(amodels.User)
-		p        = r.RequestCtx.PostArgs()
-		password = string(p.Peek("password"))
-		token    = string(p.Peek("token"))
+		app       = r.Context.(*App)
+		agent, ok = r.RequestCtx.UserValue("user").(amodels.User)
+		p         = r.RequestCtx.PostArgs()
+		password  = string(p.Peek("password"))
+		token     = string(p.Peek("token"))
 	)
 
-	if ok && user.ID > 0 {
+	if ok && agent.ID > 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("user.userAlreadyLoggedIn"), nil, envelope.InputError)
 	}
 
@@ -419,4 +372,69 @@ func handleSetPassword(r *fastglue.Request) error {
 	}
 
 	return r.SendEnvelope(true)
+}
+
+// uploadUserAvatar uploads the user avatar.
+func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart.FileHeader) error {
+	var app = r.Context.(*App)
+
+	fileHeader := files[0]
+	file, err := fileHeader.Open()
+	if err != nil {
+		app.lo.Error("error opening uploaded file", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
+	}
+	defer file.Close()
+
+	// Sanitize filename.
+	srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
+	srcContentType := fileHeader.Header.Get("Content-Type")
+	srcFileSize := fileHeader.Size
+	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
+
+	if !slices.Contains(image.Exts, srcExt) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.fileTypeisNotAnImage"), nil, envelope.InputError)
+	}
+
+	// Check file size
+	if bytesToMegabytes(srcFileSize) > maxAvatarSizeMB {
+		app.lo.Error("error uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", maxAvatarSizeMB)
+		return r.SendErrorEnvelope(
+			http.StatusRequestEntityTooLarge,
+			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", maxAvatarSizeMB)),
+			nil,
+			envelope.GeneralError,
+		)
+	}
+
+	// Reset ptr.
+	file.Seek(0, 0)
+	linkedModel := null.StringFrom(mmodels.ModelUser)
+	linkedID := null.IntFrom(user.ID)
+	disposition := null.NewString("", false)
+	contentID := ""
+	meta := []byte("{}")
+	media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
+	if err != nil {
+		app.lo.Error("error uploading file", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
+	}
+
+	// Delete current avatar.
+	if user.AvatarURL.Valid {
+		fileName := filepath.Base(user.AvatarURL.String)
+		app.media.Delete(fileName)
+	}
+
+	// Save file path.
+	path, err := stringutil.GetPathFromURL(media.URL)
+	if err != nil {
+		app.lo.Debug("error getting path from URL", "url", media.URL, "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil, envelope.GeneralError)
+	}
+	fmt.Println("path", path)
+	if err := app.user.UpdateAvatar(user.ID, path); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return nil
 }

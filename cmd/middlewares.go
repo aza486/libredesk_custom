@@ -24,7 +24,7 @@ func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		}
 
 		// Try to get user.
-		user, err := app.user.GetAgent(userSession.ID)
+		user, err := app.user.GetAgent(userSession.ID, "")
 		if err != nil {
 			return handler(r)
 		}
@@ -54,7 +54,7 @@ func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		}
 
 		// Set user in the request context.
-		user, err := app.user.GetAgent(userSession.ID)
+		user, err := app.user.GetAgent(userSession.ID, "")
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
@@ -92,7 +92,7 @@ func perm(handler fastglue.FastRequestHandler, perm string) fastglue.FastRequest
 		}
 
 		// Get user from DB.
-		user, err := app.user.GetAgent(sessUser.ID)
+		user, err := app.user.GetAgent(sessUser.ID, "")
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}

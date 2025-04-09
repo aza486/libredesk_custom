@@ -150,7 +150,7 @@ func handleServeMedia(r *fastglue.Request) error {
 		uuid  = r.RequestCtx.UserValue("uuid").(string)
 	)
 
-	user, err := app.user.GetAgent(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

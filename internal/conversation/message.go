@@ -412,7 +412,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	}
 
 	// Assignment to another user.
-	assignee, err := m.userStore.GetAgent(assigneeID)
+	assignee, err := m.userStore.GetAgent(assigneeID, "")
 	if err != nil {
 		return err
 	}

@@ -36,9 +36,6 @@ http.interceptors.request.use((request) => {
 const searchConversations = (params) => http.get('/api/v1/conversations/search', { params })
 const searchMessages = (params) => http.get('/api/v1/messages/search', { params })
 const searchContacts = (params) => http.get('/api/v1/contacts/search', { params })
-const resetPassword = (data) => http.post('/api/v1/users/reset-password', data)
-const setPassword = (data) => http.post('/api/v1/users/set-password', data)
-const deleteUser = (id) => http.delete(`/api/v1/users/${id}`)
 const getEmailNotificationSettings = () => http.get('/api/v1/settings/notifications/email')
 const updateEmailNotificationSettings = (data) => http.put('/api/v1/settings/notifications/email', data)
 const getPriorities = () => http.get('/api/v1/priorities')
@@ -119,31 +116,31 @@ const updateSettings = (key, data) =>
 const getSettings = (key) => http.get(`/api/v1/settings/${key}`)
 const login = (data) => http.post(`/api/v1/login`, data)
 const getAutomationRules = (type) =>
-  http.get(`/api/v1/automation/rules`, {
+  http.get(`/api/v1/automations/rules`, {
     params: { type: type }
   })
-const toggleAutomationRule = (id) => http.put(`/api/v1/automation/rules/${id}/toggle`)
-const getAutomationRule = (id) => http.get(`/api/v1/automation/rules/${id}`)
+const toggleAutomationRule = (id) => http.put(`/api/v1/automations/rules/${id}/toggle`)
+const getAutomationRule = (id) => http.get(`/api/v1/automations/rules/${id}`)
 const updateAutomationRule = (id, data) =>
-  http.put(`/api/v1/automation/rules/${id}`, data, {
+  http.put(`/api/v1/automations/rules/${id}`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
 const createAutomationRule = (data) =>
-  http.post(`/api/v1/automation/rules`, data, {
+  http.post(`/api/v1/automations/rules`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const deleteAutomationRule = (id) => http.delete(`/api/v1/automation/rules/${id}`)
+const deleteAutomationRule = (id) => http.delete(`/api/v1/automations/rules/${id}`)
 const updateAutomationRuleWeights = (data) =>
-  http.put(`/api/v1/automation/rules/weights`, data, {
+  http.put(`/api/v1/automations/rules/weights`, data, {
     headers: {
       'Content-Type': 'application/json'
     }
   })
-const updateAutomationRulesExecutionMode = (data) => http.put(`/api/v1/automation/rules/execution-mode`, data)
+const updateAutomationRulesExecutionMode = (data) => http.put(`/api/v1/automations/rules/execution-mode`, data)
 const getRoles = () => http.get('/api/v1/roles')
 const getRole = (id) => http.get(`/api/v1/roles/${id}`)
 const createRole = (data) =>
@@ -159,26 +156,47 @@ const updateRole = (id, data) =>
     }
   })
 const deleteRole = (id) => http.delete(`/api/v1/roles/${id}`)
-const getUser = (id) => http.get(`/api/v1/users/${id}`)
+const getContacts = (params) => http.get('/api/v1/contacts', { params })
+const getContact = (id) => http.get(`/api/v1/contacts/${id}`)
+const updateContact = (id, data) => http.put(`/api/v1/contacts/${id}`, data, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+})
 const getTeam = (id) => http.get(`/api/v1/teams/${id}`)
 const getTeams = () => http.get('/api/v1/teams')
 const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data)
 const createTeam = (data) => http.post('/api/v1/teams', data)
 const getTeamsCompact = () => http.get('/api/v1/teams/compact')
 const deleteTeam = (id) => http.delete(`/api/v1/teams/${id}`)
-
-const getUsers = () => http.get('/api/v1/users')
-const getUsersCompact = () => http.get('/api/v1/users/compact')
+const updateUser = (id, data) =>
+  http.put(`/api/v1/agents/${id}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const getUsers = () => http.get('/api/v1/agents')
+const getUsersCompact = () => http.get('/api/v1/agents/compact')
 const updateCurrentUser = (data) =>
-  http.put('/api/v1/users/me', data, {
+  http.put('/api/v1/agents/me', data, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
   })
-const deleteUserAvatar = () => http.delete('/api/v1/users/me/avatar')
-const getCurrentUser = () => http.get('/api/v1/users/me')
-const getCurrentUserTeams = () => http.get('/api/v1/users/me/teams')
-const updateCurrentUserAvailability = (data) => http.put('/api/v1/users/me/availability', data)
+const getUser = (id) => http.get(`/api/v1/agents/${id}`)
+const deleteUserAvatar = () => http.delete('/api/v1/agents/me/avatar')
+const getCurrentUser = () => http.get('/api/v1/agents/me')
+const getCurrentUserTeams = () => http.get('/api/v1/agents/me/teams')
+const updateCurrentUserAvailability = (data) => http.put('/api/v1/agents/me/availability', data)
+const resetPassword = (data) => http.post('/api/v1/agents/reset-password', data)
+const setPassword = (data) => http.post('/api/v1/agents/set-password', data)
+const deleteUser = (id) => http.delete(`/api/v1/agents/${id}`)
+const createUser = (data) =>
+  http.post('/api/v1/agents', data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
@@ -231,18 +249,6 @@ const uploadMedia = (data) =>
 const getOverviewCounts = () => http.get('/api/v1/reports/overview/counts')
 const getOverviewCharts = () => http.get('/api/v1/reports/overview/charts')
 const getLanguage = (lang) => http.get(`/api/v1/lang/${lang}`)
-const createUser = (data) =>
-  http.post('/api/v1/users', data, {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
-const updateUser = (id, data) =>
-  http.put(`/api/v1/users/${id}`, data, {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })
 const createInbox = (data) =>
   http.post('/api/v1/inboxes', data, {
     headers: {
@@ -390,4 +396,7 @@ export default {
   searchMessages,
   searchContacts,
   removeAssignee,
+  getContacts,
+  getContact,
+  updateContact,
 }

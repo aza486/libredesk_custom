@@ -1,20 +1,30 @@
 -- name: get-users
-SELECT u.id, u.updated_at, u.first_name, u.last_name, u.email, u.enabled
-FROM users u 
-WHERE u.email != 'System' AND u.deleted_at IS NULL AND u.type = 'agent'
-ORDER BY u.updated_at DESC;
+SELECT COUNT(*) OVER() as total, users.id, users.type, users.created_at, users.updated_at, users.first_name, users.last_name, users.email, users.enabled
+FROM users
+WHERE users.email != 'System' AND users.deleted_at IS NULL AND type = $1
 
--- name: soft-delete-user
+-- name: soft-delete-agent
 WITH soft_delete AS (
     UPDATE users
     SET deleted_at = now(), updated_at = now()
     WHERE id = $1 AND type = 'agent'
     RETURNING id
+),
+-- Delete from user_roles and teams
+delete_team_members AS (
+    DELETE FROM team_members
+    WHERE user_id IN (SELECT id FROM soft_delete)
+    RETURNING 1
+),
+delete_user_roles AS (
+    DELETE FROM user_roles
+    WHERE user_id IN (SELECT id FROM soft_delete)
+    RETURNING 1
 )
-DELETE FROM team_members WHERE user_id IN (SELECT id FROM soft_delete);
+SELECT 1;
 
--- name: get-users-compact
-SELECT u.id, u.first_name, u.last_name, u.enabled, u.avatar_url
+-- name: get-agents-compact
+SELECT u.id, u.type, u.first_name, u.last_name, u.enabled, u.avatar_url
 FROM users u
 WHERE u.email != 'System' AND u.deleted_at IS NULL AND u.type = 'agent'
 ORDER BY u.updated_at DESC;
@@ -22,6 +32,8 @@ ORDER BY u.updated_at DESC;
 -- name: get-user
 SELECT
     u.id,
+    u.created_at,
+    u.updated_at,
     u.email,
     u.password,
     u.type,
@@ -34,28 +46,30 @@ SELECT
     u.availability_status,
     u.last_active_at,
     u.last_login_at,
-    array_agg(DISTINCT r.name) as roles,
+    u.phone_number_calling_code,
+    u.phone_number,
+    array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL) AS roles,
     COALESCE(
-         (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
-          FROM team_members tm
-          JOIN teams t ON tm.team_id = t.id
-          WHERE tm.user_id = u.id),
-         '[]'
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
+         FROM team_members tm
+         JOIN teams t ON tm.team_id = t.id
+         WHERE tm.user_id = u.id),
+        '[]'
     ) AS teams,
-    array_agg(DISTINCT p) as permissions
+    array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL) AS permissions
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
-LEFT JOIN roles r ON r.id = ur.role_id,
-     unnest(r.permissions) p
+LEFT JOIN roles r ON r.id = ur.role_id
+LEFT JOIN LATERAL unnest(r.permissions) AS p ON true
 WHERE (u.id = $1 OR u.email = $2) AND u.type = $3 AND u.deleted_at IS NULL
 GROUP BY u.id;
 
 -- name: set-user-password
 UPDATE users
 SET password = $1, updated_at = now()
-WHERE id = $2 AND type = 'agent';
+WHERE id = $2;
 
--- name: update-user
+-- name: update-agent
 WITH not_removed_roles AS (
  SELECT r.id FROM unnest($5::text[]) role_name
  JOIN roles r ON r.name = role_name
@@ -79,12 +93,12 @@ SET first_name = COALESCE($2, first_name),
  enabled = COALESCE($8, enabled),
  availability_status = COALESCE($9, availability_status),
  updated_at = now()
-WHERE id = $1 AND type = 'agent';
+WHERE id = $1;
 
 -- name: update-avatar
 UPDATE users  
 SET avatar_url = $2, updated_at = now()
-WHERE id = $1 AND type = 'agent';
+WHERE id = $1;
 
 -- name: update-availability
 UPDATE users
@@ -145,3 +159,15 @@ UPDATE users
 SET last_login_at = now(),
 updated_at = now()
 WHERE id = $1;
+
+-- name: update-contact
+UPDATE users
+SET first_name = COALESCE($2, first_name),
+    last_name = COALESCE($3, last_name),
+    email = COALESCE($4, email),
+    avatar_url = COALESCE($5, avatar_url), 
+    phone_number = COALESCE($6, phone_number),
+    phone_number_calling_code = COALESCE($7, phone_number_calling_code),
+    enabled = COALESCE($8, enabled),
+    updated_at = now()
+WHERE id = $1 and type = 'contact';

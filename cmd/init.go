@@ -526,7 +526,7 @@ func initNotifier() *notifier.Service {
 }
 
 // initEmailInbox initializes the email inbox.
-func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.Inbox, error) {
+func initEmailInbox(inboxRecord imodels.Inbox, msgStore inbox.MessageStore, usrStore inbox.UserStore) (inbox.Inbox, error) {
 	var config email.Config
 
 	// Load JSON data into Koanf.
@@ -552,7 +552,7 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 		log.Printf("WARNING: No `from` email address set for `%s` inbox: Name: `%s`", inboxRecord.Channel, inboxRecord.Name)
 	}
 
-	inbox, err := email.New(store, email.Opts{
+	inbox, err := email.New(msgStore, usrStore, email.Opts{
 		ID:     inboxRecord.ID,
 		Config: config,
 		Lo:     initLogger("email_inbox"),
@@ -568,10 +568,10 @@ func initEmailInbox(inboxRecord imodels.Inbox, store inbox.MessageStore) (inbox.
 }
 
 // initializeInboxes handles inbox initialization.
-func initializeInboxes(inboxR imodels.Inbox, store inbox.MessageStore) (inbox.Inbox, error) {
+func initializeInboxes(inboxR imodels.Inbox, msgStore inbox.MessageStore, usrStore inbox.UserStore) (inbox.Inbox, error) {
 	switch inboxR.Channel {
 	case "email":
-		return initEmailInbox(inboxR, store)
+		return initEmailInbox(inboxR, msgStore, usrStore)
 	default:
 		return nil, fmt.Errorf("unknown inbox channel: %s", inboxR.Channel)
 	}
@@ -584,8 +584,9 @@ func reloadInboxes(app *App) error {
 }
 
 // startInboxes registers the active inboxes and starts receiver for each.
-func startInboxes(ctx context.Context, mgr *inbox.Manager, store inbox.MessageStore) {
-	mgr.SetMessageStore(store)
+func startInboxes(ctx context.Context, mgr *inbox.Manager, msgStore inbox.MessageStore, usrStore inbox.UserStore) {
+	mgr.SetMessageStore(msgStore)
+	mgr.SetUserStore(usrStore)
 
 	if err := mgr.InitInboxes(initializeInboxes); err != nil {
 		log.Fatalf("error initializing inboxes: %v", err)

@@ -42,6 +42,18 @@ const routes = [
     component: App,
     children: [
       {
+        path: 'contacts',
+        name: 'contacts',
+        component: () => import('@/views/contact/ContactsView.vue'),
+        meta: { title: 'Contacts' }
+      },
+      {
+        path: 'contacts/:id',
+        name: 'contact-detail',
+        component: () => import('@/views/contact/ContactDetailView.vue'),
+        meta: { title: 'Contacts' },
+      },
+      {
         path: '/reports',
         name: 'reports',
         redirect: '/reports/overview',

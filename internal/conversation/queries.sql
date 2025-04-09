@@ -132,6 +132,7 @@ SELECT
    ct.email as "contact.email",
    ct.avatar_url as "contact.avatar_url",
    ct.phone_number as "contact.phone_number",
+   ct.phone_number_calling_code as "contact.phone_number_calling_code",
    COALESCE(lr.cc, '[]'::jsonb) as cc,
    COALESCE(lr.bcc, '[]'::jsonb) as bcc,
    as_latest.first_response_deadline_at,

@@ -126,3 +126,10 @@ export const accountNavItems = [
         description: 'Update your profile'
     }
 ]
+
+export const contactNavItems = [
+    {
+        titleKey: 'navigation.allContacts',
+        href: '/contacts',
+    }
+]

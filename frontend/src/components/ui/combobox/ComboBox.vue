@@ -5,7 +5,7 @@
         variant="outline"
         role="combobox"
         :aria-expanded="open"
-        class="w-full justify-between"
+        :class="['w-full justify-between', buttonClass]"
       >
         <slot name="selected" :selected="selectedItem">{{ selectedLabel }}</slot>
         <CaretSortIcon class="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -58,7 +58,11 @@ const props = defineProps({
     required: true
   },
   placeholder: String,
-  defaultLabel: String
+  defaultLabel: String,
+  buttonClass: {
+    type: String,
+    default: ''
+  }
 })
 
 const emit = defineEmits(['select'])

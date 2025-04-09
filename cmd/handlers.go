@@ -79,7 +79,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/v1/statuses/{id}", perm(handleDeleteStatus, "status:manage"))
 	g.GET("/api/v1/priorities", auth(handleGetPriorities))
 
-	// Tag.
+	// Tags.
 	g.GET("/api/v1/tags", auth(handleGetTags))
 	g.POST("/api/v1/tags", perm(handleCreateTag, "tags:manage"))
 	g.PUT("/api/v1/tags/{id}", perm(handleUpdateTag, "tags:manage"))
@@ -93,22 +93,30 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/v1/macros/{id}", perm(handleDeleteMacro, "macros:manage"))
 	g.POST("/api/v1/conversations/{uuid}/macros/{id}/apply", auth(handleApplyMacro))
 
-	// User.
-	g.GET("/api/v1/users/me", auth(handleGetCurrentUser))
-	g.PUT("/api/v1/users/me", auth(handleUpdateCurrentUser))
-	g.GET("/api/v1/users/me/teams", auth(handleGetCurrentUserTeams))
-	g.PUT("/api/v1/users/me/availability", auth(handleUpdateUserAvailability))
-	g.DELETE("/api/v1/users/me/avatar", auth(handleDeleteAvatar))
-	g.GET("/api/v1/users/compact", auth(handleGetUsersCompact))
-	g.GET("/api/v1/users", perm(handleGetUsers, "users:manage"))
-	g.GET("/api/v1/users/{id}", perm(handleGetUser, "users:manage"))
-	g.POST("/api/v1/users", perm(handleCreateUser, "users:manage"))
-	g.PUT("/api/v1/users/{id}", perm(handleUpdateUser, "users:manage"))
-	g.DELETE("/api/v1/users/{id}", perm(handleDeleteUser, "users:manage"))
-	g.POST("/api/v1/users/reset-password", tryAuth(handleResetPassword))
-	g.POST("/api/v1/users/set-password", tryAuth(handleSetPassword))
+	// Agents.
+	g.GET("/api/v1/agents/me", auth(handleGetCurrentAgent))
+	g.PUT("/api/v1/agents/me", auth(handleUpdateCurrentAgent))
+	g.GET("/api/v1/agents/me/teams", auth(handleGetCurrentAgentTeams))
+	g.PUT("/api/v1/agents/me/availability", auth(handleUpdateAgentAvailability))
+	g.DELETE("/api/v1/agents/me/avatar", auth(handleDeleteCurrentAgentAvatar))
 
-	// Team.
+	g.GET("/api/v1/agents/compact", auth(handleGetAgentsCompact))
+	g.GET("/api/v1/agents", perm(handleGetAgents, "users:manage"))
+	g.GET("/api/v1/agents/{id}", perm(handleGetAgent, "users:manage"))
+	g.POST("/api/v1/agents", perm(handleCreateAgent, "users:manage"))
+	g.PUT("/api/v1/agents/{id}", perm(handleUpdateAgent, "users:manage"))
+	g.DELETE("/api/v1/agents/{id}", perm(handleDeleteAgent, "users:manage"))
+	g.POST("/api/v1/agents/reset-password", tryAuth(handleResetPassword))
+	g.POST("/api/v1/agents/set-password", tryAuth(handleSetPassword))
+
+	// Contacts.
+	// TODO: Add permission checks for contacts.
+	g.GET("/api/v1/contacts", handleGetContacts)
+	g.GET("/api/v1/contacts/{id}", handleGetContact)
+	g.PUT("/api/v1/contacts/{id}", handleUpdateContact)
+	g.DELETE("/api/v1/contacts/{id}/avatar", handleDeleteContactAvatar)
+
+	// Teams.
 	g.GET("/api/v1/teams/compact", auth(handleGetTeamsCompact))
 	g.GET("/api/v1/teams", perm(handleGetTeams, "teams:manage"))
 	g.GET("/api/v1/teams/{id}", perm(handleGetTeam, "teams:manage"))
@@ -119,17 +127,17 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// i18n.
 	g.GET("/api/v1/lang/{lang}", handleGetI18nLang)
 
-	// Automation.
-	g.GET("/api/v1/automation/rules", perm(handleGetAutomationRules, "automations:manage"))
-	g.GET("/api/v1/automation/rules/{id}", perm(handleGetAutomationRule, "automations:manage"))
-	g.POST("/api/v1/automation/rules", perm(handleCreateAutomationRule, "automations:manage"))
-	g.PUT("/api/v1/automation/rules/{id}/toggle", perm(handleToggleAutomationRule, "automations:manage"))
-	g.PUT("/api/v1/automation/rules/{id}", perm(handleUpdateAutomationRule, "automations:manage"))
-	g.PUT("/api/v1/automation/rules/weights", perm(handleUpdateAutomationRuleWeights, "automations:manage"))
-	g.PUT("/api/v1/automation/rules/execution-mode", perm(handleUpdateAutomationRuleExecutionMode, "automations:manage"))
-	g.DELETE("/api/v1/automation/rules/{id}", perm(handleDeleteAutomationRule, "automations:manage"))
+	// Automations.
+	g.GET("/api/v1/automations/rules", perm(handleGetAutomationRules, "automations:manage"))
+	g.GET("/api/v1/automations/rules/{id}", perm(handleGetAutomationRule, "automations:manage"))
+	g.POST("/api/v1/automations/rules", perm(handleCreateAutomationRule, "automations:manage"))
+	g.PUT("/api/v1/automations/rules/{id}/toggle", perm(handleToggleAutomationRule, "automations:manage"))
+	g.PUT("/api/v1/automations/rules/{id}", perm(handleUpdateAutomationRule, "automations:manage"))
+	g.PUT("/api/v1/automations/rules/weights", perm(handleUpdateAutomationRuleWeights, "automations:manage"))
+	g.PUT("/api/v1/automations/rules/execution-mode", perm(handleUpdateAutomationRuleExecutionMode, "automations:manage"))
+	g.DELETE("/api/v1/automations/rules/{id}", perm(handleDeleteAutomationRule, "automations:manage"))
 
-	// Inbox.
+	// Inboxes.
 	g.GET("/api/v1/inboxes", auth(handleGetInboxes))
 	g.GET("/api/v1/inboxes/{id}", perm(handleGetInbox, "inboxes:manage"))
 	g.POST("/api/v1/inboxes", perm(handleCreateInbox, "inboxes:manage"))
@@ -137,18 +145,18 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/inboxes/{id}", perm(handleUpdateInbox, "inboxes:manage"))
 	g.DELETE("/api/v1/inboxes/{id}", perm(handleDeleteInbox, "inboxes:manage"))
 
-	// Role.
+	// Roles.
 	g.GET("/api/v1/roles", perm(handleGetRoles, "roles:manage"))
 	g.GET("/api/v1/roles/{id}", perm(handleGetRole, "roles:manage"))
 	g.POST("/api/v1/roles", perm(handleCreateRole, "roles:manage"))
 	g.PUT("/api/v1/roles/{id}", perm(handleUpdateRole, "roles:manage"))
 	g.DELETE("/api/v1/roles/{id}", perm(handleDeleteRole, "roles:manage"))
 
-	// Dashboard.
+	// Reports.
 	g.GET("/api/v1/reports/overview/counts", perm(handleDashboardCounts, "reports:manage"))
 	g.GET("/api/v1/reports/overview/charts", perm(handleDashboardCharts, "reports:manage"))
 
-	// Template.
+	// Templates.
 	g.GET("/api/v1/templates", perm(handleGetTemplates, "templates:manage"))
 	g.GET("/api/v1/templates/{id}", perm(handleGetTemplate, "templates:manage"))
 	g.POST("/api/v1/templates", perm(handleCreateTemplate, "templates:manage"))
@@ -162,14 +170,14 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/business-hours/{id}", perm(handleUpdateBusinessHours, "business_hours:manage"))
 	g.DELETE("/api/v1/business-hours/{id}", perm(handleDeleteBusinessHour, "business_hours:manage"))
 
-	// SLA.
+	// SLAs.
 	g.GET("/api/v1/sla", perm(handleGetSLAs, "sla:manage"))
 	g.GET("/api/v1/sla/{id}", perm(handleGetSLA, "sla:manage"))
 	g.POST("/api/v1/sla", perm(handleCreateSLA, "sla:manage"))
 	g.PUT("/api/v1/sla/{id}", perm(handleUpdateSLA, "sla:manage"))
 	g.DELETE("/api/v1/sla/{id}", perm(handleDeleteSLA, "sla:manage"))
 
-	// AI completion.
+	// AI completions.
 	g.GET("/api/v1/ai/prompts", auth(handleGetAIPrompts))
 	g.POST("/api/v1/ai/completion", auth(handleAICompletion))
 	g.PUT("/api/v1/ai/provider", perm(handleUpdateAIProvider, "ai:manage"))
