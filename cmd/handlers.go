@@ -191,6 +191,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/teams/{all:*}", authPage(serveIndexPage))
 	g.GET("/views/{all:*}", authPage(serveIndexPage))
 	g.GET("/admin/{all:*}", authPage(serveIndexPage))
+	g.GET("/contacts/{all:*}", authPage(serveIndexPage))
 	g.GET("/reports/{all:*}", authPage(serveIndexPage))
 	g.GET("/account/{all:*}", authPage(serveIndexPage))
 	g.GET("/reset-password", notAuthPage(serveIndexPage))
