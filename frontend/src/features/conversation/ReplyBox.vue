@@ -41,7 +41,7 @@
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
-        class="max-w-[70%] max-h-[70%] h-[70%] bg-card text-card-foreground p-4 flex flex-col"
+        class="max-w-[60%] max-h-[75%] h-[70%] bg-card text-card-foreground p-4 flex flex-col"
         :class="{ '!bg-[#FEF1E1]': messageType === 'private_note' }"
         @escapeKeyDown="isEditorFullscreen = false"
         :hide-close-button="true"

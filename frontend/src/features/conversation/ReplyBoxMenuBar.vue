@@ -1,5 +1,8 @@
 <template>
-  <div class="flex justify-between items-center h-14 relative">
+  <div
+    class="flex justify-between h-14 relative"
+    :class="{ 'items-end': isFullscreen, 'items-center': !isFullscreen }"
+  >
     <EmojiPicker
       ref="emojiPickerRef"
       :native="true"
@@ -58,6 +61,7 @@ const emit = defineEmits(['emojiSelect'])
 
 // Using defineProps for props that don't need two-way binding
 defineProps({
+  isFullscreen: Boolean,
   isSending: Boolean,
   enableSend: Boolean,
   handleSend: Function,

@@ -32,7 +32,7 @@
         <component
           :is="isFullscreen ? Minimize2 : Maximize2"
           :size="isFullscreen ? '18' : '15'"
-          :class="{ 'mr-2': !isFullscreen }"
+          :class="{ 'mr-2': !isFullscreen, 'mr-1 mb-2': isFullscreen }"
         />
       </span>
     </div>
@@ -119,6 +119,7 @@
     <!-- Editor menu bar with send button -->
     <ReplyBoxMenuBar
       class="mt-1 shrink-0"
+      :isFullscreen="isFullscreen"
       :handleFileUpload="handleFileUpload"
       :handleInlineImageUpload="handleInlineImageUpload"
       :isBold="isBold"
