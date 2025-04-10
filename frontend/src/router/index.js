@@ -1,16 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import App from '../App.vue'
-import OuterApp from '../OuterApp.vue'
-import DashboardView from '../views/reports/DashboardView.vue'
-import InboxLayout from '../layouts/inbox/InboxLayout.vue'
-import SearchView from '../views/search/SearchView.vue'
-import UserLoginView from '../views/login/UserLoginView.vue'
+import App from '@/App.vue'
+import OuterApp from '@/OuterApp.vue'
+import DashboardView from '@/views/reports/DashboardView.vue'
+import InboxLayout from '@/layouts/inbox/InboxLayout.vue'
+import SearchView from '@/views/search/SearchView.vue'
 import AccountLayout from '@/layouts/account/AccountLayout.vue'
 import AdminLayout from '@/layouts/admin/AdminLayout.vue'
-import ResetPasswordView from '@/views/outerapp/ResetPasswordView.vue'
-import SetPasswordView from '@/views/outerapp/SetPasswordView.vue'
+import UserLoginView from '@/views/auth/UserLoginView.vue'
+import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
+import SetPasswordView from '@/views/auth/SetPasswordView.vue'
 import InboxView from '@/views/inbox/InboxView.vue'
 import ConversationDetailView from '@/views/conversation/ConversationDetailView.vue'
+import { useAppSettingsStore } from '@/stores/appSettings'
 
 const routes = [
   {
@@ -465,7 +466,11 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title + ' - Libredesk'
+  // Make page title with  the route name and site name
+  const appSettingsStore = useAppSettingsStore()
+  const siteName = appSettingsStore.settings?.['app.site_name'] || 'Libredesk'
+  const pageTitle = to.meta?.title || ''
+  document.title = `${pageTitle} - ${siteName}`
   next()
 })
 
