@@ -1,6 +1,6 @@
 # Upgrade
 
-!!! Warning
+!!! warning "Warning"
     Always take a backup of the Postgres database before upgrading Libredesk.
 
 ## Binary
