@@ -82,3 +82,7 @@ __________________
 
 ## Developers
 If you are interested in contributing, refer to the [developer setup](https://libredesk.io/docs/developer-setup/). The backend is written in Go and the frontend is Vue js 3 with Shadcn for UI components.
+
+
+## Translators
+You can help translate Libredesk into your language on [Crowdin](https://crowdin.com/project/libredesk).  
