@@ -54,6 +54,7 @@ type Email struct {
 	lo           *logf.Logger
 	from         string
 	messageStore inbox.MessageStore
+	userStore    inbox.UserStore
 	wg           sync.WaitGroup
 }
 
@@ -66,7 +67,7 @@ type Opts struct {
 }
 
 // New returns a new instance of the email inbox.
-func New(store inbox.MessageStore, opts Opts) (*Email, error) {
+func New(store inbox.MessageStore, userStore inbox.UserStore, opts Opts) (*Email, error) {
 	pools, err := NewSmtpPool(opts.Config.SMTP)
 	if err != nil {
 		return nil, err
@@ -79,6 +80,7 @@ func New(store inbox.MessageStore, opts Opts) (*Email, error) {
 		lo:           opts.Lo,
 		smtpPools:    pools,
 		messageStore: store,
+		userStore:    userStore,
 	}
 	return e, nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
+	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 	"github.com/zerodha/logf"
@@ -32,7 +33,7 @@ var (
 	ErrInboxNotFound = errors.New("inbox not found")
 )
 
-type initFn func(imodels.Inbox, MessageStore) (Inbox, error)
+type initFn func(imodels.Inbox, MessageStore, UserStore) (Inbox, error)
 
 // Closer provides a function for closing an inbox.
 type Closer interface {
@@ -65,6 +66,11 @@ type MessageStore interface {
 	EnqueueIncoming(models.IncomingMessage) error
 }
 
+// UserStore defines methods for fetching user information.
+type UserStore interface {
+	GetContact(id int, email string) (umodels.User, error)
+}
+
 // Opts contains the options for initializing the inbox manager.
 type Opts struct {
 	QueueSize   int
@@ -79,7 +85,8 @@ type Manager struct {
 	lo        *logf.Logger
 	i18n      *i18n.I18n
 	receivers map[int]context.CancelFunc
-	store     MessageStore
+	msgStore     MessageStore
+	usrStore  UserStore
 	wg        sync.WaitGroup
 }
 
@@ -113,7 +120,12 @@ func New(lo *logf.Logger, db *sqlx.DB, i18n *i18n.I18n) (*Manager, error) {
 
 // SetMessageStore sets the message store for the manager.
 func (m *Manager) SetMessageStore(store MessageStore) {
-	m.store = store
+	m.msgStore = store
+}
+
+// SetUserStore sets the user store for the manager.
+func (m *Manager) SetUserStore(store UserStore) {
+	m.usrStore = store
 }
 
 // Register registers the inbox with the manager.
@@ -178,7 +190,7 @@ func (m *Manager) InitInboxes(initFn initFn) error {
 	}
 
 	for _, inboxRecord := range inboxRecords {
-		inbox, err := initFn(inboxRecord, m.store)
+		inbox, err := initFn(inboxRecord, m.msgStore, m.usrStore)
 		if err != nil {
 			m.lo.Error("error initializing inbox",
 				"name", inboxRecord.Name,
@@ -216,7 +228,7 @@ func (m *Manager) Reload(ctx context.Context, initFn initFn) error {
 
 	// Initialize new inboxes.
 	for _, inboxRecord := range inboxRecords {
-		inbox, err := initFn(inboxRecord, m.store)
+		inbox, err := initFn(inboxRecord, m.msgStore, m.usrStore)
 		if err != nil {
 			m.lo.Error("error initializing inbox during reload",
 				"name", inboxRecord.Name,

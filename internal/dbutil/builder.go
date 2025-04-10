@@ -33,7 +33,7 @@ type Filter struct {
 type AllowedFields map[string][]string
 
 // BuildPaginatedQuery builds a paginated query from the given base query, existing arguments, pagination options, filters JSON, and allowed fields.
-func BuildPaginatedQuery(baseQuery string, existingArgs []interface{}, opts PaginationOptions, filtersJSON string, allowedFields AllowedFields) (string, []interface{}, error) {
+func BuildPaginatedQuery(baseQuery string, existingArgs []any, opts PaginationOptions, filtersJSON string, allowedFields AllowedFields) (string, []any, error) {
 	if opts.Page <= 0 {
 		return "", nil, fmt.Errorf("invalid page number: %d", opts.Page)
 	}
@@ -62,11 +62,23 @@ func BuildPaginatedQuery(baseQuery string, existingArgs []interface{}, opts Pagi
 	}
 
 	if opts.OrderBy != "" {
+		// Validate OrderBy.
+		parts := strings.Split(opts.OrderBy, ".")
+		if len(parts) != 2 {
+			return "", nil, fmt.Errorf("invalid OrderBy format: %s", opts.OrderBy)
+		}
+		model, field := parts[0], parts[1]
+
+		modelFields, ok := allowedFields[model]
+		if !ok || !slices.Contains(modelFields, field) {
+			return "", nil, fmt.Errorf("invalid OrderBy field: %s", opts.OrderBy)
+		}
+
 		order := strings.ToUpper(opts.Order)
 		if order != "" && order != ASC && order != DESC {
 			return "", nil, fmt.Errorf("invalid order direction: %s", opts.Order)
 		}
-		query += fmt.Sprintf(" ORDER BY %s %s NULLS LAST", opts.OrderBy, order)
+		query += fmt.Sprintf(" ORDER BY %s.%s %s NULLS LAST", model, field, order)
 	}
 
 	offset := (opts.Page - 1) * opts.PageSize
@@ -126,6 +138,10 @@ func buildWhereClause(filters []Filter, existingArgs []interface{}, allowedField
 			conditions = append(conditions, fmt.Sprintf("%s BETWEEN $%d AND $%d", field, paramCount, paramCount+1))
 			args = append(args, strings.TrimSpace(values[0]), strings.TrimSpace(values[1]))
 			paramCount += 2
+		case "ilike":
+			conditions = append(conditions, field+fmt.Sprintf(" ILIKE $%d", paramCount))
+			args = append(args, "%"+f.Value+"%")
+			paramCount++
 		default:
 			return "", nil, fmt.Errorf("invalid operator: %s", f.Operator)
 		}

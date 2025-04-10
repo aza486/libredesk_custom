@@ -4,7 +4,7 @@
     <div class="bg-muted/30 box py-6 px-3" v-if="!isNewForm">
       <div class="flex items-start gap-6">
         <Avatar class="w-20 h-20">
-          <AvatarImage :src="props.initialValues.avatar_url" :alt="Avatar" />
+          <AvatarImage :src="props.initialValues.avatar_url || ''" :alt="Avatar" />
           <AvatarFallback>
             {{ getInitials(props.initialValues.first_name, props.initialValues.last_name) }}
           </AvatarFallback>

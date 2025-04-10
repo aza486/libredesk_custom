@@ -1,4 +1,4 @@
-// Package user handles user login, logout and provides functions to fetch user details.
+// Package user managers all users in libredesk - agents and contacts.
 package user
 
 import (
@@ -31,8 +31,9 @@ var (
 	//go:embed queries.sql
 	efs embed.FS
 
-	minPassword = 10
-	maxPassword = 72
+	minPassword     = 10
+	maxPassword     = 72
+	maxListPageSize = 100
 
 	// ErrPasswordTooLong is returned when the password passed to
 	// GenerateFromPassword is too long (i.e. > 72 bytes).
@@ -46,6 +47,7 @@ type Manager struct {
 	lo   *logf.Logger
 	i18n *i18n.I18n
 	q    queries
+	db   *sqlx.DB
 }
 
 // Opts contains options for initializing the Manager.
@@ -56,16 +58,17 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetUsers              *sqlx.Stmt `query:"get-users"`
-	GetUsersCompact       *sqlx.Stmt `query:"get-users-compact"`
 	GetUser               *sqlx.Stmt `query:"get-user"`
-	UpdateUser            *sqlx.Stmt `query:"update-user"`
+	GetUsers              string     `query:"get-users"`
+	GetAgentsCompact      *sqlx.Stmt `query:"get-agents-compact"`
+	UpdateContact         *sqlx.Stmt `query:"update-contact"`
+	UpdateAgent           *sqlx.Stmt `query:"update-agent"`
 	UpdateAvatar          *sqlx.Stmt `query:"update-avatar"`
 	UpdateAvailability    *sqlx.Stmt `query:"update-availability"`
 	UpdateLastActiveAt    *sqlx.Stmt `query:"update-last-active-at"`
 	UpdateInactiveOffline *sqlx.Stmt `query:"update-inactive-offline"`
 	UpdateLastLoginAt     *sqlx.Stmt `query:"update-last-login-at"`
-	SoftDeleteUser        *sqlx.Stmt `query:"soft-delete-user"`
+	SoftDeleteAgent       *sqlx.Stmt `query:"soft-delete-agent"`
 	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
 	ResetPassword         *sqlx.Stmt `query:"reset-password"`
@@ -83,10 +86,11 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 		q:    q,
 		lo:   opts.Lo,
 		i18n: i18n,
+		db:   opts.DB,
 	}, nil
 }
 
-// VerifyPassword authenticates an user by email and password.
+// VerifyPassword authenticates an user by email and password, returning the user if successful.
 func (u *Manager) VerifyPassword(email string, password []byte) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUser.Get(&user, 0, email, models.UserTypeAgent); err != nil {
@@ -102,31 +106,64 @@ func (u *Manager) VerifyPassword(email string, password []byte) (models.User, er
 	return user, nil
 }
 
-// GetAll retrieves all users.
-func (u *Manager) GetAll() ([]models.User, error) {
+// GetAllAgents returns a list of all agents.
+func (u *Manager) GetAgents() ([]models.User, error) {
+	// Some dirty hack.
+	return u.GetAllUsers(1, 999999999, models.UserTypeAgent, "desc", "users.updated_at", "")
+}
+
+// GetAllContacts returns a list of all contacts.
+func (u *Manager) GetContacts(page, pageSize int, order, orderBy string, filtersJSON string) ([]models.User, error) {
+	if pageSize > maxListPageSize {
+		return nil, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.pageTooLarge", "max", fmt.Sprintf("%d", maxListPageSize)), nil)
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	return u.GetAllUsers(page, pageSize, models.UserTypeContact, order, orderBy, filtersJSON)
+}
+
+// GetAllUsers returns a list of all users.
+func (u *Manager) GetAllUsers(page, pageSize int, userType, order, orderBy string, filtersJSON string) ([]models.User, error) {
+	query, qArgs, err := u.makeUserListQuery(page, pageSize, userType, order, orderBy, filtersJSON)
+	if err != nil {
+		u.lo.Error("error creating user list query", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
+	}
+
+	// Start a read-only txn.
+	tx, err := u.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly: true,
+	})
+	if err != nil {
+		u.lo.Error("error starting read-only transaction", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
+	}
+	defer tx.Rollback()
+
+	// Execute query
 	var users = make([]models.User, 0)
-	if err := u.q.GetUsers.Select(&users); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return users, nil
-		}
-		u.lo.Error("error fetching users from db", "error", err)
-		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.terms.user")), nil)
+	if err := tx.Select(&users, query, qArgs...); err != nil {
+		u.lo.Error("error fetching users", "error", err)
+		return nil, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
 	}
 
 	return users, nil
 }
 
-// GetAllCompact returns a compact list of users with limited fields.
-func (u *Manager) GetAllCompact() ([]models.User, error) {
+// GetAgentsCompact returns a compact list of users with limited fields.
+func (u *Manager) GetAgentsCompact() ([]models.User, error) {
 	var users = make([]models.User, 0)
-	if err := u.q.GetUsersCompact.Select(&users); err != nil {
+	if err := u.q.GetAgentsCompact.Select(&users); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return users, nil
 		}
 		u.lo.Error("error fetching users from db", "error", err)
 		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.terms.user")), nil)
 	}
-
 	return users, nil
 }
 
@@ -149,24 +186,19 @@ func (u *Manager) CreateAgent(user *models.User) error {
 }
 
 // GetAgent retrieves an agent by ID.
-func (u *Manager) GetAgent(id int) (models.User, error) {
-	return u.Get(id, models.UserTypeAgent)
-}
-
-// GetAgentByEmail retrieves an agent by email.
-func (u *Manager) GetAgentByEmail(email string) (models.User, error) {
-	return u.GetByEmail(email, models.UserTypeAgent)
+func (u *Manager) GetAgent(id int, email string) (models.User, error) {
+	return u.Get(id, email, models.UserTypeAgent)
 }
 
 // GetContact retrieves a contact by ID.
-func (u *Manager) GetContact(id int) (models.User, error) {
-	return u.Get(id, models.UserTypeContact)
+func (u *Manager) GetContact(id int, email string) (models.User, error) {
+	return u.Get(id, email, models.UserTypeContact)
 }
 
-// Get retrieves an user by ID.
-func (u *Manager) Get(id int, type_ string) (models.User, error) {
+// Get retrieves an user by ID or email.
+func (u *Manager) Get(id int, email, type_ string) (models.User, error) {
 	var user models.User
-	if err := u.q.GetUser.Get(&user, id, "", type_); err != nil {
+	if err := u.q.GetUser.Get(&user, id, email, type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			u.lo.Error("user not found", "id", id, "error", err)
 			return user, envelope.NewError(envelope.NotFoundError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.user}"), nil)
@@ -177,40 +209,28 @@ func (u *Manager) Get(id int, type_ string) (models.User, error) {
 	return user, nil
 }
 
-// GetByEmail retrieves an user by email
-func (u *Manager) GetByEmail(email, type_ string) (models.User, error) {
-	var user models.User
-	if err := u.q.GetUser.Get(&user, 0, email, type_); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.user}"), nil)
-		}
-		u.lo.Error("error fetching user from db", "error", err)
-		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
-	}
-	return user, nil
-}
-
 // GetSystemUser retrieves the system user.
 func (u *Manager) GetSystemUser() (models.User, error) {
-	return u.GetByEmail(models.SystemUserEmail, models.UserTypeAgent)
+	return u.Get(0, models.SystemUserEmail, models.UserTypeAgent)
 }
 
 // UpdateAvatar updates the user avatar.
-func (u *Manager) UpdateAvatar(id int, avatar string) error {
-	if _, err := u.q.UpdateAvatar.Exec(id, null.NewString(avatar, avatar != "")); err != nil {
+func (u *Manager) UpdateAvatar(id int, path string) error {
+	if _, err := u.q.UpdateAvatar.Exec(id, null.NewString(path, path != "")); err != nil {
 		u.lo.Error("error updating user avatar", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }
 
-// Update updates an user.
-func (u *Manager) Update(id int, user models.User) error {
+// UpdateAgent updates an agent in the database, including their password if provided.
+func (u *Manager) UpdateAgent(id int, user models.User) error {
 	var (
 		hashedPassword any
 		err            error
 	)
 
+	// Set password?
 	if user.NewPassword != "" {
 		if IsStrongPassword(user.NewPassword) {
 			return envelope.NewError(envelope.InputError, PasswordHint, nil)
@@ -223,9 +243,19 @@ func (u *Manager) Update(id int, user models.User) error {
 		u.lo.Debug("setting new password for user", "user_id", id)
 	}
 
-	if _, err := u.q.UpdateUser.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled, user.AvailabilityStatus); err != nil {
+	// Update user in the database.
+	if _, err := u.q.UpdateAgent.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled, user.AvailabilityStatus); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+	}
+	return nil
+}
+
+// UpdateContact updates a contact in the database.
+func (u *Manager) UpdateContact(id int, user models.User) error {
+	if _, err := u.q.UpdateContact.Exec(id, user.FirstName, user.LastName, user.Email, user.AvatarURL, user.PhoneNumber, user.PhoneNumberCallingCode, user.Enabled); err != nil {
+		u.lo.Error("error updating user", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.contact}"), nil)
 	}
 	return nil
 }
@@ -239,8 +269,8 @@ func (u *Manager) UpdateLastLoginAt(id int) error {
 	return nil
 }
 
-// SoftDelete soft deletes an user.
-func (u *Manager) SoftDelete(id int) error {
+// SoftDeleteAgent soft deletes an agent by ID.
+func (u *Manager) SoftDeleteAgent(id int) error {
 	// Disallow if user is system user.
 	systemUser, err := u.GetSystemUser()
 	if err != nil {
@@ -249,8 +279,7 @@ func (u *Manager) SoftDelete(id int) error {
 	if id == systemUser.ID {
 		return envelope.NewError(envelope.InputError, u.i18n.T("user.cannotDeleteSystemUser"), nil)
 	}
-
-	if _, err := u.q.SoftDeleteUser.Exec(id); err != nil {
+	if _, err := u.q.SoftDeleteAgent.Exec(id); err != nil {
 		u.lo.Error("error deleting user", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.user}"), nil)
 	}
@@ -323,6 +352,24 @@ func (u *Manager) MonitorAgentAvailability(ctx context.Context) {
 			return
 		}
 	}
+}
+
+// makeUserListQuery generates a query to fetch users based on the provided filters.
+func (u *Manager) makeUserListQuery(page, pageSize int, typ, order, orderBy, filtersJSON string) (string, []interface{}, error) {
+	var (
+		baseQuery = u.q.GetUsers
+		qArgs     []any
+	)
+	// Set the type of user to fetch.
+	qArgs = append(qArgs, typ)
+	return dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
+		Order:    order,
+		OrderBy:  orderBy,
+		Page:     page,
+		PageSize: pageSize,
+	}, filtersJSON, dbutil.AllowedFields{
+		"users": {"email", "created_at", "updated_at"},
+	})
 }
 
 // markInactiveAgentsOffline sets agents offline if they have been inactive for more than 5 minutes.

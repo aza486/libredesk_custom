@@ -31,30 +31,37 @@ export const useConversationStore = defineStore('conversation', () => {
   // TODO: Move to constants.
   const sortFieldMap = {
     oldest: {
+      model: 'conversations',
       field: 'last_message_at',
       order: 'asc'
     },
     newest: {
+      model: 'conversations',
       field: 'last_message_at',
       order: 'desc'
     },
     started_first: {
+      model: 'conversations',
       field: 'created_at',
       order: 'asc'
     },
     started_last: {
+      model: 'conversations',
       field: 'created_at',
       order: 'desc'
     },
     waiting_longest: {
+      model: 'conversations',
       field: 'waiting_since',
       order: 'asc'
     },
     next_sla_target: {
+      model: 'conversations',
       field: 'next_sla_deadline_at',
       order: 'asc'
     },
     priority_first: {
+      model: 'conversations',
       field: 'priority_id',
       order: 'desc'
     }
@@ -401,7 +408,7 @@ export const useConversationStore = defineStore('conversation', () => {
         return await api.getAssignedConversations({
           page: page,
           page_size: CONV_LIST_PAGE_SIZE,
-          order_by: sortFieldMap[conversations.sortField].field,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
         })
@@ -409,7 +416,7 @@ export const useConversationStore = defineStore('conversation', () => {
         return await api.getUnassignedConversations({
           page: page,
           page_size: CONV_LIST_PAGE_SIZE,
-          order_by: sortFieldMap[conversations.sortField].field,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
         })
@@ -417,7 +424,7 @@ export const useConversationStore = defineStore('conversation', () => {
         return await api.getAllConversations({
           page: page,
           page_size: CONV_LIST_PAGE_SIZE,
-          order_by: sortFieldMap[conversations.sortField].field,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
         })
@@ -425,14 +432,14 @@ export const useConversationStore = defineStore('conversation', () => {
         return await api.getTeamUnassignedConversations(teamID, {
           page: page,
           page_size: CONV_LIST_PAGE_SIZE,
-          order_by: sortFieldMap[conversations.sortField].field,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order
         })
       case CONVERSATION_LIST_TYPE.VIEW:
         return await api.getViewConversations(viewID, {
           page: page,
           page_size: CONV_LIST_PAGE_SIZE,
-          order_by: sortFieldMap[conversations.sortField].field,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order
         })
       default:

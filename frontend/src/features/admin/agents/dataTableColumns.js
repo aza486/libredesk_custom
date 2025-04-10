@@ -1,5 +1,5 @@
 import { h } from 'vue'
-import UserDataTableDropDown from '@/features/admin/users/dataTableDropdown.vue'
+import UserDataTableDropDown from '@/features/admin/agents/dataTableDropdown.vue'
 import { format } from 'date-fns'
 
 export const createColumns = (t) => [

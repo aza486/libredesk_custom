@@ -139,7 +139,7 @@ func handleApplyMacro(r *fastglue.Request) error {
 		id, _            = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 		incomingActions  = []autoModels.RuleAction{}
 	)
-	user, err := app.user.GetAgent(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -233,7 +233,7 @@ func setDisplayValues(app *App, actions []autoModels.RuleAction) error {
 			return t.Name, nil
 		},
 		autoModels.ActionAssignUser: func(id int) (string, error) {
-			u, err := app.user.GetAgent(id)
+			u, err := app.user.GetAgent(id, "")
 			if err != nil {
 				app.lo.Warn("user not found for macro action", "user_id", id)
 				return "", err

@@ -73,7 +73,7 @@ const props = defineProps({
 })
 
 function editUser(id) {
-  router.push({ path: `/admin/teams/users/${id}/edit` })
+  router.push({ path: `/admin/teams/agents/${id}/edit` })
 }
 
 async function handleDelete() {
@@ -91,7 +91,7 @@ async function handleDelete() {
 
 const emitRefreshUserList = () => {
   emit.emit(EMITTER_EVENTS.REFRESH_LIST, {
-    model: 'user'
+    model: 'agent'
   })
 }
 </script>

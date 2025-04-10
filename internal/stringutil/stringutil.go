@@ -182,3 +182,12 @@ func FormatDuration(d time.Duration, includeSeconds bool) string {
 	}
 	return strings.Join(parts, " ")
 }
+
+// ValidEmail returns true if it's a valid email else return false.
+func ValidEmail(email string) bool {
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return false
+	}
+	return addr.Name == "" && addr.Address == email
+}

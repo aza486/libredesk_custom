@@ -185,7 +185,7 @@ func main() {
 	)
 	automation.SetConversationStore(conversation)
 
-	startInboxes(ctx, inbox, conversation)
+	startInboxes(ctx, inbox, conversation, user)
 	go automation.Run(ctx, automationWorkers)
 	go autoassigner.Run(ctx, autoAssignInterval)
 	go conversation.Run(ctx, messageIncomingQWorkers, messageOutgoingQWorkers, messageOutgoingScanInterval)

@@ -1,5 +1,10 @@
 <script setup>
-import { adminNavItems, reportsNavItems, accountNavItems } from '@/constants/navigation'
+import {
+  adminNavItems,
+  reportsNavItems,
+  accountNavItems,
+  contactNavItems
+} from '@/constants/navigation'
 import { RouterLink, useRoute } from 'vue-router'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -64,6 +69,7 @@ const deleteView = (view) => {
 
 const filteredAdminNavItems = computed(() => filterNavItems(adminNavItems, userStore.can))
 const filteredReportsNavItems = computed(() => filterNavItems(reportsNavItems, userStore.can))
+const filteredContactsNavItems = computed(() => filterNavItems(contactNavItems, userStore.can))
 
 const isActiveParent = (parentHref) => {
   return route.path.startsWith(parentHref)
@@ -84,6 +90,44 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
     :default-open="sidebarOpen"
     v-on:update:open="sidebarOpen = $event"
   >
+    <!-- Contacts sidebar -->
+    <template
+      v-if="
+        route.matched.some((record) => record.name && record.name.startsWith('contact'))
+      "
+    >
+      <Sidebar collapsible="offcanvas" class="border-r ml-12">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton :isActive="isActiveParent('/contacts')" asChild>
+                <div>
+                  <span class="font-semibold text-xl">
+                    {{ t('globals.terms.contact', 2) }}
+                  </span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarSeparator />
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem v-for="item in filteredContactsNavItems" :key="item.titleKey">
+                <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
+                  <router-link :to="item.href">
+                    <span>{{ t(item.titleKey) }}</span>
+                  </router-link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
+    </template>
+
     <!-- Reports sidebar -->
     <template
       v-if="

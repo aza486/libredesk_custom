@@ -2,7 +2,7 @@
 import { SelectValue } from 'radix-vue'
 
 const props = defineProps({
-  placeholder: { type: String, required: false },
+  placeholder: { type: [String, Number], required: false },
   asChild: { type: Boolean, required: false },
   as: { type: null, required: false }
 })

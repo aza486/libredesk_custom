@@ -30,7 +30,7 @@ func handleGetMessages(r *fastglue.Request) error {
 		total       = 0
 	)
 
-	user, err := app.user.GetAgent(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -73,7 +73,7 @@ func handleGetMessage(r *fastglue.Request) error {
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
-	user, err := app.user.GetAgent(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -108,7 +108,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 
-	user, err := app.user.GetAgent(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -135,7 +135,7 @@ func handleSendMessage(r *fastglue.Request) error {
 		req   = messageReq{}
 	)
 
-	user, err := app.user.GetAgent(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

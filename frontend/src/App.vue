@@ -14,12 +14,10 @@
                     </router-link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem v-if="userStore.hasAdminTabPermissions">
-                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/admin')">
-                    <router-link
-                      :to="{ name: userStore.can('general_settings:manage') ? 'general' : 'admin' }"
-                    >
-                      <Shield />
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/contacts')" v-if="userStore.can('contacts:manage')">
+                    <router-link :to="{ name: 'contacts' }">
+                      <BookUser />
                     </router-link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -27,6 +25,15 @@
                   <SidebarMenuButton asChild :isActive="route.path.startsWith('/reports')">
                     <router-link :to="{ name: 'reports' }">
                       <FileLineChart />
+                    </router-link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem v-if="userStore.hasAdminTabPermissions">
+                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/admin')">
+                    <router-link
+                      :to="{ name: userStore.can('general_settings:manage') ? 'general' : 'admin' }"
+                    >
+                      <Shield />
                     </router-link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -96,7 +103,7 @@ import { toast as sooner } from 'vue-sonner'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
 import Command from '@/features/command/CommandBox.vue'
 import CreateConversation from '@/features/conversation/CreateConversation.vue'
-import { Inbox, Shield, FileLineChart } from 'lucide-vue-next'
+import { Inbox, Shield, FileLineChart, BookUser } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import {

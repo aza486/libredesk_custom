@@ -61,8 +61,8 @@ export const adminNavItems = [
         titleKey: 'navigation.teammates',
         children: [
             {
-                titleKey: 'navigation.users',
-                href: '/admin/teams/users',
+                titleKey: 'navigation.agents',
+                href: '/admin/teams/agents',
                 permission: 'users:manage'
             },
             {
@@ -124,5 +124,12 @@ export const accountNavItems = [
         titleKey: 'navigation.profile',
         href: '/account/profile',
         description: 'Update your profile'
+    }
+]
+
+export const contactNavItems = [
+    {
+        titleKey: 'navigation.allContacts',
+        href: '/contacts',
     }
 ]

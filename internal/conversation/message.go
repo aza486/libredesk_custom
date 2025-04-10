@@ -251,7 +251,9 @@ func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSiz
 		return messages, pageSize, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.message}"), nil)
 	}
 
-	tx, err := m.db.BeginTxx(context.Background(), nil)
+	tx, err := m.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly: true,
+	})
 	defer tx.Rollback()
 	if err != nil {
 		m.lo.Error("error preparing get messages query", "error", err)
@@ -412,7 +414,7 @@ func (m *Manager) RecordAssigneeUserChange(conversationUUID string, assigneeID i
 	}
 
 	// Assignment to another user.
-	assignee, err := m.userStore.GetAgent(assigneeID)
+	assignee, err := m.userStore.GetAgent(assigneeID, "")
 	if err != nil {
 		return err
 	}

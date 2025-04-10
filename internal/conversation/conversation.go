@@ -43,8 +43,8 @@ var (
 	//go:embed queries.sql
 	efs                                  embed.FS
 	errConversationNotFound              = errors.New("conversation not found")
-	conversationsListAllowedFilterFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id"}
-	conversationStatusesFilterFields     = []string{"id", "name"}
+	conversationsAllowedFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "created_at", "waiting_since", "next_sla_deadline_at", "priority_id"}
+	conversationStatusAllowedFields     = []string{"id", "name"}
 	csatReplyMessage                     = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
 )
 
@@ -97,7 +97,7 @@ type teamStore interface {
 }
 
 type userStore interface {
-	GetAgent(int) (umodels.User, error)
+	GetAgent(int, string) (umodels.User, error)
 	GetSystemUser() (umodels.User, error)
 	CreateContact(user *umodels.User) error
 }
@@ -355,7 +355,9 @@ func (c *Manager) GetConversations(userID int, teamIDs []int, listTypes []string
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.conversation}"), nil)
 	}
 
-	tx, err := c.db.BeginTxx(context.Background(), nil)
+	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly: true,
+	})
 	defer tx.Rollback()
 	if err != nil {
 		c.lo.Error("error preparing get conversations query", "error", err)
@@ -581,7 +583,9 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 // TODO: Rename to overview [reports/overview].
 func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error) {
 	var counts = json.RawMessage{}
-	tx, err := c.db.BeginTxx(context.Background(), nil)
+	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly: true,
+	})
 	if err != nil {
 		c.lo.Error("error starting db txn", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingCount", "name", "{globals.terms.dashboard}"), nil)
@@ -619,7 +623,9 @@ func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error
 // GetDashboardChart returns dashboard chart data
 func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error) {
 	var stats = json.RawMessage{}
-	tx, err := c.db.BeginTxx(context.Background(), nil)
+	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly: true,
+	})
 	if err != nil {
 		c.lo.Error("error starting db txn", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingChart", "name", "{globals.terms.dashboard}"), nil)
@@ -706,7 +712,7 @@ func (m *Manager) GetMessageSourceIDs(conversationID, limit int) ([]string, erro
 
 // SendAssignedConversationEmail sends a email for an assigned conversation to the passed user ids.
 func (m *Manager) SendAssignedConversationEmail(userIDs []int, conversation models.Conversation) error {
-	agent, err := m.userStore.GetAgent(userIDs[0])
+	agent, err := m.userStore.GetAgent(userIDs[0], "")
 	if err != nil {
 		m.lo.Error("error fetching agent", "user_id", userIDs[0], "error", err)
 		return fmt.Errorf("fetching agent: %w", err)
@@ -906,7 +912,7 @@ func (c *Manager) makeConversationsListQuery(userID int, teamIDs []int, listType
 
 	// Set defaults
 	if orderBy == "" {
-		orderBy = "last_message_at"
+		orderBy = "conversations.last_message_at"
 	}
 	if order == "" {
 		order = "DESC"
@@ -965,7 +971,7 @@ func (c *Manager) makeConversationsListQuery(userID int, teamIDs []int, listType
 		Page:     page,
 		PageSize: pageSize,
 	}, filtersJSON, dbutil.AllowedFields{
-		"conversations":         conversationsListAllowedFilterFields,
-		"conversation_statuses": conversationStatusesFilterFields,
+		"conversations":         conversationsAllowedFields,
+		"conversation_statuses": conversationStatusAllowedFields,
 	})
 }

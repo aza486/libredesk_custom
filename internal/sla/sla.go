@@ -85,7 +85,7 @@ type teamStore interface {
 }
 
 type userStore interface {
-	GetAgent(int) (umodels.User, error)
+	GetAgent(int, string) (umodels.User, error)
 }
 
 type appSettingsStore interface {
@@ -349,7 +349,7 @@ func (m *Manager) SendNotification(scheduledNotification models.ScheduledSLANoti
 			m.lo.Error("error parsing recipient ID", "error", err, "recipient_id", recipientS)
 			continue
 		}
-		agent, err := m.userStore.GetAgent(recipientID)
+		agent, err := m.userStore.GetAgent(recipientID, "")
 		if err != nil {
 			m.lo.Error("error fetching agent for SLA notification", "recipient_id", recipientID, "error", err)
 			if _, err := m.q.MarkNotificationProcessed.Exec(scheduledNotification.ID); err != nil {

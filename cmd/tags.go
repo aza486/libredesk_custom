@@ -9,17 +9,19 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+// handleGetTags returns all tags from the database.
 func handleGetTags(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
 	t, err := app.tag.GetAll()
 	if err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, err.Error(), nil, "")
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(t)
 }
 
+// handleCreateTag creates a new tag in the database.
 func handleCreateTag(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -33,14 +35,14 @@ func handleCreateTag(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	err := app.tag.Create(tag.Name)
-	if err != nil {
+	if err := app.tag.Create(tag.Name); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	return r.SendEnvelope(true)
 }
 
+// handleDeleteTag deletes a tag from the database.
 func handleDeleteTag(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -50,14 +52,14 @@ func handleDeleteTag(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 
-	err = app.tag.Delete(id)
-	if err != nil {
+	if err = app.tag.Delete(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	return r.SendEnvelope(true)
 }
 
+// handleUpdateTag updates an existing tag in the database.
 func handleUpdateTag(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
@@ -76,8 +78,7 @@ func handleUpdateTag(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	err = app.tag.Update(id, tag.Name)
-	if err != nil {
+	if err = app.tag.Update(id, tag.Name); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

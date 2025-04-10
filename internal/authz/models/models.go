@@ -66,6 +66,9 @@ const (
 
 	// AI
 	PermAIManage = "ai:manage"
+
+	// Contacts
+	PermContactsManage = "contacts:manage"
 )
 
 var validPermissions = map[string]struct{}{
@@ -99,6 +102,7 @@ var validPermissions = map[string]struct{}{
 	PermNotificationSettingsManage:      {},
 	PermOIDCManage:                      {},
 	PermAIManage:                        {},
+	PermContactsManage:                  {},
 }
 
 // IsValidPermission returns true if it's a valid permission.
