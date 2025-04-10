@@ -77,9 +77,11 @@
               </div>
 
               <FormField v-slot="{ componentField }" name="avatar_url">
-                <FormControl>
-                  <Input v-bind="componentField" type="hidden" />
-                </FormControl>
+                <FormItem>
+                  <FormControl>
+                    <Input v-bind="componentField" type="hidden" />
+                  </FormControl>
+                </FormItem>
               </FormField>
 
               <div class="flex flex-wrap gap-6">
@@ -241,7 +243,7 @@ const formLoading = ref(false)
 const contact = ref(null)
 const showBlockConfirmation = ref(false)
 const form = useForm({
-  validationSchema: toTypedSchema(createFormSchema(t)),
+  validationSchema: toTypedSchema(createFormSchema(t))
 })
 
 const allCountries = countries.map((country) => ({
