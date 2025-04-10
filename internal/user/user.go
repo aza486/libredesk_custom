@@ -200,7 +200,6 @@ func (u *Manager) Get(id int, email, type_ string) (models.User, error) {
 	var user models.User
 	if err := u.q.GetUser.Get(&user, id, email, type_); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			u.lo.Error("user not found", "id", id, "error", err)
 			return user, envelope.NewError(envelope.NotFoundError, u.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.user}"), nil)
 		}
 		u.lo.Error("error fetching user from db", "error", err)
