@@ -6,7 +6,7 @@ on:
       # Only trigger a Crowdin update when the source localization file is
       # updated.
       - 'i18n/en.json'
-    # Only watches for changes happening on "feat/translate-app" branch.
+    # Only watches for changes happening on "main" branch.
     branches: [ main ]
 
 jobs:
