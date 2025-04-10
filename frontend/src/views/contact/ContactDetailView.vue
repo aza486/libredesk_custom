@@ -123,10 +123,10 @@
                             </template>
 
                             <template #selected="{ selected }">
-                              <div class="flex items-center">
-                                <div v-if="selected">
-                                  {{ selected?.emoji }}
-                                </div>
+                              <div class="flex items-center mb-1">
+                                <span v-if="selected" class="text-xl leading-none">
+                                  {{ selected.emoji }}
+                                </span>
                               </div>
                             </template>
                           </ComboBox>
