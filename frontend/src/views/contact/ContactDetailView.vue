@@ -6,12 +6,10 @@
       </div>
 
       <div v-if="contact" class="flex justify-center space-y-4 w-full">
-        <!-- Card -->
         <div class="flex flex-col w-full">
           <div class="h-16"></div>
 
           <div class="flex flex-col space-y-2">
-            <!-- Avatar with upload-->
             <AvatarUpload
               @upload="onUpload"
               @remove="onRemove"
@@ -45,146 +43,23 @@
           </div>
 
           <div class="mt-12">
-            <form @submit.prevent="onSubmit" class="space-y-8">
-              <div class="flex flex-wrap gap-6">
-                <div class="flex-1">
-                  <FormField v-slot="{ componentField }" name="first_name">
-                    <FormItem class="flex flex-col">
-                      <FormLabel class="flex items-center">
-                        {{ t('form.field.firstName') }}
-                      </FormLabel>
-                      <FormControl>
-                        <Input v-bind="componentField" type="text" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  </FormField>
-                </div>
-
-                <div class="flex-1">
-                  <FormField v-slot="{ componentField }" name="last_name" class="flex-1">
-                    <FormItem class="flex flex-col">
-                      <FormLabel class="flex items-center">
-                        {{ t('form.field.lastName') }}
-                      </FormLabel>
-                      <FormControl>
-                        <Input v-bind="componentField" type="text" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  </FormField>
-                </div>
-              </div>
-
-              <FormField v-slot="{ componentField }" name="avatar_url">
-                <FormItem>
-                  <FormControl>
-                    <Input v-bind="componentField" type="hidden" />
-                  </FormControl>
-                </FormItem>
-              </FormField>
-
-              <div class="flex flex-wrap gap-6">
-                <div class="flex-1">
-                  <FormField v-slot="{ componentField }" name="email">
-                    <FormItem class="flex flex-col">
-                      <FormLabel class="flex items-center">
-                        {{ t('form.field.email') }}
-                      </FormLabel>
-                      <FormControl>
-                        <Input v-bind="componentField" type="email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  </FormField>
-                </div>
-
-                <div class="flex flex-col flex-1">
-                  <div class="flex items-end">
-                    <FormField v-slot="{ componentField }" name="phone_number_calling_code">
-                      <FormItem class="w-20">
-                        <FormLabel class="flex items-center whitespace-nowrap">
-                          {{ t('form.field.phoneNumber') }}
-                        </FormLabel>
-                        <FormControl>
-                          <ComboBox
-                            v-bind="componentField"
-                            :items="allCountries"
-                            :placeholder="t('form.field.select')"
-                            :buttonClass="'rounded-r-none border-r-0'"
-                          >
-                            <template #item="{ item }">
-                              <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 flex items-center justify-center">
-                                  <span v-if="item.emoji">{{ item.emoji }}</span>
-                                </div>
-                                <span class="text-sm">{{ item.label }} ( {{ item.value }})</span>
-                              </div>
-                            </template>
-
-                            <template #selected="{ selected }">
-                              <div class="flex items-center mb-1">
-                                <span v-if="selected" class="text-xl leading-none">
-                                  {{ selected.emoji }}
-                                </span>
-                              </div>
-                            </template>
-                          </ComboBox>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    </FormField>
-
-                    <div class="flex-1">
-                      <FormField v-slot="{ componentField }" name="phone_number">
-                        <FormItem class="relative">
-                          <FormControl>
-                            <!-- Input field -->
-                            <Input
-                              type="tel"
-                              v-bind="componentField"
-                              class="rounded-l-none"
-                              inputmode="numeric"
-                            />
-                            <FormMessage class="absolute top-full mt-1 text-sm" />
-                          </FormControl>
-                        </FormItem>
-                      </FormField>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Button type="submit" :isLoading="formLoading" :disabled="formLoading">
-                  {{
-                    $t('globals.buttons.update', {
-                      name: $t('globals.terms.contact').toLowerCase()
-                    })
-                  }}
-                </Button>
-              </div>
-            </form>
+            <ContactForm :formLoading="formLoading" :onSubmit="onSubmit" />
           </div>
         </div>
       </div>
 
-      <!-- Loading state -->
       <Spinner v-else />
 
-      <!-- Block/Unblock confirmation dialog -->
       <Dialog :open="showBlockConfirmation" @update:open="showBlockConfirmation = $event">
         <DialogContent class="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{{
-              contact?.enabled
-                ? t('globals.buttons.block', {
-                    name: t('globals.terms.contact')
-                  })
-                : t('globals.buttons.unblock', {
-                    name: t('globals.terms.contact')
-                  })
-            }}</DialogTitle>
+            <DialogTitle>
+              {{
+                contact?.enabled
+                  ? t('globals.buttons.block', { name: t('globals.terms.contact') })
+                  : t('globals.buttons.unblock', { name: t('globals.terms.contact') })
+              }}
+            </DialogTitle>
             <DialogDescription>
               {{ contact?.enabled ? t('contact.blockConfirm') : t('contact.unblockConfirm') }}
             </DialogDescription>
@@ -215,8 +90,6 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { AvatarUpload } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -227,14 +100,13 @@ import {
 import { ShieldOffIcon, ShieldCheckIcon } from 'lucide-vue-next'
 import ContactDetail from '@/layouts/contact/ContactDetail.vue'
 import api from '@/api'
-import { createFormSchema } from './formSchema.js'
+import ContactForm from '@/features/contact/ContactForm.vue'
+import { createFormSchema } from '@/features/contact/formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
 import { handleHTTPError } from '@/utils/http'
 import { CustomBreadcrumb } from '@/components/ui/breadcrumb'
 import { Spinner } from '@/components/ui/spinner'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
-import countries from '@/constants/countries.js'
 
 const { t } = useI18n()
 const emitter = useEmitter()
@@ -242,29 +114,17 @@ const route = useRoute()
 const formLoading = ref(false)
 const contact = ref(null)
 const showBlockConfirmation = ref(false)
+
 const form = useForm({
   validationSchema: toTypedSchema(createFormSchema(t))
 })
 
-const allCountries = countries.map((country) => ({
-  label: country.name,
-  value: country.calling_code,
-  emoji: country.emoji
-}))
-
 const breadcrumbLinks = [
   { path: 'contacts', label: t('globals.terms.contact', 2) },
-  {
-    path: '',
-    label: t('globals.messages.edit', {
-      name: t('globals.terms.contact')
-    })
-  }
+  { path: '', label: t('globals.messages.edit', { name: t('globals.terms.contact') }) }
 ]
 
-onMounted(() => {
-  fetchContact()
-})
+onMounted(fetchContact)
 
 async function fetchContact() {
   try {
@@ -278,9 +138,8 @@ async function fetchContact() {
 
 const getInitials = computed(() => {
   if (!contact.value) return ''
-  const firstName = contact.value.first_name || ''
-  const lastName = contact.value.last_name || ''
-  return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`
+  const { first_name = '', last_name = '' } = contact.value
+  return `${first_name.charAt(0).toUpperCase()}${last_name.charAt(0).toUpperCase()}`
 })
 
 async function confirmToggleBlock() {
@@ -305,9 +164,7 @@ async function toggleBlock() {
 const onSubmit = form.handleSubmit(async (values) => {
   try {
     formLoading.value = true
-    await api.updateContact(contact.value.id, {
-      ...values
-    })
+    await api.updateContact(contact.value.id, { ...values })
     await fetchContact()
     emitToast(t('globals.messages.updatedSuccessfully', { name: t('globals.terms.contact') }))
   } catch (err) {

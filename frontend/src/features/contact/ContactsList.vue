@@ -196,6 +196,7 @@ const totalPages = ref(0)
 const searchTerm = ref('')
 const orderByField = ref('users.created_at')
 const orderByDirection = ref('desc')
+const total = ref(0)
 const emitter = useEmitter()
 
 // Google-style pagination
@@ -242,6 +243,7 @@ const fetchContacts = async () => {
     })
     contacts.value = response.data.data.results
     totalPages.value = response.data.data.total_pages
+    total.value = response.data.data.total
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
