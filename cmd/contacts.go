@@ -3,6 +3,7 @@ package main
 import (
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
@@ -87,7 +88,7 @@ func handleUpdateContact(r *fastglue.Request) error {
 	}
 	email := ""
 	if v, ok := form.Value["email"]; ok && len(v) > 0 {
-		email = string(v[0])
+		email = strings.TrimSpace(string(v[0]))
 	}
 	phoneNumber := ""
 	if v, ok := form.Value["phone_number"]; ok && len(v) > 0 {
@@ -107,11 +108,14 @@ func handleUpdateContact(r *fastglue.Request) error {
 	}
 
 	// Validate mandatory fields.
-	if email == "" || !stringutil.ValidEmail(email) {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`email`"), nil, envelope.InputError)
+	if email == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "email"), nil, envelope.InputError)
+	}
+	if !stringutil.ValidEmail(email) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "email"), nil, envelope.InputError)
 	}
 	if firstName == "" {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`first_name`"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "first_name"), nil, envelope.InputError)
 	}
 
 	// Another contact with same new email?
