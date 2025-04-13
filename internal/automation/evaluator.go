@@ -209,6 +209,10 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		value1, _ := strconv.Atoi(valueToCompare)
 		value2, _ := strconv.Atoi(rule.Value)
 		conditionMet = value1 > value2
+	case models.RuleOperatorLessThan:
+		value1, _ := strconv.Atoi(valueToCompare)
+		value2, _ := strconv.Atoi(rule.Value)
+		conditionMet = value1 < value2
 	default:
 		e.lo.Error("error unrecognized rule logical operator", "operator", rule.Operator)
 		return false

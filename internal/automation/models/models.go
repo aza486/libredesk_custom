@@ -29,6 +29,7 @@ const (
 	RuleOperatorSet         = "set"
 	RuleOperatorNotSet      = "not set"
 	RuleOperatorGreaterThan = "greater than"
+	RuleOperatorLessThan    = "less than"
 
 	RuleTypeNewConversation    = "new_conversation"
 	RuleTypeConversationUpdate = "conversation_update"
