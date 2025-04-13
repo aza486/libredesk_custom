@@ -124,7 +124,7 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 			note TEXT NOT NULL,
 			user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 		);
-		CREATE INDEX index_contact_notes_on_contact_id_created_at ON contact_notes (contact_id, created_at);
+		CREATE INDEX IF NOT EXISTS index_contact_notes_on_contact_id_created_at ON contact_notes (contact_id, created_at);
 	`)
 	if err != nil {
 		return err
