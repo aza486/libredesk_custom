@@ -9,7 +9,8 @@ SELECT
     key,
     values,
     data_type,
-    regex
+    regex,
+    regex_hint
 FROM
     custom_attribute_definitions
 WHERE
@@ -30,7 +31,8 @@ SELECT
     key,
     values,
     data_type,
-    regex
+    regex,
+    regex_hint
 FROM
     custom_attribute_definitions
 WHERE
@@ -38,9 +40,9 @@ WHERE
 
 -- name: insert-custom-attribute
 INSERT INTO
-    custom_attribute_definitions (applies_to, name, description, key, values, data_type, regex)
+    custom_attribute_definitions (applies_to, name, description, key, values, data_type, regex, regex_hint)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7)
+    ($1, $2, $3, $4, $5, $6, $7, $8)
 
 -- name: delete-custom-attribute
 DELETE FROM
@@ -58,6 +60,7 @@ SET
     values = $5,
     data_type = $6,
     regex = $7,
+    regex_hint = $8,
     updated_at = NOW()
 WHERE
     id = $1;

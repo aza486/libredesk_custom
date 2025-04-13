@@ -61,6 +61,7 @@ export const createFormSchema = (t) => z.object({
         required_error: t('globals.messages.required'),
     }),
     regex: z.string().optional(),
+    regex_hint: z.string().optional(),
     values: z.array(z.string())
         .default([])
 })

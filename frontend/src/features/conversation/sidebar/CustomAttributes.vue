@@ -9,7 +9,7 @@
           </p>
           <Tooltip>
             <TooltipTrigger>
-              <Info class="text-muted-foreground" size="16" />
+              <Info class="text-muted-foreground" size="14" />
             </TooltipTrigger>
             <TooltipContent>
               {{ attribute.description }}
@@ -36,7 +36,7 @@
         </p>
         <Tooltip>
           <TooltipTrigger>
-            <Info class="text-muted-foreground" size="16" />
+            <Info class="text-muted-foreground" size="14" />
           </TooltipTrigger>
           <TooltipContent>
             {{ attribute.description }}
@@ -177,13 +177,13 @@ const getValidationSchema = (attribute) => {
   switch (attribute.data_type) {
     case 'text': {
       let schema = z.string().min(1, t('globals.messages.required'))
-      // If regex is provided and valid, add it to the schema validation.
+      // If regex is provided and valid, add it to the schema validation along with the hint
       if (attribute.regex) {
         try {
           console.log('Creating regex:', attribute.regex)
           const regex = new RegExp(attribute.regex)
           schema = schema.regex(regex, {
-            message: t('globals.messages.invalid', { name: t('form.field.value').toLowerCase() })
+            message: attribute.regex_hint
           })
         } catch (err) {
           console.error('Error creating regex:', err)

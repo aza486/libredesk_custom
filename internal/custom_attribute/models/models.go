@@ -17,4 +17,5 @@ type CustomAttribute struct {
 	Values      pq.StringArray `db:"values" json:"values"`
 	DataType    string         `db:"data_type" json:"data_type"`
 	Regex       string         `db:"regex" json:"regex"`
+	RegexHint   string         `db:"regex_hint" json:"regex_hint"`
 }

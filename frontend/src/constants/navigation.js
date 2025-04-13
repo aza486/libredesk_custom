@@ -88,6 +88,16 @@ export const adminNavItems = [
         ]
     },
     {
+        titleKey: 'navigation.customAttributes',
+        children: [
+            {
+                titleKey: 'navigation.customAttributes',
+                href: '/admin/custom-attributes',
+                permission: 'custom_attributes:manage'
+            }
+        ]
+    },
+    {
         titleKey: 'navigation.notifications',
         children: [
             {
@@ -117,16 +127,6 @@ export const adminNavItems = [
             }
         ]
     },
-    {
-        titleKey: 'globals.terms.customAttribute',
-        children: [
-            {
-                titleKey: 'globals.terms.customAttribute',
-                href: '/admin/custom-attributes',
-                permission: 'custom_attributes:manage'
-            }
-        ]
-    }
 ]
 
 export const accountNavItems = [

@@ -143,6 +143,7 @@
         </AccordionTrigger>
         <AccordionContent class="p-4">
           <CustomAttributes
+            :loading="conversationStore.current.loading"
             :attributes="customAttributeStore.contactAttributeOptions"
             :customAttributes="conversationStore.current?.contact?.custom_attributes || {}"
             @update:setattributes="updateContactCustomAttributes"

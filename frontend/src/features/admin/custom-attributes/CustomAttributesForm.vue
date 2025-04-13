@@ -119,6 +119,19 @@
       </FormItem>
     </FormField>
 
+    <FormField name="regex_hint" v-slot="{ componentField }">
+      <FormItem v-show="form.values.data_type === 'text'">
+        <FormLabel> {{ $t('form.field.regexHint') }} ({{ $t('form.field.optional') }}) </FormLabel>
+        <FormControl>
+          <Input type="text" v-bind="componentField" />
+        </FormControl>
+        <FormDescription>
+          {{ $t('admin.customAttributes.regexHint.description') }}
+        </FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
     <!-- Form submit button slot -->
     <slot name="footer"></slot>
   </form>
