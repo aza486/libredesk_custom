@@ -1,12 +1,29 @@
 package main
 
 import (
+	"slices"
 	"strconv"
 
 	cmodels "github.com/abhinavxd/libredesk/internal/custom_attribute/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
+)
+
+var (
+	// disallowedKeys contains keys that are not allowed for custom attributes as they're the default fields.
+	disallowedKeys = []string{
+		"contact_email",
+		"content",
+		"subject",
+		"status",
+		"priority",
+		"assigned_team",
+		"assigned_user",
+		"hours_since_created",
+		"hours_since_resolved",
+		"inbox",
+	}
 )
 
 // handleGetCustomAttribute retrieves a custom attribute by its ID.
@@ -76,7 +93,6 @@ func handleUpdateCustomAttribute(r *fastglue.Request) error {
 	if err = app.customAttribute.Update(id, attribute); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
 	return r.SendEnvelope(true)
 }
 
@@ -89,11 +105,9 @@ func handleDeleteCustomAttribute(r *fastglue.Request) error {
 	if err != nil || id <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
-
 	if err = app.customAttribute.Delete(id); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-
 	return r.SendEnvelope(true)
 }
 
@@ -113,6 +127,9 @@ func validateCustomAttribute(app *App, attribute cmodels.CustomAttribute) error 
 	}
 	if attribute.Key == "" {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "`key`"), nil)
+	}
+	if slices.Contains(disallowedKeys, attribute.Key) {
+		return envelope.NewError(envelope.InputError, app.i18n.T("admin.customAttributes.keyNotAllowed"), nil)
 	}
 	return nil
 }

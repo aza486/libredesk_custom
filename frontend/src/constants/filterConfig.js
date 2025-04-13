@@ -3,7 +3,9 @@ export const FIELD_TYPE = {
     TAG: 'tag',
     TEXT: 'text',
     NUMBER: 'number',
-    RICHTEXT: 'richtext'
+    RICHTEXT: 'richtext',
+    BOOLEAN: 'boolean',
+    DATE: 'date',
 }
 
 export const OPERATOR = {
@@ -19,6 +21,7 @@ export const OPERATOR = {
 
 export const FIELD_OPERATORS = {
     SELECT: [OPERATOR.EQUALS, OPERATOR.NOT_EQUALS, OPERATOR.SET, OPERATOR.NOT_SET],
+    BOOLEAN: [OPERATOR.EQUALS, OPERATOR.NOT_EQUALS],
     TEXT: [
         OPERATOR.EQUALS,
         OPERATOR.NOT_EQUALS,
@@ -27,5 +30,13 @@ export const FIELD_OPERATORS = {
         OPERATOR.CONTAINS,
         OPERATOR.NOT_CONTAINS
     ],
-    NUMBER: [OPERATOR.GREATER_THAN, OPERATOR.LESS_THAN]
+    DATE: [
+        OPERATOR.EQUALS,
+        OPERATOR.NOT_EQUALS,
+        OPERATOR.SET,
+        OPERATOR.NOT_SET,
+        OPERATOR.GREATER_THAN,
+        OPERATOR.LESS_THAN
+    ],
+    NUMBER: [OPERATOR.EQUALS, OPERATOR.NOT_EQUALS],
 }

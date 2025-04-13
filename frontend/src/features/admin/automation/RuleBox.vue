@@ -41,8 +41,18 @@
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
+                  <!-- Conversation fields -->
                   <SelectLabel>{{ $t('globals.terms.conversation') }}</SelectLabel>
                   <SelectItem v-for="(field, key) in currentFilters" :key="key" :value="key">
+                    {{ field.label }}
+                  </SelectItem>
+                  <!-- Contact custom attributes -->
+                  <SelectLabel>{{ $t('globals.terms.contact') }}</SelectLabel>
+                  <SelectItem
+                    v-for="(field, key) in contactCustomAttributes"
+                    :key="key"
+                    :value="key"
+                  >
                     {{ field.label }}
                   </SelectItem>
                 </SelectGroup>
@@ -60,7 +70,7 @@
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    v-for="(op, key) in getFieldOperators(rule.field)"
+                    v-for="(op, key) in getFieldOperators(rule.field, rule.field_type)"
                     :key="key"
                     :value="op"
                   >
@@ -94,7 +104,7 @@
               <div v-if="inputType(index) === 'select'">
                 <ComboBox
                   v-model="rule.value"
-                  :items="getFieldOptions(rule.field)"
+                  :items="getFieldOptions(rule.field, rule.field_type)"
                   @select="handleValueChange($event, index)"
                 >
                   <template #item="{ item }">
@@ -128,7 +138,7 @@
                       <div v-if="selected" class="flex items-center gap-2">
                         <Avatar class="w-7 h-7">
                           <AvatarImage
-                            :src="selected.avatar_url ?? ''"
+                            :src="selected.avatar_url || ''"
                             :alt="selected.label.slice(0, 2)"
                           />
                           <AvatarFallback>
@@ -167,7 +177,38 @@
                   {{ $t('globals.messages.pressEnterToSelectAValue') }}
                 </p>
               </div>
+
+              <!-- Date input -->
+              <Input
+                type="date"
+                :placeholder="t('form.field.setValue')"
+                v-if="inputType(index) === 'date'"
+                v-model="rule.value"
+                @update:modelValue="(value) => handleValueChange(value, index)"
+              />
+
+              <!-- Boolean / Checkbox input -->
+              <Select
+                v-model="rule.value"
+                @update:modelValue="(value) => handleValueChange(value, index)"
+                v-if="inputType(index) === 'boolean'"
+              >
+                <SelectTrigger>
+                  <SelectValue :placeholder="t('form.field.selectValue')" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="true">True</SelectItem>
+                    <SelectItem value="false">False</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
+
+            <!-- Placeholder for spacing -->
+            <div v-else class="flex-1">
+            </div>
+
 
             <!-- Remove condition -->
             <div class="cursor-pointer mt-2" @click.prevent="removeCondition(index)">
@@ -242,7 +283,12 @@ const props = defineProps({
   }
 })
 
-const { conversationFilters, newConversationFilters } = useConversationFilters()
+const fieldTypeConstants = {
+  conversation: 'conversation',
+  contact_custom_attribute: 'contact_custom_attribute'
+}
+const { conversationFilters, newConversationFilters, contactCustomAttributes } =
+  useConversationFilters()
 const { ruleGroup } = toRefs(props)
 const emit = defineEmits(['update-group', 'add-condition', 'remove-condition'])
 const { t } = useI18n()
@@ -272,9 +318,16 @@ const handleGroupOperator = (value) => {
 }
 
 const handleFieldChange = (value, ruleIndex) => {
+  // Set the field type based on the selected field value.
+  let fieldType = fieldTypeConstants.conversation
+  if (contactCustomAttributes.value[value]) {
+    fieldType = fieldTypeConstants.contact_custom_attribute
+  }
+
   ruleGroup.value.rules[ruleIndex].operator = ''
   ruleGroup.value.rules[ruleIndex].value = ''
   ruleGroup.value.rules[ruleIndex].field = value
+  ruleGroup.value.rules[ruleIndex].field_type = fieldType
   emitUpdate()
 }
 
@@ -326,19 +379,39 @@ const emitUpdate = () => {
   emit('update-group', ruleGroup, props.groupIndex)
 }
 
-const getFieldOperators = (field) => {
-  return currentFilters.value[field]?.operators || []
+const getFieldOperators = (field, fieldType) => {
+  if (fieldType === fieldTypeConstants.contact_custom_attribute) {
+    return contactCustomAttributes.value[field]?.operators || []
+  }
+  if (fieldType === fieldTypeConstants.conversation) {
+    return currentFilters.value[field]?.operators || []
+  }
+  return []
 }
 
-const getFieldOptions = (field) => {
-  return currentFilters.value[field]?.options || []
+const getFieldOptions = (field, fieldType) => {
+  if (fieldType === fieldTypeConstants.contact_custom_attribute) {
+    return contactCustomAttributes.value[field]?.options || []
+  }
+  if (fieldType === fieldTypeConstants.conversation) {
+    return currentFilters.value[field]?.options || []
+  }
+  return []
 }
 
 const inputType = (index) => {
   const field = ruleGroup.value.rules[index]?.field
+  const fieldType = ruleGroup.value.rules[index]?.field_type
   const operator = ruleGroup.value.rules[index]?.operator
   if (['contains', 'not contains'].includes(operator)) return 'tag'
-  if (field) return currentFilters.value[field].type
+  if (field && fieldType) {
+    if (fieldType === fieldTypeConstants.contact_custom_attribute) {
+      return contactCustomAttributes.value[field]?.type || ''
+    }
+    if (fieldType === fieldTypeConstants.conversation) {
+      return currentFilters.value[field]?.type || ''
+    }
+  }
   return ''
 }
 

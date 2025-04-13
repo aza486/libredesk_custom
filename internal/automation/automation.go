@@ -25,7 +25,7 @@ import (
 var (
 	//go:embed queries.sql
 	efs embed.FS
-	// MaxQueueSize defines the maximum size of the task queues.
+	// MaxQueueSize is the maximum size of the task queue.
 	MaxQueueSize = 5000
 )
 

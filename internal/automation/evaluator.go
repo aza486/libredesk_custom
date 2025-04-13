@@ -1,6 +1,7 @@
 package automation
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ import (
 // the corresponding actions are executed.
 func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels.Conversation) {
 	for _, rule := range rules {
-		e.lo.Debug("evaluating rule for conversation", "rule", rule, "conversation_id", conversation.ID)
+		e.lo.Debug("evaluating rules for conversation", "rule", rule, "conversation_id", conversation.ID)
 
 		// At max there can be only 2 groups.
 		if len(rule.Groups) > 2 {
@@ -36,14 +37,14 @@ func (e *Engine) evalConversationRules(rules []models.Rule, conversation cmodels
 		}
 
 		if evaluateFinalResult(groupEvalResults, rule.GroupOperator) {
-			e.lo.Debug("rule evaluation successful executing actions", "conversation_uuid", conversation.UUID)
+			e.lo.Debug("all rules within groups evaluated successfully, executing actions", "conversation_uuid", conversation.UUID)
 			for _, action := range rule.Actions {
 				if err := e.conversationStore.ApplyAction(action, conversation, umodels.User{}); err != nil {
 					e.lo.Error("error applying action on conversation", "action", action, "conversation_uuid", conversation.UUID, "error", err)
 				}
 			}
 			if rule.ExecutionMode == models.ExecutionModeFirstMatch {
-				e.lo.Debug("first match rule execution mode, breaking out of rule evaluation", "conversation_uuid", conversation.UUID)
+				e.lo.Debug("automation is first match rule execution mode, breaking out of rule evaluation", "conversation_uuid", conversation.UUID)
 				break
 			}
 		} else {
@@ -100,47 +101,94 @@ func (e *Engine) evaluateGroup(rules []models.RuleDetail, operator string, conve
 	return false
 }
 
-// evaluateRule determines if a conversation matches the specified rule's conditions.
+// evaluateRule evaluates a single rule against a given conversation by extracting the field value and comparing it with the rule's value.
+// Returns true if the rule condition is met, false otherwise.
 func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conversation) bool {
 	var (
-		valueToCompare string
-		ruleValues     []string
-		conditionMet   bool
+		valueToCompare   string
+		ruleValues       []string
+		conditionMet     bool
+		customAttributes map[string]any
 	)
 
+	// Assign default field type if not provided
+	if rule.FieldType == "" {
+		rule.FieldType = models.FieldTypeConversationField
+	}
+
+	e.lo.Debug("evaluating rule", "rule_field", rule.Field, "field_type", rule.FieldType, "rule_operator", rule.Operator,
+		"rule_value", rule.Value, "conversation_uuid", conversation.UUID)
+
 	// Extract the value from the conversation based on the rule's field
-	switch rule.Field {
-	case models.ContactEmail:
-		valueToCompare = conversation.Contact.Email.String
-	case models.ConversationSubject:
-		valueToCompare = conversation.Subject.String
-	case models.ConversationContent:
-		valueToCompare = conversation.LastMessage.String
-	case models.ConversationStatus:
-		valueToCompare = strconv.Itoa(conversation.StatusID.Int)
-	case models.ConversationPriority:
-		valueToCompare = strconv.Itoa(conversation.PriorityID.Int)
-	case models.ConversationAssignedTeam:
-		if conversation.AssignedTeamID.Valid {
-			valueToCompare = strconv.Itoa(conversation.AssignedTeamID.Int)
+	if rule.FieldType == models.FieldTypeConversationField {
+		switch rule.Field {
+		case models.ContactEmail:
+			valueToCompare = conversation.Contact.Email.String
+		case models.ConversationSubject:
+			valueToCompare = conversation.Subject.String
+		case models.ConversationContent:
+			valueToCompare = conversation.LastMessage.String
+		case models.ConversationStatus:
+			valueToCompare = strconv.Itoa(conversation.StatusID.Int)
+		case models.ConversationPriority:
+			valueToCompare = strconv.Itoa(conversation.PriorityID.Int)
+		case models.ConversationAssignedTeam:
+			if conversation.AssignedTeamID.Valid {
+				valueToCompare = strconv.Itoa(conversation.AssignedTeamID.Int)
+			}
+		case models.ConversationAssignedUser:
+			if conversation.AssignedUserID.Valid {
+				valueToCompare = strconv.Itoa(conversation.AssignedUserID.Int)
+			}
+		case models.ConversationHoursSinceCreated:
+			valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.CreatedAt).Hours()))
+		case models.ConversationHoursSinceResolved:
+			if !conversation.ResolvedAt.IsZero() {
+				valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.ResolvedAt.Time).Hours()))
+			}
+		case models.ConversationInbox:
+			valueToCompare = strconv.Itoa(conversation.InboxID)
+		default:
+			e.lo.Error("error unrecognized conversation field", "field", rule.Field, "field_type", rule.FieldType, "conversation_uuid", conversation.UUID)
+			return false
 		}
-	case models.ConversationAssignedUser:
-		if conversation.AssignedUserID.Valid {
-			valueToCompare = strconv.Itoa(conversation.AssignedUserID.Int)
+	} else if rule.FieldType == models.FieldTypeContactCustomAttribute {
+		// If the field type is custom attribute, need to extract the value from the custom attributes
+		var attributes json.RawMessage = conversation.Contact.CustomAttributes
+
+		// Unmarshal the custom attributes
+		if err := json.Unmarshal(attributes, &customAttributes); err != nil {
+			e.lo.Error("error unmarshalling custom attributes", "conversation_uuid", conversation.UUID, "error", err)
+			return false
 		}
-	case models.ConversationHoursSinceCreated:
-		valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.CreatedAt).Hours()))
-	case models.ConversationHoursSinceResolved:
-		if !conversation.ResolvedAt.IsZero() {
-			valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.ResolvedAt.Time).Hours()))
+		e.lo.Debug("unmarshalled custom attributes", "custom_attributes", customAttributes, "conversation_uuid", conversation.UUID)
+
+		// Check if the field exists in the custom attributes, If the field is not found, return false.
+		if val, ok := customAttributes[rule.Field]; ok {
+			// Convert the value to a string for comparison, Handle different types of values, really not required but just to be safe.
+			switch v := val.(type) {
+			case string:
+				valueToCompare = v
+			case int:
+				valueToCompare = strconv.Itoa(v)
+			// Float type does not exist in the custom attributes.
+			case float64:
+				valueToCompare = strconv.FormatInt(int64(v), 10)
+			case bool:
+				valueToCompare = strconv.FormatBool(v)
+			default:
+				valueToCompare = fmt.Sprintf("%v", v)
+			}
+		} else {
+			e.lo.Warn("field not found in custom attribute", "field", rule.Field, "field_type", rule.FieldType, "conversation_uuid", conversation.UUID, "custom_attributes", customAttributes)
+			return false
 		}
-	case models.ConversationInbox:
-		valueToCompare = strconv.Itoa(conversation.InboxID)
-	default:
-		e.lo.Error("unrecognized rule field", "field", rule.Field)
+	} else {
+		e.lo.Error("error unrecognized field type", "field_type", rule.FieldType, "conversation_uuid", conversation.UUID)
 		return false
 	}
 
+	// Case sensitive match?
 	if !rule.CaseSensitiveMatch {
 		valueToCompare = strings.ToLower(valueToCompare)
 		rule.Value = strings.ToLower(rule.Value)

@@ -66,7 +66,7 @@
       <FormItem>
         <FormLabel>{{ $t('form.field.type') }}</FormLabel>
         <FormControl>
-          <Select v-bind="componentField">
+          <Select v-bind="componentField" :disabled="form.values.id && form.values.id > 0">
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

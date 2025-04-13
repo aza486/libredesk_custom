@@ -92,7 +92,7 @@ func (m *Manager) Create(attr models.CustomAttribute) error {
 
 // Update updates a custom attribute by ID.
 func (m *Manager) Update(id int, attr models.CustomAttribute) error {
-	if _, err := m.q.UpdateCustomAttribute.Exec(id, attr.AppliesTo, attr.Name, attr.Description, pq.Array(attr.Values), attr.DataType, attr.Regex, attr.RegexHint); err != nil {
+	if _, err := m.q.UpdateCustomAttribute.Exec(id, attr.AppliesTo, attr.Name, attr.Description, pq.Array(attr.Values), attr.Regex, attr.RegexHint); err != nil {
 		m.lo.Error("error updating custom attribute", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.customAttribute}"), nil)
 	}

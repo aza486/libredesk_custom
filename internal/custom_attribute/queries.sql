@@ -58,9 +58,8 @@ SET
     name = $3,
     description = $4,
     values = $5,
-    data_type = $6,
-    regex = $7,
-    regex_hint = $8,
+    regex = $6,
+    regex_hint = $7,
     updated_at = NOW()
 WHERE
     id = $1;

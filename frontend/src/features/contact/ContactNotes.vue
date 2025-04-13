@@ -55,7 +55,7 @@
       <Card
         v-for="note in notes"
         :key="note.id"
-        class="overflow-hidden border-gray-2 00 hover:border-gray-300 transition-all duration-200 box hover:shadow"
+        class="overflow-hidden border-gray-2 hover:border-gray-300 transition-all duration-200 box hover:shadow"
       >
         <!-- Header -->
         <CardHeader class="bg-gray-50/50 border-b p-2">

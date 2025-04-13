@@ -22,6 +22,15 @@ export const createColumns = (t) => [
         }
     },
     {
+        accessorKey: 'data_type',
+        header: function () {
+            return h('div', { class: 'text-center' }, t('form.field.type'))
+        },
+        cell: function ({ row }) {
+            return h('div', { class: 'text-center font-medium' }, row.getValue('data_type'))
+        }
+    },
+    {
         accessorKey: 'applies_to',
         header: function () {
             return h('div', { class: 'text-center' }, t('form.field.appliesTo'))

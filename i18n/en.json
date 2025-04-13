@@ -613,5 +613,6 @@
   "contact.notes.help": "   Add note for this contact to keep track of important information and conversations.",
   "admin.customAttributes.deleteConfirmation": "This action cannot be undone. This will permanently delete this custom attribute.",
   "admin.customAttributes.regex.description": "Regex to validate the value of this custom attribute. Leave empty to skip validation.",
-  "admin.customAttributes.regexHint.description": "Regex pattern hint."
+  "admin.customAttributes.regexHint.description": "Regex pattern hint.",
+  "admin.customAttributes.keyNotAllowed": "The provided key is not allowed as it conflicts with default attributes. Please use a different key."
 }
