@@ -503,7 +503,7 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 	case models.ActivityTagChange:
 		content = fmt.Sprintf("%s added tag %s", actorName, newValue)
 	case models.ActivitySLASet:
-		content = fmt.Sprintf("%s set %s SLA", actorName, newValue)
+		content = fmt.Sprintf("%s set %s SLA policy", actorName, newValue)
 	default:
 		return "", fmt.Errorf("invalid activity type %s", activityType)
 	}
