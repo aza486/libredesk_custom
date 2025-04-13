@@ -81,6 +81,7 @@
 
     <CustomAttributes
       v-if="customAttributeStore.conversationAttributeOptions.length > 0"
+      :loading="conversationStore.conversation.loading"
       :attributes="customAttributeStore.conversationAttributeOptions"
       :custom-attributes="conversation.custom_attributes || {}"
       @update:setattributes="updateCustomAttributes"
