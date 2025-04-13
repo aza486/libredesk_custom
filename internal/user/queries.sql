@@ -95,6 +95,12 @@ SET first_name = COALESCE($2, first_name),
  updated_at = now()
 WHERE id = $1;
 
+-- name: update-custom-attributes
+UPDATE users
+SET custom_attributes = $2,
+updated_at = now()
+WHERE id = $1;
+
 -- name: update-avatar
 UPDATE users  
 SET avatar_url = $2, updated_at = now()

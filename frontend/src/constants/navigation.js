@@ -116,6 +116,16 @@ export const adminNavItems = [
                 permission: 'oidc:manage'
             }
         ]
+    },
+    {
+        titleKey: 'globals.terms.customAttribute',
+        children: [
+            {
+                titleKey: 'globals.terms.customAttribute',
+                href: '/admin/custom-attributes',
+                permission: 'custom_attributes:manage'
+            }
+        ]
     }
 ]
 

@@ -23,6 +23,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/conversation/priority"
 	"github.com/abhinavxd/libredesk/internal/conversation/status"
 	"github.com/abhinavxd/libredesk/internal/csat"
+	customAttribute "github.com/abhinavxd/libredesk/internal/custom_attribute"
 	"github.com/abhinavxd/libredesk/internal/inbox"
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/email"
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
@@ -789,6 +790,20 @@ func initSearch(db *sqlx.DB, i18n *i18n.I18n) *search.Manager {
 	})
 	if err != nil {
 		log.Fatalf("error initializing search manager: %v", err)
+	}
+	return m
+}
+
+// initCustomAttribute inits custom attribute manager.
+func initCustomAttribute(db *sqlx.DB, i18n *i18n.I18n) *customAttribute.Manager {
+	lo := initLogger("custom-attribute")
+	m, err := customAttribute.New(customAttribute.Opts{
+		DB:   db,
+		Lo:   lo,
+		I18n: i18n,
+	})
+	if err != nil {
+		log.Fatalf("error initializing custom attribute manager: %v", err)
 	}
 	return m
 }

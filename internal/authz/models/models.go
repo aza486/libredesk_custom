@@ -69,6 +69,9 @@ const (
 
 	// Contacts
 	PermContactsManage = "contacts:manage"
+
+	// Custom attributes
+	PermCustomAttributesManage = "custom_attributes:manage"
 )
 
 var validPermissions = map[string]struct{}{
@@ -103,6 +106,7 @@ var validPermissions = map[string]struct{}{
 	PermOIDCManage:                      {},
 	PermAIManage:                        {},
 	PermContactsManage:                  {},
+	PermCustomAttributesManage:          {},
 }
 
 // IsValidPermission returns true if it's a valid permission.

@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -58,22 +59,23 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetUser               *sqlx.Stmt `query:"get-user"`
-	GetUsers              string     `query:"get-users"`
-	GetAgentsCompact      *sqlx.Stmt `query:"get-agents-compact"`
-	UpdateContact         *sqlx.Stmt `query:"update-contact"`
-	UpdateAgent           *sqlx.Stmt `query:"update-agent"`
-	UpdateAvatar          *sqlx.Stmt `query:"update-avatar"`
-	UpdateAvailability    *sqlx.Stmt `query:"update-availability"`
-	UpdateLastActiveAt    *sqlx.Stmt `query:"update-last-active-at"`
-	UpdateInactiveOffline *sqlx.Stmt `query:"update-inactive-offline"`
-	UpdateLastLoginAt     *sqlx.Stmt `query:"update-last-login-at"`
-	SoftDeleteAgent       *sqlx.Stmt `query:"soft-delete-agent"`
-	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
-	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
-	ResetPassword         *sqlx.Stmt `query:"reset-password"`
-	InsertAgent           *sqlx.Stmt `query:"insert-agent"`
-	InsertContact         *sqlx.Stmt `query:"insert-contact"`
+	GetUser                *sqlx.Stmt `query:"get-user"`
+	GetUsers               string     `query:"get-users"`
+	GetAgentsCompact       *sqlx.Stmt `query:"get-agents-compact"`
+	UpdateContact          *sqlx.Stmt `query:"update-contact"`
+	UpdateAgent            *sqlx.Stmt `query:"update-agent"`
+	UpdateCustomAttributes *sqlx.Stmt `query:"update-custom-attributes"`
+	UpdateAvatar           *sqlx.Stmt `query:"update-avatar"`
+	UpdateAvailability     *sqlx.Stmt `query:"update-availability"`
+	UpdateLastActiveAt     *sqlx.Stmt `query:"update-last-active-at"`
+	UpdateInactiveOffline  *sqlx.Stmt `query:"update-inactive-offline"`
+	UpdateLastLoginAt      *sqlx.Stmt `query:"update-last-login-at"`
+	SoftDeleteAgent        *sqlx.Stmt `query:"soft-delete-agent"`
+	SetUserPassword        *sqlx.Stmt `query:"set-user-password"`
+	SetResetPasswordToken  *sqlx.Stmt `query:"set-reset-password-token"`
+	ResetPassword          *sqlx.Stmt `query:"reset-password"`
+	InsertAgent            *sqlx.Stmt `query:"insert-agent"`
+	InsertContact          *sqlx.Stmt `query:"insert-contact"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -351,6 +353,23 @@ func (u *Manager) MonitorAgentAvailability(ctx context.Context) {
 			return
 		}
 	}
+}
+
+// UpdateCustomAttributes updates the custom attributes of an user.
+func (u *Manager) UpdateCustomAttributes(id int, customAttributes map[string]any) error {
+	// Convert custom attributes to JSON.
+	jsonb, err := json.Marshal(customAttributes)
+	if err != nil {
+		u.lo.Error("error marshalling custom attributes to JSON", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+	}
+	// Update custom attributes in the database.
+	if _, err := u.q.UpdateCustomAttributes.Exec(id, jsonb); err != nil {
+		u.lo.Error("error updating user custom attributes", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+
+	}
+	return nil
 }
 
 // makeUserListQuery generates a query to fetch users based on the provided filters.

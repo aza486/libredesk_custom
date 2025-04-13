@@ -75,5 +75,37 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
+	// Add `custom_attributes:manage` permission to Admin role
+	_, err = db.Exec(`
+		UPDATE roles
+		SET permissions = array_append(permissions, 'custom_attributes:manage')
+		WHERE name = 'Admin' AND NOT ('custom_attributes:manage' = ANY(permissions));
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Create table for custom attribute definitions
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS custom_attribute_definitions (
+			id SERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			"name" TEXT NOT NULL,
+			description TEXT NOT NULL,
+			applies_to TEXT NOT NULL,
+			key TEXT NOT NULL,
+			values TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
+			data_type TEXT NOT NULL,
+			regex TEXT NULL,
+			CONSTRAINT constraint_custom_attribute_definitions_on_name CHECK (length("name") <= 140),
+			CONSTRAINT constraint_custom_attribute_definitions_on_description CHECK (length(description) <= 300),
+			CONSTRAINT constraint_custom_attribute_definitions_on_key CHECK (length(key) <= 140),
+			CONSTRAINT constraint_custom_attribute_definitions_key_applies_to_unique UNIQUE (key, applies_to)
+		);
+	`)
+	if err != nil {
+		return err
+	}
 	return nil
 }

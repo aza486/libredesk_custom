@@ -15,7 +15,11 @@
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild :isActive="route.path.startsWith('/contacts')" v-if="userStore.can('contacts:manage')">
+                  <SidebarMenuButton
+                    asChild
+                    :isActive="route.path.startsWith('/contacts')"
+                    v-if="userStore.can('contacts:manage')"
+                  >
                     <router-link :to="{ name: 'contacts' }">
                       <BookUser />
                     </router-link>
@@ -94,6 +98,7 @@ import { useTeamStore } from '@/stores/team'
 import { useSlaStore } from '@/stores/sla'
 import { useMacroStore } from '@/stores/macro'
 import { useTagStore } from '@/stores/tag'
+import { useCustomAttributeStore } from '@/stores/customAttributes'
 import { useIdleDetection } from '@/composables/useIdleDetection'
 import PageHeader from './components/layout/PageHeader.vue'
 import ViewForm from '@/features/view/ViewForm.vue'
@@ -129,6 +134,7 @@ const inboxStore = useInboxStore()
 const slaStore = useSlaStore()
 const macroStore = useMacroStore()
 const tagStore = useTagStore()
+const customAttributeStore = useCustomAttributeStore()
 const userViews = ref([])
 const view = ref({})
 const openCreateViewForm = ref(false)
@@ -144,7 +150,7 @@ onMounted(() => {
   initStores()
 })
 
-// initialize data stores
+// Initialize data stores
 const initStores = async () => {
   if (!userStore.userID) {
     await userStore.getCurrentUser()
@@ -158,7 +164,8 @@ const initStores = async () => {
     inboxStore.fetchInboxes(),
     slaStore.fetchSlas(),
     macroStore.loadMacros(),
-    tagStore.fetchTags()
+    tagStore.fetchTags(),
+    customAttributeStore.fetchCustomAttributes()
   ])
 }
 

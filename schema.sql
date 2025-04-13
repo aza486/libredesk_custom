@@ -496,6 +496,24 @@ CREATE TABLE ai_prompts (
 );
 CREATE INDEX index_ai_prompts_on_key ON ai_prompts USING btree (key);
 
+DROP TABLE IF EXISTS custom_attribute_definitions CASCADE;
+CREATE TABLE custom_attribute_definitions (
+	id SERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+	"name" TEXT NOT NULL,
+	description TEXT NOT NULL,
+	applies_to TEXT NOT NULL,
+	key TEXT NOT NULL,
+	values TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
+	data_type TEXT NOT NULL,
+	regex TEXT NULL,
+	CONSTRAINT constraint_custom_attribute_definitions_on_name CHECK (length("name") <= 140),
+	CONSTRAINT constraint_custom_attribute_definitions_on_description CHECK (length(description) <= 300),
+	CONSTRAINT constraint_custom_attribute_definitions_on_key CHECK (length(key) <= 140),
+	CONSTRAINT constraint_custom_attribute_definitions_key_applies_to_unique UNIQUE (key, applies_to)
+);
+
 INSERT INTO ai_providers
 ("name", provider, config, is_default)
 VALUES('openai', 'openai', '{"api_key": ""}'::jsonb, true);
@@ -565,7 +583,7 @@ VALUES
 	(
 		'Admin',
 		'Role for users who have complete access to everything.',
-		'{contacts:manage,conversations:write,ai:manage,general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
+		'{custom_attributes:manage,contacts:manage,conversations:write,ai:manage,general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
 	);
 
 

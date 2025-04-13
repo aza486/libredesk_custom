@@ -1,17 +1,14 @@
 <template>
   <div>
     <ConversationSideBarContact class="p-4" />
-    <Accordion
-      type="multiple"
-      collapsible
-      :default-value="['Actions', 'Information', 'Previous conversations']"
-    >
-      <AccordionItem value="Actions" class="border-0 mb-2">
+    <Accordion type="multiple" collapsible v-model="accordionState">
+      <AccordionItem value="actions" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           {{ $t('conversation.sidebar.action', 2) }}
         </AccordionTrigger>
-        <AccordionContent class="space-y-4 p-4">
 
+        <!-- `Agent, team, and priority assignment -->
+        <AccordionContent class="space-y-4 p-4">
           <!-- Agent assignment -->
           <ComboBox
             v-model="assignedUserID"
@@ -115,6 +112,7 @@
             </template>
           </ComboBox>
 
+          <!-- Tags assignment -->
           <SelectTag
             v-if="conversationStore.current"
             v-model="conversationStore.current.tags"
@@ -124,7 +122,8 @@
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem value="Information" class="border-0 mb-2">
+      <!-- Information -->
+      <AccordionItem value="information" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           {{ $t('conversation.sidebar.information') }}
         </AccordionTrigger>
@@ -133,48 +132,31 @@
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem value="Previous conversations" class="border-0 mb-2">
+      <!-- Contact attributes -->
+      <AccordionItem
+        value="contact_attributes"
+        class="border-0 mb-2"
+        v-if="customAttributeStore.contactAttributeOptions.length > 0"
+      >
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
+          {{ $t('conversation.sidebar.contactAttributes') }}
+        </AccordionTrigger>
+        <AccordionContent class="p-4">
+          <CustomAttributes
+            :attributes="customAttributeStore.contactAttributeOptions"
+            :customAttributes="conversationStore.current?.contact?.custom_attributes || {}"
+            @update:setattributes="updateContactCustomAttributes"
+          />
+        </AccordionContent>
+      </AccordionItem>
+
+      <!-- Previous conversations -->
+      <AccordionItem value="previous_conversations" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
           {{ $t('conversation.sidebar.previousConvo') }}
         </AccordionTrigger>
         <AccordionContent class="p-4">
-          <div
-            v-if="
-              conversationStore.current?.previous_conversations?.length === 0 ||
-              conversationStore.conversation?.loading
-            "
-            class="text-center text-sm text-muted-foreground py-4"
-          >
-            {{ $t('conversation.sidebar.noPreviousConvo') }}
-          </div>
-          <div v-else class="space-y-3">
-            <router-link
-              v-for="conversation in conversationStore.current.previous_conversations"
-              :key="conversation.uuid"
-              :to="{
-                name: 'inbox-conversation',
-                params: {
-                  uuid: conversation.uuid,
-                  type: 'assigned'
-                }
-              }"
-              class="block p-2 rounded-md hover:bg-muted"
-            >
-              <div class="flex items-center justify-between">
-                <div class="flex flex-col">
-                  <span class="font-medium text-sm">
-                    {{ conversation.contact.first_name }} {{ conversation.contact.last_name }}
-                  </span>
-                  <span class="text-xs text-muted-foreground truncate max-w-[200px]">
-                    {{ conversation.last_message }}
-                  </span>
-                </div>
-                <span class="text-xs text-muted-foreground" v-if="conversation.last_message_at">
-                  {{ format(new Date(conversation.last_message_at), 'h') + ' h' }}
-                </span>
-              </div>
-            </router-link>
-          </div>
+          <PreviousConversations />
         </AccordionContent>
       </AccordionItem>
     </Accordion>
@@ -186,7 +168,6 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
-import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Accordion,
@@ -203,15 +184,23 @@ import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { CircleAlert, SignalLow, SignalMedium, SignalHigh, Users } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { useStorage } from '@vueuse/core'
+import CustomAttributes from '@/features/conversation/sidebar/CustomAttributes.vue'
+import { useCustomAttributeStore } from '@/stores/customAttributes'
+import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
 import api from '@/api'
 
+const customAttributeStore = useCustomAttributeStore()
 const emitter = useEmitter()
 const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamsStore = useTeamStore()
 const tags = ref([])
+// Save the accordion state in local storage
+const accordionState = useStorage('conversation-sidebar-accordion', [])
 const { t } = useI18n()
 let isConversationChange = false
+customAttributeStore.fetchCustomAttributes()
 
 // Watch for changes in the current conversation and set the flag
 watch(
@@ -330,6 +319,25 @@ const getPriorityIcon = (value) => {
       return SignalHigh
     default:
       return CircleAlert
+  }
+}
+
+const updateContactCustomAttributes = async (attributes) => {
+  let previousAttributes = conversationStore.current.contact.custom_attributes
+  try {
+    conversationStore.current.contact.custom_attributes = attributes
+    await api.updateContactCustomAttribute(conversationStore.current.uuid, attributes)
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      description: t('globals.messages.updatedSuccessfully', {
+        name: t('globals.terms.attribute')
+      })
+    })
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+    conversationStore.current.contact.custom_attributes = previousAttributes
   }
 }
 </script>

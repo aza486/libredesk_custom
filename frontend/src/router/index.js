@@ -172,6 +172,12 @@ const routes = [
         meta: { title: 'Admin' },
         children: [
           {
+            path: 'custom-attributes',
+            name: 'custom-attributes',
+            component: () => import('@/views/admin/custom-attributes/CustomAttributes.vue'),
+            meta: { title: 'Custom attributes' }
+          },
+          {
             path: 'general',
             name: 'general',
             component: () => import('@/views/admin/general/General.vue'),

@@ -478,6 +478,64 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleUpdateConversationCustomAttributes updates custom attributes of a conversation.
+func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
+	var (
+		app        = r.Context.(*App)
+		attributes = map[string]any{}
+		auser      = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid       = r.RequestCtx.UserValue("uuid").(string)
+	)
+	if err := r.Decode(&attributes, ""); err != nil {
+		app.lo.Error("error unmarshalling custom attributes JSON", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
+	// Enforce conversation access.
+	user, err := app.user.GetAgent(auser.ID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	_, err = enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Update custom attributes.
+	if err := app.conversation.UpdateConversationCustomAttributes(uuid, attributes); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleUpdateContactCustomAttributes updates custom attributes of a contact.
+func handleUpdateContactCustomAttributes(r *fastglue.Request) error {
+	var (
+		app        = r.Context.(*App)
+		attributes = map[string]any{}
+		auser      = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid       = r.RequestCtx.UserValue("uuid").(string)
+	)
+	if err := r.Decode(&attributes, ""); err != nil {
+		app.lo.Error("error unmarshalling custom attributes JSON", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
+	// Enforce conversation access.
+	user, err := app.user.GetAgent(auser.ID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	conversation, err := enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if err := app.user.UpdateCustomAttributes(conversation.ContactID, attributes); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
 // handleDashboardCounts retrieves general dashboard counts for all users.
 func handleDashboardCounts(r *fastglue.Request) error {
 	var (

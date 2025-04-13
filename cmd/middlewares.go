@@ -79,6 +79,7 @@ func perm(handler fastglue.FastRequestHandler, perm string) fastglue.FastRequest
 			hdrToken    = string(r.RequestCtx.Request.Header.Peek("X-CSRFTOKEN"))
 		)
 
+		// Match CSRF token from cookie and header.
 		if cookieToken == "" || hdrToken == "" || cookieToken != hdrToken {
 			app.lo.Error("csrf token mismatch", "cookie_token", cookieToken, "header_token", hdrToken)
 			return r.SendErrorEnvelope(http.StatusForbidden, app.i18n.T("auth.csrfTokenMismatch"), nil, envelope.PermissionError)

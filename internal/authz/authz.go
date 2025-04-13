@@ -94,9 +94,10 @@ func (e *Enforcer) Enforce(user umodels.User, obj, act string) (bool, error) {
 // Access can be granted under the following conditions:
 // 1. User has the "read_all" permission, allowing access to all conversations.
 // 2. User has the "read_assigned" permission and is the assigned user.
-// 3. User has the "read_team_inbox" permission and is part of the assigned team, with the conversation unassigned to any specific user.
-// 4. User has the "read_unassigned" permission and the conversation is unassigned to any user or team.
-// Returns true if access is granted, false otherwise. In case of an error while checking permissions, returns false and the error.
+// 3. User has the "read_team_inbox" permission and is part of the assigned team, with the conversation NOT assigned to any user.
+// 4. User has the "read_unassigned" permission and the conversation is not assigned to any user or team.
+// 5. User has the "read" permission, allowing access to the conversation.
+// Returns true if access is granted, false otherwise. In case of an error while checking permissions returns false and the error.
 func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmodels.Conversation) (bool, error) {
 	checkPermission := func(action string) (bool, error) {
 		allowed, err := e.Enforce(user, "conversations", action)

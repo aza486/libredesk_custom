@@ -33,6 +33,23 @@ http.interceptors.request.use((request) => {
   return request
 })
 
+const getCustomAttributes = (appliesTo) => http.get('/api/v1/custom-attributes', {
+  params: { applies_to: appliesTo }
+})
+const createCustomAttribute = (data) =>
+  http.post('/api/v1/custom-attributes', data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const getCustomAttribute = (id) => http.get(`/api/v1/custom-attributes/${id}`)
+const updateCustomAttribute = (id, data) =>
+  http.put(`/api/v1/custom-attributes/${id}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const deleteCustomAttribute = (id) => http.delete(`/api/v1/custom-attributes/${id}`)
 const searchConversations = (params) => http.get('/api/v1/conversations/search', { params })
 const searchMessages = (params) => http.get('/api/v1/messages/search', { params })
 const searchContacts = (params) => http.get('/api/v1/contacts/search', { params })
@@ -201,6 +218,18 @@ const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
 const removeAssignee = (uuid, assignee_type) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}/remove`)
+const updateContactCustomAttribute = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/contacts/custom-attributes`, data,
+  {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const updateConversationCustomAttribute = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/custom-attributes`, data,
+  {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const createConversation = (data) => http.post('/api/v1/conversations', data)
 const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
@@ -338,6 +367,8 @@ export default {
   updateConversationStatus,
   updateConversationPriority,
   upsertTags,
+  updateConversationCustomAttribute,
+  updateContactCustomAttribute,
   uploadMedia,
   updateAssigneeLastSeen,
   updateUser,
@@ -399,4 +430,9 @@ export default {
   getContacts,
   getContact,
   updateContact,
+  getCustomAttributes,
+  createCustomAttribute,
+  updateCustomAttribute,
+  deleteCustomAttribute,
+  getCustomAttribute,
 }
