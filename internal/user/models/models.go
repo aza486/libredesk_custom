@@ -55,6 +55,18 @@ type User struct {
 	Total int `json:"total,omitempty"`
 }
 
+type Note struct {
+	ID        int         `db:"id" json:"id"`
+	CreatedAt time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time   `db:"updated_at" json:"updated_at"`
+	ContactID int         `db:"contact_id" json:"contact_id"`
+	Note      string      `db:"note" json:"note"`
+	UserID    int         `db:"user_id" json:"user_id"`
+	FirstName string      `db:"first_name" json:"first_name"`
+	LastName  string      `db:"last_name" json:"last_name"`
+	AvatarURL null.String `db:"avatar_url" json:"avatar_url"`
+}
+
 func (u *User) FullName() string {
 	return u.FirstName + " " + u.LastName
 }

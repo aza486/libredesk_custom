@@ -311,6 +311,10 @@ const deleteView = (id) => http.delete(`/api/v1/views/me/${id}`)
 const getAiPrompts = () => http.get('/api/v1/ai/prompts')
 const aiCompletion = (data) => http.post('/api/v1/ai/completion', data)
 const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data)
+const getContactNotes = (id) => http.get(`/api/v1/contacts/${id}/notes`)
+const createContactNote = (id, data) => http.post(`/api/v1/contacts/${id}/notes`, data)
+const updateContactNote = (id, noteId, data) => http.put(`/api/v1/contacts/${id}/notes/${noteId}`, data)
+const deleteContactNote = (id, noteId) => http.delete(`/api/v1/contacts/${id}/notes/${noteId}`)
 
 export default {
   login,
@@ -435,4 +439,8 @@ export default {
   updateCustomAttribute,
   deleteCustomAttribute,
   getCustomAttribute,
+  getContactNotes,
+  createContactNote,
+  updateContactNote,
+  deleteContactNote
 }
