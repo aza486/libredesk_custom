@@ -58,7 +58,7 @@
         class="overflow-hidden border-gray-2 00 hover:border-gray-300 transition-all duration-200 box hover:shadow"
       >
         <!-- Header -->
-        <CardHeader class="bg-gray-50/50">
+        <CardHeader class="bg-gray-50/50 border-b p-2">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
               <Avatar class="border border-gray-200 shadow-sm">
