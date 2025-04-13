@@ -36,7 +36,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-libredesk} 
       POSTGRES_DB: ${POSTGRES_DB:-libredesk}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U libredesk"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-libredesk} -d ${POSTGRES_DB:-libredesk}"]
       interval: 10s
       timeout: 5s
       retries: 6
