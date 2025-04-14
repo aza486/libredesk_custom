@@ -99,10 +99,6 @@ func handleUpdateContact(r *fastglue.Request) error {
 	if v, ok := form.Value["phone_number_calling_code"]; ok && len(v) > 0 {
 		phoneNumberCallingCode = string(v[0])
 	}
-	enabled := false
-	if v, ok := form.Value["enabled"]; ok && len(v) > 0 {
-		enabled = string(v[0]) == "true"
-	}
 	avatarURL := ""
 	if v, ok := form.Value["avatar_url"]; ok && len(v) > 0 {
 		avatarURL = string(v[0])
@@ -132,7 +128,6 @@ func handleUpdateContact(r *fastglue.Request) error {
 		AvatarURL:              null.NewString(avatarURL, avatarURL != ""),
 		PhoneNumber:            null.NewString(phoneNumber, phoneNumber != ""),
 		PhoneNumberCallingCode: null.NewString(phoneNumberCallingCode, phoneNumberCallingCode != ""),
-		Enabled:                enabled,
 	}
 
 	if err := app.user.UpdateContact(id, contactToUpdate); err != nil {
@@ -190,29 +185,6 @@ func handleCreateContactNote(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleUpdateContactNote updates a note for a contact.
-func handleUpdateContactNote(r *fastglue.Request) error {
-	var (
-		app          = r.Context.(*App)
-		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-		noteID, _    = strconv.Atoi(r.RequestCtx.UserValue("note_id").(string))
-		note         = string(r.RequestCtx.PostArgs().Peek("note"))
-	)
-	if contactID <= 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
-	}
-	if noteID <= 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`note_id`"), nil, envelope.InputError)
-	}
-	if len(note) == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "note"), nil, envelope.InputError)
-	}
-	if err := app.user.UpdateNote(noteID, note, contactID); err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(true)
-}
-
 // handleDeleteContactNote deletes a note for a contact.
 func handleDeleteContactNote(r *fastglue.Request) error {
 	var (
@@ -227,6 +199,22 @@ func handleDeleteContactNote(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`note_id`"), nil, envelope.InputError)
 	}
 	if err := app.user.DeleteNote(noteID, contactID); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleBlockContact blocks a contact.
+func handleBlockContact(r *fastglue.Request) error {
+	var (
+		app          = r.Context.(*App)
+		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		enabled      = r.RequestCtx.PostArgs().GetBool("enabled")
+	)
+	if contactID <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
+	}
+	if err := app.user.ToggleEnabled(contactID, models.UserTypeContact, enabled); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

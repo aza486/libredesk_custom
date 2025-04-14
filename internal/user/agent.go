@@ -74,7 +74,7 @@ func (u *Manager) UpdateAgent(id int, user models.User) error {
 
 	// Set password?
 	if user.NewPassword != "" {
-		if IsStrongPassword(user.NewPassword) {
+		if !IsStrongPassword(user.NewPassword) {
 			return envelope.NewError(envelope.InputError, PasswordHint, nil)
 		}
 		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)

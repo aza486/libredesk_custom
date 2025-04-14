@@ -180,6 +180,7 @@ const updateContact = (id, data) => http.put(`/api/v1/contacts/${id}`, data, {
     'Content-Type': 'multipart/form-data'
   }
 })
+const blockContact = (id, data) => http.put(`/api/v1/contacts/${id}/block`, data)
 const getTeam = (id) => http.get(`/api/v1/teams/${id}`)
 const getTeams = () => http.get('/api/v1/teams')
 const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data)
@@ -313,7 +314,6 @@ const aiCompletion = (data) => http.post('/api/v1/ai/completion', data)
 const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data)
 const getContactNotes = (id) => http.get(`/api/v1/contacts/${id}/notes`)
 const createContactNote = (id, data) => http.post(`/api/v1/contacts/${id}/notes`, data)
-const updateContactNote = (id, noteId, data) => http.put(`/api/v1/contacts/${id}/notes/${noteId}`, data)
 const deleteContactNote = (id, noteId) => http.delete(`/api/v1/contacts/${id}/notes/${noteId}`)
 
 export default {
@@ -434,6 +434,7 @@ export default {
   getContacts,
   getContact,
   updateContact,
+  blockContact,
   getCustomAttributes,
   createCustomAttribute,
   updateCustomAttribute,
@@ -441,6 +442,5 @@ export default {
   getCustomAttribute,
   getContactNotes,
   createContactNote,
-  updateContactNote,
   deleteContactNote
 }

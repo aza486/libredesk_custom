@@ -39,11 +39,7 @@
               Cancel
             </Button>
             <Button type="submit" :disabled="!newNote.trim()">
-              {{
-                editingNoteId
-                  ? $t('globals.buttons.update') + ' ' + $t('globals.terms.note').toLowerCase()
-                  : $t('globals.buttons.save') + ' ' + $t('globals.terms.note').toLowerCase()
-              }}
+              {{ $t('globals.buttons.save') + ' ' + $t('globals.terms.note').toLowerCase() }}
             </Button>
           </div>
         </div>
@@ -83,11 +79,6 @@
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-[180px]">
-                <DropdownMenuItem @click="editNote(note)" class="cursor-pointer">
-                  <PencilIcon class="mr-2" size="15" />
-                  {{ $t('globals.buttons.edit', { name: $t('globals.terms.note').toLowerCase() }) }}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   @click="deleteNote(note.id)"
                   class="text-destructive cursor-pointer"
@@ -143,12 +134,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu'
 import {
   PlusIcon,
   MoreVerticalIcon,
-  PencilIcon,
   TrashIcon,
   ClockIcon,
   MessageSquareIcon
@@ -168,7 +157,6 @@ const emitter = useEmitter()
 const notes = ref([])
 const isAddingNote = ref(false)
 const newNote = ref('')
-const editingNoteId = ref(null)
 const isLoading = ref(false)
 
 const fetchNotes = async () => {
@@ -197,16 +185,11 @@ const startAddingNote = () => {
 const cancelAddNote = () => {
   isAddingNote.value = false
   newNote.value = ''
-  editingNoteId.value = null
 }
 
 const addOrUpdateNote = async () => {
   try {
-    if (editingNoteId.value) {
-      await api.updateContactNote(props.contactId, editingNoteId.value, { note: newNote.value })
-    } else {
-      await api.createContactNote(props.contactId, { note: newNote.value })
-    }
+    await api.createContactNote(props.contactId, { note: newNote.value })
     await fetchNotes()
     cancelAddNote()
   } catch (error) {
@@ -217,14 +200,16 @@ const addOrUpdateNote = async () => {
   }
 }
 
-const editNote = (note) => {
-  editingNoteId.value = note.id
-  newNote.value = note.note
-  isAddingNote.value = true
-}
-
 const deleteNote = async (noteId) => {
-  await api.deleteContactNote(props.contactId, noteId)
-  await fetchNotes()
+  try {
+    await api.deleteContactNote(props.contactId, noteId)
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    await fetchNotes()
+  }
 }
 </script>

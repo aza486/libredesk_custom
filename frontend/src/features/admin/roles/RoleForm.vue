@@ -157,7 +157,15 @@ const permissions = ref([
   },
   {
     name: t('globals.terms.contact'),
-    permissions: [{ name: 'contacts:manage', label: t('admin.role.contacts.manage') }]
+    permissions: [
+      { name: 'contacts:read_all', label: t('admin.role.contacts.readAll') },
+      { name: 'contacts:read', label: t('admin.role.contacts.read') },
+      { name: 'contacts:write', label: t('admin.role.contacts.write') },
+      { name: 'contacts:block', label: t('admin.role.contacts.block') },
+      { name: 'contact_notes:read', label: t('admin.role.contactNotes.read') },
+      { name: 'contact_notes:write', label: t('admin.role.contactNotes.write') },
+      { name: 'contact_notes:delete', label: t('admin.role.contactNotes.delete') }
+    ]
   }
 ])
 
@@ -169,6 +177,9 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
+  // Filter out any permissions not part of `permissions`.
+  const validPermissions = permissions.value.flatMap(entity => entity.permissions.map(p => p.name))
+  selectedPermissions.value = selectedPermissions.value.filter(perm => validPermissions.includes(perm))
   values.permissions = selectedPermissions.value
   props.submitForm(values)
 })

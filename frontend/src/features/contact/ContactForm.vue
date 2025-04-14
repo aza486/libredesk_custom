@@ -92,7 +92,7 @@
       </div>
     </div>
 
-    <div>
+    <div v-if="userStore.can('contacts.write')">
       <Button type="submit" :isLoading="formLoading" :disabled="formLoading">
         {{ t('globals.buttons.update', { name: t('globals.terms.contact').toLowerCase() }) }}
       </Button>
@@ -107,10 +107,12 @@ import { Button } from '@/components/ui/button'
 import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import countries from '@/constants/countries.js'
 import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user'
 
 defineProps(['formLoading', 'onSubmit'])
 
 const { t } = useI18n()
+const userStore = useUserStore()
 
 const allCountries = countries.map((country) => ({
   label: country.name,

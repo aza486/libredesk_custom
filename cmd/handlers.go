@@ -20,6 +20,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/v1/oidc/{id}/finish", handleOIDCCallback)
 
+	// i18n.
+	g.GET("/api/v1/lang/{lang}", handleGetI18nLang)
+
 	// Media.
 	g.GET("/uploads/{uuid}", auth(handleServeMedia))
 	g.POST("/api/v1/media", auth(handleMediaUpload))
@@ -66,7 +69,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Search.
 	g.GET("/api/v1/conversations/search", perm(handleSearchConversations, "conversations:read"))
 	g.GET("/api/v1/messages/search", perm(handleSearchMessages, "messages:read"))
-	g.GET("/api/v1/contacts/search", perm(handleSearchContacts, "conversations:write"))
+	g.GET("/api/v1/contacts/search", perm(handleSearchContacts, "contacts:read"))
 
 	// Views.
 	g.GET("/api/v1/views/me", perm(handleGetUserViews, "view:manage"))
@@ -112,13 +115,15 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/agents/set-password", tryAuth(handleSetPassword))
 
 	// Contacts.
-	g.GET("/api/v1/contacts", perm(handleGetContacts, "contacts:manage"))
-	g.GET("/api/v1/contacts/{id}", perm(handleGetContact, "contacts:manage"))
-	g.PUT("/api/v1/contacts/{id}", perm(handleUpdateContact, "contacts:manage"))
-	g.GET("/api/v1/contacts/{id}/notes", perm(handleGetContactNotes, "contacts:manage"))
-	g.POST("/api/v1/contacts/{id}/notes", perm(handleCreateContactNote, "contacts:manage"))
-	g.PUT("/api/v1/contacts/{id}/notes/{note_id}", perm(handleUpdateContactNote, "contacts:manage"))
-	g.DELETE("/api/v1/contacts/{id}/notes/{note_id}", perm(handleDeleteContactNote, "contacts:manage"))
+	g.GET("/api/v1/contacts", perm(handleGetContacts, "contacts:read_all"))
+	g.GET("/api/v1/contacts/{id}", perm(handleGetContact, "contacts:read"))
+	g.PUT("/api/v1/contacts/{id}", perm(handleUpdateContact, "contacts:write"))
+	g.PUT("/api/v1/contacts/{id}/block", perm(handleBlockContact, "contacts:block"))
+
+	// Contact notes.
+	g.GET("/api/v1/contacts/{id}/notes", perm(handleGetContactNotes, "contact_notes:read"))
+	g.POST("/api/v1/contacts/{id}/notes", perm(handleCreateContactNote, "contact_notes:write"))
+	g.DELETE("/api/v1/contacts/{id}/notes/{note_id}", perm(handleDeleteContactNote, "contact_notes:delete"))
 
 	// Teams.
 	g.GET("/api/v1/teams/compact", auth(handleGetTeamsCompact))
@@ -127,9 +132,6 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/teams", perm(handleCreateTeam, "teams:manage"))
 	g.PUT("/api/v1/teams/{id}", perm(handleUpdateTeam, "teams:manage"))
 	g.DELETE("/api/v1/teams/{id}", perm(handleDeleteTeam, "teams:manage"))
-
-	// i18n.
-	g.GET("/api/v1/lang/{lang}", handleGetI18nLang)
 
 	// Automations.
 	g.GET("/api/v1/automations/rules", perm(handleGetAutomationRules, "automations:manage"))

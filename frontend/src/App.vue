@@ -18,7 +18,7 @@
                   <SidebarMenuButton
                     asChild
                     :isActive="route.path.startsWith('/contacts')"
-                    v-if="userStore.can('contacts:manage')"
+                    v-if="userStore.can('contacts:read_all')"
                   >
                     <router-link :to="{ name: 'contacts' }">
                       <BookUser />

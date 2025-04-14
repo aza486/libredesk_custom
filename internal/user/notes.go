@@ -24,15 +24,6 @@ func (u *Manager) CreateNote(userID, authorID int, note string) error {
 	return nil
 }
 
-// UpdateNote updates an existing note for a user.
-func (u *Manager) UpdateNote(noteID int, note string, contactID int) error {
-	if _, err := u.q.UpdateNote.Exec(noteID, note, contactID); err != nil {
-		u.lo.Error("error updating user note", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", u.i18n.P("globals.terms.note")), nil)
-	}
-	return nil
-}
-
 // DeleteNote deletes a note for a user.
 func (u *Manager) DeleteNote(noteID int, contactID int) error {
 	if _, err := u.q.DeleteNote.Exec(noteID, contactID); err != nil {

@@ -69,7 +69,6 @@ type queries struct {
 	UpdateLastActiveAt     *sqlx.Stmt `query:"update-last-active-at"`
 	UpdateInactiveOffline  *sqlx.Stmt `query:"update-inactive-offline"`
 	UpdateLastLoginAt      *sqlx.Stmt `query:"update-last-login-at"`
-	UpdateNote             *sqlx.Stmt `query:"update-note"`
 	SoftDeleteAgent        *sqlx.Stmt `query:"soft-delete-agent"`
 	SetUserPassword        *sqlx.Stmt `query:"set-user-password"`
 	SetResetPasswordToken  *sqlx.Stmt `query:"set-reset-password-token"`
@@ -78,6 +77,7 @@ type queries struct {
 	InsertAgent            *sqlx.Stmt `query:"insert-agent"`
 	InsertContact          *sqlx.Stmt `query:"insert-contact"`
 	InsertNote             *sqlx.Stmt `query:"insert-note"`
+	ToggleEnable           *sqlx.Stmt `query:"toggle-enable"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -281,6 +281,15 @@ func (u *Manager) generatePassword() ([]byte, error) {
 		return nil, fmt.Errorf("generating bcrypt password: %w", err)
 	}
 	return bytes, nil
+}
+
+// ToggleEnabled toggles the enabled status of an user.
+func (u *Manager) ToggleEnabled(id int, typ string, enabled bool) error {
+	if _, err := u.q.ToggleEnable.Exec(id, typ, enabled); err != nil {
+		u.lo.Error("error toggling user enabled status", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+	}
+	return nil
 }
 
 // ChangeSystemUserPassword updates the system user's password with a newly prompted one.

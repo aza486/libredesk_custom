@@ -166,6 +166,11 @@ SET last_login_at = now(),
 updated_at = now()
 WHERE id = $1;
 
+-- name: toggle-enable
+UPDATE users
+SET enabled = $3, updated_at = NOW()
+WHERE id = $1 AND type = $2;
+
 -- name: update-contact
 UPDATE users
 SET first_name = COALESCE($2, first_name),
@@ -174,7 +179,6 @@ SET first_name = COALESCE($2, first_name),
     avatar_url = $5,
     phone_number = COALESCE($6, phone_number),
     phone_number_calling_code = COALESCE($7, phone_number_calling_code),
-    enabled = COALESCE($8, enabled),
     updated_at = now()
 WHERE id = $1 and type = 'contact';
 
@@ -197,11 +201,6 @@ ORDER BY cn.created_at DESC;
 -- name: insert-note
 INSERT INTO contact_notes (contact_id, user_id, note)
 VALUES ($1, $2, $3);
-
--- name: update-note
-UPDATE contact_notes
-SET note = $2, updated_at = now()
-WHERE id = $1 AND contact_id = $3;
 
 -- name: delete-note
 DELETE FROM contact_notes

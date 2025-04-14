@@ -65,11 +65,32 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
-	// Add `contacts:manage` permission to Admin role
+	// Add contacts permissions to Admin role
+	permissionsToAdd := []string{
+		"contacts:read_all",
+		"contacts:read",
+		"contacts:write",
+		"contacts:block",
+		"contact_notes:read",
+		"contact_notes:write",
+		"contact_notes:delete",
+	}
+	for _, permission := range permissionsToAdd {
+		_, err = db.Exec(`
+			UPDATE roles 
+			SET permissions = array_append(permissions, $1)
+			WHERE name = 'Admin' AND NOT ($1 = ANY(permissions));
+		`, permission)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add `contacts:read` permission to Agent role
 	_, err = db.Exec(`
-		UPDATE roles 
-		SET permissions = array_append(permissions, 'contacts:manage')
-		WHERE name = 'Admin' AND NOT ('contacts:manage' = ANY(permissions));
+		UPDATE roles
+		SET permissions = array_append(permissions, 'contacts:read')
+		WHERE name = 'Agent' AND NOT ('contacts:read' = ANY(permissions));
 	`)
 	if err != nil {
 		return err
