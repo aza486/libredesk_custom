@@ -15,6 +15,16 @@ func (u *Manager) GetNotes(id int) ([]models.Note, error) {
 	return notes, nil
 }
 
+// GetNote returns a note by its ID.
+func (u *Manager) GetNote(id int) (models.Note, error) {
+	var note models.Note
+	if err := u.q.GetNote.Get(&note, id); err != nil {
+		u.lo.Error("error fetching user note", "error", err)
+		return note, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.terms.note")), nil)
+	}
+	return note, nil
+}
+
 // CreateNote creates a new note for a user.
 func (u *Manager) CreateNote(userID, authorID int, note string) error {
 	if _, err := u.q.InsertNote.Exec(userID, authorID, note); err != nil {

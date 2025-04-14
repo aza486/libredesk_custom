@@ -2,8 +2,10 @@ package models
 
 import (
 	"encoding/json"
+	"slices"
 	"time"
 
+	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
@@ -69,4 +71,8 @@ type Note struct {
 
 func (u *User) FullName() string {
 	return u.FirstName + " " + u.LastName
+}
+
+func (u *User) HasAdminRole() bool {
+	return slices.Contains(u.Roles, rmodels.RoleAdmin)
 }

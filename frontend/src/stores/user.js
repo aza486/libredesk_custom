@@ -17,6 +17,7 @@ export const useUserStore = defineStore('user', () => {
     email: '',
     teams: [],
     permissions: [],
+    roles: [],
     availability_status: 'offline',
   })
   const emitter = useEmitter()
@@ -26,6 +27,7 @@ export const useUserStore = defineStore('user', () => {
   const lastName = computed(() => user.value.last_name || '')
   const avatar = computed(() => user.value.avatar_url || '')
   const permissions = computed(() => user.value.permissions || [])
+  const roles = computed(() => user.value.roles || [])
   const email = computed(() => user.value.email)
   const teams = computed(() => user.value.teams || [])
 
@@ -105,15 +107,26 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const hasAdminRole = computed(() => {
+    return hasRole('Admin')
+  })
+
+  const hasRole = (role) => {
+    return roles.value.some(r => r === role)
+  }
+
   return {
     user,
     userID,
     firstName,
     lastName,
     avatar,
+    hasAdminRole,
+    hasRole,
     email,
     teams,
     permissions,
+    roles,
     getFullName,
     getInitials,
     hasAdminTabPermissions,

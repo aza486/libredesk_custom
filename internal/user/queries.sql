@@ -205,3 +205,18 @@ VALUES ($1, $2, $3);
 -- name: delete-note
 DELETE FROM contact_notes
 WHERE id = $1 AND contact_id = $2;
+
+-- name: get-note
+SELECT 
+    cn.id,
+    cn.created_at,
+    cn.updated_at,
+    cn.contact_id,
+    cn.note,
+    cn.user_id,
+    u.first_name,
+    u.last_name,
+    u.avatar_url
+FROM contact_notes cn
+INNER JOIN users u ON u.id = cn.user_id
+WHERE cn.id = $1;

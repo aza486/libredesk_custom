@@ -71,7 +71,13 @@
                 </p>
               </div>
             </div>
-            <DropdownMenu>
+            <!-- Allow owner and `Admin` to delete any note -->
+            <DropdownMenu
+              v-if="
+                (userStore.can('contact_notes:delete') && note.user_id === userStore.userID) ||
+                userStore.hasAdminRole
+              "
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full">
                   <MoreVerticalIcon class="h-4 w-4" />
@@ -109,7 +115,7 @@
         <div class="rounded-full bg-gray-100 p-4 mb-2">
           <MessageSquareIcon class="text-gray-400" size="25" />
         </div>
-        <h3 class="mt-2 text-base font-medium text-gray-900">{{ $t('contact.noNotes') }}</h3>
+        <h3 class="mt-2 text-base font-medium text-gray-900">{{ $t('contact.notes.empty') }}</h3>
         <p class="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
           {{ $t('contact.notes.help') }}
         </p>
@@ -133,7 +139,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuItem
 } from '@/components/ui/dropdown-menu'
 import {
   PlusIcon,
@@ -148,11 +154,13 @@ import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { handleHTTPError } from '@/utils/http'
 import { getInitials } from '@/utils/strings'
+import { useUserStore } from '@/stores/user'
 import api from '@/api'
 
 const props = defineProps({ contactId: Number })
 const { t } = useI18n()
 const emitter = useEmitter()
+const userStore = useUserStore()
 
 const notes = ref([])
 const isAddingNote = ref(false)

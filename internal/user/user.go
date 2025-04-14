@@ -60,6 +60,7 @@ type queries struct {
 	GetUser                *sqlx.Stmt `query:"get-user"`
 	GetUsers               string     `query:"get-users"`
 	GetNotes               *sqlx.Stmt `query:"get-notes"`
+	GetNote                *sqlx.Stmt `query:"get-note"`
 	GetAgentsCompact       *sqlx.Stmt `query:"get-agents-compact"`
 	UpdateContact          *sqlx.Stmt `query:"update-contact"`
 	UpdateAgent            *sqlx.Stmt `query:"update-agent"`

@@ -191,6 +191,7 @@ func handleDeleteContactNote(r *fastglue.Request) error {
 		app          = r.Context.(*App)
 		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 		noteID, _    = strconv.Atoi(r.RequestCtx.UserValue("note_id").(string))
+		auser        = r.RequestCtx.UserValue("user").(amodels.User)
 	)
 	if contactID <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
@@ -198,6 +199,23 @@ func handleDeleteContactNote(r *fastglue.Request) error {
 	if noteID <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`note_id`"), nil, envelope.InputError)
 	}
+
+	agent, err := app.user.GetAgent(auser.ID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Allow deletion of only own notes and not those created by others, but also allow `Admin` to delete any note.
+	if !agent.HasAdminRole() {
+		note, err := app.user.GetNote(noteID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if note.UserID != auser.ID {
+			return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.canOnlyDeleteOwn", "name", "{globals.terms.note}"), nil, envelope.InputError)
+		}
+	}
+
 	if err := app.user.DeleteNote(noteID, contactID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
