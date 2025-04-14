@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/abhinavxd/libredesk/internal/user/models"
@@ -98,10 +99,6 @@ func handleUpdateContact(r *fastglue.Request) error {
 	if v, ok := form.Value["phone_number_calling_code"]; ok && len(v) > 0 {
 		phoneNumberCallingCode = string(v[0])
 	}
-	enabled := false
-	if v, ok := form.Value["enabled"]; ok && len(v) > 0 {
-		enabled = string(v[0]) == "true"
-	}
 	avatarURL := ""
 	if v, ok := form.Value["avatar_url"]; ok && len(v) > 0 {
 		avatarURL = string(v[0])
@@ -131,7 +128,6 @@ func handleUpdateContact(r *fastglue.Request) error {
 		AvatarURL:              null.NewString(avatarURL, avatarURL != ""),
 		PhoneNumber:            null.NewString(phoneNumber, phoneNumber != ""),
 		PhoneNumberCallingCode: null.NewString(phoneNumberCallingCode, phoneNumberCallingCode != ""),
-		Enabled:                enabled,
 	}
 
 	if err := app.user.UpdateContact(id, contactToUpdate); err != nil {
@@ -152,6 +148,92 @@ func handleUpdateContact(r *fastglue.Request) error {
 		if err := uploadUserAvatar(r, &contact, files); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleGetContactNotes returns all notes for a contact.
+func handleGetContactNotes(r *fastglue.Request) error {
+	var (
+		app          = r.Context.(*App)
+		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	)
+	if contactID <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
+	}
+	notes, err := app.user.GetNotes(contactID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(notes)
+}
+
+// handleCreateContactNote creates a note for a contact.
+func handleCreateContactNote(r *fastglue.Request) error {
+	var (
+		app          = r.Context.(*App)
+		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		auser        = r.RequestCtx.UserValue("user").(amodels.User)
+		note         = string(r.RequestCtx.PostArgs().Peek("note"))
+	)
+	if len(note) == 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "note"), nil, envelope.InputError)
+	}
+	if err := app.user.CreateNote(contactID, auser.ID, note); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleDeleteContactNote deletes a note for a contact.
+func handleDeleteContactNote(r *fastglue.Request) error {
+	var (
+		app          = r.Context.(*App)
+		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		noteID, _    = strconv.Atoi(r.RequestCtx.UserValue("note_id").(string))
+		auser        = r.RequestCtx.UserValue("user").(amodels.User)
+	)
+	if contactID <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
+	}
+	if noteID <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`note_id`"), nil, envelope.InputError)
+	}
+
+	agent, err := app.user.GetAgent(auser.ID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Allow deletion of only own notes and not those created by others, but also allow `Admin` to delete any note.
+	if !agent.HasAdminRole() {
+		note, err := app.user.GetNote(noteID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if note.UserID != auser.ID {
+			return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.canOnlyDeleteOwn", "name", "{globals.terms.note}"), nil, envelope.InputError)
+		}
+	}
+
+	if err := app.user.DeleteNote(noteID, contactID); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleBlockContact blocks a contact.
+func handleBlockContact(r *fastglue.Request) error {
+	var (
+		app          = r.Context.(*App)
+		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		enabled      = r.RequestCtx.PostArgs().GetBool("enabled")
+	)
+	if contactID <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
+	}
+	if err := app.user.ToggleEnabled(contactID, models.UserTypeContact, enabled); err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
 }

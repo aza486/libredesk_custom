@@ -1,14 +1,12 @@
 <template>
   <ContactDetail>
     <div class="flex flex-col mx-auto items-start">
-      <div class="mb-6">
+      <div class="mb-6" v-if="userStore.can('contacts:read_all')">
         <CustomBreadcrumb :links="breadcrumbLinks" />
       </div>
 
       <div v-if="contact" class="flex justify-center space-y-4 w-full">
-        <div class="flex flex-col w-full">
-          <div class="h-16"></div>
-
+        <div class="flex flex-col w-full mt-12">
           <div class="flex flex-col space-y-2">
             <AvatarUpload
               @upload="onUpload"
@@ -42,13 +40,14 @@
             </div>
           </div>
 
-          <div class="mt-12">
+          <div class="mt-12 space-y-10">
             <ContactForm :formLoading="formLoading" :onSubmit="onSubmit" />
+            <ContactNotes :contactId="contact.id" v-if="userStore.can('contact_notes:read')" />
           </div>
         </div>
       </div>
 
-      <Spinner v-else />
+      <Spinner v-if="formLoading" />
 
       <Dialog :open="showBlockConfirmation" @update:open="showBlockConfirmation = $event">
         <DialogContent class="sm:max-w-md">
@@ -97,10 +96,12 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog'
+import { useUserStore } from '@/stores/user'
 import { ShieldOffIcon, ShieldCheckIcon } from 'lucide-vue-next'
 import ContactDetail from '@/layouts/contact/ContactDetail.vue'
 import api from '@/api'
 import ContactForm from '@/features/contact/ContactForm.vue'
+import ContactNotes from '@/features/contact/ContactNotes.vue'
 import { createFormSchema } from '@/features/contact/formSchema.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents'
@@ -114,6 +115,7 @@ const route = useRoute()
 const formLoading = ref(false)
 const contact = ref(null)
 const showBlockConfirmation = ref(false)
+const userStore = useUserStore()
 
 const form = useForm({
   validationSchema: toTypedSchema(createFormSchema(t))
@@ -127,12 +129,15 @@ const breadcrumbLinks = [
 onMounted(fetchContact)
 
 async function fetchContact() {
+  formLoading.value = true
   try {
     const { data } = await api.getContact(route.params.id)
     contact.value = data.data
     form.setValues(data.data)
   } catch (err) {
     showError(err)
+  } finally {
+    formLoading.value = false
   }
 }
 
@@ -149,8 +154,9 @@ async function confirmToggleBlock() {
 
 async function toggleBlock() {
   try {
-    form.setFieldValue('enabled', !contact.value.enabled)
-    await onSubmit(form.values)
+    await api.blockContact(contact.value.id, {
+      enabled: !contact.value.enabled
+    })
     await fetchContact()
     const messageKey = contact.value.enabled
       ? 'globals.messages.unblockedSuccessfully'

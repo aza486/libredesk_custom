@@ -32,9 +32,9 @@
                   <StatusForm @submit.prevent="onSubmit">
                     <template #footer>
                       <DialogFooter class="mt-10">
-                        <Button type="submit" :isLoading="isLoading" :disabled="isLoading">{{
-                          $t('globals.buttons.save')
-                        }}</Button>
+                        <Button type="submit" :isLoading="isLoading" :disabled="isLoading">
+                          {{ $t('globals.buttons.save') }}
+                        </Button>
                       </DialogFooter>
                     </template>
                   </StatusForm>
@@ -61,7 +61,6 @@ import DataTable from '@/components/datatable/DataTable.vue'
 import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
 import { createColumns } from '@/features/admin/status/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-
 import { Spinner } from '@/components/ui/spinner'
 import StatusForm from '@/features/admin/status/StatusForm.vue'
 import {

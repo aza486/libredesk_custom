@@ -72,6 +72,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useStorage } from '@vueuse/core'
 import AdminPageWithHelp from '@/layouts/admin/AdminPageWithHelp.vue'
 import { useI18n } from 'vue-i18n'
+import { handleHTTPError } from '@/utils/http'
 import api from '@/api'
 
 const templateType = useStorage('templateType', 'email_outgoing')
@@ -98,7 +99,7 @@ const fetchAll = async () => {
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
-      description: error.message
+      description: handleHTTPError(error).message
     })
   } finally {
     isLoading.value = false

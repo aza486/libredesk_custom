@@ -68,7 +68,18 @@ const (
 	PermAIManage = "ai:manage"
 
 	// Contacts
-	PermContactsManage = "contacts:manage"
+	PermContactsReadAll = "contacts:read_all"
+	PermContactsRead    = "contacts:read"
+	PermContactsWrite   = "contacts:write"
+	PermContactsBlock   = "contacts:block"
+
+	// Contact Notes
+	PermContactNotesRead   = "contact_notes:read"
+	PermContactNotesWrite  = "contact_notes:write"
+	PermContactNotesDelete = "contact_notes:delete"
+
+	// Custom attributes
+	PermCustomAttributesManage = "custom_attributes:manage"
 )
 
 var validPermissions = map[string]struct{}{
@@ -102,7 +113,14 @@ var validPermissions = map[string]struct{}{
 	PermNotificationSettingsManage:      {},
 	PermOIDCManage:                      {},
 	PermAIManage:                        {},
-	PermContactsManage:                  {},
+	PermCustomAttributesManage:          {},
+	PermContactsReadAll:                 {},
+	PermContactsRead:                    {},
+	PermContactsWrite:                   {},
+	PermContactsBlock:                   {},
+	PermContactNotesRead:                {},
+	PermContactNotesWrite:               {},
+	PermContactNotesDelete:              {},
 }
 
 // IsValidPermission returns true if it's a valid permission.

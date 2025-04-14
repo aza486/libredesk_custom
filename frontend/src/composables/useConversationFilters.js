@@ -4,6 +4,7 @@ import { useInboxStore } from '@/stores/inbox'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
 import { useSlaStore } from '@/stores/sla'
+import { useCustomAttributeStore } from '@/stores/customAttributes'
 import { FIELD_TYPE, FIELD_OPERATORS } from '@/constants/filterConfig'
 
 export function useConversationFilters () {
@@ -12,6 +13,25 @@ export function useConversationFilters () {
     const uStore = useUsersStore()
     const tStore = useTeamStore()
     const slaStore = useSlaStore()
+    const customAttributeStore = useCustomAttributeStore()
+
+    const customAttributeDataTypeToFieldType = {
+        'text': FIELD_TYPE.TEXT,
+        'number': FIELD_TYPE.NUMBER,
+        'checkbox': FIELD_TYPE.BOOLEAN,
+        'date': FIELD_TYPE.DATE,
+        'link': FIELD_TYPE.TEXT,
+        'list': FIELD_TYPE.SELECT,
+    }
+
+    const customAttributeDataTypeToFieldOperators = {
+        'text': FIELD_OPERATORS.TEXT,
+        'number': FIELD_OPERATORS.NUMBER,
+        'checkbox': FIELD_OPERATORS.BOOLEAN,
+        'date': FIELD_OPERATORS.DATE,
+        'link': FIELD_OPERATORS.TEXT,
+        'list': FIELD_OPERATORS.SELECT,
+    }
 
     const conversationsListFilters = computed(() => ({
         status_id: {
@@ -45,6 +65,23 @@ export function useConversationFilters () {
             options: iStore.options
         }
     }))
+
+    const contactCustomAttributes = computed(() => {
+        return customAttributeStore.contactAttributeOptions
+            .filter(attribute => attribute.applies_to === 'contact')
+            .reduce((acc, attribute) => {
+                acc[attribute.key] = {
+                    label: attribute.label,
+                    type: customAttributeDataTypeToFieldType[attribute.data_type] || FIELD_TYPE.TEXT,
+                    operators: customAttributeDataTypeToFieldOperators[attribute.data_type] || FIELD_OPERATORS.TEXT,
+                    options: attribute.values.map(value => ({
+                        label: value,
+                        value: value
+                    })) || [],
+                }
+                return acc
+            }, {})
+    })
 
     const newConversationFilters = computed(() => ({
         contact_email: {
@@ -223,6 +260,7 @@ export function useConversationFilters () {
         conversationFilters,
         newConversationFilters,
         conversationActions,
-        macroActions
+        macroActions,
+        contactCustomAttributes,
     }
 }

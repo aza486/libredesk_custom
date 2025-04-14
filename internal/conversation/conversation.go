@@ -197,7 +197,7 @@ type queries struct {
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
 	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
-	RemoveConversationAssignee         *sqlx.Stmt `query:"remove-conversation-assignee"`
+	UpdateConversationCustomAttributes *sqlx.Stmt `query:"update-conversation-custom-attributes"`
 	UpdateConversationPriority         *sqlx.Stmt `query:"update-conversation-priority"`
 	UpdateConversationStatus           *sqlx.Stmt `query:"update-conversation-status"`
 	UpdateConversationLastMessage      *sqlx.Stmt `query:"update-conversation-last-message"`
@@ -209,6 +209,7 @@ type queries struct {
 	ReOpenConversation                 *sqlx.Stmt `query:"re-open-conversation"`
 	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
 	DeleteConversation                 *sqlx.Stmt `query:"delete-conversation"`
+	RemoveConversationAssignee         *sqlx.Stmt `query:"remove-conversation-assignee"`
 
 	// Dashboard queries.
 	GetDashboardCharts string `query:"get-dashboard-charts"`
@@ -883,6 +884,20 @@ func (m *Manager) DeleteConversation(uuid string) error {
 	if _, err := m.q.DeleteConversation.Exec(uuid); err != nil {
 		m.lo.Error("error deleting conversation", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorDeleting", "name", m.i18n.Ts("globals.terms.conversation")), nil)
+	}
+	return nil
+}
+
+// UpdateConversationCustomAttributes updates the custom attributes of a conversation.
+func (c *Manager) UpdateConversationCustomAttributes(uuid string, customAttributes map[string]any) error {
+	jsonb, err := json.Marshal(customAttributes)
+	if err != nil {
+		c.lo.Error("error marshalling custom attributes", "error", err)
+		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
+	}
+	if _, err := c.q.UpdateConversationCustomAttributes.Exec(uuid, jsonb); err != nil {
+		c.lo.Error("error updating conversation custom attributes", "error", err)
+		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
 	}
 	return nil
 }

@@ -22,7 +22,7 @@
         {{ conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name }}
       </span>
       <ExternalLink
-        v-if="!conversationStore.conversation.loading && userStore.can('contacts:manage')"
+        v-if="!conversationStore.conversation.loading && userStore.can('contacts:read')"
         size="16"
         class="text-muted-foreground cursor-pointer flex-shrink-0"
         @click="$router.push({ name: 'contact-detail', params: { id: conversation?.contact_id } })"

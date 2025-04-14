@@ -88,6 +88,16 @@ export const adminNavItems = [
         ]
     },
     {
+        titleKey: 'navigation.customAttributes',
+        children: [
+            {
+                titleKey: 'navigation.customAttributes',
+                href: '/admin/custom-attributes',
+                permission: 'custom_attributes:manage'
+            }
+        ]
+    },
+    {
         titleKey: 'navigation.notifications',
         children: [
             {
@@ -116,7 +126,7 @@ export const adminNavItems = [
                 permission: 'oidc:manage'
             }
         ]
-    }
+    },
 ]
 
 export const accountNavItems = [

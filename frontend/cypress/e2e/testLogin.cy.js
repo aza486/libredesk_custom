@@ -95,7 +95,7 @@ describe('Login Component', () => {
         cy.contains('button', 'Sign in').click()
 
         // Check for validation error (matching the error message with a trailing period)
-        cy.contains('Invalid email address.').should('be.visible')
+        cy.contains('Invalid email address').should('be.visible')
     })
 
     it('should validate empty password', () => {
@@ -106,7 +106,7 @@ describe('Login Component', () => {
         cy.contains('button', 'Sign in').click()
 
         // Check for validation error (matching the error message with a trailing period)
-        cy.contains('Password cannot be empty.').should('be.visible')
+        cy.contains('Password cannot be empty').should('be.visible')
     })
 
     it('should show loading state during login', () => {

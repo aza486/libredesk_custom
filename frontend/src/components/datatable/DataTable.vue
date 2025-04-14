@@ -68,7 +68,7 @@ const emptyText = computed(
   () =>
     props.emptyText ||
     t('globals.messages.noResults', {
-      name: t('globals.terms.result', 2)
+      name: t('globals.terms.result', 2).toLowerCase()
     })
 )
 

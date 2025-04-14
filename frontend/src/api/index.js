@@ -33,6 +33,23 @@ http.interceptors.request.use((request) => {
   return request
 })
 
+const getCustomAttributes = (appliesTo) => http.get('/api/v1/custom-attributes', {
+  params: { applies_to: appliesTo }
+})
+const createCustomAttribute = (data) =>
+  http.post('/api/v1/custom-attributes', data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const getCustomAttribute = (id) => http.get(`/api/v1/custom-attributes/${id}`)
+const updateCustomAttribute = (id, data) =>
+  http.put(`/api/v1/custom-attributes/${id}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const deleteCustomAttribute = (id) => http.delete(`/api/v1/custom-attributes/${id}`)
 const searchConversations = (params) => http.get('/api/v1/conversations/search', { params })
 const searchMessages = (params) => http.get('/api/v1/messages/search', { params })
 const searchContacts = (params) => http.get('/api/v1/contacts/search', { params })
@@ -163,6 +180,7 @@ const updateContact = (id, data) => http.put(`/api/v1/contacts/${id}`, data, {
     'Content-Type': 'multipart/form-data'
   }
 })
+const blockContact = (id, data) => http.put(`/api/v1/contacts/${id}/block`, data)
 const getTeam = (id) => http.get(`/api/v1/teams/${id}`)
 const getTeams = () => http.get('/api/v1/teams')
 const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data)
@@ -201,6 +219,18 @@ const getTags = () => http.get('/api/v1/tags')
 const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
 const updateAssignee = (uuid, assignee_type, data) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
 const removeAssignee = (uuid, assignee_type) => http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}/remove`)
+const updateContactCustomAttribute = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/contacts/custom-attributes`, data,
+  {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+const updateConversationCustomAttribute = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/custom-attributes`, data,
+  {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const createConversation = (data) => http.post('/api/v1/conversations', data)
 const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
@@ -282,6 +312,9 @@ const deleteView = (id) => http.delete(`/api/v1/views/me/${id}`)
 const getAiPrompts = () => http.get('/api/v1/ai/prompts')
 const aiCompletion = (data) => http.post('/api/v1/ai/completion', data)
 const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data)
+const getContactNotes = (id) => http.get(`/api/v1/contacts/${id}/notes`)
+const createContactNote = (id, data) => http.post(`/api/v1/contacts/${id}/notes`, data)
+const deleteContactNote = (id, noteId) => http.delete(`/api/v1/contacts/${id}/notes/${noteId}`)
 
 export default {
   login,
@@ -338,6 +371,8 @@ export default {
   updateConversationStatus,
   updateConversationPriority,
   upsertTags,
+  updateConversationCustomAttribute,
+  updateContactCustomAttribute,
   uploadMedia,
   updateAssigneeLastSeen,
   updateUser,
@@ -399,4 +434,13 @@ export default {
   getContacts,
   getContact,
   updateContact,
+  blockContact,
+  getCustomAttributes,
+  createCustomAttribute,
+  updateCustomAttribute,
+  deleteCustomAttribute,
+  getCustomAttribute,
+  getContactNotes,
+  createContactNote,
+  deleteContactNote
 }

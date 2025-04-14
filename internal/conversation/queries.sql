@@ -118,6 +118,7 @@ SELECT
    c.sla_policy_id,
    sla.name as sla_policy_name,
    c.last_message,
+   c.custom_attributes,
    (SELECT COALESCE(
        (SELECT json_agg(t.name)
        FROM tags t
@@ -125,6 +126,7 @@ SELECT
        WHERE ct.conversation_id = c.id),
        '[]'::json
    )) AS tags,
+   ct.id as "contact.id",
    ct.created_at as "contact.created_at",
    ct.updated_at as "contact.updated_at",
    ct.first_name as "contact.first_name",
@@ -133,6 +135,7 @@ SELECT
    ct.avatar_url as "contact.avatar_url",
    ct.phone_number as "contact.phone_number",
    ct.phone_number_calling_code as "contact.phone_number_calling_code",
+   ct.custom_attributes as "contact.custom_attributes",
    COALESCE(lr.cc, '[]'::jsonb) as cc,
    COALESCE(lr.bcc, '[]'::jsonb) as bcc,
    as_latest.first_response_deadline_at,
@@ -258,7 +261,7 @@ SELECT json_build_object(
     'unassigned', COUNT(CASE WHEN c.assigned_user_id IS NULL THEN 1 END),
     'pending', COUNT(CASE WHEN c.first_reply_at IS NOT NULL THEN 1 END),
     'agents_online', (SELECT COUNT(*) FROM users WHERE availability_status = 'online' AND type = 'agent' AND deleted_at is null),
-    'agents_away', (SELECT COUNT(*) FROM users WHERE availability_status in ('away', 'away_manual') AND type = 'agent' AND deleted_at is null),
+    'agents_away', (SELECT COUNT(*) FROM users WHERE availability_status = 'away_manual' AND type = 'agent' AND deleted_at is null),
     'agents_offline', (SELECT COUNT(*) FROM users WHERE availability_status = 'offline' AND type = 'agent' AND deleted_at is null)
 )
 FROM conversations c
@@ -368,6 +371,11 @@ SET assigned_user_id = NULL,
     updated_at = now()
 WHERE assigned_user_id = $1 AND status_id in (SELECT id FROM conversation_statuses WHERE name NOT IN ('Resolved', 'Closed'));
 
+-- name: update-conversation-custom-attributes
+UPDATE conversations
+SET custom_attributes = $2,
+    updated_at = now()
+WHERE uuid = $1;
 
 -- MESSAGE queries.
 -- name: get-message-source-ids

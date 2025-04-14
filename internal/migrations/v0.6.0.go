@@ -65,15 +65,90 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
-	// Add `contacts:manage` permission to Admin role
+	// Add contacts permissions to Admin role
+	permissionsToAdd := []string{
+		"contacts:read_all",
+		"contacts:read",
+		"contacts:write",
+		"contacts:block",
+		"contact_notes:read",
+		"contact_notes:write",
+		"contact_notes:delete",
+	}
+	for _, permission := range permissionsToAdd {
+		_, err = db.Exec(`
+			UPDATE roles 
+			SET permissions = array_append(permissions, $1)
+			WHERE name = 'Admin' AND NOT ($1 = ANY(permissions));
+		`, permission)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add `contacts:read` permission to Agent role
 	_, err = db.Exec(`
-		UPDATE roles 
-		SET permissions = array_append(permissions, 'contacts:manage')
-		WHERE name = 'Admin' AND NOT ('contacts:manage' = ANY(permissions));
+		UPDATE roles
+		SET permissions = array_append(permissions, 'contacts:read')
+		WHERE name = 'Agent' AND NOT ('contacts:read' = ANY(permissions));
 	`)
 	if err != nil {
 		return err
 	}
 
+	// Add `custom_attributes:manage` permission to Admin role
+	_, err = db.Exec(`
+		UPDATE roles
+		SET permissions = array_append(permissions, 'custom_attributes:manage')
+		WHERE name = 'Admin' AND NOT ('custom_attributes:manage' = ANY(permissions));
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Create table for custom attribute definitions
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS custom_attribute_definitions (
+			id SERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			"name" TEXT NOT NULL,
+			description TEXT NOT NULL,
+			applies_to TEXT NOT NULL,
+			key TEXT NOT NULL,
+			values TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
+			data_type TEXT NOT NULL,
+			regex TEXT NULL,
+			regex_hint TEXT NULL,
+			CONSTRAINT constraint_custom_attribute_definitions_on_name CHECK (length("name") <= 140),
+			CONSTRAINT constraint_custom_attribute_definitions_on_description CHECK (length(description) <= 300),
+			CONSTRAINT constraint_custom_attribute_definitions_on_key CHECK (length(key) <= 140),
+			CONSTRAINT constraint_custom_attribute_definitions_on_applies_to CHECK (length(applies_to) <= 50),
+			CONSTRAINT constraint_custom_attribute_definitions_on_data_type CHECK (length(data_type) <= 100),
+			CONSTRAINT constraint_custom_attribute_definitions_on_regex CHECK (length(regex) <= 1000),
+			CONSTRAINT constraint_custom_attribute_definitions_on_regex_hint CHECK (length(regex_hint) <= 1000),
+			CONSTRAINT constraint_custom_attribute_definitions_key_applies_to_unique UNIQUE (key, applies_to)
+		);
+
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Create contact notes table.
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS contact_notes (
+			id SERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			contact_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+			note TEXT NOT NULL,
+			user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+		);
+		CREATE INDEX IF NOT EXISTS index_contact_notes_on_contact_id_created_at ON contact_notes (contact_id, created_at);
+	`)
+	if err != nil {
+		return err
+	}
 	return nil
 }

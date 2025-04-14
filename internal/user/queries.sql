@@ -95,6 +95,12 @@ SET first_name = COALESCE($2, first_name),
  updated_at = now()
 WHERE id = $1;
 
+-- name: update-custom-attributes
+UPDATE users
+SET custom_attributes = $2,
+updated_at = now()
+WHERE id = $1;
+
 -- name: update-avatar
 UPDATE users  
 SET avatar_url = $2, updated_at = now()
@@ -124,7 +130,7 @@ UPDATE users
 SET reset_password_token = $2, reset_password_token_expiry = now() + interval '1 day'
 WHERE id = $1 AND type = 'agent';
 
--- name: reset-password
+-- name: set-password
 UPDATE users  
 SET password = $1, reset_password_token = NULL, reset_password_token_expiry = NULL
 WHERE reset_password_token = $2 AND reset_password_token_expiry > now() AND type = 'agent';
@@ -160,6 +166,11 @@ SET last_login_at = now(),
 updated_at = now()
 WHERE id = $1;
 
+-- name: toggle-enable
+UPDATE users
+SET enabled = $3, updated_at = NOW()
+WHERE id = $1 AND type = $2;
+
 -- name: update-contact
 UPDATE users
 SET first_name = COALESCE($2, first_name),
@@ -168,6 +179,44 @@ SET first_name = COALESCE($2, first_name),
     avatar_url = $5,
     phone_number = COALESCE($6, phone_number),
     phone_number_calling_code = COALESCE($7, phone_number_calling_code),
-    enabled = COALESCE($8, enabled),
     updated_at = now()
 WHERE id = $1 and type = 'contact';
+
+-- name: get-notes
+SELECT 
+    cn.id,
+    cn.created_at,
+    cn.updated_at,
+    cn.contact_id,
+    cn.note,
+    cn.user_id,
+    u.first_name,
+    u.last_name,
+    u.avatar_url
+FROM contact_notes cn
+INNER JOIN users u ON u.id = cn.user_id
+WHERE cn.contact_id = $1
+ORDER BY cn.created_at DESC;
+
+-- name: insert-note
+INSERT INTO contact_notes (contact_id, user_id, note)
+VALUES ($1, $2, $3);
+
+-- name: delete-note
+DELETE FROM contact_notes
+WHERE id = $1 AND contact_id = $2;
+
+-- name: get-note
+SELECT 
+    cn.id,
+    cn.created_at,
+    cn.updated_at,
+    cn.contact_id,
+    cn.note,
+    cn.user_id,
+    u.first_name,
+    u.last_name,
+    u.avatar_url
+FROM contact_notes cn
+INNER JOIN users u ON u.id = cn.user_id
+WHERE cn.id = $1;

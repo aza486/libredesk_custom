@@ -27,11 +27,11 @@ import { useAppSettingsStore } from '@/stores/appSettings'
 import {
   ChevronRight,
   EllipsisVertical,
-  Plus,
-  CircleUserRound,
+  User,
   UserSearch,
   UsersRound,
-  Search
+  Search,
+  Plus
 } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -92,9 +92,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
   >
     <!-- Contacts sidebar -->
     <template
-      v-if="
-        route.matched.some((record) => record.name && record.name.startsWith('contact'))
-      "
+      v-if="route.matched.some((record) => record.name && record.name.startsWith('contact'))"
     >
       <Sidebar collapsible="offcanvas" class="border-r ml-12">
         <SidebarHeader>
@@ -285,24 +283,12 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                   </div>
                   <div class="ml-auto">
                     <div class="flex items-center space-x-2">
-                      <div
-                        class="flex items-center bg-accent p-2 rounded-full cursor-pointer"
-                        @click="emit('createConversation')"
-                      >
-                        <Plus
-                          class="transition-transform duration-200 hover:scale-110"
-                          size="15"
-                          stroke-width="2.5"
-                        />
-                      </div>
                       <router-link :to="{ name: 'search' }">
-                        <div class="flex items-center bg-accent p-2 rounded-full">
-                          <Search
-                            class="transition-transform duration-200 hover:scale-110 cursor-pointer"
-                            size="15"
-                            stroke-width="2.5"
-                          />
-                        </div>
+                        <button
+                          class="flex items-center bg-accent p-2 rounded-full hover:scale-110 transition-transform duration-100"
+                        >
+                          <Search size="15" stroke-width="2.5" />
+                        </button>
                       </router-link>
                     </div>
                   </div>
@@ -316,9 +302,23 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="#" @click="emit('createConversation')">
+                    <Plus />
+                    <span
+                      >{{
+                        t('globals.messages.new', {
+                          name: t('globals.terms.conversation').toLowerCase()
+                        })
+                      }}
+                    </span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/assigned')">
                   <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
-                    <CircleUserRound />
+                    <User />
                     <span>{{ t('navigation.myInbox') }}</span>
                   </router-link>
                 </SidebarMenuButton>
@@ -390,7 +390,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton asChild>
-                      <router-link to="#">
+                      <router-link to="#" class="group/item">
                         <!-- <SlidersHorizontal /> -->
                         <span>
                           {{ t('navigation.views') }}
@@ -399,7 +399,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                           <Plus
                             size="18"
                             @click.stop="openCreateViewDialog"
-                            class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
+                            class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover/item:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
                           />
                         </div>
                         <ChevronRight

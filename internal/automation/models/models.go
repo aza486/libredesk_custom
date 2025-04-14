@@ -55,6 +55,9 @@ const (
 
 	ExecutionModeAll        = "all"
 	ExecutionModeFirstMatch = "first_match"
+
+	FieldTypeContactCustomAttribute      = "contact_custom_attribute"
+	FieldTypeConversationField           = "conversation"
 )
 
 // ActionPermissions maps actions to permissions
@@ -99,6 +102,7 @@ type RuleGroup struct {
 
 type RuleDetail struct {
 	Field              string `json:"field" db:"field"`
+	FieldType          string `json:"field_type" db:"field_type"`
 	Operator           string `json:"operator" db:"operator"`
 	Value              string `json:"value" db:"value"`
 	CaseSensitiveMatch bool   `json:"case_sensitive_match" db:"case_sensitive_match"`

@@ -1,5 +1,5 @@
 <template>
-  <form @submit.prevent="onSubmit" class="space-y-6">
+  <form @submit.prevent="onSubmit" class="space-y-8">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
         <FormLabel>{{ $t('form.field.name') }}</FormLabel>
@@ -23,31 +23,42 @@
       </FormItem>
     </FormField>
 
-    <p class="text-base">{{ $t('admin.role.setPermissionsForThisRole') }}</p>
+    <div>
+      <div class="mb-5 text-lg">{{ $t('admin.role.setPermissionsForThisRole') }}</div>
 
-    <div v-for="entity in permissions" :key="entity.name" class="box p-4">
-      <p class="text-lg mb-5">{{ entity.name }}</p>
-      <div class="space-y-4">
-        <FormField
-          v-for="permission in entity.permissions"
-          :key="permission.name"
-          type="checkbox"
-          :name="permission.name"
+      <div class="space-y-6">
+        <div
+          v-for="entity in permissions"
+          :key="entity.name"
+          class="rounded-lg border border-border bg-card"
         >
-          <FormItem class="flex flex-col gap-y-5 space-y-0 rounded-lg">
-            <div class="flex space-x-3">
-              <FormControl>
-                <Checkbox
-                  :checked="selectedPermissions.includes(permission.name)"
-                  @update:checked="(newValue) => handleChange(newValue, permission.name)"
-                />
-                <FormLabel>{{ permission.label }}</FormLabel>
-              </FormControl>
+          <div class="border-b border-border bg-muted/30 px-5 py-3">
+            <h4 class="font-medium text-card-foreground">{{ entity.name }}</h4>
+          </div>
+
+          <div class="p-5">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField
+                v-for="permission in entity.permissions"
+                :key="permission.name"
+                :name="permission.name"
+              >
+                <FormItem class="flex items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      :checked="selectedPermissions.includes(permission.name)"
+                      @update:checked="(newValue) => handleChange(newValue, permission.name)"
+                    />
+                  </FormControl>
+                  <FormLabel class="font-normal text-sm">{{ permission.label }}</FormLabel>
+                </FormItem>
+              </FormField>
             </div>
-          </FormItem>
-        </FormField>
+          </div>
+        </div>
       </div>
     </div>
+
     <Button type="submit" :isLoading="isLoading">{{ submitLabel }}</Button>
   </form>
 </template>
@@ -140,12 +151,21 @@ const permissions = ref([
       { name: 'reports:manage', label: t('admin.role.reports.manage') },
       { name: 'business_hours:manage', label: t('admin.role.businessHours.manage') },
       { name: 'sla:manage', label: t('admin.role.sla.manage') },
-      { name: 'ai:manage', label: t('admin.role.ai.manage') }
+      { name: 'ai:manage', label: t('admin.role.ai.manage') },
+      { name: 'custom_attributes:manage', label: t('admin.role.customAttributes.manage') }
     ]
   },
   {
     name: t('globals.terms.contact'),
-    permissions: [{ name: 'contacts:manage', label: t('admin.role.contacts.manage') }]
+    permissions: [
+      { name: 'contacts:read_all', label: t('admin.role.contacts.readAll') },
+      { name: 'contacts:read', label: t('admin.role.contacts.read') },
+      { name: 'contacts:write', label: t('admin.role.contacts.write') },
+      { name: 'contacts:block', label: t('admin.role.contacts.block') },
+      { name: 'contact_notes:read', label: t('admin.role.contactNotes.read') },
+      { name: 'contact_notes:write', label: t('admin.role.contactNotes.write') },
+      { name: 'contact_notes:delete', label: t('admin.role.contactNotes.delete') }
+    ]
   }
 ])
 
@@ -157,6 +177,9 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
+  // Filter out any permissions not part of `permissions`.
+  const validPermissions = permissions.value.flatMap(entity => entity.permissions.map(p => p.name))
+  selectedPermissions.value = selectedPermissions.value.filter(perm => validPermissions.includes(perm))
   values.permissions = selectedPermissions.value
   props.submitForm(values)
 })

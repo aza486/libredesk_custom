@@ -5,12 +5,12 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"log"
 
@@ -21,7 +21,6 @@ import (
 	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
-	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 	"golang.org/x/crypto/bcrypt"
@@ -58,22 +57,28 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
-	GetUser               *sqlx.Stmt `query:"get-user"`
-	GetUsers              string     `query:"get-users"`
-	GetAgentsCompact      *sqlx.Stmt `query:"get-agents-compact"`
-	UpdateContact         *sqlx.Stmt `query:"update-contact"`
-	UpdateAgent           *sqlx.Stmt `query:"update-agent"`
-	UpdateAvatar          *sqlx.Stmt `query:"update-avatar"`
-	UpdateAvailability    *sqlx.Stmt `query:"update-availability"`
-	UpdateLastActiveAt    *sqlx.Stmt `query:"update-last-active-at"`
-	UpdateInactiveOffline *sqlx.Stmt `query:"update-inactive-offline"`
-	UpdateLastLoginAt     *sqlx.Stmt `query:"update-last-login-at"`
-	SoftDeleteAgent       *sqlx.Stmt `query:"soft-delete-agent"`
-	SetUserPassword       *sqlx.Stmt `query:"set-user-password"`
-	SetResetPasswordToken *sqlx.Stmt `query:"set-reset-password-token"`
-	ResetPassword         *sqlx.Stmt `query:"reset-password"`
-	InsertAgent           *sqlx.Stmt `query:"insert-agent"`
-	InsertContact         *sqlx.Stmt `query:"insert-contact"`
+	GetUser                *sqlx.Stmt `query:"get-user"`
+	GetUsers               string     `query:"get-users"`
+	GetNotes               *sqlx.Stmt `query:"get-notes"`
+	GetNote                *sqlx.Stmt `query:"get-note"`
+	GetAgentsCompact       *sqlx.Stmt `query:"get-agents-compact"`
+	UpdateContact          *sqlx.Stmt `query:"update-contact"`
+	UpdateAgent            *sqlx.Stmt `query:"update-agent"`
+	UpdateCustomAttributes *sqlx.Stmt `query:"update-custom-attributes"`
+	UpdateAvatar           *sqlx.Stmt `query:"update-avatar"`
+	UpdateAvailability     *sqlx.Stmt `query:"update-availability"`
+	UpdateLastActiveAt     *sqlx.Stmt `query:"update-last-active-at"`
+	UpdateInactiveOffline  *sqlx.Stmt `query:"update-inactive-offline"`
+	UpdateLastLoginAt      *sqlx.Stmt `query:"update-last-login-at"`
+	SoftDeleteAgent        *sqlx.Stmt `query:"soft-delete-agent"`
+	SetUserPassword        *sqlx.Stmt `query:"set-user-password"`
+	SetResetPasswordToken  *sqlx.Stmt `query:"set-reset-password-token"`
+	SetPassword            *sqlx.Stmt `query:"set-password"`
+	DeleteNote             *sqlx.Stmt `query:"delete-note"`
+	InsertAgent            *sqlx.Stmt `query:"insert-agent"`
+	InsertContact          *sqlx.Stmt `query:"insert-contact"`
+	InsertNote             *sqlx.Stmt `query:"insert-note"`
+	ToggleEnable           *sqlx.Stmt `query:"toggle-enable"`
 }
 
 // New creates and returns a new instance of the Manager.
@@ -106,26 +111,6 @@ func (u *Manager) VerifyPassword(email string, password []byte) (models.User, er
 	return user, nil
 }
 
-// GetAllAgents returns a list of all agents.
-func (u *Manager) GetAgents() ([]models.User, error) {
-	// Some dirty hack.
-	return u.GetAllUsers(1, 999999999, models.UserTypeAgent, "desc", "users.updated_at", "")
-}
-
-// GetAllContacts returns a list of all contacts.
-func (u *Manager) GetContacts(page, pageSize int, order, orderBy string, filtersJSON string) ([]models.User, error) {
-	if pageSize > maxListPageSize {
-		return nil, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.pageTooLarge", "max", fmt.Sprintf("%d", maxListPageSize)), nil)
-	}
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = 10
-	}
-	return u.GetAllUsers(page, pageSize, models.UserTypeContact, order, orderBy, filtersJSON)
-}
-
 // GetAllUsers returns a list of all users.
 func (u *Manager) GetAllUsers(page, pageSize int, userType, order, orderBy string, filtersJSON string) ([]models.User, error) {
 	query, qArgs, err := u.makeUserListQuery(page, pageSize, userType, order, orderBy, filtersJSON)
@@ -152,47 +137,6 @@ func (u *Manager) GetAllUsers(page, pageSize int, userType, order, orderBy strin
 	}
 
 	return users, nil
-}
-
-// GetAgentsCompact returns a compact list of users with limited fields.
-func (u *Manager) GetAgentsCompact() ([]models.User, error) {
-	var users = make([]models.User, 0)
-	if err := u.q.GetAgentsCompact.Select(&users); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return users, nil
-		}
-		u.lo.Error("error fetching users from db", "error", err)
-		return users, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", u.i18n.P("globals.terms.user")), nil)
-	}
-	return users, nil
-}
-
-// CreateAgent creates a new agent user.
-func (u *Manager) CreateAgent(user *models.User) error {
-	password, err := u.generatePassword()
-	if err != nil {
-		u.lo.Error("error generating password", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
-	}
-	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
-	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
-		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
-		}
-		u.lo.Error("error creating user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
-	}
-	return nil
-}
-
-// GetAgent retrieves an agent by ID.
-func (u *Manager) GetAgent(id int, email string) (models.User, error) {
-	return u.Get(id, email, models.UserTypeAgent)
-}
-
-// GetContact retrieves a contact by ID.
-func (u *Manager) GetContact(id int, email string) (models.User, error) {
-	return u.Get(id, email, models.UserTypeContact)
 }
 
 // Get retrieves an user by ID or email.
@@ -222,65 +166,11 @@ func (u *Manager) UpdateAvatar(id int, path string) error {
 	return nil
 }
 
-// UpdateAgent updates an agent in the database, including their password if provided.
-func (u *Manager) UpdateAgent(id int, user models.User) error {
-	var (
-		hashedPassword any
-		err            error
-	)
-
-	// Set password?
-	if user.NewPassword != "" {
-		if IsStrongPassword(user.NewPassword) {
-			return envelope.NewError(envelope.InputError, PasswordHint, nil)
-		}
-		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)
-		if err != nil {
-			u.lo.Error("error generating bcrypt password", "error", err)
-			return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
-		}
-		u.lo.Debug("setting new password for user", "user_id", id)
-	}
-
-	// Update user in the database.
-	if _, err := u.q.UpdateAgent.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled, user.AvailabilityStatus); err != nil {
-		u.lo.Error("error updating user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
-	}
-	return nil
-}
-
-// UpdateContact updates a contact in the database.
-func (u *Manager) UpdateContact(id int, user models.User) error {
-	if _, err := u.q.UpdateContact.Exec(id, user.FirstName, user.LastName, user.Email, user.AvatarURL, user.PhoneNumber, user.PhoneNumberCallingCode, user.Enabled); err != nil {
-		u.lo.Error("error updating user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.contact}"), nil)
-	}
-	return nil
-}
-
 // UpdateLastLoginAt updates the last login timestamp of an user.
 func (u *Manager) UpdateLastLoginAt(id int) error {
 	if _, err := u.q.UpdateLastLoginAt.Exec(id); err != nil {
 		u.lo.Error("error updating user last login at", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
-	}
-	return nil
-}
-
-// SoftDeleteAgent soft deletes an agent by ID.
-func (u *Manager) SoftDeleteAgent(id int) error {
-	// Disallow if user is system user.
-	systemUser, err := u.GetSystemUser()
-	if err != nil {
-		return err
-	}
-	if id == systemUser.ID {
-		return envelope.NewError(envelope.InputError, u.i18n.T("user.cannotDeleteSystemUser"), nil)
-	}
-	if _, err := u.q.SoftDeleteAgent.Exec(id); err != nil {
-		u.lo.Error("error deleting user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorDeleting", "name", "{globals.terms.user}"), nil)
 	}
 	return nil
 }
@@ -310,7 +200,7 @@ func (u *Manager) ResetPassword(token, password string) error {
 		u.lo.Error("error generating bcrypt password", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.password}"), nil)
 	}
-	rows, err := u.q.ResetPassword.Exec(passwordHash, token)
+	rows, err := u.q.SetPassword.Exec(passwordHash, token)
 	if err != nil {
 		u.lo.Error("error setting new password", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.password}"), nil)
@@ -339,18 +229,21 @@ func (u *Manager) UpdateLastActive(id int) error {
 	return nil
 }
 
-// MonitorAgentAvailability continuously checks for user activity and sets them offline if inactive for more than 5 minutes.
-func (u *Manager) MonitorAgentAvailability(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			u.markInactiveAgentsOffline()
-		case <-ctx.Done():
-			return
-		}
+// UpdateCustomAttributes updates the custom attributes of an user.
+func (u *Manager) UpdateCustomAttributes(id int, customAttributes map[string]any) error {
+	// Convert custom attributes to JSON.
+	jsonb, err := json.Marshal(customAttributes)
+	if err != nil {
+		u.lo.Error("error marshalling custom attributes to JSON", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
+	// Update custom attributes in the database.
+	if _, err := u.q.UpdateCustomAttributes.Exec(id, jsonb); err != nil {
+		u.lo.Error("error updating user custom attributes", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+
+	}
+	return nil
 }
 
 // makeUserListQuery generates a query to fetch users based on the provided filters.
@@ -371,18 +264,6 @@ func (u *Manager) makeUserListQuery(page, pageSize int, typ, order, orderBy, fil
 	})
 }
 
-// markInactiveAgentsOffline sets agents offline if they have been inactive for more than 5 minutes.
-func (u *Manager) markInactiveAgentsOffline() {
-	if res, err := u.q.UpdateInactiveOffline.Exec(); err != nil {
-		u.lo.Error("error setting users offline", "error", err)
-	} else {
-		rows, _ := res.RowsAffected()
-		if rows > 0 {
-			u.lo.Info("set inactive users offline", "count", rows)
-		}
-	}
-}
-
 // verifyPassword compares the provided password with the stored password hash.
 func (u *Manager) verifyPassword(pwd []byte, pwdHash string) error {
 	if err := bcrypt.CompareHashAndPassword([]byte(pwdHash), pwd); err != nil {
@@ -401,6 +282,15 @@ func (u *Manager) generatePassword() ([]byte, error) {
 		return nil, fmt.Errorf("generating bcrypt password: %w", err)
 	}
 	return bytes, nil
+}
+
+// ToggleEnabled toggles the enabled status of an user.
+func (u *Manager) ToggleEnabled(id int, typ string, enabled bool) error {
+	if _, err := u.q.ToggleEnable.Exec(id, typ, enabled); err != nil {
+		u.lo.Error("error toggling user enabled status", "error", err)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
+	}
+	return nil
 }
 
 // ChangeSystemUserPassword updates the system user's password with a newly prompted one.
