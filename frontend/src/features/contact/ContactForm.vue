@@ -92,7 +92,7 @@
       </div>
     </div>
 
-    <div v-if="userStore.can('contacts.write')">
+    <div v-if="userStore.can('contacts:write')">
       <Button type="submit" :isLoading="formLoading" :disabled="formLoading">
         {{ t('globals.buttons.update', { name: t('globals.terms.contact').toLowerCase() }) }}
       </Button>
