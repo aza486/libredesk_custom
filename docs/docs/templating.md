@@ -1,11 +1,12 @@
 # Templating
 
-Templating in outgoing emails allows you to personalize content by embedding dynamic expressions like {{ .Recipient.FullName }}. These expressions reference fields from the conversation, contact, and recipient objects, making it easy to generate customized messages. This section documents all available template variables and provides a basic example to demonstrate their usage.
+Templating in outgoing emails allows you to personalize content by embedding dynamic expressions like `{{ .Recipient.FullName }}`. These expressions reference fields from the conversation, contact, and recipient objects.
 
-## Email template expressions
+## Outgoing Email Template Expressions
 
-There are several template expressions that can be used in the outgoing email template, They are written in the form `{{ .Recipient.FullName }}`.
+If you want to customize the look of outgoing emails, you can do so in the **Settings > Templates -> Outgoing Email Templates** section. This template will be used for all outgoing emails including replies to conversations, notifications, and other system-generated emails.
 
+### Conversation fields
 
 | Variable                        | Value                                                  |
 |---------------------------------|--------------------------------------------------------|
@@ -31,9 +32,12 @@ There are several template expressions that can be used in the outgoing email te
 
 
 ### Example outgoing email template
+
 ```html
 Dear {{ .Recipient.FirstName }}
 {{ template "content" . }}
 Best regards,
 ```
-Here the `{{ template "content" . }}` is a placeholder for the content of the outgoing email. It will be replaced with the actual content of the email when it is sent. The `{{ .Recipient.FirstName }}` will be replaced with the first name of the recipient when the email is sent, this way you don't have to hardcode the name in the template. The same applies to the other variables.
+Here, the `{{ template "content" . }}` serves as a placeholder for the body of the outgoing email. It will be replaced with the actual email content at the time of sending.
+
+Similarly, the `{{ .Recipient.FirstName }}` expression will dynamically insert the recipient's first name when the email is sent.
