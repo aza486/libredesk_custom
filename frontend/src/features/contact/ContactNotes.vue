@@ -64,7 +64,7 @@
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p class="text-sm font-medium text-gray-900">{{ note.first_name }}</p>
+                <p class="text-sm font-medium text-gray-900">{{ note.first_name }} {{ note.last_name }}</p>
                 <p class="text-xs text-muted-foreground flex items-center">
                   <ClockIcon class="h-3 w-3 mr-1 inline-block opacity-70" />
                   {{ formatDate(note.created_at) }}
