@@ -31,7 +31,8 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Upgrade: upgrade.md
-      - Variables: variables.md
-  - Advanced Configuration:
+      - Templating: templating.md
       - SSO: sso.md
-  - Developer Setup: developer-setup.md
+  - Contributors:
+      - Developer setup: developer-setup.md
+      - Translations: translations.md
