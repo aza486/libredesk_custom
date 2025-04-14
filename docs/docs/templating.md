@@ -6,7 +6,7 @@ Templating in outgoing emails allows you to personalize content by embedding dyn
 
 If you want to customize the look of outgoing emails, you can do so in the **Settings > Templates -> Outgoing Email Templates** section. This template will be used for all outgoing emails including replies to conversations, notifications, and other system-generated emails.
 
-### Conversation fields
+### Conversation Variables
 
 | Variable                        | Value                                                  |
 |---------------------------------|--------------------------------------------------------|
@@ -14,7 +14,7 @@ If you want to customize the look of outgoing emails, you can do so in the **Set
 | {{ .Conversation.Subject }}         | The subject of the conversation                     |
 | {{ .Conversation.UUID }}           | The unique identifier of the conversation            |
 
-### Contact fields
+### Contact Variables
 | Variable                     | Value                              |
 |------------------------------|------------------------------------|
 | {{ .Contact.FirstName }}     | First name of the contact/customer |
