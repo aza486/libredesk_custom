@@ -104,6 +104,17 @@ func handleUpdateContact(r *fastglue.Request) error {
 		avatarURL = string(v[0])
 	}
 
+	// Set nulls to empty strings.
+	if avatarURL == "null" {
+		avatarURL = ""
+	}
+	if phoneNumberCallingCode == "null" {
+		phoneNumberCallingCode = ""
+	}
+	if phoneNumber == "null" {
+		phoneNumber = ""
+	}
+
 	// Validate mandatory fields.
 	if email == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "email"), nil, envelope.InputError)
