@@ -10,7 +10,7 @@
         href="https://libredesk.io/docs/sso/"
         target="_blank"
         rel="noopener noreferrer"
-        class="text-blue-500 hover:underline"
+        class="link-style"
       >
         <p>Learn more</p>
       </a>

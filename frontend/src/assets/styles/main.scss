@@ -359,3 +359,10 @@ a[data-active='false']:hover {
 [data-radix-popper-content-wrapper] {
   z-index: 9999 !important;
 }
+
+// Components
+@layer components {
+  .link-style {
+    @apply text-blue-500 hover:underline;
+  }
+}
