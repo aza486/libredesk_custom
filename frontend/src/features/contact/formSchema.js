@@ -22,9 +22,9 @@ export const createFormSchema = (t) => z.object({
     phone_number: z
         .string()
         .optional()
-        .refine(val => !val || (/^\d{6,15}$/.test(val)), {
+        .refine(val => !val || (/^\d{1,15}$/.test(val)), {
             message: t('form.error.minmax', {
-                min: 6,
+                min: 1,
                 max: 15,
             })
         })
