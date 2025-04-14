@@ -48,6 +48,9 @@
       <template #help>
         <p>Design templates for customer communications and responses.</p>
         <p>Modify content for internal and external emails.</p>
+        <a href="https://libredesk.io/docs/templating/" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">
+          <p>Learn more</p>
+        </a>
       </template>
     </AdminPageWithHelp>
   </div>
