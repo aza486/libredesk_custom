@@ -177,8 +177,8 @@ SET first_name = COALESCE($2, first_name),
     last_name = COALESCE($3, last_name),
     email = COALESCE($4, email),
     avatar_url = $5,
-    phone_number = COALESCE($6, phone_number),
-    phone_number_calling_code = COALESCE($7, phone_number_calling_code),
+    phone_number = $6,
+    phone_number_calling_code = $7,
     updated_at = now()
 WHERE id = $1 and type = 'contact';
 
