@@ -292,7 +292,7 @@ func isMacroActionAllowed(action string) bool {
 	switch action {
 	case autoModels.ActionSendPrivateNote, autoModels.ActionReply:
 		return false
-	case autoModels.ActionAssignTeam, autoModels.ActionAssignUser, autoModels.ActionSetStatus, autoModels.ActionSetPriority, autoModels.ActionSetTags:
+	case autoModels.ActionAssignTeam, autoModels.ActionAssignUser, autoModels.ActionSetStatus, autoModels.ActionSetPriority, autoModels.ActionAddTags, autoModels.ActionSetTags, autoModels.ActionRemoveTags:
 		return true
 	default:
 		return false

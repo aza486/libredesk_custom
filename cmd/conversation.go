@@ -472,7 +472,7 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := app.conversation.UpsertConversationTags(uuid, tagNames, user); err != nil {
+	if err := app.conversation.SetConversationTags(uuid, models.ActionSetTags, tagNames, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

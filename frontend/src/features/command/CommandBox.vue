@@ -124,7 +124,17 @@
                             class="shrink-0 text-primary"
                           />
                           <Tags
+                            v-else-if="action.type === 'add_tags'"
+                            :size="10"
+                            class="shrink-0 text-primary"
+                          />
+                          <Tags
                             v-else-if="action.type === 'set_tags'"
+                            :size="10"
+                            class="shrink-0 text-primary"
+                          />
+                          <Tags
+                            v-else-if="action.type === 'remove_tags'"
                             :size="10"
                             class="shrink-0 text-primary"
                           />
@@ -260,7 +270,9 @@ const getActionLabel = computed(() => (action) => {
     assign_team: t('globals.messages.assignTeam'),
     set_status: t('globals.messages.setStatus'),
     set_priority: t('globals.messages.setPriority'),
-    set_tags: t('globals.messages.setTags')
+    add_tags: t('globals.messages.addTags'),
+    set_tags: t('globals.messages.setTags'),
+    remove_tags: t('globals.messages.removeTags')
   }
   return `${prefixes[action.type]}: ${action.display_value.length > 0 ? action.display_value.join(', ') : action.value.join(', ')}`
 })
