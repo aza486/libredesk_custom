@@ -123,16 +123,6 @@ export function useConversationFilters () {
             operators: FIELD_OPERATORS.SELECT,
             options: uStore.options
         },
-        hours_since_created: {
-            label: 'Hours since created',
-            type: FIELD_TYPE.NUMBER,
-            operators: FIELD_OPERATORS.NUMBER
-        },
-        hours_since_resolved: {
-            label: 'Hours since resolved',
-            type: FIELD_TYPE.NUMBER,
-            operators: FIELD_OPERATORS.NUMBER
-        },
         inbox: {
             label: 'Inbox',
             type: FIELD_TYPE.SELECT,
@@ -168,6 +158,16 @@ export function useConversationFilters () {
         },
         hours_since_created: {
             label: 'Hours since created',
+            type: FIELD_TYPE.NUMBER,
+            operators: FIELD_OPERATORS.NUMBER
+        },
+        hours_since_first_reply: {
+            label: 'Hours since first reply',
+            type: FIELD_TYPE.NUMBER,
+            operators: FIELD_OPERATORS.NUMBER
+        },
+        hours_since_last_reply: {
+            label: 'Hours since last reply',
             type: FIELD_TYPE.NUMBER,
             operators: FIELD_OPERATORS.NUMBER
         },

@@ -21,6 +21,8 @@ var (
 		"assigned_team",
 		"assigned_user",
 		"hours_since_created",
+		"hours_since_first_reply",
+		"hours_since_last_reply",
 		"hours_since_resolved",
 		"inbox",
 	}

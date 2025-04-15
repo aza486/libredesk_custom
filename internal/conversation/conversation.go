@@ -194,6 +194,7 @@ type queries struct {
 	GetConversationParticipants        *sqlx.Stmt `query:"get-conversation-participants"`
 	GetUserActiveConversationsCount    *sqlx.Stmt `query:"get-user-active-conversations-count"`
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
+	UpdateConversationLastReplyAt      *sqlx.Stmt `query:"update-conversation-last-reply-at"`
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
 	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
@@ -424,6 +425,21 @@ func (c *Manager) UpdateConversationFirstReplyAt(conversationUUID string, conver
 	rows, _ := res.RowsAffected()
 	if rows > 0 {
 		c.BroadcastConversationUpdate(conversationUUID, "first_reply_at", at.Format(time.RFC3339))
+	}
+	return nil
+}
+
+// UpdateConversationLastReplyAt updates the last reply timestamp for a conversation.
+func (c *Manager) UpdateConversationLastReplyAt(conversationUUID string, conversationID int, at time.Time) error {
+	res, err := c.q.UpdateConversationLastReplyAt.Exec(conversationID, at)
+	if err != nil {
+		c.lo.Error("error updating conversation last reply at", "error", err)
+		return err
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows > 0 {
+		c.BroadcastConversationUpdate(conversationUUID, "last_reply_at", at.Format(time.RFC3339))
 	}
 	return nil
 }

@@ -150,5 +150,15 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 	if err != nil {
 		return err
 	}
+
+	// Add a new "Last reply at" column to the conversations table and populate it.
+	_, err = db.Exec(`
+		ALTER TABLE conversations ADD COLUMN IF NOT EXISTS last_reply_at TIMESTAMPTZ NULL;
+		UPDATE conversations SET last_reply_at=first_reply_at WHERE last_reply_at IS NULL AND first_reply_at IS NOT NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

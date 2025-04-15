@@ -46,6 +46,7 @@ SELECT
     inboxes.name as inbox_name,
     conversations.sla_policy_id,
     conversations.first_reply_at,
+    conversations.last_reply_at,
     conversations.resolved_at,
     conversations.subject,
     conversations.last_message,
@@ -110,6 +111,7 @@ SELECT
    c.uuid,
    c.reference_number,
    c.first_reply_at,
+   c.last_reply_at,
    c.waiting_since,
    c.assigned_user_id,
    c.assigned_team_id,
@@ -322,11 +324,15 @@ SELECT json_build_object(
     'status_summary', (SELECT data FROM status_summary)
 ) AS result;
 
-
 -- name: update-conversation-first-reply-at
 UPDATE conversations
 SET first_reply_at = $2
 WHERE first_reply_at IS NULL AND id = $1;
+
+-- name: update-conversation-last-reply-at
+UPDATE conversations
+SET last_reply_at = $2
+WHERE id = $1;
 
 -- name: upsert-conversation-tags
 WITH conversation_id AS (

@@ -142,6 +142,14 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 			}
 		case models.ConversationHoursSinceCreated:
 			valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.CreatedAt).Hours()))
+		case models.ConversationHoursSinceFirstReply:
+			if !conversation.FirstReplyAt.IsZero() {
+				valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.FirstReplyAt.Time).Hours()))
+			}
+		case models.ConversationHoursSinceLastReply:
+			if !conversation.LastReplyAt.IsZero() {
+				valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.LastReplyAt.Time).Hours()))
+			}
 		case models.ConversationHoursSinceResolved:
 			if !conversation.ResolvedAt.IsZero() {
 				valueToCompare = fmt.Sprintf("%.0f", (time.Since(conversation.ResolvedAt.Time).Hours()))

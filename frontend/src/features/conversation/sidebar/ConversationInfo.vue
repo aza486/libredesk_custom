@@ -44,6 +44,15 @@
     </div>
 
     <div class="flex flex-col">
+      <p class="font-medium">{{ $t('form.field.lastReplyAt') }}</p>
+      <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
+      <p v-if="conversation.last_reply_at">
+        {{ format(conversation.last_reply_at, 'PPpp') }}
+      </p>
+      <p v-else>-</p>
+    </div>
+
+    <div class="flex flex-col">
       <div class="flex justify-start items-center space-x-2">
         <p class="font-medium">{{ $t('form.field.resolvedAt') }}</p>
         <SlaBadge
