@@ -111,7 +111,7 @@ func (e *Engine) evaluateRule(rule models.RuleDetail, conversation cmodels.Conve
 		customAttributes map[string]any
 	)
 
-	// Assign default field type if not provided
+	// Assign default field type if not provided for backward compatibility.
 	if rule.FieldType == "" {
 		rule.FieldType = models.FieldTypeConversationField
 	}

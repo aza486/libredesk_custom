@@ -206,9 +206,7 @@
             </div>
 
             <!-- Placeholder for spacing -->
-            <div v-else class="flex-1">
-            </div>
-
+            <div v-else class="flex-1"></div>
 
             <!-- Remove condition -->
             <div class="cursor-pointer mt-2" @click.prevent="removeCondition(index)">
@@ -380,6 +378,10 @@ const emitUpdate = () => {
 }
 
 const getFieldOperators = (field, fieldType) => {
+  // Set default field type if not set for backwards compatibility as this field was added later.
+  if (!fieldType) {
+    fieldType = fieldTypeConstants.conversation
+  }
   if (fieldType === fieldTypeConstants.contact_custom_attribute) {
     return contactCustomAttributes.value[field]?.operators || []
   }
@@ -390,6 +392,10 @@ const getFieldOperators = (field, fieldType) => {
 }
 
 const getFieldOptions = (field, fieldType) => {
+  // Set default field type if not set for backwards compatibility as this field was added later.
+  if (!fieldType) {
+    fieldType = fieldTypeConstants.conversation
+  }
   if (fieldType === fieldTypeConstants.contact_custom_attribute) {
     return contactCustomAttributes.value[field]?.options || []
   }
@@ -401,9 +407,14 @@ const getFieldOptions = (field, fieldType) => {
 
 const inputType = (index) => {
   const field = ruleGroup.value.rules[index]?.field
-  const fieldType = ruleGroup.value.rules[index]?.field_type
   const operator = ruleGroup.value.rules[index]?.operator
+  let fieldType = ruleGroup.value.rules[index]?.field_type
   if (['contains', 'not contains'].includes(operator)) return 'tag'
+
+  // Set default field type if not set for backwards compatibility as this field was added later.
+  if (!fieldType) {
+    fieldType = fieldTypeConstants.conversation
+  }
   if (field && fieldType) {
     if (fieldType === fieldTypeConstants.contact_custom_attribute) {
       return contactCustomAttributes.value[field]?.type || ''
