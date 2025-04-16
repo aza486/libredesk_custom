@@ -16,7 +16,9 @@ const (
 	ActionSendPrivateNote = "send_private_note"
 	ActionReply           = "send_reply"
 	ActionSetSLA          = "set_sla"
+	ActionAddTags         = "add_tags"
 	ActionSetTags         = "set_tags"
+	ActionRemoveTags      = "remove_tags"
 	ActionSendCSAT        = "send_csat"
 
 	OperatorAnd = "AND"
@@ -68,7 +70,9 @@ var ActionPermissions = map[string]string{
 	ActionSetPriority:     authzModels.PermConversationsUpdatePriority,
 	ActionSendPrivateNote: authzModels.PermMessagesWrite,
 	ActionReply:           authzModels.PermMessagesWrite,
+	ActionAddTags:         authzModels.PermConversationsUpdateTags,
 	ActionSetTags:         authzModels.PermConversationsUpdateTags,
+	ActionRemoveTags:      authzModels.PermConversationsUpdateTags,
 }
 
 // RuleRecord represents a rule record in the database

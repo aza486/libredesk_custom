@@ -60,7 +60,9 @@ const getIcon = (type) =>
     assign_user: User,
     set_status: MessageSquare,
     set_priority: Flag,
-    set_tags: Tags
+    add_tags: Tags,
+    set_tags: Tags,
+    remove_tags: Tags
   })[type]
 
 const getDisplayValue = (action) => {
@@ -80,8 +82,12 @@ const getTooltip = (action) => {
       return `${t('globals.messages.setStatus')}: ${getDisplayValue(action)}`
     case 'set_priority':
       return `${t('globals.messages.setPriority')}: ${getDisplayValue(action)}`
+    case 'add_tags':
+      return `${t('globals.messages.addTags')}: ${getDisplayValue(action)}`
     case 'set_tags':
       return `${t('globals.messages.setTags')}: ${getDisplayValue(action)}`
+    case 'remove_tags':
+      return `${t('globals.messages.removeTags')}: ${getDisplayValue(action)}`
     default:
       return `${t('globals.terms.action')}: ${action.type}, ${t('globals.terms.value')}: ${getDisplayValue(action)}`
   }

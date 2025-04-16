@@ -445,9 +445,14 @@ func (m *Manager) RecordSLASet(conversationUUID string, slaName string, actor um
 	return m.InsertConversationActivity(models.ActivitySLASet, conversationUUID, slaName, actor)
 }
 
-// RecordTagChange records an activity for a tag change.
-func (m *Manager) RecordTagChange(conversationUUID string, tag string, actor umodels.User) error {
-	return m.InsertConversationActivity(models.ActivityTagChange, conversationUUID, tag, actor)
+// RecordTagAddition records an activity for a tag addition.
+func (m *Manager) RecordTagAddition(conversationUUID string, tag string, actor umodels.User) error {
+	return m.InsertConversationActivity(models.ActivityTagAdded, conversationUUID, tag, actor)
+}
+
+// RecordTagRemoval records an activity for a tag removal.
+func (m *Manager) RecordTagRemoval(conversationUUID string, tag string, actor umodels.User) error {
+	return m.InsertConversationActivity(models.ActivityTagRemoved, conversationUUID, tag, actor)
 }
 
 // InsertConversationActivity inserts an activity message.
@@ -500,8 +505,10 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 		content = fmt.Sprintf("%s set priority to %s", actorName, newValue)
 	case models.ActivityStatusChange:
 		content = fmt.Sprintf("%s marked the conversation as %s", actorName, newValue)
-	case models.ActivityTagChange:
+	case models.ActivityTagAdded:
 		content = fmt.Sprintf("%s added tag %s", actorName, newValue)
+	case models.ActivityTagRemoved:
+		content = fmt.Sprintf("%s removed tag %s", actorName, newValue)
 	case models.ActivitySLASet:
 		content = fmt.Sprintf("%s set %s SLA policy", actorName, newValue)
 	default:

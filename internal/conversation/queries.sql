@@ -328,7 +328,15 @@ UPDATE conversations
 SET first_reply_at = $2
 WHERE first_reply_at IS NULL AND id = $1;
 
--- name: upsert-conversation-tags
+-- name: add-conversation-tags
+-- Insert new tags
+INSERT INTO conversation_tags (conversation_id, tag_id)
+  SELECT c.id, t.id
+  FROM conversations c, tags t
+  WHERE t.name = ANY($2::text[]) AND c.uuid = $1
+  ON CONFLICT (conversation_id, tag_id) DO UPDATE SET tag_id = EXCLUDED.tag_id;
+
+-- name: set-conversation-tags
 WITH conversation_id AS (
     SELECT id FROM conversations WHERE uuid = $1
 ),
@@ -344,6 +352,14 @@ inserted AS (
 DELETE FROM conversation_tags
 WHERE conversation_id = (SELECT id FROM conversation_id) 
 AND tag_id NOT IN (
+    SELECT id FROM tags WHERE name = ANY($2::text[])
+);
+
+-- name: remove-conversation-tags
+-- Delete tags that are not in the new list
+DELETE FROM conversation_tags
+WHERE conversation_id = (SELECT id FROM conversations WHERE uuid = $1)
+AND tag_id IN (
     SELECT id FROM tags WHERE name = ANY($2::text[])
 );
 
