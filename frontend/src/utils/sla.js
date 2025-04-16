@@ -12,34 +12,37 @@ import { differenceInMinutes } from 'date-fns'
 export function calculateSla (dueAt, actualAt) {
     const compareTime = actualAt ? new Date(actualAt) : new Date()
     const dueTime = new Date(dueAt)
+    // Difference in minutes will be negative if overdue, positive if remaining.
     const diffInMinutes = differenceInMinutes(dueTime, compareTime)
 
-    if (!actualAt) {
-        if (diffInMinutes > 0) {
-            if (diffInMinutes >= 2880) {
-                return {
-                    status: 'remaining',
-                    value: `${Math.floor(diffInMinutes / 1440)} days`
-                }
-            }
+    // No actual at and diffInMinutes is positive; there is still time remaining.
+    if (!actualAt && diffInMinutes >= 0) {
+        if (diffInMinutes >= 2880) {
             return {
                 status: 'remaining',
-                value: diffInMinutes < 60 ? `${diffInMinutes} mins` : `${Math.floor(diffInMinutes / 60)} hrs`
+                value: `${Math.floor(diffInMinutes / 1440)} days`
             }
+        }
+        return {
+            status: 'remaining',
+            value: diffInMinutes < 60 ? `${diffInMinutes} mins` : `${Math.floor(diffInMinutes / 60)} hrs`
         }
     }
 
-    const overdueTime = Math.abs(diffInMinutes)
-    const status = actualAt ? 'hit' : 'overdue'
+    let status = 'hit'
+    if (diffInMinutes < 0) {
+        status = 'overdue'
+    }
 
-    if (overdueTime >= 2880) {
+    const overdueMins = Math.abs(diffInMinutes)
+    if (overdueMins >= 2880) {
         return {
             status,
-            value: `${Math.floor(overdueTime / 1440)} days`
+            value: `${Math.floor(overdueMins / 1440)} days`
         }
     }
     return {
         status,
-        value: overdueTime < 60 ? `${overdueTime} mins` : `${Math.floor(overdueTime / 60)} hrs`
+        value: overdueMins < 60 ? `${overdueMins} mins` : `${Math.floor(overdueMins / 60)} hrs`
     }
 }
