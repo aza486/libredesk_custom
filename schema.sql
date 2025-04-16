@@ -213,6 +213,7 @@ CREATE TABLE conversations (
 	custom_attributes JSONB DEFAULT '{}'::jsonb NOT NULL,
     assignee_last_seen_at TIMESTAMPTZ DEFAULT NOW(),
     first_reply_at TIMESTAMPTZ NULL,
+    last_reply_at TIMESTAMPTZ NULL,
     closed_at TIMESTAMPTZ NULL,
     resolved_at TIMESTAMPTZ NULL,
 

@@ -275,6 +275,7 @@
   "form.field.referenceNumber": "Reference Number",
   "form.field.initiatedAt": "Initiated at",
   "form.field.firstReplyAt": "First Reply At",
+  "form.field.lastReplyAt": "Last Reply At",
   "form.field.resolvedAt": "Resolved At",
   "form.field.closedAt": "Closed At",
   "form.field.slaPolicy": "SLA Policy",

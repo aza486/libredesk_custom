@@ -187,10 +187,11 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	// Update status of the message.
 	m.UpdateMessageStatus(message.UUID, models.MessageStatusSent)
 
-	// Update first reply time if the sender is not the system user.
+	// Update first and last reply time if the sender is not the system user.
 	// All automated messages are sent by the system user.
 	if systemUser, err := m.userStore.GetSystemUser(); err == nil && message.SenderID != systemUser.ID {
 		m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, time.Now())
+		m.UpdateConversationLastReplyAt(message.ConversationUUID, message.ConversationID, time.Now())
 	} else if err != nil {
 		m.lo.Error("error fetching system user for updating first reply time", "error", err)
 	}
