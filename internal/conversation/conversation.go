@@ -204,7 +204,9 @@ type queries struct {
 	UpdateConversationLastMessage      *sqlx.Stmt `query:"update-conversation-last-message"`
 	InsertConversationParticipant      *sqlx.Stmt `query:"insert-conversation-participant"`
 	InsertConversation                 *sqlx.Stmt `query:"insert-conversation"`
-	UpsertConversationTags             *sqlx.Stmt `query:"upsert-conversation-tags"`
+	AddConversationTags                *sqlx.Stmt `query:"add-conversation-tags"`
+	SetConversationTags                *sqlx.Stmt `query:"set-conversation-tags"`
+	RemoveConversationTags             *sqlx.Stmt `query:"remove-conversation-tags"`
 	GetConversationTags                *sqlx.Stmt `query:"get-conversation-tags"`
 	UnassignOpenConversations          *sqlx.Stmt `query:"unassign-open-conversations"`
 	ReOpenConversation                 *sqlx.Stmt `query:"re-open-conversation"`
@@ -673,32 +675,62 @@ func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error)
 	return stats, nil
 }
 
-// UpsertConversationTags upserts the tags associated with a conversation.
-func (c *Manager) UpsertConversationTags(uuid string, tagNames []string, actor umodels.User) error {
-	// Get the existing tags.
-	tags, err := c.getConversationTags(uuid)
+// SetConversationTags sets the tags associated with a conversation.
+func (c *Manager) SetConversationTags(uuid string, action string, tagNames []string, actor umodels.User) error {
+	// Get current tags list.
+	prevTags, err := c.getConversationTags(uuid)
 	if err != nil {
-		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.tag}"), nil)
 	}
 
-	// Upsert the tags.
-	if _, err := c.q.UpsertConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
-		c.lo.Error("error upserting conversation tags", "error", err)
-		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+	// Add specified tags, ignore existing ones.
+	if action == amodels.ActionAddTags {
+		if _, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
+			c.lo.Error("error adding conversation tags", "error", err)
+			return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+		}
 	}
 
-	// Find the newly added tags.
-	newTags := []string{}
-	for _, tag := range tagNames {
-		if slices.Contains(tags, tag) {
+	// Set specified tags and remove all other existing ones.
+	if action == amodels.ActionSetTags {
+		if _, err := c.q.SetConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
+			c.lo.Error("error setting conversation tags", "error", err)
+			return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+		}
+	}
+
+	// Delete specified tags, ignore all others.
+	if action == amodels.ActionRemoveTags {
+		if _, err := c.q.RemoveConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
+			c.lo.Error("error removing conversation tags", "error", err)
+			return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+		}
+	}
+
+	// Get updated tags list.
+	newTags, err := c.getConversationTags(uuid)
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.tag}"), nil)
+	}
+
+	// Find actually removed tags.
+	for _, tag := range prevTags {
+		if slices.Contains(newTags, tag) {
 			continue
 		}
-		newTags = append(newTags, tag)
+		// Record the removed tags as activities.
+		if err := c.RecordTagRemoval(uuid, tag, actor); err != nil {
+			return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+		}
 	}
 
-	// Record the new tags as activities.
+	// Find actually added tags.
 	for _, tag := range newTags {
-		if err := c.RecordTagChange(uuid, tag, actor); err != nil {
+		if slices.Contains(prevTags, tag) {
+			continue
+		}
+		// Record the added tags as activities.
+		if err := c.RecordTagAddition(uuid, tag, actor); err != nil {
 			return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
 		}
 	}
@@ -858,8 +890,8 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 	case amodels.ActionSetSLA:
 		slaID, _ := strconv.Atoi(action.Value[0])
 		return m.ApplySLA(conv, slaID, user)
-	case amodels.ActionSetTags:
-		return m.UpsertConversationTags(conv.UUID, action.Value, user)
+	case amodels.ActionAddTags, amodels.ActionSetTags, amodels.ActionRemoveTags:
+		return m.SetConversationTags(conv.UUID, action.Type, action.Value, user)
 	case amodels.ActionSendCSAT:
 		return m.SendCSATReply(user.ID, conv)
 	default:

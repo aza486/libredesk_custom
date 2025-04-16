@@ -221,8 +221,16 @@ export function useConversationFilters () {
             type: FIELD_TYPE.SELECT,
             options: slaStore.options
         },
+        add_tags: {
+            label: 'Add tags',
+            type: FIELD_TYPE.TAG
+        },
         set_tags: {
             label: 'Set tags',
+            type: FIELD_TYPE.TAG
+        },
+        remove_tags: {
+            label: 'Remove tags',
             type: FIELD_TYPE.TAG
         }
     }))
@@ -248,8 +256,16 @@ export function useConversationFilters () {
             type: FIELD_TYPE.SELECT,
             options: cStore.priorityOptions
         },
+        add_tags: {
+            label: 'Add tags',
+            type: FIELD_TYPE.TAG
+        },
         set_tags: {
             label: 'Set tags',
+            type: FIELD_TYPE.TAG
+        },
+        remove_tags: {
+            label: 'Remove tags',
             type: FIELD_TYPE.TAG
         }
     }))

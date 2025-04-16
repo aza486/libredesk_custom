@@ -44,7 +44,8 @@ var (
 	ActivityAssignedUserChange = "assigned_user_change"
 	ActivityAssignedTeamChange = "assigned_team_change"
 	ActivitySelfAssign         = "self_assign"
-	ActivityTagChange          = "tag_change"
+	ActivityTagAdded           = "tag_added"
+	ActivityTagRemoved         = "tag_removed"
 	ActivitySLASet             = "sla_set"
 
 	ContentTypeText = "text"
