@@ -170,7 +170,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/v1/templates/{id}", perm(handleDeleteTemplate, "templates:manage"))
 
 	// Business hours.
-	g.GET("/api/v1/business-hours", perm(handleGetBusinessHours, "business_hours:manage"))
+	g.GET("/api/v1/business-hours", auth(handleGetBusinessHours))
 	g.GET("/api/v1/business-hours/{id}", perm(handleGetBusinessHour, "business_hours:manage"))
 	g.POST("/api/v1/business-hours", perm(handleCreateBusinessHours, "business_hours:manage"))
 	g.PUT("/api/v1/business-hours/{id}", perm(handleUpdateBusinessHours, "business_hours:manage"))
