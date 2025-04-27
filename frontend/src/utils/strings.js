@@ -37,7 +37,8 @@ export function validateEmail (email) {
 }
 
 export const isGoDuration = (value) => {
-  const regex = /^[0-9]+[smh]$/
+  if (value === '') return false
+  const regex = /^(\d+h)?(\d+m)?(\d+s)?$/
   return regex.test(value)
 }
 
@@ -59,7 +60,7 @@ export function getTextFromHTML (htmlString) {
   }
 }
 
-export function getInitials(firstName = '', lastName = '') {
+export function getInitials (firstName = '', lastName = '') {
   const firstInitial = firstName.charAt(0).toUpperCase() || ''
   const lastInitial = lastName.charAt(0).toUpperCase() || ''
   return `${firstInitial}${lastInitial}`
