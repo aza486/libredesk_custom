@@ -74,6 +74,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useI18n } from 'vue-i18n'
+import { permissions as perms } from '@/constants/permissions.js'
 
 const props = defineProps({
   initialValues: {
@@ -105,66 +106,78 @@ const permissions = ref([
   {
     name: t('globals.terms.conversation'),
     permissions: [
-      { name: 'conversations:read', label: t('admin.role.conversations.read') },
-      { name: 'conversations:write', label: t('admin.role.conversations.write') },
-      { name: 'conversations:read_assigned', label: t('admin.role.conversations.readAssigned') },
-      { name: 'conversations:read_all', label: t('admin.role.conversations.readAll') },
+      { name: perms.CONVERSATIONS_READ, label: t('admin.role.conversations.read') },
+      { name: perms.CONVERSATIONS_WRITE, label: t('admin.role.conversations.write') },
       {
-        name: 'conversations:read_unassigned',
+        name: perms.CONVERSATIONS_READ_ASSIGNED,
+        label: t('admin.role.conversations.readAssigned')
+      },
+      { name: perms.CONVERSATIONS_READ_ALL, label: t('admin.role.conversations.readAll') },
+      {
+        name: perms.CONVERSATIONS_READ_UNASSIGNED,
         label: t('admin.role.conversations.readUnassigned')
       },
-      { name: 'conversations:read_team_inbox', label: t('admin.role.conversations.readTeamInbox') },
       {
-        name: 'conversations:update_user_assignee',
+        name: perms.CONVERSATIONS_READ_TEAM_INBOX,
+        label: t('admin.role.conversations.readTeamInbox')
+      },
+      {
+        name: perms.CONVERSATIONS_UPDATE_USER_ASSIGNEE,
         label: t('admin.role.conversations.updateUserAssignee')
       },
       {
-        name: 'conversations:update_team_assignee',
+        name: perms.CONVERSATIONS_UPDATE_TEAM_ASSIGNEE,
         label: t('admin.role.conversations.updateTeamAssignee')
       },
       {
-        name: 'conversations:update_priority',
+        name: perms.CONVERSATIONS_UPDATE_PRIORITY,
         label: t('admin.role.conversations.updatePriority')
       },
-      { name: 'conversations:update_status', label: t('admin.role.conversations.updateStatus') },
-      { name: 'conversations:update_tags', label: t('admin.role.conversations.updateTags') },
-      { name: 'messages:read', label: t('admin.role.messages.read') },
-      { name: 'messages:write', label: t('admin.role.messages.write') },
-      { name: 'view:manage', label: t('admin.role.view.manage') }
+      {
+        name: perms.CONVERSATIONS_UPDATE_STATUS,
+        label: t('admin.role.conversations.updateStatus')
+      },
+      { name: perms.CONVERSATIONS_UPDATE_TAGS, label: t('admin.role.conversations.updateTags') },
+      { name: perms.MESSAGES_READ, label: t('admin.role.messages.read') },
+      { name: perms.MESSAGES_WRITE, label: t('admin.role.messages.write') },
+      { name: perms.VIEW_MANAGE, label: t('admin.role.view.manage') }
     ]
   },
   {
     name: t('globals.terms.admin'),
     permissions: [
-      { name: 'general_settings:manage', label: t('admin.role.generalSettings.manage') },
-      { name: 'notification_settings:manage', label: t('admin.role.notificationSettings.manage') },
-      { name: 'status:manage', label: t('admin.role.status.manage') },
-      { name: 'oidc:manage', label: t('admin.role.oidc.manage') },
-      { name: 'tags:manage', label: t('admin.role.tags.manage') },
-      { name: 'macros:manage', label: t('admin.role.macros.manage') },
-      { name: 'users:manage', label: t('admin.role.users.manage') },
-      { name: 'teams:manage', label: t('admin.role.teams.manage') },
-      { name: 'automations:manage', label: t('admin.role.automations.manage') },
-      { name: 'inboxes:manage', label: t('admin.role.inboxes.manage') },
-      { name: 'roles:manage', label: t('admin.role.roles.manage') },
-      { name: 'templates:manage', label: t('admin.role.templates.manage') },
-      { name: 'reports:manage', label: t('admin.role.reports.manage') },
-      { name: 'business_hours:manage', label: t('admin.role.businessHours.manage') },
-      { name: 'sla:manage', label: t('admin.role.sla.manage') },
-      { name: 'ai:manage', label: t('admin.role.ai.manage') },
-      { name: 'custom_attributes:manage', label: t('admin.role.customAttributes.manage') }
+      { name: perms.GENERAL_SETTINGS_MANAGE, label: t('admin.role.generalSettings.manage') },
+      {
+        name: perms.NOTIFICATION_SETTINGS_MANAGE,
+        label: t('admin.role.notificationSettings.manage')
+      },
+      { name: perms.STATUS_MANAGE, label: t('admin.role.status.manage') },
+      { name: perms.OIDC_MANAGE, label: t('admin.role.oidc.manage') },
+      { name: perms.TAGS_MANAGE, label: t('admin.role.tags.manage') },
+      { name: perms.MACROS_MANAGE, label: t('admin.role.macros.manage') },
+      { name: perms.USERS_MANAGE, label: t('admin.role.users.manage') },
+      { name: perms.TEAMS_MANAGE, label: t('admin.role.teams.manage') },
+      { name: perms.AUTOMATIONS_MANAGE, label: t('admin.role.automations.manage') },
+      { name: perms.INBOXES_MANAGE, label: t('admin.role.inboxes.manage') },
+      { name: perms.ROLES_MANAGE, label: t('admin.role.roles.manage') },
+      { name: perms.TEMPLATES_MANAGE, label: t('admin.role.templates.manage') },
+      { name: perms.REPORTS_MANAGE, label: t('admin.role.reports.manage') },
+      { name: perms.BUSINESS_HOURS_MANAGE, label: t('admin.role.businessHours.manage') },
+      { name: perms.SLA_MANAGE, label: t('admin.role.sla.manage') },
+      { name: perms.AI_MANAGE, label: t('admin.role.ai.manage') },
+      { name: perms.CUSTOM_ATTRIBUTES_MANAGE, label: t('admin.role.customAttributes.manage') }
     ]
   },
   {
     name: t('globals.terms.contact'),
     permissions: [
-      { name: 'contacts:read_all', label: t('admin.role.contacts.readAll') },
-      { name: 'contacts:read', label: t('admin.role.contacts.read') },
-      { name: 'contacts:write', label: t('admin.role.contacts.write') },
-      { name: 'contacts:block', label: t('admin.role.contacts.block') },
-      { name: 'contact_notes:read', label: t('admin.role.contactNotes.read') },
-      { name: 'contact_notes:write', label: t('admin.role.contactNotes.write') },
-      { name: 'contact_notes:delete', label: t('admin.role.contactNotes.delete') }
+      { name: perms.CONTACTS_READ_ALL, label: t('admin.role.contacts.readAll') },
+      { name: perms.CONTACTS_READ, label: t('admin.role.contacts.read') },
+      { name: perms.CONTACTS_WRITE, label: t('admin.role.contacts.write') },
+      { name: perms.CONTACTS_BLOCK, label: t('admin.role.contacts.block') },
+      { name: perms.CONTACT_NOTES_READ, label: t('admin.role.contactNotes.read') },
+      { name: perms.CONTACT_NOTES_WRITE, label: t('admin.role.contactNotes.write') },
+      { name: perms.CONTACT_NOTES_DELETE, label: t('admin.role.contactNotes.delete') }
     ]
   }
 ])
@@ -177,9 +190,11 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit((values) => {
-  // Filter out any permissions not part of `permissions`.
-  const validPermissions = permissions.value.flatMap(entity => entity.permissions.map(p => p.name))
-  selectedPermissions.value = selectedPermissions.value.filter(perm => validPermissions.includes(perm))
+  // Filter out any permissions not part of the `perms` object.
+  const validPermissions = Object.values(perms)
+  selectedPermissions.value = selectedPermissions.value.filter((perm) =>
+    validPermissions.includes(perm)
+  )
   values.permissions = selectedPermissions.value
   props.submitForm(values)
 })

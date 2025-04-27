@@ -102,10 +102,14 @@ func (u *Manager) Delete(id int) error {
 
 // Create creates a new role.
 func (u *Manager) Create(r models.Role) error {
-	if err := u.validatePermissions(r.Permissions); err != nil {
+	validPermissions, err := u.filterValidPermissions(r.Permissions)
+	if err != nil {
 		return err
 	}
-	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
+	if len(validPermissions) == 0 {
+		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
+	}
+	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(validPermissions)); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
 			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.role}"), nil)
 		}
@@ -117,10 +121,13 @@ func (u *Manager) Create(r models.Role) error {
 
 // Update updates an existing role.
 func (u *Manager) Update(id int, r models.Role) error {
-	if err := u.validatePermissions(r.Permissions); err != nil {
+	validPermissions, err := u.filterValidPermissions(r.Permissions)
+	if err != nil {
 		return err
 	}
-
+	if len(validPermissions) == 0 {
+		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
+	}
 	// Disallow updating `Admin` role, as the main System login requires it.
 	role, err := u.Get(id)
 	if err != nil {
@@ -130,23 +137,22 @@ func (u *Manager) Update(id int, r models.Role) error {
 		return envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
 	}
 
-	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(r.Permissions)); err != nil {
+	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(validPermissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.role}"), nil)
 	}
 	return nil
 }
 
-// validatePermissions returns true if all given permissions are valid
-func (u *Manager) validatePermissions(permissions []string) error {
-	if len(permissions) == 0 {
-		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
-	}
+// filterValidPermissions filters out invalid permissions, logs warnings for unknown permissions.
+func (u *Manager) filterValidPermissions(permissions []string) ([]string, error) {
+	validPermissions := make([]string, 0, len(permissions))
 	for _, perm := range permissions {
-		if !amodels.IsValidPermission(perm) {
-			u.lo.Error("error unknown permission", "permission", perm)
-			return envelope.NewError(envelope.InputError, u.i18n.Ts("role.invalidPermission", "name", perm), nil)
+		if amodels.PermissionExists(perm) {
+			validPermissions = append(validPermissions, perm)
+		} else {
+			u.lo.Warn("ignoring unknown permission", "permission", perm)
 		}
 	}
-	return nil
+	return validPermissions, nil
 }

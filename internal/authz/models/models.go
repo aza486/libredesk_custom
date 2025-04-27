@@ -123,8 +123,8 @@ var validPermissions = map[string]struct{}{
 	PermContactNotesDelete:              {},
 }
 
-// IsValidPermission returns true if it's a valid permission.
-func IsValidPermission(permission string) bool {
+// PermissionExists returns true if the permission exists else false
+func PermissionExists(permission string) bool {
 	_, exists := validPermissions[permission]
 	return exists
 }
