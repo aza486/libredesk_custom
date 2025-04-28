@@ -208,6 +208,11 @@ const editorConfig = {
         emit('send')
         return true
       }
+      if (event.ctrlKey && event.key.toLowerCase() === 'b') {
+         // Prevent outer listeners
+        event.stopPropagation()
+        return false
+      }
     }
   }
 }
