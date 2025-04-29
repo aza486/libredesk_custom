@@ -7,7 +7,8 @@ Open source, self-hosted customer support desk. Single binary app.
 
 Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live demo**](https://demo.libredesk.io/).
 
-![Screenshot_20250220_231723](https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-HvmxvOkalQSLp4qVezdTXaCd3dB4Rm.png)
+![image](https://github.com/user-attachments/assets/8e434a02-8b33-41c8-8433-3c98d1d5b834)
+
 
 
 > **CAUTION:** This project is currently in **alpha**. Features and APIs may change and are not yet fully tested.
