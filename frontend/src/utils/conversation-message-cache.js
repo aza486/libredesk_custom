@@ -70,6 +70,29 @@ export default class MessageCache {
     }
 
     /**
+     * Returns latest message for a conversation
+     * @param {string} convId - Conversation ID
+     * @param {string[]} type - Array of message types to filter - outgoing, incoming, etc.
+     * @param {boolean} excludePrivate - Exclude private messages
+     * 
+     * @returns {object} - Latest message object or null if not found
+     */
+    getLatestMessage (convId, type = [], excludePrivate = false) {
+        const conv = this.cache.get(convId)
+        if (!conv) return null
+        let allMessages = Array.from(conv.pages.values()).flat()
+        // If type is provided, filter messages by type
+        if (type.length > 0) {
+            allMessages = allMessages.filter(msg => type.includes(msg.type))
+        }
+        // If excludePrivate is true, filter out private messages
+        if (excludePrivate) {
+            allMessages = allMessages.filter(msg => !msg.private)
+        }
+        return allMessages.length ? allMessages[0] : null
+    }
+
+    /**
      * Updates message fields by applying update object
      */
     updateMessage (convId, msgId, updates) {

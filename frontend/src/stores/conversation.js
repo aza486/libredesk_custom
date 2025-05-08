@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, nextTick } from 'vue'
+import { computed, reactive, ref, nextTick, watchEffect } from 'vue'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { useEmitter } from '@/composables/useEmitter'
@@ -12,6 +12,9 @@ export const useConversationStore = defineStore('conversation', () => {
   const MESSAGE_LIST_PAGE_SIZE = 30
   const priorities = ref([])
   const statuses = ref([])
+  const currentTo = ref([])
+  const currentBCC = ref([])
+  const currentCC = ref([])
 
   // Options for select fields
   const priorityOptions = computed(() => {
@@ -245,12 +248,27 @@ export const useConversationStore = defineStore('conversation', () => {
     return Object.keys(conversation.data || {}).length > 0
   })
 
-  const currentBCC = computed(() => {
-    return conversation.data?.bcc || []
-  })
+  // Watch for changes in the conversation and messages and update the to, cc, and bcc fields accordingly
+  watchEffect(() => {
+    const conv = conversation.data
+    const msgData = messages.data
+    if (!conv || !msgData) return
+    const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true)
+    if (!latestMessage) return
+    const meta = latestMessage?.meta || {}
+    currentCC.value = meta.cc || []
+    currentBCC.value = meta.bcc || []
+    // Set correct "To" field based on message type
+    if (latestMessage.type === 'incoming') {
+      currentTo.value = meta.from || []
+    } else {
+      currentTo.value = meta.to || []
+    }
 
-  const currentCC = computed(() => {
-    return conversation.data?.cc || []
+    // If to is still empty, set it to the contact's email
+    if (currentTo.value.length === 0 && conv.contact) {
+      currentTo.value = [conv.contact.email]
+    }
   })
 
   async function fetchParticipants (uuid) {
@@ -647,6 +665,7 @@ export const useConversationStore = defineStore('conversation', () => {
     hasConversationOpen,
     current,
     currentContactName,
+    currentTo,
     currentBCC,
     currentCC,
     clearListReRenderInterval,

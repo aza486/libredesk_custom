@@ -41,11 +41,11 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs                                  embed.FS
-	errConversationNotFound              = errors.New("conversation not found")
-	conversationsAllowedFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "created_at", "waiting_since", "next_sla_deadline_at", "priority_id"}
-	conversationStatusAllowedFields     = []string{"id", "name"}
-	csatReplyMessage                     = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
+	efs                             embed.FS
+	errConversationNotFound         = errors.New("conversation not found")
+	conversationsAllowedFields      = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "created_at", "waiting_since", "next_sla_deadline_at", "priority_id"}
+	conversationStatusAllowedFields = []string{"id", "name"}
+	csatReplyMessage                = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
 )
 
 const (
@@ -886,7 +886,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 	case amodels.ActionSendPrivateNote:
 		return m.SendPrivateNote([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0])
 	case amodels.ActionReply:
-		return m.SendReply([]mmodels.Media{}, conv.InboxID, user.ID, conv.UUID, action.Value[0], nil, nil, nil)
+		return m.SendReply([]mmodels.Media{}, conv.InboxID, user.ID, conv.UUID, action.Value[0], nil, nil, nil, nil)
 	case amodels.ActionSetSLA:
 		slaID, _ := strconv.Atoi(action.Value[0])
 		return m.ApplySLA(conv, slaID, user)
@@ -924,7 +924,7 @@ func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversatio
 	meta := map[string]interface{}{
 		"is_csat": true,
 	}
-	return m.SendReply([]mmodels.Media{}, conversation.InboxID, actorUserID, conversation.UUID, message, nil, nil, meta)
+	return m.SendReply([]mmodels.Media{}, conversation.InboxID, actorUserID, conversation.UUID, message, nil, nil, nil, meta)
 }
 
 // DeleteConversation deletes a conversation.
