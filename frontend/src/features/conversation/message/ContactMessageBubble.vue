@@ -26,9 +26,9 @@
             'hide-quoted-text': !showQuotedText
           }"
         >
-          <MessageEnvelope :message="message" />
+          <MessageEnvelope :message="message" v-if="showEnvelope" />
 
-          <hr class="mb-2" />
+          <hr class="mb-2" v-if="showEnvelope" />
 
           <!-- Message Text -->
           <Letter
@@ -131,5 +131,15 @@ const getFullName = computed(() => {
 const avatarFallback = computed(() => {
   const contact = convStore.current?.contact || {}
   return (contact.first_name || '').toUpperCase().substring(0, 2)
+})
+
+const showEnvelope = computed(() => {
+  return (
+    props.message.meta?.from?.length ||
+    props.message.meta?.to?.length ||
+    props.message.meta?.cc?.length ||
+    props.message.meta?.bcc?.length ||
+    props.message.meta?.subject
+  )
 })
 </script>

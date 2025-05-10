@@ -74,6 +74,7 @@ type Conversation struct {
 	WaitingSince          null.Time       `db:"waiting_since" json:"waiting_since"`
 	Subject               null.String     `db:"subject" json:"subject"`
 	UnreadMessageCount    int             `db:"unread_message_count" json:"unread_message_count"`
+	InboxMail             string          `db:"inbox_mail" json:"inbox_mail"`
 	InboxName             string          `db:"inbox_name" json:"inbox_name,omitempty"`
 	InboxChannel          string          `db:"inbox_channel" json:"inbox_channel,omitempty"`
 	Tags                  null.JSON       `db:"tags" json:"tags"`

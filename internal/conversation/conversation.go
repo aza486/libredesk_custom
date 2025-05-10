@@ -28,6 +28,7 @@ import (
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
@@ -254,6 +255,14 @@ func (c *Manager) GetConversation(id int, uuid string) (models.Conversation, err
 		c.lo.Error("error fetching conversation", "error", err)
 		return conversation, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.conversation}"), nil)
 	}
+
+	// Strip name and extract plain email from "Name <email>"
+	var err error
+	conversation.InboxMail, err = stringutil.ExtractEmail(conversation.InboxMail)
+	if err != nil {
+		c.lo.Error("error extracting email from inbox mail", "inbox_mail", conversation.InboxMail, "error", err)
+	}
+
 	return conversation, nil
 }
 

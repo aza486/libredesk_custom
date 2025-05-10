@@ -1,14 +1,5 @@
 <template>
-  <div
-    class="mb-1 space-y-0.5 text-xs text-muted-foreground"
-    v-if="
-      message.meta.from?.length ||
-      message.meta.to?.length ||
-      message.meta.cc?.length ||
-      message.meta.bcc?.length ||
-      message.meta.subject
-    "
-  >
+  <div class="mb-1 space-y-0.5 text-xs text-muted-foreground">
     <p v-if="message.meta.from?.length">
       <span class="font-medium text-foreground">From:</span> {{ message.meta.from.join(', ') }}
     </p>

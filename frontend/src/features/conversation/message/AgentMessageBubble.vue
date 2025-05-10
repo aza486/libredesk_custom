@@ -21,9 +21,9 @@
           }"
         >
           <!-- Message Envelope -->
-          <MessageEnvelope :message="message" />
+          <MessageEnvelope :message="message" v-if="showEnvelope" />
 
-          <hr class="mb-2" />
+          <hr class="mb-2" v-if="showEnvelope" />
 
           <!-- Message -->
           <div
@@ -137,6 +137,16 @@ const avatarFallback = computed(() => {
 const retryMessage = (msg) => {
   api.retryMessage(convStore.current.uuid, msg.uuid)
 }
+
+const showEnvelope = computed(() => {
+  return (
+    props.message.meta?.from?.length ||
+    props.message.meta?.to?.length ||
+    props.message.meta?.cc?.length ||
+    props.message.meta?.bcc?.length ||
+    props.message.meta?.subject
+  )
+})
 </script>
 
 <style scoped>

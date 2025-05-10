@@ -1,7 +1,7 @@
 export default class MessageCache {
     /**
-     * Cache for conversation messages with LRU eviction
-     * @param {number} maxConvs - Max conversations to store
+     * Cache for conversation messages with eviction of old conversations
+     * @param {number} maxConvs - Max conversations to store before eviction
      */
     constructor(maxConvs = 100) {
         this.cache = new Map()
@@ -80,18 +80,23 @@ export default class MessageCache {
     getLatestMessage (convId, type = [], excludePrivate = false) {
         const conv = this.cache.get(convId)
         if (!conv) return null
+
+        // Get all messages from all pages
         let allMessages = Array.from(conv.pages.values()).flat()
-        // If type is provided, filter messages by type
+
+        // Apply filters
         if (type.length > 0) {
             allMessages = allMessages.filter(msg => type.includes(msg.type))
         }
-        // If excludePrivate is true, filter out private messages
         if (excludePrivate) {
             allMessages = allMessages.filter(msg => !msg.private)
         }
+
+        // Sort messages by created_at in descending order (newest first)
+        allMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
         return allMessages.length ? allMessages[0] : null
     }
-
     /**
      * Updates message fields by applying update object
      */

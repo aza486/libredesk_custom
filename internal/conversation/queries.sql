@@ -89,6 +89,7 @@ SELECT
    c.closed_at,
    c.resolved_at,
    c.inbox_id,
+   COALESCE(inb.from, '') as inbox_mail,
    c.status_id,
    c.priority_id,
    p.name as priority,
@@ -128,6 +129,7 @@ SELECT
    as_latest.status as sla_status
 FROM conversations c
 JOIN users ct ON c.contact_id = ct.id
+INNER JOIN inboxes inb ON c.inbox_id = inb.id
 LEFT JOIN sla_policies sla ON c.sla_policy_id = sla.id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
