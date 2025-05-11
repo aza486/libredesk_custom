@@ -185,7 +185,6 @@ func New(
 
 type queries struct {
 	// Conversation queries.
-	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
 	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
 	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
 	GetConversationsCreatedAfter       *sqlx.Stmt `query:"get-conversations-created-after"`
@@ -745,16 +744,6 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	}
 
 	return nil
-}
-
-// GetToAddress retrieves the recipient addresses for a conversation and channel.
-func (m *Manager) GetToAddress(conversationID int) ([]string, error) {
-	var addr []string
-	if err := m.q.GetToAddress.Select(&addr, conversationID); err != nil {
-		m.lo.Error("error fetching `to` address for message", "error", err, "conversation_id", conversationID)
-		return addr, err
-	}
-	return addr, nil
 }
 
 // GetMessageSourceIDs retrieves source IDs for messages in a conversation in descending order.

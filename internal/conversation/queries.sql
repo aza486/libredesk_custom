@@ -359,12 +359,6 @@ FROM conversation_tags ct
 JOIN tags t ON ct.tag_id = t.id
 WHERE ct.conversation_id = (SELECT id FROM conversations WHERE uuid = $1);
 
--- name: get-to-address
-SELECT cc.identifier 
-FROM conversations c 
-INNER JOIN contact_channels cc ON cc.id = c.contact_channel_id 
-WHERE c.id = $1;
-
 -- name: get-conversation-uuid-from-message-uuid
 SELECT c.uuid AS conversation_uuid
 FROM conversation_messages m
