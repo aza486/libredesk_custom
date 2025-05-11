@@ -213,6 +213,7 @@ type queries struct {
 	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
 	DeleteConversation                 *sqlx.Stmt `query:"delete-conversation"`
 	RemoveConversationAssignee         *sqlx.Stmt `query:"remove-conversation-assignee"`
+	GetLatestMessage                   *sqlx.Stmt `query:"get-latest-message"`
 
 	// Dashboard queries.
 	GetDashboardCharts string `query:"get-dashboard-charts"`
@@ -870,23 +871,53 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 
 	switch action.Type {
 	case amodels.ActionAssignTeam:
-		teamID, _ := strconv.Atoi(action.Value[0])
+		teamID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid team ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationTeamAssignee(conv.UUID, teamID, user)
 	case amodels.ActionAssignUser:
-		agentID, _ := strconv.Atoi(action.Value[0])
+		agentID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid agent ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationUserAssignee(conv.UUID, agentID, user)
 	case amodels.ActionSetPriority:
-		priorityID, _ := strconv.Atoi(action.Value[0])
+		priorityID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid priority ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationPriority(conv.UUID, priorityID, "", user)
 	case amodels.ActionSetStatus:
-		statusID, _ := strconv.Atoi(action.Value[0])
+		statusID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid status ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationStatus(conv.UUID, statusID, "", "", user)
 	case amodels.ActionSendPrivateNote:
 		return m.SendPrivateNote([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0])
 	case amodels.ActionReply:
-		return m.SendReply([]mmodels.Media{}, conv.InboxID, user.ID, conv.UUID, action.Value[0], nil, nil, nil, nil)
+		// Make recipient list.
+		to, cc, bcc, err := m.makeRecipients(conv.ID, conv.Contact.Email.String, conv.InboxMail)
+		if err != nil {
+			return fmt.Errorf("making recipients for reply action: %w", err)
+		}
+		return m.SendReply(
+			[]mmodels.Media{},
+			conv.InboxID,
+			user.ID,
+			conv.UUID,
+			action.Value[0],
+			to,
+			cc,
+			bcc,
+			map[string]any{}, /**meta**/
+		)
 	case amodels.ActionSetSLA:
-		slaID, _ := strconv.Atoi(action.Value[0])
+		slaID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid SLA ID %q: %w", action.Value[0], err)
+		}
 		return m.ApplySLA(conv, slaID, user)
 	case amodels.ActionAddTags, amodels.ActionSetTags, amodels.ActionRemoveTags:
 		return m.SetConversationTags(conv.UUID, action.Type, action.Value, user)
@@ -922,7 +953,14 @@ func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversatio
 	meta := map[string]interface{}{
 		"is_csat": true,
 	}
-	return m.SendReply([]mmodels.Media{}, conversation.InboxID, actorUserID, conversation.UUID, message, nil, nil, nil, meta)
+
+	// Make recipient list.
+	to, cc, bcc, err := m.makeRecipients(conversation.ID, conversation.Contact.Email.String, conversation.InboxMail)
+	if err != nil {
+		return fmt.Errorf("making recipients for CSAT reply: %w", err)
+	}
+
+	return m.SendReply(nil /**media**/, conversation.InboxID, actorUserID, conversation.UUID, message, to, cc, bcc, meta)
 }
 
 // DeleteConversation deletes a conversation.

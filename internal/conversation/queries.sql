@@ -558,3 +558,23 @@ WHERE
 
 -- name: delete-conversation
 DELETE FROM conversations WHERE uuid = $1;
+
+-- name: get-latest-message
+SELECT
+    m.created_at,
+    m.updated_at,
+    m.status,
+    m.type, 
+    m.content,
+    m.uuid,
+    m.private,
+    m.sender_id,
+    m.sender_type,
+    m.meta
+FROM conversation_messages m
+WHERE m.conversation_id = $1
+AND m.type = ANY($2)
+AND m.status = ANY($3)
+AND m.private = NOT $4
+ORDER BY m.created_at DESC
+LIMIT 1;

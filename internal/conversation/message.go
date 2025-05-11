@@ -321,7 +321,7 @@ func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conver
 	bcc = stringutil.RemoveEmpty(bcc)
 
 	if len(to) == 0 {
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.empty", "name", "to"), nil)
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.empty", "name", "`to`"), nil)
 	}
 	meta["to"] = to
 
@@ -840,4 +840,17 @@ func (m *Manager) uploadThumbnailForMedia(media mmodels.Media, content []byte) e
 		return fmt.Errorf("error uploading thumbnail: %w", err)
 	}
 	return nil
+}
+
+// getLatestMessage returns the latest message in a conversation.
+func (m *Manager) getLatestMessage(conversationID int, typ []string, status []string, excludePrivate bool) (models.Message, error) {
+	var message models.Message
+	if err := m.q.GetLatestMessage.Get(&message, conversationID, pq.Array(typ), pq.Array(status), excludePrivate); err != nil {
+		if err == sql.ErrNoRows {
+			return message, sql.ErrNoRows
+		}
+		m.lo.Error("error fetching latest message from DB", "error", err)
+		return message, fmt.Errorf("fetching latest message: %w", err)
+	}
+	return message, nil
 }
