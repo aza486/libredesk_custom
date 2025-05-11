@@ -1,10 +1,14 @@
 <template>
   <div class="space-y-4">
-    <div class="flex flex-col">
+    <!-- Hide subject for email channel as each message shows the envelope -->
+    <div
+      class="flex flex-col"
+      v-if="conversation.subject && conversation.inbox_channel !== 'email'"
+    >
       <p class="font-medium">{{ $t('form.field.subject') }}</p>
       <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
       <p v-else>
-        {{ conversation.subject || '-' }}
+        {{ conversation.subject }}
       </p>
     </div>
 

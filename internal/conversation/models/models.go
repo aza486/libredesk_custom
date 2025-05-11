@@ -75,8 +75,8 @@ type Conversation struct {
 	Subject               null.String     `db:"subject" json:"subject"`
 	UnreadMessageCount    int             `db:"unread_message_count" json:"unread_message_count"`
 	InboxMail             string          `db:"inbox_mail" json:"inbox_mail"`
-	InboxName             string          `db:"inbox_name" json:"inbox_name,omitempty"`
-	InboxChannel          string          `db:"inbox_channel" json:"inbox_channel,omitempty"`
+	InboxName             string          `db:"inbox_name" json:"inbox_name"`
+	InboxChannel          string          `db:"inbox_channel" json:"inbox_channel"`
 	Tags                  null.JSON       `db:"tags" json:"tags"`
 	Meta                  pq.StringArray  `db:"meta" json:"meta"`
 	CustomAttributes      json.RawMessage `db:"custom_attributes" json:"custom_attributes"`
