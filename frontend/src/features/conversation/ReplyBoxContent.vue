@@ -259,7 +259,6 @@ const enableSend = computed(() => {
  * @param {string} field - 'to', 'cc', or 'bcc'
  */
 const validateEmails = (field) => {
-  console.log('Validating emails for field:', field)
   const emails = field === 'to' ? to.value : field === 'cc' ? cc.value : bcc.value
   const emailList = emails
     .split(',')
@@ -267,8 +266,6 @@ const validateEmails = (field) => {
     .filter((e) => e !== '')
 
   const invalidEmails = emailList.filter((email) => !validateEmail(email))
-
-  console.log('Invalid emails:', invalidEmails)
 
   // Clear existing errors
   emailErrors.value = []

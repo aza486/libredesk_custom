@@ -4,7 +4,11 @@ export function computeRecipientsFromMessage (message, contactEmail, inboxEmail)
 
     // Build TO field
     const toList = isIncoming
-        ? meta.from || []
+        ? meta.from && meta.from.length
+            ? meta.from
+            : contactEmail
+                ? [contactEmail]
+                : []
         : meta.to && meta.to.length
             ? meta.to
             : contactEmail

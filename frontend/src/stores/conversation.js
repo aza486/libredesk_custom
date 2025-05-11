@@ -262,12 +262,11 @@ export const useConversationStore = defineStore('conversation', () => {
     if (!conv || !msgData || !inboxEmail) return
 
     const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true)
+    if (!latestMessage) return
 
     if (!["received", "sent"].includes(latestMessage.status)) {
       return
     }
-
-    if (!latestMessage) return
 
     const { to, cc, bcc } = computeRecipientsFromMessage(
       latestMessage,

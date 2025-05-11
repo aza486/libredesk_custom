@@ -180,7 +180,6 @@ const getValidationSchema = (attribute) => {
       // If regex is provided and valid, add it to the schema validation along with the hint
       if (attribute.regex) {
         try {
-          console.log('Creating regex:', attribute.regex)
           const regex = new RegExp(attribute.regex)
           schema = schema.regex(regex, {
             message: attribute.regex_hint
