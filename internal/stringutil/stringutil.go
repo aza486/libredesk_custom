@@ -218,8 +218,7 @@ func DedupAndExcludeString(list []string, exclude string) []string {
 	return cleaned
 }
 
-// ComputeRecipients deduplicates and resolves to, cc, and bcc fields.
-// Applies fallback logic using contactEmail and thread rules for incoming messages.
+// ComputeRecipients computes new recipients using last message's recipients and direction.
 func ComputeRecipients(
 	from, to, cc, bcc []string,
 	contactEmail, inboxEmail string,
@@ -250,11 +249,10 @@ func ComputeRecipients(
 		}
 	}
 
-	finalBCC = append([]string{}, bcc...)
-
 	finalTo = DedupAndExcludeString(finalTo, inboxEmail)
 	finalCC = DedupAndExcludeString(finalCC, inboxEmail)
-	finalBCC = DedupAndExcludeString(finalBCC, inboxEmail)
+	// BCC is one-time only, user is supposed to add it manually.
+	finalBCC = []string{}
 
 	return
 }

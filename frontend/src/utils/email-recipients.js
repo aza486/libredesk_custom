@@ -33,9 +33,6 @@ export function computeRecipientsFromMessage (message, contactEmail, inboxEmail)
         }
     }
 
-    // BCC field
-    let bccList = meta.bcc || []
-
     // Dedup + remove inbox email
     const clean = list =>
         Array.from(new Set(list.filter(email => email && email !== inboxEmail)))
@@ -43,6 +40,7 @@ export function computeRecipientsFromMessage (message, contactEmail, inboxEmail)
     return {
         to: clean(toList),
         cc: clean(ccList),
-        bcc: clean(bccList)
+        // BCC stays empty user is supposed to add it manually.
+        bcc: [],
     }
 }
