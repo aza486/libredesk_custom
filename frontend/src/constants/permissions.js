@@ -36,5 +36,6 @@ export const permissions = {
     CONTACTS_BLOCK: 'contacts:block',
     CONTACT_NOTES_READ: 'contact_notes:read',
     CONTACT_NOTES_WRITE: 'contact_notes:write',
-    CONTACT_NOTES_DELETE: 'contact_notes:delete'
+    CONTACT_NOTES_DELETE: 'contact_notes:delete',
+    ACTIVITY_LOGS_MANAGE: 'activity_logs:manage',
 };

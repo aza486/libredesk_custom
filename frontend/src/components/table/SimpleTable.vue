@@ -1,5 +1,5 @@
 <template>
-  <table class="min-w-full divide-y divide-gray-200">
+  <table class="min-w-full table-fixed divide-y divide-gray-200">
     <thead class="bg-gray-50">
       <tr>
         <th
@@ -34,11 +34,11 @@
           <td
             v-for="key in keys"
             :key="key"
-            class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-normal break-words"
           >
             {{ item[key] }}
           </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          <td class="px-6 py-4 text-sm text-gray-500" v-if="showDelete">
             <Button size="xs" variant="ghost" @click.prevent="deleteItem(item)">
               <Trash2 class="h-4 w-4" />
             </Button>
@@ -69,6 +69,10 @@ defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  showDelete: {
+    type: Boolean,
+    default: true
   }
 })
 

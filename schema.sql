@@ -17,6 +17,7 @@ DROP TYPE IF EXISTS "user_availability_status" CASCADE; CREATE TYPE "user_availa
 DROP TYPE IF EXISTS "applied_sla_status" CASCADE; CREATE TYPE "applied_sla_status" AS ENUM ('pending', 'breached', 'met', 'partially_met');
 DROP TYPE IF EXISTS "sla_metric" CASCADE; CREATE TYPE "sla_metric" AS ENUM ('first_response', 'resolution');
 DROP TYPE IF EXISTS "sla_notification_type" CASCADE; CREATE TYPE "sla_notification_type" AS ENUM ('warning', 'breach');
+DROP TYPE IF EXISTS "activity_log_type" CASCADE; CREATE TYPE "activity_log_type" AS ENUM ('login', 'logout', 'away', 'away_reassigned', 'online');
 
 -- Sequence to generate reference number for conversations.
 DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
@@ -530,6 +531,21 @@ CREATE TABLE contact_notes (
 	user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE INDEX index_contact_notes_on_contact_id_created_at ON contact_notes (contact_id, created_at);
+
+DROP TABLE IF EXISTS activity_logs CASCADE;
+CREATE TABLE activity_logs (
+	id BIGSERIAL PRIMARY KEY,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	updated_at TIMESTAMPTZ DEFAULT NOW(),
+	activity_type activity_log_type NOT NULL,
+	activity_description TEXT NOT NULL,
+	actor_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	target_model_type TEXT NOT NULL,
+	target_model_id BIGINT NOT NULL,
+	ip INET,
+);
+CREATE INDEX IF NOT EXISTS index_activity_logs_on_actor_id ON activity_logs (actor_id);
+CREATE INDEX IF NOT EXISTS index_activity_logs_on_activity_type ON activity_logs (activity_type);
 
 INSERT INTO ai_providers
 ("name", provider, config, is_default)

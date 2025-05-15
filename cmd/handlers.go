@@ -16,7 +16,7 @@ import (
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Authentication.
 	g.POST("/api/v1/login", handleLogin)
-	g.GET("/logout", handleLogout)
+	g.GET("/logout", auth(handleLogout))
 	g.GET("/api/v1/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/v1/oidc/{id}/finish", handleOIDCCallback)
 
@@ -194,6 +194,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/custom-attributes/{id}", perm(handleGetCustomAttribute, "custom_attributes:manage"))
 	g.PUT("/api/v1/custom-attributes/{id}", perm(handleUpdateCustomAttribute, "custom_attributes:manage"))
 	g.DELETE("/api/v1/custom-attributes/{id}", perm(handleDeleteCustomAttribute, "custom_attributes:manage"))
+
+	// Actvity logs.
+	g.GET("/api/v1/activity-logs", perm(handleGetActivityLogs, "activity_logs:manage"))
 
 	// WebSocket.
 	g.GET("/ws", auth(func(r *fastglue.Request) error {

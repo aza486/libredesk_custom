@@ -341,6 +341,12 @@ const routes = [
                   }
                 ]
               },
+              {
+                path: 'activity-log',
+                name: 'activity-log',
+                component: () => import('@/views/admin/activity-log/ActivityLog.vue'),
+                meta: { title: 'Activity Log' },
+              }
             ]
           },
           {

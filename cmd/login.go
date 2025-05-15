@@ -14,6 +14,7 @@ func handleLogin(r *fastglue.Request) error {
 		app      = r.Context.(*App)
 		email    = string(r.RequestCtx.PostArgs().Peek("email"))
 		password = r.RequestCtx.PostArgs().Peek("password")
+		ip       = r.RequestCtx.RemoteIP().String()
 	)
 
 	// Verify email and password.
@@ -53,12 +54,27 @@ func handleLogin(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	// Insert activity log.
+	if err := app.activityLog.Login(user.ID, user.Email.String, ip); err != nil {
+		app.lo.Error("error creating login activity log", "error", err)
+	}
+
 	return r.SendEnvelope(user)
 }
 
 // handleLogout logs out the user and redirects to the dashboard.
 func handleLogout(r *fastglue.Request) error {
-	var app = r.Context.(*App)
+	var (
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		ip    = r.RequestCtx.RemoteIP().String()
+	)
+
+	// Insert activity log.
+	if err := app.activityLog.Logout(auser.ID, auser.Email, ip); err != nil {
+		app.lo.Error("error creating logout activity log", "error", err)
+	}
+
 	if err := app.auth.DestroySession(r); err != nil {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorDestroying", "name", "{globals.terms.session}"), nil))
 	}

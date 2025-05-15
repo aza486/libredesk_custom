@@ -74,7 +74,7 @@ import {
   FormMessage
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import FilterBuilder from '@/features/view/FilterBuilder.vue'
+import FilterBuilder from '@/features/filter/FilterBuilder.vue'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 import { toTypedSchema } from '@vee-validate/zod'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

@@ -165,7 +165,8 @@ const permissions = ref([
       { name: perms.BUSINESS_HOURS_MANAGE, label: t('admin.role.businessHours.manage') },
       { name: perms.SLA_MANAGE, label: t('admin.role.sla.manage') },
       { name: perms.AI_MANAGE, label: t('admin.role.ai.manage') },
-      { name: perms.CUSTOM_ATTRIBUTES_MANAGE, label: t('admin.role.customAttributes.manage') }
+      { name: perms.CUSTOM_ATTRIBUTES_MANAGE, label: t('admin.role.customAttributes.manage') },
+      { name: perms.ACTIVITY_LOGS_MANAGE, label: t('admin.role.activityLog.manage') }
     ]
   },
   {

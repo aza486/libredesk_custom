@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	UserModel = "user"
+
 	SystemUserEmail = "System"
 
 	// User types

@@ -13,6 +13,7 @@ import (
 
 	_ "time/tzdata"
 
+	activitylog "github.com/abhinavxd/libredesk/internal/activity_log"
 	"github.com/abhinavxd/libredesk/internal/ai"
 	auth_ "github.com/abhinavxd/libredesk/internal/auth"
 	"github.com/abhinavxd/libredesk/internal/authz"
@@ -86,6 +87,7 @@ type App struct {
 	view            *view.Manager
 	ai              *ai.Manager
 	search          *search.Manager
+	activityLog     *activitylog.Manager
 	notifier        *notifier.Service
 	customAttribute *customAttribute.Manager
 
@@ -218,6 +220,7 @@ func main() {
 		conversation:    conversation,
 		automation:      automation,
 		businessHours:   businessHours,
+		activityLog:     initActivityLog(db, i18n),
 		customAttribute: initCustomAttribute(db, i18n),
 		authz:           initAuthz(i18n),
 		view:            initView(db),
