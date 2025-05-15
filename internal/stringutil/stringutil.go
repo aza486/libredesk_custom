@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -190,4 +191,68 @@ func ValidEmail(email string) bool {
 		return false
 	}
 	return addr.Name == "" && addr.Address == email
+}
+
+// ExtractEmail extracts the email address from a string.
+func ExtractEmail(s string) (string, error) {
+	addr, err := mail.ParseAddress(s)
+	if err != nil {
+		return "", err
+	}
+	return addr.Address, nil
+}
+
+// DedupAndExcludeString returns a deduplicated []string excluding empty and a specific value.
+func DedupAndExcludeString(list []string, exclude string) []string {
+	seen := make(map[string]struct{}, len(list))
+	cleaned := make([]string, 0, len(list))
+	for _, s := range list {
+		if s == "" || s == exclude {
+			continue
+		}
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			cleaned = append(cleaned, s)
+		}
+	}
+	return cleaned
+}
+
+// ComputeRecipients computes new recipients using last message's recipients and direction.
+func ComputeRecipients(
+	from, to, cc, bcc []string,
+	contactEmail, inboxEmail string,
+	lastMessageIncoming bool,
+) (finalTo, finalCC, finalBCC []string) {
+	if lastMessageIncoming {
+		if len(from) > 0 {
+			finalTo = from
+		} else if contactEmail != "" {
+			finalTo = []string{contactEmail}
+		}
+	} else {
+		if len(to) > 0 {
+			finalTo = to
+		} else if contactEmail != "" {
+			finalTo = []string{contactEmail}
+		}
+	}
+
+	finalCC = append([]string{}, cc...)
+
+	if lastMessageIncoming {
+		if len(to) > 0 {
+			finalCC = append(finalCC, to...)
+		}
+		if contactEmail != "" && !slices.Contains(finalTo, contactEmail) && !slices.Contains(finalCC, contactEmail) {
+			finalCC = append(finalCC, contactEmail)
+		}
+	}
+
+	finalTo = DedupAndExcludeString(finalTo, inboxEmail)
+	finalCC = DedupAndExcludeString(finalCC, inboxEmail)
+	// BCC is one-time only, user is supposed to add it manually.
+	finalBCC = []string{}
+
+	return
 }

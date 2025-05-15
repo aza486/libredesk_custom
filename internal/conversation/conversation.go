@@ -28,6 +28,7 @@ import (
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
@@ -41,11 +42,11 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs                                  embed.FS
-	errConversationNotFound              = errors.New("conversation not found")
-	conversationsAllowedFields = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "created_at", "waiting_since", "next_sla_deadline_at", "priority_id"}
-	conversationStatusAllowedFields     = []string{"id", "name"}
-	csatReplyMessage                     = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
+	efs                             embed.FS
+	errConversationNotFound         = errors.New("conversation not found")
+	conversationsAllowedFields      = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "created_at", "waiting_since", "next_sla_deadline_at", "priority_id"}
+	conversationStatusAllowedFields = []string{"id", "name"}
+	csatReplyMessage                = "Please rate your experience with us: <a href=\"%s\">Rate now</a>"
 )
 
 const (
@@ -184,7 +185,6 @@ func New(
 
 type queries struct {
 	// Conversation queries.
-	GetToAddress                       *sqlx.Stmt `query:"get-to-address"`
 	GetConversationUUID                *sqlx.Stmt `query:"get-conversation-uuid"`
 	GetConversation                    *sqlx.Stmt `query:"get-conversation"`
 	GetConversationsCreatedAfter       *sqlx.Stmt `query:"get-conversations-created-after"`
@@ -213,6 +213,7 @@ type queries struct {
 	UnsnoozeAll                        *sqlx.Stmt `query:"unsnooze-all"`
 	DeleteConversation                 *sqlx.Stmt `query:"delete-conversation"`
 	RemoveConversationAssignee         *sqlx.Stmt `query:"remove-conversation-assignee"`
+	GetLatestMessage                   *sqlx.Stmt `query:"get-latest-message"`
 
 	// Dashboard queries.
 	GetDashboardCharts string `query:"get-dashboard-charts"`
@@ -254,6 +255,14 @@ func (c *Manager) GetConversation(id int, uuid string) (models.Conversation, err
 		c.lo.Error("error fetching conversation", "error", err)
 		return conversation, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.conversation}"), nil)
 	}
+
+	// Strip name and extract plain email from "Name <email>"
+	var err error
+	conversation.InboxMail, err = stringutil.ExtractEmail(conversation.InboxMail)
+	if err != nil {
+		c.lo.Error("error extracting email from inbox mail", "inbox_mail", conversation.InboxMail, "error", err)
+	}
+
 	return conversation, nil
 }
 
@@ -738,16 +747,6 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	return nil
 }
 
-// GetToAddress retrieves the recipient addresses for a conversation and channel.
-func (m *Manager) GetToAddress(conversationID int) ([]string, error) {
-	var addr []string
-	if err := m.q.GetToAddress.Select(&addr, conversationID); err != nil {
-		m.lo.Error("error fetching `to` address for message", "error", err, "conversation_id", conversationID)
-		return addr, err
-	}
-	return addr, nil
-}
-
 // GetMessageSourceIDs retrieves source IDs for messages in a conversation in descending order.
 // So the oldest message will be the last in the list.
 func (m *Manager) GetMessageSourceIDs(conversationID, limit int) ([]string, error) {
@@ -872,23 +871,53 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 
 	switch action.Type {
 	case amodels.ActionAssignTeam:
-		teamID, _ := strconv.Atoi(action.Value[0])
+		teamID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid team ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationTeamAssignee(conv.UUID, teamID, user)
 	case amodels.ActionAssignUser:
-		agentID, _ := strconv.Atoi(action.Value[0])
+		agentID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid agent ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationUserAssignee(conv.UUID, agentID, user)
 	case amodels.ActionSetPriority:
-		priorityID, _ := strconv.Atoi(action.Value[0])
+		priorityID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid priority ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationPriority(conv.UUID, priorityID, "", user)
 	case amodels.ActionSetStatus:
-		statusID, _ := strconv.Atoi(action.Value[0])
+		statusID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid status ID %q: %w", action.Value[0], err)
+		}
 		return m.UpdateConversationStatus(conv.UUID, statusID, "", "", user)
 	case amodels.ActionSendPrivateNote:
 		return m.SendPrivateNote([]mmodels.Media{}, user.ID, conv.UUID, action.Value[0])
 	case amodels.ActionReply:
-		return m.SendReply([]mmodels.Media{}, conv.InboxID, user.ID, conv.UUID, action.Value[0], nil, nil, nil)
+		// Make recipient list.
+		to, cc, bcc, err := m.makeRecipients(conv.ID, conv.Contact.Email.String, conv.InboxMail)
+		if err != nil {
+			return fmt.Errorf("making recipients for reply action: %w", err)
+		}
+		return m.SendReply(
+			[]mmodels.Media{},
+			conv.InboxID,
+			user.ID,
+			conv.UUID,
+			action.Value[0],
+			to,
+			cc,
+			bcc,
+			map[string]any{}, /**meta**/
+		)
 	case amodels.ActionSetSLA:
-		slaID, _ := strconv.Atoi(action.Value[0])
+		slaID, err := strconv.Atoi(action.Value[0])
+		if err != nil {
+			return fmt.Errorf("invalid SLA ID %q: %w", action.Value[0], err)
+		}
 		return m.ApplySLA(conv, slaID, user)
 	case amodels.ActionAddTags, amodels.ActionSetTags, amodels.ActionRemoveTags:
 		return m.SetConversationTags(conv.UUID, action.Type, action.Value, user)
@@ -924,7 +953,14 @@ func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversatio
 	meta := map[string]interface{}{
 		"is_csat": true,
 	}
-	return m.SendReply([]mmodels.Media{}, conversation.InboxID, actorUserID, conversation.UUID, message, nil, nil, meta)
+
+	// Make recipient list.
+	to, cc, bcc, err := m.makeRecipients(conversation.ID, conversation.Contact.Email.String, conversation.InboxMail)
+	if err != nil {
+		return fmt.Errorf("making recipients for CSAT reply: %w", err)
+	}
+
+	return m.SendReply(nil /**media**/, conversation.InboxID, actorUserID, conversation.UUID, message, to, cc, bcc, meta)
 }
 
 // DeleteConversation deletes a conversation.

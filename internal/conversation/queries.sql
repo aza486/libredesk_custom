@@ -82,21 +82,6 @@ SELECT
 WHERE 1=1 %s
 
 -- name: get-conversation
-WITH last_reply AS (
-   SELECT 
-       conversation_id,
-       meta->'cc' as cc,
-       meta->'bcc' as bcc
-   FROM conversation_messages 
-   WHERE private = false
-   AND type IN ('outgoing', 'incoming')
-   AND (
-       ($1 > 0 AND conversation_id = $1)
-       OR ($2 != '' AND conversation_id = (SELECT id FROM conversations WHERE uuid = $2::uuid))
-   )
-   ORDER BY created_at DESC 
-   LIMIT 1
-)
 SELECT
    c.id,
    c.created_at,
@@ -104,6 +89,8 @@ SELECT
    c.closed_at,
    c.resolved_at,
    c.inbox_id,
+   COALESCE(inb.from, '') as inbox_mail,
+   COALESCE(inb.channel::TEXT, '') as inbox_channel,
    c.status_id,
    c.priority_id,
    p.name as priority,
@@ -118,6 +105,7 @@ SELECT
    c.subject,
    c.contact_id,
    c.sla_policy_id,
+   c.meta,
    sla.name as sla_policy_name,
    c.last_message,
    c.custom_attributes,
@@ -138,18 +126,16 @@ SELECT
    ct.phone_number as "contact.phone_number",
    ct.phone_number_calling_code as "contact.phone_number_calling_code",
    ct.custom_attributes as "contact.custom_attributes",
-   COALESCE(lr.cc, '[]'::jsonb) as cc,
-   COALESCE(lr.bcc, '[]'::jsonb) as bcc,
    as_latest.first_response_deadline_at,
    as_latest.resolution_deadline_at,
    as_latest.status as sla_status
 FROM conversations c
 JOIN users ct ON c.contact_id = ct.id
+JOIN inboxes inb ON c.inbox_id = inb.id
 LEFT JOIN sla_policies sla ON c.sla_policy_id = sla.id
 LEFT JOIN teams at ON at.id = c.assigned_team_id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 LEFT JOIN conversation_priorities p ON c.priority_id = p.id
-LEFT JOIN last_reply lr ON lr.conversation_id = c.id
 LEFT JOIN LATERAL (
     SELECT first_response_deadline_at, resolution_deadline_at, status
     FROM applied_slas 
@@ -375,12 +361,6 @@ FROM conversation_tags ct
 JOIN tags t ON ct.tag_id = t.id
 WHERE ct.conversation_id = (SELECT id FROM conversations WHERE uuid = $1);
 
--- name: get-to-address
-SELECT cc.identifier 
-FROM conversations c 
-INNER JOIN contact_channels cc ON cc.id = c.contact_channel_id 
-WHERE c.id = $1;
-
 -- name: get-conversation-uuid-from-message-uuid
 SELECT c.uuid AS conversation_uuid
 FROM conversation_messages m
@@ -424,6 +404,7 @@ SELECT
     m.source_id,
     ARRAY(SELECT jsonb_array_elements_text(m.meta->'cc')) AS cc,
     ARRAY(SELECT jsonb_array_elements_text(m.meta->'bcc')) AS bcc,
+    ARRAY(SELECT jsonb_array_elements_text(m.meta->'to')) AS to,
     c.inbox_id,
     c.uuid as conversation_uuid,
     c.subject
@@ -577,3 +558,23 @@ WHERE
 
 -- name: delete-conversation
 DELETE FROM conversations WHERE uuid = $1;
+
+-- name: get-latest-message
+SELECT
+    m.created_at,
+    m.updated_at,
+    m.status,
+    m.type, 
+    m.content,
+    m.uuid,
+    m.private,
+    m.sender_id,
+    m.sender_type,
+    m.meta
+FROM conversation_messages m
+WHERE m.conversation_id = $1
+AND m.type = ANY($2)
+AND m.status = ANY($3)
+AND m.private = NOT $4
+ORDER BY m.created_at DESC
+LIMIT 1;
