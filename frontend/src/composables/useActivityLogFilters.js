@@ -16,20 +16,20 @@ export function useActivityLogFilters () {
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
             options: [{
-                label: 'Login',
-                value: 'login'
+                label: 'User login',
+                value: 'agent_login'
             }, {
-                label: 'Logout',
-                value: 'logout'
+                label: 'User logout',
+                value: 'agent_logout'
             }, {
-                label: 'Away',
-                value: 'away'
+                label: 'User away',
+                value: 'agent_away'
             }, {
-                label: 'Away Reassigned',
-                value: 'away_reassigned'
+                label: 'User away reassigned',
+                value: 'agent_away_reassigned'
             }, {
-                label: 'Online',
-                value: 'online'
+                label: 'User online',
+                value: 'agent_online'
             }]
         },
     }))

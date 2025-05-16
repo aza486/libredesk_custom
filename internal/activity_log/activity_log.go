@@ -95,7 +95,7 @@ func (m *Manager) Create(activityType, activityDescription string, actorID int, 
 // Login records a login event for the given user.
 func (al *Manager) Login(userID int, email, ip string) error {
 	return al.Create(
-		models.Login,
+		models.AgentLogin,
 		fmt.Sprintf("%s (#%d) logged in", email, userID),
 		userID,
 		umodels.UserModel,
@@ -107,7 +107,7 @@ func (al *Manager) Login(userID int, email, ip string) error {
 // Logout records a logout event for the given user.
 func (al *Manager) Logout(userID int, email, ip string) error {
 	return al.Create(
-		models.Logout,
+		models.AgentLogout,
 		fmt.Sprintf("%s (#%d) logged out", email, userID),
 		userID,
 		umodels.UserModel,
@@ -125,7 +125,7 @@ func (al *Manager) Away(actorID int, actorEmail, ip string, targetID int, target
 		description = fmt.Sprintf("%s (#%d) is away", actorEmail, actorID)
 	}
 	return al.Create(
-		models.Away, /* activity type*/
+		models.AgentAway, /* activity type*/
 		description,
 		actorID,           /*actor_id*/
 		umodels.UserModel, /*target_model_type*/
@@ -143,7 +143,7 @@ func (al *Manager) AwayReassigned(actorID int, actorEmail, ip string, targetID i
 		description = fmt.Sprintf("%s (#%d) is away and reassigning", actorEmail, actorID)
 	}
 	return al.Create(
-		models.AwayReassigned, /* activity type*/
+		models.AgentAwayReassigned, /* activity type*/
 		description,
 		actorID,           /*actor_id*/
 		umodels.UserModel, /*target_model_type*/
@@ -161,7 +161,7 @@ func (al *Manager) Online(actorID int, actorEmail, ip string, targetID int, targ
 		description = fmt.Sprintf("%s (#%d) is online", actorEmail, actorID)
 	}
 	return al.Create(
-		models.Online, /* activity type*/
+		models.AgentOnline, /* activity type*/
 		description,
 		actorID,           /*actor_id*/
 		umodels.UserModel, /*target_model_type*/

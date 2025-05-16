@@ -167,7 +167,7 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 			IF NOT EXISTS (
 				SELECT 1 FROM pg_type WHERE typname = 'activity_log_type'
 			) THEN
-				CREATE TYPE activity_log_type AS ENUM ('login', 'logout', 'away', 'away_reassigned', 'online');
+				CREATE TYPE activity_log_type AS ENUM ('agent_login', 'agent_logout', 'agent_away', 'agent_away_reassigned', 'agent_online');
 			END IF;
 		END
 		$$;
@@ -191,6 +191,7 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		);
 		CREATE INDEX IF NOT EXISTS index_activity_logs_on_actor_id ON activity_logs (actor_id);
 		CREATE INDEX IF NOT EXISTS index_activity_logs_on_activity_type ON activity_logs (activity_type);
+		CREATE INDEX IF NOT EXISTS index_activity_logs_on_created_at ON activity_logs (created_at);
 	`)
 	if err != nil {
 		return err

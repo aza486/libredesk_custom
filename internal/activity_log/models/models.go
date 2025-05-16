@@ -5,12 +5,11 @@ import (
 )
 
 const (
-	Login          = "login"
-	Logout         = "logout"
-	Away           = "away"
-	AwayManual     = "away_manual"
-	AwayReassigned = "away_reassigned"
-	Online         = "online"
+	AgentLogin          = "agent_login"
+	AgentLogout         = "agent_logout"
+	AgentAway           = "agent_away"
+	AgentAwayReassigned = "agent_away_reassigned"
+	AgentOnline         = "agent_online"
 )
 
 type ActivityLog struct {
