@@ -1,26 +1,40 @@
 <template>
   <div class="min-h-screen flex flex-col w-full">
     <div class="flex flex-wrap gap-4 pb-4">
-      <div class="flex items-center gap-4 mb-4">
+      <div class="flex items-center gap-2 mb-4">
         <!-- Filter Popover -->
-        <Popover>
-          <PopoverTrigger>
-            <ListFilter size="18" class="text-muted-foreground cursor-pointer" />
+        <Popover :open="filtersOpen" @update:open="filtersOpen = $event">
+          <PopoverTrigger @click="filtersOpen = !filtersOpen">
+            <Button variant="outline" size="sm" class="flex items-center gap-2 h-8">
+              <ListFilter size="14" />
+              <span>Filter</span>
+              <span
+                v-if="filters.length > 0"
+                class="flex items-center justify-center bg-primary text-primary-foreground rounded-full size-4 text-xs"
+              >
+                {{ filters.length }}
+              </span>
+            </Button>
           </PopoverTrigger>
           <PopoverContent class="w-full p-4 flex flex-col gap-4">
-            <FilterBuilder
-              :fields="filterFields"
-              :showButtons="true"
-              v-model="filters"
-              @apply="fetchActivityLogs"
-            />
+            <div class="w-[32rem]">
+              <FilterBuilder
+                :fields="filterFields"
+                :showButtons="true"
+                v-model="filters"
+                @apply="fetchActivityLogs"
+                @clear="fetchActivityLogs"
+              />
+            </div>
           </PopoverContent>
         </Popover>
 
         <!-- Order By Popover -->
         <Popover>
           <PopoverTrigger>
-            <ArrowDownUp size="18" class="text-muted-foreground cursor-pointer" />
+            <Button variant="outline" size="sm" class="flex items-center h-8">
+              <ArrowDownWideNarrow size="18" class="text-muted-foreground cursor-pointer" />
+            </Button>
           </PopoverTrigger>
           <PopoverContent class="w-[200px] p-4 flex flex-col gap-4">
             <!-- order by field -->
@@ -70,12 +84,10 @@
             :showDelete="false"
           />
         </div>
-        <div v-if="activityLogs.length === 0" class="flex items-center justify-center w-full h-32">
-          <p class="text-lg text-muted-foreground">{{ t('globals.states.noResults') }}</p>
-        </div>
       </template>
     </div>
 
+    <!-- TODO: deduplicate this code, copied from contacts list -->
     <div class="sticky bottom-0 bg-background p-4 mt-auto">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div class="flex items-center gap-2">
@@ -167,14 +179,13 @@ import {
 } from '@/components/ui/select'
 import FilterBuilder from '@/features/filter/FilterBuilder.vue'
 import { Button } from '@/components/ui/button'
-import { ArrowDownUp, ListFilter } from 'lucide-vue-next'
+import { ListFilter, ArrowDownWideNarrow } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import api from '@/api'
 import { useActivityLogFilters } from '@/composables/useActivityLogFilters'
 import { useI18n } from 'vue-i18n'
 import { format } from 'date-fns'
 import { getVisiblePages } from '@/utils/pagination'
-
+import api from '@/api'
 
 const activityLogs = ref([])
 const { t } = useI18n()
@@ -186,6 +197,7 @@ const orderByDirection = ref('desc')
 const totalCount = ref(0)
 const totalPages = ref(0)
 const filters = ref([])
+const filtersOpen = ref(false)
 const { activityLogListFilters } = useActivityLogFilters()
 
 const filterFields = computed(() =>
@@ -202,6 +214,7 @@ const filterFields = computed(() =>
 const visiblePages = computed(() => getVisiblePages(page.value, totalPages.value))
 
 async function fetchActivityLogs() {
+  filtersOpen.value = false
   loading.value = true
   try {
     const resp = await api.getActivityLogs({
