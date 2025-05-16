@@ -21,7 +21,7 @@
               <span class="text-md text-gray-500">
                 {{
                   $t('globals.messages.noResults', {
-                    name: $t('globals.terms.result', 2)
+                    name: $t('globals.terms.result', 2).toLowerCase()
                   })
                 }}
               </span>
