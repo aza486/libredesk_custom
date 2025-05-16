@@ -78,7 +78,7 @@ func handleUpdateAgentAvailability(r *fastglue.Request) error {
 	}
 
 	// Create activity log.
-	if err := app.activityLog.UserAvailability(auser.ID, auser.Email, status, ip, "" /*peformedByEmail*/, 0 /*peformedByID*/); err != nil {
+	if err := app.activityLog.UserAvailability(auser.ID, auser.Email, status, ip, "", 0); err != nil {
 		app.lo.Error("error creating activity log", "error", err)
 	}
 
@@ -237,7 +237,7 @@ func handleUpdateAgent(r *fastglue.Request) error {
 
 	// Create activity log if user availability status changed.
 	if oldAvailabilityStatus != user.AvailabilityStatus {
-		if err := app.activityLog.UserAvailability(id, user.Email.String, user.AvailabilityStatus, ip, auser.Email, auser.ID); err != nil {
+		if err := app.activityLog.UserAvailability(auser.ID, auser.Email, user.AvailabilityStatus, ip, user.Email.String, id); err != nil {
 			app.lo.Error("error creating activity log", "error", err)
 		}
 	}
