@@ -76,8 +76,6 @@ func (m *Manager) GetAll(order, orderBy, filtersJSON string, page, pageSize int)
 
 	// Execute query
 	var activityLogs = make([]models.ActivityLog, 0)
-	fmt.Println("QUERY", query)
-	fmt.Println("ARGS", qArgs)
 	if err := tx.Select(&activityLogs, query, qArgs...); err != nil {
 		m.lo.Error("error fetching activity logs", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.activityLog}"), nil)
@@ -119,73 +117,73 @@ func (al *Manager) Logout(userID int, email, ip string) error {
 }
 
 // Away records an away event for the given user.
-func (al *Manager) Away(userID int, email, ip string, performedById int, performedByEmail string) error {
+func (al *Manager) Away(actorID int, actorEmail, ip string, targetID int, targetEmail string) error {
 	var description string
-	if performedById != 0 && performedByEmail != "" && (performedById != userID || performedByEmail != email) {
-		description = fmt.Sprintf("%s (#%d) changed %s (#%d) status to away", performedByEmail, performedById, email, userID)
+	if targetID != 0 && targetEmail != "" && (targetID != actorID || targetEmail != actorEmail) {
+		description = fmt.Sprintf("%s (#%d) changed %s (#%d) status to away", actorEmail, actorID, targetEmail, targetID)
 	} else {
-		description = fmt.Sprintf("%s (#%d) is away", email, userID)
+		description = fmt.Sprintf("%s (#%d) is away", actorEmail, actorID)
 	}
 	return al.Create(
-		models.Away,
+		models.Away, /* activity type*/
 		description,
-		userID,
-		umodels.UserModel,
-		userID,
+		actorID,           /*actor_id*/
+		umodels.UserModel, /*target_model_type*/
+		actorID,           /*target_model_id*/
 		ip,
 	)
 }
 
 // AwayReassigned records an away and reassigned event for the given user.
-func (al *Manager) AwayReassigned(userID int, email, ip string, performedById int, performedByEmail string) error {
+func (al *Manager) AwayReassigned(actorID int, actorEmail, ip string, targetID int, targetEmail string) error {
 	var description string
-	if performedById != 0 && performedByEmail != "" && (performedById != userID || performedByEmail != email) {
-		description = fmt.Sprintf("%s (#%d) changed %s (#%d) status to away and reassigning", performedByEmail, performedById, email, userID)
+	if targetID != 0 && targetEmail != "" && (targetID != actorID || targetEmail != actorEmail) {
+		description = fmt.Sprintf("%s (#%d) changed %s (#%d) status to away and reassigning", actorEmail, actorID, targetEmail, targetID)
 	} else {
-		description = fmt.Sprintf("%s (#%d) is away and reassigning", email, userID)
+		description = fmt.Sprintf("%s (#%d) is away and reassigning", actorEmail, actorID)
 	}
 	return al.Create(
-		models.AwayReassigned,
+		models.AwayReassigned, /* activity type*/
 		description,
-		userID,
-		umodels.UserModel,
-		userID,
+		actorID,           /*actor_id*/
+		umodels.UserModel, /*target_model_type*/
+		actorID,           /*target_model_id*/
 		ip,
 	)
 }
 
 // Online records an online event for the given user.
-func (al *Manager) Online(userID int, email, ip string, performedById int, performedByEmail string) error {
+func (al *Manager) Online(actorID int, actorEmail, ip string, targetID int, targetEmail string) error {
 	var description string
-	if performedById != 0 && performedByEmail != "" && (performedById != userID || performedByEmail != email) {
-		description = fmt.Sprintf("%s (#%d) changed %s (#%d) status to online", performedByEmail, performedById, email, userID)
+	if targetID != 0 && targetEmail != "" && (targetID != actorID || targetEmail != actorEmail) {
+		description = fmt.Sprintf("%s (#%d) changed %s (#%d) status to online", actorEmail, actorID, targetEmail, targetID)
 	} else {
-		description = fmt.Sprintf("%s (#%d) is online", email, userID)
+		description = fmt.Sprintf("%s (#%d) is online", actorEmail, actorID)
 	}
 	return al.Create(
-		models.Online,
+		models.Online, /* activity type*/
 		description,
-		userID,
-		umodels.UserModel,
-		userID,
+		actorID,           /*actor_id*/
+		umodels.UserModel, /*target_model_type*/
+		actorID,           /*target_model_id*/
 		ip,
 	)
 }
 
 // UserAvailability records a user availability event for the given user.
-func (al *Manager) UserAvailability(userID int, email, status, ip, performedByEmail string, performedById int) error {
+func (al *Manager) UserAvailability(actorID int, actorEmail, status, ip, targetEmail string, targetID int) error {
 	switch status {
 	case umodels.Online:
-		if err := al.Online(userID, email, ip, performedById, performedByEmail); err != nil {
+		if err := al.Online(actorID, actorEmail, ip, targetID, targetEmail); err != nil {
 			return err
 		}
 	case umodels.AwayManual:
-		if err := al.Away(userID, email, ip, performedById, performedByEmail); err != nil {
+		if err := al.Away(actorID, actorEmail, ip, targetID, targetEmail); err != nil {
 			al.lo.Error("error logging away activity", "error", err)
 			return err
 		}
 	case umodels.AwayAndReassigning:
-		if err := al.AwayReassigned(userID, email, ip, performedById, performedByEmail); err != nil {
+		if err := al.AwayReassigned(actorID, actorEmail, ip, targetID, targetEmail); err != nil {
 			al.lo.Error("error logging away and reassigning activity", "error", err)
 			return err
 		}
