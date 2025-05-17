@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col w-full">
+  <div class="min-h-screen flex flex-col">
     <div class="flex flex-wrap gap-4 pb-4">
       <div class="flex items-center gap-2 mb-4">
         <!-- Filter Popover -->
@@ -63,16 +63,23 @@
         </Popover>
       </div>
 
-      <div v-if="loading" class="flex flex-col gap-4 w-full">
-        <Card v-for="i in perPage" :key="i" class="p-4 flex-shrink-0">
-          <div class="flex items-center gap-4">
-            <Skeleton class="h-10 w-10 rounded-full" />
-            <div class="space-y-2 w-full">
-              <Skeleton class="h-3 w-[160px]" />
-              <Skeleton class="h-3 w-[140px]" />
-            </div>
+      <div v-if="loading" class="w-full">
+        <div class="flex border-b border-border p-4 font-medium bg-gray-50">
+          <div class="flex-1 text-muted-foreground">{{ t('form.field.name') }}</div>
+          <div class="w-[200px] text-muted-foreground">{{ t('form.field.date') }}</div>
+          <div class="w-[150px] text-muted-foreground">{{ t('globals.terms.ipAddress') }}</div>
+        </div>
+        <div v-for="i in perPage" :key="i" class="flex border-b border-border py-3 px-4">
+          <div class="flex-1">
+            <Skeleton class="h-4 w-[90%]" />
           </div>
-        </Card>
+          <div class="w-[200px]">
+            <Skeleton class="h-4 w-[120px]" />
+          </div>
+          <div class="w-[150px]">
+            <Skeleton class="h-4 w-[100px]" />
+          </div>
+        </div>
       </div>
 
       <template v-else>
@@ -99,7 +106,6 @@
               <SelectValue :placeholder="perPage" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem :value="10">10</SelectItem>
               <SelectItem :value="15">15</SelectItem>
               <SelectItem :value="30">30</SelectItem>
               <SelectItem :value="50">50</SelectItem>
@@ -191,7 +197,7 @@ const activityLogs = ref([])
 const { t } = useI18n()
 const loading = ref(true)
 const page = ref(1)
-const perPage = ref(10)
+const perPage = ref(15)
 const orderByField = ref('activity_logs.created_at')
 const orderByDirection = ref('desc')
 const totalCount = ref(0)
