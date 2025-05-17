@@ -163,7 +163,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import SimpleTable from '@/components/table/SimpleTable.vue'
 import {
