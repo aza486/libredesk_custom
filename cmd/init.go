@@ -12,6 +12,7 @@ import (
 
 	"html/template"
 
+	activitylog "github.com/abhinavxd/libredesk/internal/activity_log"
 	"github.com/abhinavxd/libredesk/internal/ai"
 	auth_ "github.com/abhinavxd/libredesk/internal/auth"
 	"github.com/abhinavxd/libredesk/internal/authz"
@@ -804,6 +805,20 @@ func initCustomAttribute(db *sqlx.DB, i18n *i18n.I18n) *customAttribute.Manager 
 	})
 	if err != nil {
 		log.Fatalf("error initializing custom attribute manager: %v", err)
+	}
+	return m
+}
+
+// initActivityLog inits activity log manager.
+func initActivityLog(db *sqlx.DB, i18n *i18n.I18n) *activitylog.Manager {
+	lo := initLogger("activity-log")
+	m, err := activitylog.New(activitylog.Opts{
+		DB:   db,
+		Lo:   lo,
+		I18n: i18n,
+	})
+	if err != nil {
+		log.Fatalf("error initializing activity log manager: %v", err)
 	}
 	return m
 }

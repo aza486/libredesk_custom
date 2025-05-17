@@ -82,7 +82,7 @@ func (u *Manager) UpdateAgent(id int, user models.User) error {
 			u.lo.Error("error generating bcrypt password", "error", err)
 			return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 		}
-		u.lo.Debug("setting new password for user", "user_id", id)
+		u.lo.Info("setting new password for user", "user_id", id)
 	}
 
 	// Update user in the database.

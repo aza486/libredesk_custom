@@ -69,10 +69,19 @@ func handleUpdateAgentAvailability(r *fastglue.Request) error {
 		app    = r.Context.(*App)
 		auser  = r.RequestCtx.UserValue("user").(amodels.User)
 		status = string(r.RequestCtx.PostArgs().Peek("status"))
+		ip     = r.RequestCtx.RemoteIP().String()
 	)
+
+	// Update availability status.
 	if err := app.user.UpdateAvailability(auser.ID, status); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// Create activity log.
+	if err := app.activityLog.UserAvailability(auser.ID, auser.Email, status, ip, "", 0); err != nil {
+		app.lo.Error("error creating activity log", "error", err)
+	}
+
 	return r.SendEnvelope(true)
 }
 
@@ -189,8 +198,10 @@ func handleCreateAgent(r *fastglue.Request) error {
 // handleUpdateAgent updates an agent.
 func handleUpdateAgent(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		user = models.User{}
+		app   = r.Context.(*App)
+		user  = models.User{}
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		ip    = r.RequestCtx.RemoteIP().String()
 	)
 	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	if err != nil || id == 0 {
@@ -213,9 +224,22 @@ func handleUpdateAgent(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`first_name`"), nil, envelope.InputError)
 	}
 
+	agent, err := app.user.GetAgent(id, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	oldAvailabilityStatus := agent.AvailabilityStatus
+
 	// Update agent.
 	if err = app.user.UpdateAgent(id, user); err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	// Create activity log if user availability status changed.
+	if oldAvailabilityStatus != user.AvailabilityStatus {
+		if err := app.activityLog.UserAvailability(auser.ID, auser.Email, user.AvailabilityStatus, ip, user.Email.String, id); err != nil {
+			app.lo.Error("error creating activity log", "error", err)
+		}
 	}
 
 	// Upsert agent teams.

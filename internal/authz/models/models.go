@@ -80,6 +80,9 @@ const (
 
 	// Custom attributes
 	PermCustomAttributesManage = "custom_attributes:manage"
+
+	// Activity log
+	PermActivityLogsManage = "activity_logs:manage"
 )
 
 var validPermissions = map[string]struct{}{
@@ -121,6 +124,7 @@ var validPermissions = map[string]struct{}{
 	PermContactNotesRead:                {},
 	PermContactNotesWrite:               {},
 	PermContactNotesDelete:              {},
+	PermActivityLogsManage:              {},
 }
 
 // PermissionExists returns true if the permission exists else false

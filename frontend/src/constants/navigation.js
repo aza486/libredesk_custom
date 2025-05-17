@@ -74,6 +74,11 @@ export const adminNavItems = [
                 titleKey: 'navigation.roles',
                 href: '/admin/teams/roles',
                 permission: 'roles:manage'
+            },
+            {
+                titleKey: 'navigation.activityLog',
+                href: '/admin/teams/activity-log',
+                permission: 'activity_logs:manage'
             }
         ]
     },

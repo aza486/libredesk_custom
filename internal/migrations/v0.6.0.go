@@ -160,5 +160,52 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
+	// Create activity_log_type enum if not exists
+	_, err = db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_type WHERE typname = 'activity_log_type'
+			) THEN
+				CREATE TYPE activity_log_type AS ENUM ('agent_login', 'agent_logout', 'agent_away', 'agent_away_reassigned', 'agent_online');
+			END IF;
+		END
+		$$;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Create activity_logs table if not exists
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS activity_logs (
+			id BIGSERIAL PRIMARY KEY,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			activity_type activity_log_type NOT NULL,
+			activity_description TEXT NOT NULL,
+			actor_id INT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+			target_model_type TEXT NOT NULL,
+			target_model_id BIGINT NOT NULL,
+			ip INET
+		);
+		CREATE INDEX IF NOT EXISTS index_activity_logs_on_actor_id ON activity_logs (actor_id);
+		CREATE INDEX IF NOT EXISTS index_activity_logs_on_activity_type ON activity_logs (activity_type);
+		CREATE INDEX IF NOT EXISTS index_activity_logs_on_created_at ON activity_logs (created_at);
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Add `activity_logs:manage` permission to Admin role
+	_, err = db.Exec(`
+		UPDATE roles
+		SET permissions = array_append(permissions, 'activity_logs:manage')
+		WHERE name = 'Admin' AND NOT ('activity_logs:manage' = ANY(permissions));
+	`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

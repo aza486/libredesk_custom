@@ -315,6 +315,7 @@ const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data)
 const getContactNotes = (id) => http.get(`/api/v1/contacts/${id}/notes`)
 const createContactNote = (id, data) => http.post(`/api/v1/contacts/${id}/notes`, data)
 const deleteContactNote = (id, noteId) => http.delete(`/api/v1/contacts/${id}/notes/${noteId}`)
+const getActivityLogs = (params) => http.get('/api/v1/activity-logs', { params })
 
 export default {
   login,
@@ -442,5 +443,6 @@ export default {
   getCustomAttribute,
   getContactNotes,
   createContactNote,
-  deleteContactNote
+  deleteContactNote,
+  getActivityLogs
 }
