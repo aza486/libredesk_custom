@@ -288,6 +288,7 @@
   "form.field.channel": "Channel",
   "form.field.configure": "Configure",
   "form.field.date": "Date",
+  "form.field.timestamp": "Timestamp",
   "form.field.description": "Description",
   "form.field.email": "Email",
   "form.field.fromEmailAddress": "From Email Address",

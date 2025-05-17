@@ -85,7 +85,7 @@
       <template v-else>
         <div class="w-full overflow-x-auto">
           <SimpleTable
-            :headers="[t('form.field.name'), t('form.field.date'), t('globals.terms.ipAddress')]"
+            :headers="[t('form.field.name'), t('form.field.timestamp'), t('globals.terms.ipAddress')]"
             :keys="['activity_description', 'created_at', 'ip']"
             :data="activityLogs"
             :showDelete="false"
