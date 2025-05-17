@@ -14,7 +14,9 @@
         <!-- Order By Popover -->
         <Popover>
           <PopoverTrigger>
-            <ArrowDownUp size="18" class="text-muted-foreground cursor-pointer" />
+            <Button variant="outline" size="sm" class="flex items-center h-8">
+              <ArrowDownWideNarrow size="18" class="text-muted-foreground cursor-pointer" />
+            </Button>
           </PopoverTrigger>
           <PopoverContent class="w-[200px] p-4 flex flex-col gap-4">
             <!-- order by field -->
@@ -180,7 +182,7 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { ArrowDownUp } from 'lucide-vue-next'
+import { ArrowDownWideNarrow } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { debounce } from '@/utils/debounce'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
