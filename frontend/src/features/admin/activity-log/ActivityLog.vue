@@ -182,7 +182,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import FilterBuilder from '@/features/filter/FilterBuilder.vue'
+import FilterBuilder from '@/components/filter/FilterBuilder.vue'
 import { Button } from '@/components/ui/button'
 import { ListFilter, ArrowDownWideNarrow } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
