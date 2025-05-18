@@ -50,7 +50,7 @@ To compile the latest unreleased version (`main` branch):
 
 ## Nginx
 
-Libredesk using websockets for real-time updates. If you are using Nginx, you need to add the following (or similar) configuration to your Nginx configuration file.
+Libredesk uses websockets for real-time updates. If you are using Nginx, you need to add the following (or similar) configuration to your Nginx configuration file.
 
 ```nginx
 client_max_body_size 100M;

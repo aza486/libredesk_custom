@@ -4,7 +4,7 @@ Templating in outgoing emails allows you to personalize content by embedding dyn
 
 ## Outgoing Email Template Expressions
 
-If you want to customize the look of outgoing emails, you can do so in the **Settings > Templates -> Outgoing Email Templates** section. This template will be used for all outgoing emails including replies to conversations, notifications, and other system-generated emails.
+If you want to customize the look of outgoing emails, you can do so in the Admin > Templates -> Outgoing Email Templates section. This template will be used for all outgoing emails including replies to conversations, notifications, and other system-generated emails.
 
 ### Conversation Variables
 
