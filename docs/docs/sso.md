@@ -9,49 +9,49 @@ Libredesk supports external OpenID Connect providers (e.g., Google, Keycloak) fo
 
 Since each provider’s configuration might differ, consult your provider’s documentation for any additional or divergent settings.
 
-1. **Provider Setup:**  
+1. Provider setup:  
    In your provider’s admin console, create a new OpenID Connect application/client. Retrieve:
-      - **Client ID**
-      - **Client Secret**
+      - Client ID
+      - Client Secret
 
-2. **Libredesk Configuration:**  
-   In Libredesk, navigate to **Security > SSO** and click **New SSO**. Enter:
-      - **Provider URL** (e.g., the URL of your OpenID provider)
-      - **Client ID**
-      - **Client Secret**
-      - A descriptive **Name** for the connection
+2. Libredesk configuration: 
+   In Libredesk, navigate to Security > SSO and click New SSO and enter the following details:
+      - Provider URL (e.g., the URL of your OpenID provider)
+      - Client ID
+      - Client Secret
+      - A descriptive name for the connection
 
-3. **Redirect URL:**  
-   After saving, copy the generated **Callback URL** from Libredesk and add it as a valid redirect URI in your provider’s client settings.
+3. Redirect URL:  
+   After saving, copy the generated Callback URL from Libredesk and add it as a valid redirect URI in your provider’s client settings.
    
 ## Provider Examples
 
-### Keycloak
+#### Keycloak
 
 1. Log in to your Keycloak Admin Console.
 
-2. In Keycloak, navigate to **Clients** and click **Create**:
+2. In Keycloak, navigate to Clients and click Create:
 
-      - **Client ID** (e.g., `libredesk-app`)
-      - **Client Protocol**: `openid-connect`
-      - **Root URL** and **Web Origins**: your app domain (e.g., `https://ticket.example.com`)
-      - Under **Authentication flow**, uncheck everything except **Standard flow**
-      - Click **Save**
+      - Client ID (e.g., `libredesk-app`)
+      - Client Protocol: `openid-connect`
+      - Root URL and Web Origins: your app domain (e.g., `https://ticket.example.com`)
+      - Under Authentication flow, uncheck everything except the standard flow
+      - Click save
 
-3. Go to the **Credentials** tab:
-      - Ensure **Client Authenticator** is set to `Client Id and Secret`
-      - Note down the generated **Client Secret**
+3. Go to the credentials tab:
+      - Ensure client authenticator is set to `Client Id and Secret`
+      - Note down the generated client secret
 
-4. In Libredesk, go to **Security > SSO** and click **New SSO**:
-      - **Provider URL** (e.g., `https://keycloak.example.com/realms/yourrealm`)
-      - **Name** (e.g., `Keycloak`)
-      - **Client ID**
-      - **Client Secret**
-      - Click **Save**
+4. In Libredesk, go to Admin > Security > SSO and click New SSO:
+      - Provider URL (e.g., `https://keycloak.example.com/realms/yourrealm`)
+      - Name (e.g., `Keycloak`)
+      - Client ID
+      - Client secret
+      - Click save
 
-5. After saving, click on the three dots and choose **Edit** to open the newly SSO entry.
+5. After saving, click on the three dots and choose Edit to open the new SSO entry.
 
-6. Copy the generated **Callback URL** from Libredesk.
+6. Copy the generated Callback URL from Libredesk.
 
-7. Back in Keycloak, edit the client and add the **Callback URL** to **Valid Redirect URIs**:
+7. Back in Keycloak, edit the client and add the Callback URL to Valid Redirect URIs:
       - e.g., `https://ticket.example.com/api/v1/oidc/1/finish`
