@@ -35,7 +35,7 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
   Connect your favorite BI tools like Metabase and create custom dashboards and reports with your support data—without lock-ins.
 - **AI-Assisted Response Rewrite**  
   Instantly rewrite responses with AI to make them more friendly, professional, or polished.
-- **Activity logs**
+- **Activity logs**  
   Track all actions performed by agents and admins—updates and key events across the system—for auditing and accountability.
 - **Command Bar**  
   Opens with a simple shortcut (CTRL+k) and lets you quickly perform actions on conversations.
