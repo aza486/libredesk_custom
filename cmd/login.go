@@ -4,6 +4,7 @@ import (
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
+	realip "github.com/ferluci/fast-realip"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -14,7 +15,7 @@ func handleLogin(r *fastglue.Request) error {
 		app      = r.Context.(*App)
 		email    = string(r.RequestCtx.PostArgs().Peek("email"))
 		password = r.RequestCtx.PostArgs().Peek("password")
-		ip       = r.RequestCtx.RemoteIP().String()
+		ip       = realip.FromRequest(r.RequestCtx)
 	)
 
 	// Verify email and password.
@@ -67,7 +68,7 @@ func handleLogout(r *fastglue.Request) error {
 	var (
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
-		ip    = r.RequestCtx.RemoteIP().String()
+		ip    = realip.FromRequest(r.RequestCtx)
 	)
 
 	// Insert activity log.

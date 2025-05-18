@@ -1,6 +1,6 @@
 module github.com/abhinavxd/libredesk
 
-go 1.22.3
+go 1.24.3
 
 require (
 	github.com/casbin/casbin/v2 v2.99.0
@@ -8,6 +8,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/emersion/go-imap/v2 v2.0.0-beta.3
 	github.com/fasthttp/websocket v1.5.9
+	github.com/ferluci/fast-realip v1.0.1
 	github.com/google/uuid v1.6.0
 	github.com/jhillyerd/enmime v1.2.0
 	github.com/jmoiron/sqlx v1.4.0
@@ -29,19 +30,19 @@ require (
 	github.com/rhnvrm/simples3 v0.9.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
-	github.com/valyala/fasthttp v1.54.0
+	github.com/valyala/fasthttp v1.62.0
 	github.com/volatiletech/null/v9 v9.0.0
 	github.com/zerodha/fastglue v1.8.0
 	github.com/zerodha/logf v0.5.5
 	github.com/zerodha/simplesessions/stores/redis/v3 v3.0.0
 	github.com/zerodha/simplesessions/v3 v3.0.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.38.0
 	golang.org/x/mod v0.17.0
 	golang.org/x/oauth2 v0.21.0
 )
 
 require (
-	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
 	github.com/casbin/govaluate v1.2.0 // indirect
 	github.com/cention-sany/utf7 v0.0.0-20170124080048-26cad61bd60a // indirect
@@ -56,7 +57,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.0.0-alpha.1 // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/jaytaylor/html2text v0.0.0-20230321000545-74c2419ad056 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
@@ -71,8 +72,8 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/image v0.18.0 // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

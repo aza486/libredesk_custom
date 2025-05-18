@@ -6,6 +6,7 @@ import (
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
+	realip "github.com/ferluci/fast-realip"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -53,7 +54,7 @@ func handleOIDCCallback(r *fastglue.Request) error {
 		code            = string(r.RequestCtx.QueryArgs().Peek("code"))
 		state           = string(r.RequestCtx.QueryArgs().Peek("state"))
 		providerID, err = strconv.Atoi(string(r.RequestCtx.UserValue("id").(string)))
-		ip              = r.RequestCtx.RemoteIP().String()
+		ip              = realip.FromRequest(r.RequestCtx)
 	)
 	if err != nil {
 		app.lo.Error("error parsing provider id", "error", err)
