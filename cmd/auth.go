@@ -53,6 +53,7 @@ func handleOIDCCallback(r *fastglue.Request) error {
 		code            = string(r.RequestCtx.QueryArgs().Peek("code"))
 		state           = string(r.RequestCtx.QueryArgs().Peek("state"))
 		providerID, err = strconv.Atoi(string(r.RequestCtx.UserValue("id").(string)))
+		ip              = r.RequestCtx.RemoteIP().String()
 	)
 	if err != nil {
 		app.lo.Error("error parsing provider id", "error", err)
@@ -90,6 +91,16 @@ func handleOIDCCallback(r *fastglue.Request) error {
 	}, r); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError,
 			app.i18n.Ts("globals.messages.errorSaving", "name", "{globals.terms.session}"), nil, envelope.GeneralError)
+	}
+
+	// Update last login time.
+	if err := app.user.UpdateLastLoginAt(user.ID); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Insert activity log.
+	if err := app.activityLog.Login(user.ID, user.Email.String, ip); err != nil {
+		app.lo.Error("error creating login activity log", "error", err)
 	}
 
 	return r.Redirect("/", fasthttp.StatusFound, nil, "")
