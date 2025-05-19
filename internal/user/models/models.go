@@ -23,7 +23,9 @@ const (
 	// User availability statuses
 	Online             = "online"
 	Offline            = "offline"
+	// Away due to inactivity
 	Away               = "away"
+	// Away due to manual setting from sidebar
 	AwayManual         = "away_manual"
 	AwayAndReassigning = "away_and_reassigning"
 )

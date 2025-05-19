@@ -72,15 +72,26 @@ func handleUpdateAgentAvailability(r *fastglue.Request) error {
 		status = string(r.RequestCtx.PostArgs().Peek("status"))
 		ip     = realip.FromRequest(r.RequestCtx)
 	)
+	agent, err := app.user.GetAgent(auser.ID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Same status?
+	if agent.AvailabilityStatus == status {
+		return r.SendEnvelope(true)
+	}
 
 	// Update availability status.
 	if err := app.user.UpdateAvailability(auser.ID, status); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	// Create activity log.
-	if err := app.activityLog.UserAvailability(auser.ID, auser.Email, status, ip, "", 0); err != nil {
-		app.lo.Error("error creating activity log", "error", err)
+	// Skip activity log if agent returns online from away (to avoid spam).
+	if !(agent.AvailabilityStatus == models.Away && status == models.Online) {
+		if err := app.activityLog.UserAvailability(auser.ID, auser.Email, status, ip, "", 0); err != nil {
+			app.lo.Error("error creating activity log", "error", err)
+		}
 	}
 
 	return r.SendEnvelope(true)
