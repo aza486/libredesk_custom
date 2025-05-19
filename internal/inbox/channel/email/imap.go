@@ -186,7 +186,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		e.lo.Warn("no sender received for email", "message_id", env.MessageID)
 		return nil
 	}
-	var fromAddress = env.From[0].Addr()
+	var fromAddress = strings.ToLower(env.From[0].Addr())
 
 	// Check if the message already exists in the database.
 	// If it does, ignore it.
@@ -225,29 +225,29 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		Type:            umodels.UserTypeContact,
 	}
 
-	// Set `to`, `cc`, and `bcc` addresses in meta.
+	// Lowercase and set the `to`, `cc`, `from` and `bcc` addresses in message meta.
 	var ccAddr = make([]string, 0, len(env.Cc))
 	var toAddr = make([]string, 0, len(env.To))
 	var bccAddr = make([]string, 0, len(env.Bcc))
 	var fromAddr = make([]string, 0, len(env.From))
 	for _, cc := range env.Cc {
 		if cc.Addr() != "" {
-			ccAddr = append(ccAddr, cc.Addr())
+			ccAddr = append(ccAddr, strings.ToLower(cc.Addr()))
 		}
 	}
 	for _, to := range env.To {
 		if to.Addr() != "" {
-			toAddr = append(toAddr, to.Addr())
+			toAddr = append(toAddr, strings.ToLower(to.Addr()))
 		}
 	}
 	for _, bcc := range env.Bcc {
 		if bcc.Addr() != "" {
-			bccAddr = append(bccAddr, bcc.Addr())
+			bccAddr = append(bccAddr, strings.ToLower(bcc.Addr()))
 		}
 	}
 	for _, from := range env.From {
 		if from.Addr() != "" {
-			fromAddr = append(fromAddr, from.Addr())
+			fromAddr = append(fromAddr, strings.ToLower(from.Addr()))
 		}
 	}
 
