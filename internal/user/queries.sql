@@ -123,7 +123,7 @@ SET availability_status = 'offline'
 WHERE 
 type = 'agent' 
 AND (last_active_at IS NULL OR last_active_at < NOW() - INTERVAL '5 minutes')
-AND availability_status != 'offline';
+AND availability_status NOT IN ('offline', 'away_and_reassigning', 'away_manual');
 
 -- name: set-reset-password-token
 UPDATE users
