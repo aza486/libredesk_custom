@@ -484,7 +484,7 @@ func (m *Manager) SendNotifications(ctx context.Context) error {
 				}
 				m.lo.Error("error fetching scheduled SLA notifications", "error", err)
 			} else if len(notifications) > 0 {
-				m.lo.Debug("found scheduled SLA notifications", "count", len(notifications))
+				m.lo.Info("found scheduled SLA notifications", "count", len(notifications))
 				for _, notification := range notifications {
 					if ctx.Err() != nil {
 						return ctx.Err()
@@ -493,7 +493,7 @@ func (m *Manager) SendNotifications(ctx context.Context) error {
 						m.lo.Error("error sending notification", "error", err)
 					}
 				}
-				m.lo.Debug("sent SLA notifications", "count", len(notifications))
+				m.lo.Info("sent SLA notifications", "count", len(notifications))
 			}
 			<-ticker.C
 		}
