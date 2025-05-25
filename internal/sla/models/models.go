@@ -75,8 +75,8 @@ type AppliedSLA struct {
 	Status                  string    `db:"status"`
 	ConversationID          int       `db:"conversation_id"`
 	SLAPolicyID             int       `db:"sla_policy_id"`
-	FirstResponseDeadlineAt time.Time `db:"first_response_deadline_at"`
-	ResolutionDeadlineAt    time.Time `db:"resolution_deadline_at"`
+	FirstResponseDeadlineAt null.Time `db:"first_response_deadline_at"`
+	ResolutionDeadlineAt    null.Time `db:"resolution_deadline_at"`
 	FirstResponseBreachedAt null.Time `db:"first_response_breached_at"`
 	ResolutionBreachedAt    null.Time `db:"resolution_breached_at"`
 	FirstResponseMetAt      null.Time `db:"first_response_met_at"`

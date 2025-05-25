@@ -617,10 +617,10 @@ func (m *Manager) SendNotification(scheduledNotification models.ScheduledSLANoti
 
 		switch scheduledNotification.Metric {
 		case MetricFirstResponse:
-			dueIn = getFriendlyDuration(appliedSLA.FirstResponseDeadlineAt)
+			dueIn = getFriendlyDuration(appliedSLA.FirstResponseDeadlineAt.Time)
 			overdueBy = getFriendlyDuration(appliedSLA.FirstResponseBreachedAt.Time)
 		case MetricResolution:
-			dueIn = getFriendlyDuration(appliedSLA.ResolutionDeadlineAt)
+			dueIn = getFriendlyDuration(appliedSLA.ResolutionDeadlineAt.Time)
 			overdueBy = getFriendlyDuration(appliedSLA.ResolutionBreachedAt.Time)
 		case MetricNextResponse:
 			dueIn = getFriendlyDuration(slaEvent.DeadlineAt)
@@ -828,7 +828,7 @@ func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
 	m.lo.Debug("evaluating SLA", "conversation_id", sla.ConversationID, "applied_sla_id", sla.ID)
 	checkDeadline := func(deadline time.Time, metAt null.Time, metric string) error {
 		if deadline.IsZero() {
-			m.lo.Warn("deadline zero, skipping checking the deadline")
+			m.lo.Warn("deadline zero, skipping checking the deadline", "conversation_id", sla.ConversationID, "applied_sla_id", sla.ID, "metric", metric)
 			return nil
 		}
 
@@ -860,7 +860,7 @@ func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
 	// If first response is not breached and not met, check the deadline and set them.
 	if !sla.FirstResponseBreachedAt.Valid && !sla.FirstResponseMetAt.Valid {
 		m.lo.Debug("checking deadline", "deadline", sla.FirstResponseDeadlineAt, "met_at", sla.ConversationFirstResponseAt.Time, "metric", MetricFirstResponse)
-		if err := checkDeadline(sla.FirstResponseDeadlineAt, sla.ConversationFirstResponseAt, MetricFirstResponse); err != nil {
+		if err := checkDeadline(sla.FirstResponseDeadlineAt.Time, sla.ConversationFirstResponseAt, MetricFirstResponse); err != nil {
 			return err
 		}
 	}
@@ -868,7 +868,7 @@ func (m *Manager) evaluateSLA(sla models.AppliedSLA) error {
 	// If resolution is not breached and not met, check the deadine and set them.
 	if !sla.ResolutionBreachedAt.Valid && !sla.ResolutionMetAt.Valid {
 		m.lo.Debug("checking deadline", "deadline", sla.ResolutionDeadlineAt, "met_at", sla.ConversationResolvedAt.Time, "metric", MetricResolution)
-		if err := checkDeadline(sla.ResolutionDeadlineAt, sla.ConversationResolvedAt, MetricResolution); err != nil {
+		if err := checkDeadline(sla.ResolutionDeadlineAt.Time, sla.ConversationResolvedAt, MetricResolution); err != nil {
 			return err
 		}
 	}
