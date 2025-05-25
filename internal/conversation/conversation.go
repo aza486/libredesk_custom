@@ -247,15 +247,22 @@ func (c *Manager) CreateConversation(contactID, contactChannelID, inboxID int, l
 	return id, uuid, nil
 }
 
-// GetConversation retrieves a conversation by its UUID.
+// GetConversation retrieves a conversation by its ID or UUID.
 func (c *Manager) GetConversation(id int, uuid string) (models.Conversation, error) {
 	var conversation models.Conversation
-	if err := c.q.GetConversation.Get(&conversation, id, uuid); err != nil {
+	var uuidParam any
+	if uuid != "" {
+		uuidParam = uuid
+	}
+
+	if err := c.q.GetConversation.Get(&conversation, id, uuidParam); err != nil {
 		if err == sql.ErrNoRows {
-			return conversation, envelope.NewError(envelope.InputError, c.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.conversation}"), nil)
+			return conversation, envelope.NewError(envelope.InputError,
+				c.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.conversation}"), nil)
 		}
 		c.lo.Error("error fetching conversation", "error", err)
-		return conversation, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.conversation}"), nil)
+		return conversation, envelope.NewError(envelope.GeneralError,
+			c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.conversation}"), nil)
 	}
 
 	// Strip name and extract plain email from "Name <email>"

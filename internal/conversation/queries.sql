@@ -163,9 +163,9 @@ LEFT JOIN LATERAL (
   LIMIT 1
 ) nxt_resp_event ON true
 WHERE 
-   ($1 > 0 AND c.id = $1)
-   OR 
-   ($2 != '' AND c.uuid = $2::uuid)
+  ($1 > 0 AND c.id = $1)
+  OR 
+  ($2::uuid IS NOT NULL AND c.uuid = $2::uuid)
 
 
 -- name: get-conversations-created-after
