@@ -383,7 +383,6 @@
   "admin.sla.deleteConfirmation": "This action cannot be undone. This will permanently delete this SLA policy.",
   "admin.sla.name.valid": "SLA Policy name should be between 1 and 255 characters",
   "admin.sla.description.valid": "SLA Policy description should be between 1 and 255 characters",
-  "admin.sla.delay.required": "Delay is required",
   "admin.sla.firstResponseTime": "First response time",
   "admin.sla.resolutionTime": "Resolution time",
   "admin.sla.nextResponseTime": "Next response time",

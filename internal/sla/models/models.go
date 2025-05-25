@@ -18,7 +18,6 @@ type SLAPolicy struct {
 	Name              string           `db:"name" json:"name"`
 	Description       string           `db:"description" json:"description,omitempty"`
 	FirstResponseTime string           `db:"first_response_time" json:"first_response_time,omitempty"`
-	EveryResponseTime string           `db:"every_response_time" json:"every_response_time,omitempty"`
 	NextResponseTime  string           `db:"next_response_time" json:"next_response_time,omitempty"`
 	ResolutionTime    string           `db:"resolution_time" json:"resolution_time,omitempty"`
 	Notifications     SlaNotifications `db:"notifications" json:"notifications,omitempty"`

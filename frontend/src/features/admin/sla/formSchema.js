@@ -27,9 +27,7 @@ export const createFormSchema = (t) =>
                         .object({
                             type: z.enum(['breach', 'warning']),
                             time_delay_type: z.enum(['immediately', 'after', 'before']),
-                            time_delay: z.string().optional().refine(val => isGoHourMinuteDuration(val), {
-                                message: t('globals.messages.goHourMinuteDuration'),
-                            }),
+                            time_delay: z.string().optional(),
                             metric: z.enum(['first_response', 'resolution', 'next_response', 'all']),
                             recipients: z
                                 .array(z.string())
@@ -40,7 +38,7 @@ export const createFormSchema = (t) =>
                                 if (!obj.time_delay || obj.time_delay === '') {
                                     ctx.addIssue({
                                         code: z.ZodIssueCode.custom,
-                                        message: t('admin.sla.delay.required'),
+                                        message: t('globals.messages.required'),
                                         path: ['time_delay'],
                                     });
                                 } else if (!isGoHourMinuteDuration(obj.time_delay)) {

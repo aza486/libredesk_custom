@@ -46,11 +46,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['status'])
-
-let sla = null
-if (props.dueAt) {
-  sla = useSla(ref(props.dueAt), ref(props.actualAt))
-}
+let sla = useSla(ref(props.dueAt), ref(props.actualAt))
 
 // Watch for status change and emit
 watch(
