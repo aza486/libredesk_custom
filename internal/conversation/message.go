@@ -189,14 +189,12 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	if systemUser, err := m.userStore.GetSystemUser(); err == nil && message.SenderID != systemUser.ID {
 		m.UpdateConversationFirstReplyAt(message.ConversationUUID, message.ConversationID, time.Now())
 		m.UpdateConversationLastReplyAt(message.ConversationUUID, message.ConversationID, time.Now())
-		// Set `met_at` timestamp for next response SLA event if event exists and not already met.
-		if message.ConversationAppliedSLAID.Int > 0 {
-			metAt, err := m.slaStore.SetLatestSLAEventMetAt(message.ConversationAppliedSLAID.Int, sla.MetricNextResponse)
-			if err != nil {
-				m.lo.Error("error setting next response SLA event met at", "conversation_id", message.ConversationID, "error", err)
-			} else if !metAt.IsZero() {
-				m.BroadcastConversationUpdate(message.ConversationUUID, "next_response_met_at", metAt.Format(time.RFC3339))
-			}
+		// Set the `met_at` timestamp for the latest next response SLA event if the event exists and is not already met.
+		metAt, err := m.slaStore.SetLatestSLAEventMetAt(message.ConversationID, sla.MetricNextResponse)
+		if err != nil {
+			m.lo.Error("error setting next response SLA event met at", "conversation_id", message.ConversationID, "error", err)
+		} else if !metAt.IsZero() {
+			m.BroadcastConversationUpdate(message.ConversationUUID, "next_response_met_at", metAt.Format(time.RFC3339))
 		}
 	} else if err != nil {
 		m.lo.Error("error fetching system user for updating first reply time", "error", err)

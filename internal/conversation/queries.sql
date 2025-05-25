@@ -426,7 +426,6 @@ SELECT
     ARRAY(SELECT jsonb_array_elements_text(m.meta->'to')) AS to,
     c.inbox_id,
     c.uuid as conversation_uuid,
-    c.applied_sla_id as conversation_applied_sla_id,
     c.subject
 FROM conversation_messages m
 INNER JOIN conversations c ON c.id = m.conversation_id

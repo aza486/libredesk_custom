@@ -83,7 +83,7 @@ type Manager struct {
 type slaStore interface {
 	ApplySLA(startTime time.Time, conversationID, assignedTeamID, slaID int) (slaModels.SLAPolicy, error)
 	CreateNextResponseSLAEvent(conversationID, assignedTeamID int) (time.Time, error)
-	SetLatestSLAEventMetAt(appliedSLAID int, metric string) (time.Time, error)
+	SetLatestSLAEventMetAt(conversationID int, metric string) (time.Time, error)
 }
 
 type statusStore interface {

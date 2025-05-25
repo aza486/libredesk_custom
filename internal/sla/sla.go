@@ -349,12 +349,22 @@ func (m *Manager) CreateNextResponseSLAEvent(conversationID, assignedTeamID int)
 }
 
 // SetLatestSLAEventMetAt marks the latest SLA event as met for a given applied SLA.
-func (m *Manager) SetLatestSLAEventMetAt(appliedSLAID int, metric string) (time.Time, error) {
-	var metAt time.Time
-	if err := m.q.SetLatestSLAEventMetAt.QueryRow(appliedSLAID, metric).Scan(&metAt); err != nil {
+func (m *Manager) SetLatestSLAEventMetAt(conversationID int, metric string) (time.Time, error) {
+	var appliedSLA models.AppliedSLA
+	if err := m.q.GetLatestAppliedSLAForConversation.Get(&appliedSLA, conversationID); err != nil {
 		if err == sql.ErrNoRows {
-			m.lo.Warn("no SLA event found for applied SLA ID and metric to update met at", "applied_sla_id", appliedSLAID, "metric", metric)
-			return metAt, fmt.Errorf("no SLA event found for applied SLA ID: %d and metric: %s to update met at", appliedSLAID, metric)
+			m.lo.Warn("no applied SLA found for conversation to update met at", "conversation_id", conversationID)
+			return time.Time{}, fmt.Errorf("no applied SLA found for conversation: %d to update met at", conversationID)
+		}
+		m.lo.Error("error fetching latest applied SLA for conversation", "error", err)
+		return time.Time{}, fmt.Errorf("fetching latest applied SLA for conversation: %w", err)
+	}
+
+	var metAt time.Time
+	if err := m.q.SetLatestSLAEventMetAt.QueryRow(appliedSLA.ID, metric).Scan(&metAt); err != nil {
+		if err == sql.ErrNoRows {
+			m.lo.Warn("no SLA event found for applied SLA and metric to update met at", "applied_sla_id", appliedSLA.ID, "metric", metric)
+			return metAt, fmt.Errorf("no SLA event found for applied SLA ID: %d and metric: %s to update met at", appliedSLA.ID, metric)
 		}
 		m.lo.Error("error marking SLA event as met", "error", err)
 		return metAt, fmt.Errorf("marking SLA event as met: %w", err)

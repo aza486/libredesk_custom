@@ -77,7 +77,7 @@ SET next_sla_deadline_at = CASE
 
     -- If an external timestamp ($3) is provided (e.g. next_response), use the earliest of $3.
     WHEN $3 IS NOT NULL THEN LEAST(
-        $3,
+        $3::TIMESTAMPTZ,
         CASE
             WHEN c.first_reply_at IS NOT NULL AND c.resolved_at IS NULL AND a.resolution_deadline_at IS NOT NULL THEN a.resolution_deadline_at
             WHEN c.first_reply_at IS NULL AND c.resolved_at IS NULL AND a.first_response_deadline_at IS NOT NULL THEN a.first_response_deadline_at

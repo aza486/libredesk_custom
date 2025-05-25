@@ -137,7 +137,6 @@ type Message struct {
 	Meta                     json.RawMessage        `db:"meta" json:"meta"`
 	Attachments              attachment.Attachments `db:"attachments" json:"attachments"`
 	ConversationUUID         string                 `db:"conversation_uuid" json:"-"`
-	ConversationAppliedSLAID null.Int               `db:"conversation_applied_sla_id" json:"-"`
 	From                     string                 `db:"from"  json:"-"`
 	Subject                  string                 `db:"subject" json:"-"`
 	Channel                  string                 `db:"channel" json:"-"`
