@@ -52,6 +52,7 @@ type SlaNotification struct {
 	Recipients    []string `db:"recipients" json:"recipients"`
 	TimeDelay     string   `db:"time_delay" json:"time_delay"`
 	TimeDelayType string   `db:"time_delay_type" json:"time_delay_type"`
+	Metric        string   `db:"metric" json:"metric"`
 }
 
 // ScheduledSLANotification represents a scheduled SLA notification

@@ -195,8 +195,7 @@ RETURNING id;
 
 -- name: set-latest-sla-event-met-at
 UPDATE sla_events
-SET met_at = NOW(),
-status = CASE WHEN NOW() > deadline_at THEN 'breached'::sla_event_status ELSE 'met'::sla_event_status END
+SET met_at = NOW()
 WHERE id = (
   SELECT id FROM sla_events
   WHERE applied_sla_id = $1 AND type = $2 AND met_at IS NULL
@@ -208,7 +207,7 @@ RETURNING met_at;
 -- name: mark-sla-event-as-breached
 UPDATE sla_events
 SET breached_at = NOW(),
-status = 'breached'
+    status = 'breached'
 WHERE id = $1;
 
 -- name: mark-sla-event-as-met
@@ -216,7 +215,7 @@ UPDATE sla_events
 SET status = 'met'
 WHERE id = $1;
 
--- name: get-sla-event
+-- name: get-sla-event-by-id
 SELECT id, created_at, updated_at, applied_sla_id, sla_policy_id, type, deadline_at, met_at, breached_at
 FROM sla_events
 WHERE id = $1;
@@ -224,4 +223,4 @@ WHERE id = $1;
 -- name: get-pending-sla-events
 SELECT id
 FROM sla_events
-WHERE status = 'pending' and deadline_at IS NOT NULL;
+WHERE status = 'pending' AND deadline_at IS NOT NULL;

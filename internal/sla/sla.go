@@ -38,6 +38,7 @@ const (
 	MetricFirstResponse = "first_response"
 	MetricResolution    = "resolution"
 	MetricNextResponse  = "next_response"
+	MetricAll           = "all"
 
 	NotificationTypeWarning = "warning"
 	NotificationTypeBreach  = "breach"
@@ -103,11 +104,10 @@ type businessHrsStore interface {
 
 // queries hold prepared SQL queries.
 type queries struct {
-	// TODO: name queries better.
 	GetSLA                             *sqlx.Stmt `query:"get-sla-policy"`
 	GetAllSLA                          *sqlx.Stmt `query:"get-all-sla-policies"`
 	GetAppliedSLA                      *sqlx.Stmt `query:"get-applied-sla"`
-	GetSLAEvent                        *sqlx.Stmt `query:"get-sla-event"`
+	GetSLAEventByID                    *sqlx.Stmt `query:"get-sla-event-by-id"`
 	GetScheduledSLANotifications       *sqlx.Stmt `query:"get-scheduled-sla-notifications"`
 	GetLatestAppliedSLAForConversation *sqlx.Stmt `query:"get-latest-applied-sla-for-conversation"`
 	InsertScheduledSLANotification     *sqlx.Stmt `query:"insert-scheduled-sla-notification"`
@@ -372,14 +372,18 @@ func (m *Manager) SetLatestSLAEventMetAt(conversationID int, metric string) (tim
 	return metAt, nil
 }
 
-// evaluatePendingSLAEvents fetches pending SLA events and marks them as breached if the deadline has passed.
+// evaluatePendingSLAEvents fetches pending SLA events, updates their status based on deadlines, and schedules notifications for breached SLAs.
 func (m *Manager) evaluatePendingSLAEvents(ctx context.Context) error {
 	var slaEvents []models.SLAEvent
 	if err := m.q.GetPendingSLAEvents.SelectContext(ctx, &slaEvents); err != nil {
 		m.lo.Error("error fetching pending SLA events", "error", err)
 		return fmt.Errorf("fetching pending SLA events: %w", err)
 	}
-	m.lo.Info("found SLA events that have breached", "count", len(slaEvents))
+	if len(slaEvents) == 0 {
+		return nil
+	}
+
+	m.lo.Info("found pending SLA events for evaluation", "count", len(slaEvents))
 
 	// Cache for SLA policies.
 	var slaPolicyCache = make(map[int]models.SLAPolicy)
@@ -390,13 +394,13 @@ func (m *Manager) evaluatePendingSLAEvents(ctx context.Context) error {
 		default:
 		}
 
-		if err := m.q.GetSLAEvent.GetContext(ctx, &event, event.ID); err != nil {
+		if err := m.q.GetSLAEventByID.GetContext(ctx, &event, event.ID); err != nil {
 			m.lo.Error("error fetching SLA event", "error", err)
 			continue
 		}
 
 		if event.DeadlineAt.IsZero() {
-			m.lo.Warn("SLA event deadline is zero, skipping marking as breached", "sla_event_id", event.ID)
+			m.lo.Warn("SLA event deadline is zero, skipping evaluation", "sla_event_id", event.ID)
 			continue
 		}
 
@@ -418,9 +422,9 @@ func (m *Manager) evaluatePendingSLAEvents(ctx context.Context) error {
 			}
 		}
 
-		// Schedule a breach notification if the event is not met at all.
+		// Schedule a breach notification if the event is not met at all and SLA breached.
 		if !event.MetAt.Valid && hasBreached {
-			// Check if the SLA policy is already cached.
+			// Get policy from cache.
 			slaPolicy, ok := slaPolicyCache[event.SlaPolicyID]
 			if !ok {
 				var err error
@@ -439,8 +443,8 @@ func (m *Manager) evaluatePendingSLAEvents(ctx context.Context) error {
 	return nil
 }
 
-// Start begins SLA and SLA event evaluation loops in separate goroutines.
-func (m *Manager) Start(ctx context.Context, interval time.Duration) {
+// Run starts Applied SLA and SLA event evaluation loops in separate goroutines.
+func (m *Manager) Run(ctx context.Context, interval time.Duration) {
 	m.wg.Add(2)
 	go m.runSLAEvaluation(ctx, interval)
 	go m.runSLAEventEvaluation(ctx, interval)
@@ -515,14 +519,14 @@ func (m *Manager) SendNotifications(ctx context.Context) error {
 	}
 }
 
-// SendNotification sends a SLA notification to agents.
+// SendNotification sends a SLA notification to agents, a schedule notification can be linked to a specific SLA event or applied SLA.
 func (m *Manager) SendNotification(scheduledNotification models.ScheduledSLANotification) error {
 	var (
 		appliedSLA models.AppliedSLA
 		slaEvent   models.SLAEvent
 	)
 	if scheduledNotification.SlaEventID.Int != 0 {
-		if err := m.q.GetSLAEvent.Get(&slaEvent, scheduledNotification.SlaEventID.Int); err != nil {
+		if err := m.q.GetSLAEventByID.Get(&slaEvent, scheduledNotification.SlaEventID.Int); err != nil {
 			m.lo.Error("error fetching SLA event", "error", err)
 			return fmt.Errorf("fetching SLA event for notification: %w", err)
 		}
@@ -760,14 +764,15 @@ func (m *Manager) getBusinessHoursAndTimezone(assignedTeamID int) (bmodels.Busin
 	return bh, timezone, nil
 }
 
-// createNotificationSchedule creates a notification schedule in database for the applied SLA.
+// createNotificationSchedule creates a notification schedule in database for the applied SLA to be sent later.
 func (m *Manager) createNotificationSchedule(notifications models.SlaNotifications, appliedSLAID int, slaEventID null.Int, deadlines Deadlines, breaches Breaches) {
 	scheduleNotification := func(sendAt time.Time, metric, notifType string, recipients []string) {
 		// Make sure the sendAt time is in not too far in the past.
 		if sendAt.Before(time.Now().Add(-5 * time.Minute)) {
-			m.lo.Debug("skipping scheduling notification as it is in the past", "send_at", sendAt, "applied_sla_id", appliedSLAID, "metric", metric, "type", notifType)
+			m.lo.Warn("skipping scheduling notification as it is in the past", "send_at", sendAt, "applied_sla_id", appliedSLAID, "metric", metric, "type", notifType)
 			return
 		}
+		m.lo.Info("scheduling SLA notification", "send_at", sendAt, "applied_sla_id", appliedSLAID, "metric", metric, "type", notifType, "recipients", recipients)
 		if _, err := m.q.InsertScheduledSLANotification.Exec(appliedSLAID, slaEventID, metric, notifType, pq.Array(recipients), sendAt); err != nil {
 			m.lo.Error("error inserting scheduled SLA notification", "error", err)
 		}
@@ -775,42 +780,41 @@ func (m *Manager) createNotificationSchedule(notifications models.SlaNotificatio
 
 	// Insert scheduled entries for each notification.
 	for _, notif := range notifications {
-		var (
-			delayDur time.Duration
-			err      error
-		)
-
-		// No delay for immediate notifications.
-		if notif.TimeDelayType == "immediately" {
-			delayDur = 0
-		} else {
-			delayDur, err = time.ParseDuration(notif.TimeDelay)
-			if err != nil {
+		delayDur := time.Duration(0)
+		if notif.TimeDelayType != "immediately" && notif.TimeDelay != "" {
+			if d, err := time.ParseDuration(notif.TimeDelay); err == nil {
+				delayDur = d
+			} else {
 				m.lo.Error("error parsing sla notification delay", "error", err)
 				continue
 			}
 		}
 
-		if notif.Type == NotificationTypeWarning {
-			if !deadlines.FirstResponse.IsZero() {
-				scheduleNotification(deadlines.FirstResponse.Add(-delayDur), MetricFirstResponse, notif.Type, notif.Recipients)
+		if notif.Metric == "" {
+			notif.Metric = MetricAll
+		}
+
+		schedule := func(target time.Time, metricType string) {
+			if !target.IsZero() && (notif.Metric == metricType || notif.Metric == MetricAll) {
+				var sendAt time.Time
+				if notif.Type == NotificationTypeWarning {
+					sendAt = target.Add(-delayDur)
+				} else {
+					sendAt = target.Add(delayDur)
+				}
+				scheduleNotification(sendAt, metricType, notif.Type, notif.Recipients)
 			}
-			if !deadlines.Resolution.IsZero() {
-				scheduleNotification(deadlines.Resolution.Add(-delayDur), MetricResolution, notif.Type, notif.Recipients)
-			}
-			if !deadlines.NextResponse.IsZero() {
-				scheduleNotification(deadlines.NextResponse.Add(-delayDur), MetricNextResponse, notif.Type, notif.Recipients)
-			}
-		} else if notif.Type == NotificationTypeBreach {
-			if !breaches.FirstResponse.IsZero() {
-				scheduleNotification(breaches.FirstResponse.Add(delayDur), MetricFirstResponse, notif.Type, notif.Recipients)
-			}
-			if !breaches.Resolution.IsZero() {
-				scheduleNotification(breaches.Resolution.Add(delayDur), MetricResolution, notif.Type, notif.Recipients)
-			}
-			if !breaches.NextResponse.IsZero() {
-				scheduleNotification(breaches.NextResponse.Add(delayDur), MetricNextResponse, notif.Type, notif.Recipients)
-			}
+		}
+
+		switch notif.Type {
+		case NotificationTypeWarning:
+			schedule(deadlines.FirstResponse, MetricFirstResponse)
+			schedule(deadlines.Resolution, MetricResolution)
+			schedule(deadlines.NextResponse, MetricNextResponse)
+		case NotificationTypeBreach:
+			schedule(breaches.FirstResponse, MetricFirstResponse)
+			schedule(breaches.Resolution, MetricResolution)
+			schedule(breaches.NextResponse, MetricNextResponse)
 		}
 	}
 }
