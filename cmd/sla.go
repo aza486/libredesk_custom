@@ -110,7 +110,7 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 	if sla.Name == "" {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil)
 	}
-	if sla.FirstResponseTime == "" && sla.NextResponseTime == "" && sla.ResolutionTime == "" {
+	if sla.FirstResponseTime.String == "" && sla.NextResponseTime.String == "" && sla.ResolutionTime.String == "" {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "At least one of `first_response_time`, `next_response_time`, or `resolution_time` must be provided."), nil)
 	}
 
@@ -144,8 +144,8 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 	}
 
 	// Validate first response time duration string if not empty.
-	if sla.FirstResponseTime != "" {
-		frt, err := time.ParseDuration(sla.FirstResponseTime)
+	if sla.FirstResponseTime.String != "" {
+		frt, err := time.ParseDuration(sla.FirstResponseTime.String)
 		if err != nil {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`first_response_time`"), nil)
 		}
@@ -155,8 +155,8 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 	}
 
 	// Validate resolution time duration string if not empty.
-	if sla.ResolutionTime != "" {
-		rt, err := time.ParseDuration(sla.ResolutionTime)
+	if sla.ResolutionTime.String != "" {
+		rt, err := time.ParseDuration(sla.ResolutionTime.String)
 		if err != nil {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`resolution_time`"), nil)
 		}
@@ -164,8 +164,8 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`resolution_time`"), nil)
 		}
 		// Compare with first response time if both are present.
-		if sla.FirstResponseTime != "" {
-			frt, _ := time.ParseDuration(sla.FirstResponseTime)
+		if sla.FirstResponseTime.String != "" {
+			frt, _ := time.ParseDuration(sla.FirstResponseTime.String)
 			if frt > rt {
 				return envelope.NewError(envelope.InputError, app.i18n.T("sla.firstResponseTimeAfterResolution"), nil)
 			}
@@ -173,8 +173,8 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 	}
 
 	// Validate next response time duration string if not empty.
-	if sla.NextResponseTime != "" {
-		nrt, err := time.ParseDuration(sla.NextResponseTime)
+	if sla.NextResponseTime.String != "" {
+		nrt, err := time.ParseDuration(sla.NextResponseTime.String)
 		if err != nil {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`next_response_time`"), nil)
 		}

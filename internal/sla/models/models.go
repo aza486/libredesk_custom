@@ -16,11 +16,11 @@ type SLAPolicy struct {
 	CreatedAt         time.Time        `db:"created_at" json:"created_at"`
 	UpdatedAt         time.Time        `db:"updated_at" json:"updated_at"`
 	Name              string           `db:"name" json:"name"`
-	Description       string           `db:"description" json:"description,omitempty"`
-	FirstResponseTime string           `db:"first_response_time" json:"first_response_time,omitempty"`
-	NextResponseTime  string           `db:"next_response_time" json:"next_response_time,omitempty"`
-	ResolutionTime    string           `db:"resolution_time" json:"resolution_time,omitempty"`
-	Notifications     SlaNotifications `db:"notifications" json:"notifications,omitempty"`
+	Description       string           `db:"description" json:"description"`
+	FirstResponseTime null.String      `db:"first_response_time" json:"first_response_time"`
+	NextResponseTime  null.String      `db:"next_response_time" json:"next_response_time"`
+	ResolutionTime    null.String      `db:"resolution_time" json:"resolution_time"`
+	Notifications     SlaNotifications `db:"notifications" json:"notifications"`
 }
 
 type SlaNotifications []SlaNotification

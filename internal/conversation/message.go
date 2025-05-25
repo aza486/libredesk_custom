@@ -205,8 +205,8 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 
 		// Mark latest SLA event for next response as met.
 		metAt, err := m.slaStore.SetLatestSLAEventMetAt(conversation.AppliedSLAID.Int, sla.MetricNextResponse)
-		if err != nil {
-			m.lo.Error("error setting next response SLA event met at", "conversation_id", conversation.ID, "error", err)
+		if err != nil && !errors.Is(err, sla.ErrLatestSLAEventNotFound) {
+			m.lo.Error("error setting next response SLA event `met_at`", "conversation_id", conversation.ID, "metric", sla.MetricNextResponse, "applied_sla_id", conversation.AppliedSLAID.Int, "error", err)
 		} else if !metAt.IsZero() {
 			m.BroadcastConversationUpdate(message.ConversationUUID, "next_response_met_at", metAt.Format(time.RFC3339))
 		}

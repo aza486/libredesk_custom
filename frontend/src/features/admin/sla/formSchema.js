@@ -12,13 +12,13 @@ export const createFormSchema = (t) =>
                 .string()
                 .min(1, { message: t('admin.sla.description.valid') })
                 .max(255, { message: t('admin.sla.description.valid') }),
-            first_response_time: z.string().optional().refine(val => !val || isGoHourMinuteDuration(val), {
+            first_response_time: z.string().nullable().optional().refine(val => !val || isGoHourMinuteDuration(val), {
                 message: t('globals.messages.goHourMinuteDuration'),
             }),
-            resolution_time: z.string().optional().refine(val => !val || isGoHourMinuteDuration(val), {
+            resolution_time: z.string().nullable().optional().refine(val => !val || isGoHourMinuteDuration(val), {
                 message: t('globals.messages.goHourMinuteDuration'),
             }),
-            next_response_time: z.string().optional().refine(val => !val || isGoHourMinuteDuration(val), {
+            next_response_time: z.string().nullable().optional().refine(val => !val || isGoHourMinuteDuration(val), {
                 message: t('globals.messages.goHourMinuteDuration'),
             }),
             notifications: z

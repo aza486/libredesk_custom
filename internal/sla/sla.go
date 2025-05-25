@@ -34,6 +34,7 @@ var (
 	//go:embed queries.sql
 	efs                           embed.FS
 	ErrUnmetSLAEventAlreadyExists = errors.New("unmet SLA event already exists, cannot create a new one for the same applied SLA and metric")
+	ErrLatestSLAEventNotFound     = errors.New("latest SLA event not found for the applied SLA and metric")
 )
 
 const (
@@ -162,7 +163,7 @@ func (m *Manager) GetAll() ([]models.SLAPolicy, error) {
 }
 
 // Create creates a new SLA policy.
-func (m *Manager) Create(name, description string, firstResponseTime, resolutionTime, nextResponseTime string, notifications models.SlaNotifications) error {
+func (m *Manager) Create(name, description string, firstResponseTime, resolutionTime, nextResponseTime null.String, notifications models.SlaNotifications) error {
 	if _, err := m.q.InsertSLA.Exec(name, description, firstResponseTime, resolutionTime, nextResponseTime, notifications); err != nil {
 		m.lo.Error("error inserting SLA", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.sla}"), nil)
@@ -171,7 +172,7 @@ func (m *Manager) Create(name, description string, firstResponseTime, resolution
 }
 
 // Update updates a SLA policy.
-func (m *Manager) Update(id int, name, description string, firstResponseTime, resolutionTime, nextResponseTime string, notifications models.SlaNotifications) error {
+func (m *Manager) Update(id int, name, description string, firstResponseTime, resolutionTime, nextResponseTime null.String, notifications models.SlaNotifications) error {
 	if _, err := m.q.UpdateSLA.Exec(id, name, description, firstResponseTime, resolutionTime, nextResponseTime, notifications); err != nil {
 		m.lo.Error("error updating SLA", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.sla}"), nil)
@@ -220,13 +221,13 @@ func (m *Manager) GetDeadlines(startTime time.Time, slaPolicyID, assignedTeamID 
 		return deadline, nil
 	}
 
-	if deadlines.FirstResponse, err = calculateDeadline(sla.FirstResponseTime); err != nil {
+	if deadlines.FirstResponse, err = calculateDeadline(sla.FirstResponseTime.String); err != nil {
 		return deadlines, err
 	}
-	if deadlines.Resolution, err = calculateDeadline(sla.ResolutionTime); err != nil {
+	if deadlines.Resolution, err = calculateDeadline(sla.ResolutionTime.String); err != nil {
 		return deadlines, err
 	}
-	if deadlines.NextResponse, err = calculateDeadline(sla.NextResponseTime); err != nil {
+	if deadlines.NextResponse, err = calculateDeadline(sla.NextResponseTime.String); err != nil {
 		return deadlines, err
 	}
 	return deadlines, nil
@@ -278,7 +279,7 @@ func (m *Manager) CreateNextResponseSLAEvent(conversationID, appliedSLAID, slaPo
 		return time.Time{}, fmt.Errorf("fetching SLA policy: %w", err)
 	}
 
-	if slaPolicy.NextResponseTime == "" {
+	if slaPolicy.NextResponseTime.String == "" {
 		m.lo.Info("no next response time set for SLA policy, skipping event creation",
 			"conversation_id", conversationID,
 			"policy_id", slaPolicyID,
@@ -345,7 +346,7 @@ func (m *Manager) SetLatestSLAEventMetAt(appliedSLAID int, metric string) (time.
 	if err := m.q.SetLatestSLAEventMetAt.QueryRow(appliedSLAID, metric).Scan(&metAt); err != nil {
 		if err == sql.ErrNoRows {
 			m.lo.Warn("no SLA event found for applied SLA and metric to update met at", "applied_sla_id", appliedSLAID, "metric", metric)
-			return metAt, fmt.Errorf("no SLA event found for applied SLA ID: %d and metric: %s to update met at", appliedSLAID, metric)
+			return metAt, ErrLatestSLAEventNotFound
 		}
 		m.lo.Error("error marking SLA event as met", "error", err)
 		return metAt, fmt.Errorf("marking SLA event as met: %w", err)
