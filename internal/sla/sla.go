@@ -77,16 +77,16 @@ type Opts struct {
 
 // Deadlines holds the deadlines for an SLA policy.
 type Deadlines struct {
-	FirstResponse time.Time
-	Resolution    time.Time
-	NextResponse  time.Time
+	FirstResponse null.Time
+	Resolution    null.Time
+	NextResponse  null.Time
 }
 
 // Breaches holds the breach timestamps for an SLA policy.
 type Breaches struct {
-	FirstResponse time.Time
-	Resolution    time.Time
-	NextResponse  time.Time
+	FirstResponse null.Time
+	Resolution    null.Time
+	NextResponse  null.Time
 }
 
 type teamStore interface {
@@ -206,19 +206,19 @@ func (m *Manager) GetDeadlines(startTime time.Time, slaPolicyID, assignedTeamID 
 	}
 
 	// Helper function to calculate deadlines by parsing the duration string.
-	calculateDeadline := func(durationStr string) (time.Time, error) {
+	calculateDeadline := func(durationStr string) (null.Time, error) {
 		if durationStr == "" {
-			return time.Time{}, nil
+			return null.Time{}, nil
 		}
 		dur, err := time.ParseDuration(durationStr)
 		if err != nil {
-			return time.Time{}, fmt.Errorf("parsing SLA duration (%s): %v", durationStr, err)
+			return null.Time{}, fmt.Errorf("parsing SLA duration (%s): %v", durationStr, err)
 		}
 		deadline, err := m.CalculateDeadline(startTime, int(dur.Minutes()), businessHrs, timezone)
 		if err != nil {
-			return time.Time{}, err
+			return null.Time{}, err
 		}
-		return deadline, nil
+		return null.TimeFrom(deadline), nil
 	}
 
 	if deadlines.FirstResponse, err = calculateDeadline(sla.FirstResponseTime.String); err != nil {
@@ -243,7 +243,7 @@ func (m *Manager) ApplySLA(startTime time.Time, conversationID, assignedTeamID, 
 		return sla, err
 	}
 	// Next response is not set at this point, next response are stored in SLA events as there can be multiple entries for next response.
-	deadlines.NextResponse = time.Time{}
+	deadlines.NextResponse = null.Time{}
 
 	// Insert applied SLA entry.
 	var appliedSLAID int
@@ -333,11 +333,11 @@ func (m *Manager) CreateNextResponseSLAEvent(conversationID, appliedSLAID, slaPo
 	}
 
 	// Create notification schedule for the next response SLA event.
-	deadlines.FirstResponse = time.Time{}
-	deadlines.Resolution = time.Time{}
+	deadlines.FirstResponse = null.Time{}
+	deadlines.Resolution = null.Time{}
 	m.createNotificationSchedule(slaPolicy.Notifications, appliedSLAID, null.IntFrom(slaEventID), deadlines, Breaches{})
 
-	return deadlines.NextResponse, nil
+	return deadlines.NextResponse.Time, nil
 }
 
 // SetLatestSLAEventMetAt marks the latest SLA event as met for a given applied SLA.
@@ -418,7 +418,7 @@ func (m *Manager) evaluatePendingSLAEvents(ctx context.Context) error {
 				slaPolicyCache[event.SlaPolicyID] = slaPolicy
 			}
 			m.createNotificationSchedule(slaPolicy.Notifications, event.AppliedSLAID, null.IntFrom(event.ID), Deadlines{}, Breaches{
-				NextResponse: time.Now(),
+				NextResponse: null.TimeFrom(time.Now()),
 			})
 		}
 	}
@@ -776,13 +776,13 @@ func (m *Manager) createNotificationSchedule(notifications models.SlaNotificatio
 			notif.Metric = MetricAll
 		}
 
-		schedule := func(target time.Time, metricType string) {
-			if !target.IsZero() && (notif.Metric == metricType || notif.Metric == MetricAll) {
+		schedule := func(target null.Time, metricType string) {
+			if target.Valid && (notif.Metric == metricType || notif.Metric == MetricAll) {
 				var sendAt time.Time
 				if notif.Type == NotificationTypeWarning {
-					sendAt = target.Add(-delayDur)
+					sendAt = target.Time.Add(-delayDur)
 				} else {
-					sendAt = target.Add(delayDur)
+					sendAt = target.Time.Add(delayDur)
 				}
 				scheduleNotification(sendAt, metricType, notif.Type, notif.Recipients)
 			}
@@ -899,11 +899,11 @@ func (m *Manager) updateBreachAt(appliedSLAID, slaPolicyID int, metric string) e
 		return err
 	}
 
-	var firstResponse, resolution time.Time
+	var firstResponse, resolution null.Time
 	if metric == MetricFirstResponse {
-		firstResponse = time.Now()
+		firstResponse = null.TimeFrom(time.Now())
 	} else if metric == MetricResolution {
-		resolution = time.Now()
+		resolution = null.TimeFrom(time.Now())
 	}
 
 	// Create notification schedule.
