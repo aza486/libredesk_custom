@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -31,7 +32,8 @@ import (
 
 var (
 	//go:embed queries.sql
-	efs embed.FS
+	efs                           embed.FS
+	ErrUnmetSLAEventAlreadyExists = errors.New("unmet SLA event already exists, cannot create a new one for the same applied SLA and metric")
 )
 
 const (
@@ -104,28 +106,27 @@ type businessHrsStore interface {
 
 // queries hold prepared SQL queries.
 type queries struct {
-	GetSLA                             *sqlx.Stmt `query:"get-sla-policy"`
-	GetAllSLA                          *sqlx.Stmt `query:"get-all-sla-policies"`
-	GetAppliedSLA                      *sqlx.Stmt `query:"get-applied-sla"`
-	GetSLAEventByID                    *sqlx.Stmt `query:"get-sla-event-by-id"`
-	GetScheduledSLANotifications       *sqlx.Stmt `query:"get-scheduled-sla-notifications"`
-	GetLatestAppliedSLAForConversation *sqlx.Stmt `query:"get-latest-applied-sla-for-conversation"`
-	InsertScheduledSLANotification     *sqlx.Stmt `query:"insert-scheduled-sla-notification"`
-	InsertSLA                          *sqlx.Stmt `query:"insert-sla-policy"`
-	InsertNextResponseSLAEvent         *sqlx.Stmt `query:"insert-next-response-sla-event"`
-	DeleteSLA                          *sqlx.Stmt `query:"delete-sla-policy"`
-	UpdateSLA                          *sqlx.Stmt `query:"update-sla-policy"`
-	ApplySLA                           *sqlx.Stmt `query:"apply-sla"`
-	GetPendingSLAs                     *sqlx.Stmt `query:"get-pending-slas"`
-	UpdateBreach                       *sqlx.Stmt `query:"update-breach"`
-	UpdateMet                          *sqlx.Stmt `query:"update-met"`
-	SetConversationNextSLADeadline     *sqlx.Stmt `query:"set-conversation-sla-deadline"`
-	GetPendingSLAEvents                *sqlx.Stmt `query:"get-pending-sla-events"`
-	UpdateSLAStatus                    *sqlx.Stmt `query:"update-sla-status"`
-	MarkNotificationProcessed          *sqlx.Stmt `query:"mark-notification-processed"`
-	MarkSLAEventAsBreached             *sqlx.Stmt `query:"mark-sla-event-as-breached"`
-	MarkSLAEventAsMet                  *sqlx.Stmt `query:"mark-sla-event-as-met"`
-	SetLatestSLAEventMetAt             *sqlx.Stmt `query:"set-latest-sla-event-met-at"`
+	GetSLA                         *sqlx.Stmt `query:"get-sla-policy"`
+	GetAllSLA                      *sqlx.Stmt `query:"get-all-sla-policies"`
+	GetAppliedSLA                  *sqlx.Stmt `query:"get-applied-sla"`
+	GetSLAEventByID                *sqlx.Stmt `query:"get-sla-event-by-id"`
+	GetScheduledSLANotifications   *sqlx.Stmt `query:"get-scheduled-sla-notifications"`
+	InsertScheduledSLANotification *sqlx.Stmt `query:"insert-scheduled-sla-notification"`
+	InsertSLA                      *sqlx.Stmt `query:"insert-sla-policy"`
+	InsertNextResponseSLAEvent     *sqlx.Stmt `query:"insert-next-response-sla-event"`
+	DeleteSLA                      *sqlx.Stmt `query:"delete-sla-policy"`
+	UpdateSLA                      *sqlx.Stmt `query:"update-sla-policy"`
+	ApplySLA                       *sqlx.Stmt `query:"apply-sla"`
+	GetPendingSLAs                 *sqlx.Stmt `query:"get-pending-slas"`
+	UpdateBreach                   *sqlx.Stmt `query:"update-breach"`
+	UpdateMet                      *sqlx.Stmt `query:"update-met"`
+	SetConversationNextSLADeadline *sqlx.Stmt `query:"set-conversation-sla-deadline"`
+	GetPendingSLAEvents            *sqlx.Stmt `query:"get-pending-sla-events"`
+	UpdateSLAStatus                *sqlx.Stmt `query:"update-sla-status"`
+	MarkNotificationProcessed      *sqlx.Stmt `query:"mark-notification-processed"`
+	MarkSLAEventAsBreached         *sqlx.Stmt `query:"mark-sla-event-as-breached"`
+	MarkSLAEventAsMet              *sqlx.Stmt `query:"mark-sla-event-as-met"`
+	SetLatestSLAEventMetAt         *sqlx.Stmt `query:"set-latest-sla-event-met-at"`
 }
 
 // New creates a new SLA manager.
@@ -267,21 +268,11 @@ func (m *Manager) ApplySLA(startTime time.Time, conversationID, assignedTeamID, 
 }
 
 // CreateNextResponseSLAEvent creates a next response SLA event for a conversation.
-func (m *Manager) CreateNextResponseSLAEvent(conversationID, assignedTeamID int) (time.Time, error) {
-	// Fetch the latest applied SLA for the conversation.
-	var appliedSLA models.AppliedSLA
-	if err := m.q.GetLatestAppliedSLAForConversation.Get(&appliedSLA, conversationID); err != nil {
-		if err == sql.ErrNoRows {
-			return time.Time{}, fmt.Errorf("no applied SLA found for conversation: %d", conversationID)
-		}
-		m.lo.Error("error fetching latest applied SLA for conversation", "error", err)
-		return time.Time{}, fmt.Errorf("fetching latest applied SLA for conversation: %w", err)
-	}
-
+func (m *Manager) CreateNextResponseSLAEvent(conversationID, appliedSLAID, slaPolicyID, assignedTeamID int) (time.Time, error) {
 	var slaPolicy models.SLAPolicy
-	if err := m.q.GetSLA.Get(&slaPolicy, appliedSLA.SLAPolicyID); err != nil {
+	if err := m.q.GetSLA.Get(&slaPolicy, slaPolicyID); err != nil {
 		if err == sql.ErrNoRows {
-			return time.Time{}, fmt.Errorf("SLA policy not found: %d", appliedSLA.SLAPolicyID)
+			return time.Time{}, fmt.Errorf("SLA policy not found: %d", slaPolicyID)
 		}
 		m.lo.Error("error fetching SLA policy", "error", err)
 		return time.Time{}, fmt.Errorf("fetching SLA policy: %w", err)
@@ -290,10 +281,10 @@ func (m *Manager) CreateNextResponseSLAEvent(conversationID, assignedTeamID int)
 	if slaPolicy.NextResponseTime == "" {
 		m.lo.Info("no next response time set for SLA policy, skipping event creation",
 			"conversation_id", conversationID,
-			"policy_id", appliedSLA.SLAPolicyID,
-			"applied_sla_id", appliedSLA.ID,
+			"policy_id", slaPolicyID,
+			"applied_sla_id", appliedSLAID,
 		)
-		return time.Time{}, fmt.Errorf("no next response time set for SLA policy: %d, applied_sla: %d", appliedSLA.SLAPolicyID, appliedSLA.ID)
+		return time.Time{}, fmt.Errorf("no next response time set for SLA policy: %d, applied_sla: %d", slaPolicyID, appliedSLAID)
 	}
 
 	// Calculate the deadline for the next response SLA event.
@@ -306,28 +297,28 @@ func (m *Manager) CreateNextResponseSLAEvent(conversationID, assignedTeamID int)
 	if deadlines.NextResponse.IsZero() {
 		m.lo.Info("next response deadline is zero, skipping event creation",
 			"conversation_id", conversationID,
-			"policy_id", appliedSLA.SLAPolicyID,
-			"applied_sla_id", appliedSLA.ID,
+			"policy_id", slaPolicyID,
+			"applied_sla_id", appliedSLAID,
 		)
-		return time.Time{}, fmt.Errorf("next response deadline is zero for conversation: %d, policy: %d, applied_sla: %d", conversationID, appliedSLA.SLAPolicyID, appliedSLA.ID)
+		return time.Time{}, fmt.Errorf("next response deadline is zero for conversation: %d, policy: %d, applied_sla: %d", conversationID, slaPolicyID, appliedSLAID)
 	}
 
 	var slaEventID int
-	if err := m.q.InsertNextResponseSLAEvent.QueryRow(appliedSLA.ID, appliedSLA.SLAPolicyID, deadlines.NextResponse).Scan(&slaEventID); err != nil {
+	if err := m.q.InsertNextResponseSLAEvent.QueryRow(appliedSLAID, slaPolicyID, deadlines.NextResponse).Scan(&slaEventID); err != nil {
 		if err == sql.ErrNoRows {
-			m.lo.Debug("unmet SLA event for next response already exists, skipping creation",
+			m.lo.Info("skipping next response SLA event creation; unmet event already exists",
 				"conversation_id", conversationID,
 				"policy_id", slaPolicy.ID,
-				"applied_sla_id", appliedSLA.ID,
+				"applied_sla_id", appliedSLAID,
 			)
-			return time.Time{}, fmt.Errorf("unmet next response SLA event already exists for conversation: %d, policy: %d, applied_sla: %d", conversationID, slaPolicy.ID, appliedSLA.ID)
+			return time.Time{}, ErrUnmetSLAEventAlreadyExists
 		}
 		m.lo.Error("error inserting SLA event",
 			"error", err,
 			"conversation_id", conversationID,
-			"applied_sla_id", appliedSLA.ID,
+			"applied_sla_id", appliedSLAID,
 		)
-		return time.Time{}, fmt.Errorf("inserting SLA event (applied_sla: %d): %w", appliedSLA.ID, err)
+		return time.Time{}, fmt.Errorf("inserting SLA event (applied_sla: %d): %w", appliedSLAID, err)
 	}
 
 	// Update next SLA deadline (SLA target) in the conversation.
@@ -335,36 +326,26 @@ func (m *Manager) CreateNextResponseSLAEvent(conversationID, assignedTeamID int)
 		m.lo.Error("error updating conversation next SLA deadline",
 			"error", err,
 			"conversation_id", conversationID,
-			"applied_sla_id", appliedSLA.ID,
+			"applied_sla_id", appliedSLAID,
 		)
-		return time.Time{}, fmt.Errorf("updating conversation next SLA deadline (applied_sla: %d): %w", appliedSLA.ID, err)
+		return time.Time{}, fmt.Errorf("updating conversation next SLA deadline (applied_sla: %d): %w", appliedSLAID, err)
 	}
 
 	// Create notification schedule for the next response SLA event.
 	deadlines.FirstResponse = time.Time{}
 	deadlines.Resolution = time.Time{}
-	m.createNotificationSchedule(slaPolicy.Notifications, appliedSLA.ID, null.IntFrom(slaEventID), deadlines, Breaches{})
+	m.createNotificationSchedule(slaPolicy.Notifications, appliedSLAID, null.IntFrom(slaEventID), deadlines, Breaches{})
 
 	return deadlines.NextResponse, nil
 }
 
 // SetLatestSLAEventMetAt marks the latest SLA event as met for a given applied SLA.
-func (m *Manager) SetLatestSLAEventMetAt(conversationID int, metric string) (time.Time, error) {
-	var appliedSLA models.AppliedSLA
-	if err := m.q.GetLatestAppliedSLAForConversation.Get(&appliedSLA, conversationID); err != nil {
-		if err == sql.ErrNoRows {
-			m.lo.Warn("no applied SLA found for conversation to update met at", "conversation_id", conversationID)
-			return time.Time{}, fmt.Errorf("no applied SLA found for conversation: %d to update met at", conversationID)
-		}
-		m.lo.Error("error fetching latest applied SLA for conversation", "error", err)
-		return time.Time{}, fmt.Errorf("fetching latest applied SLA for conversation: %w", err)
-	}
-
+func (m *Manager) SetLatestSLAEventMetAt(appliedSLAID int, metric string) (time.Time, error) {
 	var metAt time.Time
-	if err := m.q.SetLatestSLAEventMetAt.QueryRow(appliedSLA.ID, metric).Scan(&metAt); err != nil {
+	if err := m.q.SetLatestSLAEventMetAt.QueryRow(appliedSLAID, metric).Scan(&metAt); err != nil {
 		if err == sql.ErrNoRows {
-			m.lo.Warn("no SLA event found for applied SLA and metric to update met at", "applied_sla_id", appliedSLA.ID, "metric", metric)
-			return metAt, fmt.Errorf("no SLA event found for applied SLA ID: %d and metric: %s to update met at", appliedSLA.ID, metric)
+			m.lo.Warn("no SLA event found for applied SLA and metric to update met at", "applied_sla_id", appliedSLAID, "metric", metric)
+			return metAt, fmt.Errorf("no SLA event found for applied SLA ID: %d and metric: %s to update met at", appliedSLAID, metric)
 		}
 		m.lo.Error("error marking SLA event as met", "error", err)
 		return metAt, fmt.Errorf("marking SLA event as met: %w", err)

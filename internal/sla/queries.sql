@@ -151,33 +151,6 @@ FROM applied_slas a INNER JOIN conversations c on a.conversation_id = c.id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 WHERE a.id = $1;
 
--- name: get-latest-applied-sla-for-conversation
-SELECT a.id,
-   a.created_at,
-   a.updated_at,
-   a.conversation_id,
-   a.sla_policy_id,
-   a.first_response_deadline_at,
-   a.resolution_deadline_at,
-   a.first_response_met_at,
-   a.resolution_met_at,
-   a.first_response_breached_at,
-   a.resolution_breached_at,
-   a.status,
-   c.first_reply_at as conversation_first_response_at,
-   c.resolved_at as conversation_resolved_at,
-   c.uuid as conversation_uuid,
-   c.reference_number as conversation_reference_number,
-   c.subject as conversation_subject,
-   c.assigned_user_id as conversation_assigned_user_id,
-   s.name as conversation_status
-FROM applied_slas a
-INNER JOIN conversations c ON a.conversation_id = c.id
-LEFT JOIN conversation_statuses s ON c.status_id = s.id
-WHERE a.conversation_id = $1
-ORDER BY a.created_at DESC
-LIMIT 1;
-
 -- name: mark-notification-processed
 UPDATE scheduled_sla_notifications
 SET processed_at = NOW(),
