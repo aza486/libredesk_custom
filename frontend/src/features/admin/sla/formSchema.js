@@ -27,7 +27,9 @@ export const createFormSchema = (t) =>
                         .object({
                             type: z.enum(['breach', 'warning']),
                             time_delay_type: z.enum(['immediately', 'after', 'before']),
-                            time_delay: z.string().optional(),
+                            time_delay: z.string().optional().refine(val => isGoHourMinuteDuration(val), {
+                                message: t('globals.messages.goHourMinuteDuration'),
+                            }),
                             metric: z.enum(['first_response', 'resolution', 'next_response', 'all']),
                             recipients: z
                                 .array(z.string())

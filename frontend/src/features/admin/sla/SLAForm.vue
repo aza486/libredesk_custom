@@ -172,22 +172,14 @@
                       }}
                     </FormLabel>
                     <FormControl>
-                      <Select v-bind="componentField">
-                        <SelectTrigger class="w-full">
-                          <SelectValue :placeholder="t('admin.sla.selectDuration')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem
-                              v-for="duration in delayDurations"
-                              :key="duration"
-                              :value="duration"
-                            >
-                              {{ duration }}
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        type="text"
+                        :placeholder="t('globals.messages.enter', {
+                          name: t('globals.terms.duration').toLowerCase()
+                        })"
+                        v-bind="componentField"
+                        @keydown.enter.prevent
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -341,25 +333,6 @@ const submitLabel = computed(() => {
     (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
   )
 })
-const delayDurations = [
-  '5m',
-  '10m',
-  '15m',
-  '30m',
-  '45m',
-  '1h',
-  '2h',
-  '3h',
-  '4h',
-  '5h',
-  '6h',
-  '7h',
-  '8h',
-  '9h',
-  '10h',
-  '11h',
-  '12h'
-]
 
 const { t } = useI18n()
 const form = useForm({

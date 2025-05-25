@@ -129,6 +129,14 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 			if n.TimeDelay == "" {
 				return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "`time_delay`"), nil)
 			}
+			// Validate time delay duration.
+			td, err := time.ParseDuration(n.TimeDelay)
+			if err != nil {
+				return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`time_delay`"), nil)
+			}
+			if td.Minutes() < 1 {
+				return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`time_delay`"), nil)
+			}
 		}
 		if len(n.Recipients) == 0 {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "`recipients`"), nil)
@@ -170,7 +178,7 @@ func validateSLA(app *App, sla *smodels.SLAPolicy) error {
 		if err != nil {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`next_response_time`"), nil)
 		}
-		if nrt.Seconds() < 1 {
+		if nrt.Minutes() < 1 {
 			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.invalid", "name", "`next_response_time`"), nil)
 		}
 	}
