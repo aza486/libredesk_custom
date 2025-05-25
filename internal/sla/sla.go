@@ -500,7 +500,7 @@ func (m *Manager) SendNotifications(ctx context.Context) error {
 	}
 }
 
-// SendNotification sends a SLA notification to agents, a schedule notification can be linked to a specific SLA event or applied SLA.
+// SendNotification sends a SLA notification to agents, a schedule notification is always linked to an applied SLA and optionally to a SLA event.
 func (m *Manager) SendNotification(scheduledNotification models.ScheduledSLANotification) error {
 	var (
 		appliedSLA models.AppliedSLA
