@@ -47,7 +47,7 @@ FROM new_sla ns
 WHERE c.id = ns.conversation_id
 RETURNING ns.id;
 
--- name: get-pending-slas
+-- name: get-pending-applied-sla
 -- Get all the applied SLAs (applied to a conversation) that are pending
 SELECT a.id, a.first_response_deadline_at, c.first_reply_at as conversation_first_response_at, a.sla_policy_id,
 a.resolution_deadline_at, c.resolved_at as conversation_resolved_at, c.id as conversation_id, a.first_response_met_at, a.resolution_met_at, a.first_response_breached_at, a.resolution_breached_at
@@ -55,21 +55,21 @@ FROM applied_slas a
 JOIN conversations c ON a.conversation_id = c.id and c.sla_policy_id = a.sla_policy_id
 WHERE a.status = 'pending'::applied_sla_status;
 
--- name: update-breach
+-- name: update-applied-sla-breached-at
 UPDATE applied_slas SET
    first_response_breached_at = CASE WHEN $2 = 'first_response' THEN NOW() ELSE first_response_breached_at END,
    resolution_breached_at = CASE WHEN $2 = 'resolution' THEN NOW() ELSE resolution_breached_at END,
    updated_at = NOW()
 WHERE id = $1;
 
--- name: update-met
+-- name: update-applied-sla-met-at
 UPDATE applied_slas SET
    first_response_met_at = CASE WHEN $2 = 'first_response' THEN NOW() ELSE first_response_met_at END,
    resolution_met_at = CASE WHEN $2 = 'resolution' THEN NOW() ELSE resolution_met_at END,
    updated_at = NOW()
 WHERE id = $1;
 
--- name: set-conversation-sla-deadline
+-- name: update-conversation-sla-deadline
 UPDATE conversations c
 SET next_sla_deadline_at = CASE
     -- If resolved or closed, clear the deadline
@@ -98,7 +98,7 @@ FROM applied_slas a
 WHERE a.conversation_id = c.id
 AND c.id = $1;
 
--- name: update-sla-status
+-- name: update-applied-sla-status
 UPDATE applied_slas
 SET
   status = CASE 
@@ -151,7 +151,7 @@ FROM applied_slas a INNER JOIN conversations c on a.conversation_id = c.id
 LEFT JOIN conversation_statuses s ON c.status_id = s.id
 WHERE a.id = $1;
 
--- name: mark-notification-processed
+-- name: update-notification-processed
 UPDATE scheduled_sla_notifications
 SET processed_at = NOW(),
       updated_at = NOW()
@@ -177,18 +177,18 @@ WHERE id = (
 )
 RETURNING met_at;
 
--- name: mark-sla-event-as-breached
+-- name: update-sla-event-as-breached
 UPDATE sla_events
 SET breached_at = NOW(),
     status = 'breached'
 WHERE id = $1;
 
--- name: mark-sla-event-as-met
+-- name: update-sla-event-as-met
 UPDATE sla_events
 SET status = 'met'
 WHERE id = $1;
 
--- name: get-sla-event-by-id
+-- name: get-sla-event
 SELECT id, created_at, updated_at, applied_sla_id, sla_policy_id, type, deadline_at, met_at, breached_at
 FROM sla_events
 WHERE id = $1;
