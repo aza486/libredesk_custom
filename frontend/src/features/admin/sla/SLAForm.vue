@@ -27,7 +27,7 @@
           <Input type="text" placeholder="6h" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.sla.firstResponseTime.description') }}
+          {{ t('globals.messages.golangDurationHoursMinutes') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -39,7 +39,20 @@
         <FormControl>
           <Input type="text" placeholder="24h" v-bind="componentField" />
         </FormControl>
-        <FormDescription>{{ t('admin.sla.resolutionTime.description') }} </FormDescription>
+        <FormDescription>{{ t('globals.messages.golangDurationHoursMinutes') }} </FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ componentField }" name="next_response_time">
+      <FormItem>
+        <FormLabel>{{ t('admin.sla.nextResponseTime') }}</FormLabel>
+        <FormControl>
+          <Input type="text" placeholder="30m" v-bind="componentField" />
+        </FormControl>
+        <FormDescription>
+          {{ t('globals.messages.golangDurationHoursMinutes') }}
+        </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -93,16 +106,19 @@
               </span>
               <div>
                 <div class="font-medium text-foreground">
-                  {{ notification.type === 'warning' ? t('admin.sla.warning') : t('admin.sla.breach') }} {{ t('admin.sla.notification') }}
+                  {{
+                    notification.type === 'warning' ? t('admin.sla.warning') : t('admin.sla.breach')
+                  }}
+                  {{ t('globals.terms.alert').toLowerCase() }}
                 </div>
                 <p class="text-xs text-muted-foreground">
-                  {{ notification.type === 'warning' ? 'Pre-breach alert' : 'Post-breach action' }}
+                  {{ notification.type === 'warning' ? 'Pre-breach alert' : 'Post-breach alert' }}
                 </p>
               </div>
             </div>
             <Button
               variant="ghost"
-              size="sm"
+              size="xs"
               @click.prevent="removeNotification(index)"
               class="opacity-70 hover:opacity-100 text-muted-foreground hover:text-foreground"
             >
@@ -126,16 +142,16 @@
                       {{ t('admin.sla.triggerTiming') }}
                     </FormLabel>
                     <FormControl>
-                      <Select v-bind="componentField" class="hover:border-foreground/30">
+                      <Select v-bind="componentField">
                         <SelectTrigger class="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="immediately" class="focus:bg-accent">
+                            <SelectItem value="immediately">
                               {{ t('admin.sla.immediatelyOnBreach') }}
                             </SelectItem>
-                            <SelectItem value="after" class="focus:bg-accent">
+                            <SelectItem value="after">
                               {{ t('admin.sla.afterSpecificDuration') }}
                             </SelectItem>
                           </SelectGroup>
@@ -149,26 +165,23 @@
                   <FormItem v-if="shouldShowTimeDelay(index)">
                     <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                       <Hourglass class="w-4 h-4 text-muted-foreground" />
-                      {{ notification.type === 'warning' ? t('admin.sla.advanceWarning') : t('admin.sla.followUpDelay') }}
+                      {{
+                        notification.type === 'warning'
+                          ? t('admin.sla.advanceWarning')
+                          : t('admin.sla.followUpDelay')
+                      }}
                     </FormLabel>
                     <FormControl>
-                      <Select v-bind="componentField" class="hover:border-foreground/30">
-                        <SelectTrigger class="w-full">
-                          <SelectValue :placeholder="t('admin.sla.selectDuration')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem
-                              v-for="duration in delayDurations"
-                              :key="duration"
-                              :value="duration"
-                              class="focus:bg-accent"
-                            >
-                              {{ duration }}
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        type="text"
+                        :placeholder="
+                          t('globals.messages.enter', {
+                            name: t('globals.terms.duration').toLowerCase()
+                          })
+                        "
+                        v-bind="componentField"
+                        @keydown.enter.prevent
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -185,7 +198,7 @@
                 <FormItem>
                   <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                     <Users class="w-4 h-4 text-muted-foreground" />
-                    {{ t('admin.sla.notificationRecipients') }}
+                    {{ t('admin.sla.alertRecipients') }}
                   </FormLabel>
                   <FormControl>
                     <SelectTag
@@ -205,6 +218,45 @@
                 </FormItem>
               </FormField>
             </div>
+
+            <FormField :name="`notifications.${index}.metric`" v-slot="{ componentField }">
+              <FormItem>
+                <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
+                  <SlidersHorizontal class="w-4 h-4 text-muted-foreground" />
+                  {{ t('globals.terms.slaMetric') }}
+                </FormLabel>
+                <FormControl>
+                  <Select v-bind="componentField">
+                    <SelectTrigger class="w-full">
+                      <SelectValue
+                        :placeholder="
+                          t('form.field.select', {
+                            name: t('globals.terms.slaMetric').toLowerCase()
+                          })
+                        "
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="all">
+                          {{ t('globals.messages.all') }}
+                        </SelectItem>
+                        <SelectItem value="first_response">
+                          {{ t('admin.sla.firstResponseTime') }}
+                        </SelectItem>
+                        <SelectItem value="next_response">
+                          {{ t('admin.sla.nextResponseTime') }}
+                        </SelectItem>
+                        <SelectItem value="resolution">
+                          {{ t('admin.sla.resolutionTime') }}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            </FormField>
           </div>
         </div>
       </div>
@@ -215,7 +267,7 @@
         class="flex flex-col items-center justify-center p-8 space-y-3 rounded-xl bg-muted/30 border border-dashed"
       >
         <Bell class="w-8 h-8 text-muted-foreground" />
-        <p class="text-sm text-muted-foreground">{{ t('admin.sla.noNotificationsConfigured') }}</p>
+        <p class="text-sm text-muted-foreground">{{ t('admin.sla.noAlertsConfigured') }}</p>
       </div>
     </div>
 
@@ -231,7 +283,17 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { createFormSchema } from './formSchema'
 import { Button } from '@/components/ui/button'
-import { X, Plus, Timer, CircleAlert, Users, Clock, Hourglass, Bell } from 'lucide-vue-next'
+import {
+  X,
+  Plus,
+  Timer,
+  CircleAlert,
+  Users,
+  Clock,
+  Hourglass,
+  Bell,
+  SlidersHorizontal
+} from 'lucide-vue-next'
 import { useUsersStore } from '@/stores/users'
 import {
   FormControl,
@@ -274,27 +336,11 @@ const props = defineProps({
 
 const usersStore = useUsersStore()
 const submitLabel = computed(() => {
-  return props.submitLabel || (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
+  return (
+    props.submitLabel ||
+    (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
+  )
 })
-const delayDurations = [
-  '5m',
-  '10m',
-  '15m',
-  '30m',
-  '45m',
-  '1h',
-  '2h',
-  '3h',
-  '4h',
-  '5h',
-  '6h',
-  '7h',
-  '8h',
-  '9h',
-  '10h',
-  '11h',
-  '12h'
-]
 
 const { t } = useI18n()
 const form = useForm({
@@ -320,7 +366,8 @@ const addNotification = (type) => {
     type: type,
     time_delay_type: type === 'warning' ? 'before' : 'immediately',
     time_delay: type === 'warning' ? '10m' : '',
-    recipients: []
+    recipients: [],
+    metric: 'all'
   })
   form.setFieldValue('notifications', notifications)
 }
@@ -341,6 +388,8 @@ watch(
 
     const transformedNotifications = (newValues.notifications || []).map((notification) => ({
       ...notification,
+      // Default value, notification applies to all metrics unless specified.
+      metric: notification.metric || 'all',
       time_delay_type:
         notification.type === 'warning'
           ? 'before'
