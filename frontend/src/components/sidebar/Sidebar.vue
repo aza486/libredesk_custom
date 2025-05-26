@@ -340,7 +340,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                   <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
                     <UsersRound />
                     <span>
-                      {{ t('navigation.all') }}
+                      {{ t('globals.messages.all') }}
                     </span>
                   </router-link>
                 </SidebarMenuButton>

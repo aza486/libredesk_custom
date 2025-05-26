@@ -27,7 +27,7 @@
           <Input type="text" placeholder="6h" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.sla.firstResponseTime.description') }}
+          {{ t('globals.messages.golangDurationHoursMinutes') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -39,7 +39,7 @@
         <FormControl>
           <Input type="text" placeholder="24h" v-bind="componentField" />
         </FormControl>
-        <FormDescription>{{ t('admin.sla.resolutionTime.description') }} </FormDescription>
+        <FormDescription>{{ t('globals.messages.golangDurationHoursMinutes') }} </FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>
@@ -51,7 +51,7 @@
           <Input type="text" placeholder="30m" v-bind="componentField" />
         </FormControl>
         <FormDescription>
-          {{ t('admin.sla.nextResponseTime.description') }}
+          {{ t('globals.messages.golangDurationHoursMinutes') }}
         </FormDescription>
         <FormMessage />
       </FormItem>
@@ -174,9 +174,11 @@
                     <FormControl>
                       <Input
                         type="text"
-                        :placeholder="t('globals.messages.enter', {
-                          name: t('globals.terms.duration').toLowerCase()
-                        })"
+                        :placeholder="
+                          t('globals.messages.enter', {
+                            name: t('globals.terms.duration').toLowerCase()
+                          })
+                        "
                         v-bind="componentField"
                         @keydown.enter.prevent
                       />
@@ -221,17 +223,23 @@
               <FormItem>
                 <FormLabel class="flex items-center gap-1.5 text-sm font-medium">
                   <SlidersHorizontal class="w-4 h-4 text-muted-foreground" />
-                  {{ t('admin.sla.metric') }}
+                  {{ t('globals.terms.slaMetric') }}
                 </FormLabel>
                 <FormControl>
                   <Select v-bind="componentField">
                     <SelectTrigger class="w-full">
-                      <SelectValue :placeholder="t('admin.sla.selectMetric')" />
+                      <SelectValue
+                        :placeholder="
+                          t('form.field.select', {
+                            name: t('globals.terms.slaMetric').toLowerCase()
+                          })
+                        "
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="all">
-                          {{ t('admin.sla.metrics.all') }}
+                          {{ t('globals.messages.all') }}
                         </SelectItem>
                         <SelectItem value="first_response">
                           {{ t('admin.sla.firstResponseTime') }}
