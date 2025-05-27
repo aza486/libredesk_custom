@@ -1,5 +1,5 @@
 <template>
-  <div class="text-foreground">
+  <div>
     <ConversationSideBarContact class="p-4" />
     <Accordion type="multiple" collapsible v-model="accordionState">
       <AccordionItem value="actions" class="border-0 mb-2">
