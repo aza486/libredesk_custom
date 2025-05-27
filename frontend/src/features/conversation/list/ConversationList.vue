@@ -99,7 +99,7 @@
         <div
           v-if="!conversationStore.conversations.errorMessage"
           key="list"
-          class="divide-y divide-gray-200"
+          class="divide-y divide-gray-200 dark:divide-gray-700"
         >
           <ConversationListItem
             v-for="conversation in conversationStore.conversationsList"

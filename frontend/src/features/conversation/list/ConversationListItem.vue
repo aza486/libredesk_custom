@@ -1,9 +1,8 @@
 <template>
   <div
-    class="group relative p-4 transition-all duration-200 ease-in-out cursor-pointer border-b last:border-b-0 hover:shadow-sm border-gray-200 dark:border-gray-700 hover:bg-accent/20 dark:hover:bg-accent/30"
+    class="group relative p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-accent/20 dark:hover:bg-accent/30"
     :class="{
-      'bg-accent/30 dark:bg-accent border-l-4 border-accent-500 dark:border-accent-400':
-        conversation.uuid === currentConversation?.uuid
+      'bg-accent/30 dark:bg-accent border-l-2': conversation.uuid === currentConversation?.uuid
     }"
     @click="navigateToConversation(conversation.uuid)"
   >
