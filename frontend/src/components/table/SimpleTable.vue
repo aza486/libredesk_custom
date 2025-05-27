@@ -1,24 +1,24 @@
 <template>
-  <table class="min-w-full table-fixed divide-y divide-gray-200">
-    <thead class="bg-gray-50">
+  <table class="min-w-full table-fixed divide-y divide-border">
+    <thead class="bg-muted">
       <tr>
         <th
           v-for="(header, index) in headers"
           :key="index"
           scope="col"
-          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+          class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
         >
           {{ header }}
         </th>
         <th scope="col" class="relative px-6 py-3"></th>
       </tr>
     </thead>
-    <tbody class="bg-white divide-y divide-gray-200">
+    <tbody class="bg-background divide-y divide-border">
       <template v-if="data.length === 0">
         <tr>
           <td :colspan="headers.length + 1" class="px-6 py-12 text-center">
             <div class="flex flex-col items-center space-y-4">
-              <span class="text-md text-gray-500">
+              <span class="text-md text-muted-foreground">
                 {{
                   $t('globals.messages.noResults', {
                     name: $t('globals.terms.result', 2).toLowerCase()
@@ -30,15 +30,15 @@
         </tr>
       </template>
       <template v-else>
-        <tr v-for="(item, index) in data" :key="index">
+        <tr v-for="(item, index) in data" :key="index" class="hover:bg-accent">
           <td
             v-for="key in keys"
             :key="key"
-            class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-normal break-words"
+            class="px-6 py-4 text-sm font-medium text-foreground whitespace-normal break-words"
           >
             {{ item[key] }}
           </td>
-          <td class="px-6 py-4 text-sm text-gray-500" v-if="showDelete">
+          <td v-if="showDelete" class="px-6 py-4 text-sm text-muted-foreground">
             <Button size="xs" variant="ghost" @click.prevent="deleteItem(item)">
               <Trash2 class="h-4 w-4" />
             </Button>

@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <div class="rounded-md border shadow">
+    <div class="rounded border shadow">
       <Table>
         <TableHeader>
           <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">

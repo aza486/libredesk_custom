@@ -64,7 +64,7 @@
                   :value="macro.label"
                   :data-index="index"
                   @select="handleApplyMacro(macro)"
-                  class="px-3 py-2 rounded-md cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                  class="px-3 py-2 rounded cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:text-primary"
                 >
                   <div class="flex items-center gap-2">
                     <Zap size="14" class="text-primary shrink-0" />
@@ -84,7 +84,7 @@
                       {{ $t('command.replyPreview') }}
                     </p>
                     <div
-                      class="w-full min-h-200 p-2 bg-muted/50 rounded-md overflow-auto shadow-sm native-html"
+                      class="w-full min-h-200 p-2 bg-muted/50 rounded overflow-auto shadow-sm native-html"
                       v-dompurify-html="replyContent"
                     />
                   </div>
@@ -98,7 +98,7 @@
                       <div
                         v-for="action in otherActions"
                         :key="action.type"
-                        class="flex items-center gap-2 px-2 py-1.5 bg-muted/30 hover:bg-accent hover:text-accent-foreground rounded-md text-xs transition-all duration-200 group"
+                        class="flex items-center gap-2 px-2 py-1.5 bg-muted/30 hover:bg-accent hover:text-accent-foreground rounded text-xs transition-all duration-200 group"
                       >
                         <div
                           class="p-1 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors duration-200"

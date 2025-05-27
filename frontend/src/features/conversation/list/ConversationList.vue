@@ -2,12 +2,12 @@
   <div class="h-screen flex flex-col">
     <!-- Header -->
     <div class="flex items-center space-x-4 px-2 h-12 border-b shrink-0">
-      <SidebarTrigger class="h-4 w-4" />
-      <span class="text-xl font-semibold text-gray-800">{{ title }}</span>
+      <SidebarTrigger class="cursor-pointer" />
+      <span class="text-xl font-semibold">{{ title }}</span>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white p-2 flex justify-between items-center">
+    <div class="p-2 flex justify-between items-center">
       <!-- Status dropdown-menu, hidden when a view is selected as views are pre-filtered -->
       <DropdownMenu v-if="!route.params.viewID">
         <DropdownMenuTrigger asChild>
@@ -107,7 +107,7 @@
             :conversation="conversation"
             :currentConversation="conversationStore.current"
             :contactFullName="conversationStore.getContactFullName(conversation.uuid)"
-            class="transition-colors duration-200 hover:bg-gray-50"
+            class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-600"
           />
         </div>
 

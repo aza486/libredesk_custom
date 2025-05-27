@@ -19,7 +19,7 @@
           type: 'assigned'
         }
       }"
-      class="block p-2 rounded-md hover:bg-muted"
+      class="block p-2 rounded hover:bg-muted"
     >
       <div class="flex items-center justify-between">
         <div class="flex flex-col">

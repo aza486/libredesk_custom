@@ -1,9 +1,7 @@
 <template>
   <TooltipProvider :delay-duration="150">
-    <div class="!font-jakarta">
-      <Toaster class="pointer-events-auto" position="top-center" richColors />
-      <RouterView />
-    </div>
+    <Toaster class="pointer-events-auto" position="top-center" richColors />
+    <RouterView />
   </TooltipProvider>
 </template>
 

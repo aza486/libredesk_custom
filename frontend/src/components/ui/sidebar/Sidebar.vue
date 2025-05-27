@@ -1,6 +1,6 @@
 <script setup>
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { SIDEBAR_WIDTH_MOBILE, useSidebar } from './utils';
 
 defineOptions({
@@ -12,7 +12,6 @@ const props = defineProps({
   variant: { type: String, required: false, default: 'sidebar' },
   collapsible: { type: String, required: false, default: 'offcanvas' },
   class: { type: null, required: false },
-  collapseOnMobile: { type: Boolean, required: false, default: true },
 });
 
 const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
@@ -33,7 +32,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
   </div>
 
   <Sheet
-    v-else-if="isMobile && collapseOnMobile"
+    v-else-if="isMobile"
     :open="openMobile"
     v-bind="$attrs"
     @update:open="setOpenMobile"
@@ -55,7 +54,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
   <div
     v-else
-    :class="cn('group peer', collapseOnMobile ? 'hidden md:block' : 'block')"
+    class="group peer hidden md:block"
     :data-state="state"
     :data-collapsible="state === 'collapsed' ? collapsible : ''"
     :data-variant="variant"
@@ -77,8 +76,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
     <div
       :class="
         cn(
-          'duration-200 fixed inset-y-0 z-10 h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex',
-          collapseOnMobile ? 'hidden' : '',
+          'duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex',
           side === 'left'
             ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
             : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',

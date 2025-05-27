@@ -4,16 +4,16 @@
       <div
         v-for="attachment in allAttachments"
         :key="attachment.uuid || attachment.tempId"
-        class="flex items-center bg-white border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group px-2 gap-2"
+        class="flex items-center bg-background border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group px-2 gap-2"
       >
         <div class="flex items-center space-x-1 py-1">
           <DotLoader v-if="attachment.loading"/>
-          <PaperclipIcon v-else size="16" class="text-gray-500 group-hover:text-primary" />
+          <PaperclipIcon v-else size="16" />
 
           <Tooltip>
             <TooltipTrigger as-child>
               <div
-                class="max-w-[12rem] overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-primary group-hover:text-gray-900"
+                class="max-w-[12rem] overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium text-primary group-hover:text-gray-900 dark:group-hover:text-foreground"
               >
                 {{ getAttachmentName(attachment.filename) }}
                 <span class="text-xs text-gray-500 ml-1">

@@ -1,26 +1,33 @@
 <template>
-  <div class="max-w-5xl mx-auto p-6 bg-background min-h-screen">
+  <div class="max-w-5xl mx-auto p-6 min-h-screen">
     <div class="space-y-8">
       <div
         v-for="(items, type) in results"
         :key="type"
-        class="bg-card rounded-lg shadow-md overflow-hidden"
+        class="bg-card rounded shadow overflow-hidden"
       >
-        <h2 class="bg-primary text-lg font-bold text-secondary py-2 px-6 capitalize">
+        <!-- Header for each section -->
+        <h2
+          class="bg-primary dark:bg-primary text-lg font-bold text-white dark:text-primary-foreground py-2 px-6 capitalize"
+        >
           {{ type }}
         </h2>
 
-        <div v-if="items.length === 0" class="p-6 text-muted-foreground">
-          {{ $t('globals.messages.noResults', {
-            name: type
-          }) }}
+        <!-- No results message -->
+        <div v-if="items.length === 0" class="p-6 text-gray-500 dark:text-muted-foreground">
+          {{
+            $t('globals.messages.noResults', {
+              name: type
+            })
+          }}
         </div>
 
-        <div class="divide-y divide-border">
+        <!-- Results list -->
+        <div class="divide-y divide-gray-200 dark:divide-border">
           <div
             v-for="item in items"
             :key="item.id || item.uuid"
-            class="p-6 hover:bg-accent transition duration-300 ease-in-out group"
+            class="p-6 hover:bg-gray-100 dark:hover:bg-accent transition duration-300 ease-in-out group"
           >
             <router-link
               :to="{
@@ -34,8 +41,9 @@
             >
               <div class="flex justify-between items-start">
                 <div class="flex-grow">
+                  <!-- Reference number -->
                   <div
-                    class="text-sm font-semibold text-primary mb-2 group-hover:text-primary transition duration-300"
+                    class="text-sm font-semibold mb-2 group-hover:text-primary dark:group-hover:text-primary transition duration-300"
                   >
                     #{{
                       type === 'conversations'
@@ -43,14 +51,18 @@
                         : item.conversation_reference_number
                     }}
                   </div>
+
+                  <!-- Content -->
                   <div
-                    class="text-card-foreground font-medium mb-2 text-lg group-hover:text-foreground transition duration-300"
+                    class="text-gray-900 dark:text-card-foreground font-medium mb-2 text-lg group-hover:text-gray-950 dark:group-hover:text-foreground transition duration-300"
                   >
                     {{
                       truncateText(type === 'conversations' ? item.subject : item.text_content, 100)
                     }}
                   </div>
-                  <div class="text-sm text-muted-foreground flex items-center">
+
+                  <!-- Timestamp -->
+                  <div class="text-sm text-gray-500 dark:text-muted-foreground flex items-center">
                     <ClockIcon class="h-4 w-4 mr-1" />
                     {{
                       formatDate(
@@ -59,11 +71,13 @@
                     }}
                   </div>
                 </div>
+
+                <!-- Right arrow icon -->
                 <div
-                  class="bg-secondary rounded-full p-2 group-hover:bg-primary transition duration-300"
+                  class="bg-gray-200 dark:bg-secondary rounded-full p-2 group-hover:bg-primary dark:group-hover:bg-primary transition duration-300"
                 >
                   <ChevronRightIcon
-                    class="h-5 w-5 text-secondary-foreground group-hover:text-primary-foreground"
+                    class="h-5 w-5 text-gray-700 dark:text-secondary-foreground group-hover:text-white dark:group-hover:text-primary-foreground"
                     aria-hidden="true"
                   />
                 </div>
@@ -75,7 +89,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ChevronRightIcon, ClockIcon } from 'lucide-vue-next'
 import { format, parseISO } from 'date-fns'

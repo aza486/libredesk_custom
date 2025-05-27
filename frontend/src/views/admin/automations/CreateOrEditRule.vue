@@ -122,13 +122,21 @@
           <div class="flex justify-center">
             <div class="flex items-center space-x-2">
               <Button
-                :class="[groupOperator === 'AND' ? 'bg-black' : 'bg-gray-100 text-black']"
+                :class="[
+                  groupOperator === 'AND'
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : 'bg-gray-100 text-black dark:bg-secondary dark:text-white'
+                ]"
                 @click.prevent="toggleGroupOperator('AND')"
               >
                 {{ $t('admin.automation.and') }}
               </Button>
               <Button
-                :class="[groupOperator === 'OR' ? 'bg-black' : 'bg-gray-100 text-black']"
+                :class="[
+                  groupOperator === 'OR'
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : 'bg-gray-100 text-black dark:bg-secondary dark:text-white'
+                ]"
                 @click.prevent="toggleGroupOperator('OR')"
               >
                 {{ $t('admin.automation.or') }}

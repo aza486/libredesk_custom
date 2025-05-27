@@ -2,12 +2,12 @@
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
       <SidebarMenuButton
-        size="lg"
-        class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground p-0"
+        size="md"
+        class="p-0"
       >
-        <Avatar class="h-8 w-8 rounded-lg relative overflow-visible">
-          <AvatarImage :src="userStore.avatar" alt="" class="rounded-lg" />
-          <AvatarFallback class="rounded-lg">
+        <Avatar class="h-8 w-8 rounded relative overflow-visible">
+          <AvatarImage :src="userStore.avatar" alt="U" class="rounded" />
+          <AvatarFallback class="rounded">
             {{ userStore.getInitials }}
           </AvatarFallback>
           <div
@@ -30,51 +30,65 @@
       </SidebarMenuButton>
     </DropdownMenuTrigger>
     <DropdownMenuContent
-      class="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+      class="w-[--radix-dropdown-menu-trigger-width] min-w-56"
       side="bottom"
       :side-offset="4"
     >
-      <DropdownMenuLabel class="p-0 font-normal space-y-1">
-        <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-          <Avatar class="h-8 w-8 rounded-lg">
+      <DropdownMenuLabel class="font-normal space-y-2 px-2">
+        <!-- User header -->
+        <div class="flex items-center gap-2 py-1.5 text-left text-sm">
+          <Avatar class="h-8 w-8 rounded">
             <AvatarImage :src="userStore.avatar" alt="U" />
-            <AvatarFallback class="rounded-lg">
+            <AvatarFallback class="rounded">
               {{ userStore.getInitials }}
             </AvatarFallback>
           </Avatar>
-          <div class="grid flex-1 text-left text-sm leading-tight">
+          <div class="flex-1 flex flex-col leading-tight">
             <span class="truncate font-semibold">{{ userStore.getFullName }}</span>
-            <span class="truncate text-xs">{{ userStore.email }}</span>
+            <span class="truncate text-xs text-muted-foreground">{{ userStore.email }}</span>
           </div>
         </div>
+
         <div class="space-y-2">
-          <!-- Away switch is checked with 'away_manual' or 'away_and_reassigning' -->
-          <div class="flex items-center gap-2 px-1 text-left text-sm justify-between">
-            <span class="text-muted-foreground">{{ t('navigation.away') }}</span>
+          <!-- Dark-mode toggle -->
+          <div class="flex items-center justify-between text-sm">
+            <div class="flex items-center gap-2">
+              <Moon v-if="mode === 'dark'" size="16" class="text-muted-foreground" />
+              <Sun v-else size="16" class="text-muted-foreground" />
+              <span class="text-muted-foreground">{{ t('navigation.darkMode') }}</span>
+            </div>
             <Switch
-              :checked="
-                ['away_manual', 'away_and_reassigning'].includes(userStore.user.availability_status)
-              "
-              @update:checked="
-                (val) => {
-                  const newStatus = val ? 'away_manual' : 'online'
-                  userStore.updateUserAvailability(newStatus)
-                }
-              "
+              :checked="mode === 'dark'"
+              @update:checked="(val) => (mode = val ? 'dark' : 'light')"
             />
           </div>
-          <!-- Reassign Replies Switch is checked with 'away_and_reassigning' -->
-          <div class="flex items-center gap-2 px-1 text-left text-sm justify-between">
-            <span class="text-muted-foreground">{{ t('navigation.reassignReplies') }}</span>
-            <Switch
-              :checked="userStore.user.availability_status === 'away_and_reassigning'"
-              @update:checked="
-                (val) => {
-                  const newStatus = val ? 'away_and_reassigning' : 'away_manual'
-                  userStore.updateUserAvailability(newStatus)
-                }
-              "
-            />
+
+          <div class="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-3">
+            <!-- Away toggle -->
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted-foreground">{{ t('navigation.away') }}</span>
+              <Switch
+                :checked="
+                  ['away_manual', 'away_and_reassigning'].includes(
+                    userStore.user.availability_status
+                  )
+                "
+                @update:checked="
+                  (val) => userStore.updateUserAvailability(val ? 'away_manual' : 'online')
+                "
+              />
+            </div>
+            <!-- Reassign toggle -->
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-muted-foreground">{{ t('navigation.reassignReplies') }}</span>
+              <Switch
+                :checked="userStore.user.availability_status === 'away_and_reassigning'"
+                @update:checked="
+                  (val) =>
+                    userStore.updateUserAvailability(val ? 'away_and_reassigning' : 'away_manual')
+                "
+              />
+            </div>
           </div>
         </div>
       </DropdownMenuLabel>
@@ -108,10 +122,13 @@ import {
 import { SidebarMenuButton } from '@/components/ui/sidebar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
-import { ChevronsUpDown, CircleUserRound, LogOut } from 'lucide-vue-next'
+import { ChevronsUpDown, CircleUserRound, LogOut, Moon, Sun } from 'lucide-vue-next'
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
 
+import { useColorMode } from '@vueuse/core'
+
+const mode = useColorMode()
 const userStore = useUserStore()
 const router = useRouter()
 const { t } = useI18n()

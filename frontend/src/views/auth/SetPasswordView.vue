@@ -25,7 +25,7 @@
               :placeholder="t('auth.enterNewPassword')"
               v-model="passwordForm.password"
               :class="{ 'border-destructive': passwordHasError }"
-              class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
+              class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
             />
           </div>
 
@@ -40,12 +40,12 @@
               :placeholder="t('auth.confirmNewPassword')"
               v-model="passwordForm.confirmPassword"
               :class="{ 'border-destructive': confirmPasswordHasError }"
-              class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded-lg py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
+              class="w-full bg-card border-border text-foreground placeholder:text-muted-foreground rounded py-2 px-3 focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out"
             />
           </div>
 
           <Button
-            class="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg py-2 transition-all duration-200 ease-in-out transform hover:scale-105"
+            class="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded py-2 transition-all duration-200 ease-in-out transform hover:scale-105"
             :disabled="isLoading"
             type="submit"
           >
@@ -80,7 +80,7 @@
           v-if="errorMessage"
           :errorMessage="errorMessage"
           :border="true"
-          class="w-full bg-destructive/10 text-destructive border-destructive/20 p-3 rounded-lg text-sm"
+          class="w-full bg-destructive/10 text-destructive border-destructive/20 p-3 rounded text-sm"
         />
       </CardContent>
     </Card>

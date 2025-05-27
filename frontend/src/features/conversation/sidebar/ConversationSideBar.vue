@@ -1,9 +1,9 @@
 <template>
-  <div>
+  <div class="text-foreground">
     <ConversationSideBarContact class="p-4" />
     <Accordion type="multiple" collapsible v-model="accordionState">
       <AccordionItem value="actions" class="border-0 mb-2">
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded mx-2">
           {{ $t('conversation.sidebar.action', 2) }}
         </AccordionTrigger>
 
@@ -124,7 +124,7 @@
 
       <!-- Information -->
       <AccordionItem value="information" class="border-0 mb-2">
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded mx-2">
           {{ $t('conversation.sidebar.information') }}
         </AccordionTrigger>
         <AccordionContent class="p-4">
@@ -138,7 +138,7 @@
         class="border-0 mb-2"
         v-if="customAttributeStore.contactAttributeOptions.length > 0"
       >
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded mx-2">
           {{ $t('conversation.sidebar.contactAttributes') }}
         </AccordionTrigger>
         <AccordionContent class="p-4">
@@ -153,7 +153,7 @@
 
       <!-- Previous conversations -->
       <AccordionItem value="previous_conversations" class="border-0 mb-2">
-        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded-lg mx-2">
+        <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded mx-2">
           {{ $t('conversation.sidebar.previousConvo') }}
         </AccordionTrigger>
         <AccordionContent class="p-4">

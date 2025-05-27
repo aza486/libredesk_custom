@@ -98,13 +98,11 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/contacts')" asChild>
-                <div>
-                  <span class="font-semibold text-xl">
-                    {{ t('globals.terms.contact', 2) }}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+              <div>
+                <span class="font-semibold text-xl">
+                  {{ t('globals.terms.contact', 2) }}
+                </span>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -137,13 +135,11 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild>
-                <div>
-                  <span class="font-semibold text-xl">
-                    {{ t('navigation.reports') }}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+              <div>
+                <span class="font-semibold text-xl">
+                  {{ t('navigation.reports') }}
+                </span>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -171,17 +167,15 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
-                <div class="flex items-center justify-between w-full">
-                  <span class="font-semibold text-xl">
-                    {{ t('navigation.admin') }}
-                  </span>
-                </div>
-                <!-- App version -->
-                <div class="text-xs text-muted-foreground ml-2">
-                  ({{ settingsStore.settings['app.version'] }})
-                </div>
-              </SidebarMenuButton>
+              <div class="flex items-center justify-between w-full">
+                <span class="font-semibold text-xl">
+                  {{ t('navigation.admin') }}
+                </span>
+              </div>
+              <!-- App version -->
+              <div class="text-xs text-muted-foreground">
+                ({{ settingsStore.settings['app.version'] }})
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -239,13 +233,11 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild>
-                <div>
-                  <span class="font-semibold text-xl">
-                    {{ t('navigation.account') }}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+              <div>
+                <span class="font-semibold text-xl">
+                  {{ t('navigation.account') }}
+                </span>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -276,24 +268,22 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <div class="flex items-center justify-between w-full">
-                  <div class="font-semibold text-xl">
-                    <span>{{ t('navigation.inbox') }}</span>
-                  </div>
-                  <div class="ml-auto">
-                    <div class="flex items-center space-x-2">
-                      <router-link :to="{ name: 'search' }">
-                        <button
-                          class="flex items-center bg-accent p-2 rounded-full hover:scale-110 transition-transform duration-100"
-                        >
-                          <Search size="15" stroke-width="2.5" />
-                        </button>
-                      </router-link>
-                    </div>
+              <div class="flex items-center justify-between w-full">
+                <div class="font-semibold text-xl">
+                  <span>{{ t('navigation.inbox') }}</span>
+                </div>
+                <div class="ml-auto">
+                  <div class="flex items-center space-x-2">
+                    <router-link :to="{ name: 'search' }">
+                      <button
+                        class="flex items-center bg-accent p-2 rounded-full hover:scale-110 transition-transform duration-100"
+                      >
+                        <Search size="15" stroke-width="2.5" />
+                      </button>
+                    </router-link>
                   </div>
                 </div>
-              </SidebarMenuButton>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -399,7 +389,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                           <Plus
                             size="18"
                             @click.stop="openCreateViewDialog"
-                            class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover/item:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
+                            class="rounded cursor-pointer opacity-0 transition-all duration-200 group-hover/item:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
                           />
                         </div>
                         <ChevronRight

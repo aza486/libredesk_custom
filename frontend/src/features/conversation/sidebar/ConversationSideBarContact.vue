@@ -7,11 +7,14 @@
           {{ conversation?.contact?.first_name?.toUpperCase().substring(0, 2) }}
         </AvatarFallback>
       </Avatar>
-      <PanelLeft
-        class="cursor-pointer"
+      <Button
+        variant="ghost"
+        size="icon"
+        class="h-7 w-7"
         @click="emitter.emit(EMITTER_EVENTS.CONVERSATION_SIDEBAR_TOGGLE)"
-        size="20"
-      />
+      >
+        <ViewVerticalIcon />
+      </Button>
     </div>
 
     <div class="h-6 flex items-center gap-2">
@@ -51,7 +54,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { PanelLeft } from 'lucide-vue-next'
+import { ViewVerticalIcon } from '@radix-icons/vue'
+import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Mail, Phone, ExternalLink } from 'lucide-vue-next'
 import { useEmitter } from '@/composables/useEmitter'

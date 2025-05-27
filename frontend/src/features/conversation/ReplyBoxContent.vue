@@ -6,18 +6,18 @@
       class="flex justify-between items-center"
       :class="{ 'mb-4': !isFullscreen, 'border-b border-border pb-4': isFullscreen }"
     >
-      <Tabs v-model="messageType" class="rounded-lg border">
-        <TabsList class="bg-muted p-1 rounded-lg">
+      <Tabs v-model="messageType" class="rounded border">
+        <TabsList class="bg-muted p-1 rounded">
           <TabsTrigger
             value="reply"
-            class="px-3 py-1 rounded-lg transition-colors duration-200"
+            class="px-3 py-1 rounded transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'reply' }"
           >
             {{ $t('replyBox.reply') }}
           </TabsTrigger>
           <TabsTrigger
             value="private_note"
-            class="px-3 py-1 rounded-lg transition-colors duration-200"
+            class="px-3 py-1 rounded transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
           >
             {{ $t('replyBox.privateNote') }}
@@ -48,7 +48,7 @@
           type="text"
           :placeholder="t('replyBox.emailAddresess')"
           v-model="to"
-          class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
+          class="flex-grow px-3 py-2 text-sm border rounded focus:ring-2 focus:ring-ring"
           @blur="validateEmails('to')"
         />
       </div>
@@ -58,7 +58,7 @@
           type="text"
           :placeholder="t('replyBox.emailAddresess')"
           v-model="cc"
-          class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
+          class="flex-grow px-3 py-2 text-sm border rounded focus:ring-2 focus:ring-ring"
           @blur="validateEmails('cc')"
         />
         <Button
@@ -75,7 +75,7 @@
           type="text"
           :placeholder="t('replyBox.emailAddresess')"
           v-model="bcc"
-          class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
+          class="flex-grow px-3 py-2 text-sm border rounded focus:ring-2 focus:ring-ring"
           @blur="validateEmails('bcc')"
         />
       </div>

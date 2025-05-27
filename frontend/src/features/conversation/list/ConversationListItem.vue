@@ -1,8 +1,9 @@
 <template>
   <div
-    class="group relative p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-accent/20 border-gray-200 last:border-b-0 hover:shadow-sm"
+    class="group relative p-4 transition-all duration-200 ease-in-out cursor-pointer border-b last:border-b-0 hover:shadow-sm border-gray-200 dark:border-gray-700 hover:bg-accent/20 dark:hover:bg-accent/30"
     :class="{
-      'bg-accent/30 border-l-4': conversation.uuid === currentConversation?.uuid
+      'bg-accent/30 dark:bg-accent border-l-4 border-accent-500 dark:border-accent-400':
+        conversation.uuid === currentConversation?.uuid
     }"
     @click="navigateToConversation(conversation.uuid)"
   >
@@ -23,7 +24,7 @@
       <div class="flex-1 min-w-0 space-y-2">
         <!-- Contact name and last message time -->
         <div class="flex items-center justify-between gap-2">
-          <h3 class="text-sm font-semibold text-gray-900 truncate">
+          <h3 class="text-sm font-semibold truncate">
             {{ contactFullName }}
           </h3>
           <span class="text-xs text-gray-400 whitespace-nowrap" v-if="conversation.last_message_at">
@@ -39,7 +40,7 @@
 
         <!-- Message preview and unread count -->
         <div class="flex items-start justify-between gap-2">
-          <div class="text-sm text-gray-600 flex items-center gap-1.5 flex-1 break-all">
+          <div class="text-sm flex items-center gap-1.5 flex-1 break-all">
             <Reply
               class="text-green-600 flex-shrink-0"
               size="15"
