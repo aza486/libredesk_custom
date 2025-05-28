@@ -1,8 +1,8 @@
 <template>
   <div
-    class="group relative p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-accent/20 dark:hover:bg-accent/30"
+    class="group relative px-4 p-4 transition-all duration-200 ease-in-out cursor-pointer hover:bg-accent/20 dark:hover:bg-accent/60"
     :class="{
-      'bg-accent/30 dark:bg-accent border-l-2': conversation.uuid === currentConversation?.uuid
+      'bg-accent/60 border-l-4': conversation.uuid === currentConversation?.uuid
     }"
     @click="navigateToConversation(conversation.uuid)"
   >
@@ -39,7 +39,7 @@
 
         <!-- Message preview and unread count -->
         <div class="flex items-start justify-between gap-2">
-          <div class="text-sm flex items-center gap-1.5 flex-1 break-all">
+          <div class="text-sm flex items-center gap-1.5 flex-1 break-all text-gray-600 dark:text-gray-300">
             <Reply
               class="text-green-600 flex-shrink-0"
               size="15"

@@ -24,17 +24,9 @@
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <span
-        class="text-muted-foreground hover:text-foreground transition-colors duration-200 cursor-pointer"
-        variant="ghost"
-        @click="toggleFullscreen"
-      >
-        <component
-          :is="isFullscreen ? Minimize2 : Maximize2"
-          :size="isFullscreen ? '18' : '15'"
-          :class="{ 'mr-2': !isFullscreen, 'mr-1 mb-2': isFullscreen }"
-        />
-      </span>
+      <Button class="text-muted-foreground" variant="ghost" @click="toggleFullscreen">
+        <component :is="isFullscreen ? Minimize2 : Maximize2" />
+      </Button>
     </div>
 
     <!-- To, CC, and BCC fields -->
@@ -43,13 +35,13 @@
       v-if="messageType === 'reply'"
     >
       <div class="flex items-center space-x-2">
-        <label class="w-12 text-sm font-medium text-muted-foreground">To:</label>
+        <label class="w-12 text-sm font-medium text-muted-foreground">TO:</label>
         <Input
           type="text"
           :placeholder="t('replyBox.emailAddresess')"
           v-model="to"
           class="flex-grow px-3 py-2 text-sm border rounded focus:ring-2 focus:ring-ring"
-          @blur="validateEmails('to')"
+          @blur="validateEmails"
         />
       </div>
       <div class="flex items-center space-x-2">
@@ -59,7 +51,7 @@
           :placeholder="t('replyBox.emailAddresess')"
           v-model="cc"
           class="flex-grow px-3 py-2 text-sm border rounded focus:ring-2 focus:ring-ring"
-          @blur="validateEmails('cc')"
+          @blur="validateEmails"
         />
         <Button
           size="sm"
@@ -76,7 +68,7 @@
           :placeholder="t('replyBox.emailAddresess')"
           v-model="bcc"
           class="flex-grow px-3 py-2 text-sm border rounded focus:ring-2 focus:ring-ring"
-          @blur="validateEmails('bcc')"
+          @blur="validateEmails"
         />
       </div>
     </div>
@@ -221,9 +213,11 @@ const editorPlaceholder = t('replyBox.editor.placeholder')
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
   await nextTick()
-  // If hiding BCC field, clear the content
+  // If hiding BCC field, clear the content and validate email bcc so it doesn't show errors.
   if (!showBcc.value) {
     bcc.value = ''
+    await nextTick()
+    validateEmails()
   }
 }
 
@@ -255,37 +249,32 @@ const enableSend = computed(() => {
 })
 
 /**
- * Validate email addresses in the To, CC, and BCC fields
- * @param {string} field - 'to', 'cc', or 'bcc'
+ * Validates email addresses in To, CC, and BCC fields.
+ * Populates `emailErrors` with invalid emails grouped by field.
  */
-const validateEmails = (field) => {
-  const emails = field === 'to' ? to.value : field === 'cc' ? cc.value : bcc.value
-  const emailList = emails
-    .split(',')
-    .map((e) => e.trim())
-    .filter((e) => e !== '')
-
-  const invalidEmails = emailList.filter((email) => !validateEmail(email))
-
-  // Clear existing errors
+const validateEmails = async () => {
   emailErrors.value = []
+  await nextTick()
 
-  // Add new error if there are invalid emails
-  if (invalidEmails.length > 0) {
-    emailErrors.value = [
-      ...emailErrors.value,
-      `${t('replyBox.invalidEmailsIn')} '${field}': ${invalidEmails.join(', ')}`
-    ]
-  }
+  const fields = ['to', 'cc', 'bcc']
+  const values = { to: to.value, cc: cc.value, bcc: bcc.value }
+
+  fields.forEach((field) => {
+    const invalid = values[field]
+      .split(',')
+      .map((e) => e.trim())
+      .filter((e) => e && !validateEmail(e))
+
+    if (invalid.length)
+      emailErrors.value.push(`${t('replyBox.invalidEmailsIn')} '${field}': ${invalid.join(', ')}`)
+  })
 }
 
 /**
  * Send the reply or private note
  */
 const handleSend = async () => {
-  validateEmails('to')
-  validateEmails('cc')
-  validateEmails('bcc')
+  await validateEmails()
   if (emailErrors.value.length > 0) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',

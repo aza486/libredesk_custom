@@ -17,7 +17,7 @@
             'bg-[#FEF1E1] dark:bg-[#4C3A24]': message.private,
             'border border-border': !message.private,
             'opacity-50 animate-pulse': message.status === 'pending',
-            'border-red-200': message.status === 'failed'
+            'border-red-400': message.status === 'failed'
           }"
         >
           <!-- Message Envelope -->
