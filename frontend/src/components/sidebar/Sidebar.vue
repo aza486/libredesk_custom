@@ -14,7 +14,6 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarSeparator,
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -28,10 +27,10 @@ import {
   ChevronRight,
   EllipsisVertical,
   User,
-  UserSearch,
-  UsersRound,
   Search,
-  Plus
+  Plus,
+  CircleDashed,
+  List,
 } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -307,7 +306,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/unassigned')">
                   <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
-                    <UserSearch />
+                    <CircleDashed />
                     <span>
                       {{ t('navigation.unassigned') }}
                     </span>
@@ -318,7 +317,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/all')">
                   <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
-                    <UsersRound />
+                    <List />
                     <span>
                       {{ t('globals.messages.all') }}
                     </span>
@@ -368,9 +367,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <!-- Views -->
               <Collapsible class="group/collapsible" defaultOpen v-model:open="viewInboxOpen">
                 <SidebarMenuItem>
-                  <CollapsibleTrigger as-child>
+                  <CollapsibleTrigger>
                     <SidebarMenuButton asChild>
-                      <router-link to="#" class="group/item">
+                      <router-link to="#" class="group/item !p-2">
                         <!-- <SlidersHorizontal /> -->
                         <span>
                           {{ t('navigation.views') }}
