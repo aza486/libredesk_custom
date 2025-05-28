@@ -66,7 +66,7 @@
           v-model:emailErrors="emailErrors"
           v-model:messageType="messageType"
           v-model:showBcc="showBcc"
-          @toggleFullscreen="isEditorFullscreen = true"
+          @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
           @send="processSend"
           @fileUpload="handleFileUpload"
           @inlineImageUpload="handleInlineImageUpload"
@@ -79,7 +79,7 @@
 
     <!-- Main Editor non-fullscreen -->
     <div
-      class="bg-card text-card-foreground box m-2 px-2 pt-2 flex flex-col"
+      class="bg-background text-card-foreground box m-2 px-2 pt-2 flex flex-col"
       :class="{ '!bg-[#FEF1E1] dark:!bg-[#4C3A24]': messageType === 'private_note' }"
       v-if="!isEditorFullscreen"
     >
@@ -102,7 +102,7 @@
         v-model:emailErrors="emailErrors"
         v-model:messageType="messageType"
         v-model:showBcc="showBcc"
-        @toggleFullscreen="isEditorFullscreen = true"
+        @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
         @send="processSend"
         @fileUpload="handleFileUpload"
         @inlineImageUpload="handleInlineImageUpload"
