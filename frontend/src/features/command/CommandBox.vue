@@ -2,10 +2,13 @@
   <CommandDialog
     :open="open"
     @update:open="handleOpenChange"
-    class="transform-gpu z-[51] !min-w-[50vw] !min-h-[60vh]"
+    class="transform-gpu z-[51] !min-w-[50vw]"
   >
     <CommandInput :placeholder="t('command.typeCmdOrSearch')" @keydown="onInputKeydown" />
-    <CommandList class="!min-h-[60vh] !min-w-[50vw]">
+    <CommandList
+      class="!min-h-[60vh] h-[60vh] !min-w-[50vw]"
+      :class="{ 'overflow-hidden': nestedCommand === 'apply-macro' }"
+    >
       <CommandEmpty>
         <p class="text-muted-foreground">{{ $t('command.noCommandAvailable') }}</p>
       </CommandEmpty>
@@ -52,22 +55,22 @@
       </CommandGroup>
 
       <!-- Macros -->
-      <div v-if="nestedCommand === 'apply-macro'" class="bg-background">
-        <CommandGroup heading="Apply macro" class="pb-2">
-          <div class="min-h-[400px] overflow-auto">
-            <div class="grid grid-cols-12 gap-3">
+      <div v-if="nestedCommand === 'apply-macro'">
+        <CommandGroup heading="Apply macro">
+          <div class="min-h-[400px]">
+            <div class="h-[60vh] grid grid-cols-12">
               <!-- Left Column: Macro List (30%) -->
-              <div class="col-span-4 pr-2 border-r">
+              <div class="col-span-4 pr-4 border-r overflow-y-auto h-full">
                 <CommandItem
                   v-for="(macro, index) in macroStore.macroOptions"
                   :key="macro.value"
-                  :value="macro.label"
+                  :value="macro.label + '|' + index"
                   :data-index="index"
                   @select="handleApplyMacro(macro)"
-                  class="px-3 py-2 rounded cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                  class="px-3 py-2 rounded cursor-pointer transition-all duration-200 hover:bg-primary/10 hover:"
                 >
                   <div class="flex items-center gap-2">
-                    <Zap size="14" class="text-primary shrink-0" />
+                    <Zap size="14" class="shrink-0" />
                     <span class="text-sm truncate w-full break-words whitespace-normal">{{
                       macro.label
                     }}</span>
@@ -76,67 +79,63 @@
               </div>
 
               <!-- Right Column: Macro Details (70%) -->
-              <div class="col-span-8 pl-2">
+              <div class="col-span-8 px-4 overflow-y-auto h-full pb-12">
                 <div class="space-y-3 text-xs">
                   <!-- Reply Preview -->
-                  <div v-if="replyContent" class="space-y-1">
-                    <p class="text-xs font-semibold text-primary">
+                  <div v-if="replyContent" class="space-y-2">
+                    <p class="text-xs font-semibold text-foreground">
                       {{ $t('command.replyPreview') }}
                     </p>
                     <div
-                      class="w-full min-h-200 p-2 bg-muted/50 rounded overflow-auto shadow-sm native-html"
+                      class="w-full min-h-200 p-2 bg-muted/50 rounded overflow-auto shadow native-html"
                       v-dompurify-html="replyContent"
                     />
                   </div>
 
                   <!-- Actions -->
-                  <div v-if="otherActions.length > 0" class="space-y-1">
-                    <p class="text-xs font-semibold text-primary">
+                  <div v-if="otherActions.length > 0" class="space-y-2">
+                    <p class="text-xs font-semibold">
                       {{ $t('globals.terms.action', 2) }}
                     </p>
                     <div class="space-y-1.5 max-w-sm">
                       <div
                         v-for="action in otherActions"
                         :key="action.type"
-                        class="flex items-center gap-2 px-2 py-1.5 bg-muted/30 hover:bg-accent hover:text-accent-foreground rounded text-xs transition-all duration-200 group"
+                        class="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-muted/50 hover:bg-accent hover:text-accent-foreground transition duration-200 group"
                       >
                         <div
-                          class="p-1 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors duration-200"
+                          class="p-1 rounded-full group-hover:bg-muted/20 transition duration-200"
                         >
-                          <User
-                            v-if="action.type === 'assign_user'"
-                            :size="10"
-                            class="shrink-0 text-primary"
-                          />
+                          <User v-if="action.type === 'assign_user'" :size="10" class="shrink-0" />
                           <Users
                             v-else-if="action.type === 'assign_team'"
                             :size="10"
-                            class="shrink-0 text-primary"
+                            class="shrink-0"
                           />
                           <Pin
                             v-else-if="action.type === 'set_status'"
                             :size="10"
-                            class="shrink-0 text-primary"
+                            class="shrink-0"
                           />
                           <Rocket
                             v-else-if="action.type === 'set_priority'"
                             :size="10"
-                            class="shrink-0 text-primary"
+                            class="shrink-0"
                           />
                           <Tags
                             v-else-if="action.type === 'add_tags'"
                             :size="10"
-                            class="shrink-0 text-primary"
+                            class="shrink-0"
                           />
                           <Tags
                             v-else-if="action.type === 'set_tags'"
                             :size="10"
-                            class="shrink-0 text-primary"
+                            class="shrink-0"
                           />
                           <Tags
                             v-else-if="action.type === 'remove_tags'"
                             :size="10"
-                            class="shrink-0 text-primary"
+                            class="shrink-0"
                           />
                         </div>
                         <span class="truncate">{{ getActionLabel(action) }}</span>
