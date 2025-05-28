@@ -367,7 +367,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <!-- Views -->
               <Collapsible class="group/collapsible" defaultOpen v-model:open="viewInboxOpen">
                 <SidebarMenuItem>
-                  <CollapsibleTrigger>
+                  <CollapsibleTrigger asChild>
                     <SidebarMenuButton asChild>
                       <router-link to="#" class="group/item !p-2">
                         <!-- <SlidersHorizontal /> -->
