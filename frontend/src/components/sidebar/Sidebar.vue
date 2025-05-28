@@ -98,7 +98,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div>
+              <div class="px-1">
                 <span class="font-semibold text-xl">
                   {{ t('globals.terms.contact', 2) }}
                 </span>
@@ -106,7 +106,6 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -135,7 +134,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div>
+              <div class="px-1">
                 <span class="font-semibold text-xl">
                   {{ t('navigation.reports') }}
                 </span>
@@ -143,7 +142,6 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -167,19 +165,18 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div class="flex items-center justify-between w-full">
+              <div class="flex flex-col items-start justify-between w-full px-1">
                 <span class="font-semibold text-xl">
                   {{ t('navigation.admin') }}
                 </span>
-              </div>
-              <!-- App version -->
-              <div class="text-xs text-muted-foreground">
-                ({{ settingsStore.settings['app.version'] }})
+                <!-- App version -->
+                <div class="text-xs text-muted-foreground">
+                  ({{ settingsStore.settings['app.version'] }})
+                </div>
               </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -233,7 +230,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div>
+              <div class="px-1">
                 <span class="font-semibold text-xl">
                   {{ t('navigation.account') }}
                 </span>
@@ -241,7 +238,6 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -268,26 +264,20 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <div class="flex items-center justify-between w-full">
+              <div class="flex items-center justify-between w-full px-1">
                 <div class="font-semibold text-xl">
                   <span>{{ t('navigation.inbox') }}</span>
                 </div>
-                <div class="ml-auto">
-                  <div class="flex items-center space-x-2">
-                    <router-link :to="{ name: 'search' }">
-                      <button
-                        class="flex items-center bg-accent p-2 rounded-full hover:scale-110 transition-transform duration-100"
-                      >
-                        <Search size="15" stroke-width="2.5" />
-                      </button>
-                    </router-link>
-                  </div>
+                <div class="mr-1 mt-1 hover:scale-110 transition-transform">
+                  <router-link :to="{ name: 'search' }">
+                    <Search size="18" stroke-width="2.5" />
+                  </router-link>
                 </div>
               </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
+
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
