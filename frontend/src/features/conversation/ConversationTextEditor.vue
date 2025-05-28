@@ -4,7 +4,7 @@
       :editor="editor"
       :tippy-options="{ duration: 100 }"
       v-if="editor"
-      class="bg-white p-1 box will-change-transform"
+      class="bg-background p-1 box will-change-transform"
     >
       <div class="flex space-x-1 items-center">
         <DropdownMenu v-if="aiPrompts.length > 0">
@@ -32,7 +32,7 @@
           variant="ghost"
           @click.prevent="isBold = !isBold"
           :active="isBold"
-          :class="{ 'bg-gray-200': isBold }"
+          :class="{ 'bg-gray-200 dark:bg-secondary': isBold }"
         >
           <Bold size="14" />
         </Button>
@@ -41,7 +41,7 @@
           variant="ghost"
           @click.prevent="isItalic = !isItalic"
           :active="isItalic"
-          :class="{ 'bg-gray-200': isItalic }"
+          :class="{ 'bg-gray-200 dark:bg-secondary': isItalic }"
         >
           <Italic size="14" />
         </Button>
@@ -49,7 +49,7 @@
           size="sm"
           variant="ghost"
           @click.prevent="toggleBulletList"
-          :class="{ 'bg-gray-200': editor?.isActive('bulletList') }"
+          :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('bulletList') }"
         >
           <List size="14" />
         </Button>
@@ -58,7 +58,7 @@
           size="sm"
           variant="ghost"
           @click.prevent="toggleOrderedList"
-          :class="{ 'bg-gray-200': editor?.isActive('orderedList') }"
+          :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('orderedList') }"
         >
           <ListOrdered size="14" />
         </Button>
@@ -66,16 +66,16 @@
           size="sm"
           variant="ghost"
           @click.prevent="openLinkModal"
-          :class="{ 'bg-gray-200': editor?.isActive('link') }"
+          :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('link') }"
         >
           <LinkIcon size="14" />
         </Button>
-        <div v-if="showLinkInput" class="flex space-x-2 p-2 bg-white border rounded-lg">
-          <input
+        <div v-if="showLinkInput" class="flex space-x-2 p-2 bg-background border rounded">
+          <Input
             v-model="linkUrl"
             type="text"
             placeholder="Enter link URL"
-            class="border p-1 text-sm"
+            class="border p-1 text-sm w-[200px]"
           />
           <Button size="sm" @click="setLink">
             <Check size="14" />
@@ -111,6 +111,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import Placeholder from '@tiptap/extension-placeholder'
 import Image from '@tiptap/extension-image'
 import StarterKit from '@tiptap/starter-kit'

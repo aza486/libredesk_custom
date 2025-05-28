@@ -14,10 +14,10 @@
         <div
           class="flex flex-col justify-end message-bubble relative"
           :class="{
-            '!bg-[#FEF1E1]': message.private,
-            'bg-white border border-border': !message.private,
+            'bg-[#FEF1E1] dark:bg-[#4C3A24]': message.private,
+            'border border-border': !message.private,
             'opacity-50 animate-pulse': message.status === 'pending',
-            'bg-red-50 border-red-200': message.status === 'failed'
+            'border-red-400': message.status === 'failed'
           }"
         >
           <!-- Message Envelope -->

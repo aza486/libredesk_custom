@@ -5,7 +5,7 @@
         <DialogTitle>
           {{
             $t('globals.messages.new', {
-              name: $t('globals.terms.conversation')
+              name: $t('globals.terms.conversation').toLowerCase()
             })
           }}
         </DialogTitle>
@@ -28,13 +28,13 @@
 
               <ul
                 v-if="searchResults.length"
-                class="border rounded p-2 max-h-60 overflow-y-auto absolute bg-white w-full z-50 shadow-lg"
+                class="border rounded p-2 max-h-60 overflow-y-auto absolute w-full z-50 shadow-lg bg-background"
               >
                 <li
                   v-for="contact in searchResults"
                   :key="contact.email"
                   @click="selectContact(contact)"
-                  class="cursor-pointer p-2 hover:bg-gray-100 rounded"
+                  class="cursor-pointer p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   {{ contact.first_name }} {{ contact.last_name }} ({{ contact.email }})
                 </li>
@@ -125,11 +125,17 @@
                   <template #selected="{ selected }">
                     <div class="flex items-center gap-3">
                       <div class="w-7 h-7 flex items-center justify-center" v-if="selected">
-                        {{ selected?.emoji }}
+                        <span v-if="selected?.emoji">{{ selected?.emoji }}</span>
+                        <div
+                          v-else
+                          class="text-primary bg-muted rounded-full w-7 h-7 flex items-center justify-center"
+                        >
+                          <Users size="14" />
+                        </div>
                       </div>
-                      <span class="text-sm">{{
-                        selected?.label || t('form.field.selectTeam')
-                      }}</span>
+                      <span class="text-sm">
+                        {{ selected?.label || t('form.field.selectTeam') }}
+                      </span>
                     </div>
                   </template>
                 </ComboBox>
@@ -167,11 +173,7 @@
                     <div class="flex items-center gap-3">
                       <Avatar class="w-7 h-7" v-if="selected">
                         <AvatarImage
-                          :src="
-                            selected?.value === 'none'
-                              ? ''
-                              : selected?.avatar_url || ''
-                          "
+                          :src="selected?.value === 'none' ? '' : selected?.avatar_url || ''"
                           :alt="selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)"
                         />
                         <AvatarFallback>

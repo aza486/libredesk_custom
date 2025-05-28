@@ -12,7 +12,7 @@
         <DropdownMenu>
           <DropdownMenuTrigger>
             <div
-              class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
+              class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded text-sm"
               v-if="!conversationStore.conversation.loading"
             >
               <span class="text-secondary font-medium inline-block">

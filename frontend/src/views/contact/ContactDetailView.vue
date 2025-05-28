@@ -17,7 +17,7 @@
             />
 
             <div>
-              <h2 class="text-2xl font-bold text-gray-900">
+              <h2 class="text-2xl font-bold text-gray-900 dark:text-foreground">
                 {{ contact.first_name }} {{ contact.last_name }}
               </h2>
             </div>

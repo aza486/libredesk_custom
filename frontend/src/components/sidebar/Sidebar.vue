@@ -14,7 +14,6 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarSeparator,
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -28,10 +27,10 @@ import {
   ChevronRight,
   EllipsisVertical,
   User,
-  UserSearch,
-  UsersRound,
   Search,
-  Plus
+  Plus,
+  CircleDashed,
+  List,
 } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -98,17 +97,14 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/contacts')" asChild>
-                <div>
-                  <span class="font-semibold text-xl">
-                    {{ t('globals.terms.contact', 2) }}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+              <div class="px-1">
+                <span class="font-semibold text-xl">
+                  {{ t('globals.terms.contact', 2) }}
+                </span>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -137,17 +133,14 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/reports/overview')" asChild>
-                <div>
-                  <span class="font-semibold text-xl">
-                    {{ t('navigation.reports') }}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+              <div class="px-1">
+                <span class="font-semibold text-xl">
+                  {{ t('navigation.reports') }}
+                </span>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -171,21 +164,18 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/admin')" asChild>
-                <div class="flex items-center justify-between w-full">
-                  <span class="font-semibold text-xl">
-                    {{ t('navigation.admin') }}
-                  </span>
-                </div>
+              <div class="flex flex-col items-start justify-between w-full px-1">
+                <span class="font-semibold text-xl">
+                  {{ t('navigation.admin') }}
+                </span>
                 <!-- App version -->
-                <div class="text-xs text-muted-foreground ml-2">
+                <div class="text-xs text-muted-foreground">
                   ({{ settingsStore.settings['app.version'] }})
                 </div>
-              </SidebarMenuButton>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -239,17 +229,14 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton :isActive="isActiveParent('/account/profile')" asChild>
-                <div>
-                  <span class="font-semibold text-xl">
-                    {{ t('navigation.account') }}
-                  </span>
-                </div>
-              </SidebarMenuButton>
+              <div class="px-1">
+                <span class="font-semibold text-xl">
+                  {{ t('navigation.account') }}
+                </span>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -276,28 +263,20 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <div class="flex items-center justify-between w-full">
-                  <div class="font-semibold text-xl">
-                    <span>{{ t('navigation.inbox') }}</span>
-                  </div>
-                  <div class="ml-auto">
-                    <div class="flex items-center space-x-2">
-                      <router-link :to="{ name: 'search' }">
-                        <button
-                          class="flex items-center bg-accent p-2 rounded-full hover:scale-110 transition-transform duration-100"
-                        >
-                          <Search size="15" stroke-width="2.5" />
-                        </button>
-                      </router-link>
-                    </div>
-                  </div>
+              <div class="flex items-center justify-between w-full px-1">
+                <div class="font-semibold text-xl">
+                  <span>{{ t('navigation.inbox') }}</span>
                 </div>
-              </SidebarMenuButton>
+                <div class="mr-1 mt-1 hover:scale-110 transition-transform">
+                  <router-link :to="{ name: 'search' }">
+                    <Search size="18" stroke-width="2.5" />
+                  </router-link>
+                </div>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarSeparator />
+
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
@@ -327,7 +306,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/unassigned')">
                   <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
-                    <UserSearch />
+                    <CircleDashed />
                     <span>
                       {{ t('navigation.unassigned') }}
                     </span>
@@ -338,7 +317,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/all')">
                   <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
-                    <UsersRound />
+                    <List />
                     <span>
                       {{ t('globals.messages.all') }}
                     </span>
@@ -388,9 +367,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <!-- Views -->
               <Collapsible class="group/collapsible" defaultOpen v-model:open="viewInboxOpen">
                 <SidebarMenuItem>
-                  <CollapsibleTrigger as-child>
+                  <CollapsibleTrigger asChild>
                     <SidebarMenuButton asChild>
-                      <router-link to="#" class="group/item">
+                      <router-link to="#" class="group/item !p-2">
                         <!-- <SlidersHorizontal /> -->
                         <span>
                           {{ t('navigation.views') }}
@@ -399,7 +378,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                           <Plus
                             size="18"
                             @click.stop="openCreateViewDialog"
-                            class="rounded-lg cursor-pointer opacity-0 transition-all duration-200 group-hover/item:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
+                            class="rounded cursor-pointer opacity-0 transition-all duration-200 group-hover/item:opacity-100 hover:bg-gray-200 hover:shadow-sm text-gray-600 hover:text-gray-800 transform hover:scale-105 active:scale-100 p-1"
                           />
                         </div>
                         <ChevronRight

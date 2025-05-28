@@ -259,6 +259,7 @@
   "navigation.allContacts": "All Contacts",
   "navigation.customAttributes": "Custom Attributes",
   "navigation.activityLog": "Activity Log",
+  "navigation.darkMode": "Dark Mode",
   "form.field.name": "Name",
   "form.field.regex": "Regex",
   "form.field.regexHint": "Regex hint",

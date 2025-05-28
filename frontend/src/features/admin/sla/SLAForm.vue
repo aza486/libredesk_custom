@@ -95,7 +95,7 @@
           <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-3">
               <span
-                class="flex items-center justify-center w-8 h-8 rounded-lg"
+                class="flex items-center justify-center w-8 h-8 rounded"
                 :class="{
                   'bg-red-100/80 text-red-600': notification.type === 'breach',
                   'bg-amber-100/80 text-amber-600': notification.type === 'warning'
@@ -264,7 +264,7 @@
       <!-- Empty State -->
       <div
         v-else
-        class="flex flex-col items-center justify-center p-8 space-y-3 rounded-xl bg-muted/30 border border-dashed"
+        class="flex flex-col items-center justify-center p-8 space-y-3 rounded bg-muted/30 border border-dashed"
       >
         <Bell class="w-8 h-8 text-muted-foreground" />
         <p class="text-sm text-muted-foreground">{{ t('admin.sla.noAlertsConfigured') }}</p>

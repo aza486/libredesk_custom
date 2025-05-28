@@ -12,7 +12,7 @@
 
         <div class="space-y-4 flex-2">
           <div class="flex items-center gap-3">
-            <h3 class="text-lg font-semibold text-gray-900">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-foreground">
               {{ props.initialValues.first_name }} {{ props.initialValues.last_name }}
             </h3>
             <Badge :class="['px-2 rounded-full text-xs font-medium', availabilityStatus.color]">
@@ -25,7 +25,7 @@
               <Clock class="w-5 h-5 text-gray-400" />
               <div>
                 <p class="text-sm text-gray-500">{{ $t('form.field.lastActive') }}</p>
-                <p class="text-sm font-medium text-gray-700">
+                <p class="text-sm font-medium text-gray-700 dark:text-foreground">
                   {{
                     props.initialValues.last_active_at
                       ? format(new Date(props.initialValues.last_active_at), 'PPpp')
@@ -38,7 +38,7 @@
               <LogIn class="w-5 h-5 text-gray-400" />
               <div>
                 <p class="text-sm text-gray-500">{{ $t('form.field.lastLogin') }}</p>
-                <p class="text-sm font-medium text-gray-700">
+                <p class="text-sm font-medium text-gray-700 dark:text-foreground">
                   {{
                     props.initialValues.last_login_at
                       ? format(new Date(props.initialValues.last_login_at), 'PPpp')

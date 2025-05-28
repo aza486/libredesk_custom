@@ -1,8 +1,8 @@
 <template>
   <div v-if="!isHidden">
     <div class="flex items-center space-x-4 h-12 px-2">
-      <SidebarTrigger class="cursor-pointer w-4 h-4" />
-      <span class="text-xl font-semibold text-gray-800">
+      <SidebarTrigger class="cursor-pointer" />
+      <span class="text-xl font-semibold">
         {{ title }}
       </span>
     </div>

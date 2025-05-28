@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col p-4 border rounded-lg shadow-sm hover:shadow transition-colors cursor-pointer max-w-xs"
+    class="flex flex-col p-4 border rounded shadow-sm hover:shadow transition-colors cursor-pointer max-w-xs"
     @click="handleClick">
     <div class="flex items-center mb-2">
       <component :is="icon" size="24" class="mr-2 text-primary" />

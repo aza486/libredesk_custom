@@ -18,10 +18,10 @@
             :labels="agentStatusLabels"
           />
         </div>
-        <div class="rounded-lg box w-full p-5 bg-white">
+        <div class="rounded box w-full p-5">
           <LineChart :data="chartData.processedData" />
         </div>
-        <div class="rounded-lg box w-full p-5 bg-white">
+        <div class="rounded box w-full p-5">
           <BarChart :data="chartData.status_summary" />
         </div>
       </div>

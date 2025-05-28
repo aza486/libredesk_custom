@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-5 rounded-lg">
+  <div class="space-y-5 rounded">
     <div class="space-y-5">
       <div v-for="(action, index) in model" :key="index" class="space-y-5">
         <hr v-if="index" class="border-t-2 border-dotted border-gray-300" />

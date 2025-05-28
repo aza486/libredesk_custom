@@ -42,7 +42,7 @@
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
         class="max-w-[60%] max-h-[75%] h-[70%] bg-card text-card-foreground p-4 flex flex-col"
-        :class="{ '!bg-[#FEF1E1]': messageType === 'private_note' }"
+        :class="{ '!bg-[#FEF1E1] dark:!bg-[#4C3A24]': messageType === 'private_note' }"
         @escapeKeyDown="isEditorFullscreen = false"
         :hide-close-button="true"
       >
@@ -66,7 +66,7 @@
           v-model:emailErrors="emailErrors"
           v-model:messageType="messageType"
           v-model:showBcc="showBcc"
-          @toggleFullscreen="isEditorFullscreen = true"
+          @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
           @send="processSend"
           @fileUpload="handleFileUpload"
           @inlineImageUpload="handleInlineImageUpload"
@@ -79,8 +79,8 @@
 
     <!-- Main Editor non-fullscreen -->
     <div
-      class="bg-card text-card-foreground box m-2 px-2 pt-2 flex flex-col"
-      :class="{ '!bg-[#FEF1E1]': messageType === 'private_note' }"
+      class="bg-background text-card-foreground box m-2 px-2 pt-2 flex flex-col"
+      :class="{ '!bg-[#FEF1E1] dark:!bg-[#4C3A24]': messageType === 'private_note' }"
       v-if="!isEditorFullscreen"
     >
       <ReplyBoxContent
@@ -102,7 +102,7 @@
         v-model:emailErrors="emailErrors"
         v-model:messageType="messageType"
         v-model:showBcc="showBcc"
-        @toggleFullscreen="isEditorFullscreen = true"
+        @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
         @send="processSend"
         @fileUpload="handleFileUpload"
         @inlineImageUpload="handleInlineImageUpload"

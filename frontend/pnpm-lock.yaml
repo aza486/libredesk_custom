@@ -60,7 +60,7 @@ importers:
         specifier: ^1.4.4
         version: 1.5.0(@unovis/ts@1.5.0)(vue@3.5.13(typescript@5.7.3))
       '@vee-validate/zod':
-        specifier: ^4.13.2
+        specifier: ^4.15.0
         version: 4.15.0(vue@3.5.13(typescript@5.7.3))(zod@3.24.1)
       '@vueuse/core':
         specifier: ^12.4.0
@@ -102,7 +102,7 @@ importers:
         specifier: ^2.3.0
         version: 2.6.0
       vee-validate:
-        specifier: ^4.13.2
+        specifier: ^4.15.0
         version: 4.15.0(vue@3.5.13(typescript@5.7.3))
       vue:
         specifier: ^3.4.37
@@ -132,7 +132,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(vue@3.5.13(typescript@5.7.3))
       zod:
-        specifier: ^3.23.8
+        specifier: ^3.24.1
         version: 3.24.1
     devDependencies:
       '@rushstack/eslint-patch':

@@ -42,7 +42,7 @@
           <div
             v-if="hasQuotedContent"
             @click="toggleQuote"
-            class="text-xs cursor-pointer text-muted-foreground px-2 py-1 w-max hover:bg-muted hover:text-primary rounded-md transition-all"
+            class="text-xs cursor-pointer text-muted-foreground px-2 py-1 w-max hover:bg-muted hover:text-primary rounded transition-all"
           >
             {{
               showQuotedText ? t('conversation.hideQuotedText') : t('conversation.showQuotedText')
