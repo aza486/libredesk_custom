@@ -607,9 +607,9 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 	}
 	oldStatus := conversationBeforeChange.Status.String
 
-	// Status not changed? return early.
-	if oldStatus == status {
-		c.lo.Info("conversation status is unchanged", "uuid", uuid, "status", status)
+	// Status not changed and not snoozed. Return early.
+	if oldStatus == status && status != models.StatusSnoozed {
+		c.lo.Debug("no status update: conversation status unchanged and not snoozed", "uuid", uuid, "old_status", oldStatus, "new_status", status)
 		return nil
 	}
 
