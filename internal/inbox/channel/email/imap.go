@@ -76,9 +76,6 @@ func (e *Email) processMailbox(ctx context.Context, scanInboxSince time.Duration
 	case "none":
 		client, err = imapclient.DialInsecure(address, imapOptions)
 	case "starttls":
-		fmt.Println("starttls")
-		fmt.Println("skip verify", cfg.TLSSkipVerify)
-		fmt.Println(address)
 		client, err = imapclient.DialStartTLS(address, imapOptions)
 	case "tls":
 		client, err = imapclient.DialTLS(address, imapOptions)
@@ -132,13 +129,21 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 	seqSet := imap.SeqSet{}
 	seqSet.AddRange(searchResults.Min, searchResults.Max)
 
-	// Fetch only envelope, body is fetch later if the message is new.
+	// Fetch envelope and headers needed for auto-reply detection.
 	fetchOptions := &imap.FetchOptions{
 		Envelope: true,
+		BodySection: []*imap.FetchItemBodySection{
+			{
+				Specifier: imap.PartSpecifierHeader,
+				HeaderFields: []string{
+					"Auto-Submitted",
+					"X-Autoreply",
+				},
+			},
+		},
 	}
 
 	fetchCmd := client.Fetch(seqSet, fetchOptions)
-
 	for {
 		// Check for context cancellation before fetching the next message.
 		select {
@@ -154,7 +159,12 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 			return nil
 		}
 
-		// Process message envelope.
+		var (
+			env       *imap.Envelope
+			autoReply bool
+		)
+
+		// Process all fetch items for the current message.
 		for {
 			// Check for context cancellation before processing the next item.
 			select {
@@ -164,23 +174,49 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 			}
 
 			// Fetch the next item in the message.
-			fetchItem := msg.Next()
-			if fetchItem == nil {
+			item := msg.Next()
+			if item == nil {
 				// No message items left to process.
 				break
 			}
 
-			// Process the envelope item.
-			if item, ok := fetchItem.(imapclient.FetchItemDataEnvelope); ok {
-				if err := e.processEnvelope(ctx, client, item.Envelope, msg.SeqNum, inboxID); err != nil && err != context.Canceled {
-					e.lo.Error("error processing envelope", "error", err)
+			// Body section.
+			if bs, ok := item.(imapclient.FetchItemDataBodySection); ok && bs.Literal != nil {
+				envelope, err := enmime.ReadEnvelope(bs.Literal)
+				if err != nil {
+					e.lo.Error("error reading envelope", "error", err)
+					continue
+				}
+				if isAutoReply(envelope) {
+					autoReply = true
 				}
 			}
+
+			// Envelope.
+			if ed, ok := item.(imapclient.FetchItemDataEnvelope); ok {
+				env = ed.Envelope
+			}
+		}
+
+		// Skip if we couldn't get headers or envelope.
+		if env == nil {
+			continue
+		}
+
+		// Skip if this is an auto-reply message.
+		if autoReply {
+			e.lo.Info("skipping auto-reply message", "subject", env.Subject, "message_id", env.MessageID)
+			continue
+		}
+
+		// Process the envelope.
+		if err := e.processEnvelope(ctx, client, env, msg.SeqNum, inboxID); err != nil && err != context.Canceled {
+			e.lo.Error("error processing envelope", "error", err)
 		}
 	}
 }
 
-// processEnvelope processes an email envelope.
+// processEnvelope processes a single email envelope.
 func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, env *imap.Envelope, seqNum uint32, inboxID int) error {
 	if len(env.From) == 0 {
 		e.lo.Warn("no sender received for email", "message_id", env.MessageID)
@@ -188,8 +224,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 	var fromAddress = strings.ToLower(env.From[0].Addr())
 
-	// Check if the message already exists in the database.
-	// If it does, ignore it.
+	// Check if the message already exists in the database; if it does, ignore it.
 	exists, err := e.messageStore.MessageExists(env.MessageID)
 	if err != nil {
 		e.lo.Error("error checking if message exists", "message_id", env.MessageID)
@@ -211,7 +246,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		return nil
 	}
 
-	e.lo.Debug("message does not exist", "message_id", env.MessageID)
+	e.lo.Debug("processing new incoming message", "message_id", env.MessageID, "subject", env.Subject, "from", fromAddress, "inbox_id", inboxID)
 
 	// Make contact.
 	firstName, lastName := getContactName(env.From[0])
@@ -277,6 +312,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 		InboxID: inboxID,
 	}
 
+	// Fetch full message body.
 	fetchOptions := &imap.FetchOptions{
 		BodySection: []*imap.FetchItemBodySection{{}},
 	}
@@ -310,24 +346,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 }
 
-// extractAllHTMLParts extracts all HTML parts from the given enmime part by traversing the tree.
-func extractAllHTMLParts(part *enmime.Part) []string {
-	var htmlParts []string
-
-	// Check current part
-	if strings.HasPrefix(part.ContentType, "text/html") && len(part.Content) > 0 {
-		htmlParts = append(htmlParts, string(part.Content))
-	}
-
-	// Process children recursively
-	for child := part.FirstChild; child != nil; child = child.NextSibling {
-		childParts := extractAllHTMLParts(child)
-		htmlParts = append(htmlParts, childParts...)
-	}
-
-	return htmlParts
-}
-
+// processFullMessage processes the full message and enqueues it for inserting into the database.
 func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, incomingMsg models.IncomingMessage) error {
 	envelope, err := enmime.ReadEnvelope(item.Literal)
 	if err != nil {
@@ -431,4 +450,33 @@ func getContactName(imapAddr imap.Address) (string, string) {
 		return names[0], ""
 	}
 	return names[0], names[1]
+}
+
+// isAutoReply checks if a given email envelope indicates an auto-reply message.
+func isAutoReply(envelope *enmime.Envelope) bool {
+	if as := strings.ToLower(strings.TrimSpace(envelope.GetHeader("Auto-Submitted"))); as != "" && as != "no" {
+		return true
+	}
+	if strings.TrimSpace(envelope.GetHeader("X-Autoreply")) != "" {
+		return true
+	}
+	return false
+}
+
+// extractAllHTMLParts extracts all HTML parts from the given enmime part by traversing the tree.
+func extractAllHTMLParts(part *enmime.Part) []string {
+	var htmlParts []string
+
+	// Check current part
+	if strings.HasPrefix(part.ContentType, "text/html") && len(part.Content) > 0 {
+		htmlParts = append(htmlParts, string(part.Content))
+	}
+
+	// Process children recursively
+	for child := part.FirstChild; child != nil; child = child.NextSibling {
+		childParts := extractAllHTMLParts(child)
+		htmlParts = append(htmlParts, childParts...)
+	}
+
+	return htmlParts
 }
