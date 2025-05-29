@@ -21,7 +21,7 @@ VALUES(
    $5, 
    $6, 
    CASE 
-      WHEN $9 = TRUE THEN CONCAT($7::text, ' [', (SELECT reference_number FROM reference_number), ']')
+      WHEN $9 = TRUE THEN CONCAT($7::text, ' - #', (SELECT reference_number FROM reference_number), '')
       ELSE $7::text
    END, 
    (SELECT reference_number FROM reference_number)
