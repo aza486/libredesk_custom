@@ -143,6 +143,14 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		},
 	}
 
+	// Collect messages to process later.
+	type msgData struct {
+		env       *imap.Envelope
+		seqNum    uint32
+		autoReply bool
+	}
+	var messages []msgData
+
 	fetchCmd := client.Fetch(seqSet, fetchOptions)
 	for {
 		// Check for context cancellation before fetching the next message.
@@ -156,14 +164,13 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		msg := fetchCmd.Next()
 		if msg == nil {
 			// No more messages to process.
-			return nil
+			break
 		}
 
 		var (
 			env       *imap.Envelope
 			autoReply bool
 		)
-
 		// Process all fetch items for the current message.
 		for {
 			// Check for context cancellation before processing the next item.
@@ -203,17 +210,31 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 			continue
 		}
 
+		messages = append(messages, msgData{env: env, seqNum: msg.SeqNum, autoReply: autoReply})
+	}
+
+	// Now process each collected message.
+	for _, msgData := range messages {
+		// Check for context cancellation before processing each message.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		// Skip if this is an auto-reply message.
-		if autoReply {
-			e.lo.Info("skipping auto-reply message", "subject", env.Subject, "message_id", env.MessageID)
+		if msgData.autoReply {
+			e.lo.Info("skipping auto-reply message", "subject", msgData.env.Subject, "message_id", msgData.env.MessageID)
 			continue
 		}
 
 		// Process the envelope.
-		if err := e.processEnvelope(ctx, client, env, msg.SeqNum, inboxID); err != nil && err != context.Canceled {
+		if err := e.processEnvelope(ctx, client, msgData.env, msgData.seqNum, inboxID); err != nil && err != context.Canceled {
 			e.lo.Error("error processing envelope", "error", err)
 		}
 	}
+
+	return nil
 }
 
 // processEnvelope processes a single email envelope.
