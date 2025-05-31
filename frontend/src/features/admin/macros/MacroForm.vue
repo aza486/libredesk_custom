@@ -64,7 +64,7 @@
 
     <FormField v-if="form.values.visibility === 'team'" v-slot="{ componentField }" name="team_id">
       <FormItem>
-        <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.team') }}</FormLabel>
         <FormControl>
           <ComboBox
             v-bind="componentField"
