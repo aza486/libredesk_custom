@@ -1,25 +1,18 @@
 import { format, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns'
 
-export function formatTime(t) {
+export function getRelativeTime (timestamp, now = new Date()) {
   try {
-    const now = new Date()
-    const minutesDifference = differenceInMinutes(now, t)
-    const hoursDifference = differenceInHours(now, t)
-    const daysDifference = differenceInDays(now, t)
+    const mins = differenceInMinutes(now, timestamp)
+    const hours = differenceInHours(now, timestamp)
+    const days = differenceInDays(now, timestamp)
 
-    if (minutesDifference === 0) {
-      return `Just now`
-    } else if (minutesDifference < 121) {
-      return `${minutesDifference} minutes ago`
-    } else if (hoursDifference < 24) {
-      return `${hoursDifference} hours ago`
-    } else if (daysDifference < 7) {
-      return `${daysDifference} days ago`
-    } else {
-      return format(t, 'MMMM d, yyyy h:mm a')
-    }
+    if (mins === 0) return 'Just now'
+    if (mins < 60) return `${mins} mins ago`
+    if (hours < 24) return `${hours} hrs ago`
+    if (days < 7) return `${days} days ago`
+    return format(timestamp, 'MMMM d, yyyy h:mm a')
   } catch (error) {
-    console.error('error parsing time', error, 'time', t)
+    console.error('Error parsing time', error, 'timestamp', timestamp)
     return ''
   }
 }

@@ -114,16 +114,9 @@ export const useConversationStore = defineStore('conversation', () => {
   })
 
   let seenConversationUUIDs = new Map()
-  let reRenderInterval = setInterval(() => {
-    conversations.data = [...conversations.data]
-  }, 120000)
   const emitter = useEmitter()
 
   const incrementMessageVersion = () => setTimeout(() => messages.version++, 0)
-
-  function clearListReRenderInterval () {
-    clearInterval(reRenderInterval)
-  }
 
   async function setMacro (macro) {
     // Clear existing macro.
@@ -680,7 +673,6 @@ export const useConversationStore = defineStore('conversation', () => {
     currentTo,
     currentBCC,
     currentCC,
-    clearListReRenderInterval,
     conversationUUIDExists,
     updateConversationProp,
     addNewConversation,

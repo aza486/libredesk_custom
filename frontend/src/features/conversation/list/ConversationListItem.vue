@@ -27,7 +27,7 @@
             {{ contactFullName }}
           </h3>
           <span class="text-xs text-gray-400 whitespace-nowrap" v-if="conversation.last_message_at">
-            {{ formatTime(conversation.last_message_at) }}
+            {{ relativeLastMessageTime }}
           </span>
         </div>
 
@@ -39,7 +39,9 @@
 
         <!-- Message preview and unread count -->
         <div class="flex items-start justify-between gap-2">
-          <div class="text-sm flex items-center gap-1.5 flex-1 break-all text-gray-600 dark:text-gray-300">
+          <div
+            class="text-sm flex items-center gap-1.5 flex-1 break-all text-gray-600 dark:text-gray-300"
+          >
             <Reply
               class="text-green-600 flex-shrink-0"
               size="15"
@@ -94,13 +96,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { formatTime } from '@/utils/datetime'
+import { getRelativeTime } from '@/utils/datetime'
 import { Mail, Reply } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import SlaBadge from '@/features/sla/SlaBadge.vue'
 
+let timer = null
+const now = ref(new Date())
 const router = useRouter()
 const route = useRoute()
 const frdStatus = ref('')
@@ -129,10 +133,26 @@ const navigateToConversation = (uuid) => {
   })
 }
 
+onMounted(() => {
+  timer = setInterval(() => {
+    now.value = new Date()
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+
 const trimmedLastMessage = computed(() => {
   const message = props.conversation.last_message || ''
   return message.length > 100 ? message.slice(0, 100) + '...' : message
 })
 
 const getSlaClass = (status) => (['overdue', 'remaining'].includes(status) ? 'mr-2' : '')
+
+const relativeLastMessageTime = computed(() => {
+  return props.conversation.last_message_at
+    ? getRelativeTime(props.conversation.last_message_at, now.value)
+    : ''
+})
 </script>

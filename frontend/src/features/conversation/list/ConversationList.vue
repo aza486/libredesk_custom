@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { MessageCircleQuestion, MessageCircleWarning, ChevronDown, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -163,7 +163,6 @@ import ConversationListItemSkeleton from '@/features/conversation/list/Conversat
 
 const conversationStore = useConversationStore()
 const route = useRoute()
-let reFetchInterval = ref(null)
 const { t } = useI18n()
 
 const title = computed(() => {
@@ -172,11 +171,6 @@ const title = computed(() => {
     (typeValue || route.meta?.title || '').charAt(0).toUpperCase() +
     (typeValue || route.meta?.title || '').slice(1)
   )
-})
-
-onUnmounted(() => {
-  clearInterval(reFetchInterval.value)
-  conversationStore.clearListReRenderInterval()
 })
 
 const handleStatusChange = (status) => {
