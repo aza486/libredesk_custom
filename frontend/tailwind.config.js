@@ -82,6 +82,10 @@ module.exports = {
         sm: 'calc(var(--radius) - 4px)'
       },
       keyframes: {
+        'dot-flashing': {
+          '0%': { opacity: '0.2' },
+          '100%': { opacity: '1' },
+        },
         'accordion-down': {
           from: {
             height: 0
@@ -198,6 +202,7 @@ module.exports = {
         'slide-in': 'slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'slide-out': 'slide-out 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         'shake': 'shake 0.5s infinite',
+        'dot-flashing': 'dot-flashing 1s infinite linear alternate',
       }
     }
   },
