@@ -30,7 +30,7 @@ import {
   Search,
   Plus,
   CircleDashed,
-  List,
+  List
 } from 'lucide-vue-next'
 import {
   DropdownMenu,
@@ -111,7 +111,11 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               <SidebarMenuItem v-for="item in filteredContactsNavItems" :key="item.titleKey">
                 <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
                   <router-link :to="item.href">
-                    <span>{{ t(item.titleKey) }}</span>
+                    <span>{{
+                      t('globals.messages.all', {
+                        name: t(item.titleKey, 2).toLowerCase()
+                      })
+                    }}</span>
                   </router-link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -135,7 +139,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <div class="px-1">
                 <span class="font-semibold text-xl">
-                  {{ t('navigation.reports') }}
+                  {{ t('globals.terms.report', 2) }}
                 </span>
               </div>
             </SidebarMenuItem>
@@ -166,7 +170,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <div class="flex flex-col items-start justify-between w-full px-1">
                 <span class="font-semibold text-xl">
-                  {{ t('navigation.admin') }}
+                  {{ t('globals.terms.admin') }}
                 </span>
                 <!-- App version -->
                 <div class="text-xs text-muted-foreground">
@@ -231,7 +235,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <div class="px-1">
                 <span class="font-semibold text-xl">
-                  {{ t('navigation.account') }}
+                  {{ t('globals.terms.account') }}
                 </span>
               </div>
             </SidebarMenuItem>
@@ -265,7 +269,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
             <SidebarMenuItem>
               <div class="flex items-center justify-between w-full px-1">
                 <div class="font-semibold text-xl">
-                  <span>{{ t('navigation.inbox') }}</span>
+                  <span>{{ t('globals.terms.inbox') }}</span>
                 </div>
                 <div class="mr-1 mt-1 hover:scale-110 transition-transform">
                   <router-link :to="{ name: 'search' }">
@@ -298,7 +302,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/assigned')">
                   <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
                     <User />
-                    <span>{{ t('navigation.myInbox') }}</span>
+                    <span>{{ t('globals.terms.myInbox') }}</span>
                   </router-link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -308,7 +312,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                   <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
                     <CircleDashed />
                     <span>
-                      {{ t('navigation.unassigned') }}
+                      {{ t('globals.terms.unassigned') }}
                     </span>
                   </router-link>
                 </SidebarMenuButton>
@@ -338,7 +342,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                       <router-link to="#">
                         <!-- <Users /> -->
                         <span>
-                          {{ t('navigation.teamInboxes') }}
+                          {{ t('globals.terms.teamInbox', 2) }}
                         </span>
                         <ChevronRight
                           class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
@@ -372,7 +376,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                       <router-link to="#" class="group/item !p-2">
                         <!-- <SlidersHorizontal /> -->
                         <span>
-                          {{ t('navigation.views') }}
+                          {{ t('globals.terms.view', 2) }}
                         </span>
                         <div>
                           <Plus

@@ -1,6 +1,6 @@
 export const reportsNavItems = [
     {
-        titleKey: 'navigation.overview',
+        titleKey: 'globals.terms.overview',
         href: '/reports/overview',
         permission: 'reports:manage'
     }
@@ -8,125 +8,125 @@ export const reportsNavItems = [
 
 export const adminNavItems = [
     {
-        titleKey: 'navigation.workspace',
+        titleKey: 'globals.terms.workspace',
         children: [
             {
-                titleKey: 'navigation.generalSettings',
+                titleKey: 'globals.terms.general',
                 href: '/admin/general',
                 permission: 'general_settings:manage'
             },
             {
-                titleKey: 'navigation.businessHours',
+                titleKey: 'globals.terms.businessHour',
                 href: '/admin/business-hours',
                 permission: 'business_hours:manage'
             },
             {
-                titleKey: 'navigation.slaPolicies',
+                titleKey: 'globals.terms.slaPolicy',
                 href: '/admin/sla',
                 permission: 'sla:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.conversations',
+        titleKey: 'globals.terms.conversation',
         children: [
             {
-                titleKey: 'navigation.tags',
+                titleKey: 'globals.terms.tag',
                 href: '/admin/conversations/tags',
                 permission: 'tags:manage'
             },
             {
-                titleKey: 'navigation.macros',
+                titleKey: 'globals.terms.macro',
                 href: '/admin/conversations/macros',
                 permission: 'macros:manage'
             },
             {
-                titleKey: 'navigation.statuses',
+                titleKey: 'globals.terms.status',
                 href: '/admin/conversations/statuses',
                 permission: 'status:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.inboxes',
+        titleKey: 'globals.terms.inbox',
         children: [
             {
-                titleKey: 'navigation.inboxes',
+                titleKey: 'globals.terms.inbox',
                 href: '/admin/inboxes',
                 permission: 'inboxes:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.teammates',
+        titleKey: 'globals.terms.teammate',
         children: [
             {
-                titleKey: 'navigation.agents',
+                titleKey: 'globals.terms.agent',
                 href: '/admin/teams/agents',
                 permission: 'users:manage'
             },
             {
-                titleKey: 'navigation.teams',
+                titleKey: 'globals.terms.team',
                 href: '/admin/teams/teams',
                 permission: 'teams:manage'
             },
             {
-                titleKey: 'navigation.roles',
+                titleKey: 'globals.terms.role',
                 href: '/admin/teams/roles',
                 permission: 'roles:manage'
             },
             {
-                titleKey: 'navigation.activityLog',
+                titleKey: 'globals.terms.activityLog',
                 href: '/admin/teams/activity-log',
                 permission: 'activity_logs:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.automations',
+        titleKey: 'globals.terms.automation',
         children: [
             {
-                titleKey: 'navigation.automations',
+                titleKey: 'globals.terms.automation',
                 href: '/admin/automations',
                 permission: 'automations:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.customAttributes',
+        titleKey: 'globals.terms.customAttribute',
         children: [
             {
-                titleKey: 'navigation.customAttributes',
+                titleKey: 'globals.terms.customAttribute',
                 href: '/admin/custom-attributes',
                 permission: 'custom_attributes:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.notifications',
+        titleKey: 'globals.terms.notification',
         children: [
             {
-                titleKey: 'navigation.email',
+                titleKey: 'globals.terms.email',
                 href: '/admin/notification',
                 permission: 'notification_settings:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.templates',
+        titleKey: 'globals.terms.template',
         children: [
             {
-                titleKey: 'navigation.templates',
+                titleKey: 'globals.terms.template',
                 href: '/admin/templates',
                 permission: 'templates:manage'
             }
         ]
     },
     {
-        titleKey: 'navigation.security',
+        titleKey: 'globals.terms.security',
         children: [
             {
-                titleKey: 'navigation.sso',
+                titleKey: 'globals.terms.sso',
                 href: '/admin/sso',
                 permission: 'oidc:manage'
             }
@@ -136,7 +136,7 @@ export const adminNavItems = [
 
 export const accountNavItems = [
     {
-        titleKey: 'navigation.profile',
+        titleKey: 'globals.terms.profile',
         href: '/account/profile',
         description: 'Update your profile'
     }
@@ -144,7 +144,7 @@ export const accountNavItems = [
 
 export const contactNavItems = [
     {
-        titleKey: 'navigation.allContacts',
+        titleKey: 'globals.terms.contact',
         href: '/contacts',
     }
 ]

@@ -96,7 +96,7 @@
       <DropdownMenuGroup>
         <DropdownMenuItem @click.prevent="router.push({ name: 'account' })">
           <CircleUserRound size="18" class="mr-2" />
-          {{ t('navigation.account') }}
+          {{ t('globals.terms.account') }}
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
