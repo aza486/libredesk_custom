@@ -70,7 +70,7 @@
           @send="processSend"
           @fileUpload="handleFileUpload"
           @inlineImageUpload="handleInlineImageUpload"
-          @fileDelete="handleOnFileDelete"
+          @fileDelete="handleFileDelete"
           @aiPromptSelected="handleAiPromptSelected"
           class="h-full flex-grow"
         />
@@ -90,6 +90,7 @@
         :uploadingFiles="uploadingFiles"
         :clearEditorContent="clearEditorContent"
         :contentToSet="contentToSet"
+        :uploadedFiles="mediaFiles"
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
         v-model:selectedText="selectedText"
@@ -105,8 +106,7 @@
         @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
         @send="processSend"
         @fileUpload="handleFileUpload"
-        @inlineImageUpload="handleInlineImageUpload"
-        @fileDelete="handleOnFileDelete"
+        @fileDelete="handleFileDelete"
         @aiPromptSelected="handleAiPromptSelected"
       />
     </div>
@@ -115,7 +115,6 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
-import { transformImageSrcToCID } from '@/utils/strings'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useUserStore } from '@/stores/user'
@@ -133,6 +132,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useEmitter } from '@/composables/useEmitter'
+import { useFileUpload } from '@/composables/useFileUpload'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
 import {
   Form,
@@ -155,10 +155,20 @@ const { t } = useI18n()
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const userStore = useUserStore()
+
+// Setup file upload composable
+const {
+  uploadingFiles,
+  handleFileUpload,
+  handleFileDelete,
+  mediaFiles,
+} = useFileUpload({
+  linkedModel: 'messages'
+})
+
+// Rest of existing state
 const openAIKeyPrompt = ref(false)
 const isOpenAIKeyUpdating = ref(false)
-
-// Shared state between the two editor components.
 const clearEditorContent = ref(false)
 const isEditorFullscreen = ref(false)
 const isSending = ref(false)
@@ -169,7 +179,6 @@ const bcc = ref('')
 const showBcc = ref(false)
 const emailErrors = ref([])
 const aiPrompts = ref([])
-const uploadingFiles = ref([])
 const htmlContent = ref('')
 const textContent = ref('')
 const selectedText = ref('')
@@ -250,63 +259,6 @@ const updateProvider = async (values) => {
 }
 
 /**
- * Handles the file upload process when files are selected.
- * Uploads each file to the server and adds them to the conversation's mediaFiles.
- * @param {Event} event - The file input change event containing selected files
- */
-const handleFileUpload = (event) => {
-  const files = Array.from(event.target.files)
-  uploadingFiles.value = files
-
-  for (const file of files) {
-    api
-      .uploadMedia({
-        files: file,
-        inline: false,
-        linked_model: 'messages'
-      })
-      .then((resp) => {
-        conversationStore.conversation.mediaFiles.push(resp.data.data)
-        uploadingFiles.value = uploadingFiles.value.filter((f) => f.name !== file.name)
-      })
-      .catch((error) => {
-        uploadingFiles.value = uploadingFiles.value.filter((f) => f.name !== file.name)
-        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          variant: 'destructive',
-          description: handleHTTPError(error).message
-        })
-      })
-  }
-}
-
-// Inline image upload is not supported yet.
-const handleInlineImageUpload = (event) => {
-  for (const file of event.target.files) {
-    api
-      .uploadMedia({
-        files: file,
-        inline: true,
-        linked_model: 'messages'
-      })
-      .then((resp) => {
-        const imageData = {
-          src: resp.data.data.url,
-          alt: resp.data.data.filename,
-          title: resp.data.data.uuid
-        }
-        conversationStore.conversation.mediaFiles.push(resp.data.data)
-        return imageData
-      })
-      .catch((error) => {
-        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-          variant: 'destructive',
-          description: handleHTTPError(error).message
-        })
-      })
-  }
-}
-
-/**
  * Returns true if the editor has text content.
  */
 const hasTextContent = computed(() => {
@@ -321,32 +273,13 @@ const processSend = async () => {
   isEditorFullscreen.value = false
   try {
     isSending.value = true
-
     // Send message if there is text content in the editor.
     if (hasTextContent.value > 0) {
-      // Replace inline image url with cid.
-      const message = transformImageSrcToCID(htmlContent.value)
-
-      // Check which images are still in editor before sending.
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(htmlContent.value, 'text/html')
-      const inlineImageUUIDs = Array.from(doc.querySelectorAll('img.inline-image'))
-        .map((img) => img.getAttribute('title'))
-        .filter(Boolean)
-
-      // TODO: Inline images are not supported yet, this is some old boilerplate code.
-      conversationStore.conversation.mediaFiles = conversationStore.conversation.mediaFiles.filter(
-        (file) =>
-          // Keep if:
-          // 1. Not an inline image OR
-          // 2. Is an inline image that exists in editor
-          file.disposition !== 'inline' || inlineImageUUIDs.includes(file.uuid)
-      )
-
+      const message = htmlContent.value
       await api.sendMessage(conversationStore.current.uuid, {
         private: messageType.value === 'private_note',
         message: message,
-        attachments: conversationStore.conversation.mediaFiles.map((file) => file.id),
+        attachments: mediaFiles.value.map((file) => file.id),
         // Convert email addresses to array and remove empty strings.
         cc: cc.value
           .split(',')
@@ -367,15 +300,12 @@ const processSend = async () => {
       })
     }
 
-    // Apply macro actions if any.
-    // For macro errors just show toast and clear the editor.
-    if (conversationStore.conversation?.macro?.actions?.length > 0) {
+    // Apply macro actions if any, for macro errors just show toast and clear the editor.
+    const macroID = conversationStore.getMacro('reply')?.id
+    const macroActions = conversationStore.getMacro('reply')?.actions || []
+    if (macroID > 0 && macroActions.length > 0) {
       try {
-        await api.applyMacro(
-          conversationStore.current.uuid,
-          conversationStore.conversation.macro.id,
-          conversationStore.conversation.macro.actions
-        )
+        await api.applyMacro(conversationStore.current.uuid, macroID, macroActions)
       } catch (error) {
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
           variant: 'destructive',
@@ -396,7 +326,7 @@ const processSend = async () => {
       clearEditorContent.value = true
 
       // Clear macro.
-      conversationStore.resetMacro()
+      conversationStore.resetMacro('reply')
 
       // Clear media files.
       conversationStore.resetMediaFiles()
@@ -415,25 +345,14 @@ const processSend = async () => {
 }
 
 /**
- * Handles the file delete event.
- * Removes the file from the conversation's mediaFiles.
- * @param {String} uuid - The UUID of the file to delete
- */
-const handleOnFileDelete = (uuid) => {
-  conversationStore.conversation.mediaFiles = conversationStore.conversation.mediaFiles.filter(
-    (item) => item.uuid !== uuid
-  )
-}
-
-/**
  * Watches for changes in the conversation's macro id and update message content.
  */
 watch(
-  () => conversationStore.conversation.macro.id,
+  () => conversationStore.getMacro('reply').id,
   () => {
     // Setting timestamp, so the same macro can be set again.
     contentToSet.value = JSON.stringify({
-      content: conversationStore.conversation.macro.message_content,
+      content: conversationStore.getMacro('reply').message_content,
       timestamp: Date.now()
     })
   },

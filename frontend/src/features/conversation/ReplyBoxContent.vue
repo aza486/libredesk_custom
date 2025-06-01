@@ -103,18 +103,18 @@
 
     <!-- Macro preview -->
     <MacroActionsPreview
-      v-if="conversationStore.conversation?.macro?.actions?.length > 0"
-      :actions="conversationStore.conversation.macro.actions"
-      :onRemove="conversationStore.removeMacroAction"
+      v-if="conversationStore.getMacro('reply')?.actions?.length > 0"
+      :actions="conversationStore.getMacro('reply').actions"
+      :onRemove="(action) => conversationStore.removeMacroAction('reply', action)"
       class="mt-2"
     />
 
     <!-- Attachments preview -->
     <AttachmentsPreview
-      :attachments="attachments"
+      :attachments="uploadedFiles"
       :uploadingFiles="uploadingFiles"
       :onDelete="handleOnFileDelete"
-      v-if="attachments.length > 0 || uploadingFiles.length > 0"
+      v-if="uploadedFiles.length > 0 || uploadingFiles.length > 0"
       class="mt-2"
     />
 
@@ -131,6 +131,7 @@
       @toggleItalic="toggleItalic"
       :enableSend="enableSend"
       :handleSend="handleSend"
+      :showSendButton="true"
       @emojiSelect="handleEmojiSelect"
     />
   </div>
@@ -190,7 +191,12 @@ const props = defineProps({
   contentToSet: {
     type: String,
     default: null
-  }
+  },
+  uploadedFiles: {
+    type: Array,
+    required: false,
+    default: () => []
+  },
 })
 
 const emit = defineEmits([
@@ -233,16 +239,10 @@ const toggleItalic = () => {
   isItalic.value = !isItalic.value
 }
 
-const attachments = computed(() => {
-  return conversationStore.conversation.mediaFiles.filter(
-    (upload) => upload.disposition === 'attachment'
-  )
-})
-
 const enableSend = computed(() => {
   return (
     (textContent.value.trim().length > 0 ||
-      conversationStore.conversation?.macro?.actions?.length > 0) &&
+      conversationStore.getMacro('reply')?.actions?.length > 0) &&
     emailErrors.value.length === 0 &&
     !props.uploadingFiles.length
   )

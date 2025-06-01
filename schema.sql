@@ -19,6 +19,7 @@ DROP TYPE IF EXISTS "sla_event_status" CASCADE; CREATE TYPE "sla_event_status" A
 DROP TYPE IF EXISTS "sla_metric" CASCADE; CREATE TYPE "sla_metric" AS ENUM ('first_response', 'resolution', 'next_response');
 DROP TYPE IF EXISTS "sla_notification_type" CASCADE; CREATE TYPE "sla_notification_type" AS ENUM ('warning', 'breach');
 DROP TYPE IF EXISTS "activity_log_type" CASCADE; CREATE TYPE "activity_log_type" AS ENUM ('agent_login', 'agent_logout', 'agent_away', 'agent_away_reassigned', 'agent_online');
+DROP TYPE IF EXISTS "macro_visible_when" CASCADE; CREATE TYPE "visible_when" AS ENUM ('replying', 'starting_conversation', 'adding_private_note');
 
 -- Sequence to generate reference number for conversations.
 DROP SEQUENCE IF EXISTS conversation_reference_number_sequence; CREATE SEQUENCE conversation_reference_number_sequence START 100;
@@ -291,6 +292,7 @@ CREATE TABLE macros (
    name TEXT NOT NULL,
    actions JSONB DEFAULT '{}'::jsonb NOT NULL,
    visibility macro_visibility NOT NULL,
+   visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY['replying'],
    message_content TEXT NOT NULL,
    -- Cascade deletes when user is deleted.
    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,

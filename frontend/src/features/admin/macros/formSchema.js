@@ -13,6 +13,7 @@ export const createFormSchema = (t) => z.object({
   message_content: z.string().optional(),
   actions: actionSchema(t).optional().default([]),
   visibility: z.enum(['all', 'team', 'user']),
+  visible_when: z.enum(['replying', 'starting_conversation', 'adding_private_note']).optional().default('replying'),
   team_id: z.string().nullable().optional(),
   user_id: z.string().nullable().optional(),
 })

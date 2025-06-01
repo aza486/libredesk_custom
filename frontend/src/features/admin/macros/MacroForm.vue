@@ -41,26 +41,53 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="visibility">
-      <FormItem>
-        <FormLabel>{{ t('admin.macro.visibility') }}</FormLabel>
-        <FormControl>
-          <Select v-bind="componentField">
-            <SelectTrigger>
-              <SelectValue placeholder="Select visibility" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">{{ t('admin.macro.visibility.all') }}</SelectItem>
-                <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
-                <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </FormControl>
-        <FormMessage />
-      </FormItem>
-    </FormField>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <FormField v-slot="{ componentField }" name="visible_when">
+        <FormItem>
+          <FormLabel>{{ t('admin.macro.visibleWhen') }}</FormLabel>
+          <FormControl>
+            <Select v-bind="componentField">
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="replying">{{ t('admin.macro.replying') }}</SelectItem>
+                  <SelectItem value="starting_conversation">{{
+                    t('admin.macro.startingConversation')
+                  }}</SelectItem>
+                  <SelectItem value="adding_private_note">{{
+                    t('admin.macro.addingPrivateNote')
+                  }}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+
+      <FormField v-slot="{ componentField }" name="visibility">
+        <FormItem>
+          <FormLabel>{{ t('admin.macro.visibility') }}</FormLabel>
+          <FormControl>
+            <Select v-bind="componentField">
+              <SelectTrigger>
+                <SelectValue placeholder="Select visibility" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">{{ t('admin.macro.visibility.all') }}</SelectItem>
+                  <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
+                  <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      </FormField>
+    </div>
 
     <FormField v-if="form.values.visibility === 'team'" v-slot="{ componentField }" name="team_id">
       <FormItem>
@@ -114,7 +141,10 @@
               <div class="flex items-center gap-2">
                 <div v-if="selected" class="flex items-center gap-2">
                   <Avatar class="w-7 h-7">
-                    <AvatarImage :src="selected.avatar_url || ''" :alt="selected.label.slice(0, 2)" />
+                    <AvatarImage
+                      :src="selected.avatar_url || ''"
+                      :alt="selected.label.slice(0, 2)"
+                    />
                     <AvatarFallback>{{ selected.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
                   </Avatar>
                   <span>{{ selected.label }}</span>
@@ -189,7 +219,11 @@ const submitLabel = computed(() => {
   )
 })
 const form = useForm({
-  validationSchema: toTypedSchema(createFormSchema(t))
+  validationSchema: toTypedSchema(createFormSchema(t)),
+  initialValues: {
+    visible_when: props.initialValues.visible_when || 'replying',
+    visibility: props.initialValues.visibility || 'all'
+  }
 })
 
 const actionConfig = ref({

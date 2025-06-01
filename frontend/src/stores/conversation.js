@@ -16,6 +16,7 @@ export const useConversationStore = defineStore('conversation', () => {
   const currentTo = ref([])
   const currentBCC = ref([])
   const currentCC = ref([])
+  const macros = ref({})
 
   // Options for select fields
   const priorityOptions = computed(() => {
@@ -100,7 +101,6 @@ export const useConversationStore = defineStore('conversation', () => {
     data: null,
     participants: {},
     mediaFiles: [],
-    macro: {},
     loading: false,
     errorMessage: ''
   })
@@ -117,21 +117,6 @@ export const useConversationStore = defineStore('conversation', () => {
   const emitter = useEmitter()
 
   const incrementMessageVersion = () => setTimeout(() => messages.version++, 0)
-
-  async function setMacro (macro) {
-    // Clear existing macro.
-    conversation.macro = {}
-    await nextTick()
-    conversation.macro = macro
-  }
-
-  function removeMacroAction (action) {
-    conversation.macro.actions = conversation.macro.actions.filter(a => a.type !== action.type)
-  }
-
-  function resetMacro () {
-    conversation.macro = {}
-  }
 
   function resetMediaFiles () {
     conversation.mediaFiles = []
@@ -660,6 +645,25 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
 
+  /** Macros **/
+  async function setMacro (macro, context) {
+    console.debug('Setting macro for context:', context, macro)
+    macros.value[context] = macro
+  }
+
+  function getMacro (context) {
+    return macros.value[context] || {}
+  }
+
+  function removeMacroAction (action, context) {
+    if (!macros.value[context]) return
+    macros.value[context].actions = macros.value[context].actions.filter(a => a.type !== action.type)
+  }
+
+  function resetMacro (context) {
+    macros.value = { ...macros.value, [context]: {} }
+  }
+
   return {
     conversations,
     conversation,
@@ -699,6 +703,7 @@ export const useConversationStore = defineStore('conversation', () => {
     setListSortField,
     setListStatus,
     removeMacroAction,
+    getMacro,
     setMacro,
     resetMacro,
     resetMediaFiles,
