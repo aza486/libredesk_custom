@@ -69,7 +69,6 @@
           @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
           @send="processSend"
           @fileUpload="handleFileUpload"
-          @inlineImageUpload="handleInlineImageUpload"
           @fileDelete="handleFileDelete"
           @aiPromptSelected="handleAiPromptSelected"
           class="h-full flex-grow"
@@ -162,6 +161,7 @@ const {
   handleFileUpload,
   handleFileDelete,
   mediaFiles,
+  clearMediaFiles,
 } = useFileUpload({
   linkedModel: 'messages'
 })
@@ -269,7 +269,7 @@ const hasTextContent = computed(() => {
  * Processes the send action.
  */
 const processSend = async () => {
-  let hasAPIErrored = false
+  let hasMessageSendingErrored = false
   isEditorFullscreen.value = false
   try {
     isSending.value = true
@@ -314,14 +314,14 @@ const processSend = async () => {
       }
     }
   } catch (error) {
-    hasAPIErrored = true
+    hasMessageSendingErrored = true
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
   } finally {
     // If API has NOT errored clear state.
-    if (hasAPIErrored === false) {
+    if (hasMessageSendingErrored === false) {
       // Clear editor.
       clearEditorContent.value = true
 
@@ -329,7 +329,7 @@ const processSend = async () => {
       conversationStore.resetMacro('reply')
 
       // Clear media files.
-      conversationStore.resetMediaFiles()
+      clearMediaFiles()
 
       // Clear any email errors.
       emailErrors.value = []
@@ -340,8 +340,6 @@ const processSend = async () => {
     }
     isSending.value = false
   }
-  // Update assignee last seen timestamp.
-  api.updateAssigneeLastSeen(conversationStore.current.uuid)
 }
 
 /**

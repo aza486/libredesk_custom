@@ -196,7 +196,7 @@ const getValidationSchema = (attribute) => {
         z
           .number({
             invalid_type_error: t('globals.messages.invalid', {
-              name: t('form.field.value').toLowerCase()
+              name: t('globals.terms.value').toLowerCase()
             })
           })
           .nullable()
@@ -209,7 +209,7 @@ const getValidationSchema = (attribute) => {
         .refine(
           (val) => !isNaN(Date.parse(val)),
           t('globals.messages.invalid', {
-            name: t('form.field.value').toLowerCase()
+            name: t('globals.terms.value').toLowerCase()
           })
         )
         .nullable()
@@ -227,7 +227,7 @@ const getValidationSchema = (attribute) => {
         .string()
         .refine((val) => attribute.values.includes(val), {
           message: t('globals.messages.invalid', {
-            name: t('form.field.value').toLowerCase()
+            name: t('globals.terms.value').toLowerCase()
           })
         })
         .nullable()

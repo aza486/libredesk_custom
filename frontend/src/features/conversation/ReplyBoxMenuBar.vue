@@ -13,13 +13,13 @@
     <div class="flex justify-items-start gap-2">
       <!-- File inputs -->
       <input type="file" class="hidden" ref="attachmentInput" multiple @change="handleFileUpload" />
-      <input
+      <!-- <input
         type="file"
         class="hidden"
         ref="inlineImageInput"
         accept="image/*"
         @change="handleInlineImageUpload"
-      />
+      /> -->
       <!-- Editor buttons -->
       <Toggle
         class="px-2 py-2 border-0"
@@ -54,7 +54,7 @@ import EmojiPicker from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'
 
 const attachmentInput = ref(null)
-const inlineImageInput = ref(null)
+// const inlineImageInput = ref(null)
 const isEmojiPickerVisible = ref(false)
 const emojiPickerRef = ref(null)
 const emit = defineEmits(['emojiSelect'])

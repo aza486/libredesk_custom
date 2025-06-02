@@ -294,7 +294,7 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 			IF NOT EXISTS (
 				SELECT 1 FROM pg_type WHERE typname = 'macro_visible_when'
 			) THEN
-				CREATE TYPE macro_visible_when AS ENUM ('replying', 'starting_conversation', 'adding_note');
+				CREATE TYPE macro_visible_when AS ENUM ('replying', 'starting_conversation', 'adding_private_note');
 			END IF;
 		END
 		$$;
@@ -303,14 +303,15 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
-	// Add macro_visible_when column to macros table if it doesn't exist
+	// Add visible_when column to macros table if it doesn't exist
 	_, err = db.Exec(`
 		ALTER TABLE macros
-		ADD COLUMN IF NOT EXISTS macro_visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY['replying'];
+		ADD COLUMN IF NOT EXISTS visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY[]::macro_visible_when[];
 	`)
 	if err != nil {
 		return err
 	}
+
 
 	return nil
 }

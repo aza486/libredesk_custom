@@ -231,7 +231,11 @@ const updateConversationCustomAttribute = (uuid, data) => http.put(`/api/v1/conv
       'Content-Type': 'application/json'
     }
   })
-const createConversation = (data) => http.post('/api/v1/conversations', data)
+const createConversation = (data) => http.post('/api/v1/conversations', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const updateConversationStatus = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/status`, data)
 const updateConversationPriority = (uuid, data) => http.put(`/api/v1/conversations/${uuid}/priority`, data)
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)

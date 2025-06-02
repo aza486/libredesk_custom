@@ -1,125 +1,132 @@
 <template>
-  <div class="space-y-5 rounded">
-    <div class="space-y-5">
-      <div v-for="(action, index) in model" :key="index" class="space-y-5">
-        <hr v-if="index" class="border-t-2 border-dotted border-gray-300" />
+  <div class="space-y-6">
+    <!-- Empty State -->
+    <div
+      v-if="!model.length"
+      class="text-center py-12 px-6 border-2 border-dashed border-muted rounded-lg"
+    >
+      <div class="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
+        <Plus class="w-6 h-6 text-muted-foreground" />
+      </div>
+      <h3 class="text-sm font-medium text-foreground mb-2">
+        {{ $t('globals.messages.no', { name: $t('globals.terms.action', 2).toLowerCase() }) }}
+      </h3>
+      <Button @click="add" variant="outline" size="sm" class="inline-flex items-center gap-2">
+        <Plus class="w-4 h-4" />
+        {{ config.addButtonText }}
+      </Button>
+    </div>
 
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex gap-5">
-              <div class="w-48">
-                <Select
-                  v-model="action.type"
-                  @update:modelValue="(value) => updateField(value, index)"
+    <!-- Actions List -->
+    <div v-else class="space-y-6">
+      <div v-for="(action, index) in model" :key="index" class="relative">
+        <!-- Action Card -->
+        <div class="border rounded p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 space-y-4">
+              <!-- Action Type Selection -->
+              <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1 max-w-xs">
+                  <label class="block text-sm font-medium mb-2">{{
+                    $t('globals.messages.type', {
+                      name: $t('globals.terms.action')
+                    })
+                  }}</label>
+                  <Select
+                    v-model="action.type"
+                    @update:modelValue="(value) => updateField(value, index)"
+                  >
+                    <SelectTrigger class="w-full">
+                      <SelectValue :placeholder="config.typePlaceholder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem
+                          v-for="(actionConfig, key) in config.actions"
+                          :key="key"
+                          :value="key"
+                        >
+                          {{ actionConfig.label }}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <!-- Value Selection -->
+                <div
+                  v-if="action.type && config.actions[action.type]?.type === 'select'"
+                  class="flex-1 max-w-xs"
                 >
-                  <SelectTrigger>
-                    <SelectValue :placeholder="config.typePlaceholder" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem
-                        v-for="(actionConfig, key) in config.actions"
-                        :key="key"
-                        :value="key"
-                      >
-                        {{ actionConfig.label }}
-                      </SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  <label class="block text-sm font-medium mb-2">Value</label>
+
+                  <SelectComboBox
+                    v-if="action.type === 'assign_user'"
+                    v-model="action.value[0]"
+                    :items="config.actions[action.type].options"
+                    :placeholder="config.valuePlaceholder"
+                    @update:modelValue="(value) => updateValue(value, index)"
+                    type="user"
+                  />
+
+                  <SelectComboBox
+                    v-if="action.type === 'assign_team'"
+                    v-model="action.value[0]"
+                    :items="config.actions[action.type].options"
+                    :placeholder="config.valuePlaceholder"
+                    @update:modelValue="(value) => updateValue(value, index)"
+                    type="team"
+                  />
+                </div>
               </div>
 
+              <!-- Tag Selection -->
               <div
-                v-if="action.type && config.actions[action.type]?.type === 'select'"
-                class="w-48"
+                v-if="action.type && config.actions[action.type]?.type === 'tag'"
+                class="max-w-md"
               >
-                <ComboBox
-                  v-model="action.value[0]"
-                  :items="config.actions[action.type].options"
-                  :placeholder="config.valuePlaceholder"
-                  @update:modelValue="(value) => updateValue(value, index)"
-                >
-                  <template #item="{ item }">
-                    <div v-if="action.type === 'assign_user'">
-                      <div class="flex items-center flex-1 gap-2 ml-2">
-                        <Avatar class="w-7 h-7">
-                          <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
-                          <AvatarFallback
-                            >{{ item.label.slice(0, 2).toUpperCase() }}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{{ item.label }}</span>
-                      </div>
-                    </div>
-                    <div v-else-if="action.type === 'assign_team'">
-                      <div class="flex items-center gap-2 ml-2">
-                        <span>{{ item.emoji }}</span>
-                        <span>{{ item.label }}</span>
-                      </div>
-                    </div>
-                    <div v-else>
-                      {{ item.label }}
-                    </div>
-                  </template>
-
-                  <template #selected="{ selected }">
-                    <div v-if="action.type === 'assign_user'">
-                      <div class="flex items-center gap-2">
-                        <div v-if="selected" class="flex items-center gap-2">
-                          <Avatar class="w-7 h-7">
-                            <AvatarImage
-                              :src="selected.avatar_url || ''"
-                              :alt="selected.label.slice(0, 2)"
-                            />
-                            <AvatarFallback>{{
-                              selected.label.slice(0, 2).toUpperCase()
-                            }}</AvatarFallback>
-                          </Avatar>
-                          <span>{{ selected.label }}</span>
-                        </div>
-                        <span v-else>{{ $t('form.field.selectUser') }}</span>
-                      </div>
-                    </div>
-                    <div v-else-if="action.type === 'assign_team'">
-                      <div class="flex items-center gap-2">
-                        <span v-if="selected">
-                          {{ selected.emoji }}
-                          <span>{{ selected.label }}</span>
-                        </span>
-                        <span v-else>
-                          {{ $t('form.field.selectTeam') }}
-                        </span>
-                      </div>
-                    </div>
-                    <div v-else-if="selected">
-                      {{ selected.label }}
-                    </div>
-                    <div v-else>{{ $t('form.field.select') }}</div>
-                  </template>
-                </ComboBox>
+                <label class="block text-sm font-medium mb-2">Tags</label>
+                <SelectTag
+                  v-model="action.value"
+                  :items="tagsStore.tagNames.map((tag) => ({ label: tag, value: tag }))"
+                  placeholder="Select tags"
+                />
               </div>
             </div>
 
-            <X class="cursor-pointer w-4" @click="remove(index)" />
-          </div>
-
-          <div v-if="action.type && config.actions[action.type]?.type === 'tag'">
-            <SelectTag
-              v-model="action.value"
-              :items="tagsStore.tagNames.map((tag) => ({ label: tag, value: tag }))"
-              placeholder="Select tag"
-            />
+            <!-- Remove Button -->
+            <Button
+              variant="ghost"
+              size="sm"
+              @click="remove(index)"
+              class="text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8 p-0"
+            >
+              <X class="w-4 h-4" />
+              <span class="sr-only">Remove action</span>
+            </Button>
           </div>
         </div>
       </div>
+
+      <!-- Add Action Button -->
+      <div class="flex justify-center pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          @click="add"
+          class="inline-flex items-center gap-2 border-dashed hover:border-solid"
+        >
+          <Plus class="w-4 h-4" />
+          {{ config.addButtonText }}
+        </Button>
+      </div>
     </div>
-    <Button type="button" variant="outline" @click.prevent="add">{{ config.addButtonText }}</Button>
   </div>
 </template>
 
 <script setup>
 import { Button } from '@/components/ui/button'
-import { X } from 'lucide-vue-next'
+import { X, Plus } from 'lucide-vue-next'
 import {
   Select,
   SelectContent,
@@ -128,10 +135,9 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { SelectTag } from '@/components/ui/select'
 import { useTagStore } from '@/stores/tag'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
+import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 
 const model = defineModel('actions', {
   type: Array,

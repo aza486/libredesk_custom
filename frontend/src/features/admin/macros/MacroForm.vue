@@ -29,7 +29,9 @@
 
     <FormField v-slot="{ componentField }" name="actions">
       <FormItem>
-        <FormLabel> {{ t('admin.macro.actions') }}</FormLabel>
+        <FormLabel>
+          {{ t('globals.terms.action', 2) }} ({{ t('globals.terms.optional', 1).toLowerCase() }})
+        </FormLabel>
         <FormControl>
           <ActionBuilder
             v-model:actions="componentField.modelValue"
@@ -41,79 +43,69 @@
       </FormItem>
     </FormField>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormField v-slot="{ componentField }" name="visible_when">
-        <FormItem>
-          <FormLabel>{{ t('admin.macro.visibleWhen') }}</FormLabel>
-          <FormControl>
-            <Select v-bind="componentField">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="replying">{{ t('admin.macro.replying') }}</SelectItem>
-                  <SelectItem value="starting_conversation">{{
-                    t('admin.macro.startingConversation')
-                  }}</SelectItem>
-                  <SelectItem value="adding_private_note">{{
-                    t('admin.macro.addingPrivateNote')
-                  }}</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      </FormField>
+    <FormField v-slot="{ componentField, handleChange }" name="visible_when">
+      <FormItem>
+        <FormLabel>{{ t('globals.messages.visibleWhen') }}</FormLabel>
+        <FormControl>
+          <SelectTag
+            :items="[
+              { label: t('globals.messages.replying'), value: 'replying' },
+              {
+                label: t('globals.messages.starting', {
+                  name: t('globals.terms.conversation').toLowerCase()
+                }),
+                value: 'starting_conversation'
+              },
+              {
+                label: t('globals.messages.adding', {
+                  name: t('globals.terms.privateNote', 2).toLowerCase()
+                }),
+                value: 'adding_private_note'
+              }
+            ]"
+            v-model="componentField.modelValue"
+            @update:modelValue="handleChange"
+          />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
-      <FormField v-slot="{ componentField }" name="visibility">
-        <FormItem>
-          <FormLabel>{{ t('admin.macro.visibility') }}</FormLabel>
-          <FormControl>
-            <Select v-bind="componentField">
-              <SelectTrigger>
-                <SelectValue placeholder="Select visibility" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="all">{{ t('admin.macro.visibility.all') }}</SelectItem>
-                  <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
-                  <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      </FormField>
-    </div>
+    <FormField v-slot="{ componentField }" name="visibility">
+      <FormItem>
+        <FormLabel>{{ t('globals.terms.visibility') }}</FormLabel>
+        <FormControl>
+          <Select v-bind="componentField">
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="all">{{
+                  t('globals.messages.all', {
+                    name: t('globals.terms.user', 2).toLowerCase()
+                  })
+                }}</SelectItem>
+                <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
+                <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormField>
 
     <FormField v-if="form.values.visibility === 'team'" v-slot="{ componentField }" name="team_id">
       <FormItem>
         <FormLabel>{{ t('globals.terms.team') }}</FormLabel>
         <FormControl>
-          <ComboBox
+          <SelectComboBox
             v-bind="componentField"
             :items="tStore.options"
             :placeholder="t('form.field.selectTeam')"
-          >
-            <template #item="{ item }">
-              <div class="flex items-center gap-2 ml-2">
-                <span>{{ item.emoji }}</span>
-                <span>{{ item.label }}</span>
-              </div>
-            </template>
-            <template #selected="{ selected }">
-              <div class="flex items-center gap-2">
-                <span v-if="selected">
-                  {{ selected.emoji }}
-                  <span>{{ selected.label }}</span>
-                </span>
-                <span v-else>{{ t('form.field.selectTeam') }}</span>
-              </div>
-            </template>
-          </ComboBox>
+            type="team"
+          />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -123,36 +115,12 @@
       <FormItem>
         <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
         <FormControl>
-          <ComboBox
+          <SelectComboBox
             v-bind="componentField"
             :items="uStore.options"
             :placeholder="t('form.field.selectUser')"
-          >
-            <template #item="{ item }">
-              <div class="flex items-center gap-2 ml-2">
-                <Avatar class="w-7 h-7">
-                  <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
-                  <AvatarFallback>{{ item.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
-                </Avatar>
-                <span>{{ item.label }}</span>
-              </div>
-            </template>
-            <template #selected="{ selected }">
-              <div class="flex items-center gap-2">
-                <div v-if="selected" class="flex items-center gap-2">
-                  <Avatar class="w-7 h-7">
-                    <AvatarImage
-                      :src="selected.avatar_url || ''"
-                      :alt="selected.label.slice(0, 2)"
-                    />
-                    <AvatarFallback>{{ selected.label.slice(0, 2).toUpperCase() }}</AvatarFallback>
-                  </Avatar>
-                  <span>{{ selected.label }}</span>
-                </div>
-                <span v-else>{{ t('form.field.selectUser') }}</span>
-              </div>
-            </template>
-          </ComboBox>
+            type="user"
+          />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -169,22 +137,22 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import ActionBuilder from '@/features/admin/macros/ActionBuilder.vue'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
 import { getTextFromHTML } from '@/utils/strings.js'
 import { createFormSchema } from './formSchema.js'
+import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 import {
   Select,
   SelectContent,
   SelectGroup,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
+  SelectTag
 } from '@/components/ui/select'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { useI18n } from 'vue-i18n'
 import Editor from '@/features/conversation/ConversationTextEditor.vue'
 
@@ -221,7 +189,11 @@ const submitLabel = computed(() => {
 const form = useForm({
   validationSchema: toTypedSchema(createFormSchema(t)),
   initialValues: {
-    visible_when: props.initialValues.visible_when || 'replying',
+    visible_when: props.initialValues.visible_when || [
+      'replying',
+      'starting_conversation',
+      'adding_private_note'
+    ],
     visibility: props.initialValues.visibility || 'all'
   }
 })

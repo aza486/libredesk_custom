@@ -20,7 +20,7 @@
             class="px-3 py-1 rounded transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
           >
-            {{ $t('replyBox.privateNote') }}
+            {{ $t('globals.terms.privateNote') }}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -105,7 +105,7 @@
     <MacroActionsPreview
       v-if="conversationStore.getMacro('reply')?.actions?.length > 0"
       :actions="conversationStore.getMacro('reply').actions"
-      :onRemove="(action) => conversationStore.removeMacroAction('reply', action)"
+      :onRemove="(action) => conversationStore.removeMacroAction(action, 'reply')"
       class="mt-2"
     />
 
@@ -123,7 +123,6 @@
       class="mt-1 shrink-0"
       :isFullscreen="isFullscreen"
       :handleFileUpload="handleFileUpload"
-      :handleInlineImageUpload="handleInlineImageUpload"
       :isBold="isBold"
       :isItalic="isItalic"
       :isSending="isSending"
@@ -138,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { Maximize2, Minimize2 } from 'lucide-vue-next'
 import Editor from './ConversationTextEditor.vue'
@@ -152,8 +151,8 @@ import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue
 import ReplyBoxMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'
 import { useI18n } from 'vue-i18n'
 import { validateEmail } from '@/utils/strings'
+import { useMacroStore } from '@/stores/macro'
 
-// Define models for two-way binding
 const messageType = defineModel('messageType', { default: 'reply' })
 const to = defineModel('to', { default: '' })
 const cc = defineModel('cc', { default: '' })
@@ -166,6 +165,7 @@ const selectedText = defineModel('selectedText', { default: '' })
 const isBold = defineModel('isBold', { default: false })
 const isItalic = defineModel('isItalic', { default: false })
 const cursorPosition = defineModel('cursorPosition', { default: 0 })
+const macroStore = useMacroStore()
 
 const props = defineProps({
   isFullscreen: {
@@ -196,7 +196,7 @@ const props = defineProps({
     type: Array,
     required: false,
     default: () => []
-  },
+  }
 })
 
 const emit = defineEmits([
@@ -289,10 +289,6 @@ const handleFileUpload = (event) => {
   emit('fileUpload', event)
 }
 
-const handleInlineImageUpload = (event) => {
-  emit('inlineImageUpload', event)
-}
-
 const handleOnFileDelete = (uuid) => {
   emit('fileDelete', uuid)
 }
@@ -306,4 +302,13 @@ const handleEmojiSelect = (emoji) => {
 const handleAiPromptSelected = (key) => {
   emit('aiPromptSelected', key)
 }
+
+// Watch and update macro view based on message type this filters our macros.
+watch(messageType, (newType) => {
+  if (newType === 'reply') {
+    macroStore.setCurrentView('replying')
+  } else if (newType === 'private_note') {
+    macroStore.setCurrentView('adding_private_note')
+  }
+}, { immediate: true })
 </script>

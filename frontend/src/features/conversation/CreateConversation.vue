@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Dialog :open="dialogOpen" @update:open="dialogOpen = $event">
+    <Dialog :open="dialogOpen" @update:open="dialogOpen = false">
       <DialogContent class="max-w-5xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
@@ -61,7 +61,7 @@
                   <FormItem>
                     <FormLabel>{{ $t('form.field.lastName') }}</FormLabel>
                     <FormControl>
-                      <Input type="text" placeholder="" v-bind="componentField" required />
+                      <Input type="text" placeholder="" v-bind="componentField" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -74,7 +74,7 @@
                   <FormItem>
                     <FormLabel>{{ $t('form.field.subject') }}</FormLabel>
                     <FormControl>
-                      <Input type="text" placeholder="" v-bind="componentField" required />
+                      <Input type="text" placeholder="" v-bind="componentField" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -117,43 +117,12 @@
                       }})</FormLabel
                     >
                     <FormControl>
-                      <ComboBox
+                      <SelectComboBox
                         v-bind="componentField"
                         :items="[{ value: 'none', label: 'None' }, ...teamStore.options]"
                         :placeholder="t('form.field.selectTeam')"
-                      >
-                        <template #item="{ item }">
-                          <div class="flex items-center gap-3 py-2">
-                            <div class="w-7 h-7 flex items-center justify-center">
-                              <span v-if="item.emoji">{{ item.emoji }}</span>
-                              <div
-                                v-else
-                                class="text-primary bg-muted rounded-full w-7 h-7 flex items-center justify-center"
-                              >
-                                <Users size="14" />
-                              </div>
-                            </div>
-                            <span class="text-sm">{{ item.label }}</span>
-                          </div>
-                        </template>
-
-                        <template #selected="{ selected }">
-                          <div class="flex items-center gap-3">
-                            <div class="w-7 h-7 flex items-center justify-center" v-if="selected">
-                              <span v-if="selected?.emoji">{{ selected?.emoji }}</span>
-                              <div
-                                v-else
-                                class="text-primary bg-muted rounded-full w-7 h-7 flex items-center justify-center"
-                              >
-                                <Users size="14" />
-                              </div>
-                            </div>
-                            <span class="text-sm">
-                              {{ selected?.label || t('form.field.selectTeam') }}
-                            </span>
-                          </div>
-                        </template>
-                      </ComboBox>
+                        type="team"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -168,51 +137,12 @@
                       }})</FormLabel
                     >
                     <FormControl>
-                      <ComboBox
+                      <SelectComboBox
                         v-bind="componentField"
                         :items="[{ value: 'none', label: 'None' }, ...uStore.options]"
                         :placeholder="t('form.field.selectAgent')"
-                      >
-                        <template #item="{ item }">
-                          <div class="flex items-center gap-3 py-2">
-                            <Avatar class="w-8 h-8">
-                              <AvatarImage
-                                :src="item.value === 'none' ? '' : item.avatar_url || ''"
-                                :alt="item.value === 'none' ? 'N' : item.label.slice(0, 2)"
-                              />
-                              <AvatarFallback>
-                                {{
-                                  item.value === 'none' ? 'N' : item.label.slice(0, 2).toUpperCase()
-                                }}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span class="text-sm">{{ item.label }}</span>
-                          </div>
-                        </template>
-
-                        <template #selected="{ selected }">
-                          <div class="flex items-center gap-3">
-                            <Avatar class="w-7 h-7" v-if="selected">
-                              <AvatarImage
-                                :src="selected?.value === 'none' ? '' : selected?.avatar_url || ''"
-                                :alt="
-                                  selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)
-                                "
-                              />
-                              <AvatarFallback>
-                                {{
-                                  selected?.value === 'none'
-                                    ? 'N'
-                                    : selected?.label?.slice(0, 2)?.toUpperCase()
-                                }}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span class="text-sm">{{
-                              selected?.label || t('form.field.selectAgent')
-                            }}</span>
-                          </div>
-                        </template>
-                      </ComboBox>
+                        type="user"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -293,7 +223,6 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { z } from 'zod'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ref, watch, onUnmounted, nextTick, onMounted, computed } from 'vue'
 import AttachmentsPreview from '@/features/conversation/message/attachment/AttachmentsPreview.vue'
 import { useConversationStore } from '@/stores/conversation'
@@ -301,8 +230,6 @@ import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue
 import ReplyBoxMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
-import { Users } from 'lucide-vue-next'
 import { handleHTTPError } from '@/utils/http'
 import { useInboxStore } from '@/stores/inbox'
 import { useUsersStore } from '@/stores/users'
@@ -318,6 +245,8 @@ import {
 import { useI18n } from 'vue-i18n'
 import { useFileUpload } from '@/composables/useFileUpload'
 import Editor from '@/features/conversation/ConversationTextEditor.vue'
+import { useMacroStore } from '@/stores/macro'
+import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 import api from '@/api'
 
 const dialogOpen = defineModel({
@@ -334,6 +263,7 @@ const loading = ref(false)
 const searchResults = ref([])
 const emailQuery = ref('')
 const conversationStore = useConversationStore()
+const macroStore = useMacroStore()
 let timeoutId = null
 
 const cursorPosition = ref(null)
@@ -360,12 +290,7 @@ const isDisabled = computed(() => {
 })
 
 const formSchema = z.object({
-  subject: z.string().min(
-    3,
-    t('form.error.min', {
-      min: 3
-    })
-  ),
+  subject: z.string().optional(),
   content: z.string().min(
     1,
     t('globals.messages.cannotBeEmpty', {
@@ -379,7 +304,7 @@ const formSchema = z.object({
   agent_id: z.any().optional(),
   contact_email: z.string().email(t('globals.messages.invalidEmailAddress')),
   first_name: z.string().min(1, t('globals.messages.required')),
-  last_name: z.string().min(1, t('globals.messages.required'))
+  last_name: z.string().optional()
 })
 
 onUnmounted(() => {
@@ -393,6 +318,7 @@ onUnmounted(() => {
 })
 
 onMounted(() => {
+  macroStore.setCurrentView('starting_conversation')
   emitter.emit(EMITTER_EVENTS.SET_NESTED_COMMAND, {
     command: 'apply-macro-to-new-conversation',
     open: false
@@ -450,6 +376,12 @@ const selectContact = (contact) => {
 const createConversation = form.handleSubmit(async (values) => {
   loading.value = true
   try {
+    // convert ids to numbers if they are not already
+    values.inbox_id = Number(values.inbox_id)
+    values.team_id = values.team_id ? Number(values.team_id) : null
+    values.agent_id = values.agent_id ? Number(values.agent_id) : null
+    // array of attachment ids.
+    values.attachments = mediaFiles.value.map((file) => file.id)
     const conversation = await api.createConversation(values)
     const conversationUUID = conversation.data.data.uuid
 
@@ -465,15 +397,14 @@ const createConversation = form.handleSubmit(async (values) => {
         })
       }
     }
+    dialogOpen.value = false
+    form.resetForm()
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: handleHTTPError(error).message
     })
   } finally {
-    dialogOpen.value = false
-    emailQuery.value = ''
-    form.resetForm()
     loading.value = false
   }
 })

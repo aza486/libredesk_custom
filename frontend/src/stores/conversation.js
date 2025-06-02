@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, nextTick, watchEffect } from 'vue'
+import { computed, reactive, ref, watchEffect } from 'vue'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { computeRecipientsFromMessage } from '@/utils/email-recipients'
@@ -100,7 +100,6 @@ export const useConversationStore = defineStore('conversation', () => {
   const conversation = reactive({
     data: null,
     participants: {},
-    mediaFiles: [],
     loading: false,
     errorMessage: ''
   })
@@ -117,10 +116,6 @@ export const useConversationStore = defineStore('conversation', () => {
   const emitter = useEmitter()
 
   const incrementMessageVersion = () => setTimeout(() => messages.version++, 0)
-
-  function resetMediaFiles () {
-    conversation.mediaFiles = []
-  }
 
   function setListStatus (status, fetch = true) {
     conversations.status = status
@@ -631,7 +626,6 @@ export const useConversationStore = defineStore('conversation', () => {
     Object.assign(conversation, {
       data: null,
       participants: {},
-      mediaFiles: [],
       macro: {},
       loading: false,
       errorMessage: ''
@@ -645,9 +639,8 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
 
-  /** Macros **/
+  /** Macros for new conversation or open conversation **/
   async function setMacro (macro, context) {
-    console.debug('Setting macro for context:', context, macro)
     macros.value[context] = macro
   }
 
@@ -706,7 +699,6 @@ export const useConversationStore = defineStore('conversation', () => {
     getMacro,
     setMacro,
     resetMacro,
-    resetMediaFiles,
     removeAssignee,
     getListSortField,
     getListStatus,

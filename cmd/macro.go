@@ -81,8 +81,7 @@ func handleCreateMacro(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	err := app.macro.Create(macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.Actions)
-	if err != nil {
+	if err := app.macro.Create(macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.VisibleWhen, macro.Actions); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -110,7 +109,7 @@ func handleUpdateMacro(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err = app.macro.Update(id, macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.Actions); err != nil {
+	if err = app.macro.Update(id, macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.VisibleWhen, macro.Actions); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -275,13 +274,17 @@ func validateMacro(app *App, macro models.Macro) error {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil)
 	}
 
+	if len(macro.VisibleWhen) == 0 {
+		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", "`visible_when`"), nil)
+	}
+
 	var act []autoModels.RuleAction
 	if err := json.Unmarshal(macro.Actions, &act); err != nil {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.macroAction}"), nil)
 	}
 	for _, a := range act {
 		if len(a.Value) == 0 {
-			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.emptyActionValue", "name", a.Type), nil)
+			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.empty", "name", a.Type), nil)
 		}
 	}
 	return nil

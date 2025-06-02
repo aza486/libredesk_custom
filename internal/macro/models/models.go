@@ -3,6 +3,8 @@ package models
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type Macro struct {
@@ -11,7 +13,8 @@ type Macro struct {
 	UpdatedAt      time.Time       `db:"updated_at" json:"updated_at"`
 	Name           string          `db:"name" json:"name"`
 	MessageContent string          `db:"message_content" json:"message_content"`
-	Visibility     string            `db:"visibility" json:"visibility"`
+	VisibleWhen    pq.StringArray  `db:"visible_when" json:"visible_when"`
+	Visibility     string          `db:"visibility" json:"visibility"`
 	UserID         *int            `db:"user_id" json:"user_id,string"`
 	TeamID         *int            `db:"team_id" json:"team_id,string"`
 	UsageCount     int             `db:"usage_count" json:"usage_count"`
