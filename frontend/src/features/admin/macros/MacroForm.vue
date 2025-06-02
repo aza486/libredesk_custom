@@ -126,12 +126,12 @@
 
     <FormField v-if="form.values.visibility === 'user'" v-slot="{ componentField }" name="user_id">
       <FormItem>
-        <FormLabel>{{ t('globals.terms.user') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.agent') }}</FormLabel>
         <FormControl>
           <SelectComboBox
             v-bind="componentField"
             :items="uStore.options"
-            :placeholder="t('form.field.selectUser')"
+            :placeholder="t('form.field.selectAgent')"
             type="user"
           />
         </FormControl>
