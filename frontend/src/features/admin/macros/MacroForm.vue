@@ -27,7 +27,12 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="actions">
+    <FormField
+      v-slot="{ componentField }"
+      name="actions"
+      :validate-on-blur="false"
+      :validate-on-change="false"
+    >
       <FormItem>
         <FormLabel>
           {{ t('globals.terms.action', 2) }} ({{ t('globals.terms.optional', 1).toLowerCase() }})
@@ -71,7 +76,15 @@
       </FormItem>
     </FormField>
 
-    <FormField v-slot="{ componentField }" name="visibility">
+    <FormField
+      v-slot="{ componentField }"
+      name="visibility"
+      :validate-on-blur="false"
+      :validate-on-change="false"
+      :validate-on-input="false"
+      :validate-on-mount="false"
+      :validate-on-model-update="false"
+    >
       <FormItem>
         <FormLabel>{{ t('globals.terms.visibility') }}</FormLabel>
         <FormControl>
