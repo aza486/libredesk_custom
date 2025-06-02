@@ -103,7 +103,7 @@
               <!-- Select input -->
               <div v-if="inputType(index) === 'select'">
                 <SelectComboBox
-                  v-model="componentField"
+                  v-model="rule.value"
                   :items="getFieldOptions(rule.field, rule.field_type)"
                   @select="handleValueChange($event, index)"
                   :type="rule.field === 'assigned_user' ? 'user' : 'team'"

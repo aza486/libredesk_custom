@@ -11,7 +11,12 @@
       <h3 class="text-sm font-medium text-foreground mb-2">
         {{ $t('globals.messages.no', { name: $t('globals.terms.action', 2).toLowerCase() }) }}
       </h3>
-      <Button @click="add" variant="outline" size="sm" class="inline-flex items-center gap-2">
+      <Button
+        @click.prevent="add"
+        variant="outline"
+        size="sm"
+        class="inline-flex items-center gap-2"
+      >
         <Plus class="w-4 h-4" />
         {{ config.addButtonText }}
       </Button>
@@ -70,12 +75,19 @@
                   />
 
                   <SelectComboBox
-                    v-if="action.type === 'assign_team'"
+                    v-else-if="action.type === 'assign_team'"
                     v-model="action.value[0]"
                     :items="config.actions[action.type].options"
                     :placeholder="config.valuePlaceholder"
                     @update:modelValue="(value) => updateValue(value, index)"
                     type="team"
+                  />
+                  <SelectComboBox
+                    v-else
+                    v-model="action.value[0]"
+                    :items="config.actions[action.type].options"
+                    :placeholder="config.valuePlaceholder"
+                    @update:modelValue="(value) => updateValue(value, index)"
                   />
                 </div>
               </div>
@@ -85,7 +97,7 @@
                 v-if="action.type && config.actions[action.type]?.type === 'tag'"
                 class="max-w-md"
               >
-                <label class="block text-sm font-medium mb-2">Tags</label>
+                <label class="block text-sm font-medium mb-2">{{ $t('globals.terms.tag') }}</label>
                 <SelectTag
                   v-model="action.value"
                   :items="tagsStore.tagNames.map((tag) => ({ label: tag, value: tag }))"
@@ -95,15 +107,7 @@
             </div>
 
             <!-- Remove Button -->
-            <Button
-              variant="ghost"
-              size="sm"
-              @click="remove(index)"
-              class="text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8 p-0"
-            >
-              <X class="w-4 h-4" />
-              <span class="sr-only">Remove action</span>
-            </Button>
+            <CloseButton :onClose="() => remove(index)" />
           </div>
         </div>
       </div>
@@ -126,7 +130,7 @@
 
 <script setup>
 import { Button } from '@/components/ui/button'
-import { X, Plus } from 'lucide-vue-next'
+import { Plus } from 'lucide-vue-next'
 import {
   Select,
   SelectContent,
@@ -135,6 +139,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
+import CloseButton from '@/components/button/CloseButton.vue'
 import { SelectTag } from '@/components/ui/select'
 import { useTagStore } from '@/stores/tag'
 import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
