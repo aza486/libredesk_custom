@@ -292,7 +292,7 @@ CREATE TABLE macros (
    name TEXT NOT NULL,
    actions JSONB DEFAULT '{}'::jsonb NOT NULL,
    visibility macro_visibility NOT NULL,
-   visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY[]::macro_visible_when[],
+   visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY['replying', 'starting_conversation', 'adding_private_note']::macro_visible_when[],
    message_content TEXT NOT NULL,
    -- Cascade deletes when user is deleted.
    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,

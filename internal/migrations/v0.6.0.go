@@ -306,12 +306,10 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 	// Add visible_when column to macros table if it doesn't exist
 	_, err = db.Exec(`
 		ALTER TABLE macros
-		ADD COLUMN IF NOT EXISTS visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY[]::macro_visible_when[];
+		ADD COLUMN IF NOT EXISTS visible_when macro_visible_when[] NOT NULL DEFAULT ARRAY['replying', 'starting_conversation', 'adding_private_note']::macro_visible_when[];
 	`)
 	if err != nil {
 		return err
 	}
-
-
 	return nil
 }
