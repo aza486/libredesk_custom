@@ -30,7 +30,7 @@ SELECT
 FROM
     macros
 ORDER BY
-    updated_at DESC;
+    usage_count DESC;
 
 -- name: create
 INSERT INTO
