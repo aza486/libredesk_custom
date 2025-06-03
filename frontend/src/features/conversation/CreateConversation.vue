@@ -72,7 +72,7 @@
               <div class="grid grid-cols-2 gap-4">
                 <FormField v-slot="{ componentField }" name="subject">
                   <FormItem>
-                    <FormLabel>{{ $t('form.field.subject') }}</FormLabel>
+                    <FormLabel>{{ $t('globals.terms.subject') }}</FormLabel>
                     <FormControl>
                       <Input type="text" placeholder="" v-bind="componentField" />
                     </FormControl>
@@ -167,6 +167,7 @@
                       :insertContent="insertContent"
                       :autoFocus="false"
                       class="w-full flex-1 overflow-y-auto p-2 box min-h-0"
+                      @send="createConversation"
                     />
 
                     <!-- Macro preview -->
@@ -289,7 +290,12 @@ const isDisabled = computed(() => {
 })
 
 const formSchema = z.object({
-  subject: z.string().optional(),
+  subject: z.string().min(
+    1,
+    t('globals.messages.cannotBeEmpty', {
+      name: t('globals.terms.subject')
+    })
+  ),
   content: z.string().min(
     1,
     t('globals.messages.cannotBeEmpty', {
