@@ -5,8 +5,9 @@
     :items="items"
     :placeholder="placeholder"
   >
+    <!-- Items -->
     <template #item="{ item }">
-      <div class="flex items-center gap-2 ml-2">
+      <div class="flex items-center gap-2">
         <!--USER -->
         <Avatar v-if="type === 'user'" class="w-7 h-7">
           <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
@@ -14,10 +15,12 @@
         </Avatar>
 
         <!-- Others -->
-        <span v-else>{{ item.emoji }}</span>
+        <span v-else-if="item.emoji">{{ item.emoji }}</span>
         <span>{{ item.label }}</span>
       </div>
     </template>
+
+    <!-- Selected -->
     <template #selected="{ selected }">
       <div class="flex items-center gap-2">
         <div v-if="selected" class="flex items-center gap-2">
@@ -28,7 +31,7 @@
           </Avatar>
 
           <!-- Others -->
-          <span v-else>{{ selected.emoji }}</span>
+          <span v-else-if="selected.emoji">{{ selected.emoji }}</span>
           <span>{{ selected.label }}</span>
         </div>
         <span v-else>{{ placeholder }}</span>
