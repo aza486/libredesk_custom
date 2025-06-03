@@ -13,13 +13,13 @@
     <div class="flex justify-items-start gap-2">
       <!-- File inputs -->
       <input type="file" class="hidden" ref="attachmentInput" multiple @change="handleFileUpload" />
-      <input
+      <!-- <input
         type="file"
         class="hidden"
         ref="inlineImageInput"
         accept="image/*"
         @change="handleInlineImageUpload"
-      />
+      /> -->
       <!-- Editor buttons -->
       <Toggle
         class="px-2 py-2 border-0"
@@ -38,7 +38,7 @@
         <Smile class="h-4 w-4" />
       </Toggle>
     </div>
-    <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!enableSend" :isLoading="isSending">
+    <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!enableSend" :isLoading="isSending" v-if="showSendButton">
       {{ $t('globals.buttons.send') }}
     </Button>
   </div>
@@ -54,7 +54,7 @@ import EmojiPicker from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'
 
 const attachmentInput = ref(null)
-const inlineImageInput = ref(null)
+// const inlineImageInput = ref(null)
 const isEmojiPickerVisible = ref(false)
 const emojiPickerRef = ref(null)
 const emit = defineEmits(['emojiSelect'])
@@ -65,6 +65,7 @@ defineProps({
   isSending: Boolean,
   enableSend: Boolean,
   handleSend: Function,
+  showSendButton: Boolean,
   handleFileUpload: Function,
   handleInlineImageUpload: Function
 })

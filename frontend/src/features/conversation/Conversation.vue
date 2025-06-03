@@ -63,7 +63,10 @@ const emitter = useEmitter()
 
 const handleUpdateStatus = (status) => {
   if (status === CONVERSATION_DEFAULT_STATUSES.SNOOZED) {
-    emitter.emit(EMITTER_EVENTS.SET_NESTED_COMMAND, 'snooze')
+    emitter.emit(EMITTER_EVENTS.SET_NESTED_COMMAND, {
+      command: 'snooze',
+      open: true
+    })
     return
   }
   conversationStore.updateStatus(status)

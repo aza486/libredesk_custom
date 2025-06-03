@@ -11,6 +11,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/macro/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
+	"github.com/lib/pq"
 	"github.com/zerodha/logf"
 )
 
@@ -67,8 +68,8 @@ func (m *Manager) Get(id int) (models.Macro, error) {
 }
 
 // Create adds a new macro.
-func (m *Manager) Create(name, messageContent string, userID, teamID *int, visibility string, actions json.RawMessage) error {
-	_, err := m.q.Create.Exec(name, messageContent, userID, teamID, visibility, actions)
+func (m *Manager) Create(name, messageContent string, userID, teamID *int, visibility string, visibleWhen []string, actions json.RawMessage) error {
+	_, err := m.q.Create.Exec(name, messageContent, userID, teamID, visibility, pq.StringArray(visibleWhen), actions)
 	if err != nil {
 		m.lo.Error("error creating macro", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.macro}"), nil)
@@ -77,8 +78,8 @@ func (m *Manager) Create(name, messageContent string, userID, teamID *int, visib
 }
 
 // Update modifies an existing macro.
-func (m *Manager) Update(id int, name, messageContent string, userID, teamID *int, visibility string, actions json.RawMessage) error {
-	result, err := m.q.Update.Exec(id, name, messageContent, userID, teamID, visibility, actions)
+func (m *Manager) Update(id int, name, messageContent string, userID, teamID *int, visibility string, visibleWhen []string, actions json.RawMessage) error {
+	result, err := m.q.Update.Exec(id, name, messageContent, userID, teamID, visibility, pq.StringArray(visibleWhen), actions)
 	if err != nil {
 		m.lo.Error("error updating macro", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.macro}"), nil)

@@ -17,7 +17,7 @@
 
     <FormField v-slot="{ componentField }" name="subject" v-if="!isOutgoingTemplate">
       <FormItem>
-        <FormLabel>{{ $t('form.field.subject') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.subject') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>

@@ -10,107 +10,31 @@
         <!-- `Agent, team, and priority assignment -->
         <AccordionContent class="space-y-4 p-4">
           <!-- Agent assignment -->
-          <ComboBox
-            v-model="assignedUserID"
+          <SelectComboBox
+            v-model="conversationStore.current.assigned_user_id"
             :items="[{ value: 'none', label: 'None' }, ...usersStore.options]"
             :placeholder="t('form.field.selectAgent')"
             @select="selectAgent"
-          >
-            <template #item="{ item }">
-              <div class="flex items-center gap-3 py-2">
-                <Avatar class="w-8 h-8">
-                  <AvatarImage
-                    :src="item.value === 'none' ? '' : item.avatar_url || ''"
-                    :alt="item.value === 'none' ? 'N' : item.label.slice(0, 2)"
-                  />
-                  <AvatarFallback>
-                    {{ item.value === 'none' ? 'N' : item.label.slice(0, 2).toUpperCase() }}
-                  </AvatarFallback>
-                </Avatar>
-                <span class="text-sm">{{ item.label }}</span>
-              </div>
-            </template>
-
-            <template #selected="{ selected }">
-              <div class="flex items-center gap-3">
-                <Avatar class="w-7 h-7" v-if="selected">
-                  <AvatarImage
-                    :src="selected?.value === 'none' ? '' : selected?.avatar_url || ''"
-                    :alt="selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)"
-                  />
-                  <AvatarFallback>
-                    {{
-                      selected?.value === 'none' ? 'N' : selected?.label?.slice(0, 2)?.toUpperCase()
-                    }}
-                  </AvatarFallback>
-                </Avatar>
-                <span class="text-sm">{{ selected?.label || t('form.field.assignAgent') }}</span>
-              </div>
-            </template>
-          </ComboBox>
+            type="user"
+          />
 
           <!-- Team assignment -->
-          <ComboBox
-            v-model="assignedTeamID"
+          <SelectComboBox
+            v-model="conversationStore.current.assigned_team_id"
             :items="[{ value: 'none', label: 'None' }, ...teamsStore.options]"
             :placeholder="t('form.field.selectTeam')"
             @select="selectTeam"
-          >
-            <template #item="{ item }">
-              <div class="flex items-center gap-3 py-2">
-                <div class="w-7 h-7 flex items-center justify-center">
-                  <span v-if="item.emoji">{{ item.emoji }}</span>
-                  <div
-                    v-else
-                    class="text-primary bg-muted rounded-full w-7 h-7 flex items-center justify-center"
-                  >
-                    <Users size="14" />
-                  </div>
-                </div>
-                <span class="text-sm">{{ item.label }}</span>
-              </div>
-            </template>
-
-            <template #selected="{ selected }">
-              <div class="flex items-center gap-3">
-                <div class="w-7 h-7 flex items-center justify-center" v-if="selected">
-                  {{ selected?.emoji }}
-                </div>
-                <span class="text-sm">{{ selected?.label || t('form.field.assignTeam') }}</span>
-              </div>
-            </template>
-          </ComboBox>
+            type="team"
+          />
 
           <!-- Priority assignment -->
-          <ComboBox
-            v-model="priorityID"
+          <SelectComboBox
+            v-model="conversationStore.current.priority_id"
             :items="priorityOptions"
             :placeholder="t('form.field.selectPriority')"
             @select="selectPriority"
-          >
-            <template #item="{ item }">
-              <div class="flex items-center gap-3 py-2">
-                <div
-                  class="w-7 h-7 flex items-center text-center justify-center bg-muted rounded-full"
-                >
-                  <component :is="getPriorityIcon(item.value)" size="14" />
-                </div>
-                <span class="text-sm">{{ item.label }}</span>
-              </div>
-            </template>
-
-            <template #selected="{ selected }">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-7 h-7 flex items-center text-center justify-center bg-muted rounded-full"
-                  v-if="selected"
-                >
-                  <component :is="getPriorityIcon(selected?.value)" size="14" />
-                </div>
-                <span class="text-sm">{{ selected?.label || t('form.field.selectPriority') }}</span>
-              </div>
-            </template>
-          </ComboBox>
+            type="priority"
+          />
 
           <!-- Tags assignment -->
           <SelectTag
@@ -169,7 +93,6 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Accordion,
   AccordionContent,
@@ -178,17 +101,16 @@ import {
 } from '@/components/ui/accordion'
 import ConversationInfo from './ConversationInfo.vue'
 import ConversationSideBarContact from '@/features/conversation/sidebar/ConversationSideBarContact.vue'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
 import { SelectTag } from '@/components/ui/select'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useEmitter } from '@/composables/useEmitter'
-import { CircleAlert, SignalLow, SignalMedium, SignalHigh, Users } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useStorage } from '@vueuse/core'
 import CustomAttributes from '@/features/conversation/sidebar/CustomAttributes.vue'
 import { useCustomAttributeStore } from '@/stores/customAttributes'
 import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
+import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 import api from '@/api'
 
 const customAttributeStore = useCustomAttributeStore()
@@ -246,9 +168,6 @@ watch(
   { immediate: false }
 )
 
-const assignedUserID = computed(() => String(conversationStore.current?.assigned_user_id))
-const assignedTeamID = computed(() => String(conversationStore.current?.assigned_team_id))
-const priorityID = computed(() => String(conversationStore.current?.priority_id))
 const priorityOptions = computed(() => conversationStore.priorityOptions)
 
 const fetchTags = async () => {
@@ -288,7 +207,6 @@ const selectAgent = (agent) => {
     handleRemoveAssignee('user')
     return
   }
-  if (conversationStore.current.assigned_user_id == agent.value) return
   conversationStore.current.assigned_user_id = agent.value
   handleAssignedUserChange(agent.value)
 }
@@ -298,29 +216,13 @@ const selectTeam = (team) => {
     handleRemoveAssignee('team')
     return
   }
-  if (conversationStore.current.assigned_team_id == team.value) return
-  conversationStore.current.assigned_team_id = team.value
   handleAssignedTeamChange(team.value)
 }
 
 const selectPriority = (priority) => {
-  if (conversationStore.current.priority_id == priority.value) return
   conversationStore.current.priority = priority.label
   conversationStore.current.priority_id = priority.value
   handlePriorityChange(priority.label)
-}
-
-const getPriorityIcon = (value) => {
-  switch (value) {
-    case '1':
-      return SignalLow
-    case '2':
-      return SignalMedium
-    case '3':
-      return SignalHigh
-    default:
-      return CircleAlert
-  }
 }
 
 const updateContactCustomAttributes = async (attributes) => {

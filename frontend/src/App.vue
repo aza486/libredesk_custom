@@ -106,7 +106,7 @@
   <Command />
 
   <!-- Create conversation dialog -->
-  <CreateConversation v-model="openCreateConversationDialog" />
+  <CreateConversation v-model="openCreateConversationDialog" v-if="openCreateConversationDialog" />
 </template>
 
 <script setup>

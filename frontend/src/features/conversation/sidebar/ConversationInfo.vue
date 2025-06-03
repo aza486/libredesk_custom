@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
     <div class="flex flex-col" v-if="conversation.subject">
-      <p class="font-medium">{{ $t('form.field.subject') }}</p>
+      <p class="font-medium">{{ $t('globals.terms.subject') }}</p>
       <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
       <p v-else>
         {{ conversation.subject }}

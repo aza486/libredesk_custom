@@ -1,10 +1,10 @@
 import * as z from 'zod'
 import { getTextFromHTML } from '@/utils/strings.js'
 
-const actionSchema = (t) => z.array(
+const actionSchema = () => z.array(
   z.object({
-    type: z.string().min(1, t('admin.macro.actionTypeRequired')),
-    value: z.array(z.string().min(1, t('admin.macro.actionValueRequired'))),
+    type: z.string().optional(),
+    value: z.array(z.string()).optional(),
   })
 )
 
@@ -13,6 +13,7 @@ export const createFormSchema = (t) => z.object({
   message_content: z.string().optional(),
   actions: actionSchema(t).optional().default([]),
   visibility: z.enum(['all', 'team', 'user']),
+  visible_when: z.array(z.enum(['replying', 'starting_conversation', 'adding_private_note'])),
   team_id: z.string().nullable().optional(),
   user_id: z.string().nullable().optional(),
 })
@@ -34,19 +35,39 @@ export const createFormSchema = (t) => z.object({
   .refine(
     (data) => {
       // If visibility is 'team', team_id is required
-      if (data.visibility === 'team' && !data.team_id) {
-        return false
+      if (data.visibility === 'team') {
+        return !!data.team_id
       }
-      // If visibility is 'user', user_id is required
-      if (data.visibility === 'user' && !data.user_id) {
-        return false
-      }
-      // Otherwise, validation passes
       return true
     },
     {
-      message: t('admin.macro.teamOrUserRequired'),
+      message: t('globals.messages.required'),
+      path: ['team_id'],
+    }
+  )
+  .refine(
+    (data) => {
+      // If visibility is 'user', user_id is required
+      if (data.visibility === 'user') {
+        return !!data.user_id
+      }
+      return true
+    },
+    {
+      message: t('globals.messages.required'),
+      path: ['user_id'],
+    }
+  ).refine(
+    (data) => {
+      // if actions are present, all actions should have type and value defined.
+      if (data.actions && data.actions.length > 0) {
+        return data.actions.every(action => action.type?.length > 0 && action.value?.length > 0)
+      }
+      return true
+    },
+    {
+      message: t('admin.macro.actionInvalid'),
       // Field path to highlight
-      path: ['visibility'],
+      path: ['actions'],
     }
   )

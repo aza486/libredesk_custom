@@ -20,7 +20,7 @@
             class="px-3 py-1 rounded transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
           >
-            {{ $t('replyBox.privateNote') }}
+            {{ $t('globals.terms.privateNote') }}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -90,7 +90,7 @@
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
         v-model:cursorPosition="cursorPosition"
-        :placeholder="editorPlaceholder"
+        :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
         :aiPrompts="aiPrompts"
         @aiPromptSelected="handleAiPromptSelected"
         :contentToSet="contentToSet"
@@ -98,23 +98,24 @@
         :clearContent="clearEditorContent"
         :setInlineImage="setInlineImage"
         :insertContent="insertContent"
+        :autoFocus="true"
       />
     </div>
 
     <!-- Macro preview -->
     <MacroActionsPreview
-      v-if="conversationStore.conversation?.macro?.actions?.length > 0"
-      :actions="conversationStore.conversation.macro.actions"
-      :onRemove="conversationStore.removeMacroAction"
+      v-if="conversationStore.getMacro('reply')?.actions?.length > 0"
+      :actions="conversationStore.getMacro('reply').actions"
+      :onRemove="(action) => conversationStore.removeMacroAction(action, 'reply')"
       class="mt-2"
     />
 
     <!-- Attachments preview -->
     <AttachmentsPreview
-      :attachments="attachments"
+      :attachments="uploadedFiles"
       :uploadingFiles="uploadingFiles"
       :onDelete="handleOnFileDelete"
-      v-if="attachments.length > 0 || uploadingFiles.length > 0"
+      v-if="uploadedFiles.length > 0 || uploadingFiles.length > 0"
       class="mt-2"
     />
 
@@ -123,7 +124,6 @@
       class="mt-1 shrink-0"
       :isFullscreen="isFullscreen"
       :handleFileUpload="handleFileUpload"
-      :handleInlineImageUpload="handleInlineImageUpload"
       :isBold="isBold"
       :isItalic="isItalic"
       :isSending="isSending"
@@ -131,16 +131,17 @@
       @toggleItalic="toggleItalic"
       :enableSend="enableSend"
       :handleSend="handleSend"
+      :showSendButton="true"
       @emojiSelect="handleEmojiSelect"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { Maximize2, Minimize2 } from 'lucide-vue-next'
-import Editor from './ConversationTextEditor.vue'
+import Editor from '@/components/editor/TextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -151,8 +152,8 @@ import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue
 import ReplyBoxMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'
 import { useI18n } from 'vue-i18n'
 import { validateEmail } from '@/utils/strings'
+import { useMacroStore } from '@/stores/macro'
 
-// Define models for two-way binding
 const messageType = defineModel('messageType', { default: 'reply' })
 const to = defineModel('to', { default: '' })
 const cc = defineModel('cc', { default: '' })
@@ -165,6 +166,7 @@ const selectedText = defineModel('selectedText', { default: '' })
 const isBold = defineModel('isBold', { default: false })
 const isItalic = defineModel('isItalic', { default: false })
 const cursorPosition = defineModel('cursorPosition', { default: 0 })
+const macroStore = useMacroStore()
 
 const props = defineProps({
   isFullscreen: {
@@ -190,6 +192,11 @@ const props = defineProps({
   contentToSet: {
     type: String,
     default: null
+  },
+  uploadedFiles: {
+    type: Array,
+    required: false,
+    default: () => []
   }
 })
 
@@ -208,7 +215,6 @@ const { t } = useI18n()
 
 const insertContent = ref(null)
 const setInlineImage = ref(null)
-const editorPlaceholder = t('replyBox.editor.placeholder')
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
@@ -233,16 +239,10 @@ const toggleItalic = () => {
   isItalic.value = !isItalic.value
 }
 
-const attachments = computed(() => {
-  return conversationStore.conversation.mediaFiles.filter(
-    (upload) => upload.disposition === 'attachment'
-  )
-})
-
 const enableSend = computed(() => {
   return (
     (textContent.value.trim().length > 0 ||
-      conversationStore.conversation?.macro?.actions?.length > 0) &&
+      conversationStore.getMacro('reply')?.actions?.length > 0) &&
     emailErrors.value.length === 0 &&
     !props.uploadingFiles.length
   )
@@ -289,10 +289,6 @@ const handleFileUpload = (event) => {
   emit('fileUpload', event)
 }
 
-const handleInlineImageUpload = (event) => {
-  emit('inlineImageUpload', event)
-}
-
 const handleOnFileDelete = (uuid) => {
   emit('fileDelete', uuid)
 }
@@ -306,4 +302,17 @@ const handleEmojiSelect = (emoji) => {
 const handleAiPromptSelected = (key) => {
   emit('aiPromptSelected', key)
 }
+
+// Watch and update macro view based on message type this filters our macros.
+watch(
+  messageType,
+  (newType) => {
+    if (newType === 'reply') {
+      macroStore.setCurrentView('replying')
+    } else if (newType === 'private_note') {
+      macroStore.setCurrentView('adding_private_note')
+    }
+  },
+  { immediate: true }
+)
 </script>

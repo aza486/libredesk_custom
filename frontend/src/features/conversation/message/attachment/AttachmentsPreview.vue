@@ -29,7 +29,7 @@
 
         <button
           v-if="!attachment.loading"
-          @click.stop="onDelete(attachment.uuid)"
+          @click.prevent="onDelete(attachment.uuid)"
           class="text-gray-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 rounded transition-colors duration-300 ease-in-out"
           title="Remove attachment"
         >

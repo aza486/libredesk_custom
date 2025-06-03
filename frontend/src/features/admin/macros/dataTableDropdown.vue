@@ -19,7 +19,7 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.macro.deleteConfirmation') }}
+          {{ $t('globals.messages.deletionConfirmation', { name: $t('globals.terms.macro') }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

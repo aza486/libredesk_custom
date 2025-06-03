@@ -14,9 +14,9 @@
         <button
           v-if="!conversationSidebarOpen"
           @click="toggleSidebar"
-          class="absolute right-full top-16 p-2 rounded-l-full bg-background text-primary hover:bg-opacity-90 transition-all duration-200 shadow-lg group dark:border"
+          class="absolute right-full top-16 p-2 rounded-l-full bg-background text-primary hover:bg-opacity-90 transition-all duration-200 border shadow hover:scale-105"
         >
-          <ChevronLeft size="16" class="group-hover:scale-110 transition-transform" />
+          <ChevronLeft size="16"/>
         </button>
       </Sidebar>
     </SidebarProvider>

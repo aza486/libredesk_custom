@@ -44,79 +44,47 @@
         <div class="flex-1">
           <div v-if="modelFilter.field && modelFilter.operator">
             <template v-if="modelFilter.operator !== 'set' && modelFilter.operator !== 'not set'">
-              <ComboBox
-                v-if="getFieldOptions(modelFilter).length > 0"
+              <SelectComboBox
+                v-if="
+                  getFieldOptions(modelFilter).length > 0 &&
+                  modelFilter.field === 'assigned_user_id'
+                "
                 v-model="modelFilter.value"
                 :items="getFieldOptions(modelFilter)"
                 :placeholder="t('form.field.select')"
-              >
-                <template #item="{ item }">
-                  <div v-if="modelFilter.field === 'assigned_user_id'">
-                    <div class="flex items-center gap-1">
-                      <Avatar class="w-6 h-6">
-                        <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
-                        <AvatarFallback>{{ item.label.slice(0, 2).toUpperCase() }} </AvatarFallback>
-                      </Avatar>
-                      <span>{{ item.label }}</span>
-                    </div>
-                  </div>
-                  <div v-else-if="modelFilter.field === 'assigned_team_id'">
-                    <div class="flex items-center gap-2 ml-2">
-                      <span>{{ item.emoji }}</span>
-                      <span>{{ item.label }}</span>
-                    </div>
-                  </div>
-                  <div v-else>
-                    {{ item.label }}
-                  </div>
-                </template>
+                type="user"
+              />
 
-                <template #selected="{ selected }">
-                  <div v-if="!selected">{{ $t('form.field.selectValue') }}</div>
-                  <div v-if="modelFilter.field === 'assigned_user_id'">
-                    <div class="flex items-center gap-2">
-                      <div v-if="selected" class="flex items-center gap-1">
-                        <Avatar class="w-6 h-6">
-                          <AvatarImage
-                            :src="selected.avatar_url || ''"
-                            :alt="selected.label.slice(0, 2)"
-                          />
-                          <AvatarFallback>{{
-                            selected.label.slice(0, 2).toUpperCase()
-                          }}</AvatarFallback>
-                        </Avatar>
-                        <span>{{ selected.label }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div v-else-if="modelFilter.field === 'assigned_team_id'">
-                    <div class="flex items-center gap-2">
-                      <span v-if="selected">
-                        {{ selected.emoji }}
-                        <span>{{ selected.label }}</span>
-                      </span>
-                    </div>
-                  </div>
-                  <div v-else-if="selected">
-                    {{ selected.label }}
-                  </div>
-                </template>
-              </ComboBox>
+              <SelectComboBox
+                v-else-if="
+                  getFieldOptions(modelFilter).length > 0 &&
+                  modelFilter.field === 'assigned_team_id'
+                "
+                v-model="modelFilter.value"
+                :items="getFieldOptions(modelFilter)"
+                :placeholder="t('form.field.select')"
+                type="team"
+              />
+
+              <SelectComboBox
+                v-else-if="getFieldOptions(modelFilter).length > 0"
+                v-model="modelFilter.value"
+                :items="getFieldOptions(modelFilter)"
+                :placeholder="t('form.field.select')"
+              />
+
               <Input
                 v-else
                 v-model="modelFilter.value"
                 class="bg-transparent hover:bg-slate-100"
-                :placeholder="t('form.field.value')"
+                :placeholder="t('globals.terms.value')"
                 type="text"
               />
             </template>
           </div>
         </div>
       </div>
-
-      <button @click="removeFilter(index)" class="p-1 hover:bg-slate-100 rounded">
-        <X class="w-4 h-4 text-slate-500" />
-      </button>
+      <CloseButton :onClose="() => removeFilter(index)" />
     </div>
 
     <div class="flex items-center justify-between pt-3">
@@ -146,12 +114,12 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Plus, X } from 'lucide-vue-next'
+import { Plus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useI18n } from 'vue-i18n'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
+import CloseButton from '@/components/button/CloseButton.vue'
+import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 
 const props = defineProps({
   fields: {

@@ -7,11 +7,11 @@ import { useUserStore } from './user'
 import api from '@/api'
 import { permissions as perms } from '@/constants/permissions.js'
 
-
 export const useMacroStore = defineStore('macroStore', () => {
     const macroList = ref([])
     const emitter = useEmitter()
     const userStore = useUserStore()
+    const currentView = ref('')
 
     // actionPermissions is a map of action names to their corresponding permissions that a user must have to perform the action.
     const actionPermissions = {
@@ -34,6 +34,14 @@ export const useMacroStore = defineStore('macroStore', () => {
             userTeams.includes(macro.team_id) ||
             String(macro.user_id) === String(userStore.userID)
         )
+
+        // Filter by visible_when if currentView is set.
+        if (currentView.value) {
+            filtered = filtered.filter(macro =>
+                !macro.visible_when?.length || macro.visible_when.includes(currentView.value)
+            )
+        }
+
         // Filter macros based on permissions.
         filtered.forEach(macro => {
             macro.actions = macro.actions.filter(action => {
@@ -42,14 +50,17 @@ export const useMacroStore = defineStore('macroStore', () => {
                 return userStore.can(permission)
             })
         })
+
         // Skip macros that do not have any actions left AND the macro field `message_content` is empty.
         filtered = filtered.filter(macro => !(macro.actions.length === 0 && macro.message_content === ""))
+
         return filtered.map(macro => ({
             ...macro,
             label: macro.name,
             value: String(macro.id),
         }))
     })
+
     const loadMacros = async () => {
         if (macroList.value.length) return
         try {
@@ -62,9 +73,15 @@ export const useMacroStore = defineStore('macroStore', () => {
             })
         }
     }
+
+    const setCurrentView = (view) => {
+        currentView.value = view
+    }
+
     return {
         macroList,
         macroOptions,
         loadMacros,
+        setCurrentView
     }
 })

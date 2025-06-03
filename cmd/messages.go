@@ -132,7 +132,6 @@ func handleSendMessage(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 		cuuid = r.RequestCtx.UserValue("cuuid").(string)
-		media = []medModels.Media{}
 		req   = messageReq{}
 	)
 
@@ -153,6 +152,7 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	// Prepare attachments.
+	var media = make([]medModels.Media, 0, len(req.Attachments))
 	for _, id := range req.Attachments {
 		m, err := app.media.Get(id, "")
 		if err != nil {

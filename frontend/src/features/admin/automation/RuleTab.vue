@@ -23,6 +23,21 @@
       </Select>
     </div>
 
+    <div
+      v-if="!isLoading && rules.length === 0"
+      class="flex flex-col items-center justify-center py-12 px-4"
+    >
+      <div class="text-center space-y-2">
+        <p class="text-muted-foreground">
+          {{
+            $t('globals.messages.noResults', {
+              name: $t('globals.terms.rule', 2).toLowerCase()
+            })
+          }}
+        </p>
+      </div>
+    </div>
+
     <div class="space-y-4">
       <div v-if="type === 'new_conversation'">
         <draggable v-model="rules" class="space-y-5" item-key="id" @end="onDragEnd">

@@ -15,7 +15,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'visibility',
     header: function () {
-      return h('div', { class: 'text-center' }, t('admin.macro.visibility'))
+      return h('div', { class: 'text-center' }, t('globals.terms.visibility'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, row.getValue('visibility'))

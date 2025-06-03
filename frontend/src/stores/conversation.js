@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, nextTick, watchEffect } from 'vue'
+import { computed, reactive, ref, watchEffect } from 'vue'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
 import { handleHTTPError } from '@/utils/http'
 import { computeRecipientsFromMessage } from '@/utils/email-recipients'
@@ -16,6 +16,7 @@ export const useConversationStore = defineStore('conversation', () => {
   const currentTo = ref([])
   const currentBCC = ref([])
   const currentCC = ref([])
+  const macros = ref({})
 
   // Options for select fields
   const priorityOptions = computed(() => {
@@ -99,8 +100,6 @@ export const useConversationStore = defineStore('conversation', () => {
   const conversation = reactive({
     data: null,
     participants: {},
-    mediaFiles: [],
-    macro: {},
     loading: false,
     errorMessage: ''
   })
@@ -117,25 +116,6 @@ export const useConversationStore = defineStore('conversation', () => {
   const emitter = useEmitter()
 
   const incrementMessageVersion = () => setTimeout(() => messages.version++, 0)
-
-  async function setMacro (macro) {
-    // Clear existing macro.
-    conversation.macro = {}
-    await nextTick()
-    conversation.macro = macro
-  }
-
-  function removeMacroAction (action) {
-    conversation.macro.actions = conversation.macro.actions.filter(a => a.type !== action.type)
-  }
-
-  function resetMacro () {
-    conversation.macro = {}
-  }
-
-  function resetMediaFiles () {
-    conversation.mediaFiles = []
-  }
 
   function setListStatus (status, fetch = true) {
     conversations.status = status
@@ -646,7 +626,6 @@ export const useConversationStore = defineStore('conversation', () => {
     Object.assign(conversation, {
       data: null,
       participants: {},
-      mediaFiles: [],
       macro: {},
       loading: false,
       errorMessage: ''
@@ -659,6 +638,24 @@ export const useConversationStore = defineStore('conversation', () => {
     seenConversationUUIDs = new Map()
   }
 
+
+  /** Macros for new conversation or open conversation **/
+  async function setMacro (macro, context) {
+    macros.value[context] = macro
+  }
+
+  function getMacro (context) {
+    return macros.value[context] || {}
+  }
+
+  function removeMacroAction (action, context) {
+    if (!macros.value[context]) return
+    macros.value[context].actions = macros.value[context].actions.filter(a => a.type !== action.type)
+  }
+
+  function resetMacro (context) {
+    macros.value = { ...macros.value, [context]: {} }
+  }
 
   return {
     conversations,
@@ -699,9 +696,9 @@ export const useConversationStore = defineStore('conversation', () => {
     setListSortField,
     setListStatus,
     removeMacroAction,
+    getMacro,
     setMacro,
     resetMacro,
-    resetMediaFiles,
     removeAssignee,
     getListSortField,
     getListStatus,

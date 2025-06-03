@@ -1,9 +1,5 @@
 <template>
-  <CommandDialog
-    :open="open"
-    @update:open="handleOpenChange"
-    class="transform-gpu z-[51] !min-w-[50vw]"
-  >
+  <CommandDialog :open="open" @update:open="toggleOpen" class="transform-gpu z-[51] !min-w-[50vw]">
     <CommandInput :placeholder="t('command.typeCmdOrSearch')" @keydown="onInputKeydown" />
     <CommandList
       class="!min-h-[60vh] h-[60vh] !min-w-[50vw]"
@@ -13,23 +9,7 @@
         <p class="text-muted-foreground">{{ $t('command.noCommandAvailable') }}</p>
       </CommandEmpty>
 
-      <!-- Commands requiring a conversation to be open -->
-      <CommandGroup
-        :heading="t('globals.terms.conversation', 2)"
-        value="conversations"
-        v-if="nestedCommand === null && conversationStore.hasConversationOpen"
-      >
-        <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
-          {{ $t('globals.messages.snooze') }}
-        </CommandItem>
-        <CommandItem value="conv-resolve" @select="resolveConversation">
-          {{ $t('globals.messages.resolve') }}
-        </CommandItem>
-        <CommandItem value="apply-macro" @select="setNestedCommand('apply-macro')">
-          {{ $t('globals.messages.applyMacro') }}
-        </CommandItem>
-      </CommandGroup>
-
+      <!-- Snooze Options -->
       <CommandGroup v-if="nestedCommand === 'snooze'" heading="Snooze for">
         <CommandItem value="1 hour" @select="handleSnooze(60)">
           1 {{ $t('globals.terms.hour') }}
@@ -55,7 +35,12 @@
       </CommandGroup>
 
       <!-- Macros -->
-      <div v-if="nestedCommand === 'apply-macro'">
+      <div
+        v-if="
+          nestedCommand === 'apply-macro-to-existing-conversation' ||
+          nestedCommand === 'apply-macro-to-new-conversation'
+        "
+      >
         <CommandGroup heading="Apply macro">
           <div class="min-h-[400px]">
             <div class="h-[60vh] grid grid-cols-12">
@@ -158,6 +143,26 @@
           </div>
         </CommandGroup>
       </div>
+
+      <!-- Commands requiring a conversation to be open -->
+      <CommandGroup
+        :heading="t('globals.terms.conversation', 2)"
+        value="conversations"
+        v-else-if="conversationStore.hasConversationOpen && !nestedCommand"
+      >
+        <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
+          {{ $t('globals.messages.snooze') }}
+        </CommandItem>
+        <CommandItem value="conv-resolve" @select="resolveConversation">
+          {{ $t('globals.messages.resolve') }}
+        </CommandItem>
+        <CommandItem
+          value="apply-macro"
+          @select="setNestedCommand('apply-macro-to-existing-conversation')"
+        >
+          {{ $t('globals.messages.applyMacro') }}
+        </CommandItem>
+      </CommandGroup>
     </CommandList>
 
     <!-- Navigation -->
@@ -251,7 +256,7 @@ const { Meta_K, Ctrl_K } = useMagicKeys({
 })
 
 watch([Meta_K, Ctrl_K], ([mac, win]) => {
-  if (mac || win) handleOpenChange()
+  if (mac || win) toggleOpen()
 })
 
 const highlightedMacro = ref(null)
@@ -259,8 +264,12 @@ const highlightedMacro = ref(null)
 function handleApplyMacro(macro) {
   // Create a deep copy.
   const plainMacro = JSON.parse(JSON.stringify(macro))
-  conversationStore.setMacro(plainMacro)
-  handleOpenChange()
+  if (nestedCommand.value === 'apply-macro-to-new-conversation') {
+    conversationStore.setMacro(plainMacro, 'new-conversation')
+  } else {
+    conversationStore.setMacro(plainMacro, 'reply')
+  }
+  toggleOpen()
 }
 
 const getActionLabel = computed(() => (action) => {
@@ -285,8 +294,10 @@ const otherActions = computed(
     ) || []
 )
 
-function handleOpenChange() {
-  if (!open.value) nestedCommand.value = null
+function toggleOpen() {
+  if (nestedCommand.value != 'apply-macro-to-new-conversation' && !open.value) {
+    nestedCommand.value = null
+  }
   open.value = !open.value
 }
 
@@ -300,16 +311,16 @@ function formatDuration(minutes) {
 
 async function handleSnooze(minutes) {
   await conversationStore.snoozeConversation(formatDuration(minutes))
-  handleOpenChange()
+  toggleOpen()
 }
 
 async function resolveConversation() {
   await conversationStore.updateStatus(CONVERSATION_DEFAULT_STATUSES.RESOLVED)
-  handleOpenChange()
+  toggleOpen()
 }
 
 function showCustomDialog() {
-  handleOpenChange()
+  toggleOpen()
   showDatePicker.value = true
 }
 
@@ -329,7 +340,7 @@ function handleCustomSnooze() {
   }
   handleSnooze(diffMinutes)
   closeDatePicker()
-  handleOpenChange()
+  toggleOpen()
 }
 
 function onInputKeydown(e) {
@@ -343,9 +354,9 @@ function onInputKeydown(e) {
 }
 
 onMounted(() => {
-  emitter.on(EMITTER_EVENTS.SET_NESTED_COMMAND, (command) => {
-    setNestedCommand(command)
-    open.value = true
+  emitter.on(EMITTER_EVENTS.SET_NESTED_COMMAND, (data) => {
+    setNestedCommand(data.command)
+    open.value = data.open
   })
   watchHighlightedMacro()
 })

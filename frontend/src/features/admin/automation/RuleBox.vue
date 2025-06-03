@@ -102,59 +102,12 @@
 
               <!-- Select input -->
               <div v-if="inputType(index) === 'select'">
-                <ComboBox
+                <SelectComboBox
                   v-model="rule.value"
                   :items="getFieldOptions(rule.field, rule.field_type)"
                   @select="handleValueChange($event, index)"
-                >
-                  <template #item="{ item }">
-                    <div class="flex items-center gap-2 ml-2">
-                      <Avatar v-if="rule.field === 'assigned_user'" class="w-7 h-7">
-                        <AvatarImage :src="item.avatar_url || ''" :alt="item.label.slice(0, 2)" />
-                        <AvatarFallback>
-                          {{ item.label.slice(0, 2).toUpperCase() }}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span v-if="rule.field === 'assigned_team'">
-                        {{ item.emoji }}
-                      </span>
-                      <span>{{ item.label }}</span>
-                    </div>
-                  </template>
-
-                  <template #selected="{ selected }">
-                    <div v-if="rule?.field === 'assigned_team'">
-                      <div v-if="selected" class="flex items-center gap-2">
-                        {{ selected.emoji }}
-                        <span>{{ selected.label }}</span>
-                      </div>
-                      <span v-else>{{ $t('form.field.selectTeam') }}</span>
-                    </div>
-
-                    <div
-                      v-else-if="rule?.field === 'assigned_user'"
-                      class="flex items-center gap-2"
-                    >
-                      <div v-if="selected" class="flex items-center gap-2">
-                        <Avatar class="w-7 h-7">
-                          <AvatarImage
-                            :src="selected.avatar_url || ''"
-                            :alt="selected.label.slice(0, 2)"
-                          />
-                          <AvatarFallback>
-                            {{ selected.label.slice(0, 2).toUpperCase() }}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{{ selected.label }}</span>
-                      </div>
-                      <span v-else>{{ $t('form.field.selectUser') }}</span>
-                    </div>
-                    <span v-else>
-                      <span v-if="!selected"> {{ $t('form.field.select') }}</span>
-                      <span v-else>{{ selected.label }} </span>
-                    </span>
-                  </template>
-                </ComboBox>
+                  :type="rule.field === 'assigned_user' ? 'user' : 'team'"
+                />
               </div>
 
               <!-- Tag input -->
@@ -209,9 +162,7 @@
             <div v-else class="flex-1"></div>
 
             <!-- Remove condition -->
-            <div class="cursor-pointer mt-2" @click.prevent="removeCondition(index)">
-              <X size="16" />
-            </div>
+            <CloseButton :onClose="() => removeCondition(index)" />
           </div>
 
           <div class="flex items-center space-x-2">
@@ -242,6 +193,7 @@ import { toRefs, computed, watch } from 'vue'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
+import CloseButton from '@/components/button/CloseButton.vue'
 import {
   Select,
   SelectContent,
@@ -258,13 +210,11 @@ import {
   TagsInputItemDelete,
   TagsInputItemText
 } from '@/components/ui/tags-input'
-import { X } from 'lucide-vue-next'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import ComboBox from '@/components/ui/combobox/ComboBox.vue'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useI18n } from 'vue-i18n'
 import { useConversationFilters } from '@/composables/useConversationFilters'
+import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 
 const props = defineProps({
   ruleGroup: {
