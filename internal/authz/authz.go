@@ -80,11 +80,13 @@ func (e *Enforcer) Enforce(user umodels.User, obj, act string) (bool, error) {
 	// Load permissions before enforcing.
 	err := e.LoadPermissions(user)
 	if err != nil {
+		e.lo.Error("error loading permissions", "user_id", user.ID, "object", obj, "action", act, "error", err)
 		return false, err
 	}
 	// Check if the user has the required permission
 	allowed, err := e.enforcer.Enforce(strconv.Itoa(user.ID), obj, act)
 	if err != nil {
+		e.lo.Error("error checking permission", "user_id", user.ID, "object", obj, "action", act, "error", err)
 		return false, fmt.Errorf("error checking permission: %v", err)
 	}
 	return allowed, nil
