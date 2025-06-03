@@ -68,7 +68,7 @@
             <Editor
               v-model:htmlContent="action.value[0]"
               @update:htmlContent="(value) => handleEditorChange(value, index)"
-              :placeholder="t('editor.placeholder')"
+              :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
             />
           </div>
         </div>
@@ -101,7 +101,7 @@ import { SelectTag } from '@/components/ui/select'
 import { useConversationFilters } from '@/composables/useConversationFilters'
 import { getTextFromHTML } from '@/utils/strings.js'
 import { useI18n } from 'vue-i18n'
-import Editor from '@/features/conversation/ConversationTextEditor.vue'
+import Editor from '@/components/editor/TextEditor.vue'
 import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 
 const props = defineProps({

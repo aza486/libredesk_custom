@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Dialog :open="dialogOpen" @update:open="dialogOpen = false">
+    <Dialog v-model:open="dialogOpen">
       <DialogContent class="max-w-5xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
@@ -13,7 +13,7 @@
         </DialogHeader>
         <form @submit="createConversation" class="flex flex-col flex-1 overflow-hidden">
           <!-- Form Fields Section -->
-          <div class="space-y-4 overflow-y-auto pb-2 flex-shrink-0">
+          <div class="space-y-4 pb-2 flex-shrink-0">
             <div class="space-y-2">
               <FormField name="contact_email">
                 <FormItem class="relative">
@@ -31,7 +31,7 @@
 
                   <ul
                     v-if="searchResults.length"
-                    class="border rounded p-2 max-h-60 overflow-y-auto absolute w-full z-50 shadow-lg bg-background"
+                    class="border rounded p-2 max-h-60 overflow-y-auto absolute w-full z-50 shadow bg-background"
                   >
                     <li
                       v-for="contact in searchResults"
@@ -161,11 +161,11 @@
                     <Editor
                       v-model:htmlContent="componentField.modelValue"
                       @update:htmlContent="(value) => componentField.onChange(value)"
-                      v-model:cursorPosition="cursorPosition"
                       :contentToSet="contentToSet"
-                      :placeholder="t('editor.placeholder')"
+                      :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
                       :clearContent="clearEditorContent"
                       :insertContent="insertContent"
+                      :autoFocus="false"
                       class="w-full flex-1 overflow-y-auto p-2 box min-h-0"
                     />
 
@@ -244,7 +244,7 @@ import {
 } from '@/components/ui/select'
 import { useI18n } from 'vue-i18n'
 import { useFileUpload } from '@/composables/useFileUpload'
-import Editor from '@/features/conversation/ConversationTextEditor.vue'
+import Editor from '@/components/editor/TextEditor.vue'
 import { useMacroStore } from '@/stores/macro'
 import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 import api from '@/api'
@@ -266,7 +266,6 @@ const conversationStore = useConversationStore()
 const macroStore = useMacroStore()
 let timeoutId = null
 
-const cursorPosition = ref(null)
 const contentToSet = ref('')
 const clearEditorContent = ref(false)
 const insertContent = ref('')

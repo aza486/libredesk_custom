@@ -27,7 +27,7 @@
             <Editor
               v-model:htmlContent="newNote"
               @update:htmlContent="(value) => (newNote = value)"
-              :placeholder="t('editor.placeholder')"
+              :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
             />
           </div>
           <div class="flex justify-end space-x-3 pt-2">
@@ -148,7 +148,7 @@ import {
   ClockIcon,
   MessageSquareIcon
 } from 'lucide-vue-next'
-import Editor from '@/features/conversation/ConversationTextEditor.vue'
+import Editor from '@/components/editor/TextEditor.vue'
 import { useI18n } from 'vue-i18n'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

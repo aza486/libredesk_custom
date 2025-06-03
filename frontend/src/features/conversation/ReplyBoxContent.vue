@@ -90,7 +90,7 @@
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
         v-model:cursorPosition="cursorPosition"
-        :placeholder="editorPlaceholder"
+        :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
         :aiPrompts="aiPrompts"
         @aiPromptSelected="handleAiPromptSelected"
         :contentToSet="contentToSet"
@@ -98,6 +98,7 @@
         :clearContent="clearEditorContent"
         :setInlineImage="setInlineImage"
         :insertContent="insertContent"
+        :autoFocus="true"
       />
     </div>
 
@@ -140,7 +141,7 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { Maximize2, Minimize2 } from 'lucide-vue-next'
-import Editor from './ConversationTextEditor.vue'
+import Editor from '@/components/editor/TextEditor.vue'
 import { useConversationStore } from '@/stores/conversation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -214,7 +215,6 @@ const { t } = useI18n()
 
 const insertContent = ref(null)
 const setInlineImage = ref(null)
-const editorPlaceholder = t('replyBox.editor.placeholder')
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
@@ -304,11 +304,15 @@ const handleAiPromptSelected = (key) => {
 }
 
 // Watch and update macro view based on message type this filters our macros.
-watch(messageType, (newType) => {
-  if (newType === 'reply') {
-    macroStore.setCurrentView('replying')
-  } else if (newType === 'private_note') {
-    macroStore.setCurrentView('adding_private_note')
-  }
-}, { immediate: true })
+watch(
+  messageType,
+  (newType) => {
+    if (newType === 'reply') {
+      macroStore.setCurrentView('replying')
+    } else if (newType === 'private_note') {
+      macroStore.setCurrentView('adding_private_note')
+    }
+  },
+  { immediate: true }
+)
 </script>

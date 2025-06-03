@@ -19,7 +19,7 @@
             <Editor
               v-model:htmlContent="componentField.modelValue"
               @update:htmlContent="(value) => componentField.onChange(value)"
-              :placeholder="t('editor.placeholder')"
+              :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
             />
           </div>
         </FormControl>
@@ -167,7 +167,7 @@ import {
   SelectTag
 } from '@/components/ui/select'
 import { useI18n } from 'vue-i18n'
-import Editor from '@/features/conversation/ConversationTextEditor.vue'
+import Editor from '@/components/editor/TextEditor.vue'
 
 const { macroActions } = useConversationFilters()
 const { t } = useI18n()

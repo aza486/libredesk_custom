@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, watch, watchEffect, onUnmounted } from 'vue'
+import { ref, watch, watchEffect, onUnmounted, computed } from 'vue'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
 import {
   ChevronDown,
@@ -136,6 +136,10 @@ const props = defineProps({
   setInlineImage: Object,
   insertContent: String,
   clearContent: Boolean,
+  autoFocus: {
+    type: Boolean,
+    default: true
+  },
   aiPrompts: {
     type: Array,
     default: () => []
@@ -188,7 +192,7 @@ const CustomTableHeader = TableHeader.extend({
   }
 })
 
-const editorConfig = {
+const editorConfig = computed(() => ({
   extensions: [
     StarterKit.configure(),
     Image.configure({ HTMLAttributes: { class: 'inline-image' } }),
@@ -201,7 +205,7 @@ const editorConfig = {
     CustomTableCell,
     CustomTableHeader
   ],
-  autofocus: true,
+  autofocus: props.autoFocus,
   editorProps: {
     attributes: { class: 'outline-none' },
     handleKeyDown: (view, event) => {
@@ -210,17 +214,17 @@ const editorConfig = {
         return true
       }
       if (event.ctrlKey && event.key.toLowerCase() === 'b') {
-         // Prevent outer listeners
+        // Prevent outer listeners
         event.stopPropagation()
         return false
       }
     }
   }
-}
+}))
 
 const editor = ref(
   useEditor({
-    ...editorConfig,
+    ...editorConfig.value,
     content: htmlContent.value,
     onSelectionUpdate: ({ editor }) => {
       const { from, to } = editor.state.selection
