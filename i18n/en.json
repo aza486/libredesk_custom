@@ -431,7 +431,7 @@
   "admin.inbox.chooseChannel": "Choose a channel",
   "admin.inbox.configureChannel": "Configure channel",
   "admin.inbox.createEmailInbox": "Create Email Inbox",
-  "admin.user.deleteConfirmation": "This action cannot be undone. This will permanently delete this user.",
+  "admin.agent.deleteConfirmation": "This will permanently delete the agent. Consider disabling the account instead.",
   "admin.role.roleForAllSupportAgents": "Role for all support agents",
   "admin.role.deleteConfirmation": "This action cannot be undone. This will permanently delete this role.",
   "admin.role.setPermissionsForThisRole": "Set permissions for this role",

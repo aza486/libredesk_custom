@@ -20,7 +20,7 @@
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
-        <AlertDialogDescription>{{ $t('admin.user.deleteConfirmation') }}</AlertDialogDescription>
+        <AlertDialogDescription>{{ $t('admin.agent.deleteConfirmation') }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
