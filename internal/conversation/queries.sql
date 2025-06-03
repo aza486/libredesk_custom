@@ -1,7 +1,7 @@
 -- name: unsnooze-all
 UPDATE conversations
 SET snoozed_until = NULL, status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open')
-WHERE snoozed_until <= now();
+WHERE snoozed_until <= NOW();
 
 -- name: insert-conversation
 WITH 
@@ -197,13 +197,13 @@ UPDATE conversations
 SET assigned_user_id = $2,
 -- Reset assignee_last_seen_at when assigned to a new user.
 assignee_last_seen_at = NULL,
-updated_at = now()
+updated_at = NOW()
 WHERE uuid = $1;
 
 -- name: update-conversation-assigned-team
 UPDATE conversations
 SET assigned_team_id = $2,
-updated_at = now()
+updated_at = NOW()
 WHERE uuid = $1;
 
 -- name: update-conversation-status
@@ -221,13 +221,13 @@ SELECT COUNT(*) FROM conversations WHERE status_id IN (SELECT id FROM conversati
 -- name: update-conversation-priority
 UPDATE conversations 
 SET priority_id = (SELECT id FROM conversation_priorities WHERE name = $2),
-    updated_at = now()
+    updated_at = NOW()
 WHERE uuid = $1;
 
 -- name: update-conversation-assignee-last-seen
 UPDATE conversations 
-SET assignee_last_seen_at = now(),
-    updated_at = now()
+SET assignee_last_seen_at = NOW(),
+    updated_at = NOW()
 WHERE uuid = $1;
 
 -- name: update-conversation-last-message
@@ -390,13 +390,13 @@ WHERE m.uuid = $1;
 -- name: unassign-open-conversations
 UPDATE conversations
 SET assigned_user_id = NULL,
-    updated_at = now()
+    updated_at = NOW()
 WHERE assigned_user_id = $1 AND status_id in (SELECT id FROM conversation_statuses WHERE name NOT IN ('Resolved', 'Closed'));
 
 -- name: update-conversation-custom-attributes
 UPDATE conversations
 SET custom_attributes = $2,
-    updated_at = now()
+    updated_at = NOW()
 WHERE uuid = $1;
 
 -- MESSAGE queries.
@@ -545,14 +545,14 @@ JOIN conversations c ON m.conversation_id = c.id
 WHERE m.id = $1;
 
 -- name: update-message-status
-update conversation_messages set status = $1, updated_at = now() where uuid = $2;
+update conversation_messages set status = $1, updated_at = NOW() where uuid = $2;
 
 -- name: remove-conversation-assignee
 UPDATE conversations
 SET 
     assigned_user_id = CASE WHEN $2 = 'user' THEN NULL ELSE assigned_user_id END,
     assigned_team_id = CASE WHEN $2 = 'team' THEN NULL ELSE assigned_team_id END,
-    updated_at = now()
+    updated_at = NOW()
 WHERE uuid = $1;
 
 -- name: re-open-conversation
@@ -561,7 +561,7 @@ UPDATE conversations
 SET 
   status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'),
   snoozed_until = NULL,
-  updated_at = now(),
+  updated_at = NOW(),
   assigned_user_id = CASE
     WHEN EXISTS (
       SELECT 1 FROM users 

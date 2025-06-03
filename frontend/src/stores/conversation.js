@@ -576,7 +576,7 @@ export const useConversationStore = defineStore('conversation', () => {
    * @param {object} message - Message object with conversation_uuid field
    */
   async function updateConversationMessage (message) {
-    // Message does not exist in cache, fetch from server and update.
+    // Message does not exist in cache? fetch from server and update.
     if (!messages.data.hasMessage(message.conversation_uuid, message.uuid)) {
       fetchParticipants(message.conversation_uuid)
       const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
@@ -586,7 +586,10 @@ export const useConversationStore = defineStore('conversation', () => {
           message: fetchedMessage
         })
       }, 100)
-      updateAssigneeLastSeen(message.conversation_uuid)
+
+      // Update last seen only if the conversation is currently open.
+      if (conversation.data?.uuid === message.conversation_uuid)
+        updateAssigneeLastSeen(message.conversation_uuid)
     }
   }
 
