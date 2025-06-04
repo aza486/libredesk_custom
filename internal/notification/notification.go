@@ -15,8 +15,6 @@ const (
 
 // Message represents a message to be sent as a notification.
 type Message struct {
-	// Recipients of the message
-	UserIDs []int
 	// Email addresses of the recipients
 	RecipientEmails []string
 	// Subject of the message

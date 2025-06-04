@@ -674,17 +674,18 @@ func (m *Manager) SendNotification(scheduledNotification models.ScheduledSLANoti
 					"Priority":        "",
 					"UUID":            appliedSLA.ConversationUUID,
 				},
-				"Agent": map[string]any{
-					"FirstName": agent.FirstName,
-					"LastName":  agent.LastName,
-					"FullName":  agent.FullName(),
-					"Email":     agent.Email,
-				},
 				"Recipient": map[string]any{
 					"FirstName": agent.FirstName,
 					"LastName":  agent.LastName,
 					"FullName":  agent.FullName(),
 					"Email":     agent.Email,
+				},
+				// Automated emails do not have an author, so we set empty values.
+				"Author": map[string]any{
+					"FirstName": "",
+					"LastName":  "",
+					"FullName":  "",
+					"Email":     "",
 				},
 			})
 

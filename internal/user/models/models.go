@@ -80,3 +80,7 @@ func (u *User) FullName() string {
 func (u *User) HasAdminRole() bool {
 	return slices.Contains(u.Roles, rmodels.RoleAdmin)
 }
+
+func (u *User) IsSystemUser() bool {
+	return u.Email.String == SystemUserEmail
+}

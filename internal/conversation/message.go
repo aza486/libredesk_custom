@@ -144,7 +144,7 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	}
 
 	// Render content in template
-	if err := m.RenderContentInTemplate(inbox.Channel(), &message); err != nil {
+	if err := m.RenderMessageInTemplate(inbox.Channel(), &message); err != nil {
 		handleError(err, "error rendering content in template")
 		return
 	}
@@ -213,8 +213,8 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	}
 }
 
-// RenderContentInTemplate renders message content in template.
-func (m *Manager) RenderContentInTemplate(channel string, message *models.Message) error {
+// RenderMessageInTemplate renders message content in template.
+func (m *Manager) RenderMessageInTemplate(channel string, message *models.Message) error {
 	switch channel {
 	case inbox.ChannelEmail:
 		conversation, err := m.GetConversation(0, message.ConversationUUID)
@@ -222,8 +222,14 @@ func (m *Manager) RenderContentInTemplate(channel string, message *models.Messag
 			m.lo.Error("error fetching conversation", "uuid", message.ConversationUUID, "error", err)
 			return fmt.Errorf("fetching conversation: %w", err)
 		}
-		// Pass conversation and contact data to the template for rendering any placeholders.
-		message.Content, err = m.template.RenderEmailWithTemplate(map[string]any{
+
+		sender, err := m.userStore.GetAgent(message.SenderID, "")
+		if err != nil {
+			m.lo.Error("error fetching message sender user", "sender_id", message.SenderID, "error", err)
+			return fmt.Errorf("fetching message sender user: %w", err)
+		}
+
+		data := map[string]any{
 			"Conversation": map[string]any{
 				"ReferenceNumber": conversation.ReferenceNumber,
 				"Subject":         conversation.Subject.String,
@@ -234,15 +240,33 @@ func (m *Manager) RenderContentInTemplate(channel string, message *models.Messag
 				"FirstName": conversation.Contact.FirstName,
 				"LastName":  conversation.Contact.LastName,
 				"FullName":  conversation.Contact.FullName(),
-				"Email":     conversation.Contact.Email,
+				"Email":     conversation.Contact.Email.String,
 			},
 			"Recipient": map[string]any{
 				"FirstName": conversation.Contact.FirstName,
 				"LastName":  conversation.Contact.LastName,
 				"FullName":  conversation.Contact.FullName(),
-				"Email":     conversation.Contact.Email,
+				"Email":     conversation.Contact.Email.String,
 			},
-		}, message.Content)
+			"Author": map[string]any{
+				"FirstName": sender.FirstName,
+				"LastName":  sender.LastName,
+				"FullName":  sender.FullName(),
+				"Email":     sender.Email.String,
+			},
+		}
+
+		// For automated replies set author fields to empty strings as the recipients will see name as System.
+		if sender.IsSystemUser() {
+			data["Author"] = map[string]any{
+				"FirstName": "",
+				"LastName":  "",
+				"FullName":  "",
+				"Email":     "",
+			}
+		}
+
+		message.Content, err = m.template.RenderEmailWithTemplate(data, message.Content)
 		if err != nil {
 			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
 			return fmt.Errorf("could not render email content using template: %w", err)
