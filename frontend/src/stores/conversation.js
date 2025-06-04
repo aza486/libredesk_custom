@@ -150,7 +150,6 @@ export const useConversationStore = defineStore('conversation', () => {
       }))
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -167,7 +166,6 @@ export const useConversationStore = defineStore('conversation', () => {
       }))
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -176,8 +174,14 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const conversationsList = computed(() => {
     if (!conversations.data) return []
+    // Filter by status.
+    let filteredConversations = conversations.data
+      .filter(conv => {
+        return conv.status === conversations.status
+      })
+
     // Sort conversations based on the selected sort field
-    return [...conversations.data].sort((a, b) => {
+    return [...filteredConversations].sort((a, b) => {
       const field = sortFieldMap[conversations.sortField]?.field
       if (!a[field] && !b[field]) return 0
       if (!a[field]) return 1       // null goes last
@@ -261,7 +265,6 @@ export const useConversationStore = defineStore('conversation', () => {
       updateParticipants(participants)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -276,7 +279,6 @@ export const useConversationStore = defineStore('conversation', () => {
     } catch (error) {
       conversation.errorMessage = handleHTTPError(error).message
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: conversation.errorMessage
       })
@@ -313,7 +315,6 @@ export const useConversationStore = defineStore('conversation', () => {
       incrementMessageVersion()
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -345,7 +346,6 @@ export const useConversationStore = defineStore('conversation', () => {
       }
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -468,7 +468,6 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationPriority(conversation.data.uuid, { priority: v })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -480,7 +479,6 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationStatus(conversation.data.uuid, { status: v })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -492,7 +490,6 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateConversationStatus(conversation.data.uuid, { status: CONVERSATION_DEFAULT_STATUSES.SNOOZED, snoozed_until: snoozeDuration })
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -504,7 +501,6 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.upsertTags(conversation.data.uuid, v)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -516,7 +512,6 @@ export const useConversationStore = defineStore('conversation', () => {
       await api.updateAssignee(conversation.data.uuid, type, v)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
@@ -529,7 +524,6 @@ export const useConversationStore = defineStore('conversation', () => {
       conversation.data[`assigned_${type}_id`] = null
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        title: 'Error',
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
