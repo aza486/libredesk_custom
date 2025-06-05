@@ -4,7 +4,6 @@ import tailwind from 'tailwindcss'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   css: {
     postcss: {
@@ -28,6 +27,23 @@ export default defineConfig({
         ws: true,
       },
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'radix': ['radix-vue', 'reka-ui'],
+          'icons': ['lucide-vue-next', '@radix-icons/vue'],
+          'utils': ['@vueuse/core', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+          'charts': ['@unovis/ts', '@unovis/vue'],
+          'editor': ['@tiptap/vue-3', '@tiptap/starter-kit', '@tiptap/extension-image', '@tiptap/extension-link', '@tiptap/extension-placeholder', '@tiptap/extension-table', '@tiptap/extension-table-cell', '@tiptap/extension-table-header', '@tiptap/extension-table-row'],
+          'forms': ['vee-validate', '@vee-validate/zod', 'zod'],
+          'table': ['@tanstack/vue-table'],
+          'misc': ['axios', 'date-fns', 'mitt', 'qs', 'vue-i18n']
+        }
+      }
+    }
   },
   plugins: [
     vue(),

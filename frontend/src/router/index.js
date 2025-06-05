@@ -1,16 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import App from '@/App.vue'
 import OuterApp from '@/OuterApp.vue'
-import OverviewView from '@/views/reports/OverviewView.vue'
 import InboxLayout from '@/layouts/inbox/InboxLayout.vue'
-import SearchView from '@/views/search/SearchView.vue'
 import AccountLayout from '@/layouts/account/AccountLayout.vue'
 import AdminLayout from '@/layouts/admin/AdminLayout.vue'
-import UserLoginView from '@/views/auth/UserLoginView.vue'
-import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
-import SetPasswordView from '@/views/auth/SetPasswordView.vue'
-import InboxView from '@/views/inbox/InboxView.vue'
-import ConversationDetailView from '@/views/conversation/ConversationDetailView.vue'
 import { useAppSettingsStore } from '@/stores/appSettings'
 
 const routes = [
@@ -21,19 +14,19 @@ const routes = [
       {
         path: '',
         name: 'login',
-        component: UserLoginView,
+        component: () => import('@/views/auth/UserLoginView.vue'),
         meta: { title: 'Login' }
       },
       {
         path: 'reset-password',
         name: 'reset-password',
-        component: ResetPasswordView,
+        component: () => import('@/views/auth/ResetPasswordView.vue'),
         meta: { title: 'Reset Password' }
       },
       {
         path: 'set-password',
         name: 'set-password',
-        component: SetPasswordView,
+        component: () => import('@/views/auth/SetPasswordView.vue'),
         meta: { title: 'Set Password' }
       }
     ]
@@ -62,7 +55,7 @@ const routes = [
           {
             path: 'overview',
             name: 'overview',
-            component: OverviewView,
+            component: () => import('@/views/reports/OverviewView.vue'),
             meta: { title: 'Overview' }
           },
         ]
@@ -77,13 +70,13 @@ const routes = [
           {
             path: '',
             name: 'team-inbox',
-            component: InboxView,
+            component: () => import('@/views/inbox/InboxView.vue'),
             meta: { title: 'Team inbox' }
           },
           {
             path: 'conversation/:uuid',
             name: 'team-inbox-conversation',
-            component: ConversationDetailView,
+            component: () => import('@/views/conversation/ConversationDetailView.vue'),
             props: true,
             meta: { title: 'Team inbox', hidePageHeader: true }
           }
@@ -99,13 +92,13 @@ const routes = [
           {
             path: '',
             name: 'view-inbox',
-            component: InboxView,
+            component: () => import('@/views/inbox/InboxView.vue'),
             meta: { title: 'View inbox' }
           },
           {
             path: 'conversation/:uuid',
             name: 'view-inbox-conversation',
-            component: ConversationDetailView,
+            component: () => import('@/views/conversation/ConversationDetailView.vue'),
             props: true,
             meta: { title: 'View inbox', hidePageHeader: true }
           }
@@ -114,7 +107,7 @@ const routes = [
       {
         path: 'inboxes/search',
         name: 'search',
-        component: SearchView,
+        component: () => import('@/views/search/SearchView.vue'),
         meta: { title: 'Search', hidePageHeader: true },
       },
       {
@@ -128,7 +121,7 @@ const routes = [
           {
             path: '',
             name: 'inbox',
-            component: InboxView,
+            component: () => import('@/views/inbox/InboxView.vue'),
             meta: {
               title: 'Inbox',
               type: route => route.params.type === 'assigned' ? 'My inbox' : route.params.type
@@ -137,7 +130,7 @@ const routes = [
               {
                 path: 'conversation/:uuid',
                 name: 'inbox-conversation',
-                component: ConversationDetailView,
+                component: () => import('@/views/conversation/ConversationDetailView.vue'),
                 props: true,
                 meta: {
                   title: 'Inbox',
@@ -478,7 +471,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // Make page title with  the route name and site name
+  // Make page title with the route name and site name
   const appSettingsStore = useAppSettingsStore()
   const siteName = appSettingsStore.settings?.['app.site_name'] || 'Libredesk'
   const pageTitle = to.meta?.title || ''
