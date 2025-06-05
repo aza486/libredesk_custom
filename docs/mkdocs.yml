@@ -1,13 +1,11 @@
-site_name: Libredesk Documentation
+site_name: LibreDesk Docs
 theme:
   name: material
   language: en
   font:
     text: Source Sans Pro
     code: Roboto Mono
-    weights: 
-      - 400
-      - 700
+    weights: [400, 700]
   direction: ltr
   palette:
     primary: white
@@ -16,9 +14,9 @@ theme:
     - navigation.indexes
     - navigation.sections
     - content.code.copy
-  extra:
-    search:
-      language: en
+extra:
+  search:
+    language: en
 
 markdown_extensions:
   - admonition
@@ -30,9 +28,9 @@ nav:
   - Introduction: index.md
   - Getting Started:
       - Installation: installation.md
-      - Upgrade: upgrade.md
-      - Templating: templating.md
-      - SSO: sso.md
-  - Contributors:
-      - Developer setup: developer-setup.md
-      - Translations: translations.md
+      - Upgrade Guide: upgrade.md
+      - Email Templates: templating.md
+      - SSO Setup: sso.md
+  - Contributions:
+      - Developer Setup: developer-setup.md
+      - Translate Libredesk: translations.md
