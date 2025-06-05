@@ -1,16 +1,16 @@
 <template>
-  <div class="flex flex-1 flex-col gap-x-5 box p-5 space-y-5">
-    <div class="flex items-center space-x-2">
-      <p class="text-2xl flex items-center">{{ title }}</p>
+  <div class="flex flex-1 flex-col gap-5 box p-5">
+    <div class="flex items-center">
+      <p class="text-2xl font-medium">{{ title }}</p>
     </div>
-    <div class="flex justify-between pr-32">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
       <div
         v-for="(item, key) in filteredCounts"
         :key="key"
-        class="flex flex-col items-center gap-y-2"
+        class="flex flex-col items-center gap-2 text-center"
       >
-        <span class="text-muted-foreground">{{ labels[key] }}</span>
-        <span class="text-2xl font-medium">{{ item }}</span>
+        <span class="text-sm text-muted-foreground">{{ labels[key] }}</span>
+        <span class="text-2xl font-semibold">{{ item }}</span>
       </div>
     </div>
   </div>

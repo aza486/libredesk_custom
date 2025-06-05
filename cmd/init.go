@@ -35,6 +35,7 @@ import (
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	emailnotifier "github.com/abhinavxd/libredesk/internal/notification/providers/email"
 	"github.com/abhinavxd/libredesk/internal/oidc"
+	"github.com/abhinavxd/libredesk/internal/report"
 	"github.com/abhinavxd/libredesk/internal/role"
 	"github.com/abhinavxd/libredesk/internal/search"
 	"github.com/abhinavxd/libredesk/internal/setting"
@@ -819,6 +820,20 @@ func initActivityLog(db *sqlx.DB, i18n *i18n.I18n) *activitylog.Manager {
 	})
 	if err != nil {
 		log.Fatalf("error initializing activity log manager: %v", err)
+	}
+	return m
+}
+
+// initReport inits report manager.
+func initReport(db *sqlx.DB, i18n *i18n.I18n) *report.Manager {
+	lo := initLogger("report")
+	m, err := report.New(report.Opts{
+		DB:   db,
+		Lo:   lo,
+		I18n: i18n,
+	})
+	if err != nil {
+		log.Fatalf("error initializing report manager: %v", err)
 	}
 	return m
 }

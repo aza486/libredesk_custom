@@ -549,30 +549,6 @@ func handleUpdateContactCustomAttributes(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// handleDashboardCounts retrieves general dashboard counts for all users.
-func handleDashboardCounts(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
-	counts, err := app.conversation.GetDashboardCounts(0, 0)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(counts)
-}
-
-// handleDashboardCharts retrieves general dashboard chart data.
-func handleDashboardCharts(r *fastglue.Request) error {
-	var (
-		app = r.Context.(*App)
-	)
-	charts, err := app.conversation.GetDashboardChart(0, 0)
-	if err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(charts)
-}
-
 // enforceConversationAccess fetches the conversation and checks if the user has access to it.
 func enforceConversationAccess(app *App, uuid string, user umodels.User) (*cmodels.Conversation, error) {
 	conversation, err := app.conversation.GetConversation(0, uuid)

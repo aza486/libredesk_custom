@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import App from '@/App.vue'
 import OuterApp from '@/OuterApp.vue'
-import DashboardView from '@/views/reports/DashboardView.vue'
+import OverviewView from '@/views/reports/OverviewView.vue'
 import InboxLayout from '@/layouts/inbox/InboxLayout.vue'
 import SearchView from '@/views/search/SearchView.vue'
 import AccountLayout from '@/layouts/account/AccountLayout.vue'
@@ -62,7 +62,7 @@ const routes = [
           {
             path: 'overview',
             name: 'overview',
-            component: DashboardView,
+            component: OverviewView,
             meta: { title: 'Overview' }
           },
         ]

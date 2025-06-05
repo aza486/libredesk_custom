@@ -23,6 +23,7 @@ import (
 	customAttribute "github.com/abhinavxd/libredesk/internal/custom_attribute"
 	"github.com/abhinavxd/libredesk/internal/macro"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
+	"github.com/abhinavxd/libredesk/internal/report"
 	"github.com/abhinavxd/libredesk/internal/search"
 	"github.com/abhinavxd/libredesk/internal/sla"
 	"github.com/abhinavxd/libredesk/internal/view"
@@ -90,6 +91,7 @@ type App struct {
 	activityLog     *activitylog.Manager
 	notifier        *notifier.Service
 	customAttribute *customAttribute.Manager
+	report          *report.Manager
 
 	// Global state that stores data on an available app update.
 	update *AppUpdate
@@ -224,6 +226,7 @@ func main() {
 		customAttribute: initCustomAttribute(db, i18n),
 		authz:           initAuthz(i18n),
 		view:            initView(db),
+		report:          initReport(db, i18n),
 		csat:            initCSAT(db, i18n),
 		search:          initSearch(db, i18n),
 		role:            initRole(db, i18n),

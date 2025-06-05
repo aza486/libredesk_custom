@@ -16,3 +16,13 @@ export function getRelativeTime (timestamp, now = new Date()) {
     return ''
   }
 }
+
+export const formatDuration = (seconds, showSeconds = true) => {
+  const totalSeconds = Math.floor(seconds)
+  if (totalSeconds < 60) return `${totalSeconds}s`
+  if (totalSeconds < 3600) return `${Math.floor(totalSeconds / 60)}m ${totalSeconds % 60}s`
+  const hours = Math.floor(totalSeconds / 3600)
+  const mins = Math.floor((totalSeconds % 3600) / 60)
+  const secs = totalSeconds % 60
+  return `${hours}h ${mins}m ${showSeconds ? `${secs}s` : ''}`
+}

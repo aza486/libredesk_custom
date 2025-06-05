@@ -159,8 +159,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/v1/roles/{id}", perm(handleDeleteRole, "roles:manage"))
 
 	// Reports.
-	g.GET("/api/v1/reports/overview/counts", perm(handleDashboardCounts, "reports:manage"))
-	g.GET("/api/v1/reports/overview/charts", perm(handleDashboardCharts, "reports:manage"))
+	g.GET("/api/v1/reports/overview/sla", perm(handleOverviewSLA, "reports:manage"))
+	g.GET("/api/v1/reports/overview/counts", perm(handleOverviewCounts, "reports:manage"))
+	g.GET("/api/v1/reports/overview/charts", perm(handleOverviewCharts, "reports:manage"))
 
 	// Templates.
 	g.GET("/api/v1/templates", perm(handleGetTemplates, "templates:manage"))

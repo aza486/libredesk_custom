@@ -281,7 +281,8 @@ const uploadMedia = (data) =>
     }
   })
 const getOverviewCounts = () => http.get('/api/v1/reports/overview/counts')
-const getOverviewCharts = () => http.get('/api/v1/reports/overview/charts')
+const getOverviewCharts = (params) => http.get('/api/v1/reports/overview/charts', { params })
+const getOverviewSLA = (params) => http.get('/api/v1/reports/overview/sla', { params })
 const getLanguage = (lang) => http.get(`/api/v1/lang/${lang}`)
 const createInbox = (data) =>
   http.post('/api/v1/inboxes', data, {
@@ -360,6 +361,7 @@ export default {
   getViewConversations,
   getOverviewCharts,
   getOverviewCounts,
+  getOverviewSLA,
   getConversationParticipants,
   getConversationMessage,
   getConversationMessages,

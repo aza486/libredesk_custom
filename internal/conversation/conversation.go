@@ -217,10 +217,6 @@ type queries struct {
 	RemoveConversationAssignee         *sqlx.Stmt `query:"remove-conversation-assignee"`
 	GetLatestMessage                   *sqlx.Stmt `query:"get-latest-message"`
 
-	// Dashboard queries.
-	GetDashboardCharts string `query:"get-dashboard-charts"`
-	GetDashboardCounts string `query:"get-dashboard-counts"`
-
 	// Message queries.
 	GetMessage                         *sqlx.Stmt `query:"get-message"`
 	GetMessages                        string     `query:"get-messages"`
@@ -637,83 +633,6 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 		c.BroadcastConversationUpdate(uuid, "resolved_at", resolvedAt.Format(time.RFC3339))
 	}
 	return nil
-}
-
-// GetDashboardCounts returns dashboard counts
-// TODO: Rename to overview [reports/overview].
-func (c *Manager) GetDashboardCounts(userID, teamID int) (json.RawMessage, error) {
-	var counts = json.RawMessage{}
-	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
-		ReadOnly: true,
-	})
-	if err != nil {
-		c.lo.Error("error starting db txn", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingCount", "name", "{globals.terms.dashboard}"), nil)
-	}
-	defer tx.Rollback()
-
-	var (
-		cond  string
-		qArgs []interface{}
-	)
-	if userID > 0 {
-		cond = " AND assigned_user_id = $1"
-		qArgs = append(qArgs, userID)
-	} else if teamID > 0 {
-		cond = " AND assigned_team_id = $1"
-		qArgs = append(qArgs, teamID)
-	}
-	// TODO: Add date range filter support.
-	cond += " AND c.created_at >= NOW() - INTERVAL '30 days'"
-
-	query := fmt.Sprintf(c.q.GetDashboardCounts, cond)
-	if err := tx.Get(&counts, query, qArgs...); err != nil {
-		c.lo.Error("error fetching dashboard counts", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingCount", "name", "{globals.terms.dashboard}"), nil)
-	}
-
-	if err := tx.Commit(); err != nil {
-		c.lo.Error("error committing db txn", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingCount", "name", "{globals.terms.dashboard}"), nil)
-	}
-
-	return counts, nil
-}
-
-// GetDashboardChart returns dashboard chart data
-func (c *Manager) GetDashboardChart(userID, teamID int) (json.RawMessage, error) {
-	var stats = json.RawMessage{}
-	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
-		ReadOnly: true,
-	})
-	if err != nil {
-		c.lo.Error("error starting db txn", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingChart", "name", "{globals.terms.dashboard}"), nil)
-	}
-	defer tx.Rollback()
-
-	var (
-		cond  string
-		qArgs []interface{}
-	)
-
-	// TODO: Add date range filter support.
-	if userID > 0 {
-		cond = " AND assigned_user_id = $1"
-		qArgs = append(qArgs, userID)
-	} else if teamID > 0 {
-		cond = " AND assigned_team_id = $1"
-		qArgs = append(qArgs, teamID)
-	}
-	cond += " AND c.created_at >= NOW() - INTERVAL '90 days'"
-
-	// Apply the same condition across queries.
-	query := fmt.Sprintf(c.q.GetDashboardCharts, cond, cond, cond)
-	if err := tx.Get(&stats, query, qArgs...); err != nil {
-		c.lo.Error("error fetching dashboard charts", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorFetchingChart", "name", "{globals.terms.dashboard}"), nil)
-	}
-	return stats, nil
 }
 
 // SetConversationTags sets the tags associated with a conversation.
