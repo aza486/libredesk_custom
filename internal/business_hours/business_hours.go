@@ -22,7 +22,6 @@ var (
 	ErrBusinessHoursNotFound = errors.New("business hours not found")
 )
 
-// Manager manages business hours.
 type Manager struct {
 	q    queries
 	lo   *logf.Logger

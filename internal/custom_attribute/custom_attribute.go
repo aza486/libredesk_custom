@@ -19,7 +19,6 @@ var (
 	efs embed.FS
 )
 
-// Manager manages custom attributes.
 type Manager struct {
 	q    queries
 	lo   *logf.Logger

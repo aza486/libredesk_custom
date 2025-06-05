@@ -35,7 +35,6 @@ type Store interface {
 	Name() string
 }
 
-// Manager manages media files, including their upload and retrieval.
 type Manager struct {
 	store   Store
 	lo      *logf.Logger

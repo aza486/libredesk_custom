@@ -77,7 +77,6 @@ type Opts struct {
 	Concurrency int
 }
 
-// Manager manages the inboxes.
 type Manager struct {
 	mu        sync.RWMutex
 	queries   queries
@@ -85,7 +84,7 @@ type Manager struct {
 	lo        *logf.Logger
 	i18n      *i18n.I18n
 	receivers map[int]context.CancelFunc
-	msgStore     MessageStore
+	msgStore  MessageStore
 	usrStore  UserStore
 	wg        sync.WaitGroup
 }

@@ -53,7 +53,6 @@ var metricLabels = map[string]string{
 	MetricNextResponse:  "Next Response",
 }
 
-// Manager manages SLA policies and calculations.
 type Manager struct {
 	q                queries
 	lo               *logf.Logger

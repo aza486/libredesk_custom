@@ -21,7 +21,6 @@ var (
 	efs embed.FS
 )
 
-// Manager manages activity logs.
 type Manager struct {
 	q    queries
 	lo   *logf.Logger

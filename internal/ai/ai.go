@@ -23,7 +23,6 @@ var (
 	ErrApiKeyNotSet  = errors.New("api Key not set")
 )
 
-// Manager manages LLM providers.
 type Manager struct {
 	q    queries
 	lo   *logf.Logger
