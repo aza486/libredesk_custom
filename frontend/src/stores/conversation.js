@@ -125,6 +125,10 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  const getListStatus = computed(() => {
+    return conversations.status
+  })
+
   function setListSortField (field) {
     if (conversations.sortField === field) return
     conversations.sortField = field
@@ -136,9 +140,6 @@ export const useConversationStore = defineStore('conversation', () => {
     return sortFieldLabels[conversations.sortField]
   })
 
-  const getListStatus = computed(() => {
-    return conversations.status
-  })
 
   async function fetchStatuses () {
     if (statuses.value.length > 0) return
@@ -174,11 +175,14 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const conversationsList = computed(() => {
     if (!conversations.data) return []
-    // Filter by status.
     let filteredConversations = conversations.data
-      .filter(conv => {
-        return conv.status === conversations.status
-      })
+    // Filter by status if set.
+    if (conversations.status !== "") {
+      filteredConversations = conversations.data
+        .filter(conv => {
+          return conv.status === conversations.status
+        })
+    }
 
     // Sort conversations based on the selected sort field
     return [...filteredConversations].sort((a, b) => {
