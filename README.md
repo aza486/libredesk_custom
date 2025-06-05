@@ -7,7 +7,8 @@ Open source, self-hosted customer support desk. Single binary app.
 
 Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live demo**](https://demo.libredesk.io/).
 
-![image](https://github.com/user-attachments/assets/8e434a02-8b33-41c8-8433-3c98d1d5b834)
+![image](https://github.com/user-attachments/assets/cefe0a37-f6c8-448a-95b5-6d11381faffd)
+
 
 
 
@@ -15,8 +16,8 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
 
 ## Features
 
-- **Multi Inbox**  
-  Libredesk supports multiple inboxes, letting you manage conversations across teams effortlessly.
+- **Multi Shared Inbox**  
+  Libredesk supports multiple shares inboxes, letting you manage conversations across teams effortlessly.
 - **Granular Permissions**  
   Create custom roles with granular permissions for teams and individual agents.
 - **Smart Automation**  
@@ -31,14 +32,14 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
   Distribute workload with auto assignment rules. Auto-assign conversations based on agent capacity or custom criteria.
 - **SLA Management**  
   Set and track response time targets. Get notified when conversations are at risk of breaching SLA commitments.
-- **Business Intelligence**  
-  Connect your favorite BI tools like Metabase and create custom dashboards and reports with your support data—without lock-ins.
-- **AI-Assisted Response Rewrite**  
+- **Custom attributes**  
+  Create custom attributes for contacts or conversations such as the subscription plan or the date of their first purchase. 
+- **AI-Assist**  
   Instantly rewrite responses with AI to make them more friendly, professional, or polished.
 - **Activity logs**  
   Track all actions performed by agents and admins—updates and key events across the system—for auditing and accountability.
 - **Command Bar**  
-  Opens with a simple shortcut (CTRL+k) and lets you quickly perform actions on conversations.
+  Opens with a simple shortcut (CTRL+K) and lets you quickly perform actions on conversations.
 
 And more checkout - [libredesk.io](https://libredesk.io)
 
