@@ -150,17 +150,17 @@
         value="conversations"
         v-else-if="conversationStore.hasConversationOpen && !nestedCommand"
       >
-        <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
-          {{ $t('globals.messages.snooze') }}
-        </CommandItem>
-        <CommandItem value="conv-resolve" @select="resolveConversation">
-          {{ $t('globals.messages.resolve') }}
-        </CommandItem>
         <CommandItem
           value="apply-macro"
           @select="setNestedCommand('apply-macro-to-existing-conversation')"
         >
           {{ $t('globals.messages.applyMacro') }}
+        </CommandItem>
+        <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
+          {{ $t('globals.messages.snooze') }}
+        </CommandItem>
+        <CommandItem value="conv-resolve" @select="resolveConversation">
+          {{ $t('globals.messages.resolve') }}
         </CommandItem>
       </CommandGroup>
     </CommandList>
