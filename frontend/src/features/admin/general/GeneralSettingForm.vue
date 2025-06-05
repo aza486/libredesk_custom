@@ -248,18 +248,10 @@ const fetchBusinessHours = async () => {
     })
     businessHours.value = response.data.data
   } catch (error) {
-    // If unauthorized (no permission), show a toast message.
-    if (error.response.status === 403) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: t('admin.businessHours.unauthorized')
-      })
-    } else {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
-    }
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   }
 }
 

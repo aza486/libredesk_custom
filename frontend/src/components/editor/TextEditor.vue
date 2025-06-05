@@ -30,25 +30,23 @@
         <Button
           size="sm"
           variant="ghost"
-          @click.prevent="isBold = !isBold"
-          :active="isBold"
-          :class="{ 'bg-gray-200 dark:bg-secondary': isBold }"
+          @click.prevent="editor?.chain().focus().toggleBold().run()"
+          :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('bold') }"
         >
           <Bold size="14" />
         </Button>
         <Button
           size="sm"
           variant="ghost"
-          @click.prevent="isItalic = !isItalic"
-          :active="isItalic"
-          :class="{ 'bg-gray-200 dark:bg-secondary': isItalic }"
+          @click.prevent="editor?.chain().focus().toggleItalic().run()"
+          :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('italic') }"
         >
           <Italic size="14" />
         </Button>
         <Button
           size="sm"
           variant="ghost"
-          @click.prevent="toggleBulletList"
+          @click.prevent="editor?.chain().focus().toggleBulletList().run()"
           :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('bulletList') }"
         >
           <List size="14" />
@@ -57,7 +55,7 @@
         <Button
           size="sm"
           variant="ghost"
-          @click.prevent="toggleOrderedList"
+          @click.prevent="editor?.chain().focus().toggleOrderedList().run()"
           :class="{ 'bg-gray-200 dark:bg-secondary': editor?.isActive('orderedList') }"
         >
           <ListOrdered size="14" />
@@ -91,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, watch, watchEffect, onUnmounted, computed } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/vue-3'
 import {
   ChevronDown,
@@ -121,21 +119,14 @@ import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 
-const selectedText = defineModel('selectedText', { default: '' })
-const textContent = defineModel('textContent')
-const htmlContent = defineModel('htmlContent')
-const isBold = defineModel('isBold')
-const isItalic = defineModel('isItalic')
-const cursorPosition = defineModel('cursorPosition', { default: 0 })
+const textContent = defineModel('textContent', { default: '' })
+const htmlContent = defineModel('htmlContent', { default: '' })
 const showLinkInput = ref(false)
 const linkUrl = ref('')
 
 const props = defineProps({
   placeholder: String,
-  contentToSet: String,
-  setInlineImage: Object,
   insertContent: String,
-  clearContent: Boolean,
   autoFocus: {
     type: Boolean,
     default: true
@@ -150,8 +141,6 @@ const emit = defineEmits(['send', 'aiPromptSelected'])
 
 const emitPrompt = (key) => emit('aiPromptSelected', key)
 
-const getSelectionText = (from, to, doc) => doc.textBetween(from, to)
-
 // To preseve the table styling in emails, need to set the table style inline.
 // Created these custom extensions to set the table style inline.
 const CustomTable = Table.extend({
@@ -160,7 +149,7 @@ const CustomTable = Table.extend({
       ...this.parent?.(),
       style: {
         parseHTML: (element) =>
-          (element.getAttribute('style') || '') + ' border: 1px solid #dee2e6 !important; width: 100%; margin:0; table-layout: fixed; border-collapse: collapse; position:relative; border-radius: 0.25rem;'
+          (element.getAttribute('style') || '') + '; border: 1px solid #dee2e6 !important; width: 100%; margin:0; table-layout: fixed; border-collapse: collapse; position:relative; border-radius: 0.25rem;'
       }
     }
   }
@@ -173,7 +162,7 @@ const CustomTableCell = TableCell.extend({
       style: {
         parseHTML: (element) =>
           (element.getAttribute('style') || '') +
-          ' border: 1px solid #dee2e6 !important; box-sizing: border-box !important; min-width: 1em !important; padding: 6px 8px !important; vertical-align: top !important;'
+          '; border: 1px solid #dee2e6 !important; box-sizing: border-box !important; min-width: 1em !important; padding: 6px 8px !important; vertical-align: top !important;'
       }
     }
   }
@@ -186,26 +175,27 @@ const CustomTableHeader = TableHeader.extend({
       style: {
         parseHTML: (element) =>
           (element.getAttribute('style') || '') +
-          ' background-color: #f8f9fa !important; color: #212529 !important; font-weight: bold !important; text-align: left !important; border: 1px solid #dee2e6 !important; padding: 6px 8px !important;'
+          '; background-color: #f8f9fa !important; color: #212529 !important; font-weight: bold !important; text-align: left !important; border: 1px solid #dee2e6 !important; padding: 6px 8px !important;'
       }
     }
   }
 })
 
-const editorConfig = computed(() => ({
+const isInternalUpdate = ref(false)
+
+const editor = useEditor({
   extensions: [
     StarterKit.configure(),
     Image.configure({ HTMLAttributes: { class: 'inline-image' } }),
     Placeholder.configure({ placeholder: () => props.placeholder }),
     Link,
-    CustomTable.configure({
-      resizable: false
-    }),
+    CustomTable.configure({ resizable: false }),
     TableRow,
     CustomTableCell,
     CustomTableHeader
   ],
   autofocus: props.autoFocus,
+  content: htmlContent.value,
   editorProps: {
     attributes: { class: 'outline-none' },
     handleKeyDown: (view, event) => {
@@ -213,110 +203,30 @@ const editorConfig = computed(() => ({
         emit('send')
         return true
       }
-      if (event.ctrlKey && event.key.toLowerCase() === 'b') {
-        // Prevent outer listeners
-        event.stopPropagation()
-        return false
-      }
     }
-  }
-}))
-
-const editor = ref(
-  useEditor({
-    ...editorConfig.value,
-    content: htmlContent.value,
-    onSelectionUpdate: ({ editor }) => {
-      const { from, to } = editor.state.selection
-      selectedText.value = getSelectionText(from, to, editor.state.doc)
-    },
-    onUpdate: ({ editor }) => {
-      htmlContent.value = editor.getHTML()
-      textContent.value = editor.getText()
-      cursorPosition.value = editor.state.selection.from
-    },
-    onCreate: ({ editor }) => {
-      if (cursorPosition.value) {
-        editor.commands.setTextSelection(cursorPosition.value)
-      }
-    }
-  })
-)
-
-watchEffect(() => {
-  const editorInstance = editor.value
-  if (!editorInstance) return
-  isBold.value = editorInstance.isActive('bold')
-  isItalic.value = editorInstance.isActive('italic')
-})
-
-watchEffect(() => {
-  const editorInstance = editor.value
-  if (!editorInstance) return
-
-  if (isBold.value !== editorInstance.isActive('bold')) {
-    isBold.value
-      ? editorInstance.chain().focus().setBold().run()
-      : editorInstance.chain().focus().unsetBold().run()
-  }
-  if (isItalic.value !== editorInstance.isActive('italic')) {
-    isItalic.value
-      ? editorInstance.chain().focus().setItalic().run()
-      : editorInstance.chain().focus().unsetItalic().run()
+  },
+  // To update state when user types.
+  onUpdate: ({ editor }) => {
+    isInternalUpdate.value = true
+    htmlContent.value = editor.getHTML()
+    textContent.value = editor.getText()
+    isInternalUpdate.value = false
   }
 })
 
 watch(
-  () => props.contentToSet,
-  (newContentData) => {
-    if (!newContentData) return
-    try {
-      const parsedData = JSON.parse(newContentData)
-      const content = parsedData.content
-      if (content === '') {
-        editor.value?.commands.clearContent()
-      } else {
-        editor.value?.commands.setContent(content, true)
-      }
-      editor.value?.commands.focus()
-    } catch (e) {
-      console.error('Error parsing content data', e)
+  htmlContent,
+  (newContent) => {
+    if (!isInternalUpdate.value && editor.value && newContent !== editor.value.getHTML()) {
+      editor.value.commands.setContent(newContent || '', false)
+      textContent.value = editor.value.getText()
+      editor.value.commands.focus()
     }
-  }
+  },
+  { immediate: true }
 )
 
-watch(cursorPosition, (newPos, oldPos) => {
-  if (editor.value && newPos !== oldPos && newPos !== editor.value.state.selection.from) {
-    editor.value.commands.setTextSelection(newPos)
-  }
-})
-
-watch(
-  () => props.clearContent,
-  () => {
-    if (!props.clearContent) return
-    editor.value?.commands.clearContent()
-    editor.value?.commands.focus()
-    // `onUpdate` is not called when clearing content, so need to reset the content here.
-    htmlContent.value = ''
-    textContent.value = ''
-    cursorPosition.value = 0
-  }
-)
-
-watch(
-  () => props.setInlineImage,
-  (val) => {
-    if (val) {
-      editor.value?.commands.setImage({
-        src: val.src,
-        alt: val.alt,
-        title: val.title
-      })
-    }
-  }
-)
-
+// Insert content at cursor position when insertContent prop changes.
 watch(
   () => props.insertContent,
   (val) => {
@@ -327,18 +237,6 @@ watch(
 onUnmounted(() => {
   editor.value?.destroy()
 })
-
-const toggleBulletList = () => {
-  if (editor.value) {
-    editor.value.chain().focus().toggleBulletList().run()
-  }
-}
-
-const toggleOrderedList = () => {
-  if (editor.value) {
-    editor.value.chain().focus().toggleOrderedList().run()
-  }
-}
 
 const openLinkModal = () => {
   if (editor.value?.isActive('link')) {

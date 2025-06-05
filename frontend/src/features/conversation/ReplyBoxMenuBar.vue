@@ -65,7 +65,10 @@ defineProps({
   isSending: Boolean,
   enableSend: Boolean,
   handleSend: Function,
-  showSendButton: Boolean,
+  showSendButton: {
+    type: Boolean,
+    default: true
+  },
   handleFileUpload: Function,
   handleInlineImageUpload: Function
 })

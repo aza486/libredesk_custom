@@ -53,13 +53,8 @@
           :isSending="isSending"
           :uploadingFiles="uploadingFiles"
           :clearEditorContent="clearEditorContent"
-          :contentToSet="contentToSet"
           v-model:htmlContent="htmlContent"
           v-model:textContent="textContent"
-          v-model:selectedText="selectedText"
-          v-model:isBold="isBold"
-          v-model:isItalic="isItalic"
-          v-model:cursorPosition="cursorPosition"
           v-model:to="to"
           v-model:cc="cc"
           v-model:bcc="bcc"
@@ -88,14 +83,9 @@
         :isSending="isSending"
         :uploadingFiles="uploadingFiles"
         :clearEditorContent="clearEditorContent"
-        :contentToSet="contentToSet"
         :uploadedFiles="mediaFiles"
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
-        v-model:selectedText="selectedText"
-        v-model:isBold="isBold"
-        v-model:isItalic="isItalic"
-        v-model:cursorPosition="cursorPosition"
         v-model:to="to"
         v-model:cc="cc"
         v-model:bcc="bcc"
@@ -181,11 +171,6 @@ const emailErrors = ref([])
 const aiPrompts = ref([])
 const htmlContent = ref('')
 const textContent = ref('')
-const selectedText = ref('')
-const isBold = ref(false)
-const isItalic = ref(false)
-const cursorPosition = ref(0)
-const contentToSet = ref('')
 
 onMounted(async () => {
   await fetchAiPrompts()
@@ -218,10 +203,7 @@ const handleAiPromptSelected = async (key) => {
       prompt_key: key,
       content: textContent.value
     })
-    contentToSet.value = JSON.stringify({
-      content: resp.data.data.replace(/\n/g, '<br>'),
-      timestamp: Date.now()
-    })
+    htmlContent.value = resp.data.data.replace(/\n/g, '<br>')
   } catch (error) {
     // Check if user needs to enter OpenAI API key and has permission to do so.
     if (error.response?.status === 400 && userStore.can('ai:manage')) {
@@ -348,11 +330,7 @@ const processSend = async () => {
 watch(
   () => conversationStore.getMacro('reply').id,
   () => {
-    // Setting timestamp, so the same macro can be set again.
-    contentToSet.value = JSON.stringify({
-      content: conversationStore.getMacro('reply').message_content,
-      timestamp: Date.now()
-    })
+    htmlContent.value = conversationStore.getMacro('reply').message_content
   },
   { deep: true }
 )

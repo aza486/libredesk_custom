@@ -138,8 +138,7 @@ export const accountNavItems = [
     {
         titleKey: 'globals.terms.profile',
         href: '/account/profile',
-        description: 'Update your profile'
-    }
+    },
 ]
 
 export const contactNavItems = [

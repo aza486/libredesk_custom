@@ -84,21 +84,14 @@
     <!-- Main tiptap editor -->
     <div class="flex-grow flex flex-col overflow-hidden">
       <Editor
-        v-model:selectedText="selectedText"
-        v-model:isBold="isBold"
-        v-model:isItalic="isItalic"
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
-        v-model:cursorPosition="cursorPosition"
         :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
         :aiPrompts="aiPrompts"
-        @aiPromptSelected="handleAiPromptSelected"
-        :contentToSet="contentToSet"
-        @send="handleSend"
-        :clearContent="clearEditorContent"
-        :setInlineImage="setInlineImage"
         :insertContent="insertContent"
         :autoFocus="true"
+        @aiPromptSelected="handleAiPromptSelected"
+        @send="handleSend"
       />
     </div>
 
@@ -124,14 +117,9 @@
       class="mt-1 shrink-0"
       :isFullscreen="isFullscreen"
       :handleFileUpload="handleFileUpload"
-      :isBold="isBold"
-      :isItalic="isItalic"
       :isSending="isSending"
-      @toggleBold="toggleBold"
-      @toggleItalic="toggleItalic"
       :enableSend="enableSend"
       :handleSend="handleSend"
-      :showSendButton="true"
       @emojiSelect="handleEmojiSelect"
     />
   </div>
@@ -162,10 +150,6 @@ const showBcc = defineModel('showBcc', { default: false })
 const emailErrors = defineModel('emailErrors', { default: () => [] })
 const htmlContent = defineModel('htmlContent', { default: '' })
 const textContent = defineModel('textContent', { default: '' })
-const selectedText = defineModel('selectedText', { default: '' })
-const isBold = defineModel('isBold', { default: false })
-const isItalic = defineModel('isItalic', { default: false })
-const cursorPosition = defineModel('cursorPosition', { default: 0 })
 const macroStore = useMacroStore()
 
 const props = defineProps({
@@ -184,14 +168,6 @@ const props = defineProps({
   uploadingFiles: {
     type: Array,
     required: true
-  },
-  clearEditorContent: {
-    type: Boolean,
-    required: true
-  },
-  contentToSet: {
-    type: String,
-    default: null
   },
   uploadedFiles: {
     type: Array,
@@ -212,9 +188,7 @@ const emit = defineEmits([
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const { t } = useI18n()
-
 const insertContent = ref(null)
-const setInlineImage = ref(null)
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
@@ -229,14 +203,6 @@ const toggleBcc = async () => {
 
 const toggleFullscreen = () => {
   emit('toggleFullscreen')
-}
-
-const toggleBold = () => {
-  isBold.value = !isBold.value
-}
-
-const toggleItalic = () => {
-  isItalic.value = !isItalic.value
 }
 
 const enableSend = computed(() => {

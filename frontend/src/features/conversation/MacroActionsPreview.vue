@@ -4,7 +4,7 @@
       <div
         v-for="action in actions"
         :key="action.type"
-        class="flex items-center border border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group gap-2"
+        class="flex items-center border bg-background border-gray-200 rounded shadow-sm transition-all duration-300 ease-in-out hover:shadow-md group gap-2"
       >
         <div class="flex items-center space-x-2 px-2">
           <component

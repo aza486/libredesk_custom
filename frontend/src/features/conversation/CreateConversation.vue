@@ -161,9 +161,7 @@
                     <Editor
                       v-model:htmlContent="componentField.modelValue"
                       @update:htmlContent="(value) => componentField.onChange(value)"
-                      :contentToSet="contentToSet"
-                      :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
-                      :clearContent="clearEditorContent"
+                      :placeholder="t('editor.newLine') + t('editor.cmdK')"
                       :insertContent="insertContent"
                       :autoFocus="false"
                       class="w-full flex-1 overflow-y-auto p-2 box min-h-0"
@@ -199,6 +197,7 @@
             <ReplyBoxMenuBar
               :handleFileUpload="handleFileUpload"
               @emojiSelect="handleEmojiSelect"
+              :showSendButton="false"
             />
             <Button type="submit" :disabled="isDisabled" :isLoading="loading">
               {{ $t('globals.buttons.submit') }}
@@ -266,9 +265,6 @@ const emailQuery = ref('')
 const conversationStore = useConversationStore()
 const macroStore = useMacroStore()
 let timeoutId = null
-
-const contentToSet = ref('')
-const clearEditorContent = ref(false)
 const insertContent = ref('')
 
 const handleEmojiSelect = (emoji) => {
@@ -420,11 +416,7 @@ const createConversation = form.handleSubmit(async (values) => {
 watch(
   () => conversationStore.getMacro('new-conversation').id,
   () => {
-    // Setting timestamp, so the same macro can be set again.
-    contentToSet.value = JSON.stringify({
-      content: conversationStore.getMacro('new-conversation').message_content,
-      timestamp: Date.now()
-    })
+    form.setFieldValue('content', conversationStore.getMacro('new-conversation').message_content)
   },
   { deep: true }
 )

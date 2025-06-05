@@ -2,7 +2,9 @@
   <div class="w-full space-y-6 pb-8 relative">
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
-      <span class="text-xl font-semibold text-gray-900 dark:text-foreground">{{ $t('globals.terms.note', 2) }}</span>
+      <span class="text-xl font-semibold text-gray-900 dark:text-foreground">
+        {{ $t('globals.terms.note', 2) }}
+      </span>
       <Button
         variant="outline"
         size="sm"
@@ -27,7 +29,7 @@
             <Editor
               v-model:htmlContent="newNote"
               @update:htmlContent="(value) => (newNote = value)"
-              :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
+              :placeholder="t('editor.newLine') + t('editor.send')"
             />
           </div>
           <div class="flex justify-end space-x-3 pt-2">
@@ -64,7 +66,9 @@
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p class="text-sm font-medium text-gray-900 dark:text-foreground">{{ note.first_name }} {{ note.last_name }}</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-foreground">
+                  {{ note.first_name }} {{ note.last_name }}
+                </p>
                 <p class="text-xs text-muted-foreground flex items-center">
                   <ClockIcon class="h-3 w-3 mr-1 inline-block opacity-70" />
                   {{ formatDate(note.created_at) }}
@@ -115,7 +119,9 @@
         <div class="rounded-full bg-gray-100 dark:bg-foreground p-4 mb-2">
           <MessageSquareIcon class="text-gray-400 dark:text-background" size="25" />
         </div>
-        <h3 class="mt-2 text-base font-medium text-gray-900 dark:text-foreground">{{ $t('contact.notes.empty') }}</h3>
+        <h3 class="mt-2 text-base font-medium text-gray-900 dark:text-foreground">
+          {{ $t('contact.notes.empty') }}
+        </h3>
         <p class="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
           {{ $t('contact.notes.help') }}
         </p>

@@ -19,7 +19,7 @@
             <Editor
               v-model:htmlContent="componentField.modelValue"
               @update:htmlContent="(value) => componentField.onChange(value)"
-              :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
+              :placeholder="t('editor.newLine')"
             />
           </div>
         </FormControl>

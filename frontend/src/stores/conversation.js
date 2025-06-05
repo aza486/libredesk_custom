@@ -640,7 +640,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
 
-  /** Macros for new conversation or open conversation **/
+  /** Macros set for new conversation or an open conversation **/
   async function setMacro (macro, context) {
     macros.value[context] = macro
   }
