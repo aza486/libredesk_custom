@@ -39,7 +39,7 @@ const routes = [
         path: 'contacts',
         name: 'contacts',
         component: () => import('@/views/contact/ContactsView.vue'),
-        meta: { title: 'Contacts' }
+        meta: { title: 'All contacts' }
       },
       {
         path: 'contacts/:id',
