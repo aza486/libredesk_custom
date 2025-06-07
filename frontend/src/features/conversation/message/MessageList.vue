@@ -130,7 +130,7 @@ onMounted(() => {
 const handleNewMessage = () => {
   emitter.on(EMITTER_EVENTS.NEW_MESSAGE, (data) => {
     if (data.conversation_uuid === conversationStore.current.uuid) {
-      if (data.message.sender_id === userStore.userID) {
+      if (data.message?.sender_id === userStore.userID) {
         scrollToBottom()
       } else if (!isAtBottom.value) {
         unReadMessages.value++
