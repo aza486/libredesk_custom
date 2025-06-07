@@ -54,6 +54,14 @@ const route = useRoute()
 const { t } = useI18n()
 const emit = defineEmits(['createView', 'editView', 'deleteView', 'createConversation'])
 
+const isActiveParent = (parentHref) => {
+  return route.path.startsWith(parentHref)
+}
+
+const isInboxRoute = (path) => {
+  return path.startsWith('/inboxes')
+}
+
 const openCreateViewDialog = () => {
   emit('createView')
 }
@@ -94,14 +102,6 @@ watch(
 const sidebarOpen = useStorage('mainSidebarOpen', true)
 const teamInboxOpen = useStorage('teamInboxOpen', true)
 const viewInboxOpen = useStorage('viewInboxOpen', true)
-
-const isActiveParent = (parentHref) => {
-  return route.path.startsWith(parentHref)
-}
-
-const isInboxRoute = (path) => {
-  return path.startsWith('/inboxes')
-}
 </script>
 
 <template>
