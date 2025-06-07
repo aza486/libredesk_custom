@@ -546,6 +546,8 @@ func handleUpdateContactCustomAttributes(r *fastglue.Request) error {
 	if err := app.user.UpdateCustomAttributes(conversation.ContactID, attributes); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	// Broadcast update.
+	app.conversation.BroadcastConversationUpdate(conversation.UUID, "contact.custom_attributes", attributes)
 	return r.SendEnvelope(true)
 }
 

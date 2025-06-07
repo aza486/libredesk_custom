@@ -611,15 +611,34 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  /**
+   * Update a conversation property, supports nested paths via dot notation
+   * @param {Object} update - { uuid, prop, value }
+   */
   function updateConversationProp (update) {
-    // Update the current conversation if it matches the UUID.
-    if (conversation.data?.uuid === update.uuid) {
-      conversation.data[update.prop] = update.value
+    const updateNested = (obj, prop, value) => {
+      if (!prop.includes('.')) {
+        obj[prop] = value
+        return
+      }
+
+      const keys = prop.split('.')
+      const lastKey = keys.pop()
+      const target = keys.reduce((o, key) => o[key] = o[key] || {}, obj)
+      target[lastKey] = value
     }
-    // Update the conversation in the list if it exists.
-    const existingConversation = conversations?.data?.find(c => c.uuid === update.uuid)
+
+    const { uuid, prop, value } = update
+
+    // Conversation is currently open? Update it.
+    if (conversation.data?.uuid === uuid) {
+      updateNested(conversation.data, prop, value)
+    }
+
+    // Update conversation if it exists in the list.
+    const existingConversation = conversations?.data?.find(c => c.uuid === uuid)
     if (existingConversation) {
-      existingConversation[update.prop] = update.value
+      updateNested(existingConversation, prop, value)
     }
   }
 

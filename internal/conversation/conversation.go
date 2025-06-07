@@ -924,6 +924,8 @@ func (c *Manager) UpdateConversationCustomAttributes(uuid string, customAttribut
 		c.lo.Error("error updating conversation custom attributes", "error", err)
 		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
 	}
+	// Broadcast the custom attributes update.
+	c.BroadcastConversationUpdate(uuid, "custom_attributes", customAttributes)
 	return nil
 }
 
