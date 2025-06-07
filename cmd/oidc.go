@@ -50,18 +50,6 @@ func handleGetOIDC(r *fastglue.Request) error {
 	return r.SendEnvelope(o)
 }
 
-// handleTestOIDC tests an OIDC provider URL by doing a discovery on the provider URL.
-func handleTestOIDC(r *fastglue.Request) error {
-	var (
-		app         = r.Context.(*App)
-		providerURL = string(r.RequestCtx.PostArgs().Peek("provider_url"))
-	)
-	if err := app.auth.TestProvider(providerURL); err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	return r.SendEnvelope(true)
-}
-
 // handleCreateOIDC creates a new OIDC record.
 func handleCreateOIDC(r *fastglue.Request) error {
 	var (
@@ -70,6 +58,11 @@ func handleCreateOIDC(r *fastglue.Request) error {
 	)
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.GeneralError)
+	}
+
+	// Test OIDC provider URL by performing a discovery.
+	if err := app.auth.TestProvider(req.ProviderURL); err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 
 	if err := app.oidc.Create(req); err != nil {
@@ -96,6 +89,11 @@ func handleUpdateOIDC(r *fastglue.Request) error {
 
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.GeneralError)
+	}
+
+	// Test OIDC provider URL by performing a discovery.
+	if err := app.auth.TestProvider(req.ProviderURL); err != nil {
+		return sendErrorEnvelope(r, err)
 	}
 
 	if err = app.oidc.Update(id, req); err != nil {
