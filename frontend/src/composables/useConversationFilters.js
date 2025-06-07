@@ -253,7 +253,7 @@ export function useConversationFilters () {
         },
         add_tags: {
             label: t('globals.messages.add', {
-                name: t('globals.terms.tag,', 2).toLowerCase()
+                name: t('globals.terms.tag', 2).toLowerCase()
             }),
             type: FIELD_TYPE.TAG
         },

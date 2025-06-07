@@ -116,7 +116,9 @@
           <SelectComboBox
             v-bind="componentField"
             :items="tStore.options"
-            :placeholder="t('globals.messages.select', { name: t('globals.terms.team') })"
+            :placeholder="
+              t('globals.messages.select', { name: t('globals.terms.team').toLowerCase() })
+            "
             type="team"
           />
         </FormControl>
@@ -131,7 +133,9 @@
           <SelectComboBox
             v-bind="componentField"
             :items="uStore.options"
-            :placeholder="t('globals.messages.select', { name: t('globals.terms.agent') })"
+            :placeholder="
+              t('globals.messages.select', { name: t('globals.terms.agent').toLowerCase() })
+            "
             type="user"
           />
         </FormControl>

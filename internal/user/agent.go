@@ -82,22 +82,22 @@ func (u *Manager) GetAgentsCompact() ([]models.User, error) {
 	return users, nil
 }
 
-// CreateAgent creates a new agent user and returns the created user.
-func (u *Manager) CreateAgent(user *models.User) (models.User, error) {
+// CreateAgent creates a new agent user.
+func (u *Manager) CreateAgent(user *models.User) (error) {
 	password, err := u.generatePassword()
 	if err != nil {
 		u.lo.Error("error generating password", "error", err)
-		return models.User{}, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
 	}
 	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
 	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return models.User{}, envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
+			return envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
 		}
 		u.lo.Error("error creating user", "error", err)
-		return models.User{}, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
 	}
-	return u.GetAgent(user.ID, "")
+	return nil
 }
 
 // UpdateAgent updates an agent in the database, including their password if provided.

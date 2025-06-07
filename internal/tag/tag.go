@@ -67,7 +67,7 @@ func (t *Manager) GetAll() ([]models.Tag, error) {
 func (t *Manager) Create(name string) error {
 	if _, err := t.q.InsertTag.Exec(name); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.ConflictError, t.i18n.Ts("globals.messages.mismatch", "name", "{globals.terms.tag}"), nil)
+			return envelope.NewError(envelope.ConflictError, t.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.tag}"), nil)
 		}
 		t.lo.Error("error inserting tag", "error", err)
 		return envelope.NewError(envelope.GeneralError, t.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.tag}"), nil)

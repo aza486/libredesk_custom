@@ -35,7 +35,7 @@
                   <CustomAttributesForm @submit.prevent="onSubmit" :form="form">
                     <template #footer>
                       <DialogFooter class="mt-10">
-                        <Button type="submit" :isLoading="isLoading" :disabled="isLoading">
+                        <Button type="submit" :isLoading="isLoading">
                           {{
                             isEditing ? $t('globals.messages.update') : $t('globals.messages.create')
                           }}

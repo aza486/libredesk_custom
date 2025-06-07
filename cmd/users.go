@@ -148,7 +148,6 @@ func handleCreateAgent(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		user = models.User{}
-		err  error
 	)
 	if err := r.Decode(&user, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
@@ -166,7 +165,7 @@ func handleCreateAgent(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`first_name`"), nil, envelope.InputError)
 	}
 
-	if user, err = app.user.CreateAgent(&user); err != nil {
+	if err := app.user.CreateAgent(&user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -204,7 +203,7 @@ func handleCreateAgent(r *fastglue.Request) error {
 			return r.SendEnvelope(true)
 		}
 	}
-	return r.SendEnvelope(user)
+	return r.SendEnvelope(true)
 }
 
 // handleUpdateAgent updates an agent.
@@ -248,7 +247,7 @@ func handleUpdateAgent(r *fastglue.Request) error {
 	}
 
 	// Invalidate authz cache.
-	app.authz.InvalidateUserCache(id)
+	defer app.authz.InvalidateUserCache(id)
 
 	// Create activity log if user availability status changed.
 	if oldAvailabilityStatus != user.AvailabilityStatus {

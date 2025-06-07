@@ -2,7 +2,7 @@
   <div class="mb-5">
     <CustomBreadcrumb :links="breadcrumbLinks" />
   </div>
-  <Spinner v-if="isLoading"/>
+  <Spinner v-if="isLoading" />
   <TemplateForm
     :initial-values="template"
     :submitForm="submitForm"

@@ -66,7 +66,7 @@
       <FormItem>
         <FormLabel>{{ $t('globals.terms.type') }}</FormLabel>
         <FormControl>
-          <Select v-bind="componentField" :disabled="form.values.id && form.values.id > 0">
+          <Select v-bind="componentField" :disabled="!!(form.values.id && form.values.id > 0)">
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -108,7 +108,9 @@
 
     <FormField name="regex" v-slot="{ componentField }">
       <FormItem v-show="form.values.data_type === 'text'">
-        <FormLabel> {{ $t('globals.terms.regex') }} ({{ $t('globals.terms.optional') }}) </FormLabel>
+        <FormLabel>
+          {{ $t('globals.terms.regex') }} ({{ $t('globals.terms.optional') }})
+        </FormLabel>
         <FormControl>
           <Input type="text" v-bind="componentField" />
         </FormControl>
@@ -121,7 +123,9 @@
 
     <FormField name="regex_hint" v-slot="{ componentField }">
       <FormItem v-show="form.values.data_type === 'text'">
-        <FormLabel> {{ $t('globals.terms.regexHint') }} ({{ $t('globals.terms.optional') }}) </FormLabel>
+        <FormLabel>
+          {{ $t('globals.terms.regexHint') }} ({{ $t('globals.terms.optional') }})
+        </FormLabel>
         <FormControl>
           <Input type="text" v-bind="componentField" />
         </FormControl>

@@ -119,6 +119,7 @@
           <p class="font-semibold">{{ $t('admin.automation.matchTheseRules') }}</p>
 
           <RuleBox
+            v-if="form.values.type"
             :ruleGroup="firstRuleGroup"
             @update-group="handleUpdateGroup"
             @add-condition="handleAddCondition"
@@ -153,6 +154,7 @@
           </div>
 
           <RuleBox
+            v-if="form.values.type"
             :ruleGroup="secondRuleGroup"
             @update-group="handleUpdateGroup"
             @add-condition="handleAddCondition"
@@ -244,13 +246,13 @@ const rule = ref({
 const conversationEventOptions = [
   {
     label: t('globals.messages.assigned', {
-      name: t('globals.terms.agent').toLowerCase()
+      name: t('globals.terms.agent')
     }),
     value: 'conversation.user.assigned'
   },
   {
     label: t('globals.messages.assigned', {
-      name: t('globals.terms.team').toLowerCase()
+      name: t('globals.terms.team')
     }),
     value: 'conversation.team.assigned'
   },

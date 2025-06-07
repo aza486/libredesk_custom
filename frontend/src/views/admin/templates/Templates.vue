@@ -23,12 +23,12 @@
             <div>
               <Tabs default-value="email_outgoing" v-model="templateType">
                 <TabsList class="grid w-full grid-cols-2 mb-5">
-                  <TabsTrigger value="email_outgoing">{{
-                    $t('admin.template.outgoingEmailTemplates')
-                  }}</TabsTrigger>
-                  <TabsTrigger value="email_notification">{{
-                    $t('admin.template.emailNotificationTemplates')
-                  }}</TabsTrigger>
+                  <TabsTrigger value="email_outgoing">
+                    {{ $t('admin.template.outgoingEmailTemplates') }}
+                  </TabsTrigger>
+                  <TabsTrigger value="email_notification">
+                    {{ $t('admin.template.emailNotificationTemplates') }}
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="email_outgoing">
                   <DataTable :columns="createOutgoingEmailTableColumns(t)" :data="templates" />
@@ -48,7 +48,12 @@
       <template #help>
         <p>Design templates for customer communications and responses.</p>
         <p>Modify content for internal and external emails.</p>
-        <a href="https://libredesk.io/docs/templating/" target="_blank" rel="noopener noreferrer" class="link-style">
+        <a
+          href="https://libredesk.io/docs/templating/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="link-style"
+        >
           <p>Learn more</p>
         </a>
       </template>
@@ -64,7 +69,7 @@ import {
   createEmailNotificationTableColumns
 } from '@/features/admin/templates/dataTableColumns.js'
 import { Button } from '@/components/ui/button'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Spinner } from '@/components/ui/spinner'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
@@ -80,10 +85,10 @@ const { t } = useI18n()
 const templates = ref([])
 const isLoading = ref(false)
 const router = useRouter()
+const route = useRoute()
 const emit = useEmitter()
 
 onMounted(async () => {
-  fetchAll()
   emit.on(EMITTER_EVENTS.REFRESH_LIST, refreshList)
 })
 
@@ -106,6 +111,8 @@ const fetchAll = async () => {
   }
 }
 
+fetchAll()
+
 const refreshList = (data) => {
   if (data?.model === 'templates') fetchAll()
 }
@@ -117,12 +124,18 @@ const navigateToNewTemplate = () => {
   })
 }
 
+watch(templateType, () => {
+  templates.value = []
+  fetchAll()
+})
+
+// When back to template list, refetch all items.
 watch(
-  templateType,
+  () => route.name,
   () => {
-    templates.value = []
-    fetchAll()
-  },
-  { immediate: true }
+    if (route.name === 'templates') {
+      fetchAll()
+    }
+  }
 )
 </script>

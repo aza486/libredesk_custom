@@ -11,8 +11,12 @@
         <!-- Field -->
         <div class="flex-1">
           <Select v-model="modelFilter.field">
-            <SelectTrigger class="bg-transparent hover:bg-slate-100 w-full">
-              <SelectValue :placeholder="t('globals.messages.select', { name: t('globals.terms.field').toLowerCase() })" />
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="
+                  t('globals.messages.select', { name: t('globals.terms.field').toLowerCase() })
+                "
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -27,8 +31,12 @@
         <!-- Operator -->
         <div class="flex-1">
           <Select v-model="modelFilter.operator" v-if="modelFilter.field">
-            <SelectTrigger class="bg-transparent hover:bg-slate-100 w-full">
-              <SelectValue :placeholder="t('globals.messages.select', { name: t('globals.terms.operator').toLowerCase() })" />
+            <SelectTrigger>
+              <SelectValue
+                :placeholder="
+                  t('globals.messages.select', { name: t('globals.terms.operator').toLowerCase() })
+                "
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -76,7 +84,6 @@
               <Input
                 v-else
                 v-model="modelFilter.value"
-                class="bg-transparent hover:bg-slate-100"
                 :placeholder="t('globals.terms.value')"
                 type="text"
               />

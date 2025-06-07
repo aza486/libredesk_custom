@@ -6,7 +6,6 @@
         <FormControl>
           <Input
             type="text"
-            placeholder=""
             v-bind="componentField"
             :disabled="!isOutgoingTemplate"
           />

@@ -17,7 +17,7 @@ export const createFormSchema = (t) => z.object({
         if (!data.hours || Object.keys(data.hours).length === 0) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: t('admin.business_hours.hours.required'),
+                message: t('globals.messages.required'),
                 path: ['hours']
             })
         } else {
@@ -25,7 +25,7 @@ export const createFormSchema = (t) => z.object({
                 if (!data.hours[day].open || !data.hours[day].close) {
                     ctx.addIssue({
                         code: z.ZodIssueCode.custom,
-                        message: t('admin.business_hours.open_close.required'),
+                        message: t('globals.messages.required'),
                         path: ['hours', day]
                     })
                 }

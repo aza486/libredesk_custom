@@ -51,11 +51,7 @@
       <AlertDialogHeader>
         <AlertDialogTitle> {{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{
-            $t('globals.messages.deletionConfirmation', {
-              name: t('globals.terms.status').toLowerCase()
-            })
-          }}
+          {{ $t('admin.status.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

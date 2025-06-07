@@ -296,7 +296,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.tls_type">
         <FormItem>
-          <FormLabel>{{ t('admin.inbox.tls') }}</FormLabel>
+          <FormLabel>{{ t('globals.terms.tls') }}</FormLabel>
           <FormControl>
             <Select v-bind="componentField">
               <SelectTrigger>

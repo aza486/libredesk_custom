@@ -40,21 +40,6 @@ const props = defineProps({
 })
 
 const submitForm = async (values) => {
-  // Test the provider first.
-  try {
-    formLoading.value = true
-    await api.testOIDC({
-      provider_url: values.provider_url
-    })
-  } catch (error) {
-    formLoading.value = false
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-    return
-  }
-
   try {
     let toastDescription = ''
     if (props.id) {
