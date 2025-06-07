@@ -197,6 +197,7 @@ type queries struct {
 	GetUserActiveConversationsCount    *sqlx.Stmt `query:"get-user-active-conversations-count"`
 	UpdateConversationFirstReplyAt     *sqlx.Stmt `query:"update-conversation-first-reply-at"`
 	UpdateConversationLastReplyAt      *sqlx.Stmt `query:"update-conversation-last-reply-at"`
+	UpdateConversationWaitingSince     *sqlx.Stmt `query:"update-conversation-waiting-since"`
 	UpdateConversationAssigneeLastSeen *sqlx.Stmt `query:"update-conversation-assignee-last-seen"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
 	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
@@ -456,6 +457,25 @@ func (c *Manager) UpdateConversationLastReplyAt(conversationUUID string, convers
 	rows, _ := res.RowsAffected()
 	if rows > 0 {
 		c.BroadcastConversationUpdate(conversationUUID, "last_reply_at", at.Format(time.RFC3339))
+	}
+	return nil
+}
+
+// UpdateConversationWaitingSince updates the waiting since timestamp for a conversation.
+func (c *Manager) UpdateConversationWaitingSince(conversationUUID string, at *time.Time) error {
+	res, err := c.q.UpdateConversationWaitingSince.Exec(conversationUUID, at)
+	if err != nil {
+		c.lo.Error("error updating conversation waiting since", "error", err)
+		return err
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows > 0 {
+		if at != nil {
+			c.BroadcastConversationUpdate(conversationUUID, "waiting_since", at.Format(time.RFC3339))
+		} else {
+			c.BroadcastConversationUpdate(conversationUUID, "waiting_since", nil)
+		}
 	}
 	return nil
 }

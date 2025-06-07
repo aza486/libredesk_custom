@@ -203,6 +203,9 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		}
 		m.UpdateConversationLastReplyAt(message.ConversationUUID, message.ConversationID, now)
 
+		// Clear waiting since timestamp as agent has replied to the conversation.
+		m.UpdateConversationWaitingSince(message.ConversationUUID, nil)
+
 		// Mark latest SLA event for next response as met.
 		metAt, err := m.slaStore.SetLatestSLAEventMetAt(conversation.AppliedSLAID.Int, sla.MetricNextResponse)
 		if err != nil && !errors.Is(err, sla.ErrLatestSLAEventNotFound) {
@@ -616,6 +619,10 @@ func (m *Manager) processIncomingMessage(in models.IncomingMessage) error {
 			m.lo.Error("error reopening conversation", "error", err)
 		}
 	}
+
+	// Set waiting since timestamp, this gets cleared when agent replies to the conversation.
+	now := time.Now()
+	m.UpdateConversationWaitingSince(in.Message.ConversationUUID, &now)
 
 	// Trigger automations on incoming message event.
 	m.automation.EvaluateConversationUpdateRules(in.Message.ConversationUUID, amodels.EventConversationMessageIncoming)

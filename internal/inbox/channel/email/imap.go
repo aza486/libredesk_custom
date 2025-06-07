@@ -54,7 +54,7 @@ func (e *Email) ReadIncomingMessages(ctx context.Context, cfg IMAPConfig) error 
 			if err := e.processMailbox(ctx, scanInboxSince, cfg); err != nil && err != context.Canceled {
 				e.lo.Error("error searching emails", "error", err)
 			}
-			e.lo.Debug("email search complete", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+			e.lo.Info("email search complete", "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 		}
 	}
 }
@@ -98,7 +98,7 @@ func (e *Email) processMailbox(ctx context.Context, scanInboxSince time.Duration
 	// Scan emails since the specified duration.
 	since := time.Now().Add(-scanInboxSince)
 
-	e.lo.Debug("searching emails", "since", since, "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
+	e.lo.Info("searching emails", "since", since, "mailbox", cfg.Mailbox, "inbox_id", e.Identifier())
 
 	// Search for messages in the mailbox.
 	searchResults, err := e.searchMessages(client, since)

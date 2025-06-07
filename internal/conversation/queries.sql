@@ -331,6 +331,54 @@ SET custom_attributes = $2,
     updated_at = NOW()
 WHERE uuid = $1;
 
+-- name: update-conversation-waiting-since
+UPDATE conversations
+SET waiting_since = $2,
+    updated_at = NOW()
+WHERE uuid = $1;
+
+-- name: remove-conversation-assignee
+UPDATE conversations
+SET 
+    assigned_user_id = CASE WHEN $2 = 'user' THEN NULL ELSE assigned_user_id END,
+    assigned_team_id = CASE WHEN $2 = 'team' THEN NULL ELSE assigned_team_id END,
+    updated_at = NOW()
+WHERE uuid = $1;
+
+-- name: re-open-conversation
+-- Open conversation if it is not already open and unset the assigned user if they are away and reassigning.
+UPDATE conversations
+SET 
+  status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'),
+  snoozed_until = NULL,
+  updated_at = NOW(),
+  assigned_user_id = CASE
+    WHEN EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = conversations.assigned_user_id 
+        AND users.availability_status = 'away_and_reassigning'
+    ) THEN NULL
+    ELSE assigned_user_id
+  END
+WHERE 
+  uuid = $1
+  AND status_id IN (
+    SELECT id FROM conversation_statuses WHERE name NOT IN ('Open')
+  )
+
+-- name: get-conversation-by-message-id
+SELECT
+    c.id,
+    c.uuid,
+    c.assigned_team_id,
+    c.assigned_user_id
+FROM conversation_messages m
+JOIN conversations c ON m.conversation_id = c.id
+WHERE m.id = $1;
+
+-- name: delete-conversation
+DELETE FROM conversations WHERE uuid = $1;
+
 -- MESSAGE queries.
 -- name: get-message-source-ids
 SELECT 
@@ -449,15 +497,6 @@ inserted_msg AS (
        $5, $6, $7, $8, $9, $10, $11, $12
    )
    RETURNING id, uuid, created_at, conversation_id
-),
-updated_conversation AS (
-   UPDATE conversations 
-   SET waiting_since = CASE
-       WHEN $8 = 'contact' THEN NOW()
-       WHEN $8 = 'agent' THEN NULL
-       ELSE waiting_since
-   END
-   WHERE id = (SELECT id FROM conversation_id)
 )
 SELECT id, uuid, created_at FROM inserted_msg;
 
@@ -466,50 +505,8 @@ SELECT conversation_id
 FROM conversation_messages
 WHERE source_id = ANY($1::text []);
 
--- name: get-conversation-by-message-id
-SELECT
-    c.id,
-    c.uuid,
-    c.assigned_team_id,
-    c.assigned_user_id
-FROM conversation_messages m
-JOIN conversations c ON m.conversation_id = c.id
-WHERE m.id = $1;
-
 -- name: update-message-status
 update conversation_messages set status = $1, updated_at = NOW() where uuid = $2;
-
--- name: remove-conversation-assignee
-UPDATE conversations
-SET 
-    assigned_user_id = CASE WHEN $2 = 'user' THEN NULL ELSE assigned_user_id END,
-    assigned_team_id = CASE WHEN $2 = 'team' THEN NULL ELSE assigned_team_id END,
-    updated_at = NOW()
-WHERE uuid = $1;
-
--- name: re-open-conversation
--- Open conversation if it is not already open and unset the assigned user if they are away and reassigning.
-UPDATE conversations
-SET 
-  status_id = (SELECT id FROM conversation_statuses WHERE name = 'Open'),
-  snoozed_until = NULL,
-  updated_at = NOW(),
-  assigned_user_id = CASE
-    WHEN EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = conversations.assigned_user_id 
-        AND users.availability_status = 'away_and_reassigning'
-    ) THEN NULL
-    ELSE assigned_user_id
-  END
-WHERE 
-  uuid = $1
-  AND status_id IN (
-    SELECT id FROM conversation_statuses WHERE name NOT IN ('Open')
-  )
-
--- name: delete-conversation
-DELETE FROM conversations WHERE uuid = $1;
 
 -- name: get-latest-message
 SELECT
