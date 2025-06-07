@@ -3,7 +3,7 @@
     <!-- Tags visible to the user -->
     <div class="flex gap-2 flex-wrap items-center px-3">
       <TagsInputItem v-for="tagValue in tags" :key="tagValue" :value="tagValue">
-        <TagsInputItemText/>
+        <TagsInputItemText />
         <TagsInputItemDelete />
       </TagsInputItem>
     </div>
@@ -23,6 +23,7 @@
             :class="tags.length > 0 ? 'mt-2' : ''"
             @keydown.enter.prevent
             @blur="handleBlur"
+            @click="open = true"
           />
         </ComboboxInput>
       </ComboboxAnchor>
@@ -99,11 +100,14 @@ const open = ref(false)
 const searchTerm = ref('')
 
 // Get all options that are not already selected and match the search term
+// If not search term is provided, return all available options
 const filteredOptions = computed(() => {
-  return props.items.filter(
-    (item) =>
-      !tags.value.includes(item.value) &&
-      item.label.toLowerCase().includes(searchTerm.value.toLowerCase())
+  const available = props.items.filter((item) => !tags.value.includes(item.value))
+
+  if (!searchTerm.value) return available
+
+  return available.filter((item) =>
+    item.label.toLowerCase().includes(searchTerm.value.toLowerCase())
   )
 })
 
@@ -127,6 +131,8 @@ const handleSelect = (event) => {
 // Custom filter function to filter items based on the search term
 const filterFunc = (remainingItemValues, term) => {
   const remainingItems = props.items.filter((item) => remainingItemValues.includes(item.value))
-  return remainingItems.filter((item) => item.label.toLowerCase().includes(term.toLowerCase())).map(item => item.value)
+  return remainingItems
+    .filter((item) => item.label.toLowerCase().includes(term.toLowerCase()))
+    .map((item) => item.value)
 }
 </script>
