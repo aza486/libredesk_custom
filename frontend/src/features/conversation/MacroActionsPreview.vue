@@ -74,21 +74,21 @@ const getDisplayValue = (action) => {
 const getTooltip = (action) => {
   switch (action.type) {
     case 'assign_team':
-      return `${t('globals.messages.assignTeam')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.assign', { name: t('globals.terms.team').toLowerCase() })}: ${getDisplayValue(action)}`
     case 'assign_user':
-      return `${t('globals.messages.assignUser')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.assign', { name: t('globals.terms.agent').toLowerCase() })}: ${getDisplayValue(action)}`
     case 'set_status':
-      return `${t('globals.messages.setStatus')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.set', { name: t('globals.terms.status').toLowerCase() })}: ${getDisplayValue(action)}`
     case 'set_priority':
-      return `${t('globals.messages.setPriority')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.set', { name: t('globals.terms.priority').toLowerCase() })}: ${getDisplayValue(action)}`
     case 'add_tags':
-      return `${t('globals.messages.addTags')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.add', { name: t('globals.terms.tag', 2).toLowerCase() })}: ${getDisplayValue(action)}`
     case 'set_tags':
-      return `${t('globals.messages.setTags')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.set', { name: t('globals.terms.tag', 2).toLowerCase() })}: ${getDisplayValue(action)}`
     case 'remove_tags':
-      return `${t('globals.messages.removeTags')}: ${getDisplayValue(action)}`
+      return `${t('globals.messages.remove', { name: t('globals.terms.tag', 2).toLowerCase() })}: ${getDisplayValue(action)}`
     default:
-      return `${t('globals.terms.action')}: ${action.type}, ${t('globals.terms.value')}: ${getDisplayValue(action)}`
+      return `${t('globals.terms.action')}: ${action.type}, ${t('globals.terms.value').toLowerCase()}: ${getDisplayValue(action)}`
   }
 }
 </script>

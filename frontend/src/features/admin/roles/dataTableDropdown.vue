@@ -8,13 +8,13 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editRole(props.role.id)">{{
-        $t('globals.buttons.edit')
+        $t('globals.messages.edit')
       }}</DropdownMenuItem>
       <DropdownMenuItem
         @click="() => (alertOpen = true)"
         v-if="Roles.includes(props.role.name) === false"
       >
-        {{ $t('globals.buttons.delete') }}
+        {{ $t('globals.messages.delete') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -24,13 +24,17 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.role.deleteConfirmation') }}
+          {{
+            $t('globals.messages.deletionConfirmation', {
+              name: $t('globals.terms.role').toLowerCase()
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">{{
-          $t('globals.buttons.delete')
+          $t('globals.messages.delete')
         }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

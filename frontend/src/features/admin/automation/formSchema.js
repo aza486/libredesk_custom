@@ -18,7 +18,7 @@ export const createFormSchema = (t) => z
         if (data.type === 'conversation_update' && (!data.events || data.events.length === 0)) {
             ctx.addIssue({
                 path: ['events'],
-                message: t('globals.messages.pleaseSelectAtLeastOne', {
+                message: t('globals.messages.selectAtLeastOne', {
                     name: t('globals.terms.event')
                 }),
                 code: z.ZodIssueCode.custom,

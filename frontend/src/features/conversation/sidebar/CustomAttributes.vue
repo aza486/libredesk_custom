@@ -99,7 +99,7 @@
             <template v-else-if="attribute.data_type === 'list'">
               <Select v-model="editingValue">
                 <SelectTrigger>
-                  <SelectValue :placeholder="t('form.field.selectValue')" />
+                  <SelectValue :placeholder="t('globals.messages.select', { name: t('globals.terms.value') })" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="option in attribute.values" :key="option" :value="option">
@@ -218,7 +218,7 @@ const getValidationSchema = (attribute) => {
         .string()
         .url(
           t('globals.messages.invalid', {
-            name: t('form.field.url', 2).toLowerCase()
+            name: t('globals.terms.url').toLowerCase()
           })
         )
         .nullable()

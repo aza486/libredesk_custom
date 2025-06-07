@@ -5,7 +5,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.name'))
+      return h('div', { class: 'text-center' }, t('globals.terms.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -14,7 +14,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'description',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.description'))
+      return h('div', { class: 'text-center' }, t('globals.terms.description'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('description'))

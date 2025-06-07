@@ -6,7 +6,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.name'))
+      return h('div', { class: 'text-center' }, t('globals.terms.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -15,7 +15,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'provider',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.provider'))
+      return h('div', { class: 'text-center' }, t('globals.terms.provider'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('provider'))
@@ -23,7 +23,7 @@ export const createColumns = (t) => [
   },
   {
     accessorKey: 'enabled',
-    header: () => h('div', { class: 'text-center' }, t('form.field.enabled')),
+    header: () => h('div', { class: 'text-center' }, t('globals.terms.enabled')),
     cell: ({ row }) => {
       const enabled = row.getValue('enabled')
       return h('div', { class: 'text-center' }, enabled ? t('globals.messages.yes') : t('globals.messages.no'))
@@ -32,7 +32,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

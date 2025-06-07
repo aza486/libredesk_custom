@@ -4,7 +4,7 @@
     <Accordion type="multiple" collapsible v-model="accordionState">
       <AccordionItem value="actions" class="border-0 mb-2">
         <AccordionTrigger class="bg-muted px-4 py-3 text-sm font-medium rounded mx-2">
-          {{ $t('conversation.sidebar.action', 2) }}
+          {{ $t('globals.terms.action', 2) }}
         </AccordionTrigger>
 
         <!-- `Agent, team, and priority assignment -->
@@ -13,7 +13,7 @@
           <SelectComboBox
             v-model="conversationStore.current.assigned_user_id"
             :items="[{ value: 'none', label: 'None' }, ...usersStore.options]"
-            :placeholder="t('form.field.selectAgent')"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.agent').toLowerCase() })"
             @select="selectAgent"
             type="user"
           />
@@ -22,7 +22,7 @@
           <SelectComboBox
             v-model="conversationStore.current.assigned_team_id"
             :items="[{ value: 'none', label: 'None' }, ...teamsStore.options]"
-            :placeholder="t('form.field.selectTeam')"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.team').toLowerCase() })"
             @select="selectTeam"
             type="team"
           />
@@ -31,7 +31,7 @@
           <SelectComboBox
             v-model="conversationStore.current.priority_id"
             :items="priorityOptions"
-            :placeholder="t('form.field.selectPriority')"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.priority').toLowerCase() })"
             @select="selectPriority"
             type="priority"
           />
@@ -41,7 +41,7 @@
             v-if="conversationStore.current"
             v-model="conversationStore.current.tags"
             :items="tags.map((tag) => ({ label: tag, value: tag }))"
-            :placeholder="t('form.field.selectTag', 2)"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.tag', 2).toLowerCase() })"
           />
         </AccordionContent>
       </AccordionItem>

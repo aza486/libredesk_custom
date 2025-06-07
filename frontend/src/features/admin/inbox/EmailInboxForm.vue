@@ -3,7 +3,7 @@
     <!-- Basic Fields -->
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
@@ -14,7 +14,7 @@
 
     <FormField v-slot="{ componentField }" name="from">
       <FormItem>
-        <FormLabel>{{ $t('form.field.fromEmailAddress') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.fromEmailAddress') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
@@ -33,7 +33,7 @@
     <FormField v-slot="{ componentField, handleChange }" name="enabled">
       <FormItem class="flex flex-row items-center justify-between box p-4">
         <div class="space-y-0.5">
-          <FormLabel class="text-base">{{ $t('form.field.enabled') }}</FormLabel>
+          <FormLabel class="text-base">{{ $t('globals.terms.enabled') }}</FormLabel>
           <FormDescription>{{ $t('admin.inbox.enabled.description') }}</FormDescription>
         </div>
         <FormControl>
@@ -73,7 +73,7 @@
 
       <FormField v-slot="{ componentField }" name="imap.port">
         <FormItem>
-          <FormLabel>{{ $t('form.field.port') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.port') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="993" v-bind="componentField" />
           </FormControl>
@@ -100,7 +100,7 @@
 
       <FormField v-slot="{ componentField }" name="imap.username">
         <FormItem>
-          <FormLabel>{{ $t('form.field.username') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.username') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="inbox@example.com" v-bind="componentField" />
           </FormControl>
@@ -110,7 +110,7 @@
 
       <FormField v-slot="{ componentField }" name="imap.password">
         <FormItem>
-          <FormLabel>{{ $t('form.field.password') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.password') }}</FormLabel>
           <FormControl>
             <Input type="password" placeholder="••••••••" v-bind="componentField" />
           </FormControl>
@@ -124,7 +124,7 @@
           <FormControl>
             <Select v-bind="componentField">
               <SelectTrigger>
-                <SelectValue :placeholder="t('form.field.selectTLS')" />
+                <SelectValue :placeholder="t('globals.messages.selectTLS')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">OFF</SelectItem>
@@ -185,7 +185,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.host">
         <FormItem>
-          <FormLabel>{{ $t('form.field.host') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.host') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="smtp.gmail.com" v-bind="componentField" />
           </FormControl>
@@ -195,7 +195,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.port">
         <FormItem>
-          <FormLabel>{{ $t('form.field.port') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.port') }}</FormLabel>
           <FormControl>
             <Input type="number" placeholder="587" v-bind="componentField" />
           </FormControl>
@@ -205,7 +205,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.username">
         <FormItem>
-          <FormLabel>{{ $t('form.field.username') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.username') }}</FormLabel>
           <FormControl>
             <Input type="text" placeholder="user@example.com" v-bind="componentField" />
           </FormControl>
@@ -215,7 +215,7 @@
 
       <FormField v-slot="{ componentField }" name="smtp.password">
         <FormItem>
-          <FormLabel>{{ $t('form.field.password') }}</FormLabel>
+          <FormLabel>{{ $t('globals.terms.password') }}</FormLabel>
           <FormControl>
             <Input type="password" placeholder="••••••••" v-bind="componentField" />
           </FormControl>
@@ -429,7 +429,7 @@ const form = useForm({
 })
 
 const submitLabel = computed(() => {
-  return props.submitLabel || t('globals.buttons.save')
+  return props.submitLabel || t('globals.messages.save')
 })
 
 const onSubmit = form.handleSubmit(async (values) => {

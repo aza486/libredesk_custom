@@ -3,7 +3,7 @@
     <DialogContent class="min-w-[40%] min-h-[30%]">
       <DialogHeader class="space-y-1">
         <DialogTitle
-          >{{ view?.id ? $t('globals.buttons.edit') : $t('globals.buttons.create') }}
+          >{{ view?.id ? $t('globals.messages.edit') : $t('globals.messages.create') }}
           view
         </DialogTitle>
         <DialogDescription>
@@ -14,7 +14,7 @@
         <div class="grid gap-4 py-4">
           <FormField v-slot="{ componentField }" name="name">
             <FormItem>
-              <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+              <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
               <FormControl>
                 <Input
                   id="name"
@@ -45,7 +45,7 @@
         </div>
         <DialogFooter>
           <Button type="submit" :disabled="isSubmitting" :isLoading="isSubmitting">
-            {{ isSubmitting ? t('globals.buttons.saving') : t('globals.buttons.save') }}
+            {{ isSubmitting ? t('globals.messages.saving') : t('globals.messages.save') }}
           </Button>
         </DialogFooter>
       </form>
@@ -112,9 +112,21 @@ const formSchema = toTypedSchema(
     filters: z
       .array(
         z.object({
-          model: z.string({ required_error: t('view.form.filter.required') }),
-          field: z.string({ required_error: t('view.form.filter.required') }),
-          operator: z.string({ required_error: t('view.form.filter.required') }),
+          model: z.string({
+            required_error: t('globals.messages.required', {
+              name: t('globals.terms.filter').toLowerCase()
+            })
+          }),
+          field: z.string({
+            required_error: t('globals.messages.required', {
+              name: t('globals.terms.field').toLowerCase()
+            })
+          }),
+          operator: z.string({
+            required_error: t('globals.messages.required', {
+              name: t('globals.terms.operator').toLowerCase()
+            })
+          }),
           value: z.union([z.string(), z.number(), z.boolean()]).optional()
         })
       )

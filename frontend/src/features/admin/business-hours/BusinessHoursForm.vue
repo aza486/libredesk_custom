@@ -3,7 +3,7 @@
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
         <FormLabel>
-          {{ t('form.field.name') }}
+          {{ t('globals.terms.name') }}
         </FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
@@ -15,7 +15,7 @@
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
         <FormLabel>
-          {{ t('form.field.description') }}
+          {{ t('globals.terms.description') }}
         </FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
@@ -106,7 +106,7 @@
         </div>
       </div>
       <SimpleTable
-        :headers="[t('form.field.name'), t('form.field.date')]"
+        :headers="[t('globals.terms.name'), t('globals.terms.date')]"
         :keys="['name', 'date']"
         :data="holidays"
         @deleteItem="deleteHoliday"
@@ -124,11 +124,11 @@
         </DialogHeader>
         <div class="grid gap-4 py-4">
           <div class="grid grid-cols-4 items-center gap-4">
-            <Label for="holiday_name" class="text-right"> {{ t('form.field.name') }} </Label>
+            <Label for="holiday_name" class="text-right"> {{ t('globals.terms.name') }} </Label>
             <Input id="holiday_name" v-model="holidayName" class="col-span-3" />
           </div>
           <div class="grid grid-cols-4 items-center gap-4">
-            <Label for="date" class="text-right"> {{ t('form.field.date') }} </Label>
+            <Label for="date" class="text-right"> {{ t('globals.terms.date') }} </Label>
             <Popover>
               <PopoverTrigger as-child>
                 <Button
@@ -144,7 +144,7 @@
                   {{
                     holidayDate && !isNaN(new Date(holidayDate).getTime())
                       ? format(new Date(holidayDate), 'MMMM dd, yyyy')
-                      : t('form.field.pickDate')
+                      : t('globals.terms.pickDate')
                   }}
                 </Button>
               </PopoverTrigger>
@@ -156,7 +156,7 @@
         </div>
         <DialogFooter>
           <Button :disabled="!holidayName || !holidayDate" @click="saveHoliday">
-            {{ t('globals.buttons.saveChanges') }}
+            {{ t('globals.messages.saveChanges') }}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -218,7 +218,7 @@ const props = defineProps({
 })
 
 const submitLabel = computed(() => {
-  return props.submitLabel || t('globals.buttons.save')
+  return props.submitLabel || t('globals.messages.save')
 })
 
 let holidays = reactive([])

@@ -64,7 +64,7 @@
       </div>
 
       <div v-else-if="currentStep === 2" class="space-y-6">
-        <Button @click="goBack" variant="link" size="xs">← {{ $t('globals.buttons.back') }}</Button>
+        <Button @click="goBack" variant="link" size="xs">← {{ $t('globals.messages.back') }}</Button>
         <div v-if="selectedChannel === 'email'">
           <EmailInboxForm :initial-values="{}" :submitForm="submitForm" :isLoading="isLoading" />
         </div>
@@ -72,7 +72,7 @@
 
       <div v-else>
         <Button @click="goInboxList" variant="link" size="xs" class="mt-10"
-          >← {{ $t('globals.buttons.back') }}</Button
+          >← {{ $t('globals.messages.back') }}</Button
         >
       </div>
     </div>
@@ -114,12 +114,12 @@ const breadcrumbLinks = [
 const steps = [
   {
     step: 1,
-    title: t('form.field.channel'),
+    title: t('globals.terms.channel'),
     description: t('admin.inbox.chooseChannel')
   },
   {
     step: 2,
-    title: t('form.field.configure'),
+    title: t('globals.terms.configure'),
     description: t('admin.inbox.configureChannel')
   }
 ]

@@ -35,12 +35,14 @@
         </p>
         <div v-else class="mt-16 text-center">
           <h2 class="text-2xl font-semibold text-primary mb-4">
-            {{ $t('search.searchConversations') }}
+            {{
+              $t('globals.messages.search', {
+                name: $t('globals.terms.conversation', 2).toLowerCase()
+              })
+            }}
           </h2>
           <p class="text-lg text-muted-foreground">
-            {{
-              $t('search.searchBy')
-            }}
+            {{ $t('search.searchBy') }}
           </p>
         </div>
       </div>

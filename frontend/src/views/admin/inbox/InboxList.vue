@@ -64,7 +64,7 @@ const columns = [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.name'))
+      return h('div', { class: 'text-center' }, t('globals.terms.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -73,7 +73,7 @@ const columns = [
   {
     accessorKey: 'channel',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.channel'))
+      return h('div', { class: 'text-center' }, t('globals.terms.channel'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('channel'))
@@ -81,7 +81,7 @@ const columns = [
   },
   {
     accessorKey: 'enabled',
-    header: () => h('div', { class: 'text-center' }, t('form.field.enabled')),
+    header: () => h('div', { class: 'text-center' }, t('globals.terms.enabled')),
     cell: ({ row }) => {
       const enabled = row.getValue('enabled')
       return h('div', { class: 'text-center' }, enabled ? 'Yes' : 'No')
@@ -90,7 +90,7 @@ const columns = [
   {
     accessorKey: 'created_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.createdAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.createdAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('created_at'), 'PPpp'))
@@ -99,7 +99,7 @@ const columns = [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

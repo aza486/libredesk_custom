@@ -6,7 +6,7 @@ export const createColumns = (t) => [
     {
         accessorKey: 'name',
         header: function () {
-            return h('div', { class: 'text-center' }, t('form.field.name'))
+            return h('div', { class: 'text-center' }, t('globals.terms.name'))
         },
         cell: function ({ row }) {
             return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -15,7 +15,7 @@ export const createColumns = (t) => [
     {
         accessorKey: 'key',
         header: function () {
-            return h('div', { class: 'text-center' }, t('form.field.key'))
+            return h('div', { class: 'text-center' }, t('globals.terms.key'))
         },
         cell: function ({ row }) {
             return h('div', { class: 'text-center font-medium' }, row.getValue('key'))
@@ -24,7 +24,7 @@ export const createColumns = (t) => [
     {
         accessorKey: 'data_type',
         header: function () {
-            return h('div', { class: 'text-center' }, t('form.field.type'))
+            return h('div', { class: 'text-center' }, t('globals.terms.type'))
         },
         cell: function ({ row }) {
             return h('div', { class: 'text-center font-medium' }, row.getValue('data_type'))
@@ -33,7 +33,7 @@ export const createColumns = (t) => [
     {
         accessorKey: 'applies_to',
         header: function () {
-            return h('div', { class: 'text-center' }, t('form.field.appliesTo'))
+            return h('div', { class: 'text-center' }, t('globals.terms.appliesTo'))
         },
         cell: function ({ row }) {
             return h('div', { class: 'text-center font-medium' }, row.getValue('applies_to'))
@@ -42,7 +42,7 @@ export const createColumns = (t) => [
     {
         accessorKey: 'created_at',
         header: function () {
-            return h('div', { class: 'text-center' }, t('form.field.createdAt'))
+            return h('div', { class: 'text-center' }, t('globals.terms.createdAt'))
         },
         cell: function ({ row }) {
             return h(
@@ -55,7 +55,7 @@ export const createColumns = (t) => [
     {
         accessorKey: 'updated_at',
         header: function () {
-            return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
+            return h('div', { class: 'text-center' }, t('globals.terms.updatedAt'))
         },
         cell: function ({ row }) {
             return h(

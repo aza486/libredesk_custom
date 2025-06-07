@@ -1,18 +1,22 @@
 import { computed } from 'vue'
 import { useUsersStore } from '@/stores/users'
 import { FIELD_TYPE, FIELD_OPERATORS } from '@/constants/filterConfig'
+import { useI18n } from 'vue-i18n'
 
 export function useActivityLogFilters () {
     const uStore = useUsersStore()
+    const { t } = useI18n()
     const activityLogListFilters = computed(() => ({
         actor_id: {
-            label: 'Actor',
+            label: t('globals.terms.actor'),
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
             options: uStore.options
         },
         activity_type: {
-            label: 'Activity type',
+            label: t('globals.messages.type', {
+                name: t('globals.terms.activityLog')
+            }),
             type: FIELD_TYPE.SELECT,
             operators: FIELD_OPERATORS.SELECT,
             options: [{

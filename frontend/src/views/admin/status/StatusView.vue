@@ -33,7 +33,7 @@
                     <template #footer>
                       <DialogFooter class="mt-10">
                         <Button type="submit" :isLoading="isLoading" :disabled="isLoading">
-                          {{ $t('globals.buttons.save') }}
+                          {{ $t('globals.messages.save') }}
                         </Button>
                       </DialogFooter>
                     </template>

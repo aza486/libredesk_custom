@@ -11,7 +11,7 @@ export const createFormSchema = (t) => z.object({
     }),
     port: z
         .number({
-            invalid_type_error: t('globals.messages.invalidPortNumber'),
+            invalid_type_error: t('globals.messages.invalidValue', { name: t('globals.terms.port') }),
             required_error: t('globals.messages.required')
         })
         .min(1, { message: t('form.error.minmaxNumber', { min: 1, max: 65535 }) })

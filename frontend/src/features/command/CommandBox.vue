@@ -154,13 +154,13 @@
           value="apply-macro"
           @select="setNestedCommand('apply-macro-to-existing-conversation')"
         >
-          {{ $t('globals.messages.applyMacro') }}
+          {{ $t('globals.messages.apply', { name: t('globals.terms.macro').toLowerCase() }) }}
         </CommandItem>
         <CommandItem value="conv-snooze" @select="setNestedCommand('snooze')">
-          {{ $t('globals.messages.snooze') }}
+          {{ $t('globals.terms.snooze') }}
         </CommandItem>
         <CommandItem value="conv-resolve" @select="resolveConversation">
-          {{ $t('globals.messages.resolve') }}
+          {{ $t('globals.terms.resolve') }}
         </CommandItem>
       </CommandGroup>
     </CommandList>
@@ -185,7 +185,7 @@
           <PopoverTrigger as-child>
             <Button variant="outline" class="w-full justify-start text-left font-normal">
               <CalendarIcon class="mr-2 h-4 w-4" />
-              {{ selectedDate ? selectedDate : t('form.field.pickDate') }}
+              {{ selectedDate ? selectedDate : t('globals.terms.pickDate') }}
             </Button>
           </PopoverTrigger>
           <PopoverContent class="w-auto p-0">
@@ -193,12 +193,12 @@
           </PopoverContent>
         </Popover>
         <div class="grid gap-2">
-          <Label>{{ $t('form.field.time') }}</Label>
+          <Label>{{ $t('globals.terms.time') }}</Label>
           <Input type="time" v-model="selectedTime" />
         </div>
       </div>
       <DialogFooter>
-        <Button @click="handleCustomSnooze">{{ $t('globals.messages.snooze') }}</Button>
+        <Button @click="handleCustomSnooze">{{ $t('globals.terms.snooze') }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -274,13 +274,13 @@ function handleApplyMacro(macro) {
 
 const getActionLabel = computed(() => (action) => {
   const prefixes = {
-    assign_user: t('globals.messages.assignUser'),
-    assign_team: t('globals.messages.assignTeam'),
-    set_status: t('globals.messages.setStatus'),
-    set_priority: t('globals.messages.setPriority'),
-    add_tags: t('globals.messages.addTags'),
-    set_tags: t('globals.messages.setTags'),
-    remove_tags: t('globals.messages.removeTags')
+    assign_user: t('globals.messages.assign', { name: t('globals.terms.agent').toLowerCase() }),
+    assign_team: t('globals.messages.assign', { name: t('globals.terms.team').toLowerCase() }),
+    set_status: t('globals.messages.set', { name: t('globals.terms.status').toLowerCase() }),
+    set_priority: t('globals.messages.set', { name: t('globals.terms.priority').toLowerCase() }),
+    add_tags: t('globals.messages.add', { name: t('globals.terms.tag', 2).toLowerCase() }),
+    set_tags: t('globals.messages.set', { name: t('globals.terms.tag', 2).toLowerCase() }),
+    remove_tags: t('globals.messages.remove', { name: t('globals.terms.tag', 2).toLowerCase() })
   }
   return `${prefixes[action.type]}: ${action.display_value.length > 0 ? action.display_value.join(', ') : action.value.join(', ')}`
 })

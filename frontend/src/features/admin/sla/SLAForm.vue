@@ -2,7 +2,7 @@
   <form @submit="onSubmit" class="space-y-8">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>{{ t('form.field.name') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.name') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
@@ -12,7 +12,7 @@
 
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
-        <FormLabel>{{ t('form.field.description') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.description') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
@@ -227,10 +227,9 @@
                 </FormLabel>
                 <FormControl>
                   <Select v-bind="componentField">
-                    <SelectTrigger class="w-full">
-                      <SelectValue
+                    <SelectTrigger class="w-full">                        <SelectValue
                         :placeholder="
-                          t('form.field.select', {
+                          t('globals.messages.select', {
                             name: t('globals.terms.slaMetric').toLowerCase()
                           })
                         "
@@ -338,7 +337,7 @@ const usersStore = useUsersStore()
 const submitLabel = computed(() => {
   return (
     props.submitLabel ||
-    (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
+    (props.initialValues.id ? t('globals.messages.update') : t('globals.messages.create'))
   )
 })
 

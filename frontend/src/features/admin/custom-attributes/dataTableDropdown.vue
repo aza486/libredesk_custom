@@ -8,10 +8,10 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editCustomAttribute">
-        {{ $t('globals.buttons.edit') }}
+        {{ $t('globals.messages.edit') }}
       </DropdownMenuItem>
       <DropdownMenuItem @click="() => (alertOpen = true)">
-        {{ $t('globals.buttons.delete') }}
+        {{ $t('globals.messages.delete') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -21,13 +21,15 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>{{
-          $t('admin.customAttributes.deleteConfirmation')
+          $t('globals.messages.deletionConfirmation', {
+            name: t('globals.terms.customAttribute').toLowerCase()
+          })
         }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">
-          {{ $t('globals.buttons.delete') }}
+          {{ $t('globals.messages.delete') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

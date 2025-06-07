@@ -30,7 +30,7 @@
             :is-loading="isOpenAIKeyUpdating"
             :disabled="isOpenAIKeyUpdating"
           >
-            {{ $t('globals.buttons.save') }}
+            {{ $t('globals.messages.save') }}
           </Button>
         </DialogFooter>
       </Form>

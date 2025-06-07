@@ -44,7 +44,7 @@
               </SelectTrigger>
               <SelectContent>
                 <SelectItem :value="'activity_logs.created_at'">
-                  {{ t('form.field.createdAt') }}
+                  {{ t('globals.terms.createdAt') }}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -65,8 +65,8 @@
 
       <div v-if="loading" class="w-full">
         <div class="flex border-b border-border p-4 font-medium bg-gray-50">
-          <div class="flex-1 text-muted-foreground">{{ t('form.field.name') }}</div>
-          <div class="w-[200px] text-muted-foreground">{{ t('form.field.date') }}</div>
+          <div class="flex-1 text-muted-foreground">{{ t('globals.terms.name') }}</div>
+          <div class="w-[200px] text-muted-foreground">{{ t('globals.terms.date') }}</div>
           <div class="w-[150px] text-muted-foreground">{{ t('globals.terms.ipAddress') }}</div>
         </div>
         <div v-for="i in perPage" :key="i" class="flex border-b border-border py-3 px-4">
@@ -85,7 +85,7 @@
       <template v-else>
         <div class="w-full overflow-x-auto">
           <SimpleTable
-            :headers="[t('form.field.name'), t('form.field.timestamp'), t('globals.terms.ipAddress')]"
+            :headers="[t('globals.terms.name'), t('globals.terms.timestamp'), t('globals.terms.ipAddress')]"
             :keys="['activity_description', 'created_at', 'ip']"
             :data="activityLogs"
             :showDelete="false"

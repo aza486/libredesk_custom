@@ -12,7 +12,7 @@
         <div class="flex-1">
           <Select v-model="modelFilter.field">
             <SelectTrigger class="bg-transparent hover:bg-slate-100 w-full">
-              <SelectValue :placeholder="t('form.field.selectField')" />
+              <SelectValue :placeholder="t('globals.messages.select', { name: t('globals.terms.field').toLowerCase() })" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -28,7 +28,7 @@
         <div class="flex-1">
           <Select v-model="modelFilter.operator" v-if="modelFilter.field">
             <SelectTrigger class="bg-transparent hover:bg-slate-100 w-full">
-              <SelectValue :placeholder="t('form.field.selectOperator')" />
+              <SelectValue :placeholder="t('globals.messages.select', { name: t('globals.terms.operator').toLowerCase() })" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -51,7 +51,7 @@
                 "
                 v-model="modelFilter.value"
                 :items="getFieldOptions(modelFilter)"
-                :placeholder="t('form.field.select')"
+                :placeholder="t('globals.messages.select', { name: '' })"
                 type="user"
               />
 
@@ -62,7 +62,7 @@
                 "
                 v-model="modelFilter.value"
                 :items="getFieldOptions(modelFilter)"
-                :placeholder="t('form.field.select')"
+                :placeholder="t('globals.messages.select', { name: '' })"
                 type="team"
               />
 
@@ -70,7 +70,7 @@
                 v-else-if="getFieldOptions(modelFilter).length > 0"
                 v-model="modelFilter.value"
                 :items="getFieldOptions(modelFilter)"
-                :placeholder="t('form.field.select')"
+                :placeholder="t('globals.messages.select', { name: '' })"
               />
 
               <Input
@@ -97,8 +97,8 @@
         }}
       </Button>
       <div class="flex gap-2" v-if="showButtons">
-        <Button variant="ghost" @click="clearFilters">{{ $t('globals.buttons.reset') }}</Button>
-        <Button @click="applyFilters">{{ $t('globals.buttons.apply') }}</Button>
+        <Button variant="ghost" @click="clearFilters">{{ $t('globals.messages.reset') }}</Button>
+        <Button @click="applyFilters">{{ $t('globals.messages.apply') }}</Button>
       </div>
     </div>
   </div>

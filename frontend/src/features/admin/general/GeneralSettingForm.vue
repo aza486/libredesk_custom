@@ -15,7 +15,7 @@
 
     <FormField v-slot="{ componentField }" name="lang">
       <FormItem>
-        <FormLabel>{{ t('admin.general.language') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.language') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField" :modelValue="componentField.modelValue">
             <SelectTrigger>
@@ -39,7 +39,7 @@
     <FormField v-slot="{ componentField }" name="timezone">
       <FormItem>
         <FormLabel>
-          {{ t('admin.general.timezone') }}
+          {{ t('globals.terms.timezone') }}
         </FormLabel>
         <FormControl>
           <Select v-bind="componentField">
@@ -91,7 +91,7 @@
     <FormField v-slot="{ field }" name="root_url">
       <FormItem>
         <FormLabel>
-          {{ t('admin.general.rootURL') }}
+          {{ t('globals.terms.rootURL') }}
         </FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
@@ -230,7 +230,7 @@ const props = defineProps({
   }
 })
 
-const submitLabel = props.submitLabel || t('globals.buttons.save')
+const submitLabel = props.submitLabel || t('globals.messages.save')
 const form = useForm({
   validationSchema: toTypedSchema(createFormSchema(t))
 })

@@ -6,7 +6,7 @@
         <FormControl>
           <div class="flex items-center space-x-2">
             <Checkbox :checked="value" @update:checked="handleChange" />
-            <Label>{{ $t('form.field.enabled') }}</Label>
+            <Label>{{ $t('globals.terms.enabled') }}</Label>
           </div>
         </FormControl>
         <FormMessage />
@@ -16,7 +16,7 @@
     <!-- SMTP Host Field -->
     <FormField v-slot="{ componentField }" name="host">
       <FormItem>
-        <FormLabel>{{ $t('form.field.smtpHost') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.smtpHost') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="smtp.gmail.com" v-bind="componentField" />
         </FormControl>
@@ -27,7 +27,7 @@
     <!-- SMTP Port Field -->
     <FormField v-slot="{ componentField }" name="port">
       <FormItem>
-        <FormLabel>{{ $t('form.field.smtpPort') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.smtpPort') }}</FormLabel>
         <FormControl>
           <Input type="number" placeholder="587" v-bind="componentField" />
         </FormControl>
@@ -38,7 +38,7 @@
     <!-- Username Field -->
     <FormField v-slot="{ componentField }" name="username">
       <FormItem>
-        <FormLabel>{{ $t('form.field.username') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.username') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="admin@yourcompany.com" v-bind="componentField" />
         </FormControl>
@@ -49,7 +49,7 @@
     <!-- Password Field -->
     <FormField v-slot="{ componentField }" name="password">
       <FormItem>
-        <FormLabel>{{ $t('form.field.password') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.password') }}</FormLabel>
         <FormControl>
           <Input type="password" placeholder="" v-bind="componentField" />
         </FormControl>
@@ -135,7 +135,7 @@
     <!-- Email Address Field -->
     <FormField v-slot="{ componentField }" name="email_address">
       <FormItem>
-        <FormLabel>{{ $t('form.field.fromEmailAddress') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.fromEmailAddress') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
@@ -169,7 +169,7 @@
         <FormControl>
           <Select v-bind="componentField" v-model="componentField.modelValue">
             <SelectTrigger>
-              <SelectValue :placeholder="t('form.field.selectTLS')" />
+              <SelectValue :placeholder="t('globals.messages.selectTLS')" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -251,7 +251,7 @@ const submitLabel = computed(() => {
   if (props.submitLabel) {
     return props.submitLabel
   }
-  return t('globals.buttons.save')
+  return t('globals.messages.save')
 })
 
 const smtpForm = useForm({

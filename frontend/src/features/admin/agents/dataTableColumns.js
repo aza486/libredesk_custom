@@ -6,7 +6,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'first_name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.firstName'))
+      return h('div', { class: 'text-center' }, t('globals.terms.firstName'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('first_name'))
@@ -15,7 +15,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'last_name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.lastName'))
+      return h('div', { class: 'text-center' }, t('globals.terms.lastName'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('last_name'))
@@ -24,7 +24,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'enabled',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.enabled'))
+      return h('div', { class: 'text-center' }, t('globals.terms.enabled'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('enabled') ? t('globals.messages.yes') : t('globals.messages.no'))
@@ -33,7 +33,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'email',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.email'))
+      return h('div', { class: 'text-center' }, t('globals.terms.email'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('email'))
@@ -42,7 +42,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'created_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.createdAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.createdAt'))
     },
     cell: function ({ row }) {
       return h(
@@ -55,7 +55,7 @@ export const createColumns = (t) => [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.updatedAt'))
     },
     cell: function ({ row }) {
       return h(

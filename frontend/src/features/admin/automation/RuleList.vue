@@ -7,8 +7,8 @@
             {{ rule.name }}
           </div>
           <div class="mb-1">
-            <Badge v-if="rule.enabled" class="text-[9px]">{{ $t('form.field.enabled') }}</Badge>
-            <Badge v-else variant="secondary">{{ $t('form.field.disabled') }}</Badge>
+            <Badge v-if="rule.enabled" class="text-[9px]">{{ $t('globals.terms.enabled') }}</Badge>
+            <Badge v-else variant="secondary">{{ $t('globals.terms.disabled') }}</Badge>
           </div>
         </span>
       </div>
@@ -21,16 +21,16 @@
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem @click="navigateToEditRule(rule.id)">
-              <span>{{ $t('globals.buttons.edit') }}</span>
+              <span>{{ $t('globals.messages.edit') }}</span>
             </DropdownMenuItem>
             <DropdownMenuItem @click="() => (alertOpen = true)">
-              <span>{{ $t('globals.buttons.delete') }}</span>
+              <span>{{ $t('globals.messages.delete') }}</span>
             </DropdownMenuItem>
             <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-if="rule.enabled">
-              <span>{{ $t('globals.buttons.disable') }}</span>
+              <span>{{ $t('globals.messages.disable') }}</span>
             </DropdownMenuItem>
             <DropdownMenuItem @click="$emit('toggle-rule', rule.id)" v-else>
-              <span>{{ $t('globals.buttons.enable') }}</span>
+              <span>{{ $t('globals.messages.enable') }}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -44,13 +44,17 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.automation.deleteConfirmation') }}
+          {{
+            $t('globals.messages.deletionConfirmation', {
+              name: t('globals.terms.automationRule').toLowerCase()
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">{{
-          $t('globals.buttons.delete')
+          $t('globals.messages.delete')
         }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

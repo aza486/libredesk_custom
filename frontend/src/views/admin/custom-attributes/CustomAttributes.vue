@@ -37,7 +37,7 @@
                       <DialogFooter class="mt-10">
                         <Button type="submit" :isLoading="isLoading" :disabled="isLoading">
                           {{
-                            isEditing ? $t('globals.buttons.update') : $t('globals.buttons.create')
+                            isEditing ? $t('globals.messages.update') : $t('globals.messages.create')
                           }}
                         </Button>
                       </DialogFooter>

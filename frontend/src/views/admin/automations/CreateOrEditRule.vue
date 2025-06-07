@@ -20,7 +20,7 @@
                   <Checkbox :checked="value" @update:checked="handleChange" />
                 </FormControl>
                 <div class="space-y-1 leading-none">
-                  <FormLabel> {{ $t('form.field.enabled') }} </FormLabel>
+                  <FormLabel> {{ $t('globals.terms.enabled') }} </FormLabel>
                   <FormMessage />
                 </div>
               </FormItem>
@@ -28,7 +28,7 @@
 
             <FormField v-slot="{ field }" name="name">
               <FormItem>
-                <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+                <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
                 <FormControl>
                   <Input type="text" placeholder="" v-bind="field" />
                 </FormControl>
@@ -39,7 +39,7 @@
 
             <FormField v-slot="{ field }" name="description">
               <FormItem>
-                <FormLabel>{{ $t('form.field.description') }}</FormLabel>
+                <FormLabel>{{ $t('globals.terms.description') }}</FormLabel>
                 <FormControl>
                   <Input type="text" placeholder="" v-bind="field" />
                 </FormControl>
@@ -56,7 +56,11 @@
                 <FormControl>
                   <Select v-bind="componentField" @update:modelValue="handleInput">
                     <SelectTrigger>
-                      <SelectValue :placeholder="t('form.field.selectType')" />
+                      <SelectValue
+                        :placeholder="
+                          t('globals.messages.select', { name: t('globals.terms.type') })
+                        "
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
@@ -95,7 +99,11 @@
                       v-model="componentField.modelValue"
                       @update:modelValue="handleChange"
                       :items="conversationEventOptions"
-                      :placeholder="t('form.field.selectEvents')"
+                      :placeholder="
+                        t('globals.messages.select', {
+                          name: $t('globals.terms.event', 2).toLowerCase()
+                        })
+                      "
                     >
                     </SelectTag>
                   </FormControl>
@@ -160,7 +168,7 @@
             @add-action="handleAddAction"
             @remove-action="handleRemoveAction"
           />
-          <Button type="submit" :isLoading="isLoading">{{ $t('globals.buttons.save') }}</Button>
+          <Button type="submit" :isLoading="isLoading">{{ $t('globals.messages.save') }}</Button>
         </div>
       </form>
     </div>
@@ -234,8 +242,18 @@ const rule = ref({
 })
 
 const conversationEventOptions = [
-  { label: t('admin.automation.event.user.assigned'), value: 'conversation.user.assigned' },
-  { label: t('admin.automation.event.team.assigned'), value: 'conversation.team.assigned' },
+  {
+    label: t('globals.messages.assigned', {
+      name: t('globals.terms.agent').toLowerCase()
+    }),
+    value: 'conversation.user.assigned'
+  },
+  {
+    label: t('globals.messages.assigned', {
+      name: t('globals.terms.team').toLowerCase()
+    }),
+    value: 'conversation.team.assigned'
+  },
   { label: t('admin.automation.event.priority.change'), value: 'conversation.priority.change' },
   { label: t('admin.automation.event.status.change'), value: 'conversation.status.change' },
   { label: t('admin.automation.event.message.outgoing'), value: 'conversation.message.outgoing' },

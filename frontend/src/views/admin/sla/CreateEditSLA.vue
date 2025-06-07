@@ -66,7 +66,7 @@ const submitForm = async (values) => {
 }
 
 const breadCrumLabel = () => {
-  return props.id ? t('globals.buttons.edit') : t('globals.buttons.new')
+  return props.id ? t('globals.messages.edit') : t('globals.messages.new')
 }
 
 const breadcrumbLinks = [

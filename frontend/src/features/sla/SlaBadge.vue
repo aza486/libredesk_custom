@@ -4,27 +4,19 @@
     <span v-if="sla?.status === 'overdue'" key="overdue" class="sla-badge sla-overdue">
       <AlertCircle size="14" class="shrink-0 text-red-600 dark:text-red-300" stroke-width="2" />
       <span class="sla-text">
-        <span v-if="!showExtra">{{ label }} {{ $t('sla.overdue') }}</span>
+        <span v-if="!showExtra">{{ label }} {{ $t('globals.terms.overdue') }}</span>
         <span v-else>{{ label }} {{ $t('sla.overdueBy') }} {{ sla.value }} </span>
       </span>
     </span>
 
     <!-- SLA Hit -->
-    <span
-      v-else-if="sla?.status === 'hit' && showExtra"
-      key="sla-hit"
-      class="sla-badge sla-hit"
-    >
+    <span v-else-if="sla?.status === 'hit' && showExtra" key="sla-hit" class="sla-badge sla-hit">
       <CheckCircle size="14" class="shrink-0 text-green-600 dark:text-green-300" stroke-width="2" />
       <span class="sla-text">{{ label }} {{ $t('sla.met') }}</span>
     </span>
 
     <!-- Remaining -->
-    <span
-      v-else-if="sla?.status === 'remaining'"
-      key="remaining"
-      class="sla-badge sla-remaining"
-    >
+    <span v-else-if="sla?.status === 'remaining'" key="remaining" class="sla-badge sla-remaining">
       <Clock size="14" class="shrink-0 text-amber-600 dark:text-amber-300" stroke-width="2" />
       <span class="sla-text">{{ label }} {{ sla.value }}</span>
     </span>

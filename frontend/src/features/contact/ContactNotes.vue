@@ -41,7 +41,7 @@
               Cancel
             </Button>
             <Button type="submit" :disabled="!newNote.trim()">
-              {{ $t('globals.buttons.save') + ' ' + $t('globals.terms.note').toLowerCase() }}
+              {{ $t('globals.messages.save') + ' ' + $t('globals.terms.note').toLowerCase() }}
             </Button>
           </div>
         </div>
@@ -95,7 +95,7 @@
                 >
                   <TrashIcon class="mr-2" size="15" />
                   {{
-                    $t('globals.buttons.delete', { name: $t('globals.terms.note').toLowerCase() })
+                    $t('globals.messages.delete', { name: $t('globals.terms.note').toLowerCase() })
                   }}
                 </DropdownMenuItem>
               </DropdownMenuContent>

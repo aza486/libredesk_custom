@@ -13,7 +13,7 @@
             class="px-3 py-1 rounded transition-colors duration-200"
             :class="{ 'bg-background text-foreground': messageType === 'reply' }"
           >
-            {{ $t('replyBox.reply') }}
+            {{ $t('globals.terms.reply') }}
           </TabsTrigger>
           <TabsTrigger
             value="private_note"
@@ -244,7 +244,7 @@ const handleSend = async () => {
   if (emailErrors.value.length > 0) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
-      description: t('replyBox.correctEmailErrors')
+      description: t('globals.messages.correctEmailErrors')
     })
     return
   }

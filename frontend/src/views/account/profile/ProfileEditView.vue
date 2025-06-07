@@ -27,7 +27,7 @@
       </div>
 
       <Button class="w-28" @click="saveUser" size="sm" :isLoading="isSaving">
-        {{ $t('globals.buttons.saveChanges') }}
+        {{ $t('globals.messages.saveChanges') }}
       </Button>
 
       <!-- Cropped dialog -->
@@ -49,9 +49,9 @@
           />
           <DialogFooter class="sm:justify-end">
             <Button variant="secondary" @click="closeDialog">
-              {{ $t('globals.buttons.close') }}
+              {{ $t('globals.messages.close') }}
             </Button>
-            <Button @click="getResult">{{ $t('globals.buttons.save') }}</Button>
+            <Button @click="getResult">{{ $t('globals.messages.save') }}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

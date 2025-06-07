@@ -14,10 +14,10 @@
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem> {{ $t('globals.buttons.edit') }} </DropdownMenuItem>
+          <DropdownMenuItem> {{ $t('globals.messages.edit') }} </DropdownMenuItem>
         </DialogTrigger>
         <DropdownMenuItem @click="() => (alertOpen = true)">
-          {{ $t('globals.buttons.delete') }}
+          {{ $t('globals.messages.delete') }}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -38,7 +38,7 @@
         <template #footer>
           <DialogFooter class="mt-10">
             <Button type="submit" :isLoading="isLoading" :disabled="isLoading">{{
-              $t('globals.buttons.save')
+              $t('globals.messages.save')
             }}</Button>
           </DialogFooter>
         </template>
@@ -51,13 +51,17 @@
       <AlertDialogHeader>
         <AlertDialogTitle> {{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.conversationStatus.deleteConfirmation') }}
+          {{
+            $t('globals.messages.deletionConfirmation', {
+              name: t('globals.terms.status').toLowerCase()
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">{{
-          $t('globals.buttons.delete')
+          $t('globals.messages.delete')
         }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

@@ -6,7 +6,7 @@ export const createOutgoingEmailTableColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.name'))
+      return h('div', { class: 'text-center' }, t('globals.terms.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -14,7 +14,7 @@ export const createOutgoingEmailTableColumns = (t) => [
   },
   {
     accessorKey: 'is_default',
-    header: () => h('div', { class: 'text-center' }, t('form.field.default')),
+    header: () => h('div', { class: 'text-center' }, t('globals.terms.default')),
     cell: ({ row }) => {
       const isDefault = row.getValue('is_default')
 
@@ -30,7 +30,7 @@ export const createOutgoingEmailTableColumns = (t) => [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))
@@ -57,7 +57,7 @@ export const createEmailNotificationTableColumns = (t) => [
   {
     accessorKey: 'name',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.name'))
+      return h('div', { class: 'text-center' }, t('globals.terms.name'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center font-medium' }, row.getValue('name'))
@@ -67,7 +67,7 @@ export const createEmailNotificationTableColumns = (t) => [
   {
     accessorKey: 'updated_at',
     header: function () {
-      return h('div', { class: 'text-center' }, t('form.field.updatedAt'))
+      return h('div', { class: 'text-center' }, t('globals.terms.updatedAt'))
     },
     cell: function ({ row }) {
       return h('div', { class: 'text-center' }, format(row.getValue('updated_at'), 'PPpp'))

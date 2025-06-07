@@ -2,7 +2,7 @@
   <form class="space-y-6 w-full">
     <FormField v-slot="{ componentField }" name="applies_to">
       <FormItem>
-        <FormLabel>{{ $t('form.field.appliesTo') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.appliesTo') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField" :modelValue="componentField.modelValue">
             <SelectTrigger>
@@ -27,7 +27,7 @@
 
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
@@ -38,7 +38,7 @@
 
     <FormField v-slot="{ componentField }" name="key">
       <FormItem>
-        <FormLabel>{{ $t('form.field.key') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.key') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
@@ -53,7 +53,7 @@
 
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
-        <FormLabel>{{ $t('form.field.description') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.description') }}</FormLabel>
         <FormControl>
           <Input type="text" v-bind="componentField" />
         </FormControl>
@@ -64,7 +64,7 @@
 
     <FormField v-slot="{ componentField }" name="data_type">
       <FormItem>
-        <FormLabel>{{ $t('form.field.type') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.type') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField" :disabled="form.values.id && form.values.id > 0">
             <SelectTrigger>
@@ -90,7 +90,7 @@
     <FormField name="values" v-slot="{ componentField, handleChange }">
       <FormItem v-show="form.values.data_type === 'list'">
         <FormLabel>
-          {{ $t('form.field.listValues') }}
+          {{ $t('globals.terms.listValues') }}
         </FormLabel>
         <FormControl>
           <TagsInput :modelValue="componentField.modelValue" @update:modelValue="handleChange">
@@ -108,7 +108,7 @@
 
     <FormField name="regex" v-slot="{ componentField }">
       <FormItem v-show="form.values.data_type === 'text'">
-        <FormLabel> {{ $t('form.field.regex') }} ({{ $t('form.field.optional') }}) </FormLabel>
+        <FormLabel> {{ $t('globals.terms.regex') }} ({{ $t('globals.terms.optional') }}) </FormLabel>
         <FormControl>
           <Input type="text" v-bind="componentField" />
         </FormControl>
@@ -121,7 +121,7 @@
 
     <FormField name="regex_hint" v-slot="{ componentField }">
       <FormItem v-show="form.values.data_type === 'text'">
-        <FormLabel> {{ $t('form.field.regexHint') }} ({{ $t('form.field.optional') }}) </FormLabel>
+        <FormLabel> {{ $t('globals.terms.regexHint') }} ({{ $t('globals.terms.optional') }}) </FormLabel>
         <FormControl>
           <Input type="text" v-bind="componentField" />
         </FormControl>

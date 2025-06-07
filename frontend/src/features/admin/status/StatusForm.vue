@@ -2,7 +2,7 @@
   <form>
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="Spam" v-bind="componentField" />
         </FormControl>

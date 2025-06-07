@@ -4,7 +4,7 @@
       <div class="flex-1">
         <FormField v-slot="{ componentField }" name="first_name">
           <FormItem class="flex flex-col">
-            <FormLabel class="flex items-center">{{ t('form.field.firstName') }}</FormLabel>
+            <FormLabel class="flex items-center">{{ t('globals.terms.firstName') }}</FormLabel>
             <FormControl><Input v-bind="componentField" type="text" /></FormControl>
             <FormMessage />
           </FormItem>
@@ -14,7 +14,7 @@
       <div class="flex-1">
         <FormField v-slot="{ componentField }" name="last_name">
           <FormItem class="flex flex-col">
-            <FormLabel class="flex items-center">{{ t('form.field.lastName') }}</FormLabel>
+            <FormLabel class="flex items-center">{{ t('globals.terms.lastName') }}</FormLabel>
             <FormControl><Input v-bind="componentField" type="text" /></FormControl>
             <FormMessage />
           </FormItem>
@@ -32,7 +32,7 @@
       <div class="flex-1">
         <FormField v-slot="{ componentField }" name="email">
           <FormItem class="flex flex-col">
-            <FormLabel class="flex items-center">{{ t('form.field.email') }}</FormLabel>
+            <FormLabel class="flex items-center">{{ t('globals.terms.email') }}</FormLabel>
             <FormControl><Input v-bind="componentField" type="email" /></FormControl>
             <FormMessage />
           </FormItem>
@@ -44,13 +44,13 @@
           <FormField v-slot="{ componentField }" name="phone_number_calling_code">
             <FormItem class="w-20">
               <FormLabel class="flex items-center whitespace-nowrap">
-                {{ t('form.field.phoneNumber') }}
+                {{ t('globals.terms.phoneNumber') }}
               </FormLabel>
               <FormControl>
                 <ComboBox
                   v-bind="componentField"
                   :items="allCountries"
-                  :placeholder="t('form.field.select')"
+                  :placeholder="t('globals.messages.select', { name: '' })"
                   :buttonClass="'rounded-r-none border-r-0'"
                 >
                   <template #item="{ item }">
@@ -94,7 +94,7 @@
 
     <div v-if="userStore.can('contacts:write')">
       <Button type="submit" :isLoading="formLoading" :disabled="formLoading">
-        {{ t('globals.buttons.update', { name: t('globals.terms.contact').toLowerCase() }) }}
+        {{ t('globals.messages.update', { name: t('globals.terms.contact').toLowerCase() }) }}
       </Button>
     </div>
   </form>

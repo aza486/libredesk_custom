@@ -10,10 +10,10 @@
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DialogTrigger as-child>
-          <DropdownMenuItem> {{ t('globals.buttons.edit') }} </DropdownMenuItem>
+          <DropdownMenuItem> {{ t('globals.messages.edit') }} </DropdownMenuItem>
         </DialogTrigger>
         <DropdownMenuItem @click="openAlertDialog">
-          {{ t('globals.buttons.delete') }}
+          {{ t('globals.messages.delete') }}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -29,7 +29,7 @@
       <TagsForm @submit.prevent="onSubmit">
         <template #footer>
           <DialogFooter class="mt-10">
-            <Button type="submit"> {{ t('globals.buttons.save') }} </Button>
+            <Button type="submit"> {{ t('globals.messages.save') }} </Button>
           </DialogFooter>
         </template>
       </TagsForm>
@@ -42,12 +42,16 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('admin.conversationTags.deleteConfirmation') }}
+          {{
+            t('globals.messages.deletionConfirmation', {
+              name: t('globals.terms.tag').toLowerCase()
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ t('globals.buttons.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction @click="deleteTag">{{ t('globals.buttons.delete') }}</AlertDialogAction>
+        <AlertDialogCancel>{{ t('globals.messages.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="deleteTag">{{ t('globals.messages.delete') }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
@@ -114,7 +118,7 @@ const form = useForm({
 const onSubmit = form.handleSubmit(async (values) => {
   await api.updateTag(props.tag.id, values)
   emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-    description: t('admin.conversationTags.updated')
+    description: t('globals.messages.updatedSuccessfully', { name: t('globals.terms.tag') }),
   })
   dialogOpen.value = false
   emitRefreshTagsList()

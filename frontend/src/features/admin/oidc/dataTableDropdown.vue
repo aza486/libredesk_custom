@@ -9,11 +9,11 @@
     <DropdownMenuContent>
       <DropdownMenuItem :as-child="true">
         <RouterLink :to="{ name: 'edit-sso', params: { id: props.role.id } }">
-          {{ $t('globals.buttons.edit') }}
+          {{ $t('globals.messages.edit') }}
         </RouterLink>
       </DropdownMenuItem>
       <DropdownMenuItem @click="() => (alertOpen = true)">{{
-        $t('globals.buttons.delete')
+        $t('globals.messages.delete')
       }}</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -23,13 +23,13 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.sso.deleteConfirmation') }}
+          {{ $t('globals.messages.deletionConfirmation', { name: t('globals.terms.sso') }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">
-          {{ $t('globals.buttons.delete') }}
+          {{ $t('globals.messages.delete') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

@@ -24,7 +24,7 @@
             <div class="flex items-center gap-2">
               <Clock class="w-5 h-5 text-gray-400" />
               <div>
-                <p class="text-sm text-gray-500">{{ $t('form.field.lastActive') }}</p>
+                <p class="text-sm text-gray-500">{{ $t('globals.terms.lastActive') }}</p>
                 <p class="text-sm font-medium text-gray-700 dark:text-foreground">
                   {{
                     props.initialValues.last_active_at
@@ -37,7 +37,7 @@
             <div class="flex items-center gap-2">
               <LogIn class="w-5 h-5 text-gray-400" />
               <div>
-                <p class="text-sm text-gray-500">{{ $t('form.field.lastLogin') }}</p>
+                <p class="text-sm text-gray-500">{{ $t('globals.terms.lastLogin') }}</p>
                 <p class="text-sm font-medium text-gray-700 dark:text-foreground">
                   {{
                     props.initialValues.last_login_at
@@ -55,7 +55,7 @@
     <!-- Form Fields -->
     <FormField v-slot="{ field }" name="first_name">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('form.field.firstName') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.firstName') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
@@ -65,7 +65,7 @@
 
     <FormField v-slot="{ field }" name="last_name">
       <FormItem>
-        <FormLabel>{{ $t('form.field.lastName') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.lastName') }}</FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="field" />
         </FormControl>
@@ -75,7 +75,7 @@
 
     <FormField v-slot="{ field }" name="email">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('form.field.email') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.email') }}</FormLabel>
         <FormControl>
           <Input type="email" placeholder="" v-bind="field" />
         </FormControl>
@@ -85,11 +85,11 @@
 
     <FormField v-slot="{ componentField, handleChange }" name="teams">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('form.field.teams') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.teams') }}</FormLabel>
         <FormControl>
           <SelectTag
             :items="teamOptions"
-            :placeholder="t('form.field.selectTeams')"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.team', 2) })"
             v-model="componentField.modelValue"
             @update:modelValue="handleChange"
           />
@@ -100,11 +100,15 @@
 
     <FormField v-slot="{ componentField, handleChange }" name="roles">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('form.field.roles') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.role', 2) }}</FormLabel>
         <FormControl>
           <SelectTag
             :items="roleOptions"
-            :placeholder="t('form.field.selectRoles')"
+            :placeholder="
+              t('globals.messages.select', {
+                name: $t('globals.terms.role', 2)
+              })
+            "
             v-model="componentField.modelValue"
             @update:modelValue="handleChange"
           />
@@ -115,14 +119,14 @@
 
     <FormField v-slot="{ componentField }" name="availability_status" v-if="!isNewForm">
       <FormItem>
-        <FormLabel>{{ t('form.field.availabilityStatus') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.availabilityStatus') }}</FormLabel>
         <FormControl>
           <Select v-bind="componentField" v-model="componentField.modelValue">
             <SelectTrigger>
               <SelectValue
                 :placeholder="
-                  t('form.field.select', {
-                    name: t('form.field.availabilityStatus')
+                  t('globals.messages.select', {
+                    name: t('globals.terms.availabilityStatus')
                   })
                 "
               />
@@ -132,7 +136,7 @@
                 <SelectItem value="active_group">{{ t('globals.terms.active') }}</SelectItem>
                 <SelectItem value="away_manual">{{ t('globals.terms.away') }}</SelectItem>
                 <SelectItem value="away_and_reassigning">
-                  {{ t('form.field.awayReassigning') }}
+                  {{ t('globals.terms.awayReassigning') }}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
@@ -144,7 +148,7 @@
 
     <FormField v-slot="{ field }" name="new_password" v-if="!isNewForm">
       <FormItem v-auto-animate>
-        <FormLabel>{{ t('form.field.setPassword') }}</FormLabel>
+        <FormLabel>{{ t('globals.terms.setPassword') }}</FormLabel>
         <FormControl>
           <Input type="password" placeholder="" v-bind="field" />
         </FormControl>
@@ -157,7 +161,7 @@
         <FormControl>
           <div class="flex items-center space-x-2">
             <Checkbox :checked="value" @update:checked="handleChange" />
-            <Label>{{ $t('form.field.sendWelcomeEmail') }}</Label>
+            <Label>{{ $t('globals.terms.sendWelcomeEmail') }}</Label>
           </div>
         </FormControl>
         <FormMessage />
@@ -170,7 +174,7 @@
           <Checkbox :checked="value" @update:checked="handleChange" />
         </FormControl>
         <div class="space-y-1 leading-none">
-          <FormLabel> {{ $t('form.field.enabled') }} </FormLabel>
+          <FormLabel> {{ $t('globals.terms.enabled') }} </FormLabel>
           <FormMessage />
         </div>
       </FormItem>
@@ -250,7 +254,7 @@ const availabilityStatus = computed(() => {
   if (status === 'active_group') return { text: t('globals.terms.active'), color: 'bg-green-500' }
   if (status === 'away_manual') return { text: t('globals.terms.away'), color: 'bg-yellow-500' }
   if (status === 'away_and_reassigning')
-    return { text: t('form.field.awayReassigning'), color: 'bg-orange-500' }
+    return { text: t('globals.terms.awayReassigning'), color: 'bg-orange-500' }
   return { text: t('globals.terms.offline'), color: 'bg-gray-400' }
 })
 

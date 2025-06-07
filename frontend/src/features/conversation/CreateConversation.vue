@@ -17,7 +17,7 @@
             <div class="space-y-2">
               <FormField name="contact_email">
                 <FormItem class="relative">
-                  <FormLabel>{{ $t('form.field.email') }}</FormLabel>
+                  <FormLabel>{{ $t('globals.terms.email') }}</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
@@ -49,7 +49,7 @@
               <div class="grid grid-cols-2 gap-4">
                 <FormField v-slot="{ componentField }" name="first_name">
                   <FormItem>
-                    <FormLabel>{{ $t('form.field.firstName') }}</FormLabel>
+                    <FormLabel>{{ $t('globals.terms.firstName') }}</FormLabel>
                     <FormControl>
                       <Input type="text" placeholder="" v-bind="componentField" required />
                     </FormControl>
@@ -59,7 +59,7 @@
 
                 <FormField v-slot="{ componentField }" name="last_name">
                   <FormItem>
-                    <FormLabel>{{ $t('form.field.lastName') }}</FormLabel>
+                    <FormLabel>{{ $t('globals.terms.lastName') }}</FormLabel>
                     <FormControl>
                       <Input type="text" placeholder="" v-bind="componentField" />
                     </FormControl>
@@ -82,11 +82,15 @@
 
                 <FormField v-slot="{ componentField }" name="inbox_id">
                   <FormItem>
-                    <FormLabel>{{ $t('form.field.inbox') }}</FormLabel>
+                    <FormLabel>{{ $t('globals.terms.inbox') }}</FormLabel>
                     <FormControl>
                       <Select v-bind="componentField">
                         <SelectTrigger>
-                          <SelectValue :placeholder="t('form.field.selectInbox')" />
+                          <SelectValue
+                            :placeholder="
+                              t('globals.messages.select', { name: t('globals.terms.inbox') })
+                            "
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -111,16 +115,19 @@
                 <!-- Set assigned team -->
                 <FormField v-slot="{ componentField }" name="team_id">
                   <FormItem>
-                    <FormLabel
-                      >{{ $t('form.field.assignTeam') }} ({{
-                        $t('globals.terms.optional').toLowerCase()
-                      }})</FormLabel
-                    >
+                    <FormLabel>
+                      {{
+                        $t('globals.messages.assign', { name: t('globals.terms.team').toLowerCase() })
+                      }}
+                      ({{ $t('globals.terms.optional').toLowerCase() }})
+                    </FormLabel>
                     <FormControl>
                       <SelectComboBox
                         v-bind="componentField"
                         :items="[{ value: 'none', label: 'None' }, ...teamStore.options]"
-                        :placeholder="t('form.field.selectTeam')"
+                        :placeholder="
+                          t('globals.messages.select', { name: t('globals.terms.team') })
+                        "
                         type="team"
                       />
                     </FormControl>
@@ -131,16 +138,21 @@
                 <!-- Set assigned agent -->
                 <FormField v-slot="{ componentField }" name="agent_id">
                   <FormItem>
-                    <FormLabel
-                      >{{ $t('form.field.assignAgent') }} ({{
-                        $t('globals.terms.optional').toLowerCase()
-                      }})</FormLabel
-                    >
+                    <FormLabel>
+                      {{
+                        $t('globals.messages.assign', {
+                          name: t('globals.terms.agent').toLowerCase()
+                        })
+                      }}
+                      ({{ $t('globals.terms.optional').toLowerCase() }})
+                    </FormLabel>
                     <FormControl>
                       <SelectComboBox
                         v-bind="componentField"
                         :items="[{ value: 'none', label: 'None' }, ...uStore.options]"
-                        :placeholder="t('form.field.selectAgent')"
+                        :placeholder="
+                          t('globals.messages.select', { name: t('globals.terms.agent') })
+                        "
                         type="user"
                       />
                     </FormControl>
@@ -155,7 +167,7 @@
           <div class="flex-1 flex flex-col min-h-0 mt-4">
             <FormField v-slot="{ componentField }" name="content">
               <FormItem class="flex flex-col h-full">
-                <FormLabel>{{ $t('form.field.message') }}</FormLabel>
+                <FormLabel>{{ $t('globals.terms.message') }}</FormLabel>
                 <FormControl class="flex-1 flex flex-col min-h-0">
                   <div class="flex flex-col h-full">
                     <Editor
@@ -200,7 +212,7 @@
               :showSendButton="false"
             />
             <Button type="submit" :disabled="isDisabled" :isLoading="loading">
-              {{ $t('globals.buttons.submit') }}
+              {{ $t('globals.messages.submit') }}
             </Button>
           </DialogFooter>
         </form>

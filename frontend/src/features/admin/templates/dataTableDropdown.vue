@@ -8,13 +8,13 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editTemplate(props.template.id)">{{
-        $t('globals.buttons.edit')
+        $t('globals.messages.edit')
       }}</DropdownMenuItem>
       <DropdownMenuItem
         @click="() => (alertOpen = true)"
         v-if="props.template.type !== 'email_notification'"
       >
-        {{ $t('globals.buttons.delete') }}
+        {{ $t('globals.messages.delete') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -24,15 +24,19 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.template.deleteConfirmation') }}
+          {{
+            $t('globals.messages.deletionConfirmation', {
+              name: t('globals.terms.template').toLowerCase()
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>
-          {{ $t('globals.buttons.cancel') }}
+          {{ $t('globals.messages.cancel') }}
         </AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">
-          {{ $t('globals.buttons.delete') }}
+          {{ $t('globals.messages.delete') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

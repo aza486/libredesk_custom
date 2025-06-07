@@ -2,7 +2,7 @@
   <form @submit.prevent="onSubmit" class="space-y-6">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
@@ -27,7 +27,7 @@
 
     <FormField v-slot="{ componentField, handleChange }" name="body">
       <FormItem>
-        <FormLabel>{{ $t('form.field.body') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.body') }}</FormLabel>
         <FormControl>
           <CodeEditor v-model="componentField.modelValue" @update:modelValue="handleChange" />
         </FormControl>
@@ -47,7 +47,7 @@
         <FormControl>
           <div class="flex items-center space-x-2">
             <Checkbox :checked="value" @update:checked="handleChange" />
-            <Label>{{ $t('form.field.isDefault') }}</Label>
+            <Label>{{ $t('globals.terms.isDefault') }}</Label>
           </div>
         </FormControl>
         <FormDescription>{{ $t('admin.template.onlyOneDefaultOutgoingTemplate') }}</FormDescription>
@@ -102,7 +102,7 @@ const props = defineProps({
 const { t } = useI18n()
 
 const submitLabel = computed(() => {
-  return props.submitLabel || t('globals.buttons.save')
+  return props.submitLabel || t('globals.messages.save')
 })
 
 const form = useForm({

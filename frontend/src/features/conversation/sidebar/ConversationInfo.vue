@@ -9,14 +9,14 @@
     </div>
 
     <div class="flex flex-col">
-      <p class="font-medium">{{ $t('form.field.referenceNumber') }}</p>
+      <p class="font-medium">{{ $t('globals.terms.referenceNumber') }}</p>
       <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
       <p v-else>
         {{ conversation.reference_number }}
       </p>
     </div>
     <div class="flex flex-col">
-      <p class="font-medium">{{ $t('form.field.initiatedAt') }}</p>
+      <p class="font-medium">{{ $t('globals.terms.initiatedAt') }}</p>
       <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
       <p v-if="conversation.created_at">
         {{ format(conversation.created_at, 'PPpp') }}
@@ -26,7 +26,7 @@
 
     <div class="flex flex-col">
       <div class="flex justify-start items-center space-x-2">
-        <p class="font-medium">{{ $t('form.field.firstReplyAt') }}</p>
+        <p class="font-medium">{{ $t('globals.terms.firstReplyAt') }}</p>
         <SlaBadge
           v-if="conversation.first_response_deadline_at"
           :dueAt="conversation.first_response_deadline_at"
@@ -45,7 +45,7 @@
 
     <div class="flex flex-col">
       <div class="flex justify-start items-center space-x-2">
-        <p class="font-medium">{{ $t('form.field.resolvedAt') }}</p>
+        <p class="font-medium">{{ $t('globals.terms.resolvedAt') }}</p>
         <SlaBadge
           v-if="conversation.resolution_deadline_at"
           :dueAt="conversation.resolution_deadline_at"
@@ -64,7 +64,7 @@
 
     <div class="flex flex-col">
       <div class="flex justify-start items-center space-x-2">
-        <p class="font-medium">{{ $t('form.field.lastReplyAt') }}</p>
+        <p class="font-medium">{{ $t('globals.terms.lastReplyAt') }}</p>
         <SlaBadge
           v-if="conversation.next_response_deadline_at"
           :dueAt="conversation.next_response_deadline_at"
@@ -80,7 +80,7 @@
     </div>
 
     <div class="flex flex-col" v-if="conversation.closed_at">
-      <p class="font-medium">{{ $t('form.field.closedAt') }}</p>
+      <p class="font-medium">{{ $t('globals.terms.closedAt') }}</p>
       <Skeleton v-if="conversationStore.conversation.loading" class="w-32 h-4" />
       <p v-else>
         {{ format(conversation.closed_at, 'PPpp') }}
@@ -88,7 +88,7 @@
     </div>
 
     <div class="flex flex-col" v-if="conversation.sla_policy_name">
-      <p class="font-medium">{{ $t('form.field.slaPolicy') }}</p>
+      <p class="font-medium">{{ $t('globals.terms.slaPolicy') }}</p>
       <div>
         <p>
           {{ conversation.sla_policy_name }}

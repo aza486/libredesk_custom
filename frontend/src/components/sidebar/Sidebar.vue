@@ -410,10 +410,10 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
                                   <DropdownMenuItem @click="() => editView(view)">
-                                    <span>{{ t('globals.buttons.edit') }}</span>
+                                    <span>{{ t('globals.messages.edit') }}</span>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem @click="() => deleteView(view)">
-                                    <span>{{ t('globals.buttons.delete') }}</span>
+                                    <span>{{ t('globals.messages.delete') }}</span>
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>

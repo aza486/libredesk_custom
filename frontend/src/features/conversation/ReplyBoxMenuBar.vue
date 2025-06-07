@@ -39,7 +39,7 @@
       </Toggle>
     </div>
     <Button class="h-8 w-6 px-8" @click="handleSend" :disabled="!enableSend" :isLoading="isSending" v-if="showSendButton">
-      {{ $t('globals.buttons.send') }}
+      {{ $t('globals.messages.send') }}
     </Button>
   </div>
 </template>

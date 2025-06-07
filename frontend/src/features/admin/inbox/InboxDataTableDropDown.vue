@@ -8,16 +8,16 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editInbox(props.inbox.id)">{{
-        $t('globals.buttons.edit')
+        $t('globals.messages.edit')
       }}</DropdownMenuItem>
       <DropdownMenuItem @click="() => (alertOpen = true)">{{
-        $t('globals.buttons.delete')
+        $t('globals.messages.delete')
       }}</DropdownMenuItem>
       <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-if="props.inbox.enabled">
-        {{ $t('globals.buttons.disable') }}
+        {{ $t('globals.messages.disable') }}
       </DropdownMenuItem>
       <DropdownMenuItem @click="toggleInbox(props.inbox.id)" v-else>{{
-        $t('globals.buttons.enable')
+        $t('globals.messages.enable')
       }}</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -27,13 +27,13 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ $t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ $t('admin.inbox.deleteConfirmation') }}
+          {{ $t('globals.messages.deletionConfirmation', { name: t('globals.terms.inbox').toLowerCase() }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">{{
-          $t('globals.buttons.delete')
+          $t('globals.messages.delete')
         }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

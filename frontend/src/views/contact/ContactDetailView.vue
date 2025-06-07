@@ -13,7 +13,7 @@
               @remove="onRemove"
               :src="contact.avatar_url"
               :initials="getInitials"
-              :label="t('globals.buttons.upload')"
+              :label="t('globals.messages.upload')"
             />
 
             <div>
@@ -23,7 +23,7 @@
             </div>
 
             <div class="text-xs text-gray-500">
-              {{ $t('form.field.createdOn') }}
+              {{ $t('globals.terms.createdOn') }}
               {{ contact.created_at ? format(new Date(contact.created_at), 'PPP') : 'N/A' }}
             </div>
 
@@ -35,7 +35,7 @@
               >
                 <ShieldOffIcon v-if="contact.enabled" size="18" class="mr-2" />
                 <ShieldCheckIcon v-else size="18" class="mr-2" />
-                {{ t(contact.enabled ? 'globals.buttons.block' : 'globals.buttons.unblock') }}
+                {{ t(contact.enabled ? 'globals.messages.block' : 'globals.messages.unblock') }}
               </Button>
             </div>
           </div>
@@ -55,8 +55,8 @@
             <DialogTitle>
               {{
                 contact?.enabled
-                  ? t('globals.buttons.block', { name: t('globals.terms.contact') })
-                  : t('globals.buttons.unblock', { name: t('globals.terms.contact') })
+                  ? t('globals.messages.block', { name: t('globals.terms.contact') })
+                  : t('globals.messages.unblock', { name: t('globals.terms.contact') })
               }}
             </DialogTitle>
             <DialogDescription>
@@ -65,13 +65,13 @@
           </DialogHeader>
           <div class="flex justify-end space-x-2 pt-4">
             <Button variant="outline" @click="showBlockConfirmation = false">
-              {{ t('globals.buttons.cancel') }}
+              {{ t('globals.messages.cancel') }}
             </Button>
             <Button
               :variant="contact?.enabled ? 'destructive' : 'default'"
               @click="confirmToggleBlock"
             >
-              {{ contact?.enabled ? t('globals.buttons.block') : t('globals.buttons.unblock') }}
+              {{ contact?.enabled ? t('globals.messages.block') : t('globals.messages.unblock') }}
             </Button>
           </div>
         </DialogContent>

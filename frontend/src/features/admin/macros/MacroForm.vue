@@ -3,7 +3,7 @@
   <form @submit="onSubmit" class="space-y-6 w-full" :class="{ 'opacity-50': formLoading }">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem>
-        <FormLabel>{{ t('form.field.name') }} </FormLabel>
+        <FormLabel>{{ t('globals.terms.name') }} </FormLabel>
         <FormControl>
           <Input type="text" placeholder="" v-bind="componentField" />
         </FormControl>
@@ -96,11 +96,11 @@
               <SelectGroup>
                 <SelectItem value="all">{{
                   t('globals.messages.all', {
-                    name: t('globals.terms.user', 2).toLowerCase()
+                    name: t('globals.terms.agent', 2).toLowerCase()
                   })
                 }}</SelectItem>
                 <SelectItem value="team">{{ t('globals.terms.team') }}</SelectItem>
-                <SelectItem value="user">{{ t('globals.terms.user') }}</SelectItem>
+                <SelectItem value="user">{{ t('globals.terms.agent') }}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -116,7 +116,7 @@
           <SelectComboBox
             v-bind="componentField"
             :items="tStore.options"
-            :placeholder="t('form.field.selectTeam')"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.team') })"
             type="team"
           />
         </FormControl>
@@ -131,7 +131,7 @@
           <SelectComboBox
             v-bind="componentField"
             :items="uStore.options"
-            :placeholder="t('form.field.selectAgent')"
+            :placeholder="t('globals.messages.select', { name: t('globals.terms.agent') })"
             type="user"
           />
         </FormControl>
@@ -196,7 +196,7 @@ const props = defineProps({
 const submitLabel = computed(() => {
   return (
     props.submitLabel ||
-    (props.initialValues.id ? t('globals.buttons.update') : t('globals.buttons.create'))
+    (props.initialValues.id ? t('globals.messages.update') : t('globals.messages.create'))
   )
 })
 const form = useForm({
@@ -213,9 +213,11 @@ const form = useForm({
 
 const actionConfig = ref({
   actions: macroActions,
-  typePlaceholder: t('form.field.selectActionType'),
-  valuePlaceholder: t('form.field.selectValue'),
-  addButtonText: t('form.field.addNewAction')
+  typePlaceholder: t('globals.messages.select', { name: t('globals.terms.action').toLowerCase() }),
+  valuePlaceholder: t('globals.messages.select', { name: t('globals.terms.value').toLowerCase() }),
+  addButtonText: t('globals.messages.new', {
+    name: t('globals.terms.action').toLowerCase()
+  })
 })
 
 const onSubmit = form.handleSubmit(async (values) => {

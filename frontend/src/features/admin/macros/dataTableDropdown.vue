@@ -7,9 +7,9 @@
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="editMacro">{{ $t('globals.buttons.edit') }}</DropdownMenuItem>
+      <DropdownMenuItem @click="editMacro">{{ $t('globals.messages.edit') }}</DropdownMenuItem>
       <DropdownMenuItem @click="() => (isDeleteOpen = true)">
-        {{ $t('globals.buttons.delete') }}
+        {{ $t('globals.messages.delete') }}
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -23,9 +23,9 @@
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">{{
-          $t('globals.buttons.delete')
+          $t('globals.messages.delete')
         }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

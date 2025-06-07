@@ -31,7 +31,11 @@ export const createFormSchema = (t) =>
                             metric: z.enum(['first_response', 'resolution', 'next_response', 'all']),
                             recipients: z
                                 .array(z.string())
-                                .min(1, { message: t('globals.messages.atleastOneRecipient') }),
+                                .min(1, {
+                                    message: t('globals.messages.selectAtLeastOne', {
+                                        name: t('globals.terms.recipient').toLowerCase(),
+                                    })
+                                }),
                         })
                         .superRefine((obj, ctx) => {
                             if (obj.time_delay_type !== 'immediately') {

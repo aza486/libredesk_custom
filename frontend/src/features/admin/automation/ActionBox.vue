@@ -16,7 +16,7 @@
                   @update:modelValue="(value) => handleFieldChange(value, index)"
                 >
                   <SelectTrigger class="m-auto">
-                    <SelectValue :placeholder="t('form.field.selectAction')" />
+                    <SelectValue :placeholder="t('globals.messages.select', { name: t('globals.terms.action').toLowerCase() })" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -40,7 +40,7 @@
                 <SelectTag
                   v-model="action.value"
                   :items="tagsStore.tagNames.map((tag) => ({ label: tag, value: tag }))"
-                  :placeholder="t('form.field.selectTag')"
+                  :placeholder="t('globals.messages.select', { name: t('globals.terms.tag', 2).toLowerCase() })"
                 />
               </div>
 
@@ -51,7 +51,7 @@
                 <SelectComboBox
                   v-model="action.value[0]"
                   :items="conversationActions[action.type]?.options"
-                  :placeholder="t('form.field.select')"
+                  :placeholder="t('globals.messages.select', { name: '' })"
                   @select="handleValueChange($event, index)"
                   :type="action.type === 'assign_team' ? 'team' : 'user'"
                 />

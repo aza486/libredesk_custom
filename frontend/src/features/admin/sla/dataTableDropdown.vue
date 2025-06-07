@@ -7,8 +7,12 @@
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent>
-      <DropdownMenuItem @click="edit(props.role.id)">{{t('globals.buttons.edit')}}</DropdownMenuItem>
-      <DropdownMenuItem @click="() => (alertOpen = true)">{{t('globals.buttons.delete')}}</DropdownMenuItem>
+      <DropdownMenuItem @click="edit(props.role.id)">
+        {{ t('globals.messages.edit') }}
+      </DropdownMenuItem>
+      <DropdownMenuItem @click="() => (alertOpen = true)">
+        {{ t('globals.messages.delete') }}
+      </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 
@@ -17,14 +21,18 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{ t('globals.messages.delete', {
-            name: t('globals.terms.slaPolicy')
-          }) }}
+          {{
+            t('globals.messages.deletionConfirmation', {
+              name: t('globals.terms.slaPolicy').toLowerCase()
+            })
+          }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ t('globals.buttons.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction @click="handleDelete">{{t('globals.buttons.delete')}}</AlertDialogAction>
+        <AlertDialogCancel>{{ t('globals.messages.cancel') }}</AlertDialogCancel>
+        <AlertDialogAction @click="handleDelete">
+          {{ t('globals.messages.delete') }}
+        </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

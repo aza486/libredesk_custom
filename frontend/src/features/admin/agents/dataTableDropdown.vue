@@ -8,10 +8,10 @@
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuItem @click="editUser(props.user.id)">{{
-        $t('globals.buttons.edit')
+        $t('globals.messages.edit')
       }}</DropdownMenuItem>
       <DropdownMenuItem @click="() => (alertOpen = true)">{{
-        $t('globals.buttons.delete')
+        $t('globals.messages.delete')
       }}</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
@@ -23,9 +23,9 @@
         <AlertDialogDescription>{{ $t('admin.agent.deleteConfirmation') }}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('globals.buttons.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('globals.messages.cancel') }}</AlertDialogCancel>
         <AlertDialogAction @click="handleDelete">{{
-          $t('globals.buttons.delete')
+          $t('globals.messages.delete')
         }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

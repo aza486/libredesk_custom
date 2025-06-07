@@ -2,7 +2,7 @@
   <form @submit.prevent="onSubmit" class="space-y-8">
     <FormField v-slot="{ componentField }" name="name">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('form.field.name') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.name') }}</FormLabel>
         <FormControl>
           <Input type="text" :placeholder="t('globals.terms.agent')" v-bind="componentField" />
         </FormControl>
@@ -11,7 +11,7 @@
     </FormField>
     <FormField v-slot="{ componentField }" name="description">
       <FormItem>
-        <FormLabel>{{ $t('form.field.description') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.description') }}</FormLabel>
         <FormControl>
           <Input
             type="text"
@@ -99,7 +99,7 @@ const props = defineProps({
 const { t } = useI18n()
 
 const submitLabel = computed(() => {
-  return props.submitLabel || t('globals.buttons.save')
+  return props.submitLabel || t('globals.messages.save')
 })
 
 const permissions = ref([

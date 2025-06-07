@@ -30,7 +30,7 @@
                   <TagsForm @submit.prevent="onSubmit">
                     <template #footer>
                       <DialogFooter class="mt-10">
-                        <Button type="submit">{{ t('globals.buttons.save') }}</Button>
+                        <Button type="submit">{{ t('globals.messages.save') }}</Button>
                       </DialogFooter>
                     </template>
                   </TagsForm>
@@ -109,7 +109,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     dialogOpen.value = false
     getTags()
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.conversationTags.created')
+      description: t('globals.messages.createdSuccessfully', { name: t('globals.terms.tag').toLowerCase() }),
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
