@@ -8,14 +8,19 @@ import (
 	"net/textproto"
 
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/knadh/smtppool"
 )
 
 const (
-	headerReturnPath  = "Return-Path"
-	headerMessageID   = "Message-ID"
-	headerReferences  = "References"
-	headerInReplyTo   = "In-Reply-To"
+	headerReturnPath              = "Return-Path"
+	headerMessageID               = "Message-ID"
+	headerReferences              = "References"
+	headerInReplyTo               = "In-Reply-To"
+	headerLibredeskLoopPrevention = "X-Libredesk-Loop-Prevention"
+	headerAutoreply               = "X-Autoreply"
+	headerAutoSubmitted           = "Auto-Submitted"
+
 	dispositionInline = "inline"
 )
 
@@ -101,6 +106,14 @@ func (e *Email) Send(m models.Message) error {
 		Attachments: attachments,
 		Headers:     textproto.MIMEHeader{},
 	}
+
+	// Set libredesk loop prevention header to from address.
+	emailAddress, err := stringutil.ExtractEmail(m.From)
+	if err != nil {
+		e.lo.Error("Failed to extract email address from the 'From' header", "error", err)
+		return fmt.Errorf("failed to extract email address from 'From' header: %w", err)
+	}
+	email.Headers.Set(headerLibredeskLoopPrevention, emailAddress)
 
 	// Attach SMTP level headers
 	for key, value := range e.headers {

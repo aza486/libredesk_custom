@@ -11,6 +11,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/attachment"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/stringutil"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
@@ -136,8 +137,9 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 			{
 				Specifier: imap.PartSpecifierHeader,
 				HeaderFields: []string{
-					"Auto-Submitted",
-					"X-Autoreply",
+					headerAutoSubmitted,
+					headerAutoreply,
+					headerLibredeskLoopPrevention,
 				},
 			},
 		},
@@ -148,10 +150,18 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		env       *imap.Envelope
 		seqNum    uint32
 		autoReply bool
+		isLoop    bool
 	}
 	var messages []msgData
 
 	fetchCmd := client.Fetch(seqSet, fetchOptions)
+
+	// Extract the inbox email address.
+	inboxEmail, err := stringutil.ExtractEmail(e.FromAddress())
+	if err != nil {
+		e.lo.Error("failed to extract email address from the 'From' header", "error", err)
+		return fmt.Errorf("failed to extract email address from 'From' header: %w", err)
+	}
 	for {
 		// Check for context cancellation before fetching the next message.
 		select {
@@ -170,6 +180,7 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		var (
 			env       *imap.Envelope
 			autoReply bool
+			isLoop    bool
 		)
 		// Process all fetch items for the current message.
 		for {
@@ -197,6 +208,9 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 				if isAutoReply(envelope) {
 					autoReply = true
 				}
+				if isLoopMessage(envelope, inboxEmail) {
+					isLoop = true
+				}
 			}
 
 			// Envelope.
@@ -210,7 +224,7 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 			continue
 		}
 
-		messages = append(messages, msgData{env: env, seqNum: msg.SeqNum, autoReply: autoReply})
+		messages = append(messages, msgData{env: env, seqNum: msg.SeqNum, autoReply: autoReply, isLoop: isLoop})
 	}
 
 	// Now process each collected message.
@@ -225,6 +239,12 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		// Skip if this is an auto-reply message.
 		if msgData.autoReply {
 			e.lo.Info("skipping auto-reply message", "subject", msgData.env.Subject, "message_id", msgData.env.MessageID)
+			continue
+		}
+
+		// Skip if this message is a loop prevention message.
+		if msgData.isLoop {
+			e.lo.Info("skipping message with loop prevention header", "subject", msgData.env.Subject, "message_id", msgData.env.MessageID)
 			continue
 		}
 
@@ -482,6 +502,15 @@ func isAutoReply(envelope *enmime.Envelope) bool {
 		return true
 	}
 	return false
+}
+
+// isLoopMessage returns true if the email is a loop prevention message. i.e., it has the `X-Libredesk-Loop-Prevention` header with the inbox email address.
+func isLoopMessage(envelope *enmime.Envelope, inboxEmailaddress string) bool {
+	loopHeader := envelope.GetHeader(headerLibredeskLoopPrevention)
+	if loopHeader == "" {
+		return false
+	}
+	return strings.EqualFold(loopHeader, inboxEmailaddress)
 }
 
 // extractAllHTMLParts extracts all HTML parts from the given enmime part by traversing the tree.
