@@ -179,6 +179,7 @@
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
         <DialogTitle>{{ $t('command.pickSnoozeTime') }}</DialogTitle>
+        <DialogDescription />
       </DialogHeader>
       <div class="grid gap-4 py-4">
         <Popover>
@@ -225,7 +226,8 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogDescription
 } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'

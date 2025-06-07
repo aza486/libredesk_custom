@@ -35,6 +35,7 @@
         <DialogContent class="sm:max-w-md">
           <DialogHeader>
             <DialogTitle class="text-xl">{{ $t('account.cropAvatar') }}</DialogTitle>
+            <DialogDescription />
           </DialogHeader>
 
           <VuePictureCropper
@@ -73,7 +74,8 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogDescription
 } from '@/components/ui/dialog'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'

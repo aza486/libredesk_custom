@@ -10,6 +10,7 @@
               })
             }}
           </DialogTitle>
+          <DialogDescription/>
         </DialogHeader>
         <form @submit="createConversation" class="flex flex-col flex-1 overflow-hidden">
           <!-- Form Fields Section -->
@@ -117,7 +118,9 @@
                   <FormItem>
                     <FormLabel>
                       {{
-                        $t('globals.messages.assign', { name: t('globals.terms.team').toLowerCase() })
+                        $t('globals.messages.assign', {
+                          name: t('globals.terms.team').toLowerCase()
+                        })
                       }}
                       ({{ $t('globals.terms.optional').toLowerCase() }})
                     </FormLabel>
@@ -227,7 +230,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogDescription
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

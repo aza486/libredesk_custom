@@ -30,7 +30,7 @@
                             })
                       }}
                     </DialogTitle>
-                    <DialogDescription> </DialogDescription>
+                    <DialogDescription/>
                   </DialogHeader>
                   <CustomAttributesForm @submit.prevent="onSubmit" :form="form">
                     <template #footer>
