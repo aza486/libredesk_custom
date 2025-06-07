@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { filterNavItems } from '@/utils/nav-permissions'
 import { useStorage } from '@vueuse/core'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 
@@ -70,6 +70,31 @@ const filteredAdminNavItems = computed(() => filterNavItems(adminNavItems, userS
 const filteredReportsNavItems = computed(() => filterNavItems(reportsNavItems, userStore.can))
 const filteredContactsNavItems = computed(() => filterNavItems(contactNavItems, userStore.can))
 
+// For auto opening admin collapsibles when a child route is active
+const openAdminCollapsible = ref(null)
+const toggleAdminCollapsible = (titleKey) => {
+  openAdminCollapsible.value = openAdminCollapsible.value === titleKey ? null : titleKey
+}
+// Watch for route changes and update the active collapsible
+watch(
+  [() => route.path, filteredAdminNavItems],
+  () => {
+    const activeItem = filteredAdminNavItems.value.find((item) => {
+      if (!item.children) return isActiveParent(item.href)
+      return item.children.some((child) => isActiveParent(child.href))
+    })
+    if (activeItem) {
+      openAdminCollapsible.value = activeItem.titleKey
+    }
+  },
+  { immediate: true }
+)
+
+// Sidebar open state in local storage
+const sidebarOpen = useStorage('mainSidebarOpen', true)
+const teamInboxOpen = useStorage('teamInboxOpen', true)
+const viewInboxOpen = useStorage('viewInboxOpen', true)
+
 const isActiveParent = (parentHref) => {
   return route.path.startsWith(parentHref)
 }
@@ -77,10 +102,6 @@ const isActiveParent = (parentHref) => {
 const isInboxRoute = (path) => {
   return path.startsWith('/inboxes')
 }
-
-const sidebarOpen = useStorage('mainSidebarOpen', true)
-const teamInboxOpen = useStorage('teamInboxOpen', true)
-const viewInboxOpen = useStorage('viewInboxOpen', true)
 </script>
 
 <template>
@@ -197,7 +218,8 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                 <Collapsible
                   v-else
                   class="group/collapsible"
-                  :default-open="isActiveParent(item.href)"
+                  :open="openAdminCollapsible === item.titleKey"
+                  @update:open="toggleAdminCollapsible(item.titleKey)"
                 >
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton :isActive="isActiveParent(item.href)">
