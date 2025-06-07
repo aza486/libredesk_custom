@@ -29,9 +29,44 @@ func (u *Manager) MonitorAgentAvailability(ctx context.Context) {
 	}
 }
 
-// GetAgent retrieves an agent by ID.
+// GetAgent retrieves an agent by ID and also caches it for future requests.
 func (u *Manager) GetAgent(id int, email string) (models.User, error) {
-	return u.Get(id, email, models.UserTypeAgent)
+	agent, err := u.Get(id, email, models.UserTypeAgent)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	u.agentCacheMu.Lock()
+	u.agentCache[id] = agent
+	u.agentCacheMu.Unlock()
+
+	return agent, nil
+}
+
+// GetAgentFromCache retrieves an agent from the cache by ID.
+func (u *Manager) GetAgentFromCache(id int) (models.User, bool) {
+	u.agentCacheMu.RLock()
+	defer u.agentCacheMu.RUnlock()
+	agent, exists := u.agentCache[id]
+	if !exists {
+		return models.User{}, false
+	}
+	return agent, true
+}
+
+// GetAgentCachedOrLoad retrieves an agent from cache, falling back to DB if not cached.
+func (u *Manager) GetAgentCachedOrLoad(id int) (models.User, error) {
+	if agent, exists := u.GetAgentFromCache(id); exists {
+		return agent, nil
+	}
+	return u.GetAgent(id, "")
+}
+
+// InvalidateAgentCache invalidates the agent cache for a specific agent ID.
+func (u *Manager) InvalidateAgentCache(id int) {
+	u.agentCacheMu.Lock()
+	defer u.agentCacheMu.Unlock()
+	delete(u.agentCache, id)
 }
 
 // GetAgentsCompact returns a compact list of users with limited fields.
@@ -47,22 +82,22 @@ func (u *Manager) GetAgentsCompact() ([]models.User, error) {
 	return users, nil
 }
 
-// CreateAgent creates a new agent user.
-func (u *Manager) CreateAgent(user *models.User) error {
+// CreateAgent creates a new agent user and returns the created user.
+func (u *Manager) CreateAgent(user *models.User) (models.User, error) {
 	password, err := u.generatePassword()
 	if err != nil {
 		u.lo.Error("error generating password", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
+		return models.User{}, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
 	}
 	user.Email = null.NewString(strings.TrimSpace(strings.ToLower(user.Email.String)), user.Email.Valid)
 	if err := u.q.InsertAgent.QueryRow(user.Email, user.FirstName, user.LastName, password, user.AvatarURL, pq.Array(user.Roles)).Scan(&user.ID); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
+			return models.User{}, envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
 		}
 		u.lo.Error("error creating user", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
+		return models.User{}, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.user}"), nil)
 	}
-	return nil
+	return u.GetAgent(user.ID, "")
 }
 
 // UpdateAgent updates an agent in the database, including their password if provided.
@@ -85,11 +120,12 @@ func (u *Manager) UpdateAgent(id int, user models.User) error {
 		u.lo.Info("setting new password for user", "user_id", id)
 	}
 
-	// Update user in the database.
+	// Update user in the database and clear cache.
 	if _, err := u.q.UpdateAgent.Exec(id, user.FirstName, user.LastName, user.Email, pq.Array(user.Roles), user.AvatarURL, hashedPassword, user.Enabled, user.AvailabilityStatus); err != nil {
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.user}"), nil)
 	}
+	u.InvalidateAgentCache(id)
 	return nil
 }
 

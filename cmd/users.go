@@ -148,6 +148,7 @@ func handleCreateAgent(r *fastglue.Request) error {
 	var (
 		app  = r.Context.(*App)
 		user = models.User{}
+		err  error
 	)
 	if err := r.Decode(&user, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
@@ -165,8 +166,7 @@ func handleCreateAgent(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`first_name`"), nil, envelope.InputError)
 	}
 
-	// Right now, only agents can be created.
-	if err := app.user.CreateAgent(&user); err != nil {
+	if user, err = app.user.CreateAgent(&user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -204,7 +204,7 @@ func handleCreateAgent(r *fastglue.Request) error {
 			return r.SendEnvelope(true)
 		}
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(user)
 }
 
 // handleUpdateAgent updates an agent.
@@ -214,9 +214,9 @@ func handleUpdateAgent(r *fastglue.Request) error {
 		user  = models.User{}
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
 		ip    = realip.FromRequest(r.RequestCtx)
+		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	id, err := strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-	if err != nil || id == 0 {
+	if id == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`id`"), nil, envelope.InputError)
 	}
 
@@ -246,6 +246,9 @@ func handleUpdateAgent(r *fastglue.Request) error {
 	if err = app.user.UpdateAgent(id, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+
+	// Invalidate authz cache.
+	app.authz.InvalidateUserCache(id)
 
 	// Create activity log if user availability status changed.
 	if oldAvailabilityStatus != user.AvailabilityStatus {

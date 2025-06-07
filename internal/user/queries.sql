@@ -56,7 +56,7 @@ SELECT
          WHERE tm.user_id = u.id),
         '[]'
     ) AS teams,
-    array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL) AS permissions
+    array_agg(DISTINCT p ORDER BY p) FILTER (WHERE p IS NOT NULL) AS permissions
 FROM users u
 LEFT JOIN user_roles ur ON ur.user_id = u.id
 LEFT JOIN roles r ON r.id = ur.role_id

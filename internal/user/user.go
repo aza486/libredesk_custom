@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 
 	"log"
 
@@ -43,10 +44,12 @@ var (
 
 // Manager handles user-related operations.
 type Manager struct {
-	lo   *logf.Logger
-	i18n *i18n.I18n
-	q    queries
-	db   *sqlx.DB
+	lo           *logf.Logger
+	i18n         *i18n.I18n
+	q            queries
+	db           *sqlx.DB
+	agentCache   map[int]models.User
+	agentCacheMu sync.RWMutex
 }
 
 // Opts contains options for initializing the Manager.
@@ -88,10 +91,11 @@ func New(i18n *i18n.I18n, opts Opts) (*Manager, error) {
 		return nil, err
 	}
 	return &Manager{
-		q:    q,
-		lo:   opts.Lo,
-		i18n: i18n,
-		db:   opts.DB,
+		q:          q,
+		lo:         opts.Lo,
+		i18n:       i18n,
+		db:         opts.DB,
+		agentCache: make(map[int]models.User),
 	}, nil
 }
 

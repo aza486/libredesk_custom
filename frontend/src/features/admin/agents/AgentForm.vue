@@ -85,7 +85,7 @@
 
     <FormField v-slot="{ componentField, handleChange }" name="teams">
       <FormItem v-auto-animate>
-        <FormLabel>{{ $t('globals.terms.teams') }}</FormLabel>
+        <FormLabel>{{ $t('globals.terms.team', 2) }}</FormLabel>
         <FormControl>
           <SelectTag
             :items="teamOptions"
