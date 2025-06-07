@@ -4,9 +4,10 @@ Libredesk is a monorepo with a Go backend and a Vue.js frontend. The frontend us
 
 ### Pre-requisites
 
-- `go`
-- `nodejs` (if you are working on the frontend) and `pnpm`
-- Postgres database (>= 13)
+- go
+- nodejs (if you are working on the frontend) and `pnpm`
+- redis
+- postgres database (>= 13)
 
 ### First time setup
 
