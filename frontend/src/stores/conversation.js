@@ -209,7 +209,9 @@ export const useConversationStore = defineStore('conversation', () => {
     const index = conversations.data.findIndex(conv => conv.uuid === uuid)
     if (index !== -1) {
       setTimeout(() => {
-        conversations.data[index].unread_message_count = 0
+        if (conversations.data?.[index]) {
+          conversations.data[index].unread_message_count = 0
+        }
       }, 3000)
     }
   }
