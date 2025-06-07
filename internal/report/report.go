@@ -94,7 +94,7 @@ func (m *Manager) GetOverviewSLA(days int) (json.RawMessage, error) {
 
 	var result models.OverviewSLA
 	// Format query with days parameter for both CTEs
-	query := fmt.Sprintf(m.q.GetOverviewSLA, days, days)
+	query := fmt.Sprintf(m.q.GetOverviewSLA, days, days, days, days)
 	if err := tx.Get(&result, query); err != nil {
 		m.lo.Error("error fetching overview SLA data", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetchingCount", "name", "{globals.terms.overview}"), nil)
@@ -126,7 +126,7 @@ func (m *Manager) GetOverviewChart(days int) (json.RawMessage, error) {
 	}
 	defer tx.Rollback()
 
-	query := fmt.Sprintf(m.q.GetOverviewCharts, days, days)
+	query := fmt.Sprintf(m.q.GetOverviewCharts, days, days, days, days)
 	if err := tx.Get(&stats, query); err != nil {
 		m.lo.Error("error fetching overview charts", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetchingChart", "name", "{globals.terms.overview}"), nil)

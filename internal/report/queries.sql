@@ -120,7 +120,10 @@ WITH first_and_resolution AS (
     FROM
         applied_slas
     WHERE
-        created_at >= NOW() - INTERVAL '%d days'
+        created_at >= CASE
+            WHEN %d = 0 THEN CURRENT_DATE
+            ELSE NOW() - INTERVAL '%d days'
+        END
 ),
 next_response AS (
     SELECT
@@ -148,7 +151,10 @@ next_response AS (
     FROM
         sla_events
     WHERE
-        created_at >= NOW() - INTERVAL '%d days'
+        created_at >= CASE
+            WHEN %d = 0 THEN CURRENT_DATE
+            ELSE NOW() - INTERVAL '%d days'
+        END
         AND type = 'next_response'
 )
 SELECT
@@ -177,7 +183,10 @@ WITH new_conversations AS (
             FROM
                 conversations c
             WHERE
-                c.created_at >= NOW() - INTERVAL '%d days'
+                c.created_at >= CASE
+                    WHEN %d = 0 THEN CURRENT_DATE
+                    ELSE NOW() - INTERVAL '%d days'
+                END
             GROUP BY
                 date
             ORDER BY
@@ -196,7 +205,10 @@ resolved_conversations AS (
                 conversations c
             WHERE
                 c.resolved_at IS NOT NULL
-                AND c.created_at >= NOW() - INTERVAL '%d days'
+                AND c.created_at >= CASE
+                    WHEN %d = 0 THEN CURRENT_DATE
+                    ELSE NOW() - INTERVAL '%d days'
+                END
             GROUP BY
                 date
             ORDER BY
