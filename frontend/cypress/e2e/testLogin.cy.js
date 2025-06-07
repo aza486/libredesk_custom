@@ -132,7 +132,7 @@ describe('Login Component', () => {
 
         // Check if loading state is shown
         cy.contains('Logging in...').should('be.visible')
-        cy.get('svg.animate-spin').should('be.visible')
+        cy.get('.animate-spin').should('be.visible')
 
         // Wait for API call to finish
         cy.wait('@slowLogin')
