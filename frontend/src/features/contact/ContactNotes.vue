@@ -104,7 +104,7 @@
         </CardHeader>
 
         <!-- Note content -->
-        <CardContent class="pt-4 pb-5 text-gray-700">
+        <CardContent class="pt-4 pb-5">
           <p class="whitespace-pre-wrap text-sm leading-relaxed" v-dompurify-html="note.note"></p>
         </CardContent>
       </Card>
