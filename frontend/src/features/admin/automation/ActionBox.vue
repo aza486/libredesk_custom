@@ -66,6 +66,7 @@
             v-if="action.type && conversationActions[action.type]?.type === 'richtext'"
           >
             <Editor
+              :autoFocus="false"
               v-model:htmlContent="action.value[0]"
               @update:htmlContent="(value) => handleEditorChange(value, index)"
               :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
