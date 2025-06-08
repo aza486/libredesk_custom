@@ -10,13 +10,30 @@
         >
           {{ header }}
         </th>
-        <th scope="col" class="relative px-6 py-3"></th>
+        <th v-if="showDelete" scope="col" class="relative px-6 py-3"></th>
       </tr>
     </thead>
     <tbody class="bg-background divide-y divide-border">
-      <template v-if="data.length === 0">
+      <!-- Loading State -->
+      <template v-if="loading">
+        <tr v-for="i in skeletonRows" :key="`skeleton-${i}`" class="hover:bg-accent">
+          <td
+            v-for="(header, index) in headers"
+            :key="`skeleton-cell-${index}`"
+            class="px-6 py-3 text-sm font-medium text-foreground whitespace-normal break-words"
+          >
+            <Skeleton class="h-4 w-[85%]" />
+          </td>
+          <td v-if="showDelete" class="px-6 py-4 text-sm text-muted-foreground">
+            <Skeleton class="h-8 w-8 rounded" />
+          </td>
+        </tr>
+      </template>
+
+      <!-- No Results State -->
+      <template v-else-if="data.length === 0">
         <tr>
-          <td :colspan="headers.length + 1" class="px-6 py-12 text-center">
+          <td :colspan="headers.length + (showDelete ? 1 : 0)" class="px-6 py-12 text-center">
             <div class="flex flex-col items-center space-y-4">
               <span class="text-md text-muted-foreground">
                 {{
@@ -29,6 +46,8 @@
           </td>
         </tr>
       </template>
+
+      <!-- Data Rows -->
       <template v-else>
         <tr v-for="(item, index) in data" :key="index" class="hover:bg-accent">
           <td
@@ -53,6 +72,7 @@
 import { Trash2 } from 'lucide-vue-next'
 import { defineProps, defineEmits } from 'vue'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 
 defineProps({
   headers: {
@@ -73,6 +93,14 @@ defineProps({
   showDelete: {
     type: Boolean,
     default: true
+  },
+  loading: {
+    type: Boolean,
+    default: false
+  },
+  skeletonRows: {
+    type: Number,
+    default: 5
   }
 })
 

@@ -63,35 +63,20 @@
         </Popover>
       </div>
 
-      <div v-if="loading" class="w-full">
-        <div class="flex border-b border-border p-4 font-medium bg-gray-50">
-          <div class="flex-1 text-muted-foreground">{{ t('globals.terms.name') }}</div>
-          <div class="w-[200px] text-muted-foreground">{{ t('globals.terms.date') }}</div>
-          <div class="w-[150px] text-muted-foreground">{{ t('globals.terms.ipAddress') }}</div>
-        </div>
-        <div v-for="i in perPage" :key="i" class="flex border-b border-border py-3 px-4">
-          <div class="flex-1">
-            <Skeleton class="h-4 w-[90%]" />
-          </div>
-          <div class="w-[200px]">
-            <Skeleton class="h-4 w-[120px]" />
-          </div>
-          <div class="w-[150px]">
-            <Skeleton class="h-4 w-[100px]" />
-          </div>
-        </div>
+      <div class="w-full overflow-x-auto">
+        <SimpleTable
+          :headers="[
+            t('globals.terms.name'),
+            t('globals.terms.timestamp'),
+            t('globals.terms.ipAddress')
+          ]"
+          :keys="['activity_description', 'created_at', 'ip']"
+          :data="activityLogs"
+          :showDelete="false"
+          :loading="loading"
+          :skeletonRows="15"
+        />
       </div>
-
-      <template v-else>
-        <div class="w-full overflow-x-auto">
-          <SimpleTable
-            :headers="[t('globals.terms.name'), t('globals.terms.timestamp'), t('globals.terms.ipAddress')]"
-            :keys="['activity_description', 'created_at', 'ip']"
-            :data="activityLogs"
-            :showDelete="false"
-          />
-        </div>
-      </template>
     </div>
 
     <!-- TODO: deduplicate this code, copied from contacts list -->
@@ -163,7 +148,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { Skeleton } from '@/components/ui/skeleton'
 import SimpleTable from '@/components/table/SimpleTable.vue'
 import {
   Pagination,
