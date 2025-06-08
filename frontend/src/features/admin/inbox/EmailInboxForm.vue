@@ -398,7 +398,7 @@ const form = useForm({
   initialValues: {
     name: '',
     from: '',
-    enabled: false,
+    enabled: true,
     csat_enabled: false,
     imap: {
       host: 'imap.gmail.com',
