@@ -70,7 +70,7 @@
 
 <script setup>
 import { Trash2 } from 'lucide-vue-next'
-import { defineProps, defineEmits } from 'vue'
+import { defineEmits } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
