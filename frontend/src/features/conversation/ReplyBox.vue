@@ -52,7 +52,7 @@
           :aiPrompts="aiPrompts"
           :isSending="isSending"
           :uploadingFiles="uploadingFiles"
-          :clearEditorContent="clearEditorContent"
+          :uploadedFiles="mediaFiles"
           v-model:htmlContent="htmlContent"
           v-model:textContent="textContent"
           v-model:to="to"
@@ -82,7 +82,6 @@
         :aiPrompts="aiPrompts"
         :isSending="isSending"
         :uploadingFiles="uploadingFiles"
-        :clearEditorContent="clearEditorContent"
         :uploadedFiles="mediaFiles"
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
@@ -103,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { handleHTTPError } from '@/utils/http'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 import { useUserStore } from '@/stores/user'
@@ -146,20 +145,14 @@ const emitter = useEmitter()
 const userStore = useUserStore()
 
 // Setup file upload composable
-const {
-  uploadingFiles,
-  handleFileUpload,
-  handleFileDelete,
-  mediaFiles,
-  clearMediaFiles,
-} = useFileUpload({
-  linkedModel: 'messages'
-})
+const { uploadingFiles, handleFileUpload, handleFileDelete, mediaFiles, clearMediaFiles } =
+  useFileUpload({
+    linkedModel: 'messages'
+  })
 
 // Rest of existing state
 const openAIKeyPrompt = ref(false)
 const isOpenAIKeyUpdating = ref(false)
-const clearEditorContent = ref(false)
 const isEditorFullscreen = ref(false)
 const isSending = ref(false)
 const messageType = ref('reply')
@@ -304,9 +297,6 @@ const processSend = async () => {
   } finally {
     // If API has NOT errored clear state.
     if (hasMessageSendingErrored === false) {
-      // Clear editor.
-      clearEditorContent.value = true
-
       // Clear macro.
       conversationStore.resetMacro('reply')
 
@@ -315,10 +305,6 @@ const processSend = async () => {
 
       // Clear any email errors.
       emailErrors.value = []
-
-      nextTick(() => {
-        clearEditorContent.value = false
-      })
     }
     isSending.value = false
   }
