@@ -63,7 +63,7 @@ docker compose up -d
 docker exec -it libredesk_app ./libredesk --set-system-user-password
 ```
 
-Go to `http://localhost:9000` and login with username `System` and the password you set using the --set-system-user-password command.
+Go to `http://localhost:9000` and login with username `System` and the password you set using the `--set-system-user-password` command.
 
 See [installation docs](https://libredesk.io/docs/installation/)
 
