@@ -53,6 +53,8 @@ jobs:
       - name: Configure app
         run: |
           cp config.sample.toml config.toml
+          sed -i 's/host = "db"/host = "127.0.0.1"/' config.toml
+          sed -i 's/address = "redis:6379"/address = "localhost:6379"/' config.toml
 
       - name: Run unit tests for frontend
         run: cd frontend && pnpm test:run
