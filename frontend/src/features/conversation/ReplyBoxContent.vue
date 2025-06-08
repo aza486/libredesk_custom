@@ -208,7 +208,8 @@ const toggleFullscreen = () => {
 const enableSend = computed(() => {
   return (
     (textContent.value.trim().length > 0 ||
-      conversationStore.getMacro('reply')?.actions?.length > 0) &&
+      conversationStore.getMacro('reply')?.actions?.length > 0 ||
+      props.uploadedFiles.length > 0) &&
     emailErrors.value.length === 0 &&
     !props.uploadingFiles.length
   )
