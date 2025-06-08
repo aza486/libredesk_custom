@@ -2,15 +2,14 @@
 {{ template "header" . }}
 <div class="csat-container">
     <div class="csat-header">
-        <h1>Rate your experience</h1>
-        <p class="conversation-subject"><i>{{ .Data.Conversation.Subject }}</i> - #{{ .Data.Conversation.ReferenceNumber
-            }}</p>
+        <h2>Rate your recent interaction</h2>
+        {{ if .Data.Conversation.Subject }}
+        <p class="conversation-subject"><i>{{ .Data.Conversation.Subject }}</i></p>
+        {{ end }}
     </div>
 
     <form action="/csat/{{ .Data.CSAT.UUID }}" method="POST" class="csat-form" novalidate>
         <div class="rating-container">
-            <label class="rating-label">We would greatly appreciate if you could rate your recent interaction with us to
-                help us improve the quality of our services.</label>
             <div class="rating-options">
                 <input type="radio" id="rating-1" name="rating" value="1" required>
                 <label for="rating-1" class="rating-option" tabindex="0">
@@ -61,7 +60,7 @@
 
         <div class="feedback-container">
             <label for="feedback" class="feedback-label">Additional feedback (optional)</label>
-            <textarea id="feedback" name="feedback" placeholder="Share your thoughts..." rows="6" maxlength="1000"
+            <textarea id="feedback" name="feedback" placeholder="" rows="6" maxlength="1000"
                 onkeyup="updateCharCount(this)"></textarea>
             <div class="char-counter">
                 <span id="charCount">0</span>/1000
@@ -90,6 +89,8 @@
     document.querySelector('.csat-form').addEventListener('submit', function (e) {
         const rating = document.querySelector('input[name="rating"]:checked');
         const feedback = document.querySelector('#feedback');
+        const validationMsg = document.getElementById('ratingValidationMessage');
+
         if (!rating) {
             e.preventDefault();
             validationMsg.style.display = 'block';
@@ -98,7 +99,17 @@
             setTimeout(() => {
                 validationMsg.style.display = 'none';
             }, 10000);
+        } else {
+            validationMsg.style.display = 'none';
         }
+    });
+
+    // Hide validation message when a rating is selected
+    document.querySelectorAll('input[name="rating"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            const validationMsg = document.getElementById('ratingValidationMessage');
+            validationMsg.style.display = 'none';
+        });
     });
 </script>
 
@@ -132,14 +143,6 @@
 
     .rating-container {
         margin-bottom: 40px;
-    }
-
-    .rating-label {
-        display: block;
-        font-size: 1.1em;
-        margin-bottom: 20px;
-        color: #333;
-        text-align: center;
     }
 
     .rating-options {
