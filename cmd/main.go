@@ -159,13 +159,23 @@ func main() {
 	settings := initSettings(db)
 	loadSettings(settings)
 
+	// Fallback for config typo. Logs a warning but continues to work with the incorrect key.
+	// Uses 'message.message_outgoing_scan_interval' (correct key) as default key, falls back to the common typo.
+	msgOutgoingScanIntervalKey := "message.message_outgoing_scan_interval"
+	if ko.String(msgOutgoingScanIntervalKey) == "" {
+		if ko.String("message.message_outoing_scan_interval") != "" {
+			colorlog.Red("WARNING: typo in config key 'message.message_outoing_scan_interval' detected. Use 'message.message_outgoing_scan_interval' instead in your config.toml file. Support for this incorrect key will be removed in a future release.")
+			msgOutgoingScanIntervalKey = "message.message_outoing_scan_interval"
+		}
+	}
+
 	var (
 		autoAssignInterval          = ko.MustDuration("autoassigner.autoassign_interval")
 		unsnoozeInterval            = ko.MustDuration("conversation.unsnooze_interval")
 		automationWorkers           = ko.MustInt("automation.worker_count")
 		messageOutgoingQWorkers     = ko.MustDuration("message.outgoing_queue_workers")
 		messageIncomingQWorkers     = ko.MustDuration("message.incoming_queue_workers")
-		messageOutgoingScanInterval = ko.MustDuration("message.message_outoing_scan_interval")
+		messageOutgoingScanInterval = ko.MustDuration(msgOutgoingScanIntervalKey)
 		slaEvaluationInterval       = ko.MustDuration("sla.evaluation_interval")
 		lo                          = initLogger(appName)
 		rdb                         = initRedis()
