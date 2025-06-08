@@ -109,7 +109,7 @@ const onSubmit = form.handleSubmit(async (values) => {
     dialogOpen.value = false
     getTags()
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('globals.messages.createdSuccessfully', { name: t('globals.terms.tag').toLowerCase() }),
+      description: t('globals.messages.createdSuccessfully', { name: t('globals.terms.tag') }),
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

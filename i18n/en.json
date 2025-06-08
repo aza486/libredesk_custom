@@ -519,7 +519,7 @@
   "admin.customAttributes.regex.description": "Regex to validate the value of this custom attribute. Leave empty to skip validation.",
   "admin.customAttributes.regexHint.description": "Regex pattern hint.",
   "admin.customAttributes.keyNotAllowed": "The provided key is not allowed as it conflicts with default attributes. Please use a different key.",
-  "admin.status.deleteConfirmation": "Are you sure you want to delete this status? This will also remove it from all conversations",
+  "admin.tags.deleteConfirmation": "Are you sure you want to delete this tag? This will also remove it from all conversations",
   "command.typeCmdOrSearch": "Type a command or search...",
   "command.noCommandAvailable": "No command available",
   "command.selectAMacro": "Select a macro to view details",

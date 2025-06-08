@@ -42,11 +42,7 @@
       <AlertDialogHeader>
         <AlertDialogTitle>{{ t('globals.messages.areYouAbsolutelySure') }}</AlertDialogTitle>
         <AlertDialogDescription>
-          {{
-            t('globals.messages.deletionConfirmation', {
-              name: t('globals.terms.tag').toLowerCase()
-            })
-          }}
+          {{ $t('admin.tags.deleteConfirmation') }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
@@ -118,7 +114,7 @@ const form = useForm({
 const onSubmit = form.handleSubmit(async (values) => {
   await api.updateTag(props.tag.id, values)
   emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-    description: t('globals.messages.updatedSuccessfully', { name: t('globals.terms.tag') }),
+    description: t('globals.messages.updatedSuccessfully', { name: t('globals.terms.tag') })
   })
   dialogOpen.value = false
   emitRefreshTagsList()

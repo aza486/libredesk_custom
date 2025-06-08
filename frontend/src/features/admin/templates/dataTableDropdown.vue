@@ -26,7 +26,7 @@
         <AlertDialogDescription>
           {{
             $t('globals.messages.deletionConfirmation', {
-              name: t('globals.terms.template').toLowerCase()
+              name: $t('globals.terms.template').toLowerCase()
             })
           }}
         </AlertDialogDescription>
