@@ -415,8 +415,8 @@ CREATE TABLE csat_responses (
     updated_at TIMESTAMPTZ DEFAULT NOW(),
 	uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
 
-	-- Keep CSAT responses even if the conversation or agent is deleted.
-    conversation_id BIGINT REFERENCES conversations(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+	-- Cascade deletes when conversation is deleted.
+    conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
 
     rating INT DEFAULT 0 NOT NULL,
     feedback TEXT NULL,
@@ -447,9 +447,9 @@ CREATE TABLE applied_slas (
 
 	status applied_sla_status DEFAULT 'pending' NOT NULL,
 
-	-- Conversation / SLA policy maybe deleted but for reports the applied SLA should remain.
-	conversation_id BIGINT REFERENCES conversations(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
-	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE SET NULL ON UPDATE CASCADE NOT NULL,
+	-- Cascade deletes when conversation or SLA policy is deleted.
+	conversation_id BIGINT REFERENCES conversations(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+	sla_policy_id INT REFERENCES sla_policies(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
 
 	first_response_deadline_at TIMESTAMPTZ NULL,
 	resolution_deadline_at TIMESTAMPTZ NULL,

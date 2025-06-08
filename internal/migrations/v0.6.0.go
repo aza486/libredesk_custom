@@ -86,16 +86,6 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		}
 	}
 
-	// Add `contacts:read` permission to Agent role
-	_, err = db.Exec(`
-		UPDATE roles
-		SET permissions = array_append(permissions, 'contacts:read')
-		WHERE name = 'Agent' AND NOT ('contacts:read' = ANY(permissions));
-	`)
-	if err != nil {
-		return err
-	}
-
 	// Add `custom_attributes:manage` permission to Admin role
 	_, err = db.Exec(`
 		UPDATE roles
@@ -311,5 +301,28 @@ func V0_6_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 	if err != nil {
 		return err
 	}
+
+	// Replace constraints for applied_slas and csat_responses tables.
+	_, err = db.Exec(`
+		ALTER TABLE applied_slas
+		DROP CONSTRAINT IF EXISTS applied_slas_conversation_id_fkey,
+		DROP CONSTRAINT IF EXISTS applied_slas_sla_policy_id_fkey,
+		ALTER COLUMN conversation_id SET NOT NULL,
+		ALTER COLUMN sla_policy_id   SET NOT NULL,
+		ADD CONSTRAINT applied_slas_conversation_id_fkey
+			FOREIGN KEY (conversation_id) REFERENCES conversations(id)
+			ON DELETE CASCADE ON UPDATE CASCADE,
+		ADD CONSTRAINT applied_slas_sla_policy_id_fkey
+			FOREIGN KEY (sla_policy_id) REFERENCES sla_policies(id)
+			ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+		ALTER TABLE csat_responses
+		DROP CONSTRAINT IF EXISTS csat_responses_conversation_id_fkey,
+		ALTER COLUMN conversation_id SET NOT NULL,
+		ADD CONSTRAINT csat_responses_conversation_id_fkey
+		FOREIGN KEY (conversation_id) REFERENCES conversations(id) 
+			ON DELETE CASCADE ON UPDATE CASCADE;
+	`)
 	return nil
 }
