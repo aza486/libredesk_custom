@@ -34,7 +34,8 @@ const route = useRoute()
 const props = defineProps({
   id: {
     type: String,
-    required: true
+    required: false,
+    default: null
   }
 })
 
