@@ -156,6 +156,11 @@ func handleCreateAgent(r *fastglue.Request) error {
 	if user.Email.String == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`email`"), nil, envelope.InputError)
 	}
+	user.Email = null.StringFrom(strings.TrimSpace(strings.ToLower(user.Email.String)))
+
+	if !stringutil.ValidEmail(user.Email.String) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`email`"), nil, envelope.InputError)
+	}
 
 	if user.Roles == nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`role`"), nil, envelope.InputError)
@@ -225,6 +230,11 @@ func handleUpdateAgent(r *fastglue.Request) error {
 
 	if user.Email.String == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`email`"), nil, envelope.InputError)
+	}
+	user.Email = null.StringFrom(strings.TrimSpace(strings.ToLower(user.Email.String)))
+
+	if !stringutil.ValidEmail(user.Email.String) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`email`"), nil, envelope.InputError)
 	}
 
 	if user.Roles == nil {
