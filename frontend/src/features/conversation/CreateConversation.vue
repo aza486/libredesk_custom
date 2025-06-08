@@ -176,7 +176,7 @@
                     <Editor
                       v-model:htmlContent="componentField.modelValue"
                       @update:htmlContent="(value) => componentField.onChange(value)"
-                      :placeholder="t('editor.newLine') + t('editor.cmdK')"
+                      :placeholder="t('editor.newLine') + t('editor.ctrlK')"
                       :insertContent="insertContent"
                       :autoFocus="false"
                       class="w-full flex-1 overflow-y-auto p-2 box min-h-0"

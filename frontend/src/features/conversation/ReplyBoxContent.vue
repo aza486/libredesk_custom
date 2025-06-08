@@ -86,7 +86,7 @@
       <Editor
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
-        :placeholder="t('editor.newLine') + t('editor.send') + t('editor.cmdK')"
+        :placeholder="t('editor.newLine') + t('editor.send') + t('editor.ctrlK')"
         :aiPrompts="aiPrompts"
         :insertContent="insertContent"
         :autoFocus="true"
