@@ -38,12 +38,16 @@ export const createFormSchema = (t) => z.object({
 
   new_password: z
     .string()
-    .regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{10,72}$/, {
-      message: t('globals.messages.strongPassword', {
-        min: 10,
-        max: 72,
-      })
+    .min(10, {
+      message: t('globals.messages.strongPassword', { min: 10, max: 72 })
     })
+    .max(72, {
+      message: t('globals.messages.strongPassword', { min: 10, max: 72 })
+    })
+    .refine(val => /[a-z]/.test(val), t('globals.messages.strongPassword', { min: 10, max: 72 }))
+    .refine(val => /[A-Z]/.test(val), t('globals.messages.strongPassword', { min: 10, max: 72 }))
+    .refine(val => /\d/.test(val), t('globals.messages.strongPassword', { min: 10, max: 72 }))
+    .refine(val => /[\W_]/.test(val), t('globals.messages.strongPassword', { min: 10, max: 72 }))
     .optional(),
   enabled: z.boolean().optional().default(true),
   availability_status: z.string().optional().default('offline'),

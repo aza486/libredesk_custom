@@ -54,6 +54,9 @@ jobs:
         run: |
           cp config.sample.toml config.toml
 
+      - name: Run unit tests for frontend
+        run: cd frontend && pnpm test:run
+
       - name: Install db schema and run tests
         env:
           LIBREDESK_SYSTEM_USER_PASSWORD: "StrongPass!123"
