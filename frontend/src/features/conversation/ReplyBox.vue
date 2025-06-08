@@ -248,8 +248,8 @@ const processSend = async () => {
   isEditorFullscreen.value = false
   try {
     isSending.value = true
-    // Send message if there is text content in the editor.
-    if (hasTextContent.value > 0) {
+    // Send message if there is text content in the editor or media files are attached.
+    if (hasTextContent.value > 0 || mediaFiles.value.length > 0) {
       const message = htmlContent.value
       await api.sendMessage(conversationStore.current.uuid, {
         private: messageType.value === 'private_note',
