@@ -4,7 +4,7 @@
       <DialogHeader class="space-y-1">
         <DialogTitle
           >{{ view?.id ? $t('globals.messages.edit') : $t('globals.messages.create') }}
-          view
+          {{ $t('globals.terms.view') }}
         </DialogTitle>
         <DialogDescription>
           {{ $t('view.form.description') }}
