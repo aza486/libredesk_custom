@@ -27,8 +27,6 @@ curl -LO https://github.com/abhinavxd/libredesk/raw/main/config.sample.toml
 # Copy the config.sample.toml to config.toml and edit it as needed.
 cp config.sample.toml config.toml
 
-# Edit config.toml and find commented lines containing "docker compose". Replace the values in the lines below those comments with service names instead of IP addresses.
-
 # Run the services in the background.
 docker compose up -d
 
