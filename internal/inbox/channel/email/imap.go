@@ -162,6 +162,10 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		e.lo.Error("failed to extract email address from the 'From' header", "error", err)
 		return fmt.Errorf("failed to extract email address from 'From' header: %w", err)
 	}
+	if inboxEmail == "" {
+		e.lo.Error("inbox email address is empty, cannot process messages", "inbox_id", e.Identifier())
+		return fmt.Errorf("inbox (%d) email address is empty, cannot process messages", e.Identifier())
+	}
 	for {
 		// Check for context cancellation before fetching the next message.
 		select {
