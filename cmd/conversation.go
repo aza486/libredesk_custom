@@ -571,7 +571,7 @@ func handleRemoveUserAssignee(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if err = app.conversation.RemoveConversationAssignee(uuid, "user"); err != nil {
+	if err = app.conversation.RemoveConversationAssignee(uuid, "user", user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -592,7 +592,7 @@ func handleRemoveTeamAssignee(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if err = app.conversation.RemoveConversationAssignee(uuid, "team"); err != nil {
+	if err = app.conversation.RemoveConversationAssignee(uuid, "team", user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

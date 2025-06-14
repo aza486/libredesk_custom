@@ -335,7 +335,9 @@ func (m *Manager) UpdateMessageStatus(messageUUID string, status string) error {
 	m.BroadcastMessageUpdate(conversationUUID, messageUUID, "status" /*property*/, status)
 
 	// Trigger webhook for message update.
-	if message, err := m.GetMessage(messageUUID); err == nil {
+	if message, err := m.GetMessage(messageUUID); err != nil {
+		m.lo.Error("error fetching message for webhook event", "uuid", messageUUID, "error", err)
+	} else {
 		m.webhookStore.TriggerEvent(wmodels.EventMessageUpdated, message)
 	}
 
@@ -460,8 +462,13 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	// Broadcast new message.
 	m.BroadcastNewMessage(message)
 
-	// Trigger webhook for message created.
-	m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, message)
+	// Refetch message and send webhook event for message created.
+	updatedMessage, err := m.GetMessage(message.UUID)
+	if err != nil {
+		m.lo.Error("error fetching updated message for webhook event", "uuid", message.UUID, "error", err)
+	} else {
+		m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, updatedMessage)
+	}
 
 	// Evaluate automation rules for outgoing message event.
 	conversation, err := m.GetConversation(0, message.ConversationUUID)
