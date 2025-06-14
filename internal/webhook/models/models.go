@@ -9,15 +9,14 @@ import (
 
 // Webhook represents a webhook configuration
 type Webhook struct {
-	ID        int             `db:"id" json:"id"`
-	CreatedAt time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time       `db:"updated_at" json:"updated_at"`
-	Name      string          `db:"name" json:"name"`
-	URL       string          `db:"url" json:"url"`
-	Events    pq.StringArray  `db:"events" json:"events"`
-	Secret    string          `db:"secret" json:"secret,omitempty"`
-	IsActive  bool            `db:"is_active" json:"is_active"`
-	Headers   json.RawMessage `db:"headers" json:"headers"`
+	ID        int            `db:"id" json:"id"`
+	CreatedAt time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time      `db:"updated_at" json:"updated_at"`
+	Name      string         `db:"name" json:"name"`
+	URL       string         `db:"url" json:"url"`
+	Events    pq.StringArray `db:"events" json:"events"`
+	Secret    string         `db:"secret" json:"secret,omitempty"`
+	IsActive  bool           `db:"is_active" json:"is_active"`
 }
 
 // WebhookEvent represents an event that can trigger a webhook

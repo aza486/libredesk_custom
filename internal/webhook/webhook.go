@@ -120,7 +120,7 @@ func (m *Manager) Get(id int) (models.Webhook, error) {
 // Create creates a new webhook.
 func (m *Manager) Create(webhook models.Webhook) (int, error) {
 	var id int
-	if err := m.q.InsertWebhook.Get(&id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive, webhook.Headers); err != nil {
+	if err := m.q.InsertWebhook.Get(&id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
 			return 0, envelope.NewError(envelope.ConflictError, m.i18n.Ts("globals.messages.errorAlreadyExists", "name", "webhook"), nil)
 		}
@@ -132,7 +132,7 @@ func (m *Manager) Create(webhook models.Webhook) (int, error) {
 
 // Update updates a webhook by ID.
 func (m *Manager) Update(id int, webhook models.Webhook) error {
-	if _, err := m.q.UpdateWebhook.Exec(id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive, webhook.Headers); err != nil {
+	if _, err := m.q.UpdateWebhook.Exec(id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive); err != nil {
 		m.lo.Error("error updating webhook", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "webhook"), nil)
 	}
@@ -273,16 +273,6 @@ func (m *Manager) deliverWebhook(task DeliveryTask) {
 	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Libredesk-Webhook/1.0")
-
-	// Add custom headers
-	if len(webhook.Headers) > 0 {
-		var headers map[string]string
-		if err := json.Unmarshal(webhook.Headers, &headers); err == nil {
-			for key, value := range headers {
-				req.Header.Set(key, value)
-			}
-		}
-	}
 
 	// Add signature if secret is provided
 	if webhook.Secret != "" {
