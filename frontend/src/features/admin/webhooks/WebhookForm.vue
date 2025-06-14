@@ -22,8 +22,10 @@
 
     <FormField name="events" v-slot="{ componentField, handleChange }">
       <FormItem>
-        <FormLabel>Events</FormLabel>
-        <FormDescription>Select which events should trigger this webhook</FormDescription>
+        <FormLabel>{{ $t('globals.terms.event', 2) }}</FormLabel>
+        <FormDescription>
+          {{ $t('admin.webhook.events.description') }}
+        </FormDescription>
         <FormControl>
           <div class="space-y-6">
             <div
@@ -69,9 +71,9 @@
       <FormItem>
         <FormLabel>{{ $t('globals.terms.secret') }}</FormLabel>
         <FormControl>
-          <Input type="password" placeholder="optional-secret-key" v-bind="componentField" />
+          <Input type="password" v-bind="componentField" />
         </FormControl>
-        <FormDescription>Optional secret key for webhook signature verification</FormDescription>
+        <FormDescription>{{ $t('admin.webhook.secret.description') }}</FormDescription>
         <FormMessage />
       </FormItem>
     </FormField>

@@ -17,7 +17,11 @@
             :isLoading="testLoading"
             @click="handleTestWebhook"
           >
-            Send Test
+            {{
+              $t('globals.messages.send', {
+                name: t('globals.terms.test').toLowerCase()
+              })
+            }}
           </Button>
         </div>
       </template>
@@ -89,7 +93,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       })
     }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
+      variant: 'success',
       description: toastDescription
     })
   } catch (error) {
@@ -109,8 +113,10 @@ const handleTestWebhook = async () => {
     testLoading.value = true
     await api.testWebhook(props.id)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Test webhook sent successfully'
+      variant: 'success',
+      description: t('globals.messages.sentSuccessfully', {
+        name: t('globals.terms.webhook')
+      })
     })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {

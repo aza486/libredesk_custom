@@ -20,18 +20,22 @@ export const createColumns = (t) => [
     },
     cell: function ({ row }) {
       const url = row.getValue('url')
-      return h('div', { class: 'text-center font-mono text-sm max-w-xs truncate' }, url)
+      return h('div', { class: 'text-center font-mono text-sm max-w-sm truncate' }, url)
     }
   },
   {
     accessorKey: 'events',
     header: function () {
-      return h('div', { class: 'text-center' }, 'Events')
+      return h('div', { class: 'text-center' }, t('globals.terms.event', 2))
     },
     cell: function ({ row }) {
       const events = row.getValue('events')
       return h('div', { class: 'text-center' }, [
-        h(Badge, { variant: 'secondary', class: 'text-xs' }, `${events.length} events`)
+        h(
+          Badge,
+          { variant: 'secondary', class: 'text-xs' },
+          () => `${events.length} ${t('globals.terms.event', 2)}`
+        )
       ])
     }
   },
@@ -47,7 +51,7 @@ export const createColumns = (t) => [
             variant: isActive ? 'default' : 'secondary',
             class: 'text-xs'
           },
-          isActive ? t('globals.terms.active') : t('globals.terms.inactive')
+          () => isActive ? t('globals.terms.active') : t('globals.terms.inactive')
         )
       ])
     }

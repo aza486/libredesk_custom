@@ -17,7 +17,13 @@
           props.webhook.is_active ? $t('globals.messages.disable') : $t('globals.messages.enable')
         }}
       </DropdownMenuItem>
-      <DropdownMenuItem @click="handleTest"> Send Test </DropdownMenuItem>
+      <DropdownMenuItem @click="handleTest">
+        {{
+          $t('globals.messages.send', {
+            name: $t('globals.terms.test').toLowerCase()
+          })
+        }}
+      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem @click="() => (alertOpen = true)" class="text-destructive">
         {{ $t('globals.messages.delete') }}
@@ -114,7 +120,7 @@ async function handleToggle() {
       model: 'webhook'
     })
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
+      variant: 'success',
       description: t('globals.messages.updatedSuccessfully', {
         name: t('globals.terms.webhook')
       })
@@ -131,8 +137,10 @@ async function handleTest() {
   try {
     await api.testWebhook(props.webhook.id)
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      title: 'Success',
-      description: 'Test webhook sent successfully'
+      variant: 'success',
+      description: t('globals.messages.sentSuccessfully', {
+        name: t('globals.terms.webhook')
+      })
     })
   } catch (error) {
     emit.emit(EMITTER_EVENTS.SHOW_TOAST, {
