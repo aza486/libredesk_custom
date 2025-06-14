@@ -134,6 +134,7 @@ export const adminNavItems = [
   },
   {
     titleKey: 'globals.terms.integration',
+    isTitleKeyPlural: true,
     children: [
       {
         titleKey: 'globals.terms.webhook',
