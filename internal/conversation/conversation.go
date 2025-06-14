@@ -494,10 +494,15 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
 	}
 
+	// Refetch the conversation to get the updated details.
 	conversation, err := c.GetConversation(0, uuid)
 	if err != nil {
 		return err
 	}
+
+	// Trigger webhook for conversation assigned and evaluate automation rules.
+	c.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationUserAssigned)
+	c.webhookStore.TriggerEvent(wmodels.EventConversationAssigned, conversation)
 
 	// Send email to assignee.
 	if err := c.SendAssignedConversationEmail([]int{assigneeID}, conversation); err != nil {
@@ -508,19 +513,12 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
 	}
 
-	// Trigger webhook for conversation assigned and evaluate automation rules.
-	conversation, err = c.GetConversation(0, uuid)
-	if err == nil {
-		c.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationUserAssigned)
-		c.webhookStore.TriggerEvent(wmodels.EventConversationAssigned, conversation)
-	}
-
 	return nil
 }
 
 // UpdateConversationTeamAssignee sets the assignee of a conversation to a specific team and sets the assigned user id to NULL.
 func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error {
-	// Store previous assigned team ID to apply SLA policy if team has changed.
+	// Store previously assigned team ID to apply SLA policy if team has changed.
 	conversation, err := c.GetConversation(0, uuid)
 	if err != nil {
 		return err
@@ -536,9 +534,14 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 		return nil
 	}
 
-	// Apply SLA policy if team has changed and the new team has an SLA policy.
-	if previousAssignedTeamID != teamID && teamID > 0 {
+	// Team changed?
+	if previousAssignedTeamID != teamID {
 		team, err := c.teamStore.Get(teamID)
+		if err != nil {
+			return nil
+		}
+		// Fetch the conversation again to get the updated details.
+		conversation, err := c.GetConversation(0, uuid)
 		if err != nil {
 			return nil
 		}
@@ -547,16 +550,13 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 			if err != nil {
 				return nil
 			}
-
-			// Fetch the conversation again to get the updated assignee details.
-			conversation, err := c.GetConversation(0, uuid)
-			if err != nil {
-				return nil
-			}
 			if err := c.ApplySLA(conversation, team.SLAPolicyID.Int, systemUser); err != nil {
 				return nil
 			}
 		}
+
+		// Evaluate automation rules for conversation team assignment.
+		c.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationTeamAssigned)
 	}
 	return nil
 }
@@ -599,17 +599,18 @@ func (c *Manager) UpdateConversationPriority(uuid string, priorityID int, priori
 		c.lo.Error("error updating conversation priority", "error", err)
 		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
 	}
-	if err := c.RecordPriorityChange(priority, uuid, actor); err != nil {
-		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
-	}
-	c.BroadcastConversationUpdate(uuid, "priority", priority)
 
 	// Evaluate automation rules for conversation priority change.
 	conversation, err := c.GetConversation(0, uuid)
 	if err == nil {
 		c.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationPriorityChange)
 	}
-
+	
+	// Record activity.
+	if err := c.RecordPriorityChange(priority, uuid, actor); err != nil {
+		return envelope.NewError(envelope.GeneralError, c.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.conversation}"), nil)
+	}
+	c.BroadcastConversationUpdate(uuid, "priority", priority)
 	return nil
 }
 

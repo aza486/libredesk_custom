@@ -464,7 +464,7 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, message)
 
 	// Evaluate automation rules for outgoing message event.
-	conversation, err := m.GetConversation(message.ConversationID, message.ConversationUUID)
+	conversation, err := m.GetConversation(0, message.ConversationUUID)
 	if err == nil {
 		m.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationMessageOutgoing)
 	}
