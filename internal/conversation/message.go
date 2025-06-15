@@ -64,7 +64,7 @@ func (m *Manager) Run(ctx context.Context, incomingQWorkers, outgoingQWorkers, s
 			)
 
 			// Get pending outgoing messages and skip the currently processing message ids.
-			if err := m.q.GetPendingMessages.Select(&pendingMessages, pq.Array(messageIDs)); err != nil {
+			if err := m.q.GetOutgoingPendingMessages.Select(&pendingMessages, pq.Array(messageIDs)); err != nil {
 				m.lo.Error("error fetching pending messages from db", "error", err)
 				continue
 			}
