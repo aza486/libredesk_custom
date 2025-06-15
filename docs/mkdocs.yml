@@ -1,4 +1,4 @@
-site_name: LibreDesk Docs
+site_name: Libredesk Docs
 theme:
   name: material
   language: en
@@ -31,6 +31,7 @@ nav:
       - Upgrade Guide: upgrade.md
       - Email Templates: templating.md
       - SSO Setup: sso.md
+      - Webhooks: webhooks.md
   - Contributions:
       - Developer Setup: developer-setup.md
       - Translate Libredesk: translations.md
