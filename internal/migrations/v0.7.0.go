@@ -43,7 +43,6 @@ func V0_7_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 			events webhook_event[] NOT NULL DEFAULT '{}',
 			secret TEXT DEFAULT '',
 			is_active BOOLEAN DEFAULT true,
-			headers JSONB DEFAULT '{}',
 			CONSTRAINT constraint_webhooks_on_name CHECK (length(name) <= 255),
 			CONSTRAINT constraint_webhooks_on_url CHECK (length(url) <= 2048),
 			CONSTRAINT constraint_webhooks_on_secret CHECK (length(secret) <= 255),
