@@ -29,35 +29,32 @@
         <FormControl>
           <div class="space-y-6">
             <div
-              v-for="eventGroup in webhookEvents"
-              :key="eventGroup.name"
+              v-for="group in webhookEvents"
+              :key="group.name"
               class="rounded border border-border bg-card"
             >
               <div class="border-b border-border bg-muted/30 px-5 py-3">
-                <h4 class="font-medium text-card-foreground">{{ eventGroup.name }}</h4>
+                <h4 class="font-medium text-card-foreground">{{ group.name }}</h4>
               </div>
-
-              <div class="p-5">
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <div
-                    v-for="event in eventGroup.events"
-                    :key="event.value"
-                    class="flex items-start space-x-3"
-                  >
-                    <Checkbox
-                      :checked="componentField.modelValue?.includes(event.value)"
-                      @update:checked="
-                        (newValue) =>
-                          handleEventChange(
-                            newValue,
-                            event.value,
-                            handleChange,
-                            componentField.modelValue
-                          )
-                      "
-                    />
-                    <label class="font-normal text-sm">{{ event.label }}</label>
-                  </div>
+              <div class="p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                  v-for="event in group.events"
+                  :key="event.value"
+                  class="flex items-start space-x-3"
+                >
+                  <Checkbox
+                    :checked="componentField.modelValue?.includes(event.value)"
+                    @update:checked="
+                      (checked) =>
+                        handleEventChange(
+                          checked,
+                          event.value,
+                          handleChange,
+                          componentField.modelValue
+                        )
+                    "
+                  />
+                  <label class="font-normal text-sm">{{ event.label }}</label>
                 </div>
               </div>
             </div>
@@ -163,16 +160,9 @@ const webhookEvents = ref([
   }
 ])
 
+// If checked add event to the list, if unchecked remove it and call handleChange
 const handleEventChange = (checked, eventName, handleChange, currentEvents) => {
   const events = currentEvents || []
-  let newEvents
-
-  if (checked) {
-    newEvents = [...events, eventName]
-  } else {
-    newEvents = events.filter((event) => event !== eventName)
-  }
-
-  handleChange(newEvents)
+  handleChange(checked ? [...events, eventName] : events.filter((e) => e !== eventName))
 }
 </script>
