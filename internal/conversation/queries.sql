@@ -398,13 +398,14 @@ and source_id > ''
 ORDER BY id DESC
 LIMIT $2;
 
--- name: get-pending-messages
+-- name: get-outgoing-pending-messages
 SELECT
     m.created_at,
     m.id,
     m.uuid,
     m.sender_id,
     m.type,
+    m.private,
     m.status,
     m.content,
     m.conversation_id,
@@ -418,7 +419,7 @@ SELECT
     c.subject
 FROM conversation_messages m
 INNER JOIN conversations c ON c.id = m.conversation_id
-WHERE m.status = 'pending'
+WHERE m.status = 'pending' AND m.type = 'outgoing' AND m.private = false
 AND NOT(m.id = ANY($1::INT[]))
 
 -- name: get-message

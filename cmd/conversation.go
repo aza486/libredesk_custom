@@ -318,9 +318,14 @@ func handleUpdateUserAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	_, err = enforceConversationAccess(app, uuid, user)
+	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	// Already assigned?
+	if conversation.AssignedUserID.Int == assigneeID {
+		return r.SendEnvelope(true)
 	}
 
 	if err := app.conversation.UpdateConversationUserAssignee(uuid, assigneeID, user); err != nil {
@@ -352,9 +357,14 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	_, err = enforceConversationAccess(app, uuid, user)
+	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	// Already assigned?
+	if conversation.AssignedTeamID.Int == assigneeID {
+		return r.SendEnvelope(true)
 	}
 	if err := app.conversation.UpdateConversationTeamAssignee(uuid, assigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)

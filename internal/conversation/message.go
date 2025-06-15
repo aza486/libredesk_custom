@@ -214,6 +214,9 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		} else if !metAt.IsZero() {
 			m.BroadcastConversationUpdate(message.ConversationUUID, "next_response_met_at", metAt.Format(time.RFC3339))
 		}
+
+		// Evaluate automation rules for outgoing message.
+		m.automation.EvaluateConversationUpdateRulesByID(message.ConversationID, "", amodels.EventConversationMessageOutgoing)
 	}
 }
 
@@ -468,12 +471,6 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		m.lo.Error("error fetching updated message for webhook event", "uuid", message.UUID, "error", err)
 	} else {
 		m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, updatedMessage)
-	}
-
-	// Evaluate automation rules for outgoing message event.
-	conversation, err := m.GetConversation(0, message.ConversationUUID)
-	if err == nil {
-		m.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationMessageOutgoing)
 	}
 
 	return nil

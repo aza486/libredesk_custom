@@ -229,7 +229,7 @@ type queries struct {
 	// Message queries.
 	GetMessage                         *sqlx.Stmt `query:"get-message"`
 	GetMessages                        string     `query:"get-messages"`
-	GetPendingMessages                 *sqlx.Stmt `query:"get-pending-messages"`
+	GetOutgoingPendingMessages         *sqlx.Stmt `query:"get-outgoing-pending-messages"`
 	GetMessageSourceIDs                *sqlx.Stmt `query:"get-message-source-ids"`
 	GetConversationUUIDFromMessageUUID *sqlx.Stmt `query:"get-conversation-uuid-from-message-uuid"`
 	InsertMessage                      *sqlx.Stmt `query:"insert-message"`

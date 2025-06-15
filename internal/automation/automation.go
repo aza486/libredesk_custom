@@ -289,7 +289,7 @@ func (e *Engine) EvaluateNewConversationRules(conversation cmodels.Conversation)
 	}
 }
 
-// EvaluateConversationUpdateRules enqueues an updated conversation for rule evaluation.
+// EvaluateConversationUpdateRules enqueues a conversation for rule evaluation, this function exists along with EvaluateConversationUpdateRulesByID to reduce DB queries for fetching conversations.
 func (e *Engine) EvaluateConversationUpdateRules(conversation cmodels.Conversation, eventType string) {
 	if eventType == "" {
 		e.lo.Error("error evaluating conversation update rules: eventType is empty")
@@ -310,6 +310,17 @@ func (e *Engine) EvaluateConversationUpdateRules(conversation cmodels.Conversati
 		// Queue is full.
 		e.lo.Warn("EvaluateConversationUpdateRules: updateConversationQ is full, unable to enqueue conversation")
 	}
+}
+
+// EvaluateConversationUpdateRulesByID fetches conversation by ID and enqueues for rule evaluation,
+// This function is useful when callers want to fresh fetch the conversation from the database instead of passing it directly as they might have a stale copy.
+func (e *Engine) EvaluateConversationUpdateRulesByID(conversationID int, conversationUUID, eventType string) {
+	conversation, err := e.conversationStore.GetConversation(conversationID, conversationUUID)
+	if err != nil {
+		e.lo.Error("error fetching conversation", "conversation_id", conversationID, "error", err)
+		return
+	}
+	e.EvaluateConversationUpdateRules(conversation, eventType)
 }
 
 // handleNewConversation handles new conversation events.
