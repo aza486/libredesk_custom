@@ -34,7 +34,7 @@ export const createColumns = (t) => [
         h(
           Badge,
           { variant: 'secondary', class: 'text-xs' },
-          () => `${events.length} ${t('globals.terms.event', 2)}`
+          () => `${events.length} ${t('globals.terms.event', 2).toLowerCase()}`
         )
       ])
     }
