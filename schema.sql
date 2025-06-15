@@ -594,8 +594,6 @@ CREATE TABLE webhooks (
 	CONSTRAINT constraint_webhooks_on_secret CHECK (length(secret) <= 255),
 	CONSTRAINT constraint_webhooks_on_events_not_empty CHECK (array_length(events, 1) > 0)
 );
-CREATE INDEX index_webhooks_on_created_at ON webhooks (created_at);
-CREATE INDEX index_webhooks_on_events ON webhooks USING GIN (events);
 
 INSERT INTO ai_providers
 ("name", provider, config, is_default)

@@ -48,7 +48,6 @@ func V0_7_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 			CONSTRAINT constraint_webhooks_on_secret CHECK (length(secret) <= 255),
 			CONSTRAINT constraint_webhooks_on_events_not_empty CHECK (array_length(events, 1) > 0)
 		);
-		CREATE INDEX IF NOT EXISTS index_webhooks_on_is_active ON webhooks (is_active);
 	`)
 	if err != nil {
 		return err
