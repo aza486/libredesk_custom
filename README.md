@@ -36,6 +36,8 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
   Instantly rewrite responses with AI to make them more friendly, professional, or polished.
 - **Activity logs**  
   Track all actions performed by agents and admins—updates and key events across the system—for auditing and accountability.
+- **Webhooks**  
+  Integrate with external systems using real-time HTTP notifications for conversation and message events.
 - **Command Bar**  
   Opens with a simple shortcut (CTRL+K) and lets you quickly perform actions on conversations.
 
