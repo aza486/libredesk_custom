@@ -48,6 +48,8 @@ SELECT
     u.last_login_at,
     u.phone_number_calling_code,
     u.phone_number,
+    u.api_key,
+    u.api_key_last_used_at,
     array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL) AS roles,
     COALESCE(
         (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
@@ -220,3 +222,51 @@ SELECT
 FROM contact_notes cn
 INNER JOIN users u ON u.id = cn.user_id
 WHERE cn.id = $1;
+
+-- name: get-user-by-api-key
+SELECT
+    u.id,
+    u.created_at,
+    u.updated_at,
+    u.email,
+    u.type,
+    u.enabled,
+    u.avatar_url,
+    u.first_name,
+    u.last_name,
+    u.availability_status,
+    u.last_active_at,
+    u.last_login_at,
+    u.phone_number_calling_code,
+    u.phone_number,
+    u.api_secret,
+    array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL) AS roles,
+    COALESCE(
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'emoji', t.emoji))
+         FROM team_members tm
+         JOIN teams t ON tm.team_id = t.id
+         WHERE tm.user_id = u.id),
+        '[]'
+    ) AS teams,
+    array_agg(DISTINCT p ORDER BY p) FILTER (WHERE p IS NOT NULL) AS permissions
+FROM users u
+LEFT JOIN user_roles ur ON ur.user_id = u.id
+LEFT JOIN roles r ON r.id = ur.role_id
+LEFT JOIN LATERAL unnest(r.permissions) AS p ON true
+WHERE u.api_key = $1 AND u.enabled = true AND u.deleted_at IS NULL
+GROUP BY u.id;
+
+-- name: generate-api-key
+UPDATE users 
+SET api_key = $2, api_secret = $3, api_key_last_used_at = NULL, updated_at = now()
+WHERE id = $1;
+
+-- name: revoke-api-key
+UPDATE users 
+SET api_key = NULL, api_secret = NULL, api_key_last_used_at = NULL, updated_at = now()
+WHERE id = $1;
+
+-- name: update-api-key-last-used
+UPDATE users 
+SET api_key_last_used_at = now()
+WHERE id = $1;

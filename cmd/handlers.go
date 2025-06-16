@@ -110,6 +110,8 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.POST("/api/v1/agents", perm(handleCreateAgent, "users:manage"))
 	g.PUT("/api/v1/agents/{id}", perm(handleUpdateAgent, "users:manage"))
 	g.DELETE("/api/v1/agents/{id}", perm(handleDeleteAgent, "users:manage"))
+	g.POST("/api/v1/agents/{id}/api-key", perm(handleGenerateAPIKey, "users:manage"))
+	g.DELETE("/api/v1/agents/{id}/api-key", perm(handleRevokeAPIKey, "users:manage"))
 	g.POST("/api/v1/agents/reset-password", tryAuth(handleResetPassword))
 	g.POST("/api/v1/agents/set-password", tryAuth(handleSetPassword))
 

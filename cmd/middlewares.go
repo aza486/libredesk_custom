@@ -6,30 +6,77 @@ import (
 
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	"github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 	"github.com/zerodha/simplesessions/v3"
 )
 
+// authenticateUser handles both API key and session-based authentication
+// Returns the authenticated user or an error
+func authenticateUser(r *fastglue.Request, app *App) (models.User, error) {
+	var user models.User
+
+	// Check for Authorization header first (API key authentication)
+	apiKey, apiSecret, err := r.ParseAuthHeader(fastglue.AuthBasic | fastglue.AuthToken)
+	if err == nil && len(apiKey) > 0 && len(apiSecret) > 0 {
+		// API key authentication
+		user, err = app.user.ValidateAPIKey(string(apiKey), string(apiSecret))
+		if err != nil {
+			return user, err
+		}
+		return user, nil
+	}
+
+	// Session-based authentication
+	cookieToken := string(r.RequestCtx.Request.Header.Cookie("csrf_token"))
+	hdrToken := string(r.RequestCtx.Request.Header.Peek("X-CSRFTOKEN"))
+
+	// Match CSRF token from cookie and header.
+	if cookieToken == "" || hdrToken == "" || cookieToken != hdrToken {
+		app.lo.Error("csrf token mismatch", "cookie_token", cookieToken, "header_token", hdrToken)
+		return user, envelope.NewError(envelope.PermissionError, app.i18n.T("auth.csrfTokenMismatch"), nil)
+	}
+
+	// Validate session and fetch user.
+	sessUser, err := app.auth.ValidateSession(r)
+	if err != nil || sessUser.ID <= 0 {
+		app.lo.Error("error validating session", "error", err)
+		return user, envelope.NewError(envelope.GeneralError, app.i18n.T("auth.invalidOrExpiredSession"), nil)
+	}
+
+	// Get agent user from cache or load it.
+	user, err = app.user.GetAgentCachedOrLoad(sessUser.ID)
+	if err != nil {
+		return user, err
+	}
+
+	// Destroy session if user is disabled.
+	if !user.Enabled {
+		if err := app.auth.DestroySession(r); err != nil {
+			app.lo.Error("error destroying session", "error", err)
+		}
+		return user, envelope.NewError(envelope.PermissionError, app.i18n.T("user.accountDisabled"), nil)
+	}
+
+	return user, nil
+}
+
 // tryAuth attempts to authenticate the user and add them to the context but doesn't enforce authentication.
 // Handlers can check if user exists in context optionally.
+// Supports both API key authentication (Authorization header) and session-based authentication.
 func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		app := r.Context.(*App)
 
-		// Try to validate session without returning error.
-		userSession, err := app.auth.ValidateSession(r)
-		if err != nil || userSession.ID <= 0 {
-			return handler(r)
-		}
-
-		// Try to get user.
-		user, err := app.user.GetAgentCachedOrLoad(userSession.ID)
+		// Try to authenticate user using shared authentication logic, but don't return errors
+		user, err := authenticateUser(r, app)
 		if err != nil {
+			// Authentication failed, but this is optional, so continue without user
 			return handler(r)
 		}
 
-		// Set user in context if found.
+		// Set user in context if authentication succeeded.
 		r.RequestCtx.SetUserValue("user", amodels.User{
 			ID:        user.ID,
 			Email:     user.Email.String,
@@ -41,23 +88,25 @@ func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	}
 }
 
-// auth validates the session and adds the user to the request context.
+// auth validates the session or API key and adds the user to the request context.
+// Supports both API key authentication (Authorization header) and session-based authentication.
 func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
 		var app = r.Context.(*App)
 
-		// Validate session and fetch user.
-		userSession, err := app.auth.ValidateSession(r)
-		if err != nil || userSession.ID <= 0 {
-			app.lo.Error("error validating session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, app.i18n.T("auth.invalidOrExpiredSession"), nil, envelope.GeneralError)
+		// Authenticate user using shared authentication logic
+		user, err := authenticateUser(r, app)
+		if err != nil {
+			if envErr, ok := err.(envelope.Error); ok {
+				if envErr.ErrorType == envelope.PermissionError {
+					return r.SendErrorEnvelope(http.StatusForbidden, envErr.Message, nil, envelope.PermissionError)
+				}
+				return r.SendErrorEnvelope(http.StatusUnauthorized, envErr.Message, nil, envelope.GeneralError)
+			}
+			return sendErrorEnvelope(r, err)
 		}
 
 		// Set user in the request context.
-		user, err := app.user.GetAgentCachedOrLoad(userSession.ID)
-		if err != nil {
-			return sendErrorEnvelope(r, err)
-		}
 		r.RequestCtx.SetUserValue("user", amodels.User{
 			ID:        user.ID,
 			Email:     user.Email.String,
@@ -69,41 +118,22 @@ func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 	}
 }
 
-// perm matches the CSRF token and checks if the user has the required permission to access the endpoint.
-// and sets the user in the request context.
+// perm checks if the user has the required permission to access the endpoint.
+// Supports both API key authentication (Authorization header) and session-based authentication.
 func perm(handler fastglue.FastRequestHandler, perm string) fastglue.FastRequestHandler {
 	return func(r *fastglue.Request) error {
-		var (
-			app         = r.Context.(*App)
-			cookieToken = string(r.RequestCtx.Request.Header.Cookie("csrf_token"))
-			hdrToken    = string(r.RequestCtx.Request.Header.Peek("X-CSRFTOKEN"))
-		)
+		var app = r.Context.(*App)
 
-		// Match CSRF token from cookie and header.
-		if cookieToken == "" || hdrToken == "" || cookieToken != hdrToken {
-			app.lo.Error("csrf token mismatch", "cookie_token", cookieToken, "header_token", hdrToken)
-			return r.SendErrorEnvelope(http.StatusForbidden, app.i18n.T("auth.csrfTokenMismatch"), nil, envelope.PermissionError)
-		}
-
-		// Validate session and fetch user.
-		sessUser, err := app.auth.ValidateSession(r)
-		if err != nil || sessUser.ID <= 0 {
-			app.lo.Error("error validating session", "error", err)
-			return r.SendErrorEnvelope(http.StatusUnauthorized, app.i18n.T("auth.invalidOrExpiredSession"), nil, envelope.GeneralError)
-		}
-
-		// Get agent user from cache or load it.
-		user, err := app.user.GetAgentCachedOrLoad(sessUser.ID)
+		// Authenticate user using shared authentication logic
+		user, err := authenticateUser(r, app)
 		if err != nil {
-			return sendErrorEnvelope(r, err)
-		}
-
-		// Destroy session if user is disabled.
-		if !user.Enabled {
-			if err := app.auth.DestroySession(r); err != nil {
-				app.lo.Error("error destroying session", "error", err)
+			if envErr, ok := err.(envelope.Error); ok {
+				if envErr.ErrorType == envelope.PermissionError {
+					return r.SendErrorEnvelope(http.StatusForbidden, envErr.Message, nil, envelope.PermissionError)
+				}
+				return r.SendErrorEnvelope(http.StatusUnauthorized, envErr.Message, nil, envelope.GeneralError)
 			}
-			return r.SendErrorEnvelope(http.StatusUnauthorized, app.i18n.T("user.accountDisabled"), nil, envelope.PermissionError)
+			return sendErrorEnvelope(r, err)
 		}
 
 		// Split the permission string into object and action and enforce it.

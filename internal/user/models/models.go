@@ -21,10 +21,10 @@ const (
 	UserTypeContact = "contact"
 
 	// User availability statuses
-	Online             = "online"
-	Offline            = "offline"
+	Online  = "online"
+	Offline = "offline"
 	// Away due to inactivity
-	Away               = "away"
+	Away = "away"
 	// Away due to manual setting from sidebar
 	AwayManual         = "away_manual"
 	AwayAndReassigning = "away_and_reassigning"
@@ -57,6 +57,11 @@ type User struct {
 	InboxID                int             `json:"-"`
 	SourceChannel          null.String     `json:"-"`
 	SourceChannelID        null.String     `json:"-"`
+
+	// API Key fields
+	APIKey           null.String `db:"api_key" json:"api_key"`
+	APIKeyLastUsedAt null.Time   `db:"api_key_last_used_at" json:"api_key_last_used_at"`
+	APISecret        null.String `db:"api_secret" json:"-"`
 
 	Total int `json:"total,omitempty"`
 }

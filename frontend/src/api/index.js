@@ -135,7 +135,11 @@ const updateSettings = (key, data) =>
     }
   })
 const getSettings = (key) => http.get(`/api/v1/settings/${key}`)
-const login = (data) => http.post(`/api/v1/login`, data)
+const login = (data) => http.post(`/api/v1/login`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const getAutomationRules = (type) =>
   http.get(`/api/v1/automations/rules`, {
     params: { type: type }
@@ -211,9 +215,21 @@ const getUser = (id) => http.get(`/api/v1/agents/${id}`)
 const deleteUserAvatar = () => http.delete('/api/v1/agents/me/avatar')
 const getCurrentUser = () => http.get('/api/v1/agents/me')
 const getCurrentUserTeams = () => http.get('/api/v1/agents/me/teams')
-const updateCurrentUserAvailability = (data) => http.put('/api/v1/agents/me/availability', data)
-const resetPassword = (data) => http.post('/api/v1/agents/reset-password', data)
-const setPassword = (data) => http.post('/api/v1/agents/set-password', data)
+const updateCurrentUserAvailability = (data) => http.put('/api/v1/agents/me/availability', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const resetPassword = (data) => http.post('/api/v1/agents/reset-password', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const setPassword = (data) => http.post('/api/v1/agents/set-password', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const deleteUser = (id) => http.delete(`/api/v1/agents/${id}`)
 const createUser = (data) =>
   http.post('/api/v1/agents', data, {
@@ -358,6 +374,15 @@ const deleteWebhook = (id) => http.delete(`/api/v1/webhooks/${id}`)
 const toggleWebhook = (id) => http.put(`/api/v1/webhooks/${id}/toggle`)
 const testWebhook = (id) => http.post(`/api/v1/webhooks/${id}/test`)
 
+const generateAPIKey = (id) => 
+  http.post(`/api/v1/agents/${id}/api-key`, {}, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+
+const revokeAPIKey = (id) => http.delete(`/api/v1/agents/${id}/api-key`)
+
 export default {
   login,
   deleteUser,
@@ -492,5 +517,7 @@ export default {
   updateWebhook,
   deleteWebhook,
   toggleWebhook,
-  testWebhook
+  testWebhook,
+  generateAPIKey,
+  revokeAPIKey
 }

@@ -63,5 +63,24 @@ func V0_7_0(db *sqlx.DB, fs stuffbin.FileSystem, ko *koanf.Koanf) error {
 		return err
 	}
 
+	// Add API key authentication fields to users table
+	_, err = db.Exec(`
+		ALTER TABLE users 
+		ADD COLUMN IF NOT EXISTS api_key TEXT NULL,
+		ADD COLUMN IF NOT EXISTS api_secret TEXT NULL,
+		ADD COLUMN IF NOT EXISTS api_key_last_used_at TIMESTAMPTZ NULL;
+	`)
+	if err != nil {
+		return err
+	}
+
+	// Create index for API key field
+	_, err = db.Exec(`
+		CREATE INDEX IF NOT EXISTS index_users_on_api_key ON users(api_key);
+	`)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

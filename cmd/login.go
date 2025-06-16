@@ -9,17 +9,26 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+type loginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
 // handleLogin logs in the user and returns the user.
 func handleLogin(r *fastglue.Request) error {
 	var (
 		app      = r.Context.(*App)
-		email    = string(r.RequestCtx.PostArgs().Peek("email"))
-		password = r.RequestCtx.PostArgs().Peek("password")
 		ip       = realip.FromRequest(r.RequestCtx)
+		loginReq loginRequest
 	)
 
+	// Decode JSON request.
+	if err := r.Decode(&loginReq, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
 	// Verify email and password.
-	user, err := app.user.VerifyPassword(email, password)
+	user, err := app.user.VerifyPassword(loginReq.Email, []byte(loginReq.Password))
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
