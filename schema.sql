@@ -154,7 +154,7 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX index_unique_users_on_email_and_type_when_deleted_at_is_null ON users (email, type)
 WHERE deleted_at IS NULL;
 CREATE INDEX index_tgrm_users_on_email ON users USING GIN (email gin_trgm_ops);
-CREATE INDEX index_users_on_api_key ON users(api_key) WHERE api_key;
+CREATE INDEX index_users_on_api_key ON users(api_key);
 
 DROP TABLE IF EXISTS user_roles CASCADE;
 CREATE TABLE user_roles (
