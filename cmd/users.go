@@ -434,20 +434,22 @@ func handleSetPassword(r *fastglue.Request) error {
 	var (
 		app       = r.Context.(*App)
 		agent, ok = r.RequestCtx.UserValue("user").(amodels.User)
-		p         = r.RequestCtx.PostArgs()
-		password  = string(p.Peek("password"))
-		token     = string(p.Peek("token"))
+		req       = SetPasswordRequest{}
 	)
 
 	if ok && agent.ID > 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("user.userAlreadyLoggedIn"), nil, envelope.InputError)
 	}
 
-	if password == "" {
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
+	}
+
+	if req.Password == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.password}"), nil, envelope.InputError)
 	}
 
-	if err := app.user.ResetPassword(token, password); err != nil {
+	if err := app.user.ResetPassword(req.Token, req.Password); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
 
@@ -19,16 +18,37 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+type assigneeChangeReq struct {
+	AssigneeID int `json:"assignee_id"`
+}
+
+type teamAssigneeChangeReq struct {
+	AssigneeID int `json:"assignee_id"`
+}
+
+type priorityUpdateReq struct {
+	Priority string `json:"priority"`
+}
+
+type statusUpdateReq struct {
+	Status       string `json:"status"`
+	SnoozedUntil string `json:"snoozed_until,omitempty"`
+}
+
+type tagsUpdateReq struct {
+	Tags []string `json:"tags"`
+}
+
 type createConversationRequest struct {
-	InboxID         int    `json:"inbox_id" form:"inbox_id"`
-	AssignedAgentID int    `json:"agent_id" form:"agent_id"`
-	AssignedTeamID  int    `json:"team_id" form:"team_id"`
-	Email           string `json:"contact_email" form:"contact_email"`
-	FirstName       string `json:"first_name" form:"first_name"`
-	LastName        string `json:"last_name" form:"last_name"`
-	Subject         string `json:"subject" form:"subject"`
-	Content         string `json:"content" form:"content"`
-	Attachments     []int  `json:"attachments" form:"attachments"`
+	InboxID         int    `json:"inbox_id"`
+	AssignedAgentID int    `json:"agent_id"`
+	AssignedTeamID  int    `json:"team_id"`
+	Email           string `json:"contact_email"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Subject         string `json:"subject"`
+	Content         string `json:"content"`
+	Attachments     []int  `json:"attachments"`
 }
 
 // handleGetAllConversations retrieves all conversations.
@@ -304,13 +324,15 @@ func handleGetConversationParticipants(r *fastglue.Request) error {
 // handleUpdateUserAssignee updates the user assigned to a conversation.
 func handleUpdateUserAssignee(r *fastglue.Request) error {
 	var (
-		app        = r.Context.(*App)
-		uuid       = r.RequestCtx.UserValue("uuid").(string)
-		auser      = r.RequestCtx.UserValue("user").(amodels.User)
-		assigneeID = r.RequestCtx.PostArgs().GetUintOrZero("assignee_id")
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		req   = assigneeChangeReq{}
 	)
-	if assigneeID == 0 {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`assignee_id`"), nil, envelope.InputError)
+
+	if err := r.Decode(&req, "json"); err != nil {
+		app.lo.Error("error decoding assignee change request", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
 	user, err := app.user.GetAgent(auser.ID, "")
@@ -324,11 +346,11 @@ func handleUpdateUserAssignee(r *fastglue.Request) error {
 	}
 
 	// Already assigned?
-	if conversation.AssignedUserID.Int == assigneeID {
+	if conversation.AssignedUserID.Int == req.AssigneeID {
 		return r.SendEnvelope(true)
 	}
 
-	if err := app.conversation.UpdateConversationUserAssignee(uuid, assigneeID, user); err != nil {
+	if err := app.conversation.UpdateConversationUserAssignee(uuid, req.AssigneeID, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -341,11 +363,15 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		uuid  = r.RequestCtx.UserValue("uuid").(string)
 		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		req   = teamAssigneeChangeReq{}
 	)
-	assigneeID, err := r.RequestCtx.PostArgs().GetUint("assignee_id")
-	if err != nil {
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`assignee_id`"), nil, envelope.InputError)
+
+	if err := r.Decode(&req, "json"); err != nil {
+		app.lo.Error("error decoding team assignee change request", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
+
+	assigneeID := req.AssigneeID
 
 	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
@@ -376,11 +402,18 @@ func handleUpdateTeamAssignee(r *fastglue.Request) error {
 // handleUpdateConversationPriority updates the priority of a conversation.
 func handleUpdateConversationPriority(r *fastglue.Request) error {
 	var (
-		app      = r.Context.(*App)
-		uuid     = r.RequestCtx.UserValue("uuid").(string)
-		auser    = r.RequestCtx.UserValue("user").(amodels.User)
-		priority = string(r.RequestCtx.PostArgs().Peek("priority"))
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		req   = priorityUpdateReq{}
 	)
+
+	if err := r.Decode(&req, "json"); err != nil {
+		app.lo.Error("error decoding priority update request", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
+	priority := req.Priority
 	if priority == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`priority`"), nil, envelope.InputError)
 	}
@@ -403,12 +436,19 @@ func handleUpdateConversationPriority(r *fastglue.Request) error {
 // handleUpdateConversationStatus updates the status of a conversation.
 func handleUpdateConversationStatus(r *fastglue.Request) error {
 	var (
-		app          = r.Context.(*App)
-		status       = string(r.RequestCtx.PostArgs().Peek("status"))
-		snoozedUntil = string(r.RequestCtx.PostArgs().Peek("snoozed_until"))
-		uuid         = r.RequestCtx.UserValue("uuid").(string)
-		auser        = r.RequestCtx.UserValue("user").(amodels.User)
+		app   = r.Context.(*App)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		req   = statusUpdateReq{}
 	)
+
+	if err := r.Decode(&req, "json"); err != nil {
+		app.lo.Error("error decoding status update request", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
+	status := req.Status
+	snoozedUntil := req.SnoozedUntil
 
 	// Validate inputs
 	if status == "" {
@@ -463,17 +503,18 @@ func handleUpdateConversationStatus(r *fastglue.Request) error {
 // handleUpdateConversationtags updates conversation tags.
 func handleUpdateConversationtags(r *fastglue.Request) error {
 	var (
-		app      = r.Context.(*App)
-		tagNames = []string{}
-		tagJSON  = r.RequestCtx.PostArgs().Peek("tags")
-		auser    = r.RequestCtx.UserValue("user").(amodels.User)
-		uuid     = r.RequestCtx.UserValue("uuid").(string)
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+		req   = tagsUpdateReq{}
 	)
 
-	if err := json.Unmarshal(tagJSON, &tagNames); err != nil {
-		app.lo.Error("error unmarshalling tags JSON", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	if err := r.Decode(&req, "json"); err != nil {
+		app.lo.Error("error decoding tags update request", "error", err)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
+
+	tagNames := req.Tags
 
 	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {

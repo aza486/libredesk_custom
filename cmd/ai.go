@@ -5,6 +5,11 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+type aiCompletionReq struct {
+	PromptKey string `json:"prompt_key"`
+	Content   string `json:"content"`
+}
+
 type providerUpdateReq struct {
 	Provider string `json:"provider"`
 	APIKey   string `json:"api_key"`
@@ -13,11 +18,15 @@ type providerUpdateReq struct {
 // handleAICompletion handles AI completion requests
 func handleAICompletion(r *fastglue.Request) error {
 	var (
-		app       = r.Context.(*App)
-		promptKey = string(r.RequestCtx.PostArgs().Peek("prompt_key"))
-		content   = string(r.RequestCtx.PostArgs().Peek("content"))
+		app = r.Context.(*App)
+		req = aiCompletionReq{}
 	)
-	resp, err := app.ai.Completion(promptKey, content)
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
+	}
+
+	resp, err := app.ai.Completion(req.PromptKey, req.Content)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

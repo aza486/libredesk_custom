@@ -9,6 +9,10 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+type updateAutomationRuleExecutionModeReq struct {
+	Mode string `json:"mode"`
+}
+
 // handleGetAutomationRules gets all automation rules
 func handleGetAutomationRules(r *fastglue.Request) error {
 	var (
@@ -118,14 +122,20 @@ func handleUpdateAutomationRuleWeights(r *fastglue.Request) error {
 // handleUpdateAutomationRuleExecutionMode updates the execution mode of the automation rules for a given type
 func handleUpdateAutomationRuleExecutionMode(r *fastglue.Request) error {
 	var (
-		app  = r.Context.(*App)
-		mode = string(r.RequestCtx.PostArgs().Peek("mode"))
+		app = r.Context.(*App)
+		req = updateAutomationRuleExecutionModeReq{}
 	)
-	if mode != amodels.ExecutionModeAll && mode != amodels.ExecutionModeFirstMatch {
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
+	}
+
+	if req.Mode != amodels.ExecutionModeAll && req.Mode != amodels.ExecutionModeFirstMatch {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("automation.invalidRuleExecutionMode"), nil, envelope.InputError)
 	}
+
 	// Only new conversation rules can be updated as they are the only ones that have execution mode.
-	if err := app.automation.UpdateRuleExecutionMode(amodels.RuleTypeNewConversation, mode); err != nil {
+	if err := app.automation.UpdateRuleExecutionMode(amodels.RuleTypeNewConversation, req.Mode); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

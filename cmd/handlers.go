@@ -15,7 +15,7 @@ import (
 // initHandlers initializes the HTTP routes and handlers for the application.
 func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	// Authentication.
-	g.POST("/api/v1/login", handleLogin)
+	g.POST("/api/v1/auth/login", handleLogin)
 	g.GET("/logout", auth(handleLogout))
 	g.GET("/api/v1/oidc/{id}/login", handleOIDCLogin)
 	g.GET("/api/v1/oidc/{id}/finish", handleOIDCCallback)
