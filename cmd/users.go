@@ -557,15 +557,15 @@ func handleGenerateAPIKey(r *fastglue.Request) error {
 // handleRevokeAPIKey revokes a user's API key
 func handleRevokeAPIKey(r *fastglue.Request) error {
 	var (
-		app     = r.Context.(*App)
-		id, err = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		app   = r.Context.(*App)
+		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	if err != nil || id == 0 {
+	if id <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 
 	// Check if user exists
-	_, err = app.user.GetAgent(id, "")
+	_, err := app.user.GetAgent(id, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -575,7 +575,5 @@ func handleRevokeAPIKey(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(map[string]string{
-		"message": app.i18n.Ts("globals.messages.revokedSuccessfully", "name", app.i18n.T("globals.terms.apiKey")),
-	})
+	return r.SendEnvelope(true)
 }

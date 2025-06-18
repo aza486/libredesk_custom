@@ -302,6 +302,72 @@ func (u *Manager) ToggleEnabled(id int, typ string, enabled bool) error {
 	return nil
 }
 
+// GenerateAPIKey generates a new API key and secret for a user
+func (u *Manager) GenerateAPIKey(userID int) (string, string, error) {
+	// Generate API key (32 characters)
+	apiKey, err := stringutil.RandomAlphanumeric(32)
+	if err != nil {
+		u.lo.Error("error generating API key", "error", err, "user_id", userID)
+		return "", "", envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorGenerating", "name", "{globals.terms.apiKey}"), nil)
+	}
+
+	// Generate API secret (64 characters)
+	apiSecret, err := stringutil.RandomAlphanumeric(64)
+	if err != nil {
+		u.lo.Error("error generating API secret", "error", err, "user_id", userID)
+		return "", "", envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorGenerating", "name", "{globals.terms.apiKey}"), nil)
+	}
+
+	// Hash the API secret for storage
+	secretHash, err := bcrypt.GenerateFromPassword([]byte(apiSecret), bcrypt.DefaultCost)
+	if err != nil {
+		u.lo.Error("error hashing API secret", "error", err, "user_id", userID)
+		return "", "", envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorGenerating", "name", "{globals.terms.apiKey}"), nil)
+	}
+
+	// Update user with API key.
+	if _, err := u.q.GenerateAPIKey.Exec(userID, apiKey, string(secretHash)); err != nil {
+		u.lo.Error("error saving API key", "error", err, "user_id", userID)
+		return "", "", envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorGenerating", "name", "{globals.terms.apiKey}"), nil)
+	}
+
+	return apiKey, apiSecret, nil
+}
+
+// ValidateAPIKey validates API key and secret and returns the user
+func (u *Manager) ValidateAPIKey(apiKey, apiSecret string) (models.User, error) {
+	var user models.User
+
+	// Find user by API key.
+	if err := u.q.GetUserByAPIKey.Get(&user, apiKey); err != nil {
+		if err == sql.ErrNoRows {
+			return user, envelope.NewError(envelope.UnauthorizedError, u.i18n.Ts("globals.messages.invalid", "name", u.i18n.P("globals.terms.credential")), nil)
+		}
+		return user, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.user}"), nil)
+	}
+
+	// Verify API secret.
+	if err := bcrypt.CompareHashAndPassword([]byte(user.APISecret.String), []byte(apiSecret)); err != nil {
+		return user, envelope.NewError(envelope.UnauthorizedError, u.i18n.Ts("globals.messages.invalid", "name", u.i18n.T("globals.terms.credential")), nil)
+	}
+
+	// Update last used timestamp.
+	if _, err := u.q.UpdateAPIKeyLastUsed.Exec(user.ID); err != nil {
+		u.lo.Error("failed to update API key last used timestamp", "error", err, "user_id", user.ID)
+	}
+
+	return user, nil
+}
+
+// RevokeAPIKey deactivates the API key for a user
+func (u *Manager) RevokeAPIKey(userID int) error {
+	if _, err := u.q.RevokeAPIKey.Exec(userID); err != nil {
+		u.lo.Error("error revoking API key", "error", err, "user_id", userID)
+		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorRevoking", "name", "{globals.terms.apiKey}"), nil)
+	}
+	return nil
+}
+
 // ChangeSystemUserPassword updates the system user's password with a newly prompted one.
 func ChangeSystemUserPassword(ctx context.Context, db *sqlx.DB) error {
 	// Prompt for password and get hashed password
@@ -400,69 +466,6 @@ func updateSystemUserPassword(db *sqlx.DB, hashedPassword []byte) error {
 	_, err := db.Exec(`UPDATE users SET password = $1 WHERE email = $2`, hashedPassword, models.SystemUserEmail)
 	if err != nil {
 		return fmt.Errorf("failed to update system user password: %v", err)
-	}
-	return nil
-}
-
-// GenerateAPIKey generates a new API key and secret for a user
-func (u *Manager) GenerateAPIKey(userID int) (string, string, error) {
-	// Generate API key (32 characters)
-	apiKey, err := stringutil.RandomAlphanumeric(32)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate API key: %v", err)
-	}
-
-	// Generate API secret (64 characters)
-	apiSecret, err := stringutil.RandomAlphanumeric(64)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate API secret: %v", err)
-	}
-
-	// Hash the API secret for storage
-	secretHash, err := bcrypt.GenerateFromPassword([]byte(apiSecret), bcrypt.DefaultCost)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to hash API secret: %v", err)
-	}
-
-	// Update user with API key.
-	if _, err := u.q.GenerateAPIKey.Exec(userID, apiKey, string(secretHash)); err != nil {
-		return "", "", fmt.Errorf("failed to generate API key: %v", err)
-	}
-
-	return apiKey, apiSecret, nil
-}
-
-// ValidateAPIKey validates API key and secret and returns the user
-func (u *Manager) ValidateAPIKey(apiKey, apiSecret string) (models.User, error) {
-	var user models.User
-
-	// Find user by API key.
-	err := u.q.GetUserByAPIKey.Get(&user, apiKey)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return user, envelope.NewError(envelope.UnauthorizedError, u.i18n.Ts("globals.messages.invalid", "name", u.i18n.T("globals.terms.credential")), nil)
-		}
-		return user, fmt.Errorf("fetching error by api key: %v", err)
-	}
-
-	// Verify API secret.
-	if err := bcrypt.CompareHashAndPassword([]byte(user.APISecret.String), []byte(apiSecret)); err != nil {
-		return user, envelope.NewError(envelope.UnauthorizedError, u.i18n.Ts("globals.messages.invalid", "name", u.i18n.T("globals.terms.credential")), nil)
-	}
-
-	// Update last used timestamp.
-	if _, err := u.q.UpdateAPIKeyLastUsed.Exec(user.ID); err != nil {
-		u.lo.Error("failed to update API key last used timestamp", "error", err, "user_id", user.ID)
-	}
-
-	return user, nil
-}
-
-// RevokeAPIKey deactivates the API key for a user
-func (u *Manager) RevokeAPIKey(userID int) error {
-	if _, err := u.q.RevokeAPIKey.Exec(userID); err != nil {
-		return fmt.Errorf("failed to revoke API key: %v", err)
 	}
 	return nil
 }
