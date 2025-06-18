@@ -10,8 +10,8 @@ import (
 )
 
 type loginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // handleLogin logs in the user and returns the user.
@@ -25,6 +25,10 @@ func handleLogin(r *fastglue.Request) error {
 	// Decode JSON request.
 	if err := r.Decode(&loginReq, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
+	if loginReq.Email == "" || loginReq.Password == "" {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
 	}
 
 	// Verify email and password.
