@@ -14,13 +14,13 @@ import (
 
 // authenticateUser handles both API key and session-based authentication
 // Returns the authenticated user or an error
-func authenticateUser(r *fastglue.Request, app *App, checkCsrf bool) (models.User, error) {
+// For session-based auth, CSRF is checked for POST/PUT/DELETE requests
+func authenticateUser(r *fastglue.Request, app *App) (models.User, error) {
 	var user models.User
 
 	// Check for Authorization header first (API key authentication)
 	apiKey, apiSecret, err := r.ParseAuthHeader(fastglue.AuthBasic | fastglue.AuthToken)
 	if err == nil && len(apiKey) > 0 && len(apiSecret) > 0 {
-		// API key authentication
 		user, err = app.user.ValidateAPIKey(string(apiKey), string(apiSecret))
 		if err != nil {
 			return user, err
@@ -28,14 +28,15 @@ func authenticateUser(r *fastglue.Request, app *App, checkCsrf bool) (models.Use
 		return user, nil
 	}
 
-	// Session-based authentication
-	if checkCsrf {
+	// Session-based authentication - Check CSRF first.
+	method := string(r.RequestCtx.Method())
+	if method == "POST" || method == "PUT" || method == "DELETE" {
 		cookieToken := string(r.RequestCtx.Request.Header.Cookie("csrf_token"))
 		hdrToken := string(r.RequestCtx.Request.Header.Peek("X-CSRFTOKEN"))
 
 		// Match CSRF token from cookie and header.
 		if cookieToken == "" || hdrToken == "" || cookieToken != hdrToken {
-			app.lo.Error("csrf token mismatch", "cookie_token", cookieToken, "header_token", hdrToken)
+			app.lo.Error("csrf token mismatch", "method", method, "cookie_token", cookieToken, "header_token", hdrToken)
 			return user, envelope.NewError(envelope.PermissionError, app.i18n.T("auth.csrfTokenMismatch"), nil)
 		}
 	}
@@ -72,7 +73,7 @@ func tryAuth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		app := r.Context.(*App)
 
 		// Try to authenticate user using shared authentication logic, but don't return errors
-		user, err := authenticateUser(r, app, true)
+		user, err := authenticateUser(r, app)
 		if err != nil {
 			// Authentication failed, but this is optional, so continue without user
 			return handler(r)
@@ -97,7 +98,7 @@ func auth(handler fastglue.FastRequestHandler) fastglue.FastRequestHandler {
 		var app = r.Context.(*App)
 
 		// Authenticate user using shared authentication logic
-		user, err := authenticateUser(r, app, false)
+		user, err := authenticateUser(r, app)
 		if err != nil {
 			if envErr, ok := err.(envelope.Error); ok {
 				if envErr.ErrorType == envelope.PermissionError {
@@ -127,7 +128,7 @@ func perm(handler fastglue.FastRequestHandler, perm string) fastglue.FastRequest
 		var app = r.Context.(*App)
 
 		// Authenticate user using shared authentication logic
-		user, err := authenticateUser(r, app, true)
+		user, err := authenticateUser(r, app)
 		if err != nil {
 			if envErr, ok := err.(envelope.Error); ok {
 				if envErr.ErrorType == envelope.PermissionError {
