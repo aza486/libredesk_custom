@@ -162,7 +162,7 @@ watch(
     }
 
     conversationStore.upsertTags({
-      tags: JSON.stringify(newTags)
+      tags: newTags
     })
   },
   { immediate: false }
@@ -184,13 +184,13 @@ const fetchTags = async () => {
 
 const handleAssignedUserChange = (id) => {
   conversationStore.updateAssignee('user', {
-    assignee_id: id
+    assignee_id: parseInt(id)
   })
 }
 
 const handleAssignedTeamChange = (id) => {
   conversationStore.updateAssignee('team', {
-    assignee_id: id
+    assignee_id: parseInt(id)
   })
 }
 

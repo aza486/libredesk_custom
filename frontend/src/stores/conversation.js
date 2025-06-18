@@ -245,9 +245,11 @@ export const useConversationStore = defineStore('conversation', () => {
     if (!conv || !msgData || !inboxEmail) return
 
     const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true)
-    if (!latestMessage) return
-
-    if (!["received", "sent"].includes(latestMessage.status)) {
+    if (!latestMessage) {
+      // Reset recipients if no latest message is found.
+      currentTo.value = []
+      currentCC.value = []
+      currentBCC.value = []
       return
     }
 

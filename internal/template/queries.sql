@@ -23,7 +23,7 @@ WHERE id != $1 AND $4 = TRUE;
 SELECT id, type, name, body, subject FROM templates WHERE is_default is TRUE;
 
 -- name: get-all
-SELECT id, type, name, is_default, updated_at FROM templates WHERE type = $1 ORDER BY updated_at DESC;
+SELECT id, created_at, updated_at, type, name, is_default, is_builtin FROM templates WHERE type = $1 ORDER BY updated_at DESC;
 
 -- name: get-template
 SELECT id, type, name, body, subject, is_default, type FROM templates WHERE id = $1;

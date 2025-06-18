@@ -14,6 +14,14 @@ import (
 	"github.com/zerodha/fastglue"
 )
 
+type createContactNoteReq struct {
+	Note string `json:"note"`
+}
+
+type blockContactReq struct {
+	Enabled bool `json:"enabled"`
+}
+
 // handleGetContacts returns a list of contacts from the database.
 func handleGetContacts(r *fastglue.Request) error {
 	var (
@@ -185,12 +193,17 @@ func handleCreateContactNote(r *fastglue.Request) error {
 		app          = r.Context.(*App)
 		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 		auser        = r.RequestCtx.UserValue("user").(amodels.User)
-		note         = string(r.RequestCtx.PostArgs().Peek("note"))
+		req          = createContactNoteReq{}
 	)
-	if len(note) == 0 {
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
+	}
+
+	if len(req.Note) == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "note"), nil, envelope.InputError)
 	}
-	if err := app.user.CreateNote(contactID, auser.ID, note); err != nil {
+	if err := app.user.CreateNote(contactID, auser.ID, req.Note); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -238,12 +251,18 @@ func handleBlockContact(r *fastglue.Request) error {
 	var (
 		app          = r.Context.(*App)
 		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
-		enabled      = r.RequestCtx.PostArgs().GetBool("enabled")
+		req          = blockContactReq{}
 	)
+
 	if contactID <= 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
-	if err := app.user.ToggleEnabled(contactID, models.UserTypeContact, enabled); err != nil {
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
+	}
+
+	if err := app.user.ToggleEnabled(contactID, models.UserTypeContact, req.Enabled); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

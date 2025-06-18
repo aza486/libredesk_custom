@@ -26,6 +26,29 @@ const (
 	maxAvatarSizeMB = 2
 )
 
+// Request structs for user-related endpoints
+
+// UpdateAvailabilityRequest represents the request to update user availability
+type UpdateAvailabilityRequest struct {
+	Status string `json:"status"`
+}
+
+// ResetPasswordRequest represents the password reset request
+type ResetPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// SetPasswordRequest represents the set password request
+type SetPasswordRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+// AvailabilityRequest represents the request to update agent availability
+type AvailabilityRequest struct {
+	Status string `json:"status"`
+}
+
 // handleGetAgents returns all agents.
 func handleGetAgents(r *fastglue.Request) error {
 	var (
@@ -67,29 +90,35 @@ func handleGetAgent(r *fastglue.Request) error {
 // handleUpdateAgentAvailability updates the current agent availability.
 func handleUpdateAgentAvailability(r *fastglue.Request) error {
 	var (
-		app    = r.Context.(*App)
-		auser  = r.RequestCtx.UserValue("user").(amodels.User)
-		status = string(r.RequestCtx.PostArgs().Peek("status"))
-		ip     = realip.FromRequest(r.RequestCtx)
+		app      = r.Context.(*App)
+		auser    = r.RequestCtx.UserValue("user").(amodels.User)
+		ip       = realip.FromRequest(r.RequestCtx)
+		availReq AvailabilityRequest
 	)
+
+	// Decode JSON request
+	if err := r.Decode(&availReq, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
 	agent, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Same status?
-	if agent.AvailabilityStatus == status {
+	if agent.AvailabilityStatus == availReq.Status {
 		return r.SendEnvelope(true)
 	}
 
 	// Update availability status.
-	if err := app.user.UpdateAvailability(auser.ID, status); err != nil {
+	if err := app.user.UpdateAvailability(auser.ID, availReq.Status); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
 	// Skip activity log if agent returns online from away (to avoid spam).
-	if !(agent.AvailabilityStatus == models.Away && status == models.Online) {
-		if err := app.activityLog.UserAvailability(auser.ID, auser.Email, status, ip, "", 0); err != nil {
+	if !(agent.AvailabilityStatus == models.Away && availReq.Status == models.Online) {
+		if err := app.activityLog.UserAvailability(auser.ID, auser.Email, availReq.Status, ip, "", 0); err != nil {
 			app.lo.Error("error creating activity log", "error", err)
 		}
 	}
@@ -351,19 +380,23 @@ func handleDeleteCurrentAgentAvatar(r *fastglue.Request) error {
 func handleResetPassword(r *fastglue.Request) error {
 	var (
 		app       = r.Context.(*App)
-		p         = r.RequestCtx.PostArgs()
 		auser, ok = r.RequestCtx.UserValue("user").(amodels.User)
-		email     = string(p.Peek("email"))
+		resetReq  ResetPasswordRequest
 	)
 	if ok && auser.ID > 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("user.userAlreadyLoggedIn"), nil, envelope.InputError)
 	}
 
-	if email == "" {
+	// Decode JSON request
+	if err := r.Decode(&resetReq, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
+	}
+
+	if resetReq.Email == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`email`"), nil, envelope.InputError)
 	}
 
-	agent, err := app.user.GetAgent(0, email)
+	agent, err := app.user.GetAgent(0, resetReq.Email)
 	if err != nil {
 		// Send 200 even if user not found, to prevent email enumeration.
 		return r.SendEnvelope("Reset password email sent successfully.")
@@ -401,20 +434,22 @@ func handleSetPassword(r *fastglue.Request) error {
 	var (
 		app       = r.Context.(*App)
 		agent, ok = r.RequestCtx.UserValue("user").(amodels.User)
-		p         = r.RequestCtx.PostArgs()
-		password  = string(p.Peek("password"))
-		token     = string(p.Peek("token"))
+		req       = SetPasswordRequest{}
 	)
 
 	if ok && agent.ID > 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("user.userAlreadyLoggedIn"), nil, envelope.InputError)
 	}
 
-	if password == "" {
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
+	}
+
+	if req.Password == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "{globals.terms.password}"), nil, envelope.InputError)
 	}
 
-	if err := app.user.ResetPassword(token, password); err != nil {
+	if err := app.user.ResetPassword(req.Token, req.Password); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -483,4 +518,62 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 		return sendErrorEnvelope(r, err)
 	}
 	return nil
+}
+
+// handleGenerateAPIKey generates a new API key for a user
+func handleGenerateAPIKey(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	)
+	if id <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
+	}
+
+	// Check if user exists
+	user, err := app.user.GetAgent(id, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Generate API key and secret
+	apiKey, apiSecret, err := app.user.GenerateAPIKey(user.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Return the API key and secret (only shown once)
+	response := struct {
+		APIKey    string `json:"api_key"`
+		APISecret string `json:"api_secret"`
+	}{
+		APIKey:    apiKey,
+		APISecret: apiSecret,
+	}
+
+	return r.SendEnvelope(response)
+}
+
+// handleRevokeAPIKey revokes a user's API key
+func handleRevokeAPIKey(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+	)
+	if id <= 0 {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
+	}
+
+	// Check if user exists
+	_, err := app.user.GetAgent(id, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	// Revoke API key
+	if err := app.user.RevokeAPIKey(id); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(true)
 }

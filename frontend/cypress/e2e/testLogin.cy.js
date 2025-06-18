@@ -38,7 +38,7 @@ describe('Login Component', () => {
 
     it('should show error for invalid login attempt', () => {
         // Mock failed login API call
-        cy.intercept('POST', '**/api/v1/login', {
+        cy.intercept('POST', '**/api/v1/auth/login', {
             statusCode: 401,
             body: {
                 message: 'Invalid credentials'
@@ -61,7 +61,7 @@ describe('Login Component', () => {
 
     it('should login successfully with correct credentials', () => {
         // Mock successful login API call
-        cy.intercept('POST', '**/api/v1/login', {
+        cy.intercept('POST', '**/api/v1/auth/login', {
             statusCode: 200,
             body: {
                 data: {
@@ -111,7 +111,7 @@ describe('Login Component', () => {
 
     it('should show loading state during login', () => {
         // Mock slow API response
-        cy.intercept('POST', '**/api/v1/login', {
+        cy.intercept('POST', '**/api/v1/auth/login', {
             statusCode: 200,
             body: {
                 data: {

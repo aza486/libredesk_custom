@@ -140,6 +140,10 @@ CREATE TABLE users (
 	availability_status user_availability_status DEFAULT 'offline' NOT NULL,
 	last_active_at TIMESTAMPTZ NULL,
 	last_login_at TIMESTAMPTZ NULL,
+	-- API key authentication fields
+	api_key TEXT NULL,
+	api_secret TEXT NULL,
+	api_key_last_used_at TIMESTAMPTZ NULL,
     CONSTRAINT constraint_users_on_country CHECK (LENGTH(country) <= 140),
     CONSTRAINT constraint_users_on_phone_number CHECK (LENGTH(phone_number) <= 20),
 	CONSTRAINT constraint_users_on_phone_number_calling_code CHECK (LENGTH(phone_number_calling_code) <= 10),
@@ -150,6 +154,7 @@ CREATE TABLE users (
 CREATE UNIQUE INDEX index_unique_users_on_email_and_type_when_deleted_at_is_null ON users (email, type)
 WHERE deleted_at IS NULL;
 CREATE INDEX index_tgrm_users_on_email ON users USING GIN (email gin_trgm_ops);
+CREATE INDEX index_users_on_api_key ON users(api_key);
 
 DROP TABLE IF EXISTS user_roles CASCADE;
 CREATE TABLE user_roles (
@@ -664,7 +669,7 @@ VALUES
 	(
 		'Admin',
 		'Role for users who have complete access to everything.',
-		'{activity_logs:manage,custom_attributes:manage,contacts:read_all,contacts:read,contacts:write,contacts:block,contact_notes:read,contact_notes:write,contact_notes:delete,conversations:write,ai:manage,general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
+		'{webhooks:manage,activity_logs:manage,custom_attributes:manage,contacts:read_all,contacts:read,contacts:write,contacts:block,contact_notes:read,contact_notes:write,contact_notes:delete,conversations:write,ai:manage,general_settings:manage,notification_settings:manage,oidc:manage,conversations:read_all,conversations:read_unassigned,conversations:read_assigned,conversations:read_team_inbox,conversations:read,conversations:update_user_assignee,conversations:update_team_assignee,conversations:update_priority,conversations:update_status,conversations:update_tags,messages:read,messages:write,view:manage,status:manage,tags:manage,macros:manage,users:manage,teams:manage,automations:manage,inboxes:manage,roles:manage,reports:manage,templates:manage,business_hours:manage,sla:manage}'
 	);
 
 

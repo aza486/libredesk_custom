@@ -27,9 +27,13 @@ http.interceptors.request.use((request) => {
 
   // Set content type for POST/PUT requests if the content type is not set.
   if ((request.method === 'post' || request.method === 'put') && !request.headers['Content-Type']) {
-    request.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    request.headers['Content-Type'] = 'application/json'
+  }
+  
+  if (request.headers['Content-Type'] === 'application/x-www-form-urlencoded') {
     request.data = qs.stringify(request.data)
   }
+  
   return request
 })
 
@@ -135,7 +139,11 @@ const updateSettings = (key, data) =>
     }
   })
 const getSettings = (key) => http.get(`/api/v1/settings/${key}`)
-const login = (data) => http.post(`/api/v1/login`, data)
+const login = (data) => http.post(`/api/v1/auth/login`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const getAutomationRules = (type) =>
   http.get(`/api/v1/automations/rules`, {
     params: { type: type }
@@ -162,7 +170,11 @@ const updateAutomationRuleWeights = (data) =>
     }
   })
 const updateAutomationRulesExecutionMode = (data) =>
-  http.put(`/api/v1/automations/rules/execution-mode`, data)
+  http.put(`/api/v1/automations/rules/execution-mode`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const getRoles = () => http.get('/api/v1/roles')
 const getRole = (id) => http.get(`/api/v1/roles/${id}`)
 const createRole = (data) =>
@@ -186,11 +198,23 @@ const updateContact = (id, data) =>
       'Content-Type': 'multipart/form-data'
     }
   })
-const blockContact = (id, data) => http.put(`/api/v1/contacts/${id}/block`, data)
+const blockContact = (id, data) => http.put(`/api/v1/contacts/${id}/block`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const getTeam = (id) => http.get(`/api/v1/teams/${id}`)
 const getTeams = () => http.get('/api/v1/teams')
-const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data)
-const createTeam = (data) => http.post('/api/v1/teams', data)
+const updateTeam = (id, data) => http.put(`/api/v1/teams/${id}`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const createTeam = (data) => http.post('/api/v1/teams', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const getTeamsCompact = () => http.get('/api/v1/teams/compact')
 const deleteTeam = (id) => http.delete(`/api/v1/teams/${id}`)
 const updateUser = (id, data) =>
@@ -211,9 +235,21 @@ const getUser = (id) => http.get(`/api/v1/agents/${id}`)
 const deleteUserAvatar = () => http.delete('/api/v1/agents/me/avatar')
 const getCurrentUser = () => http.get('/api/v1/agents/me')
 const getCurrentUserTeams = () => http.get('/api/v1/agents/me/teams')
-const updateCurrentUserAvailability = (data) => http.put('/api/v1/agents/me/availability', data)
-const resetPassword = (data) => http.post('/api/v1/agents/reset-password', data)
-const setPassword = (data) => http.post('/api/v1/agents/set-password', data)
+const updateCurrentUserAvailability = (data) => http.put('/api/v1/agents/me/availability', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const resetPassword = (data) => http.post('/api/v1/agents/reset-password', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const setPassword = (data) => http.post('/api/v1/agents/set-password', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const deleteUser = (id) => http.delete(`/api/v1/agents/${id}`)
 const createUser = (data) =>
   http.post('/api/v1/agents', data, {
@@ -222,9 +258,17 @@ const createUser = (data) =>
     }
   })
 const getTags = () => http.get('/api/v1/tags')
-const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data)
+const upsertTags = (uuid, data) => http.post(`/api/v1/conversations/${uuid}/tags`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const updateAssignee = (uuid, assignee_type, data) =>
-  http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data)
+  http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const removeAssignee = (uuid, assignee_type) =>
   http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}/remove`)
 const updateContactCustomAttribute = (uuid, data) =>
@@ -246,9 +290,17 @@ const createConversation = (data) =>
     }
   })
 const updateConversationStatus = (uuid, data) =>
-  http.put(`/api/v1/conversations/${uuid}/status`, data)
+  http.put(`/api/v1/conversations/${uuid}/status`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const updateConversationPriority = (uuid, data) =>
-  http.put(`/api/v1/conversations/${uuid}/priority`, data)
+  http.put(`/api/v1/conversations/${uuid}/priority`, data, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)
 const getConversationMessage = (cuuid, uuid) =>
   http.get(`/api/v1/conversations/${cuuid}/messages/${uuid}`)
@@ -334,10 +386,22 @@ const updateView = (id, data) =>
   })
 const deleteView = (id) => http.delete(`/api/v1/views/me/${id}`)
 const getAiPrompts = () => http.get('/api/v1/ai/prompts')
-const aiCompletion = (data) => http.post('/api/v1/ai/completion', data)
-const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data)
+const aiCompletion = (data) => http.post('/api/v1/ai/completion', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+const updateAIProvider = (data) => http.put('/api/v1/ai/provider', data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const getContactNotes = (id) => http.get(`/api/v1/contacts/${id}/notes`)
-const createContactNote = (id, data) => http.post(`/api/v1/contacts/${id}/notes`, data)
+const createContactNote = (id, data) => http.post(`/api/v1/contacts/${id}/notes`, data, {
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 const deleteContactNote = (id, noteId) => http.delete(`/api/v1/contacts/${id}/notes/${noteId}`)
 const getActivityLogs = (params) => http.get('/api/v1/activity-logs', { params })
 const getWebhooks = () => http.get('/api/v1/webhooks')
@@ -357,6 +421,15 @@ const updateWebhook = (id, data) =>
 const deleteWebhook = (id) => http.delete(`/api/v1/webhooks/${id}`)
 const toggleWebhook = (id) => http.put(`/api/v1/webhooks/${id}/toggle`)
 const testWebhook = (id) => http.post(`/api/v1/webhooks/${id}/test`)
+
+const generateAPIKey = (id) => 
+  http.post(`/api/v1/agents/${id}/api-key`, {}, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+
+const revokeAPIKey = (id) => http.delete(`/api/v1/agents/${id}/api-key`)
 
 export default {
   login,
@@ -492,5 +565,7 @@ export default {
   updateWebhook,
   deleteWebhook,
   toggleWebhook,
-  testWebhook
+  testWebhook,
+  generateAPIKey,
+  revokeAPIKey
 }
