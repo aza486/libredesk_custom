@@ -101,47 +101,49 @@ func (u *Manager) Delete(id int) error {
 }
 
 // Create creates a new role.
-func (u *Manager) Create(r models.Role) error {
+func (u *Manager) Create(r models.Role) (models.Role, error) {
 	validPermissions, err := u.filterValidPermissions(r.Permissions)
 	if err != nil {
-		return err
+		return models.Role{}, err
 	}
 	if len(validPermissions) == 0 {
-		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
+		return models.Role{}, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
 	}
-	if _, err := u.q.Insert.Exec(r.Name, r.Description, pq.Array(validPermissions)); err != nil {
+	var result models.Role
+	if err := u.q.Insert.Get(&result, r.Name, r.Description, pq.Array(validPermissions)); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.role}"), nil)
+			return models.Role{}, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.role}"), nil)
 		}
 		u.lo.Error("error inserting role", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.role}"), nil)
+		return models.Role{}, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.role}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // Update updates an existing role.
-func (u *Manager) Update(id int, r models.Role) error {
+func (u *Manager) Update(id int, r models.Role) (models.Role, error) {
 	validPermissions, err := u.filterValidPermissions(r.Permissions)
 	if err != nil {
-		return err
+		return models.Role{}, err
 	}
 	if len(validPermissions) == 0 {
-		return envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
+		return models.Role{}, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
 	}
 	// Disallow updating `Admin` role, as the main System login requires it.
 	role, err := u.Get(id)
 	if err != nil {
-		return err
+		return models.Role{}, err
 	}
 	if role.Name == models.RoleAdmin {
-		return envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
+		return models.Role{}, envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
 	}
 
-	if _, err := u.q.Update.Exec(id, r.Name, r.Description, pq.Array(validPermissions)); err != nil {
+	var result models.Role
+	if err := u.q.Update.Get(&result, id, r.Name, r.Description, pq.Array(validPermissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
-		return envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.role}"), nil)
+		return models.Role{}, envelope.NewError(envelope.GeneralError, u.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.role}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // filterValidPermissions filters out invalid permissions, logs warnings for unknown permissions.

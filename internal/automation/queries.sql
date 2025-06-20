@@ -24,10 +24,13 @@ DO UPDATE SET
     rules = EXCLUDED.rules,
     enabled = EXCLUDED.enabled,
     updated_at = now()
-WHERE $1 > 0;
+WHERE $1 > 0
+RETURNING *;
 
 -- name: insert-rule
-INSERT into automation_rules (name, description, type, events, rules) values ($1, $2, $3, $4, $5);
+INSERT into automation_rules (name, description, type, events, rules) 
+values ($1, $2, $3, $4, $5)
+RETURNING *;
 
 -- name: delete-rule
 delete from automation_rules where id = $1;
@@ -35,7 +38,8 @@ delete from automation_rules where id = $1;
 -- name: toggle-rule
 UPDATE automation_rules 
 SET enabled = NOT enabled, updated_at = NOW() 
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;
 
 -- name: update-rule-weight
 UPDATE automation_rules

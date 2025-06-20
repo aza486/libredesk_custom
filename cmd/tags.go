@@ -35,11 +35,12 @@ func handleCreateTag(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	if err := app.tag.Create(tag.Name); err != nil {
+	createdTag, err := app.tag.Create(tag.Name)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdTag)
 }
 
 // handleDeleteTag deletes a tag from the database.
@@ -78,9 +79,10 @@ func handleUpdateTag(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	if err = app.tag.Update(id, tag.Name); err != nil {
+	updatedTag, err := app.tag.Update(id, tag.Name)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedTag)
 }

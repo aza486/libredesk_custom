@@ -81,11 +81,12 @@ func handleCreateMacro(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := app.macro.Create(macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.VisibleWhen, macro.Actions); err != nil {
+	createdMacro, err := app.macro.Create(macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.VisibleWhen, macro.Actions)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(macro)
+	return r.SendEnvelope(createdMacro)
 }
 
 // handleUpdateMacro updates a macro.
@@ -109,11 +110,12 @@ func handleUpdateMacro(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err = app.macro.Update(id, macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.VisibleWhen, macro.Actions); err != nil {
+	updatedMacro, err := app.macro.Update(id, macro.Name, macro.MessageContent, macro.UserID, macro.TeamID, macro.Visibility, macro.VisibleWhen, macro.Actions)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(macro)
+	return r.SendEnvelope(updatedMacro)
 }
 
 // handleDeleteMacro deletes macro.

@@ -125,28 +125,30 @@ func (o *Manager) GetAllEnabled() ([]models.OIDC, error) {
 }
 
 // Create adds a new oidc.
-func (o *Manager) Create(oidc models.OIDC) error {
-	if _, err := o.q.InsertOIDC.Exec(oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret); err != nil {
+func (o *Manager) Create(oidc models.OIDC) (models.OIDC, error) {
+	var createdOIDC models.OIDC
+	if err := o.q.InsertOIDC.Get(&createdOIDC, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret); err != nil {
 		o.lo.Error("error inserting oidc", "error", err)
-		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.oidcProvider}"), nil)
+		return models.OIDC{}, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.oidcProvider}"), nil)
 	}
-	return nil
+	return createdOIDC, nil
 }
 
 // Update updates a oidc by id.
-func (o *Manager) Update(id int, oidc models.OIDC) error {
+func (o *Manager) Update(id int, oidc models.OIDC) (models.OIDC, error) {
 	current, err := o.Get(id, true)
 	if err != nil {
-		return err
+		return models.OIDC{}, err
 	}
 	if oidc.ClientSecret == "" {
 		oidc.ClientSecret = current.ClientSecret
 	}
-	if _, err := o.q.UpdateOIDC.Exec(id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Enabled); err != nil {
+	var updatedOIDC models.OIDC
+	if err := o.q.UpdateOIDC.Get(&updatedOIDC, id, oidc.Name, oidc.Provider, oidc.ProviderURL, oidc.ClientID, oidc.ClientSecret, oidc.Enabled); err != nil {
 		o.lo.Error("error updating oidc", "error", err)
-		return envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.oidcProvider}"), nil)
+		return models.OIDC{}, envelope.NewError(envelope.GeneralError, o.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.oidcProvider}"), nil)
 	}
-	return nil
+	return updatedOIDC, nil
 }
 
 // Delete deletes a oidc by its id.

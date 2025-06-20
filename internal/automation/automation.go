@@ -198,42 +198,45 @@ func (e *Engine) GetRule(id int) (models.RuleRecord, error) {
 }
 
 // ToggleRule toggles the active status of a rule by ID.
-func (e *Engine) ToggleRule(id int) error {
-	if _, err := e.q.ToggleRule.Exec(id); err != nil {
+func (e *Engine) ToggleRule(id int) (models.RuleRecord, error) {
+	var result models.RuleRecord
+	if err := e.q.ToggleRule.Get(&result, id); err != nil {
 		e.lo.Error("error toggling rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
+		return models.RuleRecord{}, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
-	return nil
+	return result, nil
 }
 
 // UpdateRule updates an existing rule.
-func (e *Engine) UpdateRule(id int, rule models.RuleRecord) error {
+func (e *Engine) UpdateRule(id int, rule models.RuleRecord) (models.RuleRecord, error) {
 	if rule.Events == nil {
 		rule.Events = pq.StringArray{}
 	}
-	if _, err := e.q.UpdateRule.Exec(id, rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules, rule.Enabled); err != nil {
+	var result models.RuleRecord
+	if err := e.q.UpdateRule.Get(&result, id, rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules, rule.Enabled); err != nil {
 		e.lo.Error("error updating rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
+		return models.RuleRecord{}, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorUpdating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
-	return nil
+	return result, nil
 }
 
 // CreateRule creates a new rule.
-func (e *Engine) CreateRule(rule models.RuleRecord) error {
+func (e *Engine) CreateRule(rule models.RuleRecord) (models.RuleRecord, error) {
 	if rule.Events == nil {
 		rule.Events = pq.StringArray{}
 	}
-	if _, err := e.q.InsertRule.Exec(rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules); err != nil {
+	var result models.RuleRecord
+	if err := e.q.InsertRule.Get(&result, rule.Name, rule.Description, rule.Type, rule.Events, rule.Rules); err != nil {
 		e.lo.Error("error creating rule", "error", err)
-		return envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorCreating", "name", e.i18n.Ts("globals.terms.rule")), nil)
+		return models.RuleRecord{}, envelope.NewError(envelope.GeneralError, e.i18n.Ts("globals.messages.errorCreating", "name", e.i18n.Ts("globals.terms.rule")), nil)
 	}
 	// Reload rules.
 	e.ReloadRules()
-	return nil
+	return result, nil
 }
 
 // DeleteRule deletes a rule by ID.

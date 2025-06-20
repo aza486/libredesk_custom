@@ -53,10 +53,11 @@ func handleCreateTemplate(r *fastglue.Request) error {
 	if req.Name == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
-	if err := app.tmpl.Create(req); err != nil {
+	template, err := app.tmpl.Create(req)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(template)
 }
 
 // handleUpdateTemplate updates a template.
@@ -76,10 +77,11 @@ func handleUpdateTemplate(r *fastglue.Request) error {
 	if req.Name == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
-	if err = app.tmpl.Update(id, req); err != nil {
+	updatedTemplate, err := app.tmpl.Update(id, req)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedTemplate)
 }
 
 // handleDeleteTemplate deletes a template.

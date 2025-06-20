@@ -68,26 +68,25 @@ func (m *Manager) Get(id int) (models.Macro, error) {
 }
 
 // Create adds a new macro.
-func (m *Manager) Create(name, messageContent string, userID, teamID *int, visibility string, visibleWhen []string, actions json.RawMessage) error {
-	_, err := m.q.Create.Exec(name, messageContent, userID, teamID, visibility, pq.StringArray(visibleWhen), actions)
+func (m *Manager) Create(name, messageContent string, userID, teamID *int, visibility string, visibleWhen []string, actions json.RawMessage) (models.Macro, error) {
+	var createdMacro models.Macro
+	err := m.q.Create.Get(&createdMacro, name, messageContent, userID, teamID, visibility, pq.StringArray(visibleWhen), actions)
 	if err != nil {
 		m.lo.Error("error creating macro", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.macro}"), nil)
+		return models.Macro{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.macro}"), nil)
 	}
-	return nil
+	return createdMacro, nil
 }
 
 // Update modifies an existing macro.
-func (m *Manager) Update(id int, name, messageContent string, userID, teamID *int, visibility string, visibleWhen []string, actions json.RawMessage) error {
-	result, err := m.q.Update.Exec(id, name, messageContent, userID, teamID, visibility, pq.StringArray(visibleWhen), actions)
+func (m *Manager) Update(id int, name, messageContent string, userID, teamID *int, visibility string, visibleWhen []string, actions json.RawMessage) (models.Macro, error) {
+	var updatedMacro models.Macro
+	err := m.q.Update.Get(&updatedMacro, id, name, messageContent, userID, teamID, visibility, pq.StringArray(visibleWhen), actions)
 	if err != nil {
 		m.lo.Error("error updating macro", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.macro}"), nil)
+		return models.Macro{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.macro}"), nil)
 	}
-	if rows, _ := result.RowsAffected(); rows == 0 {
-		return envelope.NewError(envelope.NotFoundError, m.i18n.Ts("globals.messages.notFound", "name", "{globals.terms.macro}"), nil)
-	}
-	return nil
+	return updatedMacro, nil
 }
 
 // GetAll returns all macros.

@@ -55,10 +55,11 @@ func handleCreateRole(r *fastglue.Request) error {
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
-	if err := app.role.Create(req); err != nil {
+	createdRole, err := app.role.Create(req)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdRole)
 }
 
 // handleUpdateRole updates a role
@@ -71,8 +72,9 @@ func handleUpdateRole(r *fastglue.Request) error {
 	if err := r.Decode(&req, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
-	if err := app.role.Update(id, req); err != nil {
+	updatedRole, err := app.role.Update(id, req)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedRole)
 }

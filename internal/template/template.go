@@ -66,27 +66,29 @@ func New(lo *logf.Logger, db *sqlx.DB, webTpls *template.Template, tpls *templat
 }
 
 // Update updates a new template with the given name, and body.
-func (m *Manager) Update(id int, t models.Template) error {
-	if _, err := m.q.UpdateTemplate.Exec(id, t.Name, t.Body, t.IsDefault, t.Subject, t.Type); err != nil {
+func (m *Manager) Update(id int, t models.Template) (models.Template, error) {
+	var result models.Template
+	if err := m.q.UpdateTemplate.Get(&result, id, t.Name, t.Body, t.IsDefault, t.Subject, t.Type); err != nil {
 		m.lo.Error("error updating template", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.template}"), nil)
+		return models.Template{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.template}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // Create creates a template.
-func (m *Manager) Create(t models.Template) error {
+func (m *Manager) Create(t models.Template) (models.Template, error) {
 	if t.IsDefault {
 		t.Type = TypeEmailOutgoing
 	}
-	if _, err := m.q.InsertTemplate.Exec(t.Name, t.Body, t.IsDefault, t.Subject, t.Type); err != nil {
+	var result models.Template
+	if err := m.q.InsertTemplate.Get(&result, t.Name, t.Body, t.IsDefault, t.Subject, t.Type); err != nil {
 		if dbutil.IsUniqueViolationError(err) && t.IsDefault {
-			return envelope.NewError(envelope.GeneralError, m.i18n.T("template.defaultTemplateAlreadyExists"), nil)
+			return models.Template{}, envelope.NewError(envelope.GeneralError, m.i18n.T("template.defaultTemplateAlreadyExists"), nil)
 		}
 		m.lo.Error("error inserting template", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.template}"), nil)
+		return models.Template{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.template}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // GetAll returns all templates by type.

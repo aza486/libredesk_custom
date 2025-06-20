@@ -27,7 +27,8 @@ INSERT INTO business_hours (
         hours,
         holidays
     )
-VALUES ($1, $2, $3, $4, $5);
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
 
 -- name: delete-business-hours
 DELETE FROM business_hours
@@ -41,4 +42,5 @@ SET "name" = $2,
     hours = $5,
     holidays = $6,
     updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;

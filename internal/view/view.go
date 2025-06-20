@@ -77,21 +77,23 @@ func (v *Manager) GetUsersViews(userID int) ([]models.View, error) {
 }
 
 // Create creates a new view.
-func (v *Manager) Create(name string, filter []byte, userID int) error {
-	if _, err := v.q.InsertView.Exec(name, filter, userID); err != nil {
+func (v *Manager) Create(name string, filter []byte, userID int) (models.View, error) {
+	var createdView models.View
+	if err := v.q.InsertView.Get(&createdView, name, filter, userID); err != nil {
 		v.lo.Error("error inserting view", "error", err)
-		return envelope.NewError(envelope.GeneralError, v.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.view}"), nil)
+		return models.View{}, envelope.NewError(envelope.GeneralError, v.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.view}"), nil)
 	}
-	return nil
+	return createdView, nil
 }
 
 // Update updates a view by id.
-func (v *Manager) Update(id int, name string, filter []byte) error {
-	if _, err := v.q.UpdateView.Exec(id, name, filter); err != nil {
+func (v *Manager) Update(id int, name string, filter []byte) (models.View, error) {
+	var updatedView models.View
+	if err := v.q.UpdateView.Get(&updatedView, id, name, filter); err != nil {
 		v.lo.Error("error updating view", "error", err)
-		return envelope.NewError(envelope.GeneralError, v.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.view}"), nil)
+		return models.View{}, envelope.NewError(envelope.GeneralError, v.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.view}"), nil)
 	}
-	return nil
+	return updatedView, nil
 }
 
 // Delete deletes a view by ID.

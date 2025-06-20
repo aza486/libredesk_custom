@@ -54,11 +54,12 @@ func handleCreateSLA(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := app.sla.Create(sla.Name, sla.Description, sla.FirstResponseTime, sla.ResolutionTime, sla.NextResponseTime, sla.Notifications); err != nil {
+	createdSLA, err := app.sla.Create(sla.Name, sla.Description, sla.FirstResponseTime, sla.ResolutionTime, sla.NextResponseTime, sla.Notifications)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope("SLA created successfully.")
+	return r.SendEnvelope(createdSLA)
 }
 
 // handleUpdateSLA updates the SLA with the given ID.
@@ -81,11 +82,12 @@ func handleUpdateSLA(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := app.sla.Update(id, sla.Name, sla.Description, sla.FirstResponseTime, sla.ResolutionTime, sla.NextResponseTime, sla.Notifications); err != nil {
+	updatedSLA, err := app.sla.Update(id, sla.Name, sla.Description, sla.FirstResponseTime, sla.ResolutionTime, sla.NextResponseTime, sla.Notifications)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedSLA)
 }
 
 // handleDeleteSLA deletes the SLA with the given ID.

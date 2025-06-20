@@ -8,7 +8,8 @@ FROM views WHERE user_id = $1;
 
 -- name: insert-view
 INSERT INTO views (name, filters, user_id)
-VALUES ($1, $2, $3);
+VALUES ($1, $2, $3)
+RETURNING *;
 
 -- name: delete-view
 DELETE FROM views
@@ -18,3 +19,4 @@ WHERE id = $1;
 UPDATE views
 SET name = $2, filters = $3, updated_at = NOW()
 WHERE id = $1
+RETURNING *

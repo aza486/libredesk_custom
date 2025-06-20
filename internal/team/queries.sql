@@ -18,10 +18,10 @@ JOIN teams t ON t.id = tm.team_id
 WHERE t.id = $1 AND u.deleted_at IS NULL AND u.type = 'agent' AND u.enabled = true;
 
 -- name: insert-team
-INSERT INTO teams (name, timezone, conversation_assignment_type, business_hours_id, sla_policy_id, emoji, max_auto_assigned_conversations) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;
+INSERT INTO teams (name, timezone, conversation_assignment_type, business_hours_id, sla_policy_id, emoji, max_auto_assigned_conversations) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
 
 -- name: update-team
-UPDATE teams set name = $2, timezone = $3, conversation_assignment_type = $4, business_hours_id = $5, sla_policy_id = $6, emoji = $7, max_auto_assigned_conversations = $8, updated_at = now() where id = $1;
+UPDATE teams set name = $2, timezone = $3, conversation_assignment_type = $4, business_hours_id = $5, sla_policy_id = $6, emoji = $7, max_auto_assigned_conversations = $8, updated_at = now() where id = $1 RETURNING *;
 
 -- name: upsert-user-teams
 WITH delete_old_teams AS (

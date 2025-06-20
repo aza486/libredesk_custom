@@ -67,12 +67,15 @@ func handleCreateWebhook(r *fastglue.Request) error {
 		return r.SendEnvelope(err)
 	}
 
-	_, err := app.webhook.Create(webhook)
+	webhook, err := app.webhook.Create(webhook)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	// Clear secret before returning
+	webhook.Secret = strings.Repeat(stringutil.PasswordDummy, 10)
+
+	return r.SendEnvelope(webhook)
 }
 
 // handleUpdateWebhook updates an existing webhook in the database.
@@ -105,11 +108,15 @@ func handleUpdateWebhook(r *fastglue.Request) error {
 		webhook.Secret = existingWebhook.Secret
 	}
 
-	if err := app.webhook.Update(id, webhook); err != nil {
+	updatedWebhook, err := app.webhook.Update(id, webhook)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	// Clear secret before returning
+	updatedWebhook.Secret = strings.Repeat(stringutil.PasswordDummy, 10)
+
+	return r.SendEnvelope(updatedWebhook)
 }
 
 // handleDeleteWebhook deletes a webhook from the database.
@@ -140,11 +147,15 @@ func handleToggleWebhook(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 
-	if err := app.webhook.Toggle(id); err != nil {
+	toggledWebhook, err := app.webhook.Toggle(id)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	// Clear secret before returning
+	toggledWebhook.Secret = strings.Repeat(stringutil.PasswordDummy, 10)
+
+	return r.SendEnvelope(toggledWebhook)
 }
 
 // handleTestWebhook sends a test payload to a webhook.

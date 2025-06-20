@@ -47,11 +47,12 @@ func handleCreateInbox(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), err.Error(), envelope.InputError)
 	}
 
-	if err := app.inbox.Create(inbox); err != nil {
+	createdInbox, err := app.inbox.Create(inbox)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := validateInbox(app, inbox); err != nil {
+	if err := validateInbox(app, createdInbox); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -59,7 +60,13 @@ func handleCreateInbox(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.couldNotReload", "name", "{globals.terms.inbox}"), nil, envelope.GeneralError)
 	}
 
-	return r.SendEnvelope(true)
+	// Clear passwords before returning.
+	if err := createdInbox.ClearPasswords(); err != nil {
+		app.lo.Error("error clearing inbox passwords from response", "error", err)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.inbox}"), nil)
+	}
+
+	return r.SendEnvelope(createdInbox)
 }
 
 // handleUpdateInbox updates an inbox
@@ -82,7 +89,7 @@ func handleUpdateInbox(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	err = app.inbox.Update(id, inbox)
+	updatedInbox, err := app.inbox.Update(id, inbox)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -91,7 +98,13 @@ func handleUpdateInbox(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.couldNotReload", "name", "{globals.terms.inbox}"), nil, envelope.GeneralError)
 	}
 
-	return r.SendEnvelope(inbox)
+	// Clear passwords before returning.
+	if err := updatedInbox.ClearPasswords(); err != nil {
+		app.lo.Error("error clearing inbox passwords from response", "error", err)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.inbox}"), nil)
+	}
+
+	return r.SendEnvelope(updatedInbox)
 }
 
 // handleToggleInbox toggles an inbox
@@ -105,7 +118,8 @@ func handleToggleInbox(r *fastglue.Request) error {
 			app.i18n.Ts("globals.messages.invalid", "name", "`id`"), nil, envelope.InputError)
 	}
 
-	if err = app.inbox.Toggle(id); err != nil {
+	toggledInbox, err := app.inbox.Toggle(id)
+	if err != nil {
 		return err
 	}
 
@@ -113,7 +127,13 @@ func handleToggleInbox(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.couldNotReload", "name", "{globals.terms.inbox}"), nil, envelope.GeneralError)
 	}
 
-	return r.SendEnvelope(true)
+	// Clear passwords before returning
+	if err := toggledInbox.ClearPasswords(); err != nil {
+		app.lo.Error("error clearing inbox passwords from response", "error", err)
+		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.inbox}"), nil)
+	}
+
+	return r.SendEnvelope(toggledInbox)
 }
 
 // handleDeleteInbox deletes an inbox

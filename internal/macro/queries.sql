@@ -38,7 +38,8 @@ ORDER BY
 INSERT INTO
     macros (name, message_content, user_id, team_id, visibility, visible_when, actions)
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7);
+    ($1, $2, $3, $4, $5, $6, $7)
+RETURNING *;
 
 -- name: update
 UPDATE
@@ -53,7 +54,8 @@ SET
     actions = $8,
     updated_at = NOW()
 WHERE
-    id = $1;
+    id = $1
+RETURNING *;
 
 -- name: delete
 DELETE FROM

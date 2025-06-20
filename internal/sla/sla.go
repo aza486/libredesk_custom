@@ -186,21 +186,23 @@ func (m *Manager) GetAll() ([]models.SLAPolicy, error) {
 }
 
 // Create creates a new SLA policy.
-func (m *Manager) Create(name, description string, firstResponseTime, resolutionTime, nextResponseTime null.String, notifications models.SlaNotifications) error {
-	if _, err := m.q.InsertSLAPolicy.Exec(name, description, firstResponseTime, resolutionTime, nextResponseTime, notifications); err != nil {
+func (m *Manager) Create(name, description string, firstResponseTime, resolutionTime, nextResponseTime null.String, notifications models.SlaNotifications) (models.SLAPolicy, error) {
+	var result models.SLAPolicy
+	if err := m.q.InsertSLAPolicy.Get(&result, name, description, firstResponseTime, resolutionTime, nextResponseTime, notifications); err != nil {
 		m.lo.Error("error inserting SLA", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.sla}"), nil)
+		return models.SLAPolicy{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.sla}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // Update updates a SLA policy.
-func (m *Manager) Update(id int, name, description string, firstResponseTime, resolutionTime, nextResponseTime null.String, notifications models.SlaNotifications) error {
-	if _, err := m.q.UpdateSLAPolicy.Exec(id, name, description, firstResponseTime, resolutionTime, nextResponseTime, notifications); err != nil {
+func (m *Manager) Update(id int, name, description string, firstResponseTime, resolutionTime, nextResponseTime null.String, notifications models.SlaNotifications) (models.SLAPolicy, error) {
+	var result models.SLAPolicy
+	if err := m.q.UpdateSLAPolicy.Get(&result, id, name, description, firstResponseTime, resolutionTime, nextResponseTime, notifications); err != nil {
 		m.lo.Error("error updating SLA", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.sla}"), nil)
+		return models.SLAPolicy{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.sla}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // Delete deletes an SLA policy.

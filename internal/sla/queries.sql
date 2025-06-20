@@ -12,7 +12,8 @@ INSERT INTO sla_policies (
    resolution_time,
    next_response_time,
    notifications
-) VALUES ($1, $2, $3, $4, $5, $6);
+) VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING *;
 
 -- name: update-sla-policy
 UPDATE sla_policies SET
@@ -23,7 +24,8 @@ UPDATE sla_policies SET
    next_response_time = $6,
    notifications = $7,
    updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;
 
 -- name: delete-sla-policy
 DELETE FROM sla_policies WHERE id = $1;

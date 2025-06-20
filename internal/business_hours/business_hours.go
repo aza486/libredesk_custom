@@ -80,12 +80,13 @@ func (m *Manager) GetAll() ([]models.BusinessHours, error) {
 }
 
 // Create creates new business hours.
-func (m *Manager) Create(name string, description null.String, isAlwaysOpen bool, workingHrs, holidays types.JSONText) error {
-	if _, err := m.q.InsertBusinessHours.Exec(name, description, isAlwaysOpen, workingHrs, holidays); err != nil {
+func (m *Manager) Create(name string, description null.String, isAlwaysOpen bool, workingHrs, holidays types.JSONText) (models.BusinessHours, error) {
+	var result models.BusinessHours
+	if err := m.q.InsertBusinessHours.Get(&result, name, description, isAlwaysOpen, workingHrs, holidays); err != nil {
 		m.lo.Error("error inserting business hours", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.businessHour}"), nil)
+		return models.BusinessHours{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.businessHour}"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // Delete deletes business hours by ID.
@@ -101,10 +102,11 @@ func (m *Manager) Delete(id int) error {
 }
 
 // Update updates business hours by ID.
-func (m *Manager) Update(id int, name string, description null.String, isAlwaysOpen bool, workingHrs, holidays types.JSONText) error {
-	if _, err := m.q.UpdateBusinessHours.Exec(id, name, description, isAlwaysOpen, workingHrs, holidays); err != nil {
+func (m *Manager) Update(id int, name string, description null.String, isAlwaysOpen bool, workingHrs, holidays types.JSONText) (models.BusinessHours, error) {
+	var result models.BusinessHours
+	if err := m.q.UpdateBusinessHours.Get(&result, id, name, description, isAlwaysOpen, workingHrs, holidays); err != nil {
 		m.lo.Error("error updating business hours", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.businessHour}"), nil)
+		return models.BusinessHours{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.businessHour}"), nil)
 	}
-	return nil
+	return result, nil
 }
