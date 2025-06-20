@@ -231,8 +231,15 @@ const { t } = useI18n()
 
 const form = useForm({
   validationSchema: toTypedSchema(createFormSchema(t)),
-  initialValues: props.initialValues
+  initialValues: {
+    is_always_open: true
+  }
 })
+
+// Sync form field with local state
+const syncHoursToForm = () => {
+  form.setFieldValue('hours', { ...hours.value })
+}
 
 const saveHoliday = () => {
   holidays.push({
@@ -252,21 +259,16 @@ const deleteHoliday = (item) => {
 }
 
 const handleDayToggle = (day, checked) => {
-  selectedDays.value = {
-    ...selectedDays.value,
-    [day]: checked
+  console.log(`Day: ${day}, Checked: ${checked}`, hours.value, selectedDays.value)
+  selectedDays.value[day] = checked
+
+  if (checked) {
+    hours.value[day] = hours.value[day] || { open: '09:00', close: '17:00' }
+  } else {
+    delete hours.value[day]
   }
 
-  if (checked && !hours.value[day]) {
-    hours.value[day] = { open: '09:00', close: '17:00' }
-  } else if (!checked) {
-    const newHours = { ...hours.value }
-    delete newHours[day]
-    hours.value = newHours
-  }
-
-  // Sync with form values
-  form.setFieldValue('hours', { ...hours.value })
+  syncHoursToForm()
 }
 
 const updateHours = (day, type, value) => {
@@ -274,50 +276,48 @@ const updateHours = (day, type, value) => {
     hours.value[day] = { open: '09:00', close: '17:00' }
   }
   hours.value[day][type] = value
-
-  // Sync with form values
-  form.setFieldValue('hours', { ...hours.value })
+  syncHoursToForm()
 }
 
 const onSubmit = form.handleSubmit((values) => {
-  const businessHours =
-    values.is_always_open === true
-      ? {}
-      : Object.keys(selectedDays.value)
-          .filter((day) => selectedDays.value[day])
-          .reduce((acc, day) => {
-            acc[day] = hours.value[day]
-            return acc
-          }, {})
+  const businessHours = values.is_always_open === true ? {} : { ...hours.value }
+
   const finalValues = {
     ...values,
-    is_always_open: values.is_always_open,
     hours: businessHours,
-    holidays: holidays
+    holidays: [...holidays]
   }
   props.submitForm(finalValues)
 })
 
+// Initialize state from props
+const initializeFromValues = (values) => {
+  if (!values) return
+
+  // Reset state
+  hours.value = {}
+  selectedDays.value = {}
+  holidays.length = 0
+
+  // Set hours and selected days
+  if (values.hours && typeof values.hours === 'object') {
+    hours.value = { ...values.hours }
+    selectedDays.value = Object.keys(values.hours).reduce((acc, day) => {
+      acc[day] = true
+      return acc
+    }, {})
+  }
+
+  // Set holidays
+  if (values.holidays) {
+    holidays.push(...values.holidays)
+  }
+
+  // Update form
+  form.setValues(values)
+  syncHoursToForm()
+}
+
 // Watch for initial values
-watch(
-  () => props.initialValues,
-  (newValues) => {
-    if (!newValues || Object.keys(newValues).length === 0) {
-      return
-    }
-    // Set business hours if provided
-    if (newValues.is_always_open === false) {
-      hours.value = newValues.hours || {}
-      selectedDays.value = Object.keys(hours.value).reduce((acc, day) => {
-        acc[day] = true
-        return acc
-      }, {})
-    }
-    // Set other form values
-    form.setValues(newValues)
-    holidays.length = 0
-    holidays.push(...(newValues.holidays || []))
-  },
-  { deep: true }
-)
+watch(() => props.initialValues, initializeFromValues, { immediate: true, deep: true })
 </script>
