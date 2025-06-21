@@ -55,11 +55,12 @@ func handleCreateBusinessHours(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	if err := app.businessHours.Create(businessHours.Name, businessHours.Description, businessHours.IsAlwaysOpen, businessHours.Hours, businessHours.Holidays); err != nil {
+	createdBusinessHours, err := app.businessHours.Create(businessHours.Name, businessHours.Description, businessHours.IsAlwaysOpen, businessHours.Hours, businessHours.Holidays)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdBusinessHours)
 }
 
 // handleDeleteBusinessHour deletes the business hour with the given id.
@@ -93,8 +94,9 @@ func handleUpdateBusinessHours(r *fastglue.Request) error {
 	if businessHours.Name == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.invalid", "name", "`name`"), nil, envelope.InputError)
 	}
-	if err := app.businessHours.Update(id, businessHours.Name, businessHours.Description, businessHours.IsAlwaysOpen, businessHours.Hours, businessHours.Holidays); err != nil {
+	updatedBusinessHours, err := app.businessHours.Update(id, businessHours.Name, businessHours.Description, businessHours.IsAlwaysOpen, businessHours.Hours, businessHours.Holidays)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedBusinessHours)
 }

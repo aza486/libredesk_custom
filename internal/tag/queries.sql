@@ -11,7 +11,8 @@ from
 INSERT into
     tags (name)
 values
-    ($1);
+    ($1)
+RETURNING *;
 
 -- name: delete-tag
 DELETE from
@@ -26,4 +27,5 @@ set
     name = $2,
     updated_at = now()
 where
-    id = $1;
+    id = $1
+RETURNING *;

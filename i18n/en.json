@@ -398,7 +398,7 @@
   "admin.general.allowedFileUploadExtensions.description": "Allowed file upload extensions. Use `*` to allow all file types.",
   "admin.businessHours.unauthorized": "You do not have permission to view business hours.",
   "admin.businessHours.setBusinessHours": "Set business hours",
-  "admin.businessHours.alwaysOpen24x7": "Always open 24/7",
+  "admin.businessHours.alwaysOpen24x7": "Always open (24/7)",
   "admin.businessHours.customBusinessHours": "Custom business hours",
   "admin.businessHours.hours.required": "Business hours are required",
   "admin.businessHours.openClose.required": "Open and close time are required",

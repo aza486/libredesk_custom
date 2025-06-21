@@ -127,25 +127,26 @@ func (m *Manager) Get(id int) (models.Webhook, error) {
 }
 
 // Create creates a new webhook.
-func (m *Manager) Create(webhook models.Webhook) (int, error) {
-	var id int
-	if err := m.q.InsertWebhook.Get(&id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive); err != nil {
+func (m *Manager) Create(webhook models.Webhook) (models.Webhook, error) {
+	var result models.Webhook
+	if err := m.q.InsertWebhook.Get(&result, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return 0, envelope.NewError(envelope.ConflictError, m.i18n.Ts("globals.messages.errorAlreadyExists", "name", "webhook"), nil)
+			return models.Webhook{}, envelope.NewError(envelope.ConflictError, m.i18n.Ts("globals.messages.errorAlreadyExists", "name", "webhook"), nil)
 		}
 		m.lo.Error("error inserting webhook", "error", err)
-		return 0, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "webhook"), nil)
+		return models.Webhook{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "webhook"), nil)
 	}
-	return id, nil
+	return result, nil
 }
 
 // Update updates a webhook by ID.
-func (m *Manager) Update(id int, webhook models.Webhook) error {
-	if _, err := m.q.UpdateWebhook.Exec(id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive); err != nil {
+func (m *Manager) Update(id int, webhook models.Webhook) (models.Webhook, error) {
+	var result models.Webhook
+	if err := m.q.UpdateWebhook.Get(&result, id, webhook.Name, webhook.URL, pq.Array(webhook.Events), webhook.Secret, webhook.IsActive); err != nil {
 		m.lo.Error("error updating webhook", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "webhook"), nil)
+		return models.Webhook{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "webhook"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // Delete deletes a webhook by ID.
@@ -158,12 +159,13 @@ func (m *Manager) Delete(id int) error {
 }
 
 // Toggle toggles the active status of a webhook by ID.
-func (m *Manager) Toggle(id int) error {
-	if _, err := m.q.ToggleWebhook.Exec(id); err != nil {
+func (m *Manager) Toggle(id int) (models.Webhook, error) {
+	var result models.Webhook
+	if err := m.q.ToggleWebhook.Get(&result, id); err != nil {
 		m.lo.Error("error toggling webhook", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "webhook"), nil)
+		return models.Webhook{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "webhook"), nil)
 	}
-	return nil
+	return result, nil
 }
 
 // SendTestWebhook sends a test webhook to the specified webhook ID.

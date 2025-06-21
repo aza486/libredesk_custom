@@ -70,15 +70,16 @@ func (m *Manager) GetAll() ([]models.Status, error) {
 }
 
 // Create creates a new status.
-func (m *Manager) Create(name string) error {
+func (m *Manager) Create(name string) (models.Status, error) {
+	var status models.Status
 	if err := m.validateStatusName(name); err != nil {
-		return err
+		return status, err
 	}
-	if _, err := m.q.InsertStatus.Exec(name); err != nil {
+	if err := m.q.InsertStatus.Get(&status, name); err != nil {
 		m.lo.Error("error inserting status", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", m.i18n.T("globals.terms.status")), nil)
+		return status, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", m.i18n.T("globals.terms.status")), nil)
 	}
-	return nil
+	return status, nil
 }
 
 // Delete deletes a status by ID.
@@ -104,25 +105,26 @@ func (m *Manager) Delete(id int) error {
 }
 
 // Update updates a status by id.
-func (m *Manager) Update(id int, name string) error {
+func (m *Manager) Update(id int, name string) (models.Status, error) {
+	var updatedStatus models.Status
 	if err := m.validateStatusName(name); err != nil {
-		return err
+		return updatedStatus, err
 	}
 	// Disallow updating of default statuses.
 	status, err := m.Get(id)
 	if err != nil {
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.terms.status")), nil)
+		return updatedStatus, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorFetching", "name", m.i18n.Ts("globals.terms.status")), nil)
 	}
 
 	if slices.Contains(models.DefaultStatuses, status.Name) {
-		return envelope.NewError(envelope.InputError, m.i18n.T("conversationStatus.cannotUpdateDefault"), nil)
+		return updatedStatus, envelope.NewError(envelope.InputError, m.i18n.T("conversationStatus.cannotUpdateDefault"), nil)
 	}
 
-	if _, err := m.q.UpdateStatus.Exec(id, name); err != nil {
+	if err := m.q.UpdateStatus.Get(&updatedStatus, id, name); err != nil {
 		m.lo.Error("error updating status", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", m.i18n.Ts("globals.terms.status")), nil)
+		return updatedStatus, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", m.i18n.Ts("globals.terms.status")), nil)
 	}
-	return nil
+	return updatedStatus, nil
 }
 
 // Get retrieves a status by ID.

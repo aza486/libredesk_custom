@@ -47,10 +47,11 @@ func handleCreateUserView(r *fastglue.Request) error {
 	if string(view.Filters) == "" {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`Filters`"), nil, envelope.InputError)
 	}
-	if err := app.view.Create(view.Name, view.Filters, user.ID); err != nil {
+	createdView, err := app.view.Create(view.Name, view.Filters, user.ID)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdView)
 }
 
 // handleDeleteUserView deletes a view for a user.
@@ -111,8 +112,9 @@ func handleUpdateUserView(r *fastglue.Request) error {
 	if v.UserID != user.ID {
 		return r.SendErrorEnvelope(fasthttp.StatusForbidden, app.i18n.Ts("globals.messages.denied", "name", "{globals.terms.permission}"), nil, envelope.PermissionError)
 	}
-	if err = app.view.Update(id, view.Name, view.Filters); err != nil {
+	updatedView, err := app.view.Update(id, view.Name, view.Filters)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedView)
 }

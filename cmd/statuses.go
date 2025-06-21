@@ -33,12 +33,12 @@ func handleCreateStatus(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	err := app.status.Create(status.Name)
+	createdStatus, err := app.status.Create(status.Name)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdStatus)
 }
 
 func handleDeleteStatus(r *fastglue.Request) error {
@@ -74,10 +74,10 @@ func handleUpdateStatus(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "`name`"), nil, envelope.InputError)
 	}
 
-	err = app.status.Update(id, status.Name)
+	updatedStatus, err := app.status.Update(id, status.Name)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedStatus)
 }

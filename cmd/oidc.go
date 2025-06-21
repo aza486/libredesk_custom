@@ -65,7 +65,8 @@ func handleCreateOIDC(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := app.oidc.Create(req); err != nil {
+	createdOIDC, err := app.oidc.Create(req)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -73,7 +74,11 @@ func handleCreateOIDC(r *fastglue.Request) error {
 	if err := reloadAuth(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.couldNotReload", "name", "OIDC"), nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope("OIDC created successfully")
+	
+	// Clear client secret before returning
+	createdOIDC.ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
+	
+	return r.SendEnvelope(createdOIDC)
 }
 
 // handleUpdateOIDC updates an OIDC record.
@@ -96,7 +101,8 @@ func handleUpdateOIDC(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err = app.oidc.Update(id, req); err != nil {
+	updatedOIDC, err := app.oidc.Update(id, req)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -104,7 +110,11 @@ func handleUpdateOIDC(r *fastglue.Request) error {
 	if err := reloadAuth(app); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.Ts("globals.messages.couldNotReload", "name", "OIDC"), nil, envelope.GeneralError)
 	}
-	return r.SendEnvelope(true)
+	
+	// Clear client secret before returning
+	updatedOIDC.ClientSecret = strings.Repeat(stringutil.PasswordDummy, 10)
+	
+	return r.SendEnvelope(updatedOIDC)
 }
 
 // handleDeleteOIDC deletes an OIDC record.

@@ -1,6 +1,7 @@
 -- name: insert
 INSERT INTO templates ("name", body, is_default, subject, type)
-VALUES ($1, $2, $3, $4, $5);
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
 
 -- name: update
 WITH u AS (
@@ -13,11 +14,9 @@ WITH u AS (
         type = $6::template_type,
         updated_at = NOW()
     WHERE id = $1
-    RETURNING id
+    RETURNING *
 )
-UPDATE templates
-SET is_default = FALSE
-WHERE id != $1 AND $4 = TRUE;
+SELECT * FROM u LIMIT 1;
 
 -- name: get-default
 SELECT id, type, name, body, subject FROM templates WHERE is_default is TRUE;

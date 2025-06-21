@@ -43,6 +43,7 @@ INSERT INTO
     custom_attribute_definitions (applies_to, name, description, key, values, data_type, regex, regex_hint)
 VALUES
     ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING *
 
 -- name: delete-custom-attribute
 DELETE FROM
@@ -62,4 +63,5 @@ SET
     regex_hint = $7,
     updated_at = NOW()
 WHERE
-    id = $1;
+    id = $1
+RETURNING *;

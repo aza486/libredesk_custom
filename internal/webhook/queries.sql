@@ -64,7 +64,7 @@ INSERT INTO
     webhooks (name, url, events, secret, is_active)
 VALUES
     ($1, $2, $3, $4, $5)
-RETURNING id;
+RETURNING *;
 
 -- name: update-webhook
 UPDATE
@@ -77,7 +77,8 @@ SET
     is_active = $6,
     updated_at = NOW()
 WHERE
-    id = $1;
+    id = $1
+RETURNING *;
 
 -- name: delete-webhook
 DELETE FROM
@@ -92,4 +93,5 @@ SET
     is_active = NOT is_active,
     updated_at = NOW()
 WHERE
-    id = $1;
+    id = $1
+RETURNING *;

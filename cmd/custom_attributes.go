@@ -70,10 +70,11 @@ func handleCreateCustomAttribute(r *fastglue.Request) error {
 	if err := validateCustomAttribute(app, attribute); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if err := app.customAttribute.Create(attribute); err != nil {
+	createdAttr, err := app.customAttribute.Create(attribute)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdAttr)
 }
 
 // handleUpdateCustomAttribute updates an existing custom attribute in the database.
@@ -92,10 +93,11 @@ func handleUpdateCustomAttribute(r *fastglue.Request) error {
 	if err := validateCustomAttribute(app, attribute); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if err = app.customAttribute.Update(id, attribute); err != nil {
+	updatedAttr, err := app.customAttribute.Update(id, attribute)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedAttr)
 }
 
 // handleDeleteCustomAttribute deletes a custom attribute from the database.

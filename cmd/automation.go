@@ -45,10 +45,11 @@ func handleToggleAutomationRule(r *fastglue.Request) error {
 		app   = r.Context.(*App)
 		id, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
 	)
-	if err := app.automation.ToggleRule(id); err != nil {
+	toggledRule, err := app.automation.ToggleRule(id)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(toggledRule)
 }
 
 // handleUpdateAutomationRule updates an automation rule
@@ -66,10 +67,11 @@ func handleUpdateAutomationRule(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
 
-	if err = app.automation.UpdateRule(id, rule); err != nil {
+	updatedRule, err := app.automation.UpdateRule(id, rule)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(updatedRule)
 }
 
 // handleCreateAutomationRule creates a new automation rule
@@ -81,10 +83,11 @@ func handleCreateAutomationRule(r *fastglue.Request) error {
 	if err := r.Decode(&rule, "json"); err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil, envelope.InputError)
 	}
-	if err := app.automation.CreateRule(rule); err != nil {
+	createdRule, err := app.automation.CreateRule(rule)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	return r.SendEnvelope(createdRule)
 }
 
 // handleDeleteAutomationRule deletes an automation rule

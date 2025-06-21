@@ -64,15 +64,16 @@ func (t *Manager) GetAll() ([]models.Tag, error) {
 }
 
 // Create creates a new tag.
-func (t *Manager) Create(name string) error {
-	if _, err := t.q.InsertTag.Exec(name); err != nil {
+func (t *Manager) Create(name string) (models.Tag, error) {
+	var tag models.Tag
+	if err := t.q.InsertTag.Get(&tag, name); err != nil {
 		if dbutil.IsUniqueViolationError(err) {
-			return envelope.NewError(envelope.ConflictError, t.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.tag}"), nil)
+			return tag, envelope.NewError(envelope.ConflictError, t.i18n.Ts("globals.messages.errorAlreadyExists", "name", "{globals.terms.tag}"), nil)
 		}
 		t.lo.Error("error inserting tag", "error", err)
-		return envelope.NewError(envelope.GeneralError, t.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.tag}"), nil)
+		return tag, envelope.NewError(envelope.GeneralError, t.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.tag}"), nil)
 	}
-	return nil
+	return tag, nil
 }
 
 // Delete deletes a tag by ID.
@@ -85,10 +86,11 @@ func (t *Manager) Delete(id int) error {
 }
 
 // Update updates a tag by id.
-func (t *Manager) Update(id int, name string) error {
-	if _, err := t.q.UpdateTag.Exec(id, name); err != nil {
+func (t *Manager) Update(id int, name string) (models.Tag, error) {
+	var tag models.Tag
+	if err := t.q.UpdateTag.Get(&tag, id, name); err != nil {
 		t.lo.Error("error updating tag", "error", err)
-		return envelope.NewError(envelope.GeneralError, t.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
+		return tag, envelope.NewError(envelope.GeneralError, t.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.tag}"), nil)
 	}
-	return nil
+	return tag, nil
 }

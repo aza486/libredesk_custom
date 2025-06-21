@@ -169,12 +169,13 @@ func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 }
 
 // Create creates an inbox in the DB.
-func (m *Manager) Create(inbox imodels.Inbox) error {
-	if _, err := m.queries.InsertInbox.Exec(inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled); err != nil {
+func (m *Manager) Create(inbox imodels.Inbox) (imodels.Inbox, error) {
+	var createdInbox imodels.Inbox
+	if err := m.queries.InsertInbox.Get(&createdInbox, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.inbox}"), nil)
+		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.inbox}"), nil)
 	}
-	return nil
+	return createdInbox, nil
 }
 
 // InitInboxes initializes and registers active inboxes with the manager.
@@ -254,10 +255,10 @@ func (m *Manager) Reload(ctx context.Context, initFn initFn) error {
 }
 
 // Update updates an inbox in the DB.
-func (m *Manager) Update(id int, inbox imodels.Inbox) error {
+func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 	current, err := m.GetDBRecord(id)
 	if err != nil {
-		return err
+		return imodels.Inbox{}, err
 	}
 
 	// Preserve existing passwords if update has empty password
@@ -274,22 +275,22 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 
 		if err := json.Unmarshal(current.Config, &currentCfg); err != nil {
 			m.lo.Error("error unmarshalling current config", "id", id, "error", err)
-			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.config}"), nil)
+			return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.config}"), nil)
 		}
 		if len(inbox.Config) == 0 {
-			return envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.empty", "name", "{globals.terms.config}"), nil)
+			return imodels.Inbox{}, envelope.NewError(envelope.InputError, m.i18n.Ts("globals.messages.empty", "name", "{globals.terms.config}"), nil)
 		}
 		if err := json.Unmarshal(inbox.Config, &updateCfg); err != nil {
 			m.lo.Error("error unmarshalling update config", "id", id, "error", err)
-			return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.config}"), nil)
+			return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.config}"), nil)
 		}
 
 		if len(updateCfg.IMAP) == 0 {
-			return envelope.NewError(envelope.InputError, m.i18n.T("inbox.emptyIMAP"), nil)
+			return imodels.Inbox{}, envelope.NewError(envelope.InputError, m.i18n.T("inbox.emptyIMAP"), nil)
 		}
 
 		if len(updateCfg.SMTP) == 0 {
-			return envelope.NewError(envelope.InputError, m.i18n.T("inbox.emptySMTP"), nil)
+			return imodels.Inbox{}, envelope.NewError(envelope.InputError, m.i18n.T("inbox.emptySMTP"), nil)
 		}
 
 		// Preserve existing IMAP passwords if update has empty password
@@ -308,27 +309,29 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) error {
 		updatedConfig, err := json.Marshal(updateCfg)
 		if err != nil {
 			m.lo.Error("error marshalling updated config", "id", id, "error", err)
-			return err
+			return imodels.Inbox{}, err
 		}
 		inbox.Config = updatedConfig
 	}
 
 	// Update the inbox in the DB.
-	if _, err := m.queries.Update.Exec(id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.Enabled); err != nil {
+	var updatedInbox imodels.Inbox
+	if err := m.queries.Update.Get(&updatedInbox, id, inbox.Channel, inbox.Config, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.Enabled); err != nil {
 		m.lo.Error("error updating inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.inbox}"), nil)
+		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.inbox}"), nil)
 	}
 
-	return nil
+	return updatedInbox, nil
 }
 
 // Toggle toggles the status of an inbox in the DB.
-func (m *Manager) Toggle(id int) error {
-	if _, err := m.queries.Toggle.Exec(id); err != nil {
+func (m *Manager) Toggle(id int) (imodels.Inbox, error) {
+	var updatedInbox imodels.Inbox
+	if err := m.queries.Toggle.Get(&updatedInbox, id); err != nil {
 		m.lo.Error("error toggling inbox", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.inbox}"), nil)
+		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.inbox}"), nil)
 	}
-	return nil
+	return updatedInbox, nil
 }
 
 // SoftDelete soft deletes an inbox in the DB.
