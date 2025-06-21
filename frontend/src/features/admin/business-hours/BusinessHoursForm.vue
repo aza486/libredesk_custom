@@ -259,7 +259,6 @@ const deleteHoliday = (item) => {
 }
 
 const handleDayToggle = (day, checked) => {
-  console.log(`Day: ${day}, Checked: ${checked}`, hours.value, selectedDays.value)
   selectedDays.value[day] = checked
 
   if (checked) {
