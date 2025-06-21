@@ -25,7 +25,6 @@ onMounted(() => {
     if (!conversationStore.getListStatus) {
       conversationStore.setListStatus(CONVERSATION_DEFAULT_STATUSES.OPEN, false)
     }
-    conversationStore.resetCurrentConversation()
     conversationStore.fetchConversationsList(true, type.value)
   }
   // Fetch team list.
@@ -34,7 +33,6 @@ onMounted(() => {
     if (!conversationStore.getListStatus) {
       conversationStore.setListStatus(CONVERSATION_DEFAULT_STATUSES.OPEN, false)
     }
-    conversationStore.resetCurrentConversation()
     conversationStore.fetchConversationsList(
       true,
       CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
@@ -45,7 +43,6 @@ onMounted(() => {
   if (viewID.value) {
     // Empty out list status as views are already filtered.
     conversationStore.setListStatus('', false)
-    conversationStore.resetCurrentConversation()
     conversationStore.fetchConversationsList(true, CONVERSATION_LIST_TYPE.VIEW, 0, [], viewID.value)
   }
 })

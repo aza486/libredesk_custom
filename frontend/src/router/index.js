@@ -71,14 +71,16 @@ const routes = [
             path: '',
             name: 'team-inbox',
             component: () => import('@/views/inbox/InboxView.vue'),
-            meta: { title: 'Team inbox' }
-          },
-          {
-            path: 'conversation/:uuid',
-            name: 'team-inbox-conversation',
-            component: () => import('@/views/conversation/ConversationDetailView.vue'),
-            props: true,
-            meta: { title: 'Team inbox', hidePageHeader: true }
+            meta: { title: 'Team inbox' },
+            children: [
+              {
+                path: 'conversation/:uuid',
+                name: 'team-inbox-conversation',
+                component: () => import('@/views/conversation/ConversationDetailView.vue'),
+                props: true,
+                meta: { title: 'Team inbox', hidePageHeader: true }
+              }
+            ]
           }
         ]
       },
@@ -93,14 +95,16 @@ const routes = [
             path: '',
             name: 'view-inbox',
             component: () => import('@/views/inbox/InboxView.vue'),
-            meta: { title: 'View inbox' }
-          },
-          {
-            path: 'conversation/:uuid',
-            name: 'view-inbox-conversation',
-            component: () => import('@/views/conversation/ConversationDetailView.vue'),
-            props: true,
-            meta: { title: 'View inbox', hidePageHeader: true }
+            meta: { title: 'View inbox' },
+            children: [
+              {
+                path: 'conversation/:uuid',
+                name: 'view-inbox-conversation',
+                component: () => import('@/views/conversation/ConversationDetailView.vue'),
+                props: true,
+                meta: { title: 'View inbox', hidePageHeader: true }
+              }
+            ]
           }
         ]
       },

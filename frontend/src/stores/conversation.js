@@ -378,9 +378,6 @@ export const useConversationStore = defineStore('conversation', () => {
     if (conversations.listType !== listType || conversations.teamID !== teamID || conversations.viewID !== viewID) {
       resetConversations()
     }
-    if (conversations.listType !== listType) {
-      resetCurrentConversation()
-    }
     if (listType) conversations.listType = listType
     if (teamID) conversations.teamID = teamID
     if (viewID) conversations.viewID = viewID

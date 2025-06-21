@@ -5,7 +5,7 @@ import {
   accountNavItems,
   contactNavItems
 } from '@/constants/navigation'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Sidebar,
@@ -43,14 +43,17 @@ import { useStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
+import { useConversationStore } from '@/stores/conversation'
 
 defineProps({
   userTeams: { type: Array, default: () => [] },
   userViews: { type: Array, default: () => [] }
 })
 const userStore = useUserStore()
+const conversationStore = useConversationStore()
 const settingsStore = useAppSettingsStore()
 const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 const emit = defineEmits(['createView', 'editView', 'deleteView', 'createConversation'])
 
@@ -72,6 +75,58 @@ const editView = (view) => {
 
 const deleteView = (view) => {
   emit('deleteView', view)
+}
+
+// Navigation methods with conversation retention
+const navigateToInbox = (type) => {
+  if (conversationStore.hasConversationOpen && conversationStore.conversation.data?.uuid) {
+    router.push({
+      name: 'inbox-conversation',
+      params: {
+        type,
+        uuid: conversationStore.conversation.data.uuid
+      }
+    })
+  } else {
+    router.push({
+      name: 'inbox',
+      params: { type }
+    })
+  }
+}
+
+const navigateToTeamInbox = (teamID) => {
+  if (conversationStore.hasConversationOpen && conversationStore.conversation.data?.uuid) {
+    router.push({
+      name: 'team-inbox-conversation',
+      params: {
+        teamID,
+        uuid: conversationStore.conversation.data.uuid
+      }
+    })
+  } else {
+    router.push({
+      name: 'team-inbox',
+      params: { teamID }
+    })
+  }
+}
+
+const navigateToViewInbox = (viewID) => {
+  if (conversationStore.hasConversationOpen && conversationStore.conversation.data?.uuid) {
+    router.push({
+      name: 'view-inbox-conversation',
+      params: {
+        viewID,
+        uuid: conversationStore.conversation.data.uuid
+      }
+    })
+  } else {
+    router.push({
+      name: 'view-inbox',
+      params: { viewID }
+    })
+  }
 }
 
 const filteredAdminNavItems = computed(() => filterNavItems(adminNavItems, userStore.can))
@@ -322,32 +377,32 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/assigned')">
-                  <router-link :to="{ name: 'inbox', params: { type: 'assigned' } }">
+                  <a href="#" @click.prevent="navigateToInbox('assigned')">
                     <User />
                     <span>{{ t('globals.terms.myInbox') }}</span>
-                  </router-link>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/unassigned')">
-                  <router-link :to="{ name: 'inbox', params: { type: 'unassigned' } }">
+                  <a href="#" @click.prevent="navigateToInbox('unassigned')">
                     <CircleDashed />
                     <span>
                       {{ t('globals.terms.unassigned') }}
                     </span>
-                  </router-link>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton asChild :isActive="isActiveParent('/inboxes/all')">
-                  <router-link :to="{ name: 'inbox', params: { type: 'all' } }">
+                  <a href="#" @click.prevent="navigateToInbox('all')">
                     <List />
                     <span>
                       {{ t('globals.messages.all') }}
                     </span>
-                  </router-link>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -380,9 +435,9 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                           :is-active="route.params.teamID == team.id"
                           asChild
                         >
-                          <router-link :to="{ name: 'team-inbox', params: { teamID: team.id } }">
+                          <a href="#" @click.prevent="navigateToTeamInbox(team.id)">
                             {{ team.emoji }}<span>{{ team.name }}</span>
-                          </router-link>
+                          </a>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
@@ -423,7 +478,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                           :isActive="route.params.viewID == view.id"
                           asChild
                         >
-                          <router-link :to="{ name: 'view-inbox', params: { viewID: view.id } }">
+                          <a href="#" @click.prevent="navigateToViewInbox(view.id)">
                             <span class="break-words w-32 truncate">{{ view.name }}</span>
                             <SidebarMenuAction :showOnHover="true" class="mr-3">
                               <DropdownMenu>
@@ -440,7 +495,7 @@ const viewInboxOpen = useStorage('viewInboxOpen', true)
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </SidebarMenuAction>
-                          </router-link>
+                          </a>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>

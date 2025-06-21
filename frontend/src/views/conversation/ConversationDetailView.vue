@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import { watch, onMounted, onUnmounted } from 'vue'
+import { watch, onMounted } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import Conversation from '@/features/conversation/Conversation.vue'
 import ConversationSideBarWrapper from '@/features/conversation/sidebar/ConversationSideBarWrapper.vue'
@@ -35,10 +35,6 @@ const fetchConversation = async (uuid) => {
 // Initial fetch
 onMounted(() => {
   if (props.uuid) fetchConversation(props.uuid)
-})
-
-onUnmounted(() => {
-  conversationStore.resetCurrentConversation()
 })
 
 // Watcher for UUID changes
