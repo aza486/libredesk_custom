@@ -15,7 +15,7 @@ Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**Live 
 ## Features
 
 - **Multi Shared Inbox**  
-  Libredesk supports multiple shares inboxes, letting you manage conversations across teams effortlessly.
+  Libredesk supports multiple shared inboxes, letting you manage conversations across teams effortlessly.
 - **Granular Permissions**  
   Create custom roles with granular permissions for teams and individual agents.
 - **Smart Automation**  
