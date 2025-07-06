@@ -1,5 +1,5 @@
 <template>
-    <div ref="codeEditor" @click="editorView?.focus()" class="w-full h-[28rem] border overflow-y-scroll" />
+    <div ref="codeEditor" @click="editorView?.focus()" class="w-full h-[28rem] border rounded-md" />
 </template>
 
 <script setup>
@@ -30,6 +30,11 @@ const initCodeEditor = (body) => {
             html(),
             ...(isDark ? [oneDark] : []),
             EditorView.editable.of(!props.disabled),
+            EditorView.theme({
+                '&': { height: '100%' },
+                '.cm-editor': { height: '100%' },
+                '.cm-scroller': { overflow: 'auto' }
+            }),
             EditorView.updateListener.of((update) => {
                 if (!update.docChanged) return
                 const v = update.state.doc.toString()
