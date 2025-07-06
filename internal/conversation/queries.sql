@@ -509,9 +509,9 @@ inserted_msg AS (
        $1, $2, (SELECT id FROM conversation_id),
        $5, $6, $7, $8, $9, $10, $11, $12
    )
-   RETURNING id, uuid, created_at, conversation_id
+   RETURNING *
 )
-SELECT id, uuid, created_at FROM inserted_msg;
+SELECT * FROM inserted_msg;
 
 -- name: message-exists-by-source-id
 SELECT conversation_id

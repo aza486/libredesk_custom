@@ -356,8 +356,7 @@ func (m *Manager) MarkMessageAsPending(uuid string) error {
 }
 
 // SendPrivateNote inserts a private message in a conversation.
-func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) error {
-	// Insert Message.
+func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string) (models.Message, error) {
 	message := models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
@@ -369,18 +368,25 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 		Private:          true,
 		Media:            media,
 	}
-	return m.InsertMessage(&message)
+	if err := m.InsertMessage(&message); err != nil {
+		return models.Message{}, err
+	}
+	return message, nil
 }
 
 // SendReply inserts a reply message in a conversation.
-func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conversationUUID, content string, to, cc, bcc []string, meta map[string]interface{}) error {
-	// Save to, cc and bcc in meta.
+func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conversationUUID, content string, to, cc, bcc []string, meta map[string]interface{}) (models.Message, error) {
+	var (
+		message = models.Message{}
+	)
+
+	// Clear empty fields in to, cc, bcc.
 	to = stringutil.RemoveEmpty(to)
 	cc = stringutil.RemoveEmpty(cc)
 	bcc = stringutil.RemoveEmpty(bcc)
 
 	if len(to) == 0 {
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.empty", "name", "`to`"), nil)
+		return message, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.empty", "name", "`to`"), nil)
 	}
 	meta["to"] = to
 
@@ -393,22 +399,22 @@ func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conver
 
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
-		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorMarshalling", "name", "{globals.terms.meta}"), nil)
+		return message, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorMarshalling", "name", "{globals.terms.meta}"), nil)
 	}
 
 	// Generage unique source ID i.e. message-id for email.
 	inbox, err := m.inboxStore.GetDBRecord(inboxID)
 	if err != nil {
-		return err
+		return message, err
 	}
 	sourceID, err := stringutil.GenerateEmailMessageID(conversationUUID, inbox.From)
 	if err != nil {
 		m.lo.Error("error generating source message id", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.T("conversation.errorGeneratingMessageID"), nil)
+		return message, envelope.NewError(envelope.GeneralError, m.i18n.T("conversation.errorGeneratingMessageID"), nil)
 	}
 
 	// Insert Message.
-	message := models.Message{
+	message = models.Message{
 		ConversationUUID: conversationUUID,
 		SenderID:         senderID,
 		Type:             models.MessageOutgoing,
@@ -421,16 +427,17 @@ func (m *Manager) SendReply(media []mmodels.Media, inboxID, senderID int, conver
 		Meta:             metaJSON,
 		SourceID:         null.StringFrom(sourceID),
 	}
-	return m.InsertMessage(&message)
+	if err := m.InsertMessage(&message); err != nil {
+		return models.Message{}, err
+	}
+	return message, nil
 }
 
 // InsertMessage inserts a message and attaches the media to the message.
 func (m *Manager) InsertMessage(message *models.Message) error {
-	// Private message is always sent.
 	if message.Private {
 		message.Status = models.MessageStatusSent
 	}
-
 	if len(message.Meta) == 0 || string(message.Meta) == "null" {
 		message.Meta = json.RawMessage(`{}`)
 	}
@@ -438,14 +445,16 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	// Convert HTML content to text for search.
 	message.TextContent = stringutil.HTML2Text(message.Content)
 
-	// Insert Message.
-	if err := m.q.InsertMessage.QueryRow(message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.TextContent, message.SenderID, message.SenderType,
-		message.Private, message.ContentType, message.SourceID, message.Meta).Scan(&message.ID, &message.UUID, &message.CreatedAt); err != nil {
+	// Insert and scan the message into the struct.
+	if err := m.q.InsertMessage.Get(message,
+		message.Type, message.Status, message.ConversationID, message.ConversationUUID,
+		message.Content, message.TextContent, message.SenderID, message.SenderType,
+		message.Private, message.ContentType, message.SourceID, message.Meta); err != nil {
 		m.lo.Error("error inserting message in db", "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorInserting", "name", "{globals.terms.message}"), nil)
 	}
 
-	// Attach message to the media.
+	// Attach just inserted message to the media.
 	for _, media := range message.Media {
 		m.mediaStore.Attach(media.ID, mmodels.ModelMessages, message.ID)
 	}
@@ -465,13 +474,19 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	// Broadcast new message.
 	m.BroadcastNewMessage(message)
 
-	// Refetch message and send webhook event for message created.
-	updatedMessage, err := m.GetMessage(message.UUID)
-	if err != nil {
-		m.lo.Error("error fetching updated message for webhook event", "uuid", message.UUID, "error", err)
-	} else {
-		m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, updatedMessage)
+	// Refetch message if this message has media attachments, as media gets linked after inserting the message.
+	if len(message.Media) > 0 {
+		refetchedMessage, err := m.GetMessage(message.UUID)
+		if err != nil {
+			m.lo.Error("error fetching message after insert", "error", err)
+		} else {
+			// Replace the message in the struct with the refetched message.
+			*message = refetchedMessage
+		}
 	}
+
+	// Trigger webhook for new message created.
+	m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, message)
 
 	return nil
 }
@@ -530,7 +545,7 @@ func (m *Manager) InsertConversationActivity(activityType, conversationUUID, new
 	content, err := m.getMessageActivityContent(activityType, newValue, actor.FullName())
 	if err != nil {
 		m.lo.Error("error could not generate activity content", "error", err)
-		return err
+		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorGenerating", "name", "{globals.terms.activityMessage}"), nil)
 	}
 
 	message := models.Message{
