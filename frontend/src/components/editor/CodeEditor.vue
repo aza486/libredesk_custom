@@ -7,6 +7,7 @@ import { ref, onMounted, watch, nextTick, useTemplateRef } from 'vue'
 import { EditorView, basicSetup } from 'codemirror'
 import { html } from '@codemirror/lang-html'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { useColorMode } from '@vueuse/core'
 
 const props = defineProps({
     modelValue: { type: String, default: '' },
@@ -20,7 +21,7 @@ let editorView = null
 const codeEditor = useTemplateRef('codeEditor')
 
 const initCodeEditor = (body) => {
-    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isDark = useColorMode().value === 'dark'
 
     editorView = new EditorView({
         doc: body,
