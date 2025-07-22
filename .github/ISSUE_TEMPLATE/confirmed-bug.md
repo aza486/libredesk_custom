@@ -1,4 +1,3 @@
-```markdown
 ---
 name: Confirmed Bug Report
 about: Report a confirmed bug in Libredesk
