@@ -438,6 +438,7 @@ SELECT
     m.sender_type,
     m.sender_id,
     m.meta,
+    c.uuid as conversation_uuid,
     COALESCE(
         json_agg(
             json_build_object(
@@ -452,10 +453,11 @@ SELECT
         '[]'::json
     ) AS attachments
 FROM conversation_messages m
+INNER JOIN conversations c ON c.id = m.conversation_id
 LEFT JOIN media ON media.model_type = 'messages' AND media.model_id = m.id
 WHERE m.uuid = $1
 GROUP BY 
-    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type
+    m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type, c.uuid
 ORDER BY m.created_at;
 
 -- name: get-messages
