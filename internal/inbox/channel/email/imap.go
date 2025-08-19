@@ -276,18 +276,18 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 	var fromAddress = strings.ToLower(env.From[0].Addr())
 
-	// Determine final Message ID - prefer extracted from raw headers, fallback to IMAP-parsed
-	messageID := extractedMessageID
+	// Determine final Message ID - prefer IMAP-parsed, fallback to raw header extraction
+	messageID := env.MessageID
 	if messageID == "" {
-		messageID = env.MessageID
+		messageID = extractedMessageID
 		if messageID != "" {
-			e.lo.Debug("using IMAP-parsed Message-ID as fallback", "message_id", messageID, "subject", env.Subject, "from", fromAddress)
+			e.lo.Debug("using raw header Message-ID as fallback for malformed ID", "message_id", messageID, "subject", env.Subject, "from", fromAddress)
 		}
 	}
 
 	// Drop message if we still don't have a valid Message ID
 	if messageID == "" {
-		e.lo.Error("dropping message: no valid Message-ID found in raw headers or IMAP parsing", "subject", env.Subject, "from", fromAddress)
+		e.lo.Error("dropping message: no valid Message-ID found in IMAP parsing or raw headers", "subject", env.Subject, "from", fromAddress)
 		return nil
 	}
 
