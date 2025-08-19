@@ -1,155 +1,123 @@
 package email
 
 import (
-	"bytes"
-	"os"
+	"strings"
 	"testing"
 
+	"github.com/emersion/go-message/mail"
 	"github.com/jhillyerd/enmime"
 )
 
-func TestExtractMessageIDFromHeaders(t *testing.T) {
+
+// TestGoIMAPMessageIDParsing shows how go-imap fails to parse malformed Message-IDs
+// and demonstrates the fallback solution.
+// go-imap uses mail.Header.MessageID() which strictly follows RFC 5322 and returns
+// empty strings for Message-IDs with multiple @ symbols.
+//
+// This caused emails to be dropped since we require Message-IDs for deduplication.
+// References:
+// - https://community.mailcow.email/d/701-multiple-at-in-message-id/5
+// - https://github.com/emersion/go-message/issues/154#issuecomment-1425634946
+func TestGoIMAPMessageIDParsing(t *testing.T) {
+	testCases := []struct {
+		input            string
+		expectedIMAP     string
+		expectedFallback string
+		name             string
+	}{
+		{"<normal@example.com>", "normal@example.com", "normal@example.com", "normal message ID"},
+		{"<malformed@@example.com>", "", "malformed@@example.com", "double @ - IMAP fails, fallback works"},
+		{"<001c01d710db$a8137a50$f83a6ef0$@jones.smith@example.com>", "", "001c01d710db$a8137a50$f83a6ef0$@jones.smith@example.com", "mailcow-style - IMAP fails, fallback works"},
+		{"<test@@@domain.com>", "", "test@@@domain.com", "triple @ - IMAP fails, fallback works"},
+		{"  <abc123@example.com>  ", "abc123@example.com", "abc123@example.com", "with whitespace - both handle correctly"},
+		{"abc123@example.com", "", "abc123@example.com", "no angle brackets - IMAP fails, fallback works"},
+		{"", "", "", "empty input"},
+		{"<>", "", "", "empty brackets"},
+		{"<CAFnQjQFhY8z@mail.example.com@gateway.company.com>", "", "CAFnQjQFhY8z@mail.example.com@gateway.company.com", "gateway-style - IMAP fails, fallback works"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test go-imap parsing behavior
+			var h mail.Header
+			h.Set("Message-Id", tc.input)
+			imapResult, _ := h.MessageID()
+
+			if imapResult != tc.expectedIMAP {
+				t.Errorf("IMAP parsing of %q: expected %q, got %q", tc.input, tc.expectedIMAP, imapResult)
+			}
+
+			// Test fallback solution
+			if tc.input != "" {
+				rawEmail := "From: test@example.com\nMessage-ID: " + tc.input + "\n\nBody"
+				envelope, err := enmime.ReadEnvelope(strings.NewReader(rawEmail))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				fallbackResult := extractMessageIDFromHeaders(envelope)
+				if fallbackResult != tc.expectedFallback {
+					t.Errorf("Fallback extraction of %q: expected %q, got %q", tc.input, tc.expectedFallback, fallbackResult)
+				}
+
+				// Critical check: ensure fallback works when IMAP fails
+				if imapResult == "" && tc.expectedFallback != "" && fallbackResult == "" {
+					t.Errorf("CRITICAL: Both IMAP and fallback failed for %q - would drop email!", tc.input)
+				}
+			}
+		})
+	}
+}
+
+
+// TestEdgeCasesMessageID tests additional edge cases for Message-ID extraction.
+func TestEdgeCasesMessageID(t *testing.T) {
 	tests := []struct {
-		name           string
-		emlFile        string
-		expectedResult string
-		description    string
+		name     string
+		email    string
+		expected string
 	}{
 		{
-			name:           "Normal Message ID",
-			emlFile:        "testdata/normal_message_id.eml",
-			expectedResult: "normal123@example.com",
-			description:    "Standard Message-ID format should be extracted correctly",
+			name: "no Message-ID header",
+			email: `From: test@example.com
+To: inbox@test.com
+Subject: Test
+
+Body`,
+			expected: "",
 		},
 		{
-			name:           "Double @ Message ID",
-			emlFile:        "testdata/double_at_message_id.eml",
-			expectedResult: "message123@username@example.org",
-			description:    "Message-ID with multiple @ symbols should be extracted correctly",
+			name: "malformed header syntax",
+			email: `From: test@example.com
+Message-ID: malformed-no-brackets@@domain.com
+To: inbox@test.com
+
+Body`,
+			expected: "malformed-no-brackets@@domain.com",
 		},
 		{
-			name:           "Triple @ Message ID",
-			emlFile:        "testdata/triple_at_message_id.eml",
-			expectedResult: "id@user@company@domain.com",
-			description:    "Message-ID with three @ symbols should be extracted correctly",
-		},
-		{
-			name:           "Missing Message ID",
-			emlFile:        "testdata/missing_message_id.eml",
-			expectedResult: "",
-			description:    "Email without Message-ID header should return empty string",
-		},
-		{
-			name:           "Whitespace Message ID",
-			emlFile:        "testdata/whitespace_message_id.eml",
-			expectedResult: "whitespace123@username@example.org",
-			description:    "Message-ID with whitespace and multiple @ symbols should be cleaned and extracted",
-		},
-		{
-			name:           "No Brackets Message ID",
-			emlFile:        "testdata/no_brackets_message_id.eml",
-			expectedResult: "nobrackets123@username@example.org",
-			description:    "Message-ID without angle brackets should be extracted correctly",
+			name: "multiple Message-ID headers (first wins)",
+			email: `From: test@example.com
+Message-ID: <first@example.com>
+Message-ID: <second@@example.com>
+To: inbox@test.com
+
+Body`,
+			expected: "first@example.com",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Read the email file
-			emlData, err := os.ReadFile(tt.emlFile)
+			envelope, err := enmime.ReadEnvelope(strings.NewReader(tt.email))
 			if err != nil {
-				t.Fatalf("Failed to read email file %s: %v", tt.emlFile, err)
+				t.Fatal(err)
 			}
 
-			// Parse the email with enmime
-			envelope, err := enmime.ReadEnvelope(bytes.NewReader(emlData))
-			if err != nil {
-				t.Fatalf("Failed to parse email: %v", err)
-			}
-
-			// Test the actual function
 			result := extractMessageIDFromHeaders(envelope)
-
-			// Verify the result
-			if result != tt.expectedResult {
-				t.Errorf("extractMessageIDFromHeaders() = %q, want %q\nDescription: %s",
-					result, tt.expectedResult, tt.description)
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
 			}
-
-			// Log the raw header for debugging
-			rawHeader := envelope.GetHeader(headerMessageID)
-			t.Logf("Raw Message-ID header: %q", rawHeader)
-			t.Logf("Extracted Message-ID: %q", result)
 		})
 	}
-}
-
-func TestProblematicMessageIDScenarios(t *testing.T) {
-	// Test Message-ID with multiple @ symbols that cause go-imap parsing to fail
-	t.Run("Multiple @ Symbols in Message-ID", func(t *testing.T) {
-		emlData, err := os.ReadFile("testdata/double_at_message_id.eml")
-		if err != nil {
-			t.Fatalf("Failed to read email file: %v", err)
-		}
-
-		envelope, err := enmime.ReadEnvelope(bytes.NewReader(emlData))
-		if err != nil {
-			t.Fatalf("Failed to parse email: %v", err)
-		}
-
-		result := extractMessageIDFromHeaders(envelope)
-		expected := "message123@username@example.org"
-
-		if result != expected {
-			t.Errorf("Failed to extract Message-ID with multiple @ symbols. Got %q, want %q", result, expected)
-		}
-
-		// Verify it's not empty (which would cause conversation corruption)
-		if result == "" {
-			t.Error("Extracted Message-ID is empty, this would cause conversation corruption")
-		}
-	})
-
-	// Test various Message-ID formatting edge cases
-	t.Run("Message-ID Formatting Edge Cases", func(t *testing.T) {
-		testCases := []struct {
-			file        string
-			description string
-		}{
-			{"testdata/triple_at_message_id.eml", "Message-ID with three @ symbols"},
-			{"testdata/whitespace_message_id.eml", "Message-ID with extra whitespace"},
-			{"testdata/no_brackets_message_id.eml", "Message-ID without angle brackets"},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.description, func(t *testing.T) {
-				emlData, err := os.ReadFile(tc.file)
-				if err != nil {
-					t.Fatalf("Failed to read email file %s: %v", tc.file, err)
-				}
-
-				envelope, err := enmime.ReadEnvelope(bytes.NewReader(emlData))
-				if err != nil {
-					t.Fatalf("Failed to parse email %s: %v", tc.file, err)
-				}
-
-				result := extractMessageIDFromHeaders(envelope)
-
-				// Ensure Message-ID extraction succeeds
-				if result == "" {
-					t.Errorf("Message-ID extraction failed for %s, got empty string", tc.file)
-				}
-
-				// Ensure proper cleaning - no angle brackets or whitespace
-				if result != "" {
-					if result[0] == '<' || result[len(result)-1] == '>' {
-						t.Errorf("Message-ID still contains angle brackets: %q", result)
-					}
-					if result[0] == ' ' || result[len(result)-1] == ' ' {
-						t.Errorf("Message-ID still contains whitespace: %q", result)
-					}
-				}
-			})
-		}
-	})
 }
