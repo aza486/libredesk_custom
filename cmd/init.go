@@ -181,10 +181,11 @@ func loadSettings(m *setting.Manager) {
 }
 
 // initSettings inits setting manager.
-func initSettings(db *sqlx.DB) *setting.Manager {
+func initSettings(db *sqlx.DB, i18n *i18n.I18n) *setting.Manager {
 	s, err := setting.New(setting.Opts{
-		DB: db,
-		Lo: initLogger("settings"),
+		DB:   db,
+		Lo:   initLogger("settings"),
+		I18n: i18n,
 	})
 	if err != nil {
 		log.Fatalf("error initializing setting manager: %v", err)
@@ -250,11 +251,12 @@ func initTag(db *sqlx.DB, i18n *i18n.I18n) *tag.Manager {
 }
 
 // initViews inits view manager.
-func initView(db *sqlx.DB) *view.Manager {
+func initView(db *sqlx.DB, i18n *i18n.I18n) *view.Manager {
 	var lo = initLogger("view_manager")
 	m, err := view.New(view.Opts{
-		DB: db,
-		Lo: lo,
+		DB:   db,
+		Lo:   lo,
+		I18n: i18n,
 	})
 	if err != nil {
 		log.Fatalf("error initializing view manager: %v", err)

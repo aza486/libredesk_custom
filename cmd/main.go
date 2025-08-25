@@ -157,8 +157,10 @@ func main() {
 	// Check for pending upgrade.
 	checkPendingUpgrade(db)
 
+	i18n := initI18n(fs)
+
 	// Load app settings from DB into the Koanf instance.
-	settings := initSettings(db)
+	settings := initSettings(db, i18n)
 	loadSettings(settings)
 
 	// Fallback for config typo. Logs a warning but continues to work with the incorrect key.
@@ -182,7 +184,6 @@ func main() {
 		lo                          = initLogger(appName)
 		rdb                         = initRedis()
 		constants                   = initConstants()
-		i18n                        = initI18n(fs)
 		csat                        = initCSAT(db, i18n)
 		oidc                        = initOIDC(db, settings, i18n)
 		status                      = initStatus(db, i18n)
@@ -239,7 +240,7 @@ func main() {
 		activityLog:     initActivityLog(db, i18n),
 		customAttribute: initCustomAttribute(db, i18n),
 		authz:           initAuthz(i18n),
-		view:            initView(db),
+		view:            initView(db, i18n),
 		report:          initReport(db, i18n),
 		csat:            initCSAT(db, i18n),
 		search:          initSearch(db, i18n),
