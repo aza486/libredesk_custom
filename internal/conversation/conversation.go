@@ -930,7 +930,7 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 		if err != nil {
 			return fmt.Errorf("making recipients for reply action: %w", err)
 		}
-		_, err = m.SendReply(
+		_, err = m.QueueReply(
 			[]mmodels.Media{},
 			conv.InboxID,
 			user.ID,
@@ -1001,8 +1001,8 @@ func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversatio
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.csat}"), nil)
 	}
 
-	// Send CSAT reply.
-	_, err = m.SendReply(nil /**media**/, conversation.InboxID, actorUserID, conversation.UUID, message, to, cc, bcc, meta)
+	// Queue CSAT reply.
+	_, err = m.QueueReply(nil /**media**/, conversation.InboxID, actorUserID, conversation.UUID, message, to, cc, bcc, meta)
 	if err != nil {
 		m.lo.Error("error sending CSAT reply", "conversation_uuid", conversation.UUID, "error", err)
 		return envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.errorCreating", "name", "{globals.terms.csat}"), nil)

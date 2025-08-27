@@ -85,8 +85,8 @@ func (m *Manager) GetAllJSON() (types.JSONText, error) {
 	return b, nil
 }
 
-// Update updates settings.
-func (m *Manager) Update(s interface{}) error {
+// Update updates settings with the passed values.
+func (m *Manager) Update(s any) error {
 	// Marshal settings.
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -109,7 +109,7 @@ func (m *Manager) Update(s interface{}) error {
 	return nil
 }
 
-// GetByPrefix retrieves settings by prefix as JSON.
+// GetByPrefix retrieves all settings start with the given prefix.
 func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 	var b types.JSONText
 	if err := m.q.GetByPrefix.Get(&b, prefix+"%"); err != nil {
