@@ -274,8 +274,8 @@ func handleGetConversation(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	prev, _ := app.conversation.GetContactConversations(conv.ContactID)
-	conv.PreviousConversations = filterCurrentConv(prev, conv.UUID)
+	prev, _ := app.conversation.GetContactPreviousConversations(conv.ContactID, 10)
+	conv.PreviousConversations = filterCurrentPreviousConv(prev, conv.UUID)
 	return r.SendEnvelope(conv)
 }
 
@@ -650,14 +650,14 @@ func handleRemoveTeamAssignee(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-// filterCurrentConv removes the current conversation from the list of conversations.
-func filterCurrentConv(convs []cmodels.Conversation, uuid string) []cmodels.Conversation {
+// filterCurrentPreviousConv removes the current conversation from the list of previous conversations.
+func filterCurrentPreviousConv(convs []cmodels.PreviousConversation, uuid string) []cmodels.PreviousConversation {
 	for i, c := range convs {
 		if c.UUID == uuid {
 			return append(convs[:i], convs[i+1:]...)
 		}
 	}
-	return []cmodels.Conversation{}
+	return []cmodels.PreviousConversation{}
 }
 
 // handleCreateConversation creates a new conversation and sends a message to it.
