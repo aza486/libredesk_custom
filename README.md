@@ -67,7 +67,7 @@ docker exec -it libredesk_app ./libredesk --set-system-user-password
 
 Go to `http://localhost:9000` and login with username `System` and the password you set using the `--set-system-user-password` command.
 
-See [installation docs](https://libredesk.io/docs/installation/)
+See [installation docs](https://docs.libredesk.io/getting-started/installation)
 
 __________________
 
@@ -78,12 +78,12 @@ __________________
 - Run `./libredesk --set-system-user-password` to set the password for the System user.
 - Run `./libredesk` and visit `http://localhost:9000` and login with username `System` and the password you set using the --set-system-user-password command.
 
-See [installation docs](https://libredesk.io/docs/installation)
+See [installation docs](https://docs.libredesk.io/getting-started/installation)
 __________________
 
 
 ## Developers
-If you are interested in contributing, refer to the [developer setup](https://libredesk.io/docs/developer-setup/). The backend is written in Go and the frontend is Vue js 3 with Shadcn for UI components.
+If you are interested in contributing, refer to the [developer setup](https://docs.libredesk.io/contributing/developer-setup). The backend is written in Go and the frontend is Vue js 3 with Shadcn for UI components.
 
 ## Development Status
 
