@@ -11,7 +11,6 @@ import (
 	"github.com/abhinavxd/libredesk/internal/setting/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
-	"github.com/knadh/go-i18n"
 	"github.com/zerodha/logf"
 )
 
@@ -22,16 +21,14 @@ var (
 
 // Manager handles setting-related operations.
 type Manager struct {
-	q    queries
-	lo   *logf.Logger
-	i18n *i18n.I18n
+	q  queries
+	lo *logf.Logger
 }
 
 // Opts contains options for initializing the Manager.
 type Opts struct {
-	DB   *sqlx.DB
-	Lo   *logf.Logger
-	I18n *i18n.I18n
+	DB *sqlx.DB
+	Lo *logf.Logger
 }
 
 // queries contains prepared SQL queries.
@@ -51,9 +48,8 @@ func New(opts Opts) (*Manager, error) {
 	}
 
 	return &Manager{
-		q:    q,
-		lo:   opts.Lo,
-		i18n: opts.I18n,
+		q:  q,
+		lo: opts.Lo,
 	}, nil
 }
 
@@ -93,7 +89,7 @@ func (m *Manager) Update(s any) error {
 		m.lo.Error("error marshalling settings", "error", err)
 		return envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.setting}"),
+			"Error marshalling settings",
 			nil,
 		)
 	}
@@ -102,7 +98,7 @@ func (m *Manager) Update(s any) error {
 		m.lo.Error("error updating settings", "error", err)
 		return envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorUpdating", "name", "{globals.terms.setting}"),
+			"Error updating settings",
 			nil,
 		)
 	}
@@ -116,7 +112,7 @@ func (m *Manager) GetByPrefix(prefix string) (types.JSONText, error) {
 		m.lo.Error("error fetching settings", "prefix", prefix, "error", err)
 		return b, envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.setting}"),
+			"Error fetching settings",
 			nil,
 		)
 	}
@@ -130,7 +126,7 @@ func (m *Manager) Get(key string) (types.JSONText, error) {
 		m.lo.Error("error fetching setting", "key", key, "error", err)
 		return b, envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.setting}"),
+			"Error fetching settings",
 			nil,
 		)
 	}
@@ -144,7 +140,7 @@ func (m *Manager) GetAppRootURL() (string, error) {
 		m.lo.Error("error fetching root URL", "error", err)
 		return "", envelope.NewError(
 			envelope.GeneralError,
-			m.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.appRootURL}"),
+			"Error fetching root URL",
 			nil,
 		)
 	}

@@ -181,11 +181,10 @@ func loadSettings(m *setting.Manager) {
 }
 
 // initSettings inits setting manager.
-func initSettings(db *sqlx.DB, i18n *i18n.I18n) *setting.Manager {
+func initSettings(db *sqlx.DB) *setting.Manager {
 	s, err := setting.New(setting.Opts{
-		DB:   db,
-		Lo:   initLogger("settings"),
-		I18n: i18n,
+		DB: db,
+		Lo: initLogger("settings"),
 	})
 	if err != nil {
 		log.Fatalf("error initializing setting manager: %v", err)
@@ -367,7 +366,9 @@ func getTmplFuncs(consts *constants, i18n *i18n.I18n) template.FuncMap {
 		"SiteName": func() string {
 			return consts.SiteName
 		},
-		"i18n": i18n,
+		"L": func() interface{} {
+			return i18n
+		},
 	}
 }
 
