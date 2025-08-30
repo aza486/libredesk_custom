@@ -1,10 +1,6 @@
 -- name: get-all-oidc
 SELECT id, created_at, updated_at, name, provider_url, client_id, client_secret, enabled, provider FROM oidc order by updated_at desc;
 
--- name: get-all-enabled
--- Skips the `client_secret` and returns all enabled OIDC configurations for login
-SELECT id, name, enabled, provider, client_id, updated_at FROM oidc WHERE enabled = true order by updated_at desc;
-
 -- name: get-oidc
 SELECT id, created_at, updated_at, name, provider_url, client_id, client_secret, enabled, provider FROM oidc WHERE id = $1;
 

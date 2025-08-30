@@ -18,7 +18,7 @@ const setFavicon = (url) => {
 }
 
 async function initApp () {
-  const settings = (await api.getSettings('general')).data.data
+  const settings = (await api.getConfig()).data.data
   const emitter = mitt()
   const lang = settings['app.lang'] || 'en'
   const langMessages = await api.getLanguage(lang)
