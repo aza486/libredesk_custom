@@ -2,7 +2,7 @@
 {{ template "header" . }}
 <div class="csat-container">
     <div class="csat-header">
-        <h2>Rate your recent interaction</h2>
+        <h2>{{ i18n.T "csat.rateYourInteraction" }}</h2>
         {{ if .Data.Conversation.Subject }}
         <p class="conversation-subject"><i>{{ .Data.Conversation.Subject }}</i></p>
         {{ end }}
@@ -16,7 +16,7 @@
                     <div class="emoji-wrapper">
                         <span class="emoji">😢</span>
                     </div>
-                    <span class="rating-text">Poor</span>
+                    <span class="rating-text">{{ i18n.T "csat.rating.poor" }}</span>
                 </label>
 
                 <input type="radio" id="rating-2" name="rating" value="2">
@@ -24,7 +24,7 @@
                     <div class="emoji-wrapper">
                         <span class="emoji">😕</span>
                     </div>
-                    <span class="rating-text">Fair</span>
+                    <span class="rating-text">{{ i18n.T "csat.rating.fair" }}</span>
                 </label>
 
                 <input type="radio" id="rating-3" name="rating" value="3">
@@ -32,7 +32,7 @@
                     <div class="emoji-wrapper">
                         <span class="emoji">😊</span>
                     </div>
-                    <span class="rating-text">Good</span>
+                    <span class="rating-text">{{ i18n.T "csat.rating.good" }}</span>
                 </label>
 
                 <input type="radio" id="rating-4" name="rating" value="4">
@@ -40,7 +40,7 @@
                     <div class="emoji-wrapper">
                         <span class="emoji">😃</span>
                     </div>
-                    <span class="rating-text">Great</span>
+                    <span class="rating-text">{{ i18n.T "csat.rating.great" }}</span>
                 </label>
 
                 <input type="radio" id="rating-5" name="rating" value="5">
@@ -48,18 +48,18 @@
                     <div class="emoji-wrapper">
                         <span class="emoji">🤩</span>
                     </div>
-                    <span class="rating-text">Excellent</span>
+                    <span class="rating-text">{{ i18n.T "csat.rating.excellent" }}</span>
                 </label>
             </div>
             <!-- Validation message for rating -->
             <div class="validation-message" id="ratingValidationMessage"
                 style="display: none; color: #dc2626; text-align: center; margin-top: 10px; font-size: 0.9em;">
-                Please select a rating before submitting.
+                {{ i18n.Ts "globals.messages.pleaseSelect" "name" "rating" }}
             </div>
         </div>
 
         <div class="feedback-container">
-            <label for="feedback" class="feedback-label">Additional feedback (optional)</label>
+            <label for="feedback" class="feedback-label">{{ i18n.T "globals.messages.additionalFeedback" }}</label>
             <textarea id="feedback" name="feedback" placeholder="" rows="6" maxlength="1000"
                 onkeyup="updateCharCount(this)"></textarea>
             <div class="char-counter">
@@ -67,7 +67,7 @@
             </div>
         </div>
 
-        <button type="submit" class="button submit-button">Submit</button>
+        <button type="submit" class="button submit-button">{{ i18n.T "globals.messages.submit" }}</button>
     </form>
 </div>
 
