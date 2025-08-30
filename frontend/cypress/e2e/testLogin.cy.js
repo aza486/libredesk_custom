@@ -20,7 +20,7 @@ describe('Login Component', () => {
                             "enabled": true,
                             "id": 1,
                             "logo": "/images/google-logo.png",
-                            "name": "asdas",
+                            "name": "Google",
                             "provider": "Google",
                             "provider_url": "https://accounts.google.com",
                             "redirect_uri": "http://localhost:9000/api/v1/oidc/1/finish"
