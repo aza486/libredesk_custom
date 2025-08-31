@@ -18,14 +18,14 @@ const setFavicon = (url) => {
 }
 
 async function initApp () {
-  const settings = (await api.getConfig()).data.data
+  const config = (await api.getConfig()).data.data
   const emitter = mitt()
-  const lang = settings['app.lang'] || 'en'
+  const lang = config['app.lang'] || 'en'
   const langMessages = await api.getLanguage(lang)
 
   // Set favicon.
-  if (settings['app.favicon_url'])
-    setFavicon(settings['app.favicon_url'])
+  if (config['app.favicon_url'])
+    setFavicon(config['app.favicon_url'])
 
   // Initialize i18n.
   const i18nConfig = {

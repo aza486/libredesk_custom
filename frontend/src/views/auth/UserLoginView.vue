@@ -89,7 +89,9 @@
             type="submit"
           >
             <span v-if="isLoading" class="flex items-center justify-center">
-              <div class="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3"></div>
+              <div
+                class="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3"
+              ></div>
               {{ t('auth.loggingIn') }}
             </span>
             <span v-else>{{ t('auth.signInButton') }}</span>
@@ -159,6 +161,7 @@ onMounted(async () => {
 
 const fetchOIDCProviders = async () => {
   try {
+    // Also fetched in `main.js`, can be fixed later
     const resp = await api.getConfig()
     oidcProviders.value = resp.data.data.sso_providers || []
   } catch (error) {
