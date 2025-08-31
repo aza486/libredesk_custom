@@ -168,7 +168,7 @@ func handleUpdateCurrentAgent(r *fastglue.Request) error {
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-		if err := uploadUserAvatar(r, &agent, files); err != nil {
+		if err := uploadUserAvatar(r, agent, files); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}
@@ -454,13 +454,13 @@ func handleSetPassword(r *fastglue.Request) error {
 }
 
 // uploadUserAvatar uploads the user avatar.
-func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart.FileHeader) error {
+func uploadUserAvatar(r *fastglue.Request, user models.User, files []*multipart.FileHeader) error {
 	var app = r.Context.(*App)
 
 	fileHeader := files[0]
 	file, err := fileHeader.Open()
 	if err != nil {
-		app.lo.Error("error opening uploaded file", "error", err)
+		app.lo.Error("error opening uploaded file", "user_id", user.ID, "error", err)
 		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorReading", "name", "{globals.terms.file}"), nil)
 	}
 	defer file.Close()
@@ -477,7 +477,7 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 
 	// Check file size
 	if bytesToMegabytes(srcFileSize) > maxAvatarSizeMB {
-		app.lo.Error("error uploaded file size is larger than max allowed", "size", bytesToMegabytes(srcFileSize), "max_allowed", maxAvatarSizeMB)
+		app.lo.Error("error uploaded file size is larger than max allowed", "user_id", user.ID, "size", bytesToMegabytes(srcFileSize), "max_allowed", maxAvatarSizeMB)
 		return envelope.NewError(
 			envelope.InputError,
 			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", maxAvatarSizeMB)),
@@ -494,20 +494,22 @@ func uploadUserAvatar(r *fastglue.Request, user *models.User, files []*multipart
 	meta := []byte("{}")
 	media, err := app.media.UploadAndInsert(srcFileName, srcContentType, contentID, linkedModel, linkedID, file, int(srcFileSize), disposition, meta)
 	if err != nil {
-		app.lo.Error("error uploading file", "error", err)
+		app.lo.Error("error uploading file", "user_id", user.ID, "error", err)
 		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil)
 	}
 
 	// Delete current avatar.
 	if user.AvatarURL.Valid {
 		fileName := filepath.Base(user.AvatarURL.String)
-		app.media.Delete(fileName)
+		if err := app.media.Delete(fileName); err != nil {
+			app.lo.Error("error deleting user avatar", "user_id", user.ID, "error", err)
+		}
 	}
 
 	// Save file path.
 	path, err := stringutil.GetPathFromURL(media.URL)
 	if err != nil {
-		app.lo.Debug("error getting path from URL", "url", media.URL, "error", err)
+		app.lo.Debug("error getting path from URL", "user_id", user.ID, "url", media.URL, "error", err)
 		return envelope.NewError(envelope.GeneralError, app.i18n.Ts("globals.messages.errorUploading", "name", "{globals.terms.file}"), nil)
 	}
 

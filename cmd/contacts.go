@@ -164,7 +164,7 @@ func handleUpdateContact(r *fastglue.Request) error {
 	// Upload avatar?
 	files, ok := form.File["files"]
 	if ok && len(files) > 0 {
-		if err := uploadUserAvatar(r, &contact, files); err != nil {
+		if err := uploadUserAvatar(r, contact, files); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}

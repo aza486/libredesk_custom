@@ -722,7 +722,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 		media = append(media, m)
 	}
 
-	// Handle sending initial message based on initiator using switch-case.
+	// Send initial message based on the initiator of conversation.
 	switch req.Initiator {
 	case umodels.UserTypeAgent:
 		// Queue reply.
