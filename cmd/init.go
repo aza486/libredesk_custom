@@ -385,7 +385,10 @@ func reloadSettings(app *App) error {
 		app.lo.Error("error unmarshalling settings from DB", "error", err)
 		return err
 	}
-	if err := ko.Load(confmap.Provider(out, "."), nil); err != nil {
+	app.Lock()
+	err = ko.Load(confmap.Provider(out, "."), nil)
+	app.Unlock()
+	if err != nil {
 		app.lo.Error("error loading settings into koanf", "error", err)
 		return err
 	}

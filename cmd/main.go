@@ -97,6 +97,8 @@ type App struct {
 
 	// Global state that stores data on an available app update.
 	update *AppUpdate
+	// Flag to indicate if app restart is required for settings to take effect.
+	restartRequired bool
 	sync.Mutex
 }
 

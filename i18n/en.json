@@ -550,6 +550,7 @@
   "admin.automation.event.message.incoming": "Incoming message",
   "admin.automation.invalid": "Make sure you have atleast one action and one rule and their values are not empty.",
   "admin.notification.restartApp": "Settings updated successfully, Please restart the app for changes to take effect.",
+  "admin.banner.restartMessage": "Some settings have been changed that require an application restart to take effect.",
   "admin.template.outgoingEmailTemplates": "Outgoing email templates",
   "admin.template.emailNotificationTemplates": "Email notification templates",
   "admin.template.makeSureTemplateHasContent": "Make sure the template has {content} only once.",
