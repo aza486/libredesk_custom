@@ -98,7 +98,7 @@ func handleUpdateCSATResponse(r *fastglue.Request) error {
 
 	return app.tmpl.RenderWebPage(r.RequestCtx, "info", map[string]interface{}{
 		"Data": map[string]interface{}{
-			"Title":   app.i18n.T("csat.thankYou"),
+			"Title":   app.i18n.T("globals.messages.thankYou"),
 			"Message": app.i18n.T("csat.thankYouMessage"),
 		},
 	})
