@@ -44,6 +44,10 @@ async function initApp () {
 
   // Fetch and store app settings in store
   const settingsStore = useAppSettingsStore()
+
+  // Store the public config in the store
+  settingsStore.setPublicConfig(config)
+
   try {
     const generalSettings = (await api.getSettings('general')).data.data
     settingsStore.setSettings(generalSettings)

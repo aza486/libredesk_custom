@@ -14,12 +14,12 @@ describe('Login Component', () => {
                     "app.lang": "en",
                     "app.logo_url": "http://localhost:9000/logo.png",
                     "app.site_name": "Libredesk",
-                    "sso_providers": [
+                    "app.sso_providers": [
                         {
                             "client_id": "xx",
                             "enabled": true,
                             "id": 1,
-                            "logo": "/images/google-logo.png",
+                            "logo_url": "/images/google-logo.png",
                             "name": "Google",
                             "provider": "Google",
                             "provider_url": "https://accounts.google.com",

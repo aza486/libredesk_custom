@@ -9,7 +9,7 @@
       <CardContent class="p-6 space-y-6">
         <div class="space-y-2 text-center">
           <CardTitle class="text-3xl font-bold text-foreground">
-            {{ appSettingsStore.settings?.['app.site_name'] || 'Libredesk' }}
+            {{ appSettingsStore.public_config?.['app.site_name'] || 'LIBREDESK' }}
           </CardTitle>
           <p class="text-muted-foreground">{{ t('auth.signIn') }}</p>
         </div>
@@ -161,9 +161,10 @@ onMounted(async () => {
 
 const fetchOIDCProviders = async () => {
   try {
-    // Also fetched in `main.js`, can be fixed later
-    const resp = await api.getConfig()
-    oidcProviders.value = resp.data.data.sso_providers || []
+    const config = appSettingsStore.public_config
+    if (config && config['app.sso_providers']) {
+      oidcProviders.value = config['app.sso_providers'] || []
+    }
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',

@@ -48,7 +48,7 @@ func handleGetConfig(r *fastglue.Request) error {
 				"provider":     provider.Provider,
 				"provider_url": provider.ProviderURL,
 				"client_id":    provider.ClientID,
-				"logo":         provider.ProviderLogoURL,
+				"logo_url":     provider.ProviderLogoURL,
 				"enabled":      provider.Enabled,
 				"redirect_uri": provider.RedirectURI,
 			}
@@ -57,7 +57,7 @@ func handleGetConfig(r *fastglue.Request) error {
 	}
 
 	// Add SSO providers to the response
-	publicSettings["sso_providers"] = enabledProviders
+	publicSettings["app.sso_providers"] = enabledProviders
 
 	return r.SendEnvelope(publicSettings)
 }
