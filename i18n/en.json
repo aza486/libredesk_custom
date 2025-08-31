@@ -525,6 +525,7 @@
   "admin.role.contactNotes.write": "Add Contact Notes",
   "admin.role.contactNotes.delete": "Delete Contact Notes",
   "admin.role.customAttributes.manage": "Manage Custom Attributes",
+  "admin.role.webhooks.manage": "Manage Webhooks",
   "admin.role.activityLog.manage": "Manage Activity Log",
   "admin.automation.newConversation.description": "Rules that run when a new conversation is created, drag and drop to reorder rules.",
   "admin.automation.conversationUpdate": "Conversation Update",
