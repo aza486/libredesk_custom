@@ -2,9 +2,6 @@
 
 describe('Login Component', () => {
     beforeEach(() => {
-        // Visit the login page
-        cy.visit('/')
-
         // Mock the API response for OIDC providers
         cy.intercept('GET', '**/api/v1/config', {
             statusCode: 200,
@@ -29,6 +26,9 @@ describe('Login Component', () => {
                 }
             }
         }).as('getOIDCProviders')
+
+        // Visit the login page
+        cy.visit('/')
     })
 
     it('should display login form', () => {
