@@ -25,9 +25,8 @@
           >
             <img
               :src="oidcProvider.logo_url"
+              :alt="oidcProvider.name"
               width="20"
-              class="mr-2"
-              alt=""
               v-if="oidcProvider.logo_url"
             />
             {{ oidcProvider.name }}
