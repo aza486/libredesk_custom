@@ -164,11 +164,17 @@ func handleUpdateContact(r *fastglue.Request) error {
 	// Upload avatar?
 	files, ok := form.File["files"]
 	if ok && len(files) > 0 {
-		if err := uploadUserAvatar(r, &contact, files); err != nil {
+		if err := uploadUserAvatar(r, contact, files); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
 	}
-	return r.SendEnvelope(true)
+
+	// Refetch contact and return it
+	contact, err = app.user.GetContact(id, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(contact)
 }
 
 // handleGetContactNotes returns all notes for a contact.
@@ -195,18 +201,21 @@ func handleCreateContactNote(r *fastglue.Request) error {
 		auser        = r.RequestCtx.UserValue("user").(amodels.User)
 		req          = createContactNoteReq{}
 	)
-
 	if err := r.Decode(&req, "json"); err != nil {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
 	}
-
 	if len(req.Note) == 0 {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.Ts("globals.messages.empty", "name", "note"), nil, envelope.InputError)
 	}
-	if err := app.user.CreateNote(contactID, auser.ID, req.Note); err != nil {
+	n, err := app.user.CreateNote(contactID, auser.ID, req.Note)
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+	n, err = app.user.GetNote(n.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(n)
 }
 
 // handleDeleteContactNote deletes a note for a contact.
@@ -240,6 +249,8 @@ func handleDeleteContactNote(r *fastglue.Request) error {
 		}
 	}
 
+	app.lo.Info("deleting contact note", "note_id", noteID, "contact_id", contactID, "actor_id", auser.ID)
+
 	if err := app.user.DeleteNote(noteID, contactID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -251,6 +262,7 @@ func handleBlockContact(r *fastglue.Request) error {
 	var (
 		app          = r.Context.(*App)
 		contactID, _ = strconv.Atoi(r.RequestCtx.UserValue("id").(string))
+		auser        = r.RequestCtx.UserValue("user").(amodels.User)
 		req          = blockContactReq{}
 	)
 
@@ -262,8 +274,15 @@ func handleBlockContact(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.errorParsing", "name", "{globals.terms.request}"), nil))
 	}
 
+	app.lo.Info("setting contact block status", "contact_id", contactID, "enabled", req.Enabled, "actor_id", auser.ID)
+
 	if err := app.user.ToggleEnabled(contactID, models.UserTypeContact, req.Enabled); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(true)
+
+	contact, err := app.user.GetContact(contactID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(contact)
 }

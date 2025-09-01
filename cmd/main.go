@@ -97,6 +97,8 @@ type App struct {
 
 	// Global state that stores data on an available app update.
 	update *AppUpdate
+	// Flag to indicate if app restart is required for settings to take effect.
+	restartRequired bool
 	sync.Mutex
 }
 
@@ -157,10 +159,8 @@ func main() {
 	// Check for pending upgrade.
 	checkPendingUpgrade(db)
 
-	i18n := initI18n(fs)
-
 	// Load app settings from DB into the Koanf instance.
-	settings := initSettings(db, i18n)
+	settings := initSettings(db)
 	loadSettings(settings)
 
 	// Fallback for config typo. Logs a warning but continues to work with the incorrect key.
@@ -184,6 +184,7 @@ func main() {
 		lo                          = initLogger(appName)
 		rdb                         = initRedis()
 		constants                   = initConstants()
+		i18n                        = initI18n(fs)
 		csat                        = initCSAT(db, i18n)
 		oidc                        = initOIDC(db, settings, i18n)
 		status                      = initStatus(db, i18n)

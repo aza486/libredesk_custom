@@ -9,7 +9,7 @@
       <CardContent class="p-6 space-y-6">
         <div class="space-y-2 text-center">
           <CardTitle class="text-3xl font-bold text-foreground">
-            {{ appSettingsStore.settings?.['app.site_name'] || 'Libredesk' }}
+            {{ appSettingsStore.public_config?.['app.site_name'] || 'LIBREDESK' }}
           </CardTitle>
           <p class="text-muted-foreground">{{ t('auth.signIn') }}</p>
         </div>
@@ -25,9 +25,8 @@
           >
             <img
               :src="oidcProvider.logo_url"
+              :alt="oidcProvider.name"
               width="20"
-              class="mr-2"
-              alt=""
               v-if="oidcProvider.logo_url"
             />
             {{ oidcProvider.name }}
@@ -89,7 +88,9 @@
             type="submit"
           >
             <span v-if="isLoading" class="flex items-center justify-center">
-              <div class="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3"></div>
+              <div
+                class="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-3"
+              ></div>
               {{ t('auth.loggingIn') }}
             </span>
             <span v-else>{{ t('auth.signInButton') }}</span>
@@ -159,8 +160,10 @@ onMounted(async () => {
 
 const fetchOIDCProviders = async () => {
   try {
-    const resp = await api.getAllEnabledOIDC()
-    oidcProviders.value = resp.data.data
+    const config = appSettingsStore.public_config
+    if (config && config['app.sso_providers']) {
+      oidcProviders.value = config['app.sso_providers'] || []
+    }
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
@@ -204,6 +207,9 @@ const loginAction = () => {
       if (resp?.data?.data) {
         userStore.setCurrentUser(resp.data.data)
       }
+      // Also fetch general setting as user's logged in.
+      appSettingsStore.fetchSettings('general')
+      // Navigate to inboxes
       router.push({ name: 'inboxes' })
     })
     .catch((error) => {
