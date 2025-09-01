@@ -531,7 +531,7 @@
   "admin.automation.conversationUpdate": "Conversation Update",
   "admin.automation.conversationUpdate.description": "Rules that run when a conversation is updated.",
   "admin.automation.timeTriggers": "Time Triggers",
-  "admin.automation.timeTriggers.description": "Rules that once an hour",
+  "admin.automation.timeTriggers.description": "Rules that run once an hour",
   "admin.automation.match": "Match",
   "admin.automation.any": "ANY",
   "admin.automation.all": "ALL",
