@@ -207,6 +207,9 @@ const loginAction = () => {
       if (resp?.data?.data) {
         userStore.setCurrentUser(resp.data.data)
       }
+      // Also fetch general setting as user's logged in.
+      appSettingsStore.fetchSettings('general')
+      // Navigate to inboxes
       router.push({ name: 'inboxes' })
     })
     .catch((error) => {

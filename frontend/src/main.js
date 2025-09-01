@@ -42,17 +42,16 @@ async function initApp () {
   const pinia = createPinia()
   app.use(pinia)
 
-  // Fetch and store app settings in store
+  // Fetch and store app settings in store (after pinia is initialized)
   const settingsStore = useAppSettingsStore()
 
   // Store the public config in the store
   settingsStore.setPublicConfig(config)
 
   try {
-    const generalSettings = (await api.getSettings('general')).data.data
-    settingsStore.setSettings(generalSettings)
+    await settingsStore.fetchSettings('general')
   } catch (error) {
-    // Ignore errors - could be auth, network, whatever
+    // Pass
   }
 
   // Add emitter to global properties.
