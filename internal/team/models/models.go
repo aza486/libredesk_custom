@@ -34,10 +34,18 @@ type TeamMember struct {
 	TeamID             int    `db:"team_id" json:"team_id"`
 }
 
-type Teams []Team
+type TeamsCompact []TeamCompact
+
+func (t TeamsCompact) IDs() []int {
+	ids := make([]int, len(t))
+	for i, team := range t {
+		ids[i] = team.ID
+	}
+	return ids
+}
 
 // Scan implements the sql.Scanner interface for Teams
-func (t *Teams) Scan(src interface{}) error {
+func (t *TeamsCompact) Scan(src interface{}) error {
 	if src == nil {
 		*t = nil
 		return nil
@@ -52,15 +60,6 @@ func (t *Teams) Scan(src interface{}) error {
 }
 
 // Value implements the driver.Valuer interface for Teams
-func (t Teams) Value() (driver.Value, error) {
+func (t TeamsCompact) Value() (driver.Value, error) {
 	return json.Marshal(t)
-}
-
-// IDs returns a slice of all team IDs in the Teams slice.
-func (t Teams) IDs() []int {
-	ids := make([]int, len(t))
-	for i, team := range t {
-		ids[i] = team.ID
-	}
-	return ids
 }

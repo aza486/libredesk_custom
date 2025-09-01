@@ -127,6 +127,7 @@ func handleUpdateEmailNotificationSettings(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.invalidFromAddress"), nil, envelope.InputError)
 	}
 
+	// If empty then retain previous password.
 	if req.Password == "" {
 		req.Password = cur.Password
 	}
