@@ -211,6 +211,10 @@ func handleCreateContactNote(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	n, err = app.user.GetNote(n.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 	return r.SendEnvelope(n)
 }
 
