@@ -184,10 +184,8 @@ const userStore = useUserStore()
 const isSystemUser = computed(() => props.message.author?.email === 'System')
 const canManageUsers = computed(() => !isSystemUser.value && userStore.can('users:manage'))
 
-// Direction helpers
 const isOutgoing = computed(() => props.direction === 'outgoing')
 
-// Author info from message
 const getFullName = computed(() => {
   const author = props.message.author ?? {}
   const firstName = author.first_name ?? 'User'
@@ -215,20 +213,16 @@ const nonInlineAttachments = computed(() =>
   props.message.attachments.filter((attachment) => attachment.disposition !== 'inline')
 )
 
-// Bubble classes - conditional based on direction
 const bubbleClasses = computed(() => ({
-  // Outgoing-specific: private message styling
   'bg-private': isOutgoing.value && props.message.private,
   'border border-border': isOutgoing.value && !props.message.private,
   'opacity-50 animate-pulse': isOutgoing.value && props.message.status === 'pending',
   'border-destructive': isOutgoing.value && props.message.status === 'failed',
   relative: isOutgoing.value,
-  // Incoming-specific: quoted text visibility
   'show-quoted-text': !isOutgoing.value && showQuotedText.value,
   'hide-quoted-text': !isOutgoing.value && !showQuotedText.value
 }))
 
-// Outgoing-only computed properties
 const isPrivateMessage = computed(() => isOutgoing.value && props.message.private)
 const showCheckCheck = computed(
   () => isOutgoing.value && props.message.status === 'sent' && !isPrivateMessage.value
@@ -239,7 +233,6 @@ const retryMessage = (msg) => {
   api.retryMessage(convStore.current.uuid, msg.uuid)
 }
 
-// Incoming-only: quoted text toggle
 const showQuotedText = ref(false)
 const hasQuotedContent = computed(
   () => !isOutgoing.value && sanitizedContent.value.includes('<blockquote')
@@ -248,17 +241,15 @@ const toggleQuote = () => {
   showQuotedText.value = !showQuotedText.value
 }
 
-// Inline image lightbox: click an <img> in the rendered email body to open it.
-// We enumerate images from the rendered DOM rather than the HTML source so we
-// inherit vue-letter's sanitization and don't have to parse HTML with regex
-// (which trips on attributes containing '>' and similar edge cases).
+// Enumerate from rendered DOM (not HTML source) to inherit vue-letter's
+// sanitization and dodge regex parsing of attributes containing '>'.
 const messageContentEl = ref(null)
 const inlineLightboxOpen = ref(false)
 const inlineLightboxIndex = ref(0)
 const inlineImages = ref([])
 
-// Re-walk the rendered <img> set on click. Cheaper than maintaining a watcher
-// on sanitizedContent, and always reflects what the user actually sees.
+// Re-walk on click instead of caching - cheaper than watching sanitizedContent
+// and always reflects what the user actually sees.
 const refreshInlineImages = () => {
   const root = messageContentEl.value
   if (!root) {
@@ -271,12 +262,11 @@ const refreshInlineImages = () => {
 }
 
 const onMessageContentClick = (event) => {
-  // Walk up so clicks on nested wrappers (e.g. <a><img></a>) still resolve.
+  // closest('img') so clicks on <a><img></a> wrappers still resolve.
   const img = event.target?.closest?.('img')
   if (!img || !messageContentEl.value?.contains(img)) return
 
-  // If the image is inside an anchor, suppress the navigation so the
-  // lightbox can take over.
+  // Suppress anchor navigation so the lightbox can take over.
   const wrappingAnchor = img.closest('a')
   if (wrappingAnchor && messageContentEl.value.contains(wrappingAnchor)) {
     event.preventDefault()
@@ -289,7 +279,6 @@ const onMessageContentClick = (event) => {
   inlineLightboxOpen.value = true
 }
 
-// Envelope visibility (both directions)
 const showEnvelope = computed(() => {
   return (
     props.message.meta?.from?.length ||
