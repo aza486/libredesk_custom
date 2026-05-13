@@ -35,6 +35,10 @@ const (
 	upgradeWindowTTL = 7 * 24 * time.Hour
 )
 
+var imgSrcUploadsPattern = regexp.MustCompile(
+	`(?i)(<img[^>]*?\bsrc=["'])((?:https?://[^"'<>\s/]+)?/uploads/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?[^"'<>\s]*)?)(["'])`,
+)
+
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
 // pending outgoing messages at the specified read interval and pushes them to the outgoing queue to be sent.
 func (m *Manager) Run(ctx context.Context, incomingQWorkers, outgoingQWorkers, scanInterval time.Duration) {
@@ -982,60 +986,42 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 	return sqlQuery, pageSize, qArgs, nil
 }
 
-// imgSrcUploadsPattern matches an <img> tag whose src attribute points at our
-// /uploads/<uuid> path. Restricting to the src attribute (rather than free
-// text) prevents accidental rewrites of plain prose like "see /uploads/..."
-// or quoted-thread URL mentions outside of an <img>.
-//
-// Capture groups:
-//
-//	1: tag prefix up to and including the opening quote (`<img ... src="`)
-//	2: the entire src URL value
-//	3: media UUID
-//	4: the closing quote of the src attribute
-var imgSrcUploadsPattern = regexp.MustCompile(
-	`(?i)(<img[^>]*?\bsrc=["'])((?:https?://[^"'<>\s/]+)?/uploads/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?[^"'<>\s]*)?)(["'])`,
-)
-
-// embedInlineImagesAsCID finds every <img src=".../uploads/<uuid>"> reference
-// in the outgoing message body, attaches the underlying file as an inline CID
-// part, and rewrites the src to "cid:<id>". The result is a self-contained
-// email: recipients see the images regardless of whether our media URLs later
-// expire, our domain changes, or the server is unreachable. Quoted thread
-// images from prior messages are picked up automatically.
-//
-// Authorisation: we only embed media that already lives on this conversation.
-// Otherwise an agent who can read conversation A could craft an outgoing reply
-// in conversation B with <img src="/uploads/<conv-A-uuid>"> and have us
-// dutifully exfiltrate conversation A's image to conversation B's customer.
+// Rewrites <img src=".../uploads/<uuid>"> in the outgoing body to cid:
+// references and attaches the file as an inline MIME part.
 func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
 	matches := imgSrcUploadsPattern.FindAllStringSubmatch(message.Content, -1)
 	if len(matches) == 0 {
 		return nil
 	}
 
-	// Track per-uuid Content-IDs so the same media file gets exactly one
-	// inline part even if it appears multiple times in the body.
+	// One inline part per uuid even if the body references it multiple times.
 	cidByUUID := map[string]string{}
+
+	// Only flip image attachments to inline disposition if the body actually
+	// references them - attachment-button uploads stay plain attachments.
+	referencedUUIDs := map[string]bool{}
+	for _, sub := range matches {
+		referencedUUIDs[sub[3]] = true
+	}
 
 	// Re-use any inline image already on the message (e.g. uploaded via the
 	// reply box) instead of fetching and attaching it twice. Anything already
 	// attached is by definition authorised.
 	for i := range message.Attachments {
 		att := &message.Attachments[i]
-		if att.UUID == "" || !strings.HasPrefix(strings.ToLower(att.ContentType), "image/") {
+		if att.UUID == "" || !referencedUUIDs[att.UUID] {
+			continue
+		}
+		if !strings.HasPrefix(strings.ToLower(att.ContentType), "image/") {
 			continue
 		}
 		cid := "ld-" + att.UUID
 		att.ContentID = cid
-		// Force header to inline disposition so smtppool emits it as part of
-		// the multipart/related, not as a regular attachment.
 		att.Header = attachment.MakeHeader(att.ContentType, cid, att.Name, "base64", "inline")
 		cidByUUID[att.UUID] = cid
 	}
 
-	// For URLs that point to media not yet on this message (commonly quoted
-	// thread images from previous replies), fetch + authorise + attach.
+	// Process all matches.
 	for _, sub := range matches {
 		uuid := sub[3]
 		if _, ok := cidByUUID[uuid]; ok {
@@ -1047,15 +1033,7 @@ func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
 			continue
 		}
 
-		// Authorisation: we're defending against an agent in conversation B
-		// crafting a reply with <img src="/uploads/<uuid from conv A>"> and
-		// having us embed conv A's image into conv B's outgoing email.
-		//
-		// The only way that attack succeeds is if the referenced media is
-		// already attached to a message in a different conversation. If it's
-		// orphan (model_id NULL) it hasn't been attached to anything yet —
-		// the most common case is the agent just uploaded it for this reply
-		// and the link hasn't been persisted yet. Orphans are safe to embed.
+		// Make sure this media actually belongs to this conversation.
 		if media.Model.String == mmodels.ModelMessages && media.ModelID.Valid {
 			linkedConv, err := m.GetConversationByMessageID(media.ModelID.Int)
 			if err != nil {
@@ -1068,11 +1046,11 @@ func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
 			}
 		}
 
+		// Skip non images.
 		if !strings.HasPrefix(strings.ToLower(media.ContentType), "image/") {
-			// Non-image references stay as plain links; CID inline only makes
-			// sense for things the email client will actually render inline.
 			continue
 		}
+
 		blob, err := m.mediaStore.GetBlob(media.UUID)
 		if err != nil {
 			m.lo.Warn("inline-image blob fetch failed, leaving URL unrewritten", "uuid", uuid, "error", err)
@@ -1095,23 +1073,18 @@ func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
 		return nil
 	}
 
-	// Rewrite each matched img src to its corresponding cid: ref. Anything
-	// not in cidByUUID (foreign media, fetch failure, etc.) gets its src
-	// stripped to "" so the recipient sees a broken-image placeholder rather
-	// than an external HTTP request to our server (which could leak a UUID,
-	// burn signed-URL TTL, or act as a tracking pixel).
+	// Leave the original URL alone when we couldn't embed, otherwise we'd
+	// ship <img src=""> to the recipient.
 	message.Content = imgSrcUploadsPattern.ReplaceAllStringFunc(message.Content, func(match string) string {
 		sub := imgSrcUploadsPattern.FindStringSubmatch(match)
 		if len(sub) < 5 {
 			return match
 		}
-		newSrc := ""
-		if cid, ok := cidByUUID[sub[3]]; ok {
-			newSrc = "cid:" + cid
+		cid, ok := cidByUUID[sub[3]]
+		if !ok {
+			return match
 		}
-		// sub[1] = `<img ... src="`, sub[4] = closing quote. Drop the URL,
-		// substitute newSrc.
-		return sub[1] + newSrc + sub[4]
+		return sub[1] + "cid:" + cid + sub[4]
 	})
 
 	return nil

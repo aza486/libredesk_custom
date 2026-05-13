@@ -156,6 +156,19 @@ describe('useInlineImageUpload', () => {
         expect(onOtherFiles).not.toHaveBeenCalled()
     })
 
+    test('handlePaste routes SVG to onOtherFiles (not inline)', () => {
+        const { editor, insertContent } = makeEditor()
+        const onOtherFiles = vi.fn()
+        const { handlePaste } = useInlineImageUpload({
+            getEditor: () => editor,
+            onOtherFiles
+        })
+        const svg = makeFile('icon.svg', 'image/svg+xml')
+        expect(handlePaste({}, makeClipboardEvent({ files: [svg] }))).toBe(true)
+        expect(insertContent).not.toHaveBeenCalled()
+        expect(onOtherFiles).toHaveBeenCalledWith([svg])
+    })
+
     test('handlePaste routes non-image file to onOtherFiles', () => {
         const { editor, insertContent } = makeEditor()
         const onOtherFiles = vi.fn()

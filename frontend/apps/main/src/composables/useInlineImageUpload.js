@@ -116,8 +116,12 @@ export function useInlineImageUpload ({
         const imageFiles = []
         const otherFiles = []
         for (const file of fileList) {
-            if (file.type.startsWith('image/')) imageFiles.push(file)
-            else otherFiles.push(file)
+            // Force SVG into other.
+            if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+                imageFiles.push(file)
+            } else {
+                otherFiles.push(file)
+            }
         }
         if (imageFiles.length === 0 && otherFiles.length === 0) return false
         event.preventDefault()
