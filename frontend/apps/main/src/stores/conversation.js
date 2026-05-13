@@ -325,7 +325,9 @@ export const useConversationStore = defineStore('conversation', () => {
 
     if (!conv || !msgData || !inboxEmail) return
 
-    const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true)
+    // Skip automated messages (auto-replies, CSAT) so the reply-box prefill
+    // reflects the last human-driven recipients, not a system-generated one.
+    const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true, true)
     if (!latestMessage) {
       // Reset recipients if no latest message is found.
       currentTo.value = []
