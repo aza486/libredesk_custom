@@ -35,14 +35,8 @@ const (
 	upgradeWindowTTL = 7 * 24 * time.Hour
 )
 
-// For <img class="inline-image" src="/uploads/abc-123?sig=xyz">:
-//
-//	group 1 = `<img class="inline-image" src="`
-//	group 2 = `abc-123`                            (media UUID)
-//	group 3 = `"`
-var imgSrcUploadsPattern = regexp.MustCompile(
-	`(?i)(<img\b[^>]*?\bsrc=["'])(?:https?://[^"'<>\s/]+)?/uploads/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?[^"'<>\s]*)?(["'])`,
-)
+// Matches <img ... src="URL"> and captures the URL for downstream parsing.
+var imgSrcPattern = regexp.MustCompile(`(?i)<img\b[^>]*?\bsrc=["']([^"']*)["']`)
 
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
 // pending outgoing messages at the specified read interval and pushes them to the outgoing queue to be sent.
@@ -991,34 +985,39 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 	return sqlQuery, pageSize, qArgs, nil
 }
 
-// extractInlineImageUUIDs returns the unique media UUIDs referenced by
-// <img src=".../uploads/<uuid>"> in the body, in order of first appearance.
+// extractInlineImageUUIDs returns unique media UUIDs from <img src="..."> URLs in order of first appearance, skipping the cid: form.
 func extractInlineImageUUIDs(content string) []string {
-	matches := imgSrcUploadsPattern.FindAllStringSubmatch(content, -1)
+	matches := imgSrcPattern.FindAllStringSubmatch(content, -1)
 	seen := make(map[string]bool, len(matches))
 	out := make([]string, 0, len(matches))
-	for _, sub := range matches {
-		if len(sub) < 3 {
+	for _, m := range matches {
+		url := m[1]
+		if strings.HasPrefix(url, "cid:") {
 			continue
 		}
-		if seen[sub[2]] {
+		u := stringutil.ExtractUUID(url)
+		if u == "" || seen[u] {
 			continue
 		}
-		seen[sub[2]] = true
-		out = append(out, sub[2])
+		seen[u] = true
+		out = append(out, u)
 	}
 	return out
 }
 
-// rewriteInlineImagesToCID replaces every <img src=".../uploads/<uuid>"> with
-// <img src="cid:ldsk-<uuid>">.
+// rewriteInlineImagesToCID rewrites every <img src="...<uuid>..."> to <img src="cid:ldsk-<uuid>">. Already-cid form is left alone.
 func rewriteInlineImagesToCID(content string) string {
-	return imgSrcUploadsPattern.ReplaceAllStringFunc(content, func(match string) string {
-		sub := imgSrcUploadsPattern.FindStringSubmatch(match)
-		if len(sub) < 4 {
+	return imgSrcPattern.ReplaceAllStringFunc(content, func(match string) string {
+		sub := imgSrcPattern.FindStringSubmatch(match)
+		url := sub[1]
+		if strings.HasPrefix(url, "cid:") {
 			return match
 		}
-		return sub[1] + "cid:" + inlineContentID(sub[2]) + sub[3]
+		u := stringutil.ExtractUUID(url)
+		if u == "" {
+			return match
+		}
+		return strings.Replace(match, url, "cid:"+inlineContentID(u), 1)
 	})
 }
 
@@ -1031,7 +1030,7 @@ func (m *Manager) linkInlineMediaToMessage(uuids []string, messageID int) {
 		if err != nil {
 			continue
 		}
-		if media.Model.String != mmodels.ModelMessages {
+		if media.Model.Valid && media.Model.String != mmodels.ModelMessages {
 			continue
 		}
 		// Linked to a different message already, leave it.
