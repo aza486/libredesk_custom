@@ -593,9 +593,6 @@ defineExpose({ focus, extractMentions })
       }
     }
 
-    // ProseMirror toggles `.ProseMirror-selectednode` on the wrapper for us
-    // when the image node is selected, so we don't need a document-level
-    // click listener.
     &.ProseMirror-selectednode .image-resize-handle,
     &.resizing .image-resize-handle {
       display: block;
@@ -605,8 +602,6 @@ defineExpose({ focus, extractMentions })
       display: flex;
     }
 
-    // Hardcoded brand blue rather than a theme token so it stays visible
-    // against arbitrary email content (light backgrounds, dark images, etc.).
     &.ProseMirror-selectednode .inline-image,
     &.resizing .inline-image {
       outline: 2px solid #0066cc;
