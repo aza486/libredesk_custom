@@ -143,10 +143,7 @@ func (m *Manager) Get(id int) (models.Webhook, error) {
 		return webhook, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	// Decrypt secret
-	if err := m.decryptWebhook(&webhook); err != nil {
-		return webhook, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
+	m.decryptWebhook(&webhook)
 
 	return webhook, nil
 }
@@ -169,10 +166,7 @@ func (m *Manager) Create(webhook models.Webhook) (models.Webhook, error) {
 		return models.Webhook{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	// Decrypt secret before returning (ignore errors as non-critical)
-	if err := m.decryptWebhook(&result); err != nil {
-		m.lo.Error("error decrypting webhook secret after creation", "webhook_id", result.ID, "error", err)
-	}
+	m.decryptWebhook(&result)
 
 	return result, nil
 }
@@ -204,10 +198,7 @@ func (m *Manager) Update(id int, webhook models.Webhook) (models.Webhook, error)
 		return models.Webhook{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	// Decrypt secret before returning (ignore errors as non-critical)
-	if err := m.decryptWebhook(&result); err != nil {
-		m.lo.Error("error decrypting webhook secret after update", "webhook_id", result.ID, "error", err)
-	}
+	m.decryptWebhook(&result)
 
 	return result, nil
 }

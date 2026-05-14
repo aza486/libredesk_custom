@@ -92,7 +92,7 @@ type IMAPConfig struct {
 	TLSSkipVerify  bool   `json:"tls_skip_verify"`
 }
 
-// ClearPasswords masks all config passwords
+// Empty fields stay empty so admins can see when a credential needs re-entry after key rotation.
 func (m *Inbox) ClearPasswords() error {
 	switch m.Channel {
 	case "email":
@@ -103,29 +103,32 @@ func (m *Inbox) ClearPasswords() error {
 
 		dummyPassword := strings.Repeat(stringutil.PasswordDummy, 10)
 
-		// Clear IMAP passwords
 		if imapSlice, ok := cfg["imap"].([]interface{}); ok {
 			for _, imapItem := range imapSlice {
 				if imapMap, ok := imapItem.(map[string]interface{}); ok {
-					imapMap["password"] = dummyPassword
+					if pw, _ := imapMap["password"].(string); pw != "" {
+						imapMap["password"] = dummyPassword
+					}
 				}
 			}
 		}
 
-		// Clear SMTP passwords
 		if smtpSlice, ok := cfg["smtp"].([]interface{}); ok {
 			for _, smtpItem := range smtpSlice {
 				if smtpMap, ok := smtpItem.(map[string]interface{}); ok {
-					smtpMap["password"] = dummyPassword
+					if pw, _ := smtpMap["password"].(string); pw != "" {
+						smtpMap["password"] = dummyPassword
+					}
 				}
 			}
 		}
 
-		// Clear OAuth sensitive fields if present
 		if oauthMap, ok := cfg["oauth"].(map[string]interface{}); ok {
-			oauthMap["access_token"] = dummyPassword
-			oauthMap["refresh_token"] = dummyPassword
-			oauthMap["client_secret"] = dummyPassword
+			for _, field := range []string{"access_token", "refresh_token", "client_secret"} {
+				if v, _ := oauthMap[field].(string); v != "" {
+					oauthMap[field] = dummyPassword
+				}
+			}
 		}
 
 		clearedConfig, err := json.Marshal(cfg)
@@ -135,7 +138,6 @@ func (m *Inbox) ClearPasswords() error {
 
 		m.Config = clearedConfig
 	case "livechat":
-		// Mask the secret field for livechat
 		if m.Secret.Valid && m.Secret.String != "" {
 			m.Secret = null.StringFrom(strings.Repeat(stringutil.PasswordDummy, 10))
 		}

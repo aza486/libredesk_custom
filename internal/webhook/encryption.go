@@ -15,24 +15,22 @@ func (m *Manager) encryptSecret(secret string) (string, error) {
 	return encrypted, nil
 }
 
-// decryptWebhook decrypts webhook secret in-place.
-func (m *Manager) decryptWebhook(webhook *models.Webhook) error {
+// Decrypt failures clear the secret so the app stays usable across encryption_key rotation.
+func (m *Manager) decryptWebhook(webhook *models.Webhook) {
+	if webhook.Secret == "" {
+		return
+	}
 	decrypted, err := crypto.Decrypt(webhook.Secret, m.encryptionKey)
 	if err != nil {
-		m.lo.Error("error decrypting webhook secret", "webhook_id", webhook.ID, "error", err)
-		return err
+		m.lo.Error("error decrypting webhook secret, clearing field", "webhook_id", webhook.ID, "error", err)
+		webhook.Secret = ""
+		return
 	}
-
 	webhook.Secret = decrypted
-	return nil
 }
 
-// decryptWebhooks decrypts secrets for a slice of webhooks.
 func (m *Manager) decryptWebhooks(webhooks []models.Webhook) {
 	for i := range webhooks {
-		if err := m.decryptWebhook(&webhooks[i]); err != nil {
-			m.lo.Error("error decrypting webhook secret", "webhook_id", webhooks[i].ID, "error", err)
-			continue
-		}
+		m.decryptWebhook(&webhooks[i])
 	}
 }
