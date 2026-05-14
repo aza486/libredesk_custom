@@ -38,7 +38,8 @@ type statusUpdateReq struct {
 }
 
 type tagsUpdateReq struct {
-	Tags []string `json:"tags"`
+	Tags   []string `json:"tags"`
+	Action string   `json:"action,omitempty"`
 }
 
 type createConversationRequest struct {
@@ -605,6 +606,16 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 
 	tagNames := req.Tags
 
+	// Default to set tags if action is not provided (backwards compatibility).
+	action := models.ActionSetTags
+	switch req.Action {
+	case models.ActionAddTags, models.ActionRemoveTags, models.ActionSetTags:
+		action = req.Action
+	case "":
+	default:
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("errors.parsingRequest"), nil, envelope.InputError)
+	}
+
 	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
@@ -614,7 +625,7 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	if err := app.conversation.SetConversationTags(uuid, models.ActionSetTags, tagNames, user); err != nil {
+	if err := app.conversation.SetConversationTags(uuid, action, tagNames, user); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

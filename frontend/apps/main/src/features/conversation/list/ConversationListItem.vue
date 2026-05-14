@@ -10,28 +10,38 @@
         }"
       >
         <div class="flex items-start gap-2">
-          <!-- Selection checkbox -->
-          <div class="flex items-center pt-2" @click.prevent.stop="handleCheckboxClick">
-            <Checkbox
-              :checked="isItemSelected"
-              :aria-label="t('conversation.bulkActions.selectConversation')"
-            />
-          </div>
-
-          <!-- Avatar with channel indicator -->
-          <div class="relative flex-shrink-0">
-            <Avatar class="w-10 h-10 rounded-full">
-              <AvatarImage
-                :src="conversation.contact.avatar_url || ''"
-                class="object-cover"
+          <!-- Avatar with channel indicator (checkbox overlays on hover / when selecting) -->
+          <div class="relative flex-shrink-0 w-10 h-10">
+            <div
+              class="transition-opacity"
+              :class="avatarOpacityClass"
+              :aria-hidden="showCheckbox"
+            >
+              <Avatar class="w-10 h-10 rounded-full">
+                <AvatarImage
+                  :src="conversation.contact.avatar_url || ''"
+                  class="object-cover"
+                />
+                <AvatarFallback>
+                  {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
+                </AvatarFallback>
+              </Avatar>
+              <span class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-background border border-border">
+                <component :is="conversation.inbox_channel === 'livechat' ? MessageSquare : Mail" class="w-2.5 h-2.5 text-muted-foreground" />
+              </span>
+            </div>
+            <div
+              v-if="canBulkAct"
+              class="absolute inset-0 items-center justify-center"
+              :class="showCheckbox ? 'flex' : 'hidden group-hover:flex'"
+              @click.prevent.stop="handleCheckboxClick"
+            >
+              <Checkbox
+                :checked="isItemSelected"
+                :aria-label="t('conversation.bulkActions.selectConversation')"
+                class="w-5 h-5"
               />
-              <AvatarFallback>
-                {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
-              </AvatarFallback>
-            </Avatar>
-            <span class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full bg-background border border-border">
-              <component :is="conversation.inbox_channel === 'livechat' ? MessageSquare : Mail" class="w-2.5 h-2.5 text-muted-foreground" />
-            </span>
+            </div>
           </div>
 
           <!-- Content container -->
@@ -146,12 +156,14 @@ import {
 import SlaBadge from '@main/features/sla/SlaBadge.vue'
 import { Checkbox } from '@shared-ui/components/ui/checkbox'
 import { useConversationStore } from '@main/stores/conversation'
+import { useBulkActionPermissions } from '@/composables/useBulkActionPermissions'
 import { useI18n } from 'vue-i18n'
 
 let timer = null
 const now = ref(new Date())
 const route = useRoute()
 const conversationStore = useConversationStore()
+const { canBulkAct } = useBulkActionPermissions()
 const { t } = useI18n()
 const frdStatus = ref('')
 const rdStatus = ref('')
@@ -225,6 +237,17 @@ const draftPreview = computed(() => {
 
 const isItemSelected = computed(() => {
   return conversationStore.isSelected(props.conversation.uuid)
+})
+
+const showCheckbox = computed(() => {
+  if (!canBulkAct.value) return false
+  return isItemSelected.value || conversationStore.selectedCount > 0
+})
+
+const avatarOpacityClass = computed(() => {
+  if (showCheckbox.value) return 'opacity-0'
+  if (canBulkAct.value) return 'opacity-100 group-hover:opacity-0'
+  return 'opacity-100'
 })
 
 const handleCheckboxClick = (event) => {
