@@ -343,10 +343,6 @@ func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSiz
 		return messages, pageSize, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	for i := range messages {
-		m.populateInlineMedia(&messages[i])
-	}
-
 	return messages, pageSize, nil
 }
 
@@ -357,8 +353,6 @@ func (m *Manager) GetMessage(uuid string) (models.Message, error) {
 		m.lo.Error("error fetching message", "uuid", uuid, "error", err)
 		return message, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-
-	m.populateInlineMedia(&message)
 
 	// Generate signed URLs for attachments.
 	for i := range message.Attachments {
@@ -1204,11 +1198,11 @@ func (m *Manager) messageExistsBySourceID(messageSourceIDs []string) (int, error
 	return conversationID, nil
 }
 
-// populateInlineMedia appends quoted inline images (referenced via cid: in the body but not in the attachments list) so resolveContentCIDs can rewrite them to signed URLs.
-func (m *Manager) populateInlineMedia(message *models.Message) {
+// GetInlineMediaRefs returns media referenced via cid: in the body but linked to other messages (quoted history).
+func (m *Manager) GetInlineMediaRefs(message *models.Message) ([]mmodels.Media, error) {
 	cids := extractInlineContentIDs(message.Content)
 	if len(cids) == 0 {
-		return
+		return nil, nil
 	}
 	existing := make(map[string]bool, len(message.Attachments))
 	for _, a := range message.Attachments {
@@ -1223,23 +1217,9 @@ func (m *Manager) populateInlineMedia(message *models.Message) {
 		}
 	}
 	if len(missing) == 0 {
-		return
+		return nil, nil
 	}
-	medias, err := m.mediaStore.GetByContentIDs(missing, message.ConversationUUID)
-	if err != nil {
-		m.lo.Warn("error fetching inline media by content_id", "count", len(missing), "error", err)
-		return
-	}
-	for _, media := range medias {
-		message.Attachments = append(message.Attachments, attachment.Attachment{
-			UUID:        media.UUID,
-			Name:        media.Filename,
-			ContentType: media.ContentType,
-			ContentID:   media.ContentID,
-			Size:        media.Size,
-			Disposition: media.Disposition.String,
-		})
-	}
+	return m.mediaStore.GetByContentIDs(missing, message.ConversationUUID)
 }
 
 // fetchMessageAttachments fetches attachments (also inline images) for a single message ID.
