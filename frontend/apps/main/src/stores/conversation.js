@@ -10,8 +10,8 @@ import { subscribeToConversation, sendTypingIndicator } from '@main/websocket'
 import { playNotificationSound } from '@shared-ui/composables/useNotificationSound'
 import MessageCache from '../utils/conversation-message-cache'
 import { getI18n } from '../i18n'
-import { useDebounceFn } from '@vueuse/core'
 import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES, TAG_ACTION } from '@/constants/conversation'
+import { useDebounceFn, useThrottleFn } from '@vueuse/core'
 import api from '../api'
 
 export const useConversationStore = defineStore('conversation', () => {
@@ -488,8 +488,11 @@ export const useConversationStore = defineStore('conversation', () => {
       const response = await makeConversationListRequest(listType, teamID, viewID, filters, page)
       processConversationListResponse(response)
     } catch (error) {
-      conversations.errorMessage = handleHTTPError(error).message
-      conversations.total = 0
+      // If list already exists, do not tear it down on errors.
+      if (conversations.data.length === 0) {
+        conversations.errorMessage = handleHTTPError(error).message
+        conversations.total = 0
+      }
     } finally {
       conversations.loading = false
     }
@@ -704,12 +707,11 @@ export const useConversationStore = defineStore('conversation', () => {
     pendingNotificationUUIDs.add(uuid)
   }
 
-  // Debounced to prevent apis calls during many WS events in a short time.
-  const debouncedFetchFirstPage = useDebounceFn(fetchFirstPageConversations, 1000)
+  const throttledFetchFirstPage = useThrottleFn(fetchFirstPageConversations, 2000)
   const debouncedFetchParticipants = useDebounceFn(fetchParticipants, 400)
 
   function refreshConversationList () {
-    debouncedFetchFirstPage()
+    throttledFetchFirstPage()
   }
 
   function updateConversationLastMessage (uuid, message) {
