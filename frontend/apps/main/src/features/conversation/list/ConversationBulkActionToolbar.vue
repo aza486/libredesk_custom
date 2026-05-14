@@ -133,6 +133,7 @@ import {
   DropdownMenuTrigger
 } from '@shared-ui/components/ui/dropdown-menu'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
+import { TAG_ACTION } from '@/constants/conversation'
 import { useConversationStore } from '@/stores/conversation'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
@@ -211,7 +212,7 @@ const onAssigneeSelect = (assigneeType, item) => {
 }
 
 const onTagSelect = (item) => {
-  runBulkAction((uuid) => api.upsertTags(uuid, { action: 'add_tags', tags: [item.value] }))
+  runBulkAction((uuid) => conversationStore.updateConversationTags(uuid, TAG_ACTION.ADD, [item.value]))
 }
 
 const bulkUpdateStatus = (status) => {

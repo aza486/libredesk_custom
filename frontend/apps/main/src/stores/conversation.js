@@ -11,7 +11,7 @@ import { playNotificationSound } from '@shared-ui/composables/useNotificationSou
 import MessageCache from '../utils/conversation-message-cache'
 import { getI18n } from '../i18n'
 import { useDebounceFn } from '@vueuse/core'
-import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
+import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES, TAG_ACTION } from '@/constants/conversation'
 import api from '../api'
 
 export const useConversationStore = defineStore('conversation', () => {
@@ -620,14 +620,36 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function upsertTags (v) {
+  function applyTagsLocally (uuid, action, tags) {
+    const targets = []
+    const listConv = conversations.data?.find(c => c.uuid === uuid)
+    if (listConv) targets.push(listConv)
+    if (conversation.data?.uuid === uuid) targets.push(conversation.data)
+
+    for (const conv of targets) {
+      if (!Array.isArray(conv.tags)) conv.tags = []
+      if (action === TAG_ACTION.ADD) {
+        for (const t of tags) {
+          if (!conv.tags.includes(t)) conv.tags.push(t)
+        }
+      } else if (action === TAG_ACTION.SET) {
+        conv.tags = [...tags]
+      } else if (action === TAG_ACTION.REMOVE) {
+        conv.tags = conv.tags.filter(t => !tags.includes(t))
+      }
+    }
+  }
+
+  async function updateConversationTags (uuid, action, tags) {
     try {
-      await api.upsertTags(conversation.data.uuid, v)
+      await api.upsertTags(uuid, { action, tags })
+      applyTagsLocally(uuid, action, tags)
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
+      throw error
     }
   }
 
@@ -992,7 +1014,7 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchConversation,
     fetchConversationsList,
     fetchMessages,
-    upsertTags,
+    updateConversationTags,
     updateAssignee,
     updatePriority,
     updateStatus,
