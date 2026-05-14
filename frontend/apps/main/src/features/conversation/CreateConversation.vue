@@ -224,7 +224,7 @@
                       class="mt-2 flex-shrink-0"
                     />
 
-                    <AttachmentsPreview
+                    <ReplyBoxAttachmentPreview
                       :attachments="mediaFiles"
                       :uploadingFiles="uploadingFiles"
                       :onDelete="handleFileDelete"
@@ -276,7 +276,7 @@ import {
 } from '@shared-ui/components/ui/form'
 import { z } from 'zod'
 import { ref, watch, onUnmounted, nextTick, onMounted, computed } from 'vue'
-import AttachmentsPreview from '@/features/conversation/message/attachment/AttachmentsPreview.vue'
+import ReplyBoxAttachmentPreview from '@/features/conversation/message/attachment/ReplyBoxAttachmentPreview.vue'
 import { useConversationStore } from '../../stores/conversation'
 import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue'
 import ReplyBoxMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'

@@ -85,7 +85,7 @@
           </div>
 
           <!-- Attachments -->
-          <MessageAttachmentPreview :attachments="nonInlineAttachments" />
+          <BubbleAttachmentPreview :attachments="nonInlineAttachments" />
 
           <!-- CSAT Response -->
           <CSATResponseDisplay :message="message" />
@@ -164,7 +164,7 @@ import { formatMessageTimestamp, formatFullTimestamp } from '@shared-ui/utils/da
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
 import { Letter } from 'vue-letter'
 import ImageLightbox from '@/components/ImageLightbox.vue'
-import MessageAttachmentPreview from '@main/features/conversation/message/attachment/MessageAttachmentPreview.vue'
+import BubbleAttachmentPreview from '@main/features/conversation/message/attachment/BubbleAttachmentPreview.vue'
 import MessageEnvelope from './MessageEnvelope.vue'
 import CSATResponseDisplay from './CSATResponseDisplay.vue'
 import api from '@main/api'

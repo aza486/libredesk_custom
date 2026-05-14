@@ -16,10 +16,16 @@
           class="w-full h-full object-cover"
         />
         <div
-          class="absolute inset-0 p-1 pr-12 text-gray-50 opacity-0 group-hover:opacity-100 overlay text-wrap"
+          class="absolute inset-x-0 top-0 flex items-start justify-between gap-2 px-2 pt-1.5 pb-5 bg-gradient-to-b from-black/75 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
         >
-          <p class="font-bold text-xs">{{ shortName(attachment.name) }}</p>
-          <p class="text-xs">{{ formatBytes(attachment.size) }}</p>
+          <div class="min-w-0 flex-1 text-white image-meta">
+            <p class="font-medium text-xs truncate">{{ shortName(attachment.name) }}</p>
+            <p class="text-[10px] opacity-90">{{ formatBytes(attachment.size) }}</p>
+          </div>
+          <DownloadLink
+            :url="attachment.url"
+            class="text-white hover:text-white hover:bg-white/15 shrink-0 pointer-events-auto -mr-0.5"
+          />
         </div>
       </template>
 
@@ -38,59 +44,20 @@
         </div>
       </template>
 
-      <a
-        :href="downloadUrl(attachment.url)"
-        class="absolute top-1.5 right-1.5 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-        :class="isImage ? 'hover:text-white/80' : 'hover:bg-background'"
-        :title="t('globals.terms.download')"
-        :aria-label="t('globals.terms.download')"
-        @click.stop
-      >
-        <Download
-          class="w-4 h-4"
-          :class="isImage ? '' : 'text-muted-foreground'"
-        />
-      </a>
+      <DownloadLink
+        v-if="!isImage"
+        :url="attachment.url"
+        class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+      />
     </div>
-
-    <Teleport to="body">
-      <div
-        v-if="showPdfPreview"
-        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80"
-        @click.self="showPdfPreview = false"
-      >
-        <button
-          class="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-          :aria-label="t('globals.messages.close')"
-          @click="showPdfPreview = false"
-        >
-          <X :size="28" />
-        </button>
-        <a
-          :href="downloadUrl(attachment.url)"
-          class="absolute top-4 right-14 text-white hover:text-gray-300 z-10"
-          :title="t('globals.terms.download')"
-          :aria-label="t('globals.terms.download')"
-        >
-          <Download :size="24" />
-        </a>
-        <iframe
-          :src="attachment.url"
-          :title="attachment.name"
-          class="w-[90vw] h-[90vh] rounded shadow-2xl bg-white"
-        />
-      </div>
-    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { formatBytes, getThumbFilepath, downloadUrl } from '@shared-ui/utils/file'
+import { computed } from 'vue'
+import { formatBytes, getThumbFilepath } from '@shared-ui/utils/file'
+import DownloadLink from '@/components/DownloadLink.vue'
 import {
-  Download,
-  X,
   FileText,
   FileSpreadsheet,
   File,
@@ -104,10 +71,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['preview'])
 
-const { t } = useI18n()
-
-const showPdfPreview = ref(false)
-
 const shortName = (name) => (name || '').substring(0, 40)
 
 const isImage = computed(() =>
@@ -118,8 +81,6 @@ const ext = computed(() => {
   const parts = (props.attachment.name || '').split('.')
   return parts.length > 1 ? parts.pop().toLowerCase() : ''
 })
-
-const canPreviewPdf = computed(() => !isImage.value && ext.value === 'pdf')
 
 const fileIcon = computed(() => {
   const e = ext.value
@@ -144,10 +105,14 @@ const iconColor = computed(() => {
 const onClick = () => {
   if (isImage.value) {
     emit('preview', props.attachment)
-  } else if (canPreviewPdf.value) {
-    showPdfPreview.value = true
   } else {
-    window.open(props.attachment.url, '_blank')
+    window.open(props.attachment.url, '_blank', 'noopener,noreferrer')
   }
 }
 </script>
+
+<style scoped>
+.image-meta {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+</style>
