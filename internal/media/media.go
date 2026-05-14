@@ -88,6 +88,7 @@ type queries struct {
 	GetByModel              *sqlx.Stmt `query:"get-model-media"`
 	GetUnlinkedMessageMedia *sqlx.Stmt `query:"get-unlinked-message-media"`
 	ContentIDExists         *sqlx.Stmt `query:"content-id-exists"`
+	SetContentID            *sqlx.Stmt `query:"set-media-content-id"`
 }
 
 // UploadAndInsert uploads file on storage and inserts an entry in db.
@@ -168,6 +169,15 @@ func (m *Manager) Get(id int, uuid string) (models.Media, error) {
 	return media, nil
 }
 
+// SetContentID stamps a content_id onto a media row if one isn't already set.
+func (m *Manager) SetContentID(id int, contentID string) error {
+	if _, err := m.queries.SetContentID.Exec(id, contentID); err != nil {
+		m.lo.Error("error setting media content_id", "id", id, "content_id", contentID, "error", err)
+		return fmt.Errorf("setting media content_id: %w", err)
+	}
+	return nil
+}
+
 // ContentIDExists checks if a content_id exists in the database and returns the UUID of the media file.
 func (m *Manager) ContentIDExists(contentID string) (bool, string, error) {
 	var uuid string
@@ -197,6 +207,10 @@ func (m *Manager) GetURL(uuid, contentType, fileName string) string {
 		disposition = "inline"
 	}
 	return m.store.GetURL(uuid, disposition, fileName)
+}
+
+func (m *Manager) GetURLForDownload(uuid, fileName string) string {
+	return m.store.GetURL(uuid, "attachment", fileName)
 }
 
 // GetSignedURL generates a signed URL for secure media access if the store supports it.

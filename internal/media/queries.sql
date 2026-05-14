@@ -52,3 +52,9 @@ WHERE model_type = 'messages'
 
 -- name: content-id-exists
 SELECT uuid FROM media WHERE content_id = $1;
+
+-- name: set-media-content-id
+UPDATE media
+SET content_id = $2
+WHERE id = $1
+  AND (content_id IS NULL OR content_id = '');

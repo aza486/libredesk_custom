@@ -133,10 +133,12 @@ type userStore interface {
 }
 
 type mediaStore interface {
+	Get(id int, uuid string) (mmodels.Media, error)
 	GetBlob(name string) ([]byte, error)
 	GetURL(uuid, contentType, fileName string) string
 	GetSignedURL(name string) string
 	Attach(id int, model string, modelID int) error
+	SetContentID(id int, contentID string) error
 	GetByModel(id int, model string) ([]mmodels.Media, error)
 	ContentIDExists(contentID string) (bool, string, error)
 	Upload(fileName, contentType string, content io.ReadSeeker) (string, string, error)

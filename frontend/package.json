@@ -59,6 +59,7 @@
     "tailwind-merge": "^2.3.0",
     "vee-validate": "^4.15.0",
     "vue": "^3.4.37",
+    "vue-easy-lightbox": "^1.19.0",
     "vue-i18n": "9",
     "vue-letter": "^0.2.0",
     "vue-picture-cropper": "^0.7.0",

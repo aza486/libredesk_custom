@@ -60,12 +60,19 @@
           >
             {{ sanitizedContent }}
           </div>
-          <Letter
-            v-else
-            :html="sanitizedContent"
-            :allowedSchemas="['cid', 'https', 'http', 'mailto']"
-            class="mb-1 native-html whitespace-pre-wrap break-words"
-            :class="{ 'mb-3': message.attachments.length > 0 }"
+          <div v-else ref="messageContentEl" @click="onMessageContentClick">
+            <Letter
+              :html="sanitizedContent"
+              :allowedSchemas="['cid', 'https', 'http', 'mailto']"
+              class="mb-1 native-html whitespace-pre-wrap break-words"
+              :class="{ 'mb-3': message.attachments.length > 0 }"
+            />
+          </div>
+
+          <ImageLightbox
+            v-model="inlineLightboxOpen"
+            :images="inlineImages"
+            :start-index="inlineLightboxIndex"
           />
 
           <!-- Quoted Text Toggle (incoming only) -->
@@ -78,7 +85,7 @@
           </div>
 
           <!-- Attachments -->
-          <MessageAttachmentPreview :attachments="nonInlineAttachments" />
+          <BubbleAttachmentPreview :attachments="nonInlineAttachments" />
 
           <!-- CSAT Response -->
           <CSATResponseDisplay :message="message" />
@@ -156,7 +163,8 @@ import { Spinner } from '@shared-ui/components/ui/spinner'
 import { formatMessageTimestamp, formatFullTimestamp } from '@shared-ui/utils/datetime.js'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
 import { Letter } from 'vue-letter'
-import MessageAttachmentPreview from '@main/features/conversation/message/attachment/MessageAttachmentPreview.vue'
+import ImageLightbox from '@/components/ImageLightbox.vue'
+import BubbleAttachmentPreview from '@main/features/conversation/message/attachment/BubbleAttachmentPreview.vue'
 import MessageEnvelope from './MessageEnvelope.vue'
 import CSATResponseDisplay from './CSATResponseDisplay.vue'
 import api from '@main/api'
@@ -176,10 +184,8 @@ const userStore = useUserStore()
 const isSystemUser = computed(() => props.message.author?.email === 'System')
 const canManageUsers = computed(() => !isSystemUser.value && userStore.can('users:manage'))
 
-// Direction helpers
 const isOutgoing = computed(() => props.direction === 'outgoing')
 
-// Author info from message
 const getFullName = computed(() => {
   const author = props.message.author ?? {}
   const firstName = author.first_name ?? 'User'
@@ -207,20 +213,16 @@ const nonInlineAttachments = computed(() =>
   props.message.attachments.filter((attachment) => attachment.disposition !== 'inline')
 )
 
-// Bubble classes - conditional based on direction
 const bubbleClasses = computed(() => ({
-  // Outgoing-specific: private message styling
   'bg-private': isOutgoing.value && props.message.private,
   'border border-border': isOutgoing.value && !props.message.private,
   'opacity-50 animate-pulse': isOutgoing.value && props.message.status === 'pending',
   'border-destructive': isOutgoing.value && props.message.status === 'failed',
   relative: isOutgoing.value,
-  // Incoming-specific: quoted text visibility
   'show-quoted-text': !isOutgoing.value && showQuotedText.value,
   'hide-quoted-text': !isOutgoing.value && !showQuotedText.value
 }))
 
-// Outgoing-only computed properties
 const isPrivateMessage = computed(() => isOutgoing.value && props.message.private)
 const showCheckCheck = computed(
   () => isOutgoing.value && props.message.status === 'sent' && !isPrivateMessage.value
@@ -231,7 +233,6 @@ const retryMessage = (msg) => {
   api.retryMessage(convStore.current.uuid, msg.uuid)
 }
 
-// Incoming-only: quoted text toggle
 const showQuotedText = ref(false)
 const hasQuotedContent = computed(
   () => !isOutgoing.value && sanitizedContent.value.includes('<blockquote')
@@ -240,7 +241,44 @@ const toggleQuote = () => {
   showQuotedText.value = !showQuotedText.value
 }
 
-// Envelope visibility (both directions)
+// Enumerate from rendered DOM (not HTML source) to inherit vue-letter's
+// sanitization and dodge regex parsing of attributes containing '>'.
+const messageContentEl = ref(null)
+const inlineLightboxOpen = ref(false)
+const inlineLightboxIndex = ref(0)
+const inlineImages = ref([])
+
+// Re-walk on click instead of caching - cheaper than watching sanitizedContent
+// and always reflects what the user actually sees.
+const refreshInlineImages = () => {
+  const root = messageContentEl.value
+  if (!root) {
+    inlineImages.value = []
+    return
+  }
+  inlineImages.value = Array.from(root.querySelectorAll('img'))
+    .map((el) => ({ url: el.getAttribute('src'), name: el.getAttribute('alt') || '' }))
+    .filter((img) => img.url)
+}
+
+const onMessageContentClick = (event) => {
+  // closest('img') so clicks on <a><img></a> wrappers still resolve.
+  const img = event.target?.closest?.('img')
+  if (!img || !messageContentEl.value?.contains(img)) return
+
+  // Suppress anchor navigation so the lightbox can take over.
+  const wrappingAnchor = img.closest('a')
+  if (wrappingAnchor && messageContentEl.value.contains(wrappingAnchor)) {
+    event.preventDefault()
+  }
+
+  refreshInlineImages()
+  const src = img.getAttribute('src')
+  const idx = inlineImages.value.findIndex((entry) => entry.url === src)
+  inlineLightboxIndex.value = idx >= 0 ? idx : 0
+  inlineLightboxOpen.value = true
+}
+
 const showEnvelope = computed(() => {
   return (
     props.message.meta?.from?.length ||
@@ -251,3 +289,11 @@ const showEnvelope = computed(() => {
   )
 })
 </script>
+
+<style scoped lang="scss">
+.native-html :deep(img) {
+  max-width: 100%;
+  height: auto;
+  cursor: zoom-in;
+}
+</style>
