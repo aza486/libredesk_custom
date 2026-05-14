@@ -343,6 +343,10 @@ func (m *Manager) GetConversationMessages(conversationUUID string, page, pageSiz
 		return messages, pageSize, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
+	for i := range messages {
+		m.populateInlineMedia(&messages[i])
+	}
+
 	return messages, pageSize, nil
 }
 
@@ -353,6 +357,8 @@ func (m *Manager) GetMessage(uuid string) (models.Message, error) {
 		m.lo.Error("error fetching message", "uuid", uuid, "error", err)
 		return message, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
+
+	m.populateInlineMedia(&message)
 
 	// Generate signed URLs for attachments.
 	for i := range message.Attachments {
@@ -1005,6 +1011,26 @@ func extractInlineImageUUIDs(content string) []string {
 	return out
 }
 
+// extractInlineContentIDs returns unique content_ids referenced via <img src="cid:..."> in the body.
+func extractInlineContentIDs(content string) []string {
+	matches := imgSrcPattern.FindAllStringSubmatch(content, -1)
+	seen := make(map[string]bool, len(matches))
+	out := make([]string, 0, len(matches))
+	for _, m := range matches {
+		url := m[1]
+		if !strings.HasPrefix(url, "cid:") {
+			continue
+		}
+		cid := strings.TrimPrefix(url, "cid:")
+		if cid == "" || seen[cid] {
+			continue
+		}
+		seen[cid] = true
+		out = append(out, cid)
+	}
+	return out
+}
+
 // rewriteInlineImagesToCID rewrites every <img src="...<uuid>..."> to <img src="cid:ldsk-<uuid>">. Already-cid form is left alone.
 func rewriteInlineImagesToCID(content string) string {
 	return imgSrcPattern.ReplaceAllStringFunc(content, func(match string) string {
@@ -1061,35 +1087,26 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 	}
 
 	for _, attachment := range message.Attachments {
-		// Check if this attachment already exists by the content ID, as inline images can be repeated across conversations.
 		contentID := attachment.ContentID
 		if contentID != "" {
-			// Make content ID MORE unique by prefixing it with the conversation UUID, as content id is not globally unique practically,
-			// different messages can have the same content ID, I do not have the message ID at this point, so I am using sticking with the conversation UUID
-			// to make it more unique.
-			contentID = message.ConversationUUID + "_" + contentID
+			storedCID, exists, mediaUUID := m.findExistingMedia(contentID, message.ConversationUUID)
 
-			exists, uuid, err := m.mediaStore.ContentIDExists(contentID)
-			if err != nil {
-				m.lo.Error("error checking media existence by content ID", "content_id", contentID, "error", err)
+			// Make body's cid match the stored content_id so the read path can find it.
+			if storedCID != contentID {
+				message.Content = strings.ReplaceAll(message.Content, fmt.Sprintf("cid:%s", contentID), fmt.Sprintf("cid:%s", storedCID))
 			}
 
-			// This attachment already exists, replace the cid:content_id with the media relative url, not using absolute path as the root path can change.
 			if exists {
-				m.lo.Debug("attachment with content ID already exists replacing content ID with media relative URL", "content_id", contentID, "media_uuid", uuid)
-				message.Content = strings.ReplaceAll(message.Content, fmt.Sprintf("cid:%s", attachment.ContentID), "/uploads/"+uuid)
+				m.lo.Debug("inline attachment exists, reusing", "content_id", storedCID, "media_uuid", mediaUUID)
 				continue
 			}
-
-			// Attachment does not exist, replace the content ID with the new more unique content ID.
-			message.Content = strings.ReplaceAll(message.Content, fmt.Sprintf("cid:%s", attachment.ContentID), fmt.Sprintf("cid:%s", contentID))
+			contentID = storedCID
 		}
 
 		// Sanitize filename.
 		attachment.Name = stringutil.SanitizeFilename(attachment.Name)
 
-		m.lo.Debug("uploading message attachment", "name", attachment.Name, "content_id", contentID, "size", attachment.Size, "content_type", attachment.ContentType,
-			"content_id", contentID, "disposition", attachment.Disposition)
+		m.lo.Debug("uploading message attachment", "name", attachment.Name, "content_id", contentID, "size", attachment.Size, "content_type", attachment.ContentType, "disposition", attachment.Disposition)
 
 		// Upload and insert entry in media table.
 		attachReader := bytes.NewReader(attachment.Content)
@@ -1185,6 +1202,44 @@ func (m *Manager) messageExistsBySourceID(messageSourceIDs []string) (int, error
 		return conversationID, err
 	}
 	return conversationID, nil
+}
+
+// populateInlineMedia appends quoted inline images (referenced via cid: in the body but not in the attachments list) so resolveContentCIDs can rewrite them to signed URLs.
+func (m *Manager) populateInlineMedia(message *models.Message) {
+	cids := extractInlineContentIDs(message.Content)
+	if len(cids) == 0 {
+		return
+	}
+	existing := make(map[string]bool, len(message.Attachments))
+	for _, a := range message.Attachments {
+		if a.ContentID != "" {
+			existing[a.ContentID] = true
+		}
+	}
+	missing := make([]string, 0, len(cids))
+	for _, cid := range cids {
+		if !existing[cid] {
+			missing = append(missing, cid)
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+	medias, err := m.mediaStore.GetByContentIDs(missing, message.ConversationUUID)
+	if err != nil {
+		m.lo.Warn("error fetching inline media by content_id", "count", len(missing), "error", err)
+		return
+	}
+	for _, media := range medias {
+		message.Attachments = append(message.Attachments, attachment.Attachment{
+			UUID:        media.UUID,
+			Name:        media.Filename,
+			ContentType: media.ContentType,
+			ContentID:   media.ContentID,
+			Size:        media.Size,
+			Disposition: media.Disposition.String,
+		})
+	}
 }
 
 // fetchMessageAttachments fetches attachments (also inline images) for a single message ID.
@@ -1391,4 +1446,17 @@ func (m *Manager) getMediaPreview(media mmodels.Media) string {
 
 func inlineContentID(uuid string) string {
 	return "ldsk-" + uuid
+}
+
+// findExistingMedia resolves an inbound cid to its stored form: ldsk-* is left as-is, others are namespaced by conversation to avoid cross-conversation collisions.
+func (m *Manager) findExistingMedia(rawContentID, conversationUUID string) (string, bool, string) {
+	storedCID := rawContentID
+	if !strings.HasPrefix(rawContentID, "ldsk-") {
+		storedCID = conversationUUID + "_" + rawContentID
+	}
+	exists, mediaUUID, err := m.mediaStore.ContentIDExists(storedCID)
+	if err != nil {
+		m.lo.Error("error checking media existence by content ID", "content_id", storedCID, "error", err)
+	}
+	return storedCID, exists, mediaUUID
 }
