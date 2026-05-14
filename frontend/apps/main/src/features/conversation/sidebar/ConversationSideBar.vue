@@ -131,6 +131,7 @@ import { useCustomAttributeStore } from '../../../stores/customAttributes'
 import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
 import ConversationSideBarPageVisits from '@/features/conversation/sidebar/ConversationSideBarPageVisits.vue'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
+import { TAG_ACTION } from '@/constants/conversation'
 import api from '../../../api'
 
 const customAttributeStore = useCustomAttributeStore()
@@ -182,9 +183,11 @@ watch(
       return
     }
 
-    conversationStore.upsertTags({
-      tags: newTags
-    })
+    conversationStore.updateConversationTags(
+      conversationStore.current.uuid,
+      TAG_ACTION.SET,
+      newTags
+    )
   },
   { immediate: false }
 )
