@@ -199,6 +199,10 @@ func (m *Manager) GetURL(uuid, contentType, fileName string) string {
 	return m.store.GetURL(uuid, disposition, fileName)
 }
 
+func (m *Manager) GetURLForDownload(uuid, fileName string) string {
+	return m.store.GetURL(uuid, "attachment", fileName)
+}
+
 // GetSignedURL generates a signed URL for secure media access if the store supports it.
 // Returns a regular URL if the store doesn't support signed URLs.
 func (m *Manager) GetSignedURL(name string) string {

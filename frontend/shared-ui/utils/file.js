@@ -11,3 +11,9 @@ export function getThumbFilepath (filepath) {
     const filename = urlParts.pop()
     return `/uploads/thumb_${filename}`
 }
+
+export function downloadUrl (url) {
+    if (!url) return url
+    const separator = url.includes('?') ? '&' : '?'
+    return `${url}${separator}download=1`
+}

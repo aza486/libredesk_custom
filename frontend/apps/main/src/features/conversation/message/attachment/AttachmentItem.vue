@@ -39,9 +39,7 @@
       </template>
 
       <a
-        :href="attachment.url"
-        target="_blank"
-        rel="noopener noreferrer"
+        :href="downloadUrl(attachment.url)"
         class="absolute top-1.5 right-1.5 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
         :class="isImage ? 'hover:text-white/80' : 'hover:bg-background'"
         :title="t('globals.terms.download')"
@@ -69,9 +67,7 @@
           <X :size="28" />
         </button>
         <a
-          :href="attachment.url"
-          target="_blank"
-          rel="noopener"
+          :href="downloadUrl(attachment.url)"
           class="absolute top-4 right-14 text-white hover:text-gray-300 z-10"
           :title="t('globals.terms.download')"
           :aria-label="t('globals.terms.download')"
@@ -91,7 +87,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { formatBytes, getThumbFilepath } from '@shared-ui/utils/file'
+import { formatBytes, getThumbFilepath, downloadUrl } from '@shared-ui/utils/file'
 import {
   Download,
   X,

@@ -35,6 +35,11 @@ const (
 	upgradeWindowTTL = 7 * 24 * time.Hour
 )
 
+// For <img class="inline-image" src="/uploads/abc-123?sig=xyz">:
+//   group 1 = `<img class="inline-image" src="`
+//   group 2 = `/uploads/abc-123?sig=xyz`
+//   group 3 = `abc-123`                            (media UUID)
+//   group 4 = `"`
 var imgSrcUploadsPattern = regexp.MustCompile(
 	`(?i)(<img[^>]*?\bsrc=["'])((?:https?://[^"'<>\s/]+)?/uploads/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?[^"'<>\s]*)?)(["'])`,
 )
@@ -164,13 +169,10 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		return
 	}
 
-	// Embed inline images as CID parts so the email is self-contained and
-	// recipients see the images even if the URLs in our media store later
-	// expire or our server moves. Only applies to email channels.
+	// Embed inline images as CID parts.
 	if inb.Channel() == inbox.ChannelEmail {
 		if err := m.embedInlineImagesAsCID(&message); err != nil {
-			m.lo.Error("error embedding inline images as cid", "error", err, "message_id", message.ID)
-			// Non-fatal: send anyway with whatever URLs we have.
+			m.lo.Error("error embedding inline images as cid", "message_id", message.ID, "error", err)
 		}
 	}
 
@@ -568,6 +570,10 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	for _, media := range message.Media {
 		m.mediaStore.Attach(media.ID, mmodels.ModelMessages, message.ID)
 	}
+
+	// Link orphan inline-image media referenced in the body to this message,
+	// so it isn't left dangling in DB with nothing linking to it.
+	m.linkInlineMediaToMessage(message)
 
 	// Add this user as a participant if not already present.
 	m.addConversationParticipant(message.SenderID, message.ConversationUUID)
@@ -986,6 +992,30 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 	return sqlQuery, pageSize, qArgs, nil
 }
 
+// Attaches orphan media referenced by <img src=".../uploads/<uuid>"> in the
+// body to this message so the row isn't left dangling and embed-time can
+// rely on ModelID being set.
+func (m *Manager) linkInlineMediaToMessage(message *models.Message) {
+	matches := imgSrcUploadsPattern.FindAllStringSubmatch(message.Content, -1)
+	for _, sub := range matches {
+		uuid := sub[3]
+		media, err := m.mediaStore.Get(0, uuid)
+		if err != nil {
+			continue
+		}
+		if media.Model.String != mmodels.ModelMessages {
+			continue
+		}
+		// Already linked elsewhere - leave it.
+		if media.ModelID.Valid {
+			continue
+		}
+		if err := m.mediaStore.Attach(media.ID, mmodels.ModelMessages, message.ID); err != nil {
+			m.lo.Warn("error linking inline media to message", "uuid", uuid, "message_id", message.ID, "error", err)
+		}
+	}
+}
+
 // Rewrites <img src=".../uploads/<uuid>"> in the outgoing body to cid:
 // references and attaches the file as an inline MIME part.
 func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
@@ -1033,17 +1063,27 @@ func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
 			continue
 		}
 
-		// Make sure this media actually belongs to this conversation.
-		if media.Model.String == mmodels.ModelMessages && media.ModelID.Valid {
-			linkedConv, err := m.GetConversationByMessageID(media.ModelID.Int)
-			if err != nil {
-				m.lo.Warn("refusing to embed media: linked conversation lookup failed", "uuid", uuid, "linked_message_id", media.ModelID.Int, "error", err)
-				continue
-			}
-			if linkedConv.ID != message.ConversationID {
-				m.lo.Warn("refusing to embed media from a different conversation", "uuid", uuid, "linked_conversation_id", linkedConv.ID, "outgoing_conversation_id", message.ConversationID)
-				continue
-			}
+		// Only embed message-linked media.
+		if media.Model.String != mmodels.ModelMessages {
+			m.lo.Warn("refusing to embed non-message media", "uuid", uuid, "model", media.Model.String)
+			continue
+		}
+
+		// Media should be already linked.
+		if !media.ModelID.Valid {
+			m.lo.Warn("refusing to embed media with no linked message", "uuid", uuid, "linked_message_id", media.ModelID)
+			continue
+		}
+
+		// Make sure the linked message is in the same conversation.
+		linkedConv, err := m.GetConversationByMessageID(media.ModelID.Int)
+		if err != nil {
+			m.lo.Warn("refusing to embed media: linked conversation lookup failed", "uuid", uuid, "linked_message_id", media.ModelID.Int, "error", err)
+			continue
+		}
+		if linkedConv.ID != message.ConversationID {
+			m.lo.Warn("refusing to embed media from a different conversation", "uuid", uuid, "linked_conversation_id", linkedConv.ID, "outgoing_conversation_id", message.ConversationID)
+			continue
 		}
 
 		// Skip non images.

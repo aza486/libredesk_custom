@@ -14,8 +14,7 @@
             <source :src="attachment.url" />
           </audio>
           <a
-            :href="attachment.url"
-            download
+            :href="downloadUrl(attachment.url)"
             class="p-1 rounded hover:bg-muted shrink-0"
             :title="t('globals.terms.download')"
             :aria-label="t('globals.terms.download')"
@@ -42,6 +41,7 @@ import { useI18n } from 'vue-i18n'
 import { Download } from 'lucide-vue-next'
 import AttachmentItem from '@/features/conversation/message/attachment/AttachmentItem.vue'
 import ImageLightbox from '@/components/ImageLightbox.vue'
+import { downloadUrl } from '@shared-ui/utils/file'
 
 const props = defineProps({
   attachments: { type: Array, required: true }
