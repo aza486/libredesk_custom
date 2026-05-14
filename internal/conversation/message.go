@@ -36,12 +36,12 @@ const (
 )
 
 // For <img class="inline-image" src="/uploads/abc-123?sig=xyz">:
-//   group 1 = `<img class="inline-image" src="`
-//   group 2 = `/uploads/abc-123?sig=xyz`
-//   group 3 = `abc-123`                            (media UUID)
-//   group 4 = `"`
+//
+//	group 1 = `<img class="inline-image" src="`
+//	group 2 = `abc-123`                            (media UUID)
+//	group 3 = `"`
 var imgSrcUploadsPattern = regexp.MustCompile(
-	`(?i)(<img[^>]*?\bsrc=["'])((?:https?://[^"'<>\s/]+)?/uploads/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?[^"'<>\s]*)?)(["'])`,
+	`(?i)(<img\b[^>]*?\bsrc=["'])(?:https?://[^"'<>\s/]+)?/uploads/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\?[^"'<>\s]*)?(["'])`,
 )
 
 // Run starts a pool of worker goroutines to handle message dispatching via inbox's channel and processes incoming messages. It scans for
@@ -167,13 +167,6 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 	if err := m.attachAttachmentsToMessage(&message); err != nil {
 		handleError(err, "error attaching attachments to message")
 		return
-	}
-
-	// Embed inline images as CID parts.
-	if inb.Channel() == inbox.ChannelEmail {
-		if err := m.embedInlineImagesAsCID(&message); err != nil {
-			m.lo.Error("error embedding inline images as cid", "message_id", message.ID, "error", err)
-		}
 	}
 
 	// Convert to OutboundMessage for transport
@@ -552,6 +545,13 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		message.ContentType = models.ContentTypeText
 	}
 
+	// Extract inline media UUIDs for linking after message insertion.
+	inlineUUIDs := extractInlineImageUUIDs(message.Content)
+
+	// Rewrite inline image URLs in the message content to use CID references.
+	// The GET conversation messages API rewrites the CID references back to valid signed urls.
+	message.Content = rewriteInlineImagesToCID(message.Content)
+
 	// Convert content to plain text for search.
 	if message.ContentType == models.ContentTypeText {
 		message.TextContent = message.Content
@@ -571,9 +571,8 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		m.mediaStore.Attach(media.ID, mmodels.ModelMessages, message.ID)
 	}
 
-	// Link orphan inline-image media referenced in the body to this message,
-	// so it isn't left dangling in DB with nothing linking to it.
-	m.linkInlineMediaToMessage(message)
+	// Link inline media and stamp content_id so the cid: form just persisted resolves on read.
+	m.linkInlineMediaToMessage(inlineUUIDs, message.ID)
 
 	// Add this user as a participant if not already present.
 	m.addConversationParticipant(message.SenderID, message.ConversationUUID)
@@ -992,142 +991,68 @@ func (c *Manager) generateMessagesQuery(baseQuery string, qArgs []interface{}, p
 	return sqlQuery, pageSize, qArgs, nil
 }
 
-// Attaches orphan media referenced by <img src=".../uploads/<uuid>"> in the
-// body to this message so the row isn't left dangling and embed-time can
-// rely on ModelID being set.
-func (m *Manager) linkInlineMediaToMessage(message *models.Message) {
-	matches := imgSrcUploadsPattern.FindAllStringSubmatch(message.Content, -1)
+// extractInlineImageUUIDs returns the unique media UUIDs referenced by
+// <img src=".../uploads/<uuid>"> in the body, in order of first appearance.
+func extractInlineImageUUIDs(content string) []string {
+	matches := imgSrcUploadsPattern.FindAllStringSubmatch(content, -1)
+	seen := make(map[string]bool, len(matches))
+	out := make([]string, 0, len(matches))
 	for _, sub := range matches {
-		uuid := sub[3]
-		media, err := m.mediaStore.Get(0, uuid)
-		if err != nil {
+		if len(sub) < 3 {
 			continue
 		}
-		if media.Model.String != mmodels.ModelMessages {
+		if seen[sub[2]] {
 			continue
 		}
-		// Already linked elsewhere - leave it.
-		if media.ModelID.Valid {
-			continue
-		}
-		if err := m.mediaStore.Attach(media.ID, mmodels.ModelMessages, message.ID); err != nil {
-			m.lo.Warn("error linking inline media to message", "uuid", uuid, "message_id", message.ID, "error", err)
-		}
+		seen[sub[2]] = true
+		out = append(out, sub[2])
 	}
+	return out
 }
 
-// Rewrites <img src=".../uploads/<uuid>"> in the outgoing body to cid:
-// references and attaches the file as an inline MIME part.
-func (m *Manager) embedInlineImagesAsCID(message *models.Message) error {
-	matches := imgSrcUploadsPattern.FindAllStringSubmatch(message.Content, -1)
-	if len(matches) == 0 {
-		return nil
-	}
-
-	// One inline part per uuid even if the body references it multiple times.
-	cidByUUID := map[string]string{}
-
-	// Only flip image attachments to inline disposition if the body actually
-	// references them - attachment-button uploads stay plain attachments.
-	referencedUUIDs := map[string]bool{}
-	for _, sub := range matches {
-		referencedUUIDs[sub[3]] = true
-	}
-
-	// Re-use any inline image already on the message (e.g. uploaded via the
-	// reply box) instead of fetching and attaching it twice. Anything already
-	// attached is by definition authorised.
-	for i := range message.Attachments {
-		att := &message.Attachments[i]
-		if att.UUID == "" || !referencedUUIDs[att.UUID] {
-			continue
+// rewriteInlineImagesToCID replaces every <img src=".../uploads/<uuid>"> with
+// <img src="cid:ldsk-<uuid>">.
+func rewriteInlineImagesToCID(content string) string {
+	return imgSrcUploadsPattern.ReplaceAllStringFunc(content, func(match string) string {
+		sub := imgSrcUploadsPattern.FindStringSubmatch(match)
+		if len(sub) < 4 {
+			return match
 		}
-		if !strings.HasPrefix(strings.ToLower(att.ContentType), "image/") {
-			continue
-		}
-		cid := "ld-" + att.UUID
-		att.ContentID = cid
-		att.Header = attachment.MakeHeader(att.ContentType, cid, att.Name, "base64", "inline")
-		cidByUUID[att.UUID] = cid
-	}
+		return sub[1] + "cid:" + inlineContentID(sub[2]) + sub[3]
+	})
+}
 
-	// Process all matches.
-	for _, sub := range matches {
-		uuid := sub[3]
-		if _, ok := cidByUUID[uuid]; ok {
-			continue
-		}
+// linkInlineMediaToMessage attaches each inline-image media row to this
+// message (so it isn't garbage-collected as an orphan) and stamps a stable
+// content_id so cid:ldsk-<uuid> in the saved body resolves on read.
+func (m *Manager) linkInlineMediaToMessage(uuids []string, messageID int) {
+	for _, uuid := range uuids {
 		media, err := m.mediaStore.Get(0, uuid)
 		if err != nil {
-			m.lo.Debug("inline-image media not found, leaving URL unrewritten", "uuid", uuid, "error", err)
 			continue
 		}
-
-		// Only embed message-linked media.
 		if media.Model.String != mmodels.ModelMessages {
-			m.lo.Warn("refusing to embed non-message media", "uuid", uuid, "model", media.Model.String)
+			continue
+		}
+		// Linked to a different message already, leave it.
+		if media.ModelID.Valid && media.ModelID.Int != messageID {
 			continue
 		}
 
-		// Media should be already linked.
+		// Attach.
 		if !media.ModelID.Valid {
-			m.lo.Warn("refusing to embed media with no linked message", "uuid", uuid, "linked_message_id", media.ModelID)
-			continue
+			if err := m.mediaStore.Attach(media.ID, mmodels.ModelMessages, messageID); err != nil {
+				m.lo.Warn("error linking inline media to message", "uuid", uuid, "message_id", messageID, "error", err)
+			}
 		}
 
-		// Make sure the linked message is in the same conversation.
-		linkedConv, err := m.GetConversationByMessageID(media.ModelID.Int)
-		if err != nil {
-			m.lo.Warn("refusing to embed media: linked conversation lookup failed", "uuid", uuid, "linked_message_id", media.ModelID.Int, "error", err)
-			continue
+		// Set content_id if not already set.
+		if media.ContentID == "" {
+			if err := m.mediaStore.SetContentID(media.ID, inlineContentID(uuid)); err != nil {
+				m.lo.Warn("error setting media content_id", "uuid", uuid, "message_id", messageID, "error", err)
+			}
 		}
-		if linkedConv.ID != message.ConversationID {
-			m.lo.Warn("refusing to embed media from a different conversation", "uuid", uuid, "linked_conversation_id", linkedConv.ID, "outgoing_conversation_id", message.ConversationID)
-			continue
-		}
-
-		// Skip non images.
-		if !strings.HasPrefix(strings.ToLower(media.ContentType), "image/") {
-			continue
-		}
-
-		blob, err := m.mediaStore.GetBlob(media.UUID)
-		if err != nil {
-			m.lo.Warn("inline-image blob fetch failed, leaving URL unrewritten", "uuid", uuid, "error", err)
-			continue
-		}
-		cid := "ld-" + media.UUID
-		message.Attachments = append(message.Attachments, attachment.Attachment{
-			Name:        media.Filename,
-			UUID:        media.UUID,
-			ContentType: media.ContentType,
-			Content:     blob,
-			Size:        media.Size,
-			ContentID:   cid,
-			Header:      attachment.MakeHeader(media.ContentType, cid, media.Filename, "base64", "inline"),
-		})
-		cidByUUID[uuid] = cid
 	}
-
-	if len(cidByUUID) == 0 {
-		return nil
-	}
-
-	// Leave the original URL alone when we couldn't embed, otherwise we'd
-	// ship <img src=""> to the recipient.
-	message.Content = imgSrcUploadsPattern.ReplaceAllStringFunc(message.Content, func(match string) string {
-		sub := imgSrcUploadsPattern.FindStringSubmatch(match)
-		if len(sub) < 5 {
-			return match
-		}
-		cid, ok := cidByUUID[sub[3]]
-		if !ok {
-			return match
-		}
-		return sub[1] + "cid:" + cid + sub[4]
-	})
-
-	return nil
 }
 
 // uploadMessageAttachments uploads all attachments for a message.
@@ -1263,30 +1188,36 @@ func (m *Manager) messageExistsBySourceID(messageSourceIDs []string) (int, error
 	return conversationID, nil
 }
 
-// fetchMessageAttachments fetches attachments for a single message ID - extracted for reuse
+// fetchMessageAttachments fetches attachments (also inline images) for a single message ID.
 func (m *Manager) fetchMessageAttachments(messageID int) (attachment.Attachments, error) {
 	var attachments attachment.Attachments
 
-	// Get all media for this message
+	// Get all media for this message.
 	medias, err := m.mediaStore.GetByModel(messageID, mmodels.ModelMessages)
 	if err != nil {
 		return attachments, fmt.Errorf("error fetching message attachments: %w", err)
 	}
 
-	// Fetch blobs for each media item
+	// Fetch blobs for each media item.
 	for _, media := range medias {
 		blob, err := m.mediaStore.GetBlob(media.UUID)
 		if err != nil {
 			return attachments, fmt.Errorf("error fetching media blob: %w", err)
 		}
 
+		contentID := media.ContentID
+		if contentID == "" {
+			contentID = media.UUID
+		}
+
 		attachment := attachment.Attachment{
 			Name:        media.Filename,
 			UUID:        media.UUID,
 			ContentType: media.ContentType,
+			ContentID:   contentID,
 			Content:     blob,
 			Size:        media.Size,
-			Header:      attachment.MakeHeader(media.ContentType, media.UUID, media.Filename, "base64", media.Disposition.String),
+			Header:      attachment.MakeHeader(media.ContentType, contentID, media.Filename, "base64", media.Disposition.String),
 			URL:         m.mediaStore.GetSignedURL(media.UUID),
 		}
 		attachments = append(attachments, attachment)
@@ -1457,4 +1388,8 @@ func (m *Manager) getMediaPreview(media mmodels.Media) string {
 	default:
 		return m.i18n.T("globals.terms.file")
 	}
+}
+
+func inlineContentID(uuid string) string {
+	return "ldsk-" + uuid
 }
