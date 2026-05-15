@@ -702,26 +702,6 @@ WHERE source_id = ANY($1::text []);
 -- name: update-message-status
 update conversation_messages set status = $1, updated_at = NOW() where uuid = $2;
 
--- name: get-latest-message
-SELECT
-    m.created_at,
-    m.updated_at,
-    m.status,
-    m.type, 
-    m.content,
-    m.uuid,
-    m.private,
-    m.sender_id,
-    m.sender_type,
-    m.meta
-FROM conversation_messages m
-WHERE m.conversation_id = $1
-AND m.type = ANY($2)
-AND m.status = ANY($3)
-AND m.private = NOT $4
-ORDER BY m.created_at DESC
-LIMIT 1;
-
 -- name: update-message-source-id
 UPDATE conversation_messages SET source_id = $1 WHERE id = $2;
 
