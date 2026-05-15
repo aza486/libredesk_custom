@@ -542,11 +542,8 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	// Extract inline media UUIDs for linking after message insertion.
 	inlineUUIDs := extractInlineImageUUIDs(message.Content)
 
-	// Private notes never leave the system, so they keep /uploads/<uuid> directly.
-	// Outgoing emails need cid:ldsk-<uuid> for MIME inline attachments, the read API rewrites them back to signed URLs.
-	if !message.Private {
-		message.Content = rewriteInlineImagesToCID(message.Content)
-	}
+	// Rewrite inline image URLs to cid:ldsk-<uuid>. The read API resolves them back to signed URLs.
+	message.Content = rewriteInlineImagesToCID(message.Content)
 
 	// Convert content to plain text for search.
 	if message.ContentType == models.ContentTypeText {

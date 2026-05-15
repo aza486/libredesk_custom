@@ -242,12 +242,16 @@ func handleSendMessage(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
 	}
 
+	rootURL, _ := app.setting.GetAppRootURL()
+
 	// Create contact message.
 	if req.SenderType == umodels.UserTypeContact {
 		message, err := app.conversation.CreateContactMessage(media, int(conv.ContactID), cuuid, req.Message, cmodels.ContentTypeHTML, false)
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
+		resolveQuotedCIDs(app, &message)
+		resolveAttachmentCIDs(&message, rootURL)
 		return r.SendEnvelope(message)
 	}
 
@@ -257,9 +261,11 @@ func handleSendMessage(r *fastglue.Request) error {
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
+		resolveAttachmentCIDs(&message, rootURL)
 		return r.SendEnvelope(message)
 	}
 
+	// Queue outgoing reply.
 	meta := map[string]any{}
 	if req.EchoID != "" {
 		meta["echo_id"] = req.EchoID
@@ -268,6 +274,8 @@ func handleSendMessage(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	resolveQuotedCIDs(app, &message)
+	resolveAttachmentCIDs(&message, rootURL)
 	return r.SendEnvelope(message)
 }
 
