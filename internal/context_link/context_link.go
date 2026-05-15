@@ -83,7 +83,9 @@ func (m *Manager) Get(id int) (models.ContextLink, error) {
 		m.lo.Error("error fetching context link", "error", err)
 		return link, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-	m.decryptLink(&link)
+	if err := m.decryptLink(&link); err != nil {
+		return link, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
 	return link, nil
 }
 
@@ -112,7 +114,9 @@ func (m *Manager) Create(link models.ContextLink) (models.ContextLink, error) {
 		return models.ContextLink{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	m.decryptLink(&result)
+	if err := m.decryptLink(&result); err != nil {
+		m.lo.Error("error decrypting context link secret after creation", "id", result.ID, "error", err)
+	}
 	return result, nil
 }
 
@@ -140,7 +144,9 @@ func (m *Manager) Update(id int, link models.ContextLink) (models.ContextLink, e
 		return models.ContextLink{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	m.decryptLink(&result)
+	if err := m.decryptLink(&result); err != nil {
+		m.lo.Error("error decrypting context link secret after update", "id", result.ID, "error", err)
+	}
 	return result, nil
 }
 
@@ -236,22 +242,20 @@ func (m *Manager) encryptSecret(secret string) (string, error) {
 	return encrypted, nil
 }
 
-// Decrypt failures clear the secret so the app stays usable across encryption_key rotation.
-func (m *Manager) decryptLink(link *models.ContextLink) {
-	if link.Secret == "" {
-		return
-	}
+func (m *Manager) decryptLink(link *models.ContextLink) error {
 	decrypted, err := crypto.Decrypt(link.Secret, m.encryptionKey)
 	if err != nil {
-		m.lo.Error("error decrypting context link secret, clearing field", "id", link.ID, "error", err)
-		link.Secret = ""
-		return
+		m.lo.Error("error decrypting context link secret", "id", link.ID, "error", err)
+		return err
 	}
 	link.Secret = decrypted
+	return nil
 }
 
 func (m *Manager) decryptLinks(links []models.ContextLink) {
 	for i := range links {
-		m.decryptLink(&links[i])
+		if err := m.decryptLink(&links[i]); err != nil {
+			continue
+		}
 	}
 }
