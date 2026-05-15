@@ -71,7 +71,8 @@ func handleGetMessages(r *fastglue.Request) error {
 			att := messages[i].Attachments[j]
 			messages[i].Attachments[j].URL = app.media.GetURL(att.UUID, att.ContentType, att.Name)
 		}
-		resolveContentCIDs(&messages[i], rootURL)
+		resolveQuotedCIDs(app, &messages[i])
+		resolveAttachmentCIDs(&messages[i], rootURL)
 	}
 
 	// Process CSAT status for all messages (will only affect CSAT messages)
@@ -134,7 +135,8 @@ func handleGetMessage(r *fastglue.Request) error {
 		att := message.Attachments[j]
 		message.Attachments[j].URL = app.media.GetURL(att.UUID, att.ContentType, att.Name)
 	}
-	resolveContentCIDs(&message, rootURL)
+	resolveQuotedCIDs(app, &message)
+	resolveAttachmentCIDs(&message, rootURL)
 
 	return r.SendEnvelope(message)
 }
@@ -269,9 +271,9 @@ func handleSendMessage(r *fastglue.Request) error {
 	return r.SendEnvelope(message)
 }
 
-// resolveContentCIDs replaces inline image cid: references in email message content
+// resolveAttachmentCIDs replaces inline image cid: references in email message content
 // with actual attachment URLs and resolves relative /uploads/ paths to absolute URLs.
-func resolveContentCIDs(msg *cmodels.Message, rootURL string) {
+func resolveAttachmentCIDs(msg *cmodels.Message, rootURL string) {
 	for _, att := range msg.Attachments {
 		if att.ContentID != "" && att.URL != "" {
 			msg.Content = strings.ReplaceAll(msg.Content, "cid:"+att.ContentID, att.URL)
@@ -280,5 +282,18 @@ func resolveContentCIDs(msg *cmodels.Message, rootURL string) {
 	if rootURL != "" {
 		msg.Content = strings.ReplaceAll(msg.Content, `src="/uploads/`, `src="`+rootURL+`/uploads/`)
 		msg.Content = strings.ReplaceAll(msg.Content, `src='/uploads/`, `src='`+rootURL+`/uploads/`)
+	}
+}
+
+// resolveQuotedCIDs replaces cid: refs to media on other messages with signed URLs.
+func resolveQuotedCIDs(app *App, msg *cmodels.Message) {
+	refs, err := app.conversation.GetInlineMediaRefs(msg)
+	if err != nil {
+		app.lo.Error("error fetching inline media refs", "conversation_uuid", msg.ConversationUUID, "error", err)
+		return
+	}
+	for _, ref := range refs {
+		url := app.media.GetURL(ref.UUID, ref.ContentType, ref.Filename)
+		msg.Content = strings.ReplaceAll(msg.Content, "cid:"+ref.ContentID, url)
 	}
 }

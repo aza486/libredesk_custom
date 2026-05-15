@@ -53,6 +53,14 @@ WHERE model_type = 'messages'
 -- name: content-id-exists
 SELECT uuid FROM media WHERE content_id = $1;
 
+-- name: get-media-by-content-ids
+SELECT m.id, m.created_at, m.updated_at, m."uuid", m.store, m.filename, m.content_type, m.content_id, m.model_id, m.model_type, m.disposition, m."size", m.meta
+FROM media m
+INNER JOIN conversation_messages cm ON cm.id = m.model_id
+WHERE m.model_type = 'messages'
+  AND m.content_id = ANY($1)
+  AND cm.conversation_id = (SELECT id FROM conversations WHERE uuid = $2::uuid LIMIT 1);
+
 -- name: set-media-content-id
 UPDATE media
 SET content_id = $2

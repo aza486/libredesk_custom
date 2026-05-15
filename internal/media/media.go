@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
@@ -88,6 +89,7 @@ type queries struct {
 	GetByModel              *sqlx.Stmt `query:"get-model-media"`
 	GetUnlinkedMessageMedia *sqlx.Stmt `query:"get-unlinked-message-media"`
 	ContentIDExists         *sqlx.Stmt `query:"content-id-exists"`
+	GetByContentIDs         *sqlx.Stmt `query:"get-media-by-content-ids"`
 	SetContentID            *sqlx.Stmt `query:"set-media-content-id"`
 }
 
@@ -189,6 +191,19 @@ func (m *Manager) ContentIDExists(contentID string) (bool, string, error) {
 		return false, "", fmt.Errorf("checking if content_id exists: %w", err)
 	}
 	return true, uuid, nil
+}
+
+// GetByContentIDs returns media rows matching any of the given content_ids, scoped to the given conversation to prevent cross-conversation lookup.
+func (m *Manager) GetByContentIDs(contentIDs []string, conversationUUID string) ([]models.Media, error) {
+	out := []models.Media{}
+	if len(contentIDs) == 0 || conversationUUID == "" {
+		return out, nil
+	}
+	if err := m.queries.GetByContentIDs.Select(&out, pq.Array(contentIDs), conversationUUID); err != nil {
+		m.lo.Error("error fetching media by content_ids", "error", err)
+		return nil, fmt.Errorf("fetching media by content_ids: %w", err)
+	}
+	return out, nil
 }
 
 // GetBlob retrieves the raw binary content of a media file by its name.
