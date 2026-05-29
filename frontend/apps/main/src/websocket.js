@@ -24,16 +24,21 @@ export class WebSocketClient {
     this.queueTimeoutMs = 30000
   }
 
-  init () {
+  init() {
     this.connect()
     this.setupNetworkListeners()
   }
 
-  connect () {
+  connect() {
     if (this.isReconnecting || this.manualClose) return
 
     try {
-      this.socket = new WebSocket('/ws')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/ws`
+
+      console.log('Connecting to websocket:', wsUrl)
+
+      this.socket = new WebSocket(wsUrl)
       this.socket.addEventListener('open', this.handleOpen.bind(this))
       this.socket.addEventListener('message', this.handleMessage.bind(this))
       this.socket.addEventListener('error', this.handleError.bind(this))
@@ -44,7 +49,7 @@ export class WebSocketClient {
     }
   }
 
-  handleOpen () {
+  handleOpen() {
     console.log('WebSocket connected')
     const wasReconnect = this.reconnectAttempts > 0
     this.reconnectInterval = 1000
@@ -62,7 +67,7 @@ export class WebSocketClient {
     }
   }
 
-  handleMessage (event) {
+  handleMessage(event) {
     try {
       if (!event.data) return
 
@@ -135,19 +140,19 @@ export class WebSocketClient {
     }
   }
 
-  handleError (event) {
+  handleError(event) {
     console.error('WebSocket error:', event)
     this.reconnect()
   }
 
-  handleClose () {
+  handleClose() {
     this.clearPing()
     if (!this.manualClose) {
       this.reconnect()
     }
   }
 
-  reconnect () {
+  reconnect() {
     if (this.isReconnecting || this.reconnectAttempts >= this.maxReconnectAttempts) return
 
     this.isReconnecting = true
@@ -161,7 +166,7 @@ export class WebSocketClient {
     }, this.reconnectInterval)
   }
 
-  setupNetworkListeners () {
+  setupNetworkListeners() {
     window.addEventListener('online', () => {
       // Clear any pending reconnect attempts.
       if (this.reconnectTimer) {
@@ -184,7 +189,7 @@ export class WebSocketClient {
     })
   }
 
-  setupPing () {
+  setupPing() {
     this.clearPing()
     this.pingInterval = setInterval(() => {
       if (this.socket?.readyState === WebSocket.OPEN) {
@@ -202,14 +207,14 @@ export class WebSocketClient {
     }, 30000)
   }
 
-  clearPing () {
+  clearPing() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval)
       this.pingInterval = null
     }
   }
 
-  send (message) {
+  send(message) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message))
     } else {
@@ -218,7 +223,7 @@ export class WebSocketClient {
     }
   }
 
-  queueMessage (message) {
+  queueMessage(message) {
     // Don't queue ephemeral message types.
     if (WS_EPHEMERAL_TYPES.includes(message.type)) {
       console.log('Skipping queue for ephemeral message type:', message.type)
@@ -251,7 +256,7 @@ export class WebSocketClient {
     })
   }
 
-  flushMessageQueue () {
+  flushMessageQueue() {
     if (this.messageQueue.length === 0) return
 
     // Remove expired messages before sending
@@ -271,7 +276,7 @@ export class WebSocketClient {
     }
   }
 
-  subscribeToConversation (conversationUUID) {
+  subscribeToConversation(conversationUUID) {
     if (!conversationUUID) return
 
     const subscribeMessage = {
@@ -303,7 +308,7 @@ export class WebSocketClient {
     this.send(typingMessage)
   }
 
-  close () {
+  close() {
     this.manualClose = true
     this.clearPing()
     if (this.socket) {
@@ -314,7 +319,7 @@ export class WebSocketClient {
 
 let wsClient
 
-export function initWS () {
+export function initWS() {
   if (!wsClient) {
     wsClient = new WebSocketClient()
     wsClient.init()

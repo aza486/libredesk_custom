@@ -49,7 +49,7 @@ import { useWidgetStore } from '@widget/store/widget.js'
 import { getRelativeTime } from '@shared-ui/utils/datetime.js'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
 import { Spinner } from '@shared-ui/components/ui/spinner'
-import UnreadCountBadge from './UnreadCountBadge.vue'
+import UnreadCountBadge from '../../../main/src/components/UnreadCountBadge.vue'
 
 const chatStore = useChatStore()
 const widgetStore = useWidgetStore()
