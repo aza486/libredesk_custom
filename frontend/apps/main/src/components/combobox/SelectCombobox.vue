@@ -3,7 +3,7 @@
     :model-value="normalizedValue"
     @update:model-value="$emit('update:modelValue', $event)"
     @select="$emit('select', $event)"
-    :items="items"
+    :items="sortedItems"
     :placeholder="placeholder"
     :align="align"
   >
@@ -31,10 +31,33 @@
 
         <!-- Others -->
         <span v-else-if="item.emoji">{{ item.emoji }}</span>
-        <span>{{ item.label }}</span>
+        <div class="flex items-center justify-between w-full">
+
+                <div class="flex items-center gap-2">
+                  <span>{{ item.label }}</span>
+
+                  <span
+                    v-if="isCurrentUser(item)"
+                    class="text-muted-foreground text-xs"
+                  >
+                    ({{ t('globals.terms.you') }})
+                  </span>
+                </div>
+
+                <button
+                  v-if="type === 'user' && item.value !== 'none'"
+                  class="text-yellow-500 text-sm"
+                  @click.stop="toggleFavorite(item.value)">
+                  {{
+                    favoriteAgents.includes(String(item.value))
+                      ? '★'
+                      : '☆'
+                  }}
+                </button>
+
+              </div>
         <span v-if="isCurrentUser(item)" class="text-muted-foreground text-xs"
-          >({{ t('globals.terms.you') }})</span
-        >
+          >({{ t('globals.terms.you') }})</span>
       </div>
     </template>
 
@@ -73,6 +96,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { Avatar, AvatarImage, AvatarFallback } from '@shared-ui/components/ui/avatar'
 import ComboBox from '@shared-ui/components/ui/combobox/ComboBox.vue'
 import StatusDot from '@shared-ui/components/StatusDot.vue'
@@ -80,6 +104,10 @@ import { useUserStore } from '@/stores/user'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 const userStore = useUserStore()
+const favoriteAgents = useStorage(
+  'favoriteAgents',
+  []
+)
 
 const props = defineProps({
   modelValue: [String, Number, Object],
@@ -95,6 +123,30 @@ const props = defineProps({
 })
 
 const normalizedValue = computed(() => String(props.modelValue || ''))
+const sortedItems = computed(() => {
+
+  if (props.type !== 'user') {
+    return props.items
+  }
+
+  return [...props.items].sort((a, b) => {
+
+    // "none" immer unten
+    if (a.value === 'none') return 1
+    if (b.value === 'none') return -1
+
+    const aFav =
+      favoriteAgents.value.includes(String(a.value))
+
+    const bFav =
+      favoriteAgents.value.includes(String(b.value))
+
+    if (aFav && !bFav) return -1
+    if (!aFav && bFav) return 1
+
+    return a.label.localeCompare(b.label)
+  })
+})
 
 const isCurrentUser = (item) => {
   return (
@@ -105,4 +157,17 @@ const isCurrentUser = (item) => {
 }
 
 defineEmits(['update:modelValue', 'select'])
+const toggleFavorite = (userId) => {
+
+  const id = String(userId)
+
+  if (favoriteAgents.value.includes(id)) {
+    favoriteAgents.value =
+      favoriteAgents.value.filter(fav => fav !== id)
+  } else {
+    favoriteAgents.value.push(id)
+  }
+}
+
+defineEmits(['update:modelValue'])
 </script>

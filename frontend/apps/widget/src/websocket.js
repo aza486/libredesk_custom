@@ -43,7 +43,7 @@ export class WidgetWebSocketClient {
     this.connectedBannerTimer = null
   }
 
-  init (token, inboxId) {
+  init(token, inboxId) {
     this.manualClose = false
     this.token = token
     this.inboxId = inboxId
@@ -51,11 +51,16 @@ export class WidgetWebSocketClient {
     this.setupNetworkListeners()
   }
 
-  connect () {
+  connect() {
     if (this.isReconnecting || this.manualClose) return
 
     try {
-      this.socket = new WebSocket('/widget/ws')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/widget/ws`
+
+      console.log('Connecting widget websocket:', wsUrl)
+
+      this.socket = new WebSocket(wsUrl)
       this.socket.addEventListener('open', this.handleOpen.bind(this))
       this.socket.addEventListener('message', this.handleMessage.bind(this))
       this.socket.addEventListener('error', this.handleError.bind(this))
@@ -66,7 +71,8 @@ export class WidgetWebSocketClient {
     }
   }
 
-  handleOpen () {
+  handleOpen() {
+    this.reconnectInterval = 1000
     this.reconnectAttempts = 0
     this.isReconnecting = false
     this.lastPong = Date.now()
@@ -89,7 +95,7 @@ export class WidgetWebSocketClient {
     this.wsInitiated = true
   }
 
-  handleMessage (event) {
+  handleMessage(event) {
     const chatStore = useChatStore()
     try {
       if (!event.data) return
@@ -145,12 +151,12 @@ export class WidgetWebSocketClient {
     }
   }
 
-  handleError (event) {
+  handleError(event) {
     console.error('Widget WebSocket error:', event)
     this.reconnect()
   }
 
-  handleClose () {
+  handleClose() {
     this.clearPing()
     if (!this.manualClose) {
       this.beginRecovery()
@@ -158,7 +164,7 @@ export class WidgetWebSocketClient {
     }
   }
 
-  reconnect () {
+  reconnect() {
     if (this.isReconnecting) return
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       const widgetStore = useWidgetStore()
@@ -179,7 +185,7 @@ export class WidgetWebSocketClient {
     }, RECONNECT_INTERVAL_MS)
   }
 
-  beginRecovery () {
+  beginRecovery() {
     if (!this.wsInitiated || this.recovering) return
     this.recovering = true
     clearTimeout(this.connectedBannerTimer)
@@ -188,7 +194,7 @@ export class WidgetWebSocketClient {
     widgetStore.setConnecting(true)
   }
 
-  finishRecovery () {
+  finishRecovery() {
     if (!this.recovering) return
     this.recovering = false
     const widgetStore = useWidgetStore()
@@ -198,7 +204,7 @@ export class WidgetWebSocketClient {
     this.connectedBannerTimer = setTimeout(() => widgetStore.setConnected(false), 2000)
   }
 
-  setupNetworkListeners () {
+  setupNetworkListeners() {
     if (this.networkListenersSetup) return
     this.networkListenersSetup = true
 
@@ -229,7 +235,7 @@ export class WidgetWebSocketClient {
     })
   }
 
-  setupPing () {
+  setupPing() {
     this.clearPing()
     // Backend read deadline is 20s; ping every 10s so a single missed ping doesn't trip it.
     this.pingInterval = setInterval(() => {
@@ -250,14 +256,14 @@ export class WidgetWebSocketClient {
     }, 10000)
   }
 
-  clearPing () {
+  clearPing() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval)
       this.pingInterval = null
     }
   }
 
-  joinInbox () {
+  joinInbox() {
     if (!this.inboxId || !this.token) {
       console.error('Cannot join inbox: missing inbox_id or token')
       return
@@ -274,7 +280,8 @@ export class WidgetWebSocketClient {
     this.send(joinMessage)
   }
 
-  async syncMissedMessages (attempt = 0) {
+  // Silently refresh conversation list and current conversation to catch messages missed while WS was disconnected.
+  async syncMissedMessages() {
     const now = Date.now()
     if (attempt === 0 && now - this.lastSyncAt < 2000) return
     this.lastSyncAt = now
@@ -293,7 +300,7 @@ export class WidgetWebSocketClient {
     }
   }
 
-  sendTyping (isTyping = true, conversationUUID = null) {
+  sendTyping(isTyping = true, conversationUUID = null) {
     const typingMessage = {
       type: WS_EVENT.TYPING,
       data: {
@@ -304,7 +311,7 @@ export class WidgetWebSocketClient {
     this.send(typingMessage)
   }
 
-  send (message) {
+  send(message) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message))
     } else {
@@ -312,7 +319,7 @@ export class WidgetWebSocketClient {
     }
   }
 
-  close () {
+  close() {
     this.manualClose = true
     this.clearPing()
     clearTimeout(this.syncRetryTimer)
@@ -335,7 +342,7 @@ export class WidgetWebSocketClient {
   }
 }
 
-export function initWidgetWS (token, inboxId) {
+export function initWidgetWS(token, inboxId) {
   if (!widgetWSClient) {
     widgetWSClient = new WidgetWebSocketClient()
     widgetWSClient.init(token, inboxId)
@@ -356,7 +363,7 @@ export const sendWidgetTyping = (isTyping = true, conversationUUID = null) => wi
 export const closeWidgetWebSocket = () => widgetWSClient?.close()
 export const skipInitialWsSync = () => { _syncOnFirstConnect = false }
 
-export function sendPageVisit (url, title) {
+export function sendPageVisit(url, title) {
   if (!widgetWSClient) return
   widgetWSClient.send({
     type: 'page_visit',

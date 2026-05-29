@@ -9,3 +9,8 @@ uploads
 dist/
 .vscode/
 static/widget.min.js
+backup.sql
+*_backup.sql
+frontend/package-lock.json
+uploads/*
+!uploads/.gitkeep
