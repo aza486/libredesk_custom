@@ -36,7 +36,7 @@ export class WidgetWebSocketClient {
     this.inboxId = null
   }
 
-  init (token, inboxId) {
+  init(token, inboxId) {
     this.manualClose = false
     this.token = token
     this.inboxId = inboxId
@@ -44,11 +44,16 @@ export class WidgetWebSocketClient {
     this.setupNetworkListeners()
   }
 
-  connect () {
+  connect() {
     if (this.isReconnecting || this.manualClose) return
 
     try {
-      this.socket = new WebSocket('/widget/ws')
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.host}/widget/ws`
+
+      console.log('Connecting widget websocket:', wsUrl)
+
+      this.socket = new WebSocket(wsUrl)
       this.socket.addEventListener('open', this.handleOpen.bind(this))
       this.socket.addEventListener('message', this.handleMessage.bind(this))
       this.socket.addEventListener('error', this.handleError.bind(this))
@@ -59,7 +64,7 @@ export class WidgetWebSocketClient {
     }
   }
 
-  handleOpen () {
+  handleOpen() {
     this.reconnectInterval = 1000
     this.reconnectAttempts = 0
     this.isReconnecting = false
@@ -80,7 +85,7 @@ export class WidgetWebSocketClient {
     this.wsInitiated = true
   }
 
-  handleMessage (event) {
+  handleMessage(event) {
     const chatStore = useChatStore()
     try {
       if (!event.data) return
@@ -136,19 +141,19 @@ export class WidgetWebSocketClient {
     }
   }
 
-  handleError (event) {
+  handleError(event) {
     console.error('Widget WebSocket error:', event)
     this.reconnect()
   }
 
-  handleClose () {
+  handleClose() {
     this.clearPing()
     if (!this.manualClose) {
       this.reconnect()
     }
   }
 
-  reconnect () {
+  reconnect() {
     if (this.isReconnecting || this.reconnectAttempts >= this.maxReconnectAttempts) return
 
     this.isReconnecting = true
@@ -162,7 +167,7 @@ export class WidgetWebSocketClient {
     }, this.reconnectInterval)
   }
 
-  setupNetworkListeners () {
+  setupNetworkListeners() {
     window.addEventListener('online', () => {
       // Cancel any pending backoff timer and reconnect immediately.
       if (this.reconnectTimer) {
@@ -187,7 +192,7 @@ export class WidgetWebSocketClient {
     })
   }
 
-  setupPing () {
+  setupPing() {
     this.clearPing()
     this.pingInterval = setInterval(() => {
       if (this.socket?.readyState === WebSocket.OPEN) {
@@ -207,14 +212,14 @@ export class WidgetWebSocketClient {
     }, 5000)
   }
 
-  clearPing () {
+  clearPing() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval)
       this.pingInterval = null
     }
   }
 
-  joinInbox () {
+  joinInbox() {
     if (!this.inboxId || !this.token) {
       console.error('Cannot join inbox: missing inbox_id or token')
       return
@@ -232,7 +237,7 @@ export class WidgetWebSocketClient {
   }
 
   // Silently refresh conversation list and current conversation to catch messages missed while WS was disconnected.
-  syncMissedMessages () {
+  syncMissedMessages() {
     const now = Date.now()
     if (now - this.lastSyncAt < 2000) return
     this.lastSyncAt = now
@@ -245,7 +250,7 @@ export class WidgetWebSocketClient {
     }
   }
 
-  sendTyping (isTyping = true, conversationUUID = null) {
+  sendTyping(isTyping = true, conversationUUID = null) {
     const typingMessage = {
       type: WS_EVENT.TYPING,
       data: {
@@ -256,7 +261,7 @@ export class WidgetWebSocketClient {
     this.send(typingMessage)
   }
 
-  send (message) {
+  send(message) {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message))
     } else {
@@ -264,7 +269,7 @@ export class WidgetWebSocketClient {
     }
   }
 
-  close () {
+  close() {
     this.manualClose = true
     this.clearPing()
     if (this.socket) {
@@ -273,7 +278,7 @@ export class WidgetWebSocketClient {
   }
 }
 
-export function initWidgetWS (token, inboxId) {
+export function initWidgetWS(token, inboxId) {
   if (!widgetWSClient) {
     widgetWSClient = new WidgetWebSocketClient()
     widgetWSClient.init(token, inboxId)
@@ -294,7 +299,7 @@ export const sendWidgetTyping = (isTyping = true, conversationUUID = null) => wi
 export const closeWidgetWebSocket = () => widgetWSClient?.close()
 export const skipInitialWsSync = () => { _syncOnFirstConnect = false }
 
-export function sendPageVisit (url, title) {
+export function sendPageVisit(url, title) {
   if (!widgetWSClient) return
   widgetWSClient.send({
     type: 'page_visit',

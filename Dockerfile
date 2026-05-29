@@ -3,15 +3,17 @@ FROM alpine:3.18
 # Install necessary packages
 RUN apk --no-cache add ca-certificates tzdata
 
-# Set the working directory to /libredesk
+# Set working directory
 WORKDIR /libredesk
 
-# Copy necessary files
-COPY libredesk .
-COPY config.sample.toml config.toml
+# Copy EVERYTHING into container
+COPY . .
 
-# Expose port 9000 for the application
+# Make binary executable
+RUN chmod +x /libredesk/libredesk
+
+# Expose app port
 EXPOSE 9000
 
-# Set the default command to run the libredesk binary
+# Start Libredesk
 CMD ["./libredesk"]

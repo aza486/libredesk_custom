@@ -32,7 +32,7 @@ var agentUpgrader = websocket.FastHTTPUpgrader{
 			return false
 		}
 		isLocalhost := u.Hostname() == "localhost"
-		if u.Scheme != "https" && !isLocalhost {
+		if u.Scheme != "https" && u.Scheme != "http" && !isLocalhost {
 			return false
 		}
 		if strings.EqualFold(u.Host, string(ctx.Request.Host())) {

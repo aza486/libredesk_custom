@@ -43,6 +43,7 @@ export default defineConfig(({ mode, command }) => {
       fs: {
         allow: [path.resolve(__dirname)],
       },
+      allowedHosts: ['etching-catalyze-declared.ngrok-free.dev'],
       port: isWidget ? 8001 : 8000,
       proxy: {
         '/api': {

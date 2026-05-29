@@ -1,7 +1,7 @@
 services:
   # Libredesk app
   app:
-    image: libredesk/libredesk:latest
+    build: .
     container_name: libredesk_app
     restart: unless-stopped
     ports:
@@ -13,12 +13,14 @@ services:
     networks:
       - libredesk
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
-      - ./uploads:/libredesk/uploads:rw 
+      - ./uploads:/libredesk/uploads:rw
       - ./config.toml:/libredesk/config.toml
-    command: [sh, -c, "./libredesk --install --idempotent-install --yes --config /libredesk/config.toml && ./libredesk --upgrade --yes --config /libredesk/config.toml && ./libredesk --config /libredesk/config.toml"]
+    command: [ sh, -c, "./libredesk --install --idempotent-install --yes --config /libredesk/config.toml && ./libredesk --upgrade --yes --config /libredesk/config.toml && ./libredesk --config /libredesk/config.toml" ]
 
   # PostgreSQL database
   db:
@@ -33,10 +35,10 @@ services:
     environment:
       # Set these environment variables to configure the database, defaults to libredesk.
       POSTGRES_USER: ${POSTGRES_USER:-libredesk}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-libredesk} 
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-libredesk}
       POSTGRES_DB: ${POSTGRES_DB:-libredesk}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-libredesk} -d ${POSTGRES_DB:-libredesk}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-libredesk} -d ${POSTGRES_DB:-libredesk}" ]
       interval: 10s
       timeout: 5s
       retries: 6

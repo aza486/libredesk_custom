@@ -1,4 +1,5 @@
 <script setup>
+import api from '@main/api'
 import {
   adminNavItems,
   reportsNavItems,
@@ -98,18 +99,50 @@ import {
 import { filterNavItems } from '@main/utils/nav-permissions'
 import { permissions } from '@main/constants/permissions'
 import { useStorage } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
+import  UnreadCountBadge  from '@main/components/UnreadCountBadge.vue'
 
-defineProps({
+const props = defineProps({
   userTeams: { type: Array, default: () => [] },
   userViews: { type: Array, default: () => [] },
   sharedViews: { type: Array, default: () => [] }
 })
+
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
+const openConversationCount = computed(() => {
+  return conversationStore.conversationsList.filter(conversation => {
+    return conversation.status === 'Open'
+  }).length
+})
+const unreadCount = computed(() => {
+  return conversationStore.conversationsList.reduce((total, conversation) => {
+    return total + (conversation.unread_message_count || 0)
+  }, 0)
+})
+onMounted(() => {
+  loadSidebarCounts()
+
+  sidebarCountInterval = setInterval(() => {
+    loadSidebarCounts()
+  }, 5000)
+})
+onUnmounted(() => {
+  if (sidebarCountInterval) {
+    clearInterval(sidebarCountInterval)
+  }
+})
+const myOpenCount = computed(() => {
+  return conversationStore.conversationsList.filter(conversation => {
+    return (
+      conversation.status === 'Open' &&
+      conversation.assignee_id === userStore.user.id
+    )
+  }).length
+})
 const settingsStore = useAppSettingsStore()
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +266,88 @@ const hoveredViewId = ref(null)
 // Track delete confirmation dialog state
 const isDeleteOpen = ref(false)
 const viewToDelete = ref(null)
+const sidebarCounts = ref({})
+let sidebarCountInterval = null
+const loadSidebarCounts = async () => {
+  try {
+
+    // Assigned
+    const assignedResponse =
+      await api.getAssignedConversations({
+        page: 1,
+        page_size: 100
+      })
+
+    sidebarCounts.value.assigned =
+      assignedResponse.data.data.results.filter(
+        conversation => conversation.status === 'Open'
+      ).length
+
+    // Unassigned
+    const unassignedResponse =
+      await api.getUnassignedConversations({
+        page: 1,
+        page_size: 100
+      })
+
+    sidebarCounts.value.unassigned =
+      unassignedResponse.data.data.results.filter(
+        conversation => conversation.status === 'Open'
+      ).length
+
+    // Mentions
+    const mentionedResponse =
+      await api.getMentionedConversations({
+        page: 1,
+        page_size: 100
+      })
+
+    sidebarCounts.value.mentioned =
+      mentionedResponse.data.data.results.filter(
+        conversation => conversation.status === 'Open'
+      ).length
+
+    // Teams
+    for (const team of props.userTeams || []) {
+
+      const teamResponse =
+        await api.getTeamUnassignedConversations(
+          team.id,
+          {
+            page: 1,
+            page_size: 100
+          }
+        )
+
+      sidebarCounts.value[`team_${team.id}`] =
+        teamResponse.data.data.results.filter(
+          conversation => conversation.status === 'Open'
+        ).length
+    }
+
+    // Views
+for (const view of props.userViews || []) {
+
+  const viewResponse =
+    await api.getViewConversations(
+      view.id,
+      {
+        page: 1,
+        page_size: 100
+      }
+    )
+
+  sidebarCounts.value[`view_${view.id}`] =
+    viewResponse.data.data.results.filter(
+      conversation => conversation.status === 'Open'
+    ).length
+}
+
+  } catch (error) {
+    console.error('Failed loading sidebar counts', error)
+  }
+}
+
 </script>
 
 <template>
@@ -441,26 +556,35 @@ const viewToDelete = ref(null)
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')" @click="navigateToInbox('assigned')">
-                    <User />
-                    <span>{{ t('globals.terms.myInbox') }}</span>
+                  <User />
+                    <div class="flex items-center justify-between w-full">
+                      <span>{{ t('globals.terms.myInbox') }}</span>
+                    <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
+                  </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/mentioned')" @click="navigateToInbox('mentioned')">
                     <AtSign />
-                    <span>
-                      {{ t('globals.terms.mention', 2) }}
-                    </span>
+                      <div class="flex items-center justify-between w-full">
+                        <span>
+                        {{ t('globals.terms.mention', 2) }}
+                      </span>
+                    <UnreadCountBadge :count="sidebarCounts.mentioned || 0" />
+                    </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
                 <SidebarMenuButton :isActive="isActiveParent('/inboxes/unassigned')" @click="navigateToInbox('unassigned')">
-                    <CircleDashed />
-                    <span>
-                      {{ t('globals.terms.unassigned') }}
-                    </span>
+                  <CircleDashed />
+                    <div class="flex items-center justify-between w-full">
+                      <span>
+                        {{ t('globals.terms.unassigned') }}
+                      </span>
+                      <UnreadCountBadge :count="sidebarCounts.unassigned || 0" />
+                    </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -499,7 +623,14 @@ const viewToDelete = ref(null)
                           :is-active="route.params.teamID == team.id"
                           @click="navigateToTeamInbox(team.id)"
                         >
-                          {{ team.emoji }}<span>{{ team.name }}</span>
+                          <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-2">
+                              <span>{{ team.emoji }}</span>
+                              <span>{{ team.name }}</span>
+                            </div>
+
+                            <UnreadCountBadge :count="sidebarCounts[`team_${team.id}`] || 0" />
+                          </div>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
@@ -541,7 +672,17 @@ const viewToDelete = ref(null)
                           :isActive="route.params.viewID == view.id"
                           @click="navigateToViewInbox(view.id)"
                         >
-                          <span class="flex-1 truncate" :title="view.name">{{ view.name }}</span>
+                          <div class="flex items-center justify-between w-full">
+                            
+                            <span class="flex-1 truncate" :title="view.name">
+                              {{ view.name }}
+                            </span>
+
+                            <UnreadCountBadge
+                              :count="sidebarCounts[`view_${view.id}`] || 0"
+                            />
+
+                          </div>
                         </SidebarMenuButton>
                         <SidebarMenuAction
                           :class="[
