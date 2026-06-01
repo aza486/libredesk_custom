@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
@@ -88,6 +89,8 @@ type queries struct {
 	GetByModel              *sqlx.Stmt `query:"get-model-media"`
 	GetUnlinkedMessageMedia *sqlx.Stmt `query:"get-unlinked-message-media"`
 	ContentIDExists         *sqlx.Stmt `query:"content-id-exists"`
+	GetByContentIDs         *sqlx.Stmt `query:"get-media-by-content-ids"`
+	SetContentID            *sqlx.Stmt `query:"set-media-content-id"`
 }
 
 // UploadAndInsert uploads file on storage and inserts an entry in db.
@@ -119,13 +122,13 @@ func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (s
 	// Detect content type and override if needed.
 	contentType, err := m.detectContentType(contentType, content)
 	if err != nil {
-		m.lo.Error("error detecting content type", "error", err)
+		m.lo.Error("error detecting content type", "error", err, "file_name", fileName, "content_type", contentType, "store", m.store.Name())
 		return "", "", err
 	}
 
 	fName, err := m.store.Put(fileName, contentType, content)
 	if err != nil {
-		m.lo.Error("error uploading media", "error", err)
+		m.lo.Error("error uploading media to store", "error", err, "file_name", fileName, "content_type", contentType, "store", m.store.Name())
 		return "", "", envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.errorUploadingFile"), nil)
 	}
 	return fName, contentType, nil
@@ -135,7 +138,7 @@ func (m *Manager) Upload(fileName, contentType string, content io.ReadSeeker) (s
 func (m *Manager) Insert(disposition null.String, fileName, contentType, contentID string, modelType null.String, uuid string, modelID null.Int, fileSize int, meta []byte) (models.Media, error) {
 	var id int
 	if err := m.queries.Insert.QueryRow(m.store.Name(), fileName, contentType, fileSize, meta, modelID, modelType, disposition, contentID, uuid).Scan(&id); err != nil {
-		m.lo.Error("error inserting media", "error", err)
+		m.lo.Error("error inserting media", "error", err, "file_name", fileName, "content_type", contentType, "store", m.store.Name())
 		return models.Media{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 	return m.Get(id, "")
@@ -168,10 +171,22 @@ func (m *Manager) Get(id int, uuid string) (models.Media, error) {
 	return media, nil
 }
 
-// ContentIDExists checks if a content_id exists in the database and returns the UUID of the media file.
-func (m *Manager) ContentIDExists(contentID string) (bool, string, error) {
+// SetContentID stamps a content_id onto a media row if one isn't already set.
+func (m *Manager) SetContentID(id int, contentID string) error {
+	if _, err := m.queries.SetContentID.Exec(id, contentID); err != nil {
+		m.lo.Error("error setting media content_id", "id", id, "content_id", contentID, "error", err)
+		return fmt.Errorf("setting media content_id: %w", err)
+	}
+	return nil
+}
+
+// ContentIDExists reports whether a media row with the given content_id is linked to a message in the given conversation. Scoped this way so an orphan media row (e.g., from a partial failure) doesn't short-circuit a retry into skipping the upload.
+func (m *Manager) ContentIDExists(contentID, conversationUUID string) (bool, string, error) {
+	if contentID == "" || conversationUUID == "" {
+		return false, "", nil
+	}
 	var uuid string
-	if err := m.queries.ContentIDExists.Get(&uuid, contentID); err != nil {
+	if err := m.queries.ContentIDExists.Get(&uuid, contentID, conversationUUID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, "", nil
 		}
@@ -179,6 +194,19 @@ func (m *Manager) ContentIDExists(contentID string) (bool, string, error) {
 		return false, "", fmt.Errorf("checking if content_id exists: %w", err)
 	}
 	return true, uuid, nil
+}
+
+// GetByContentIDs returns media rows matching any of the given content_ids, scoped to the given conversation to prevent cross-conversation lookup.
+func (m *Manager) GetByContentIDs(contentIDs []string, conversationUUID string) ([]models.Media, error) {
+	out := []models.Media{}
+	if len(contentIDs) == 0 || conversationUUID == "" {
+		return out, nil
+	}
+	if err := m.queries.GetByContentIDs.Select(&out, pq.Array(contentIDs), conversationUUID); err != nil {
+		m.lo.Error("error fetching media by content_ids", "error", err)
+		return nil, fmt.Errorf("fetching media by content_ids: %w", err)
+	}
+	return out, nil
 }
 
 // GetBlob retrieves the raw binary content of a media file by its name.
@@ -197,6 +225,10 @@ func (m *Manager) GetURL(uuid, contentType, fileName string) string {
 		disposition = "inline"
 	}
 	return m.store.GetURL(uuid, disposition, fileName)
+}
+
+func (m *Manager) GetURLForDownload(uuid, fileName string) string {
+	return m.store.GetURL(uuid, "attachment", fileName)
 }
 
 // GetSignedURL generates a signed URL for secure media access if the store supports it.

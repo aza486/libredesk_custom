@@ -48,6 +48,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/template"
 	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/abhinavxd/libredesk/internal/webhook"
+	"github.com/abhinavxd/libredesk/internal/ws"
 	"github.com/knadh/go-i18n"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
@@ -111,6 +112,7 @@ type App struct {
 	rateLimit        *ratelimit.Limiter
 	redis            *redis.Client
 	importer         *importer.Importer
+	wsHub            *ws.Hub
 
 	// Global state that stores data on an available app update.
 	update *AppUpdate
@@ -233,7 +235,6 @@ func main() {
 	wsHub.SetConversationStore(conversation)
 	automation.SetConversationStore(conversation)
 
-	// Start inboxes.
 	startInboxes(ctx, inbox, conversation, user, conversation.SignAvatarURL)
 
 	go automation.Run(ctx, automationWorkers)
@@ -288,6 +289,7 @@ func main() {
 		rateLimit:        rateLimiter,
 		redis:            rdb,
 		userNotification: userNotification,
+		wsHub:            wsHub,
 	}
 	app.consts.Store(constants)
 
@@ -306,10 +308,10 @@ func main() {
 
 	go func() {
 		colorlog.Green("Server started at %s", ko.String("app.server.address"))
-		if ko.String("server.socket") != "" {
-			colorlog.Green("Unix socket created at %s", ko.String("server.socket"))
+		if ko.String("app.server.socket") != "" {
+			colorlog.Green("Unix socket created at %s", ko.String("app.server.socket"))
 		}
-		if err := g.ListenAndServe(ko.String("app.server.address"), ko.String("server.socket"), s); err != nil {
+		if err := g.ListenAndServe(ko.String("app.server.address"), ko.String("app.server.socket"), s); err != nil {
 			log.Fatalf("error starting server: %v", err)
 		}
 	}()
@@ -353,7 +355,7 @@ func onUsersOffline(conv *conversation.Manager) func([]umodels.OfflineUser) {
 		for _, u := range users {
 			switch u.Type {
 			case umodels.UserTypeAgent:
-				conv.BroadcastAgentStatusToWidget(u.ID, umodels.Offline)
+				conv.BroadcastAgentAvailability(u.ID, umodels.Offline)
 			case umodels.UserTypeContact, umodels.UserTypeVisitor:
 				conv.BroadcastContactUpdate(u.ID, map[string]any{"availability_status": umodels.Offline})
 			}

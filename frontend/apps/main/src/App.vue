@@ -191,9 +191,10 @@ watch(
   () => route.path,
   (path) => {
     if (path.startsWith('/inboxes') && path !== '/inboxes/search') {
-      lastInboxPath.value = path.replace(/\/conversation\/[^/]+$/, '')
+      lastInboxPath.value = path
     }
-  }
+  },
+  { immediate: true }
 )
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
@@ -292,6 +293,7 @@ const getUserViews = async () => {
 
 const initToaster = () => {
   emitter.on(EMITTER_EVENTS.SHOW_TOAST, (message) => {
+    if (!message.description) return
     if (message.variant === 'destructive') {
       sooner.error(message.description)
     } else if (message.variant === 'warning') {

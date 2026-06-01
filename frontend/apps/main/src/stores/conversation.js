@@ -1,21 +1,24 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, watchEffect } from 'vue'
+import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { useRouter } from 'vue-router'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { TYPING_RECEIVE_TIMEOUT } from '@shared-ui/composables/useTypingIndicator.js'
 import { deepMerge } from '@shared-ui/utils/object.js'
 import { computeRecipientsFromMessage } from '../utils/email-recipients'
 import { useEmitter } from '../composables/useEmitter'
 import { EMITTER_EVENTS } from '../constants/emitterEvents'
-import { subscribeToConversation, sendTypingIndicator } from '@main/websocket'
+import { subscribeToConversation, sendTypingIndicator, subscribeListReplace } from '@main/websocket'
 import { playNotificationSound } from '@shared-ui/composables/useNotificationSound'
 import MessageCache from '../utils/conversation-message-cache'
 import { getI18n } from '../i18n'
-import { useDebounceFn } from '@vueuse/core'
-import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '@/constants/conversation'
+import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES, TAG_ACTION } from '@/constants/conversation'
+import { useThrottleFn } from '@vueuse/core'
+import { useUserStore } from '@/stores/user'
+import { delayedLoading } from '@/utils/delayed-loading'
 import api from '../api'
 
 export const useConversationStore = defineStore('conversation', () => {
-  const CONV_LIST_PAGE_SIZE = 50
+  const CONV_LIST_PAGE_SIZE = 25
   const MESSAGE_LIST_PAGE_SIZE = 30
   const priorities = ref([])
   const statuses = ref([])
@@ -24,21 +27,68 @@ export const useConversationStore = defineStore('conversation', () => {
   const currentCC = ref([])
   const macros = ref({})
   const drafts = ref(new Map())
+  const userStore = useUserStore()
+  const router = useRouter()
+  const isViewingConversation = (uuid) => router.currentRoute.value.params.uuid === uuid
 
-  // Options for select fields
+  const selectedUUIDs = ref(new Set())
+
   const priorityOptions = computed(() => {
     return priorities.value.map(p => ({ label: p.name, value: p.id }))
   })
   const statusOptions = computed(() => {
     return statuses.value.map(s => ({ label: s.name, value: s.id }))
   })
-  // Status options excluding 'Snoozed'
   const statusOptionsNoSnooze = computed(() =>
     statuses.value.filter(s => s.name !== 'Snoozed').map(s => ({
       label: s.name,
       value: s.id
     }))
   )
+
+  let lastClickedUUID = null
+
+  const selectedCount = computed(() => selectedUUIDs.value.size)
+  const allSelected = computed(() => {
+    const list = conversationsList.value
+    return list.length > 0 && selectedUUIDs.value.size === list.length
+  })
+
+  function toggleSelect (uuid, shiftKey = false) {
+    const next = new Set(selectedUUIDs.value)
+
+    if (shiftKey && lastClickedUUID && lastClickedUUID !== uuid) {
+      const list = conversationsList.value
+      const lastIdx = list.findIndex(c => c.uuid === lastClickedUUID)
+      const curIdx = list.findIndex(c => c.uuid === uuid)
+      if (lastIdx !== -1 && curIdx !== -1) {
+        const start = Math.min(lastIdx, curIdx)
+        const end = Math.max(lastIdx, curIdx)
+        for (let i = start; i <= end; i++) {
+          next.add(list[i].uuid)
+        }
+      }
+    } else {
+      if (next.has(uuid)) next.delete(uuid)
+      else next.add(uuid)
+    }
+
+    lastClickedUUID = uuid
+    selectedUUIDs.value = next
+  }
+
+  function selectAll () {
+    selectedUUIDs.value = new Set(conversationsList.value.map(c => c.uuid))
+  }
+
+  function clearSelection () {
+    selectedUUIDs.value = new Set()
+    lastClickedUUID = null
+  }
+
+  function isSelected (uuid) {
+    return selectedUUIDs.value.has(uuid)
+  }
 
   // TODO: Move to constants.
   const sortFieldMap = {
@@ -90,6 +140,8 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   let typingTimeout = null
+  const typingByUUID = reactive({})
+  const typingTimeoutsByUUID = new Map()
 
   const conversations = reactive({
     data: [],
@@ -100,6 +152,8 @@ export const useConversationStore = defineStore('conversation', () => {
     viewID: 0,
     teamID: 0,
     loading: false,
+    fetching: false,
+    initialized: false,
     page: 1,
     hasMore: false,
     total: 0,
@@ -108,7 +162,6 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const conversation = reactive({
     data: null,
-    participants: {},
     loading: false,
     errorMessage: '',
     isTyping: false
@@ -117,12 +170,29 @@ export const useConversationStore = defineStore('conversation', () => {
   const messages = reactive({
     data: new MessageCache(),
     loading: false,
+    fetching: false,
     page: 1,
     // To trigger reactivity on the messages cache, simpler than making MessageCache reactive.
     version: 0,
   })
 
-  let seenConversationUUIDs = new Map()
+  // Convos whose message cache is stale; drained lazily by fetchMessages on next open.
+  let staleConversationUUIDs = new Set()
+  const CONVERSATION_CACHE_MAX = 50
+  const conversationDataCache = new Map()
+
+  function cacheConversationData (uuid, data) {
+    if (!uuid || !data) return
+    if (conversationDataCache.has(uuid)) conversationDataCache.delete(uuid)
+    conversationDataCache.set(uuid, data)
+    while (conversationDataCache.size > CONVERSATION_CACHE_MAX) {
+      const oldest = conversationDataCache.keys().next().value
+      if (oldest === conversation.data?.uuid) break
+      conversationDataCache.delete(oldest)
+    }
+  }
+  // Bumped on resetConversations() so in-flight requests can drop stale responses.
+  let contextSeq = 0
   const emitter = useEmitter()
 
   const incrementMessageVersion = () => setTimeout(() => messages.version++, 0)
@@ -185,18 +255,32 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  function matchesAssignmentScope (conv) {
+    switch (conversations.listType) {
+      case CONVERSATION_LIST_TYPE.ASSIGNED:
+        return conv.assigned_user_id === userStore.userID
+      case CONVERSATION_LIST_TYPE.UNASSIGNED:
+        return !conv.assigned_user_id && !conv.assigned_team_id
+      case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
+        return Number(conv.assigned_team_id) === Number(conversations.teamID) && !conv.assigned_user_id
+      default:
+        return null
+    }
+  }
+
+  function belongsToList (conv) {
+    const matched = matchesAssignmentScope(conv)
+    return matched === null ? true : matched
+  }
+
   const conversationsList = computed(() => {
     if (!conversations.data) return []
     let filteredConversations = conversations.data
-    // Filter by status if set.
     if (conversations.status !== "") {
-      filteredConversations = conversations.data
-        .filter(conv => {
-          return conv.status === conversations.status
-        })
+      filteredConversations = filteredConversations.filter(conv => conv.status === conversations.status)
     }
+    filteredConversations = filteredConversations.filter(belongsToList)
 
-    // Sort conversations based on the selected sort field
     return [...filteredConversations].sort((a, b) => {
       const field = sortFieldMap[conversations.sortField]?.field
       if (!a[field] && !b[field]) return 0
@@ -240,6 +324,12 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  function incrementUnread (uuid) {
+    const row = conversations.data.find(c => c.uuid === uuid)
+    if (!row) return
+    row.unread_message_count = Math.min((row.unread_message_count || 0) + 1, 10)
+  }
+
   const currentContactName = computed(() => {
     if (!conversation.data?.contact) return ''
     return conversation.data?.contact.first_name + ' ' + conversation.data?.contact.last_name
@@ -260,14 +350,12 @@ export const useConversationStore = defineStore('conversation', () => {
     return Object.keys(conversation.data || {}).length > 0
   })
 
-  // Watch for changes in the conversation and messages and update the to, cc, and bcc
   watchEffect(async () => {
     const _ = messages.version // eslint-disable-line no-unused-vars
     const conv = conversation.data
     const msgData = messages.data
     const inboxEmail = conv?.inbox_mail
 
-    // If the conversation is a live chat, reset recipients.
     if (conv?.inbox_channel === 'livechat') {
       currentTo.value = []
       currentCC.value = []
@@ -277,9 +365,9 @@ export const useConversationStore = defineStore('conversation', () => {
 
     if (!conv || !msgData || !inboxEmail) return
 
-    const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true)
+    // Skip automated messages (auto-replies, CSAT) so the prefill reflects the last human-driven recipients.
+    const latestMessage = msgData.getLatestMessage(conv.uuid, ['incoming', 'outgoing'], true, true)
     if (!latestMessage) {
-      // Reset recipients if no latest message is found.
       currentTo.value = []
       currentCC.value = []
       currentBCC.value = []
@@ -297,34 +385,30 @@ export const useConversationStore = defineStore('conversation', () => {
     currentBCC.value = bcc
   })
 
-  async function fetchParticipants (uuid) {
-    try {
-      const resp = await api.getConversationParticipants(uuid)
-      const participants = resp.data.data.reduce((acc, p) => {
-        acc[p.id] = p
-        return acc
-      }, {})
-      updateParticipants(participants)
-    } catch (error) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
+  function resetTypingState () {
+    conversation.isTyping = false
+    if (typingTimeout) {
+      clearTimeout(typingTimeout)
+      typingTimeout = null
     }
   }
 
   async function fetchConversation (uuid) {
-    conversation.loading = true
+    const cached = conversationDataCache.get(uuid)
+    if (cached) {
+      conversation.data = cached
+      resetTypingState()
+      subscribeToConversation(uuid)
+      silentRefetchConversation(uuid)
+      return
+    }
+    const guard = delayedLoading(conversation, 'loading')
     try {
       const resp = await api.getConversation(uuid)
       conversation.data = resp.data.data
-      conversation.isTyping = false
-      if (typingTimeout) {
-        clearTimeout(typingTimeout)
-        typingTimeout = null
-      }
-      // Do a websocket subscription to the conversation.
+      resetTypingState()
       subscribeToConversation(uuid)
+      cacheConversationData(uuid, conversation.data)
     } catch (error) {
       conversation.errorMessage = handleHTTPError(error).message
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -332,35 +416,62 @@ export const useConversationStore = defineStore('conversation', () => {
         description: conversation.errorMessage
       })
     } finally {
-      conversation.loading = false
+      guard.release()
     }
   }
 
-  /**
-   * Fetches messages for a conversation if not already present in the cache.
-   * 
-   * @param {string} uuid
-   * @returns 
-   */
+  async function silentRefetchConversation (uuid) {
+    try {
+      const resp = await api.getConversation(uuid)
+      if (conversation.data?.uuid === uuid) {
+        deepMerge(conversation.data, resp.data.data)
+        cacheConversationData(uuid, conversation.data)
+      }
+    } catch (error) {
+      console.warn('silent conversation refetch failed', error)
+    }
+  }
+
   async function fetchMessages (uuid, fetchNextPage = false) {
-    // Messages are already cached?
-    let hasMessages = messages.data.getAllPagesMessages(uuid)
-    if (hasMessages.length > 0 && !fetchNextPage) {
+    if (staleConversationUUIDs.has(uuid) && messages.data.hasConversation(uuid)) {
+      try {
+        const response = await api.getConversationMessages(uuid, { page: 1, page_size: MESSAGE_LIST_PAGE_SIZE })
+        const newMessages = response.data?.data?.results || []
+        let lastAdded = null
+        for (const m of newMessages) {
+          if (!messages.data.hasMessage(uuid, m.uuid)) {
+            messages.data.addMessage(uuid, m)
+            lastAdded = m
+          }
+        }
+        staleConversationUUIDs.delete(uuid)
+        if (lastAdded) {
+          incrementMessageVersion()
+          setTimeout(() => {
+            emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, { conversation_uuid: uuid, message: lastAdded })
+          }, 100)
+        }
+      } catch (error) {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive',
+          description: handleHTTPError(error).message
+        })
+      }
+    }
+
+    if (!fetchNextPage && messages.data.getAllPagesMessages(uuid).length > 0) {
       markConversationAsRead(uuid)
       return
     }
 
-    // Fetch messages from server.
-    messages.loading = true
-    // Increment page number
-    let page = messages.data.getLastFetchedPage(uuid) + 1
+    const guard = fetchNextPage ? null : delayedLoading(messages, 'loading')
+    messages.fetching = true
+    const page = messages.data.getLastFetchedPage(uuid) + 1
     try {
-      const response = await api.getConversationMessages(uuid, { page: page, page_size: MESSAGE_LIST_PAGE_SIZE })
+      const response = await api.getConversationMessages(uuid, { page, page_size: MESSAGE_LIST_PAGE_SIZE })
       const result = response.data?.data || {}
-      const newMessages = result.results || []
       markConversationAsRead(uuid)
-      // Cache messages
-      messages.data.addMessages(uuid, newMessages, result.page, result.total_pages)
+      messages.data.addMessages(uuid, result.results || [], result.page, result.total_pages)
       incrementMessageVersion()
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -368,27 +479,20 @@ export const useConversationStore = defineStore('conversation', () => {
         description: handleHTTPError(error).message
       })
     } finally {
-      messages.loading = false
+      if (guard) guard.release()
+      messages.fetching = false
     }
   }
 
   async function fetchNextMessages () {
-    fetchMessages(conversation.data.uuid, true)
+    return fetchMessages(conversation.data.uuid, true)
   }
 
-  /**
-   * Fetches a single message from the server and adds it to the message cache.
-   * 
-   * @param {string} conversationUUID
-   * @param {string} messageUUID
-   * @returns {object}
-   */
   async function fetchMessage (conversationUUID, messageUUID) {
     try {
       const response = await api.getConversationMessage(conversationUUID, messageUUID)
       if (response?.data?.data) {
         const newMsg = response.data.data
-        // Add message to cache.
         messages.data.addMessage(conversationUUID, newMsg)
         incrementMessageVersion()
         return newMsg
@@ -402,8 +506,8 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function fetchNextConversations () {
-    conversations.page++
-    fetchConversationsList(true, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page)
+    if (conversations.fetching || !conversations.hasMore) return
+    fetchConversationsList(false, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page + 1)
   }
 
   function reFetchConversationsList (showLoader = true) {
@@ -419,7 +523,7 @@ export const useConversationStore = defineStore('conversation', () => {
     if (conversations.listType !== listType || conversations.teamID !== teamID || conversations.viewID !== viewID) {
       resetConversations()
     }
-    if (listType) conversations.listType = listType
+    conversations.listType = listType
     if (teamID) conversations.teamID = teamID
     if (viewID) conversations.viewID = viewID
     if (conversations.status) {
@@ -431,19 +535,32 @@ export const useConversationStore = defineStore('conversation', () => {
         value: conversations.status
       })
     }
-    if (filters) conversations.listFilters = filters
-    if (showLoader) conversations.loading = true
+    conversations.listFilters = filters
+    const guard = showLoader ? delayedLoading(conversations, 'loading') : null
+    conversations.fetching = true
+    if (page === 0) page = conversations.page
+    const seq = contextSeq
+    const isStale = () => seq !== contextSeq
     try {
       conversations.errorMessage = ''
-      if (page === 0)
-        page = conversations.page
       const response = await makeConversationListRequest(listType, teamID, viewID, filters, page)
+      if (isStale()) return
       processConversationListResponse(response)
     } catch (error) {
-      conversations.errorMessage = handleHTTPError(error).message
-      conversations.total = 0
+      if (isStale()) return
+      if (conversations.data.length === 0) {
+        conversations.errorMessage = handleHTTPError(error).message
+        conversations.total = 0
+      }
     } finally {
-      conversations.loading = false
+      if (guard) {
+        if (isStale()) guard.cancel()
+        else guard.release()
+      }
+      if (!isStale()) {
+        conversations.initialized = true
+        conversations.fetching = false
+      }
     }
   }
 
@@ -502,29 +619,38 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
+  function trimListToCurrentPage () {
+    const maxLen = conversations.page * CONV_LIST_PAGE_SIZE
+    if (conversations.data.length > maxLen) {
+      conversations.data.splice(maxLen)
+    }
+  }
+
+  function mergeIntoList (uuid, payload) {
+    const existing = conversations.data?.find(c => c.uuid === uuid)
+    if (existing) deepMerge(existing, payload)
+    return existing
+  }
+
   function processConversationListResponse (response) {
     const apiResponse = response.data.data
     const newConversations = []
     for (const conv of apiResponse.results) {
-      if (seenConversationUUIDs.has(conv.uuid)) {
-        // Update existing conversation with fresh data.
-        const idx = conversations.data.findIndex(c => c.uuid === conv.uuid)
-        if (idx !== -1) {
-          Object.assign(conversations.data[idx], conv)
-        }
-      } else {
-        // Add to seen and new conversations list.
-        seenConversationUUIDs.set(conv.uuid, true)
-        newConversations.push(conv)
-      }
+      if (!mergeIntoList(conv.uuid, conv)) newConversations.push(conv)
     }
-    if (apiResponse.total_pages <= conversations.page) conversations.hasMore = false
-    else conversations.hasMore = true
+    conversations.page = Math.max(conversations.page, apiResponse.page)
+    conversations.hasMore = apiResponse.total_pages > conversations.page
     if (!conversations.data) conversations.data = []
-    conversations.data.push(...newConversations)
+    if (apiResponse.page === 1) {
+      conversations.data.unshift(...newConversations)
+    } else {
+      conversations.data.push(...newConversations)
+    }
     conversations.total = apiResponse.total
 
-    // Play notification sound for new conversations that were pending.
+    trimListToCurrentPage()
+
+    // Re-check document.hidden in case the user returned while the refresh was in flight.
     if (pendingNotificationUUIDs.size > 0) {
       let shouldPlay = false
       for (const uuid of pendingNotificationUUIDs) {
@@ -533,7 +659,7 @@ export const useConversationStore = defineStore('conversation', () => {
         }
       }
       pendingNotificationUUIDs.clear()
-      if (shouldPlay) {
+      if (shouldPlay && document.hidden) {
         playNotificationSound()
       }
     }
@@ -551,9 +677,13 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function updateStatus (v) {
+    if (!conversation.data) return
+    const previous = conversation.data.status
+    conversation.data.status = v
     try {
       await api.updateConversationStatus(conversation.data.uuid, { status: v })
     } catch (error) {
+      if (conversation.data) conversation.data.status = previous
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
         description: handleHTTPError(error).message
@@ -572,14 +702,41 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function upsertTags (v) {
+  function applyTagsLocally (uuid, action, tags) {
+    const targets = []
+    const listConv = conversations.data?.find(c => c.uuid === uuid)
+    if (listConv) targets.push(listConv)
+    if (conversation.data?.uuid === uuid) targets.push(conversation.data)
+
+    for (const conv of targets) {
+      if (!Array.isArray(conv.tags)) conv.tags = []
+      if (action === TAG_ACTION.ADD) {
+        for (const t of tags) {
+          if (!conv.tags.includes(t)) conv.tags.push(t)
+        }
+      } else if (action === TAG_ACTION.SET) {
+        conv.tags = [...tags]
+      } else if (action === TAG_ACTION.REMOVE) {
+        conv.tags = conv.tags.filter(t => !tags.includes(t))
+      }
+    }
+  }
+
+  async function updateConversationTags (uuid, action, tags) {
+    const source = conversation.data?.uuid === uuid
+      ? conversation.data
+      : conversations.data?.find(c => c.uuid === uuid)
+    const previous = source ? [...(source.tags || [])] : null
+    applyTagsLocally(uuid, action, tags)
     try {
-      await api.upsertTags(conversation.data.uuid, v)
+      await api.upsertTags(uuid, { action, tags })
     } catch (error) {
+      if (previous) applyTagsLocally(uuid, TAG_ACTION.SET, previous)
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
         description: handleHTTPError(error).message
       })
+      throw error
     }
   }
 
@@ -607,39 +764,26 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function updateAssigneeLastSeen (uuid) {
+    if (!isViewingConversation(uuid)) return
     markConversationAsRead(uuid)
-    try {
-      await api.updateAssigneeLastSeen(uuid)
-    } catch (error) {
-      // pass
-    }
-  }
-
-  function updateParticipants (newParticipants) {
-    conversation.participants = {
-      ...conversation.participants,
-      ...newParticipants
-    }
+    api.updateAssigneeLastSeen(uuid).catch(() => { })
   }
 
   function isConversationInList (uuid) {
-    return conversations.data?.find(c => c.uuid === uuid) ? true : false
+    return Boolean(conversations.data?.find(c => c.uuid === uuid))
   }
 
-  // Pending notification UUIDs for new conversations not yet in list (refresh is debounced).
-  // Checked after processConversationListResponse adds conversations to the list.
   const pendingNotificationUUIDs = new Set()
 
   function addPendingNotification (uuid) {
     pendingNotificationUUIDs.add(uuid)
   }
 
-  // Debounced to prevent apis calls during many WS events in a short time.
-  const debouncedFetchFirstPage = useDebounceFn(fetchFirstPageConversations, 1000)
-  const debouncedFetchParticipants = useDebounceFn(fetchParticipants, 400)
+  // trailing=true: fires one final refresh after a burst so the list converges to latest state.
+  const throttledFetchFirstPage = useThrottleFn(fetchFirstPageConversations, 60000, true)
 
   function refreshConversationList () {
-    debouncedFetchFirstPage()
+    throttledFetchFirstPage()
   }
 
   function updateConversationLastMessage (uuid, message) {
@@ -650,28 +794,16 @@ export const useConversationStore = defineStore('conversation', () => {
     conv.last_message_sender = message.sender_type
   }
 
-  /**
-   * Update conversation message in the cache by fetching it from the server.
-   *
-   * @param {object} message - Message object with conversation_uuid field
-   */
   async function updateConversationMessage (message) {
     if (conversation.data?.uuid !== message.conversation_uuid) {
-      // Not the open conversation. If we have cached messages for it,
-      // fetch the new message to keep the cache fresh.
-      if (messages.data.getLastFetchedPage(message.conversation_uuid) > 0) {
-        const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
-        if (fetchedMessage) {
-          // Update last message in conversation list (preview)
-          updateConversationLastMessage(message.conversation_uuid, fetchedMessage)
-        }
+      // Lazy invalidation: refresh the cache when the user next opens this convo, not on every WS event.
+      if (messages.data.hasConversation(message.conversation_uuid)) {
+        staleConversationUUIDs.add(message.conversation_uuid)
       }
       return
     }
 
-    // Open conversation and message not in cache? Fetch from server.
     if (!messages.data.hasMessage(message.conversation_uuid, message.uuid)) {
-      // Match echo_id to pending message and swap its UUID so mergeMessageUpdate can find it.
       const echoId = message.echo_id
       if (echoId && messages.data.hasMessage(message.conversation_uuid, echoId)) {
         messages.data.updateMessage(message.conversation_uuid, echoId, { uuid: message.uuid })
@@ -680,7 +812,27 @@ export const useConversationStore = defineStore('conversation', () => {
         return
       }
 
-      debouncedFetchParticipants(message.conversation_uuid)
+      if (message.type === 'activity') {
+        const activityMessage = {
+          uuid: message.uuid,
+          conversation_uuid: message.conversation_uuid,
+          type: 'activity',
+          content: message.preview,
+          created_at: message.created_at,
+          updated_at: message.created_at,
+          sender_type: message.sender_type
+        }
+        messages.data.addMessage(message.conversation_uuid, activityMessage)
+        incrementMessageVersion()
+        setTimeout(() => {
+          emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
+            conversation_uuid: message.conversation_uuid,
+            message: activityMessage
+          })
+        }, 100)
+        return
+      }
+
       const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
       if (fetchedMessage) {
         updateConversationLastMessage(message.conversation_uuid, fetchedMessage)
@@ -759,8 +911,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function addNewConversation (conversation) {
     if (!isConversationInList(conversation.uuid)) {
-      // Fetch list of conversations again.
-      fetchFirstPageConversations()
+      refreshConversationList()
     }
   }
 
@@ -771,14 +922,33 @@ export const useConversationStore = defineStore('conversation', () => {
     incrementMessageVersion()
   }
 
+  function canPushInsert (conv) {
+    const matched = matchesAssignmentScope(conv)
+    if (matched !== null) return matched
+    return conversations.listType === CONVERSATION_LIST_TYPE.ALL
+  }
+
+  function handleConvPush (payload) {
+    if (!payload || !payload.uuid) return
+    if (mergeIntoList(payload.uuid, payload)) {
+      if (conversation.data?.uuid === payload.uuid) {
+        deepMerge(conversation.data, payload)
+      }
+      return
+    }
+    if (!canPushInsert(payload)) return
+    if (conversations.status !== '' && payload.status !== conversations.status) return
+    if (!conversations.data) conversations.data = []
+    conversations.data.unshift(payload)
+    conversations.total += 1
+    trimListToCurrentPage()
+  }
+
   function mergeConversationUpdate (update) {
     if (conversation.data?.uuid === update.uuid) {
       deepMerge(conversation.data, update)
     }
-    const existing = conversations?.data?.find(c => c.uuid === update.uuid)
-    if (existing) {
-      deepMerge(existing, update)
-    }
+    mergeIntoList(update.uuid, update)
   }
 
   function mergeContactUpdate (update) {
@@ -795,14 +965,17 @@ export const useConversationStore = defineStore('conversation', () => {
     })
   }
 
-  // Clears the list and pagination state so the next fetch starts fresh (removes stale rows).
   function resetConversations () {
     conversations.data = []
     conversations.page = 1
-    seenConversationUUIDs = new Map()
+    conversations.initialized = false
+    conversations.hasMore = false
+    conversations.total = 0
+    contextSeq++
+    pendingNotificationUUIDs.clear()
+    clearSelection()
   }
 
-  /** Macros set for new conversation or an open conversation **/
   function setMacro (macro, context) {
     macros.value[context] = macro
   }
@@ -827,36 +1000,43 @@ export const useConversationStore = defineStore('conversation', () => {
     macros.value = { ...macros.value, [context]: {} }
   }
 
-  // Typing indicators
   function updateTypingStatus (typingData) {
-    const { conversation_uuid, is_typing } = typingData
+    const { conversation_uuid: uuid, is_typing } = typingData
 
-    // Only update typing status for the current conversation
-    if (conversation.data?.uuid !== conversation_uuid) return
-
-    if (typingTimeout) {
-      clearTimeout(typingTimeout)
-      typingTimeout = null
+    if (conversation.data?.uuid === uuid) {
+      if (typingTimeout) {
+        clearTimeout(typingTimeout)
+        typingTimeout = null
+      }
+      conversation.isTyping = is_typing
+      if (is_typing) {
+        typingTimeout = setTimeout(() => {
+          conversation.isTyping = false
+          typingTimeout = null
+        }, TYPING_RECEIVE_TIMEOUT)
+      }
     }
 
-    conversation.isTyping = is_typing
-
+    const prev = typingTimeoutsByUUID.get(uuid)
+    if (prev) clearTimeout(prev)
     if (is_typing) {
-      typingTimeout = setTimeout(() => {
-        conversation.isTyping = false
-        typingTimeout = null
-      }, TYPING_RECEIVE_TIMEOUT)
+      typingByUUID[uuid] = true
+      typingTimeoutsByUUID.set(uuid, setTimeout(() => {
+        delete typingByUUID[uuid]
+        typingTimeoutsByUUID.delete(uuid)
+      }, TYPING_RECEIVE_TIMEOUT))
+    } else {
+      delete typingByUUID[uuid]
+      typingTimeoutsByUUID.delete(uuid)
     }
   }
 
   function sendTyping (isTyping, otherAttributes = {}) {
-    // Send typing websocket message only if a conversation is open
     if (conversation.data?.uuid) {
       sendTypingIndicator(conversation.data.uuid, isTyping, otherAttributes.isPrivateMessage)
     }
   }
 
-  // Fetch all drafts for the current user
   async function fetchAllDrafts () {
     try {
       const resp = await api.getAllDrafts()
@@ -875,26 +1055,20 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  // Get draft for a specific conversation
   function getDraft (uuid) {
     return drafts.value.get(uuid)
   }
 
-  // Set draft for a specific conversation
   function setDraft (uuid, draft) {
     drafts.value.set(uuid, draft)
-    // Trigger reactivity
     drafts.value = new Map(drafts.value)
   }
 
-  // Remove draft for a specific conversation
   function removeDraft (uuid) {
     drafts.value.delete(uuid)
-    // Trigger reactivity
     drafts.value = new Map(drafts.value)
   }
 
-  // Check if a conversation has a draft
   function hasDraft (uuid) {
     return drafts.value.has(uuid)
   }
@@ -911,6 +1085,12 @@ export const useConversationStore = defineStore('conversation', () => {
     if (contentType.startsWith('audio/')) return t('globals.terms.audio')
     return t('globals.terms.file')
   }
+
+  // On new conversation uuids, subscribere user to those conversations.
+  watch(
+    () => conversations.data?.map(c => c.uuid).sort().join(',') ?? '',
+    () => subscribeListReplace(conversations.data?.map(c => c.uuid) || [])
+  )
 
   return {
     macros,
@@ -929,21 +1109,22 @@ export const useConversationStore = defineStore('conversation', () => {
     isConversationInList,
     addPendingNotification,
     mergeConversationUpdate,
+    handleConvPush,
     mergeContactUpdate,
     addNewConversation,
     getContactFullName,
-    fetchParticipants,
     fetchNextMessages,
     fetchNextConversations,
     mergeMessageUpdate,
     updateAssigneeLastSeen,
     markAsUnread,
+    incrementUnread,
     updateConversationMessage,
     snoozeConversation,
     fetchConversation,
     fetchConversationsList,
     fetchMessages,
-    upsertTags,
+    updateConversationTags,
     updateAssignee,
     updatePriority,
     updateStatus,
@@ -969,6 +1150,7 @@ export const useConversationStore = defineStore('conversation', () => {
     statusOptionsNoSnooze,
     statusOptions,
     updateTypingStatus,
+    typingByUUID,
     sendTyping,
     drafts,
     fetchAllDrafts,
@@ -978,6 +1160,13 @@ export const useConversationStore = defineStore('conversation', () => {
     hasDraft,
     addPendingMessage,
     replacePendingMessage,
-    removePendingMessage
+    removePendingMessage,
+    selectedUUIDs,
+    selectedCount,
+    allSelected,
+    toggleSelect,
+    selectAll,
+    clearSelection,
+    isSelected
   }
 })

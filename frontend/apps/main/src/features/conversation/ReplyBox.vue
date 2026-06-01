@@ -105,6 +105,7 @@
           @send="processSend"
           @fileUpload="handleFileUpload"
           @fileDelete="handleFileDelete"
+          @filesDropped="uploadFiles"
           @aiPromptSelected="handleAiPromptSelected"
           class="h-full flex-grow"
         />
@@ -138,6 +139,7 @@
         @send="processSend"
         @fileUpload="handleFileUpload"
         @fileDelete="handleFileDelete"
+        @filesDropped="uploadFiles"
         @aiPromptSelected="handleAiPromptSelected"
       />
     </div>
@@ -156,6 +158,7 @@ import api from '@main/api'
 import { useI18n } from 'vue-i18n'
 import { useConversationStore } from '@main/stores/conversation'
 import { useInboxStore } from '@main/stores/inbox'
+import { useAiPromptStore } from '@main/stores/aiPrompt'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -178,6 +181,7 @@ import {
 import { Input } from '@shared-ui/components/ui/input'
 import { useEmitter } from '@main/composables/useEmitter'
 import { useFileUpload } from '@main/composables/useFileUpload'
+import { hasInlineImage, hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
 import { UserTypeAgent } from '@/constants/user'
 import {
@@ -208,6 +212,7 @@ const {
   uploadingFiles,
   handleFileUpload,
   handleFileDelete,
+  uploadFiles,
   mediaFiles,
   clearMediaFiles,
   setMediaFiles
@@ -237,28 +242,14 @@ const cc = ref('')
 const bcc = ref('')
 const showBcc = ref(false)
 const emailErrors = ref([])
-const aiPrompts = ref([])
+const aiPromptStore = useAiPromptStore()
+const aiPrompts = computed(() => aiPromptStore.prompts)
 const replyBoxContentRef = ref(null)
 const showContactEmailWarning = ref(false)
 const showMissingTagsWarning = ref(false)
 const mentions = ref([])
 
-/**
- * Fetches AI prompts from the server.
- */
-const fetchAiPrompts = async () => {
-  try {
-    const resp = await api.getAiPrompts()
-    aiPrompts.value = resp.data.data
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  }
-}
-
-fetchAiPrompts()
+aiPromptStore.fetchPrompts()
 
 /**
  * Handles the AI prompt selection event.
@@ -321,7 +312,9 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
   let hasMessageSendingErrored = false
   isEditorFullscreen.value = false
 
-  const hasContent = hasTextContent.value > 0 || mediaFiles.value.length > 0
+  const html = htmlContent.value
+  if (hasPendingInlineUpload(html)) return
+  const hasContent = hasTextContent.value || hasInlineImage(html) || mediaFiles.value.length > 0
   const convUUID = conversationStore.current.uuid
   const isPrivate = messageType.value === 'private_note'
 

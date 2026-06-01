@@ -42,7 +42,8 @@
           <div>
             <SelectTag
               v-if="conversationStore.current"
-              v-model="conversationStore.current.tags"
+              :model-value="conversationStore.current.tags || []"
+              @update:modelValue="onTagsChange"
               :items="tags.map((tag) => ({ label: tag, value: tag }))"
               :placeholder="t('placeholders.selectTags')"
             />
@@ -93,6 +94,20 @@
         </AccordionContent>
       </AccordionItem>
 
+      <!-- Contact notes -->
+      <AccordionItem
+        value="contact_notes"
+        class="accordion-item"
+        v-if="conversationStore.current?.contact?.id && userStore.can('contact_notes:read')"
+      >
+        <AccordionTrigger class="accordion-trigger">
+          {{ $t('globals.terms.note', 2) }}
+        </AccordionTrigger>
+        <AccordionContent class="accordion-content">
+          <ContactNotes :contact-id="conversationStore.current.contact.id" compact />
+        </AccordionContent>
+      </AccordionItem>
+
       <!-- Previous conversations -->
       <AccordionItem value="previous_conversations" class="accordion-item">
         <AccordionTrigger class="accordion-trigger">
@@ -107,11 +122,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useConversationStore } from '@/stores/conversation'
 import { useUsersStore } from '@/stores/users'
 import { useTeamStore } from '@/stores/team'
 import { useTagStore } from '@/stores/tag'
+import { useUserStore } from '@/stores/user'
 import {
   Accordion,
   AccordionContent,
@@ -128,9 +144,11 @@ import { useI18n } from 'vue-i18n'
 import { useStorage } from '@vueuse/core'
 import CustomAttributes from '@/features/conversation/sidebar/CustomAttributes.vue'
 import { useCustomAttributeStore } from '../../../stores/customAttributes'
+import ContactNotes from '@/features/contact/ContactNotes.vue'
 import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
 import ConversationSideBarPageVisits from '@/features/conversation/sidebar/ConversationSideBarPageVisits.vue'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
+import { TAG_ACTION } from '@/constants/conversation'
 import api from '../../../api'
 
 const customAttributeStore = useCustomAttributeStore()
@@ -139,55 +157,23 @@ const conversationStore = useConversationStore()
 const usersStore = useUsersStore()
 const teamsStore = useTeamStore()
 const tagStore = useTagStore()
+const userStore = useUserStore()
 const tags = ref([])
-// Save the accordion state in local storage
 const accordionState = useStorage('conversation-sidebar-accordion', [])
 const { t } = useI18n()
-let isConversationChange = false
 customAttributeStore.fetchCustomAttributes()
-
-// Watch for changes in the current conversation and set the flag
-watch(
-  () => conversationStore.current,
-  (newConversation, oldConversation) => {
-    // Set the flag when the conversation changes
-    if (newConversation?.uuid !== oldConversation?.uuid) {
-      isConversationChange = true
-    }
-  },
-  { immediate: true }
-)
 
 onMounted(async () => {
   await fetchTags()
 })
 
-// Watch for changes in the tags and upsert the tags
-watch(
-  () => conversationStore.current?.tags,
-  (newTags, oldTags) => {
-    // Skip if the tags change is due to a conversation change.
-    if (isConversationChange) {
-      isConversationChange = false
-      return
-    }
-
-    // Skip if the tags are the same (deep comparison)
-    if (
-      Array.isArray(newTags) &&
-      Array.isArray(oldTags) &&
-      newTags.length === oldTags.length &&
-      newTags.every((item) => oldTags.includes(item))
-    ) {
-      return
-    }
-
-    conversationStore.upsertTags({
-      tags: newTags
-    })
-  },
-  { immediate: false }
-)
+const onTagsChange = (newTags) => {
+  const conv = conversationStore.current
+  if (!conv) return
+  const current = conv.tags || []
+  if (newTags.length === current.length && newTags.every((t) => current.includes(t))) return
+  conversationStore.updateConversationTags(conv.uuid, TAG_ACTION.SET, newTags)
+}
 
 const priorityOptions = computed(() => conversationStore.priorityOptions)
 
