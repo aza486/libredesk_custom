@@ -26,6 +26,27 @@
         </div>
       </div>
 
+      <div class="space-y-4 border-t pt-5">
+        <div class="space-y-1">
+          <span class="sub-title">Passwort ändern</span>
+          <p class="text-muted-foreground text-xs">
+            Neues Passwort für deinen Account festlegen
+          </p>
+        </div>
+
+        <Input
+          v-model="newPassword"
+          type="password"
+          placeholder="Neues Passwort"
+        />
+
+        <Input
+          v-model="confirmPassword"
+          type="password"
+          placeholder="Passwort wiederholen"
+        />
+      </div>
+
       <Button class="self-start" @click="saveUser" :isLoading="isSaving">
         {{ $t('globals.messages.saveChanges') }}
       </Button>
@@ -79,6 +100,7 @@ import {
 } from '@shared-ui/components/ui/dialog'
 import { useI18n } from 'vue-i18n'
 import api from '../../../api'
+import { Input } from '@shared-ui/components/ui/input'
 
 const emitter = useEmitter()
 const { t } = useI18n()
@@ -89,6 +111,8 @@ const newUserAvatar = ref('')
 const showCropper = ref(false)
 let croppedBlob = null
 let avatarFile = null
+const newPassword = ref('')
+const confirmPassword = ref('')
 
 const selectAvatar = () => {
   uploadInput.value.click()
@@ -121,11 +145,32 @@ const getResult = async () => {
 }
 
 const saveUser = async () => {
+  if (newPassword.value !== confirmPassword.value) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: 'Passwörter stimmen nicht überein'
+    })
+    return
+  }
+
   const formData = new FormData()
-  formData.append('files', croppedBlob, 'avatar.png')
+
+  if (newPassword.value) {
+    formData.append('new_password', newPassword.value)
+  }
+
+  if (croppedBlob) {
+    formData.append('files', croppedBlob, 'avatar.png')
+  }
+
   try {
     isSaving.value = true
+
     await api.updateCurrentUser(formData)
+
+    newPassword.value = ''
+    confirmPassword.value = ''
+
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.savedSuccessfully')
     })

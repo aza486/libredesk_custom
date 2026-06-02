@@ -164,6 +164,7 @@ func handleUpdateCurrentAgent(r *fastglue.Request) error {
 	}
 
 	files, ok := form.File["files"]
+	newPassword := form.Value["new_password"]
 
 	// Upload avatar?
 	if ok && len(files) > 0 {
@@ -174,6 +175,30 @@ func handleUpdateCurrentAgent(r *fastglue.Request) error {
 		if err := uploadUserAvatar(r, agent, files); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
+	}
+
+	if len(newPassword) > 0 && newPassword[0] != "" {
+		agent, err := app.user.GetAgentCachedOrLoad(auser.ID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+
+		err = app.user.UpdateAgent(
+			auser.ID,
+			agent.FirstName,
+			agent.LastName,
+			agent.Email.String,
+			agent.Roles,
+			agent.Enabled,
+			agent.AvailabilityStatus,
+			newPassword[0],
+		)
+
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+
+		app.user.InvalidateAgentCache(auser.ID)
 	}
 
 	// Fetch updated agent and return.
@@ -273,6 +298,8 @@ func handleUpdateAgent(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 	oldAvailabilityStatus := agent.AvailabilityStatus
+
+	app.lo.Info("password change requested", "user_id", auser.ID) // Log
 
 	// Update agent with individual fields
 	if err = app.user.UpdateAgent(id, req.FirstName, req.LastName, req.Email, req.Roles, req.Enabled, req.AvailabilityStatus, req.NewPassword); err != nil {
