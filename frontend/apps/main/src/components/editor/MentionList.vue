@@ -15,7 +15,16 @@
         <AvatarImage :src="item.avatar_url" :alt="item.label" />
         <AvatarFallback class="text-xs">{{ getInitials(item.label) }}</AvatarFallback>
       </Avatar>
-      <span class="flex-1 truncate">{{ item.label }}</span>
+      <span class="flex-1 truncate">
+        {{ item.label }}
+      </span>
+
+      <span
+        v-if="item.favorite"
+        class="text-yellow-500"
+      >
+        ★
+      </span>
       <span class="text-xs text-muted-foreground">{{ getTypeLabel(item.type) }}</span>
     </button>
   </div>
