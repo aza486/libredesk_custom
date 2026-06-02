@@ -3,6 +3,25 @@
     <Dialog v-model:open="dialogOpen">
       <DialogContent class="max-w-5xl w-full h-[90vh] flex flex-col" >
         <DialogHeader>
+            <div class="flex gap-2 mb-4">
+              <Button
+                type="button"
+                variant="outline"
+                :class="conversationMode === 'external' ? 'border-primary' : ''"
+                @click="conversationMode = 'external'"
+              >
+                Kunden-Ticket
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                :class="conversationMode === 'internal' ? 'border-primary' : ''"
+                @click="conversationMode = 'internal'"
+              >
+                Internes Ticket
+              </Button>
+            </div>
           <DialogTitle>
             {{ $t('conversation.newConversation') }}
           </DialogTitle>
@@ -12,7 +31,8 @@
         <form @submit="createConversation" novalidate class="flex flex-col flex-1 overflow-hidden">
           <!-- Form Fields Section -->
           <div class="space-y-4 pb-2 flex-shrink-0">
-            <div class="space-y-2">
+           <div class="space-y-2">
+            <div v-if="conversationMode === 'external'">
               <FormField name="contact_email">
                 <FormItem class="relative">
                   <FormLabel>{{ $t('globals.terms.email') }}</FormLabel>
@@ -65,9 +85,11 @@
                   </div>
                 </FormItem>
               </FormField>
+            </div>
+              
 
               <!-- Name Group -->
-              <div class="grid grid-cols-2 gap-4">
+              <div v-if="conversationMode === 'external'" class="grid grid-cols-2 gap-4">
                 <FormField v-slot="{ componentField }" name="first_name">
                   <FormItem>
                     <FormLabel>{{ $t('globals.terms.firstName') }}</FormLabel>
@@ -94,44 +116,6 @@
                         v-bind="componentField"
                         :disabled="!!selectedContact"
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                </FormField>
-              </div>
-
-              <!-- Subject and Inbox Group -->
-              <div class="grid grid-cols-2 gap-4">
-                <FormField v-slot="{ componentField }" name="subject">
-                  <FormItem>
-                    <FormLabel>{{ $t('globals.terms.subject') }}</FormLabel>
-                    <FormControl>
-                      <Input type="text" placeholder="" v-bind="componentField" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                </FormField>
-
-                <FormField v-slot="{ componentField }" name="inbox_id">
-                  <FormItem>
-                    <FormLabel>{{ $t('globals.terms.inbox') }}</FormLabel>
-                    <FormControl>
-                      <Select v-bind="componentField">
-                        <SelectTrigger>
-                          <SelectValue :placeholder="t('placeholders.selectInbox')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem
-                              v-for="option in inboxStore.emailOptions"
-                              :key="option.value"
-                              :value="option.value"
-                            >
-                              {{ option.label }}
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -167,7 +151,10 @@
                   <FormItem>
                     <FormLabel>
                       {{ $t('actions.assignAgent') }}
-                      ({{ $t('globals.terms.optional') }})
+                      <span v-if="conversationMode === 'internal'">*</span>
+                      <span v-else>
+                        ({{ $t('globals.terms.optional') }})
+                      </span>
                     </FormLabel>
                     <FormControl>
                       <SelectComboBox
@@ -186,6 +173,48 @@
               </div>
             </div>
           </div>
+
+              <!-- Subject and Inbox Group -->
+              <div 
+                class="grid grid-cols-2 gap-4">
+                <FormField v-slot="{ componentField }" name="subject">
+                  <FormItem>
+                    <FormLabel>{{ $t('globals.terms.subject') }}</FormLabel>
+                    <FormControl>
+                      <Input type="text" placeholder="" v-bind="componentField" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                </FormField>
+              <div v-if="conversationMode === 'external'">
+                <FormField v-slot="{ componentField }" name="inbox_id">
+                  <FormItem>
+                    <FormLabel>{{ $t('globals.terms.inbox') }}</FormLabel>
+                    <FormControl>
+                      <Select v-bind="componentField">
+                        <SelectTrigger>
+                          <SelectValue :placeholder="t('placeholders.selectInbox')" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem
+                              v-for="option in inboxStore.emailOptions"
+                              :key="option.value"
+                              :value="option.value"
+                            >
+                              {{ option.label }}
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                </FormField>
+              </div>
+            </div>
+
+
 
           <!-- Message Editor Section -->
           <div class="flex-1 flex flex-col min-h-0 mt-4">
@@ -325,6 +354,7 @@ let previousMacroView = ''
 const insertContent = ref('')
 const selectedContact = ref(null)
 const emailInputRef = ref(null)
+const conversationMode = ref('external')
 
 const handleEmojiSelect = (emoji) => {
   insertContent.value = undefined
@@ -352,15 +382,11 @@ const isDisabled = computed(() => {
 const formSchema = z.object({
   subject: z.string().min(1, t('validation.subjectCannotBeEmpty')),
   content: z.string().min(1, t('validation.messageCannotBeEmpty')),
-  inbox_id: z
-    .any()
-    .refine((val) => inboxStore.emailOptions.some((option) => option.value === val), {
-      message: t('globals.messages.required')
-    }),
+  inbox_id: z.any().optional(),
   team_id: z.any().optional(),
   agent_id: z.any().optional(),
-  contact_email: z.string().email(t('validation.invalidEmail')),
-  first_name: z.string().min(1, t('globals.messages.required')),
+  contact_email: z.any().optional(),
+  first_name: z.any().optional(),
   last_name: z.string().optional()
 })
 
@@ -400,6 +426,7 @@ const form = useForm({
     last_name: ''
   }
 })
+
 
 watch(emailQuery, (newVal) => {
   form.setFieldValue('contact_email', newVal)
@@ -462,13 +489,35 @@ const selectContact = (contact) => {
   highlightedIndex.value = -1
 }
 
+
 const createConversation = form.handleSubmit(async (values) => {
   loading.value = true
+
   try {
     // Convert ids to numbers if they are not already
     values.inbox_id = Number(values.inbox_id)
     values.team_id = values.team_id ? Number(values.team_id) : null
     values.agent_id = values.agent_id ? Number(values.agent_id) : null
+
+    if (conversationMode.value === 'internal') {
+
+      if (!values.agent_id) {
+        toast.error('Bitte einen Mitarbeiter auswählen')
+        return
+      }
+
+    const agentResponse = await api.getUser(values.agent_id)
+    const agent = agentResponse.data.data
+
+    values.inbox_id = 3
+
+    values.contact_email = agent.email
+    values.first_name = agent.first_name
+    values.last_name = agent.last_name
+
+    values.subject = `[INTERN] ${values.subject}`
+    }
+    
     // Array of attachment ids.
     values.attachments = mediaFiles.value.map((file) => file.id)
     // Initiator of this conversation is always agent

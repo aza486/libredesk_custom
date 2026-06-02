@@ -170,6 +170,8 @@ const macroStore = useMacroStore()
 const usersStore = useUsersStore()
 const teamStore = useTeamStore()
 
+
+
 // Get suggestions for the mention dropdown
 const getSuggestions = async (query) => {
   // Only show suggestions in private note mode
@@ -177,9 +179,14 @@ const getSuggestions = async (query) => {
     return []
   }
 
+
   await Promise.all([usersStore.fetchUsers(), teamStore.fetchTeams()])
 
   const q = query.toLowerCase()
+
+  const favoriteAgents = JSON.parse(
+  localStorage.getItem('favoriteAgents') || '[]'
+)
 
   const users = usersStore.users
     .filter((u) => u.enabled)
@@ -188,8 +195,23 @@ const getSuggestions = async (query) => {
       id: u.id,
       type: 'agent',
       label: `${u.first_name} ${u.last_name}`.trim(),
-      avatar_url: u.avatar_url
+      avatar_url: u.avatar_url,
+      favorite: favoriteAgents.includes(String(u.id))
     }))
+
+    users.sort((a, b) => {
+
+  const aFav =
+    favoriteAgents.includes(String(a.id))
+
+  const bFav =
+    favoriteAgents.includes(String(b.id))
+
+  if (aFav && !bFav) return -1
+  if (!aFav && bFav) return 1
+
+  return a.label.localeCompare(b.label)
+})
 
   const teams = teamStore.teams
     .filter((t) => t.name.toLowerCase().includes(q))
