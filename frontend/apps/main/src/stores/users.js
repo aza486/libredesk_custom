@@ -14,6 +14,10 @@ export const useUsersStore = defineStore('users', () => {
         value: String(user.id),
         avatar_url: user.avatar_url,
         availability_status: user.availability_status,
+
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name
     })))
     const fetchUsers = async (force = false) => {
         if (!force && users.value.length) return

@@ -496,29 +496,37 @@ const createConversation = form.handleSubmit(async (values) => {
     values.team_id = values.team_id ? Number(values.team_id) : null
     values.agent_id = values.agent_id ? Number(values.agent_id) : null
 
-    if (conversationMode.value === 'internal') {
+    if (!values.agent_id && !values.team_id) {
+      toast.error('Bitte Mitarbeiter oder Team auswählen')
+      return
+    }
 
-      if (!values.agent_id) {
-        toast.error('Bitte einen Mitarbeiter auswählen')
-        return
-      }
+    const agent = uStore.options.find(
+      a => String(a.value) === String(values.agent_id)
+    )
 
-    const agentResponse = await api.getUser(values.agent_id)
-    const agent = agentResponse.data.data
+    if (!agent) {
+      throw new Error('Agent nicht gefunden')
+    }
 
-    values.inbox_id = 3
+    values.inbox_id = 2
 
     values.contact_email = agent.email
     values.first_name = agent.first_name
     values.last_name = agent.last_name
 
     values.subject = `[INTERN] ${values.subject}`
+    values.custom_attributes = {
+    private: true,
+    internal: true
+    }
     }
     
     // Array of attachment ids.
     values.attachments = mediaFiles.value.map((file) => file.id)
     // Initiator of this conversation is always agent
     values.initiator = UserTypeAgent
+    console.log('VALUES', values)
     const conversation = await api.createConversation(values)
     const conversationUUID = conversation.data.data.uuid
 
