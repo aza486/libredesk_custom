@@ -499,24 +499,36 @@ const createConversation = form.handleSubmit(async (values) => {
     values.team_id = values.team_id ? Number(values.team_id) : null
     values.agent_id = values.agent_id ? Number(values.agent_id) : null
 
-    if (!values.agent_id && !values.team_id) {
-      toast.error('Bitte Mitarbeiter oder Team auswählen')
-      return
-    }
+    if (conversationMode.value === 'internal') {
 
-    const agent = uStore.options.find(
-      a => String(a.value) === String(values.agent_id)
-    )
-
-    if (!agent) {
-      throw new Error('Agent nicht gefunden')
-    }
+      if (!values.agent_id && !values.team_id) {
+        toast.error('Bitte Mitarbeiter oder Team auswählen')
+        return
+      }
 
     values.inbox_id = 2
 
-    values.contact_email = agent.email
-    values.first_name = agent.first_name
-    values.last_name = agent.last_name
+    if (values.agent_id) {
+
+      const agent = uStore.options.find(
+        a => String(a.value) === String(values.agent_id)
+      )
+
+      if (!agent) {
+        throw new Error('Agent nicht gefunden')
+      }
+
+      values.contact_email = agent.email
+      values.first_name = agent.first_name
+      values.last_name = agent.last_name
+
+    } else {
+
+      values.contact_email = 'ticket@foto-co.de'
+      values.first_name = 'Internal'
+      values.last_name = 'Ticket'
+
+    }
 
     values.subject = `[INTERN] ${values.subject}`
     values.custom_attributes = {
@@ -529,7 +541,7 @@ const createConversation = form.handleSubmit(async (values) => {
     values.attachments = mediaFiles.value.map((file) => file.id)
     // Initiator of this conversation is always agent
     values.initiator = UserTypeAgent
-    console.log('VALUES', values)
+    console.log('CREATE PAYLOAD', values)
     const conversation = await api.createConversation(values)
     const conversationUUID = conversation.data.data.uuid
 

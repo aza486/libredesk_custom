@@ -668,6 +668,66 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleRemoveVisibleUser removes a user from the visible users list of a conversation.
+func handleRemoveVisibleUser(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+	)
+
+	req := struct {
+		UserID int `json:"user_id"`
+	}{}
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	conversation, err := enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	attrs := map[string]any{}
+	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+
+	creatorID := 0
+
+	switch v := attrs["creator_id"].(type) {
+	case float64:
+		creatorID = int(v)
+	case int:
+		creatorID = v
+	}
+
+	// Nur Creator darf Sichtbarkeit verwalten
+	if creatorID != auser.ID {
+		return sendErrorEnvelope(
+			r,
+			envelope.NewError(
+				envelope.PermissionError,
+				"Only creator can manage visibility",
+				nil,
+			),
+		)
+	}
+
+	if err := app.conversation.RemoveVisibleUser(
+		uuid,
+		req.UserID,
+	); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(true)
+}
+
 // handleUpdateConversationCustomAttributes updates custom attributes of a conversation.
 func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 	var (
@@ -843,6 +903,29 @@ func handleCreateConversation(r *fastglue.Request) error {
 		contact.ID = existing.ID
 	}
 
+	// Private ticket metadata
+	if req.CustomAttributes == nil {
+		req.CustomAttributes = map[string]any{}
+	}
+
+	if private, ok := req.CustomAttributes["private"].(bool); ok && private {
+
+		visibleUsers := []int{auser.ID}
+
+		if req.AssignedAgentID > 0 && req.AssignedAgentID != auser.ID {
+			visibleUsers = append(visibleUsers, req.AssignedAgentID)
+		}
+
+		req.CustomAttributes["creator_id"] = auser.ID
+		req.CustomAttributes["visible_users"] = visibleUsers
+	}
+
+	app.lo.Info(
+		"PRIVATE DEBUG",
+		"assigned_agent", req.AssignedAgentID,
+		"assigned_team", req.AssignedTeamID,
+	)
+
 	// Create conversation first.
 	conversationID, conversationUUID, err := app.conversation.CreateConversation(
 		contact.ID,
@@ -865,6 +948,12 @@ func handleCreateConversation(r *fastglue.Request) error {
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
 	}
+
+	app.lo.Info(
+		"CREATE INTERNAL DEBUG",
+		"agent_id", req.AssignedAgentID,
+		"team_id", req.AssignedTeamID,
+	)
 
 	// Assign team first, it clears any assigned agent.
 	if req.AssignedTeamID > 0 {
