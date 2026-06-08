@@ -1,11 +1,13 @@
 package authz
 
 import (
+	"encoding/json"
 	"slices"
 
 	authzmodels "github.com/abhinavxd/libredesk/internal/authz/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
+
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/knadh/go-i18n"
 	"github.com/volatiletech/null/v9"
@@ -26,6 +28,57 @@ func (e *Enforcer) Enforce(user umodels.User, obj, act string) (bool, error) {
 	return slices.Contains(user.Permissions, obj+":"+act), nil
 }
 
+// EnforceConversationAccess determines if a user has access to a specific conversation.
+func (e *Enforcer) EnforceConversationAccess(
+	user umodels.User,
+	conversation cmodels.Conversation,
+) (bool, error) {
+
+	attrs := map[string]any{}
+
+	if len(conversation.CustomAttributes) > 0 {
+		_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+	}
+
+	e.lo.Info(
+		"PRIVATE ACCESS",
+		"user_id", user.ID,
+		"attrs", string(conversation.CustomAttributes),
+	)
+
+	if private, ok := attrs["private"].(bool); ok && private {
+
+		if visibleUsers, ok := attrs["visible_users"].([]any); ok {
+
+			for _, uid := range visibleUsers {
+
+				if int(uid.(float64)) == user.ID {
+
+					e.lo.Info(
+						"PRIVATE ACCESS GRANTED",
+						"user_id", user.ID,
+					)
+
+					return true, nil
+				}
+			}
+		}
+
+		e.lo.Info(
+			"PRIVATE ACCESS DENIED",
+			"user_id", user.ID,
+		)
+
+		return false, nil
+	}
+
+	return CanReadAssignment(
+		user,
+		conversation.AssignedUserID,
+		conversation.AssignedTeamID,
+	), nil
+}
+
 // EnforceConversationAccess determines if a user has access to a specific conversation based on their permissions.
 // Requires basic "read" permission AND one of the following conditions:
 // 1. User has the "read_all" permission, allowing access to all conversations.
@@ -33,9 +86,6 @@ func (e *Enforcer) Enforce(user umodels.User, obj, act string) (bool, error) {
 // 3. User has the "read_team_inbox" permission and is part of the assigned team, with the conversation NOT assigned to any user.
 // 4. User has the "read_unassigned" permission and the conversation is not assigned to any user or team.
 // Returns true if access is granted, false otherwise. In case of an error while checking permissions returns false and the error.
-func (e *Enforcer) EnforceConversationAccess(user umodels.User, conversation cmodels.Conversation) (bool, error) {
-	return CanReadAssignment(user, conversation.AssignedUserID, conversation.AssignedTeamID), nil
-}
 
 func CanReadAssignment(user umodels.User, assignedUserID, assignedTeamID null.Int) bool {
 	if !slices.Contains(user.Permissions, authzmodels.PermConversationsRead) {
