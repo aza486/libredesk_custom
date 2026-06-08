@@ -730,6 +730,49 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 		return err
 	}
 
+	attrs := map[string]any{}
+_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+
+if private, ok := attrs["private"].(bool); ok && private {
+
+    var visibleUsers []any
+
+    if existing, ok := attrs["visible_users"].([]any); ok {
+        visibleUsers = existing
+    }
+
+    found := false
+
+    for _, uid := range visibleUsers {
+        switch v := uid.(type) {
+        case float64:
+            if int(v) == assigneeID {
+                found = true
+            }
+        case int:
+            if v == assigneeID {
+                found = true
+            }
+        }
+        if found {
+            break
+        }
+    }
+
+    if !found {
+        visibleUsers = append(visibleUsers, assigneeID)
+        attrs["visible_users"] = visibleUsers
+
+        c.lo.Info(
+            "PRIVATE VISIBILITY ADD",
+            "conversation", uuid,
+            "new_user", assigneeID,
+        )
+
+        _ = c.UpdateConversationCustomAttributes(uuid, attrs)
+    }
+}
+
 	c.webhookStore.TriggerEvent(wmodels.EventConversationAssigned, map[string]any{
 		"conversation_uuid": uuid,
 		"assigned_to":       assigneeID,
@@ -768,8 +811,75 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 
 // UpdateConversationTeamAssignee sets the assignee of a conversation to a specific team and sets the assigned user id to NULL.
 func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error {
-	// Store previously assigned team ID to apply SLA policy if team has changed.
+	// Private Ticket: alle Teammitglieder dauerhaft sichtbar machen
 	conversation, err := c.GetConversation(0, uuid, "")
+	if err == nil {
+
+		attrs := map[string]any{}
+		_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+
+		if private, ok := attrs["private"].(bool); ok && private {
+
+			members, err := c.teamStore.GetMembers(teamID)
+			if err == nil {
+
+				var visibleUsers []any
+
+				if existing, ok := attrs["visible_users"].([]any); ok {
+					visibleUsers = existing
+				}
+
+				for _, member := range members {
+
+					found := false
+
+					for _, uid := range visibleUsers {
+
+						switch v := uid.(type) {
+
+						case float64:
+							if int(v) == member.ID {
+								found = true
+							}
+
+						case int:
+							if v == member.ID {
+								found = true
+							}
+						}
+
+						if found {
+							break
+						}
+					}
+
+					if !found {
+
+						visibleUsers = append(
+							visibleUsers,
+							member.ID,
+						)
+
+						c.lo.Info(
+							"PRIVATE TEAM VISIBILITY ADD",
+							"user_id", member.ID,
+							"team_id", teamID,
+						)
+					}
+				}
+
+				attrs["visible_users"] = visibleUsers
+
+				_ = c.UpdateConversationCustomAttributes(
+					uuid,
+					attrs,
+				)
+			}
+		}
+	}
+
+	// Store previously assigned team ID to apply SLA policy if team has changed.
+	conversation, err = c.GetConversation(0, uuid, "")
 	if err != nil {
 		return err
 	}
@@ -1497,6 +1607,66 @@ func (c *Manager) UpdateConversationCustomAttributes(uuid string, customAttribut
 	// Broadcast the custom attributes update.
 	c.BroadcastConversationUpdate(uuid, map[string]any{"custom_attributes": customAttributes})
 	return nil
+}
+
+// RemoveVisibleUser removes a user from the list of visible users in a conversation's custom attributes.
+func (c *Manager) RemoveVisibleUser(
+    uuid string,
+    userID int,
+) error {
+
+    conversation, err := c.GetConversation(0, uuid, "")
+    if err != nil {
+        return err
+    }
+
+    attrs := map[string]any{}
+    _ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+
+    creatorID := 0
+
+    if creator, ok := attrs["creator_id"].(float64); ok {
+        creatorID = int(creator)
+    }
+
+    // Creator darf niemals entfernt werden
+    if creatorID == userID {
+        return nil
+    }
+
+    visibleUsers := []any{}
+
+    if existing, ok := attrs["visible_users"].([]any); ok {
+
+        for _, uid := range existing {
+
+            keep := true
+
+            switch v := uid.(type) {
+
+            case float64:
+                if int(v) == userID {
+                    keep = false
+                }
+
+            case int:
+                if v == userID {
+                    keep = false
+                }
+            }
+
+            if keep {
+                visibleUsers = append(visibleUsers, uid)
+            }
+        }
+    }
+
+    attrs["visible_users"] = visibleUsers
+
+    return c.UpdateConversationCustomAttributes(
+        uuid,
+        attrs,
+    )
 }
 
 // addConversationParticipant adds a user as participant to a conversation.

@@ -75,6 +75,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/v1/conversations/{cuuid}/messages/{uuid}", perm(handleDeleteMessage, "messages:write"))
 	g.POST("/api/v1/conversations", perm(handleCreateConversation, "conversations:write"))
 	g.PUT("/api/v1/conversations/{uuid}/custom-attributes", auth(handleUpdateConversationCustomAttributes))
+	g.PUT("/api/v1/conversations/{uuid}/remove-visible-user", auth(handleRemoveVisibleUser))
 	g.PUT("/api/v1/conversations/{uuid}/contacts/custom-attributes", auth(handleUpdateContactCustomAttributes))
 	// Draft endpoints
 	g.GET("/api/v1/drafts", auth(handleGetAllDrafts))
