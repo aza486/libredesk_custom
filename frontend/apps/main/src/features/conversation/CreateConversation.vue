@@ -122,6 +122,10 @@
                 </FormField>
               </div>
 
+              <div v-if="conversationMode === 'internal' && !hasTeam && !hasAgent" class="text-xs text-muted-foreground">
+                Bitte Team oder Mitarbeiter auswählen.
+              </div>
+
               <!-- Assignment Group -->
               <div class="grid grid-cols-2 gap-4">
                 <!-- Set assigned team -->
@@ -129,7 +133,18 @@
                   <FormItem>
                     <FormLabel>
                       {{ $t('actions.assignTeam') }}
-                      ({{ $t('globals.terms.optional') }})
+
+                      <template v-if="conversationMode === 'internal'">
+                        <span v-if="hasTeam"> ✓ </span>
+                        <span v-else-if="hasAgent">
+                          ({{ $t('globals.terms.optional') }})
+                        </span>
+                        <span v-else>*</span>
+                      </template>
+
+                      <template v-else>
+                        ({{ $t('globals.terms.optional') }})
+                      </template>
                     </FormLabel>
                     <FormControl>
                       <SelectComboBox
@@ -151,10 +166,18 @@
                   <FormItem>
                     <FormLabel>
                       {{ $t('actions.assignAgent') }}
-                      <span v-if="conversationMode === 'internal'">*</span>
-                      <span v-else>
+
+                      <template v-if="conversationMode === 'internal'">
+                        <span v-if="hasAgent"> ✓ </span>
+                        <span v-else-if="hasTeam">
+                          ({{ $t('globals.terms.optional') }})
+                        </span>
+                        <span v-else>*</span>
+                      </template>
+
+                      <template v-else>
                         ({{ $t('globals.terms.optional') }})
-                      </span>
+                      </template>
                     </FormLabel>
                     <FormControl>
                       <SelectComboBox
@@ -354,6 +377,13 @@ const insertContent = ref('')
 const selectedContact = ref(null)
 const emailInputRef = ref(null)
 const conversationMode = ref('external')
+const hasTeam = computed(() => {
+  return !!form.values.team_id
+})
+
+const hasAgent = computed(() => {
+  return !!form.values.agent_id
+})
 
 const handleEmojiSelect = (emoji) => {
   insertContent.value = undefined

@@ -28,6 +28,8 @@ var (
 	TeamUnassignedConversations = "team_unassigned"
 	TeamAllConversations        = "team_all"
 	MentionedConversations      = "mentioned"
+	VisibleConversations        = "visible"
+	CreatedConversations        = "created"
 
 	MessageIncoming = "incoming"
 	MessageOutgoing = "outgoing"

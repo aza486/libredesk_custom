@@ -562,6 +562,50 @@ func (c *Manager) GetMentionedConversationsList(viewingUserID int, order, orderB
 	return c.GetConversations(viewingUserID, 0, []int{}, []string{models.MentionedConversations}, order, orderBy, filters, page, pageSize)
 }
 
+func (c *Manager) GetVisibleConversationsList(
+	viewingUserID int,
+	order,
+	orderBy,
+	filters string,
+	page,
+	pageSize int,
+) ([]models.ConversationListItem, error) {
+
+	return c.GetConversations(
+		viewingUserID,
+		viewingUserID,
+		[]int{},
+		[]string{models.VisibleConversations},
+		order,
+		orderBy,
+		filters,
+		page,
+		pageSize,
+	)
+}
+
+func (c *Manager) GetCreatedConversationsList(
+	viewingUserID int,
+	order,
+	orderBy,
+	filters string,
+	page,
+	pageSize int,
+) ([]models.ConversationListItem, error) {
+
+	return c.GetConversations(
+		viewingUserID,
+		viewingUserID,
+		[]int{},
+		[]string{models.CreatedConversations},
+		order,
+		orderBy,
+		filters,
+		page,
+		pageSize,
+	)
+}
+
 // InsertMentions inserts mentions for a message.
 func (c *Manager) InsertMentions(conversationID, messageID, mentionedByUserID int, mentions []models.MentionInput) error {
 	for _, mention := range mentions {
@@ -1599,64 +1643,113 @@ func (c *Manager) UpdateConversationCustomAttributes(uuid string, customAttribut
 	return nil
 }
 
-// RemoveVisibleUser removes a user from the list of visible users in a conversation's custom attributes.
-func (c *Manager) RemoveVisibleUser(
-    uuid string,
-    userID int,
+// AddVisibleUser adds a user to the list of visible users in a conversation's custom attributes.
+func (c *Manager) AddVisibleUser(
+	uuid string,
+	userID int,
 ) error {
 
-    conversation, err := c.GetConversation(0, uuid, "")
-    if err != nil {
-        return err
-    }
+	conversation, err := c.GetConversation(0, uuid, "")
+	if err != nil {
+		return err
+	}
 
-    attrs := map[string]any{}
-    _ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+	attrs := map[string]any{}
+	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-    creatorID := 0
+	visibleUsers := []any{}
 
-    if creator, ok := attrs["creator_id"].(float64); ok {
-        creatorID = int(creator)
-    }
+	if existing, ok := attrs["visible_users"].([]any); ok {
+		visibleUsers = existing
 
-    // Creator darf niemals entfernt werden
-    if creatorID == userID {
-        return nil
-    }
+		for _, uid := range visibleUsers {
 
-    visibleUsers := []any{}
+			switch v := uid.(type) {
 
-    if existing, ok := attrs["visible_users"].([]any); ok {
+			case float64:
+				if int(v) == userID {
+					return nil
+				}
 
-        for _, uid := range existing {
+			case int:
+				if v == userID {
+					return nil
+				}
+			}
+		}
+	}
 
-            keep := true
+	visibleUsers = append(
+		visibleUsers,
+		userID,
+	)
 
-            switch v := uid.(type) {
+	attrs["visible_users"] = visibleUsers
 
-            case float64:
-                if int(v) == userID {
-                    keep = false
-                }
+	return c.UpdateConversationCustomAttributes(
+		uuid,
+		attrs,
+	)
+}
 
-            case int:
-                if v == userID {
-                    keep = false
-                }
-            }
+// RemoveVisibleUser removes a user from the list of visible users in a conversation's custom attributes.
+func (c *Manager) RemoveVisibleUser(
+	uuid string,
+	userID int,
+) error {
 
-            if keep {
-                visibleUsers = append(visibleUsers, uid)
-            }
-        }
-    }
+	conversation, err := c.GetConversation(0, uuid, "")
+	if err != nil {
+		return err
+	}
 
-    attrs["visible_users"] = visibleUsers
+	attrs := map[string]any{}
+	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-    return c.UpdateConversationCustomAttributes(
-        uuid,
-        attrs,
-    )
+	creatorID := 0
+
+	if creator, ok := attrs["creator_id"].(float64); ok {
+		creatorID = int(creator)
+	}
+
+	// Creator darf niemals entfernt werden
+	if creatorID == userID {
+		return nil
+	}
+
+	visibleUsers := []any{}
+
+	if existing, ok := attrs["visible_users"].([]any); ok {
+
+		for _, uid := range existing {
+
+			keep := true
+
+			switch v := uid.(type) {
+
+			case float64:
+				if int(v) == userID {
+					keep = false
+				}
+
+			case int:
+				if v == userID {
+					keep = false
+				}
+			}
+
+			if keep {
+				visibleUsers = append(visibleUsers, uid)
+			}
+		}
+	}
+
+	attrs["visible_users"] = visibleUsers
+
+	return c.UpdateConversationCustomAttributes(
+		uuid,
+		attrs,
+	)
 }
 
 // addConversationParticipant adds a user as participant to a conversation.
@@ -1799,6 +1892,27 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 					   WHERE tm.team_id = cm.mentioned_team_id AND tm.user_id = $1
 				   )
 			)`)
+
+		case models.VisibleConversations:
+
+			conditions = append(
+				conditions,
+				fmt.Sprintf(
+					"(conversations.custom_attributes->'visible_users') @> '[%d]'",
+					userID,
+				),
+			)
+
+		case models.CreatedConversations:
+
+			conditions = append(
+				conditions,
+				fmt.Sprintf(
+					"(conversations.custom_attributes->>'creator_id')::int = %d",
+					userID,
+				),
+			)
+
 		default:
 			return "", nil, fmt.Errorf("unknown conversation type: %s", lt)
 		}

@@ -6,7 +6,7 @@ const http = axios.create({
   responseType: 'json'
 })
 
-function getCSRFToken () {
+function getCSRFToken() {
   const name = 'csrf_token='
   const cookies = document.cookie.split(';')
   for (let i = 0; i < cookies.length; i++) {
@@ -20,7 +20,7 @@ function getCSRFToken () {
 
 // Route-scoped abort, opt-in via { abortOnRoute: true }. Default no-abort protects in-flight saves.
 let routeAbort = new AbortController()
-export function abortRouteScope () {
+export function abortRouteScope() {
   routeAbort.abort()
   routeAbort = new AbortController()
 }
@@ -300,6 +300,27 @@ const updateContactCustomAttribute = (uuid, data) =>
       'Content-Type': 'application/json'
     }
   })
+const addVisibleUser = (uuid, userID) =>
+  http.put(
+    `/api/v1/conversations/${uuid}/add-visible-user`,
+    { user_id: userID },
+    {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+const removeVisibleUser = (uuid, userID) =>
+  http.put(
+    `/api/v1/conversations/${uuid}/remove-visible-user`,
+    { user_id: userID },
+    {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
 const updateConversationCustomAttribute = (uuid, data) =>
   http.put(`/api/v1/conversations/${uuid}/custom-attributes`, data, {
     headers: {
@@ -371,6 +392,10 @@ const getAllConversations = (params) =>
   http.get('/api/v1/conversations/all', { params, abortOnRoute: true })
 const getMentionedConversations = (params) =>
   http.get('/api/v1/conversations/mentioned', { params, abortOnRoute: true })
+const getVisibleConversations = (params) =>
+  http.get('/api/v1/conversations/visible', { params, abortOnRoute: true })
+const getCreatedConversations = (params) =>
+  http.get('/api/v1/conversations/created', { params, abortOnRoute: true })
 const getViewConversations = (id, params) =>
   http.get(`/api/v1/views/${id}/conversations`, { params, abortOnRoute: true })
 const uploadMedia = (data) =>
@@ -498,7 +523,7 @@ const getActiveContextLinks = () => http.get('/api/v1/context-links/active')
 const getContextLinkURL = (id, conversationUUID) =>
   http.get(`/api/v1/context-links/${id}/url`, { params: { conversation_uuid: conversationUUID } })
 
-const generateAPIKey = (id) => 
+const generateAPIKey = (id) =>
   http.post(`/api/v1/agents/${id}/api-key`, {}, {
     headers: {
       'Content-Type': 'application/json'
@@ -563,6 +588,8 @@ export default {
   getUnassignedConversations,
   getAllConversations,
   getMentionedConversations,
+  getVisibleConversations,
+  getCreatedConversations,
   getTeamUnassignedConversations,
   getViewConversations,
   getOverviewCharts,
@@ -692,5 +719,7 @@ export default {
   markAllNotificationsAsRead,
   deleteNotification,
   deleteAllNotifications,
-  getContactPageVisits
+  getContactPageVisits,
+  addVisibleUser,
+  removeVisibleUser,
 }

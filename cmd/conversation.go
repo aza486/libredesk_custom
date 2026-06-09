@@ -115,6 +115,82 @@ func handleGetAssignedConversations(r *fastglue.Request) error {
 	})
 }
 
+// handleGetVisibleConversations retrieves conversations visible to the current user.
+func handleGetVisibleConversations(r *fastglue.Request) error {
+	var (
+		app     = r.Context.(*App)
+		user    = r.RequestCtx.UserValue("user").(amodels.User)
+		order   = string(r.RequestCtx.QueryArgs().Peek("order"))
+		orderBy = string(r.RequestCtx.QueryArgs().Peek("order_by"))
+		filters = string(r.RequestCtx.QueryArgs().Peek("filters"))
+		total   = 0
+	)
+
+	page, pageSize := getPagination(r)
+
+	conversations, err := app.conversation.GetVisibleConversationsList(
+		user.ID,
+		order,
+		orderBy,
+		filters,
+		page,
+		pageSize,
+	)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+
+	return r.SendEnvelope(envelope.PageResults{
+		Results:    conversations,
+		Total:      total,
+		PerPage:    pageSize,
+		TotalPages: (total + pageSize - 1) / pageSize,
+		Page:       page,
+	})
+}
+
+// handleGetCreatedConversations retrieves conversations created by the current user.
+func handleGetCreatedConversations(r *fastglue.Request) error {
+	var (
+		app     = r.Context.(*App)
+		user    = r.RequestCtx.UserValue("user").(amodels.User)
+		order   = string(r.RequestCtx.QueryArgs().Peek("order"))
+		orderBy = string(r.RequestCtx.QueryArgs().Peek("order_by"))
+		filters = string(r.RequestCtx.QueryArgs().Peek("filters"))
+		total   = 0
+	)
+
+	page, pageSize := getPagination(r)
+
+	conversations, err := app.conversation.GetCreatedConversationsList(
+		user.ID,
+		order,
+		orderBy,
+		filters,
+		page,
+		pageSize,
+	)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+
+	return r.SendEnvelope(envelope.PageResults{
+		Results:    conversations,
+		Total:      total,
+		PerPage:    pageSize,
+		TotalPages: (total + pageSize - 1) / pageSize,
+		Page:       page,
+	})
+}
+
 // handleGetUnassignedConversations retrieves unassigned conversations.
 func handleGetUnassignedConversations(r *fastglue.Request) error {
 	var (
@@ -631,6 +707,65 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleAddVisibleUser adds a user to the visible users list of a conversation.
+func handleAddVisibleUser(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+	)
+
+	req := struct {
+		UserID int `json:"user_id"`
+	}{}
+
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	conversation, err := enforceConversationAccess(app, uuid, user)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	attrs := map[string]any{}
+	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+
+	creatorID := 0
+
+	switch v := attrs["creator_id"].(type) {
+	case float64:
+		creatorID = int(v)
+	case int:
+		creatorID = v
+	}
+
+	if creatorID != auser.ID {
+		return sendErrorEnvelope(
+			r,
+			envelope.NewError(
+				envelope.PermissionError,
+				"Only creator can manage visibility",
+				nil,
+			),
+		)
+	}
+
+	if err := app.conversation.AddVisibleUser(
+		uuid,
+		req.UserID,
+	); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(true)
+}
+
 // handleRemoveVisibleUser removes a user from the visible users list of a conversation.
 func handleRemoveVisibleUser(r *fastglue.Request) error {
 	var (
@@ -669,7 +804,6 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 		creatorID = v
 	}
 
-	// Nur Creator darf Sichtbarkeit verwalten
 	if creatorID != auser.ID {
 		return sendErrorEnvelope(
 			r,
@@ -712,6 +846,40 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	// Systemfelder dürfen niemals geändert werden
+	if _, ok := attributes["creator_id"]; ok {
+		return sendErrorEnvelope(
+			r,
+			envelope.NewError(
+				envelope.PermissionError,
+				"creator_id is read only",
+				nil,
+			),
+		)
+	}
+
+	if _, ok := attributes["private"]; ok {
+		return sendErrorEnvelope(
+			r,
+			envelope.NewError(
+				envelope.PermissionError,
+				"private is read only",
+				nil,
+			),
+		)
+	}
+
+	if _, ok := attributes["internal"]; ok {
+		return sendErrorEnvelope(
+			r,
+			envelope.NewError(
+				envelope.PermissionError,
+				"internal is read only",
+				nil,
+			),
+		)
 	}
 
 	// Update custom attributes.

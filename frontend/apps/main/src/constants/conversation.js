@@ -4,7 +4,9 @@ export const CONVERSATION_LIST_TYPE = {
   TEAM_UNASSIGNED: 'team_unassigned',
   VIEW: 'view',
   ALL: 'all',
-  MENTIONED: 'mentioned'
+  MENTIONED: 'mentioned',
+  VISIBLE: 'visible',
+  CREATED: 'created'
 }
 
 export const CONVERSATION_DEFAULT_STATUSES = {

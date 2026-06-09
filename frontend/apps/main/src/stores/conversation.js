@@ -262,7 +262,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return !conv.assigned_user_id && !conv.assigned_team_id
       case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
-        return Number(conv.assigned_team_id) === Number(conversations.teamID) && !conv.assigned_user_id
+        return Number(conv.assigned_team_id) === Number(conversations.teamID) && !conv.assigned_user_id  
       default:
         return null
     }
@@ -614,6 +614,25 @@ export const useConversationStore = defineStore('conversation', () => {
           order: sortFieldMap[conversations.sortField].order,
           filters
         })
+
+      case CONVERSATION_LIST_TYPE.VISIBLE:
+        return await api.getVisibleConversations({
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters
+        })
+
+      case CONVERSATION_LIST_TYPE.CREATED:
+        return await api.getCreatedConversations({
+          page: page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by: sortFieldMap[conversations.sortField].model + "." + sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters
+        })
+
       default:
         throw new Error('Invalid conversation list type: ' + listType)
     }
