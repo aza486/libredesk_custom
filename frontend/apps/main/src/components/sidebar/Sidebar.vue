@@ -53,7 +53,8 @@ import {
   Link,
   BarChart3,
   CircleUser,
-  Contact
+  Contact,
+  FilePlus,
 } from 'lucide-vue-next'
 
 const navIconMap = {
@@ -561,6 +562,20 @@ for (const view of props.userViews || []) {
                       <span>{{ t('globals.terms.myInbox') }}</span>
                     <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
                   </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton :isActive="isActiveParent('/inboxes/visible')" @click="navigateToInbox('visible')" >
+                  <Eye />
+                  <span>Sichtbar für mich</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton :isActive="isActiveParent('/inboxes/created')" @click="navigateToInbox('created')">
+                  <FilePlus />
+                  <span>Von mir erstellt</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

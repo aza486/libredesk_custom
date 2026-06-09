@@ -117,7 +117,7 @@ const routes = [
         meta: { titleKey: 'globals.terms.search', hidePageHeader: true }
       },
       {
-        path: '/inboxes/:type(assigned|unassigned|all|mentioned)?',
+        path: '/inboxes/:type(assigned|unassigned|all|mentioned|visible|created)?',
         name: 'inboxes',
         redirect: '/inboxes/assigned',
         component: InboxLayout,
@@ -135,6 +135,8 @@ const routes = [
                 if (route.params.type === 'mentioned') return 'conversation.mentions'
                 if (route.params.type === 'unassigned') return 'globals.terms.unassigned'
                 if (route.params.type === 'all') return 'globals.messages.all'
+                if (route.params.type === 'visible') return 'conversation.visibleForMe'
+                if (route.params.type === 'created') return 'conversation.createdByMe'
                 return ''
               }
             },
@@ -151,6 +153,8 @@ const routes = [
                     if (route.params.type === 'mentioned') return 'conversation.mentions'
                     if (route.params.type === 'unassigned') return 'globals.terms.unassigned'
                     if (route.params.type === 'all') return 'globals.messages.all'
+                    if (route.params.type === 'visible') return 'conversation.visibleForMe'
+                    if (route.params.type === 'created') return 'conversation.createdByMe'
                     return ''
                   },
                   hidePageHeader: true
