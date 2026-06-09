@@ -51,6 +51,44 @@
         </AccordionContent>
       </AccordionItem>
 
+      <AccordionItem
+        value="visibility"
+        class="accordion-item"
+        v-if="conversationStore.current?.custom_attributes?.visible_users"
+      >
+        <AccordionTrigger class="accordion-trigger">
+          Sichtbarkeit
+        </AccordionTrigger>
+
+        <AccordionContent class="accordion-content">
+
+          <div
+            v-for="userId in conversationStore.current.custom_attributes.visible_users"
+            :key="userId"
+            class="flex justify-between items-center py-1"
+          >
+            <span>{{ getVisibleUserName(userId) }}</span>
+
+            <button
+              v-if="userId !== conversationStore.current.custom_attributes.creator_id"
+              @click="removeVisibleUser(userId)"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="mt-3">
+          <SelectComboBox
+            :items="usersStore.options"
+            placeholder="Benutzer hinzufügen"
+            @select="addVisibleUser"
+            type="user"
+          />
+          </div>
+
+        </AccordionContent>
+      </AccordionItem>
+
       <!-- Information -->
       <AccordionItem value="information" class="accordion-item">
         <AccordionTrigger class="accordion-trigger">
@@ -241,6 +279,80 @@ const updateContactCustomAttributes = async (attributes) => {
     conversationStore.current.contact.custom_attributes = previousAttributes
   }
 }
+
+const getVisibleUserName = (userId) => {
+
+  const user = usersStore.options.find(
+    u => Number(u.value) === Number(userId)
+  )
+
+  return user
+    ? `${user.first_name} ${user.last_name}`
+    : `User ${userId}`
+}
+
+const removeVisibleUser = async (userId) => {
+
+  try {
+
+    await api.removeVisibleUser(
+      conversationStore.current.uuid,
+      userId
+    )
+
+    conversationStore.current.custom_attributes.visible_users =
+      conversationStore.current.custom_attributes.visible_users.filter(
+        id => Number(id) !== Number(userId)
+      )
+
+  } catch (error) {
+
+    emitter.emit(
+      EMITTER_EVENTS.SHOW_TOAST,
+      {
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      }
+    )
+  }
+}
+const addVisibleUser = async (user) => {
+
+  try {
+
+    const userId = Number(user.value)
+
+    await api.addVisibleUser(
+      conversationStore.current.uuid,
+      userId
+    )
+
+    const visibleUsers =
+      conversationStore.current.custom_attributes.visible_users || []
+
+    const exists = visibleUsers.some(
+      id => Number(id) === userId
+    )
+
+    if (!exists) {
+      visibleUsers.push(userId)
+    }
+
+    conversationStore.current.custom_attributes.visible_users =
+      visibleUsers
+
+  } catch (error) {
+
+    emitter.emit(
+      EMITTER_EVENTS.SHOW_TOAST,
+      {
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      }
+    )
+  }
+}
+
 </script>
 
 <style scoped>
