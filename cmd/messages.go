@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
@@ -177,6 +178,30 @@ func handleRetryMessage(r *fastglue.Request) error {
 	if err = app.conversation.MarkMessageAsPending(uuid); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	return r.SendEnvelope(true)
+}
+
+// handleDeletePrivateNote deletes a private note and its mentions.
+func handleDeletePrivateNote(r *fastglue.Request) error {
+	var (
+		app   = r.Context.(*App)
+		auser = r.RequestCtx.UserValue("user").(amodels.User)
+		uuid  = r.RequestCtx.UserValue("uuid").(string)
+	)
+
+	app.lo.Info(
+		"DELETE NOTE",
+		"user_type", fmt.Sprintf("%T", r.RequestCtx.UserValue("user")),
+		"uuid", r.RequestCtx.UserValue("uuid"),
+	)
+
+	if err := app.conversation.DeletePrivateNote(
+		uuid,
+		auser.ID,
+	); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	return r.SendEnvelope(true)
 }
 

@@ -318,6 +318,7 @@ type queries struct {
 
 	// Message queries.
 	GetMessage                         *sqlx.Stmt `query:"get-message"`
+	GetLatestConversationMessage       *sqlx.Stmt `query:"get-latest-conversation-message"`
 	GetMessages                        string     `query:"get-messages"`
 	GetOutgoingPendingMessages         *sqlx.Stmt `query:"get-outgoing-pending-messages"`
 	GetMessageSourceIDs                *sqlx.Stmt `query:"get-message-source-ids"`
@@ -337,7 +338,8 @@ type queries struct {
 	UpdateContinuityEmailTracking   *sqlx.Stmt `query:"update-continuity-email-tracking"`
 
 	// Mention queries.
-	InsertMention *sqlx.Stmt `query:"insert-mention"`
+	InsertMention         *sqlx.Stmt `query:"insert-mention"`
+	DeleteMessageMentions *sqlx.Stmt `query:"delete-message-mentions"`
 
 	// Broadcast queries.
 	GetActiveLivechatConversationsByAgent *sqlx.Stmt `query:"get-active-livechat-conversations-by-agent"`
@@ -625,13 +627,58 @@ func (c *Manager) GetCreatedConversationsList(
 
 // InsertMentions inserts mentions for a message.
 func (c *Manager) InsertMentions(conversationID, messageID, mentionedByUserID int, mentions []models.MentionInput) error {
+	conversationUUID, err := c.GetConversationUUID(conversationID)
+	if err != nil {
+		return err
+	}
 	for _, mention := range mentions {
 		var userID, teamID any
 		switch mention.Type {
 		case models.MentionTypeAgent:
 			userID = mention.ID
+
+			if err := c.AddVisibleUser(
+				conversationUUID,
+				mention.ID,
+			); err != nil {
+				c.lo.Error(
+					"error adding mentioned user to visibility",
+					"conversation_uuid", conversationUUID,
+					"user_id", mention.ID,
+					"error", err,
+				)
+			}
 		case models.MentionTypeTeam:
 			teamID = mention.ID
+
+			members, err := c.teamStore.GetMembers(mention.ID)
+
+			if err != nil {
+
+				c.lo.Error(
+					"error loading team members for visibility",
+					"team_id", mention.ID,
+					"error", err,
+				)
+
+			} else {
+
+				for _, member := range members {
+
+					if err := c.AddVisibleUser(
+						conversationUUID,
+						member.ID,
+					); err != nil {
+
+						c.lo.Error(
+							"error adding team member to visibility",
+							"conversation_uuid", conversationUUID,
+							"user_id", member.ID,
+							"error", err,
+						)
+					}
+				}
+			}
 		default:
 			c.lo.Warn("invalid mention type, skipping", "type", mention.Type)
 			continue

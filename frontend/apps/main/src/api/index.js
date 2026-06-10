@@ -351,8 +351,8 @@ const getConversationMessage = (cuuid, uuid) =>
   http.get(`/api/v1/conversations/${cuuid}/messages/${uuid}`)
 const retryMessage = (cuuid, uuid) =>
   http.put(`/api/v1/conversations/${cuuid}/messages/${uuid}/retry`)
-const deleteMessage = (cuuid, uuid) =>
-  http.delete(`/api/v1/conversations/${cuuid}/messages/${uuid}`)
+const deleteMessage = (uuid) =>
+  http.delete(`/api/v1/messages/${uuid}`)
 const getConversationMessages = (uuid, params) =>
   http.get(`/api/v1/conversations/${uuid}/messages`, { params, abortOnRoute: true })
 const sendMessage = (uuid, data) =>

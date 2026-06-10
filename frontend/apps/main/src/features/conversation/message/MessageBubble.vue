@@ -155,6 +155,14 @@
             <!-- Spinner for Pending Messages (outgoing only) -->
             <Spinner v-if="isOutgoing && message.status === 'pending'" size="sm" />
 
+            <button
+              v-if="canDeletePrivateNote"
+              @click="deletePrivateNote"
+              class="text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              Löschen
+            </button>
+
             <!-- Status Icons (outgoing only) -->
             <div v-if="isOutgoing" class="flex items-center space-x-2 mt-2 self-end">
               <Lock :size="10" v-if="isPrivateMessage" class="text-muted-foreground" />
@@ -372,8 +380,29 @@ const showCheckCheck = computed(
 )
 const showRetry = computed(() => isOutgoing.value && props.message.status === 'failed' && props.message.sender_id === userStore.userID)
 
+const canDeletePrivateNote = computed(() =>
+  props.message.private &&
+  props.message.sender_id === userStore.userID
+)
+
 const retryMessage = (msg) => {
   api.retryMessage(convStore.current.uuid, msg.uuid)
+}
+
+const deletePrivateNote = async () => {
+  try {
+    await api.deleteMessage(props.message.uuid)
+
+    convStore.messages.data.removeMessage(
+      convStore.current.uuid,
+      props.message.uuid
+    )
+
+    convStore.messages.version++
+  } catch (err) {
+    console.error(err)
+    alert('Löschen fehlgeschlagen')
+  }
 }
 
 const showQuotedText = ref(false)
