@@ -130,6 +130,7 @@ type userStore interface {
 	Get(int, string, []string) (umodels.User, error)
 	GetAgent(int, string) (umodels.User, error)
 	GetAgentCachedOrLoad(int) (umodels.User, error)
+	GetAgents() ([]umodels.UserCompact, error)
 	GetSystemUser() (umodels.User, error)
 	CreateContact(user *umodels.User) error
 	UpgradeVisitorToContact(visitorID int) error
@@ -616,6 +617,56 @@ func (c *Manager) InsertMentions(conversationID, messageID, mentionedByUserID in
 	}
 	for _, mention := range mentions {
 		var userID, teamID any
+
+		if mention.Type == "all" {
+
+			agents, err := c.userStore.GetAgents()
+
+			if err != nil {
+				c.lo.Error(
+					"error loading agents for @all",
+					"error", err,
+				)
+				continue
+			}
+
+			for _, agent := range agents {
+
+				if !agent.Enabled {
+					continue
+				}
+
+				if err := c.AddVisibleUser(
+					conversationUUID,
+					agent.ID,
+				); err != nil {
+
+					c.lo.Error(
+						"error adding @all visibility user",
+						"user_id", agent.ID,
+						"error", err,
+					)
+				}
+
+				if _, err := c.q.InsertMention.Exec(
+					conversationID,
+					messageID,
+					agent.ID,
+					nil,
+					mentionedByUserID,
+				); err != nil {
+
+					c.lo.Error(
+						"error inserting @all mention",
+						"user_id", agent.ID,
+						"error", err,
+					)
+				}
+			}
+
+			continue
+		}
+
 		switch mention.Type {
 		case models.MentionTypeAgent:
 			userID = mention.ID
@@ -1353,6 +1404,31 @@ func (m *Manager) NotifyMention(conversationUUID string, message models.Message,
 	recipientIDMap := make(map[int]struct{})
 
 	for _, mention := range mentions {
+
+		if mention.Type == "all" {
+
+			agents, err := m.userStore.GetAgents()
+
+			if err != nil {
+				m.lo.Error(
+					"error loading agents for @all notification",
+					"error", err,
+				)
+				continue
+			}
+
+			for _, agent := range agents {
+
+				if !agent.Enabled {
+					continue
+				}
+
+				recipientIDMap[agent.ID] = struct{}{}
+			}
+
+			continue
+		}
+
 		if mention.Type == models.MentionTypeAgent {
 			// Direct user mention.
 			recipientIDMap[mention.ID] = struct{}{}

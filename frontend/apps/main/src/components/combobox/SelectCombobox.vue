@@ -6,6 +6,7 @@
     :items="sortedItems"
     :placeholder="placeholder"
     :align="align"
+    :keep-open="keepOpen"
   >
     <!-- Custom trigger passthrough -->
     <template v-if="$slots.trigger" #trigger="slotProps">
@@ -31,33 +32,44 @@
 
         <!-- Others -->
         <span v-else-if="item.emoji">{{ item.emoji }}</span>
-        <div class="flex items-center justify-between w-full">
+          <div class="flex items-center justify-between w-full">
 
-                <div class="flex items-center gap-2">
-                  <span>{{ item.label }}</span>
+            <div class="flex items-center gap-2">
+              <span>{{ item.label }}</span>
 
-                  <span
-                    v-if="isCurrentUser(item)"
-                    class="text-muted-foreground text-xs"
-                  >
-                    ({{ t('globals.terms.you') }})
-                  </span>
-                </div>
+              <span
+                v-if="isCurrentUser(item)"
+                class="text-muted-foreground text-xs"
+              >
+                ({{ t('globals.terms.you') }})
+              </span>
+            </div>
 
-                <button
-                  v-if="type === 'user' && item.value !== 'none'"
-                  class="text-yellow-500 text-sm"
-                  @click.stop="toggleFavorite(item.value)">
-                  {{
-                    favoriteAgents.includes(String(item.value))
-                      ? '★'
-                      : '☆'
-                  }}
-                </button>
+            <div class="flex items-center gap-2">
 
-              </div>
+              <button
+                v-if="type === 'user' && item.value !== 'none'"
+                class="text-yellow-500 text-sm"
+                @click.stop="toggleFavorite(item.value)"
+              >
+                {{
+                  favoriteAgents.includes(String(item.value))
+                    ? '★'
+                    : '☆'
+                }}
+              </button>
+
+              <slot
+                name="item-right"
+                :item="item"
+              />
+
+            </div>
+
+          </div>
         <span v-if="isCurrentUser(item)" class="text-muted-foreground text-xs"
           >({{ t('globals.terms.you') }})</span>
+
       </div>
     </template>
 
@@ -119,7 +131,11 @@ const props = defineProps({
   align: {
     type: String,
     default: 'center'
-  }
+  },
+  keepOpen: {
+  type: Boolean,
+  default: false
+}
 })
 
 const normalizedValue = computed(() => String(props.modelValue || ''))

@@ -32,7 +32,7 @@
                 :class="
                   cn('ml-auto h-4 w-4', String(value) === item.value ? 'opacity-100' : 'opacity-0')
                 "
-              />
+              /> 
             </CommandItem>
           </CommandGroup>
         </CommandList>
@@ -72,7 +72,15 @@ const props = defineProps({
   align: {
     type: String,
     default: 'center'
-  }
+  },
+  keepOpen: {
+  type: Boolean,
+  default: false
+},
+showCheckmark: {
+  type: Boolean,
+  default: true
+}
 })
 
 const emit = defineEmits(['select'])
@@ -98,7 +106,11 @@ const handleSelect = (ev) => {
     try {
       const selected = JSON.parse(ev.detail.value)
       value.value = selected.value
-      open.value = false
+
+      if (!props.keepOpen) {
+        open.value = false
+      }
+
       emit('select', selected)
     } catch (e) {
       console.error('Invalid selection value')

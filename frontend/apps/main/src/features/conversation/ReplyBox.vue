@@ -427,6 +427,9 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
       if (isPrivate && response?.data?.data) {
         conversationStore.replacePendingMessage(convUUID, tempUUID, response.data.data)
       }
+      await conversationStore.refreshCurrentConversation(
+        convUUID
+      )
     } catch (error) {
       hasMessageSendingErrored = true
       // Remove pending message and restore editor content.
