@@ -448,7 +448,9 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
         conversationStore.replacePendingMessage(convUUID, tempUUID, response.data.data)
       }
 
+      await conversationStore.refreshCurrentConversation(convUUID)
       notificationStore.markAssignmentAsReadForConversation(convUUID)
+
     } catch (error) {
       hasMessageSendingErrored = true
       // Remove pending message and restore editor content.

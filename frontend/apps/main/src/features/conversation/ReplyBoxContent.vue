@@ -222,8 +222,22 @@ const getSuggestions = async (query) => {
       emoji: t.emoji
     }))
 
-  return [...users, ...teams].slice(0, 25)
-}
+    const special = []
+
+    if (
+      q === '' ||
+      'alle'.includes(q) ||
+      'alle mitarbeiter'.includes(q)
+    ) {
+      special.push({
+        id: -1,
+        type: 'all',
+        label: 'Alle Mitarbeiter'
+      })
+    }
+
+    return [...special, ...users, ...teams].slice(0, 25)
+  }
 
 // Handle mentions changed from editor
 const handleMentionsChanged = (newMentions) => {

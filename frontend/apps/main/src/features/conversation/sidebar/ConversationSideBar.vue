@@ -81,14 +81,24 @@
             </button>
           </div>
 
-          <div class="mt-3">
-          <SelectComboBox
-            :items="usersStore.options"
-            placeholder="Benutzer hinzufügen"
-            @select="addVisibleUser"
-            type="user"
-          />
-          </div>
+            <div class="mt-3 space-y-2">
+
+              <UserMultiSelect
+                v-model="selectedVisibleUsers"
+                :items="availableUsers"
+                placeholder="Benutzer auswählen"
+              />
+
+              <button
+                v-if="selectedVisibleUsers.length"
+                class="w-full px-3 py-2 rounded border text-sm"
+                @click="addSelectedVisibleUsers"
+              >
+                {{ selectedVisibleUsers.length }}
+                Benutzer hinzufügen
+              </button>
+
+            </div>
 
         </AccordionContent>
       </AccordionItem>
@@ -190,6 +200,7 @@ import ContactNotes from '@/features/contact/ContactNotes.vue'
 import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
 import ConversationSideBarPageVisits from '@/features/conversation/sidebar/ConversationSideBarPageVisits.vue'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
+import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { TAG_ACTION } from '@/constants/conversation'
 import api from '../../../api'
 
@@ -201,6 +212,7 @@ const teamsStore = useTeamStore()
 const tagStore = useTagStore()
 const userStore = useUserStore()
 const tags = ref([])
+const selectedVisibleUsers = ref([])
 const accordionState = useStorage('conversation-sidebar-accordion', [])
 const { t } = useI18n()
 customAttributeStore.fetchCustomAttributes()
@@ -357,6 +369,15 @@ const addVisibleUser = async (user) => {
   }
 }
 
+const addSelectedVisibleUsers = async () => {
+
+  for (const user of selectedVisibleUsers.value) {
+    await addVisibleUser(user)
+  }
+
+  selectedVisibleUsers.value = []
+}
+
 const sortedVisibleUsers = computed(() => {
   const visibleUsers = [
     ...(conversationStore.current?.custom_attributes?.visible_users || [])
@@ -370,6 +391,19 @@ const sortedVisibleUsers = computed(() => {
     if (b === creatorID) return 1
     return 0
   })
+})
+
+const availableUsers = computed(() => {
+
+  const visibleUsers =
+    conversationStore.current?.custom_attributes?.visible_users || []
+
+  return usersStore.options.filter(
+    user =>
+      !visibleUsers.some(
+        id => Number(id) === Number(user.value)
+      )
+  )
 })
 
 </script>

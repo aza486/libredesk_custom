@@ -10,7 +10,7 @@
       :class="{ 'bg-muted': index === selectedIndex }"
       @click="selectItem(index)"
     >
-      <span v-if="item.type === 'team'" class="text-lg">{{ item.emoji || '👥' }}</span>
+      <span v-if="item.type === 'team' ||  item.type === 'special'" class="text-lg">{{ item.emoji || '👥' }}</span>
       <Avatar v-else class="w-6 h-6">
         <AvatarImage :src="item.avatar_url" :alt="item.label" />
         <AvatarFallback class="text-xs">{{ getInitials(item.label) }}</AvatarFallback>
@@ -25,7 +25,7 @@
       >
         ★
       </span>
-      <span class="text-xs text-muted-foreground">{{ getTypeLabel(item.type) }}</span>
+      <span class="text-xs text-muted-foreground">{{ getTypeLabel(item.type ) }}</span>
     </button>
   </div>
   <div v-else-if="query" class="mention-list bg-background border rounded-lg shadow-lg p-3">
@@ -69,6 +69,7 @@ const getInitials = (name) => {
 const getTypeLabel = (type) => {
   if (type === 'agent') return t('globals.terms.agent')
   if (type === 'team') return t('globals.terms.team')
+  if (type === 'special') return 'Alle'
   return type
 }
 
