@@ -60,7 +60,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return list.length > 0 && selectedUUIDs.value.size === list.length
   })
 
-  function toggleSelect (uuid, shiftKey = false) {
+  function toggleSelect(uuid, shiftKey = false) {
     const next = new Set(selectedUUIDs.value)
 
     if (shiftKey && lastClickedUUID && lastClickedUUID !== uuid) {
@@ -83,16 +83,16 @@ export const useConversationStore = defineStore('conversation', () => {
     selectedUUIDs.value = next
   }
 
-  function selectAll () {
+  function selectAll() {
     selectedUUIDs.value = new Set(conversationsList.value.map(c => c.uuid))
   }
 
-  function clearSelection () {
+  function clearSelection() {
     selectedUUIDs.value = new Set()
     lastClickedUUID = null
   }
 
-  function isSelected (uuid) {
+  function isSelected(uuid) {
     return selectedUUIDs.value.has(uuid)
   }
 
@@ -187,7 +187,7 @@ export const useConversationStore = defineStore('conversation', () => {
   const CONVERSATION_CACHE_MAX = 50
   const conversationDataCache = new Map()
 
-  function cacheConversationData (uuid, data) {
+  function cacheConversationData(uuid, data) {
     if (!uuid || !data) return
     if (conversationDataCache.has(uuid)) conversationDataCache.delete(uuid)
     conversationDataCache.set(uuid, data)
@@ -203,7 +203,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   const incrementMessageVersion = () => setTimeout(() => messages.version++, 0)
 
-  function setListStatus (status, fetch = true) {
+  function setListStatus(status, fetch = true) {
     conversations.status = status
     if (fetch) {
       resetConversations()
@@ -215,7 +215,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return conversations.status
   })
 
-  function setListSortField (field) {
+  function setListSortField(field) {
     if (conversations.sortField === field) return
     conversations.sortField = field
     resetConversations()
@@ -229,7 +229,7 @@ export const useConversationStore = defineStore('conversation', () => {
   })
 
 
-  async function fetchStatuses () {
+  async function fetchStatuses() {
     if (statuses.value.length > 0) return
     try {
       const response = await api.getStatuses()
@@ -245,7 +245,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchPriorities () {
+  async function fetchPriorities() {
     if (priorities.value.length > 0) return
     try {
       const response = await api.getPriorities()
@@ -261,20 +261,20 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function matchesAssignmentScope (conv) {
+  function matchesAssignmentScope(conv) {
     switch (conversations.listType) {
       case CONVERSATION_LIST_TYPE.ASSIGNED:
         return conv.assigned_user_id === userStore.userID
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return !conv.assigned_user_id && !conv.assigned_team_id
       case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
-        return Number(conv.assigned_team_id) === Number(conversations.teamID) && !conv.assigned_user_id  
+        return Number(conv.assigned_team_id) === Number(conversations.teamID) && !conv.assigned_user_id
       default:
         return null
     }
   }
 
-  function belongsToList (conv) {
+  function belongsToList(conv) {
     const matched = matchesAssignmentScope(conv)
     return matched === null ? true : matched
   }
@@ -307,7 +307,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return messages.data.getAllPagesMessages(conversation.data?.uuid)
   })
 
-  function markConversationAsRead (uuid) {
+  function markConversationAsRead(uuid) {
     const index = conversations.data.findIndex(conv => conv.uuid === uuid)
     if (index !== -1) {
       setTimeout(() => {
@@ -318,7 +318,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function markAsUnread (uuid) {
+  async function markAsUnread(uuid) {
     try {
       await api.markConversationAsUnread(uuid)
       const index = conversations.data.findIndex(conv => conv.uuid === uuid)
@@ -330,7 +330,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function incrementUnread (uuid) {
+  function incrementUnread(uuid) {
     const row = conversations.data.find(c => c.uuid === uuid)
     if (!row) return
     row.unread_message_count = Math.min((row.unread_message_count || 0) + 1, 10)
@@ -341,7 +341,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return conversation.data?.contact.first_name + ' ' + conversation.data?.contact.last_name
   })
 
-  function getContactFullName (uuid) {
+  function getContactFullName(uuid) {
     if (conversations?.data) {
       const conv = conversations.data.find(conv => conv.uuid === uuid)
       return conv ? `${conv.contact.first_name} ${conv.contact.last_name}` : ''
@@ -391,7 +391,7 @@ export const useConversationStore = defineStore('conversation', () => {
     currentBCC.value = bcc
   })
 
-  function resetTypingState () {
+  function resetTypingState() {
     conversation.isTyping = false
     if (typingTimeout) {
       clearTimeout(typingTimeout)
@@ -399,7 +399,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchConversation (uuid) {
+  async function fetchConversation(uuid) {
     const cached = conversationDataCache.get(uuid)
     if (cached) {
       conversation.data = cached
@@ -426,7 +426,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function silentRefetchConversation (uuid) {
+  async function silentRefetchConversation(uuid) {
     try {
       const resp = await api.getConversation(uuid)
       if (conversation.data?.uuid === uuid) {
@@ -438,7 +438,14 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchMessages (uuid, fetchNextPage = false) {
+  async function refreshCurrentConversation(uuid) {
+    await Promise.all([
+      silentRefetchConversation(uuid),
+      fetchMessages(uuid)
+    ])
+  }
+
+  async function fetchMessages(uuid, fetchNextPage = false) {
     if (staleConversationUUIDs.has(uuid) && messages.data.hasConversation(uuid)) {
       try {
         const response = await api.getConversationMessages(uuid, { page: 1, page_size: MESSAGE_LIST_PAGE_SIZE })
@@ -490,11 +497,11 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchNextMessages () {
+  async function fetchNextMessages() {
     return fetchMessages(conversation.data.uuid, true)
   }
 
-  async function fetchMessage (conversationUUID, messageUUID) {
+  async function fetchMessage(conversationUUID, messageUUID) {
     try {
       const response = await api.getConversationMessage(conversationUUID, messageUUID)
       if (response?.data?.data) {
@@ -535,15 +542,15 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchConversationsList(false, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page + 1)
   }
 
-  function reFetchConversationsList (showLoader = true) {
+  function reFetchConversationsList(showLoader = true) {
     fetchConversationsList(showLoader, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, conversations.page)
   }
 
-  async function fetchFirstPageConversations () {
+  async function fetchFirstPageConversations() {
     await fetchConversationsList(false, conversations.listType, conversations.teamID, conversations.listFilters, conversations.viewID, 1)
   }
 
-  async function fetchConversationsList (showLoader = true, listType = null, teamID = 0, filters = [], viewID = 0, page = 0) {
+  async function fetchConversationsList(showLoader = true, listType = null, teamID = 0, filters = [], viewID = 0, page = 0) {
     if (!listType) return
     if (conversations.listType !== listType || conversations.teamID !== teamID || conversations.viewID !== viewID) {
       resetConversations()
@@ -589,7 +596,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function makeConversationListRequest (listType, teamID, viewID, filters, page) {
+  async function makeConversationListRequest(listType, teamID, viewID, filters, page) {
     filters = filters.length > 0 ? JSON.stringify(filters) : []
     switch (listType) {
       case CONVERSATION_LIST_TYPE.ASSIGNED:
@@ -663,20 +670,20 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function trimListToCurrentPage () {
+  function trimListToCurrentPage() {
     const maxLen = conversations.page * CONV_LIST_PAGE_SIZE
     if (conversations.data.length > maxLen) {
       conversations.data.splice(maxLen)
     }
   }
 
-  function mergeIntoList (uuid, payload) {
+  function mergeIntoList(uuid, payload) {
     const existing = conversations.data?.find(c => c.uuid === uuid)
     if (existing) deepMerge(existing, payload)
     return existing
   }
 
-  function processConversationListResponse (response) {
+  function processConversationListResponse(response) {
     const apiResponse = response.data.data
     const newConversations = []
     for (const conv of apiResponse.results) {
@@ -709,7 +716,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function updatePriority (v) {
+  async function updatePriority(v) {
     try {
       await api.updateConversationPriority(conversation.data.uuid, { priority: v })
     } catch (error) {
@@ -720,7 +727,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function updateStatus (v) {
+  async function updateStatus(v) {
     if (!conversation.data) return
     const previous = conversation.data.status
     conversation.data.status = v
@@ -736,7 +743,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function snoozeConversation (snoozeDuration) {
+  async function snoozeConversation(snoozeDuration) {
     try {
       await api.updateConversationStatus(conversation.data.uuid, { status: CONVERSATION_DEFAULT_STATUSES.SNOOZED, snoozed_until: snoozeDuration })
     } catch (error) {
@@ -747,7 +754,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function applyTagsLocally (uuid, action, tags) {
+  function applyTagsLocally(uuid, action, tags) {
     const targets = []
     const listConv = conversations.data?.find(c => c.uuid === uuid)
     if (listConv) targets.push(listConv)
@@ -767,7 +774,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function updateConversationTags (uuid, action, tags) {
+  async function updateConversationTags(uuid, action, tags) {
     const source = conversation.data?.uuid === uuid
       ? conversation.data
       : conversations.data?.find(c => c.uuid === uuid)
@@ -785,7 +792,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function updateAssignee (type, v) {
+  async function updateAssignee(type, v) {
     try {
       await api.updateAssignee(conversation.data.uuid, type, v)
       conversation.data[`assigned_${type}_id`] = v.assignee_id
@@ -797,7 +804,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function removeAssignee (type) {
+  async function removeAssignee(type) {
     try {
       await api.removeAssignee(conversation.data.uuid, type)
       conversation.data[`assigned_${type}_id`] = null
@@ -809,30 +816,30 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function updateAssigneeLastSeen (uuid) {
+  async function updateAssigneeLastSeen(uuid) {
     if (!isViewingConversation(uuid)) return
     markConversationAsRead(uuid)
     api.updateAssigneeLastSeen(uuid).catch(() => { })
   }
 
-  function isConversationInList (uuid) {
+  function isConversationInList(uuid) {
     return Boolean(conversations.data?.find(c => c.uuid === uuid))
   }
 
   const pendingNotificationUUIDs = new Set()
 
-  function addPendingNotification (uuid) {
+  function addPendingNotification(uuid) {
     pendingNotificationUUIDs.add(uuid)
   }
 
   // trailing=true: fires one final refresh after a burst so the list converges to latest state.
   const throttledFetchFirstPage = useThrottleFn(fetchFirstPageConversations, 60000, true)
 
-  function refreshConversationList () {
+  function refreshConversationList() {
     throttledFetchFirstPage()
   }
 
-  function updateConversationLastMessage (uuid, message) {
+  function updateConversationLastMessage(uuid, message) {
     const conv = conversations.data?.find(c => c.uuid === uuid)
     if (!conv) return
     conv.last_message = message.text_content || message.content || getMediaPreview(message.attachments)
@@ -840,7 +847,7 @@ export const useConversationStore = defineStore('conversation', () => {
     conv.last_message_sender = message.sender_type
   }
 
-  async function updateConversationMessage (message) {
+  async function updateConversationMessage(message) {
     if (conversation.data?.uuid !== message.conversation_uuid) {
       // Lazy invalidation: refresh the cache when the user next opens this convo, not on every WS event.
       if (messages.data.hasConversation(message.conversation_uuid)) {
@@ -896,7 +903,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function addPendingMessage (conversationUUID, content, isPrivate, author, attachments = [], textContent = '', meta = {}) {
+  function addPendingMessage(conversationUUID, content, isPrivate, author, attachments = [], textContent = '', meta = {}) {
     const pendingMessage = {
       uuid: `pending-${Date.now()}`,
       type: 'outgoing',
@@ -941,7 +948,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return pendingMessage.uuid
   }
 
-  function replacePendingMessage (conversationUUID, tempUUID, realMessage) {
+  function replacePendingMessage(conversationUUID, tempUUID, realMessage) {
     if (messages.data.hasMessage(conversationUUID, realMessage.uuid)) {
       messages.data.removeMessage(conversationUUID, tempUUID)
     } else {
@@ -950,31 +957,31 @@ export const useConversationStore = defineStore('conversation', () => {
     incrementMessageVersion()
   }
 
-  function removePendingMessage (conversationUUID, tempUUID) {
+  function removePendingMessage(conversationUUID, tempUUID) {
     messages.data.removeMessage(conversationUUID, tempUUID)
     incrementMessageVersion()
   }
 
-  function addNewConversation (conversation) {
+  function addNewConversation(conversation) {
     if (!isConversationInList(conversation.uuid)) {
       refreshConversationList()
     }
   }
 
-  function mergeMessageUpdate (data) {
+  function mergeMessageUpdate(data) {
     const { conversation_uuid, uuid, ...fields } = data
     if (!messages.data.hasMessage(conversation_uuid, uuid)) return
     messages.data.updateMessage(conversation_uuid, uuid, fields)
     incrementMessageVersion()
   }
 
-  function canPushInsert (conv) {
+  function canPushInsert(conv) {
     const matched = matchesAssignmentScope(conv)
     if (matched !== null) return matched
     return conversations.listType === CONVERSATION_LIST_TYPE.ALL
   }
 
-  function handleConvPush (payload) {
+  function handleConvPush(payload) {
     if (!payload || !payload.uuid) return
     if (mergeIntoList(payload.uuid, payload)) {
       if (conversation.data?.uuid === payload.uuid) {
@@ -990,14 +997,14 @@ export const useConversationStore = defineStore('conversation', () => {
     trimListToCurrentPage()
   }
 
-  function mergeConversationUpdate (update) {
+  function mergeConversationUpdate(update) {
     if (conversation.data?.uuid === update.uuid) {
       deepMerge(conversation.data, update)
     }
     mergeIntoList(update.uuid, update)
   }
 
-  function mergeContactUpdate (update) {
+  function mergeContactUpdate(update) {
     const { contact_id, ...fields } = update
     if (conversation.data?.contact_id === contact_id) {
       if (!conversation.data.contact) conversation.data.contact = {}
@@ -1011,7 +1018,7 @@ export const useConversationStore = defineStore('conversation', () => {
     })
   }
 
-  function resetConversations () {
+  function resetConversations() {
     conversations.data = []
     conversations.page = 1
     conversations.initialized = false
@@ -1022,31 +1029,31 @@ export const useConversationStore = defineStore('conversation', () => {
     clearSelection()
   }
 
-  function setMacro (macro, context) {
+  function setMacro(macro, context) {
     macros.value[context] = macro
   }
 
-  function setMacroActions (actions, context) {
+  function setMacroActions(actions, context) {
     if (!macros.value[context]) {
       macros.value[context] = {}
     }
     macros.value[context].actions = actions
   }
 
-  function getMacro (context) {
+  function getMacro(context) {
     return macros.value[context] || {}
   }
 
-  function removeMacroAction (action, context) {
+  function removeMacroAction(action, context) {
     if (!macros.value[context]) return
     macros.value[context].actions = macros.value[context].actions.filter(a => a.type !== action.type)
   }
 
-  function resetMacro (context) {
+  function resetMacro(context) {
     macros.value = { ...macros.value, [context]: {} }
   }
 
-  function updateTypingStatus (typingData) {
+  function updateTypingStatus(typingData) {
     const { conversation_uuid: uuid, is_typing } = typingData
 
     if (conversation.data?.uuid === uuid) {
@@ -1077,7 +1084,7 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  function sendTyping (isTyping, otherAttributes = {}) {
+  function sendTyping(isTyping, otherAttributes = {}) {
     if (conversation.data?.uuid) {
       sendTypingIndicator(conversation.data.uuid, isTyping, otherAttributes.isPrivateMessage)
     }
@@ -1147,7 +1154,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
 
-  function getMediaPreview (attachments) {
+  function getMediaPreview(attachments) {
     if (!attachments?.length) return ''
     const contentType = attachments[0].content_type || ''
     const i18n = getI18n()
@@ -1198,6 +1205,7 @@ export const useConversationStore = defineStore('conversation', () => {
     fetchConversationsList,
     fetchMessages,
     updateConversationTags,
+    refreshCurrentConversation,
     updateAssignee,
     updatePriority,
     updateStatus,
