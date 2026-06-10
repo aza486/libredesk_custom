@@ -58,16 +58,20 @@
       >
         <AccordionTrigger class="accordion-trigger">
           Sichtbarkeit
+          ({{ conversationStore.current.custom_attributes.visible_users.length }})
         </AccordionTrigger>
 
         <AccordionContent class="accordion-content">
 
-          <div
-            v-for="userId in conversationStore.current.custom_attributes.visible_users"
-            :key="userId"
-            class="flex justify-between items-center py-1"
-          >
-            <span>{{ getVisibleUserName(userId) }}</span>
+          <div v-for="userId in sortedVisibleUsers" :key="userId" class="flex justify-between items-center py-1" :class="{'font-medium': userId === conversationStore.current.custom_attributes.creator_id }">
+            <span>
+              {{ getVisibleUserName(userId) }}
+
+              <span
+                v-if="userId === conversationStore.current.custom_attributes.creator_id" class="text-xs text-muted-foreground" >
+                (Creator)
+              </span>
+            </span>
 
             <button
               v-if="userId !== conversationStore.current.custom_attributes.creator_id"
@@ -352,6 +356,21 @@ const addVisibleUser = async (user) => {
     )
   }
 }
+
+const sortedVisibleUsers = computed(() => {
+  const visibleUsers = [
+    ...(conversationStore.current?.custom_attributes?.visible_users || [])
+  ]
+
+  const creatorID =
+    conversationStore.current?.custom_attributes?.creator_id
+
+  return visibleUsers.sort((a, b) => {
+    if (a === creatorID) return -1
+    if (b === creatorID) return 1
+    return 0
+  })
+})
 
 </script>
 

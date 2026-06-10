@@ -871,6 +871,10 @@ WHERE created_at < $1;
 INSERT INTO conversation_mentions (conversation_id, message_id, mentioned_user_id, mentioned_team_id, mentioned_by_user_id)
 VALUES ($1, $2, $3, $4, $5);
 
+-- name: delete-message-mentions
+DELETE FROM conversation_mentions
+WHERE message_id = $1;
+
 -- name: mark-conversation-unread
 WITH target AS (
     SELECT id FROM conversations WHERE uuid = $2
@@ -930,3 +934,22 @@ FROM conversations
 WHERE contact_id = $1
 ORDER BY last_message_at DESC NULLS LAST
 LIMIT 200;
+
+-- name: get-latest-conversation-message
+SELECT
+    m.id,
+    m.conversation_id,
+    c.uuid as conversation_uuid,
+    m.content,
+    m.text_content,
+    m.sender_id,
+    m.sender_type,
+    m.type,
+    m.private,
+    m.created_at
+FROM conversation_messages m
+INNER JOIN conversations c
+    ON c.id = m.conversation_id
+WHERE m.conversation_id = $1
+ORDER BY m.created_at DESC
+LIMIT 1;

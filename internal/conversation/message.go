@@ -362,6 +362,88 @@ func (m *Manager) GetMessage(uuid string) (models.Message, error) {
 	return message, nil
 }
 
+func (m *Manager) DeletePrivateNote(
+	messageUUID string,
+	currentUserID int,
+) error {
+
+	message, err := m.GetMessage(messageUUID)
+	if err != nil {
+		return err
+	}
+
+	// Nur private Notizen
+	if !message.Private {
+		return envelope.NewError(
+			envelope.PermissionError,
+			"only private notes can be deleted",
+			nil,
+		)
+	}
+
+	// Nur Ersteller
+	if message.SenderID != currentUserID {
+		return envelope.NewError(
+			envelope.PermissionError,
+			"only the creator can delete this note",
+			nil,
+		)
+	}
+
+	// Mentions entfernen
+	if _, err := m.q.DeleteMessageMentions.Exec(
+		message.ID,
+	); err != nil {
+		m.lo.Error(
+			"DELETE NOTE MENTIONS FAILED",
+			"messageID", message.ID,
+			"error", err,
+		)
+		return err
+	}
+
+	// Nachricht entfernen
+	if _, err := m.q.DeleteMessage.Exec(
+		message.ID,
+		nil,
+	); err != nil {
+		m.lo.Error(
+			"DELETE NOTE FAILED",
+			"messageID", message.ID,
+			"error", err,
+		)
+		return err
+	}
+	// Aktualisiere die Conversation Preview
+	var latest models.Message
+
+	err = m.q.GetLatestConversationMessage.Get(
+		&latest,
+		message.ConversationID,
+	)
+
+	if err == nil {
+
+		lastMessage := latest.TextContent
+
+		if strings.TrimSpace(lastMessage) == "" {
+			lastMessage = latest.Content
+		}
+
+		m.UpdateConversationLastMessage(
+			latest.ConversationID,
+			latest.ConversationUUID,
+			lastMessage,
+			latest.SenderType,
+			latest.Type,
+			latest.Private,
+			latest.CreatedAt,
+			latest.SenderID,
+		)
+	}
+	return nil
+}
+
 // UpdateMessageStatus updates the status of a message.
 func (m *Manager) UpdateMessageStatus(messageUUID string, status string) error {
 	if _, err := m.q.UpdateMessageStatus.Exec(status, messageUUID); err != nil {

@@ -2,8 +2,18 @@
   <div class="flex flex-col h-full">
     <!-- Header -->
     <div class="h-12 flex-shrink-0 px-2 border-b flex items-center justify-between">
-      <div>
-        <span>{{ conversationStore.currentContactName }}</span>
+      <div class="flex flex-col min-w-0">
+        <span class="font-semibold">
+          {{ conversationStore.currentContactName }}
+        </span>
+
+        <span
+          v-if="conversationStore.current?.subject"
+          class="text-xs text-muted-foreground truncate"
+          :title="conversationStore.current.subject"
+        >
+          {{ conversationStore.current.subject }}
+        </span>
       </div>
       <div>
         <DropdownMenu>
