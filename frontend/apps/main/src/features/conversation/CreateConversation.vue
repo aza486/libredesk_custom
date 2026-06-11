@@ -533,7 +533,7 @@ const createConversation = form.handleSubmit(async (values) => {
         return
       }
 
-    values.inbox_id = 2
+    values.inbox_id = 3
 
     if (values.agent_id) {
 
