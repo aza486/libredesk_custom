@@ -40,7 +40,7 @@ export const useConversationStore = defineStore('conversation', () => {
     return statuses.value.map(s => ({ label: s.name, value: s.id }))
   })
   const statusOptionsNoSnooze = computed(() =>
-    statuses.value.filter(s => s.name !== 'Snoozed').map(s => ({
+    statuses.value.filter(s => s.name !== CONVERSATION_DEFAULT_STATUSES.SNOOZED).map(s => ({
       label: s.name,
       value: s.id
     }))
@@ -769,6 +769,7 @@ export const useConversationStore = defineStore('conversation', () => {
   async function updateAssignee(type, v) {
     try {
       await api.updateAssignee(conversation.data.uuid, type, v)
+      conversation.data[`assigned_${type}_id`] = v.assignee_id
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',

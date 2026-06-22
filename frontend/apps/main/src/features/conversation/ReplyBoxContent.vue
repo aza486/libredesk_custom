@@ -130,6 +130,7 @@
       :isSending="isSending"
       :enableSend="enableSend"
       :handleSend="handleSend"
+      :handleSendAndSetStatus="handleSendAndSetStatus"
       @emojiSelect="handleEmojiSelect"
     />
   </div>
@@ -275,6 +276,7 @@ const props = defineProps({
 const emit = defineEmits([
   'toggleFullscreen',
   'send',
+  'sendAndSetStatus',
   'fileUpload',
   'inlineImageUpload',
   'fileDelete',
@@ -338,19 +340,32 @@ const validateEmails = async () => {
   })
 }
 
-/**
- * Send the reply or private note
- */
-const handleSend = async () => {
+const validateBeforeSend = async () => {
   await validateEmails()
   if (emailErrors.value.length > 0) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: t('globals.messages.correctEmailErrors')
     })
-    return
+    return false
   }
+  return true
+}
+
+/**
+ * Send the reply or private note
+ */
+const handleSend = async () => {
+  if (!(await validateBeforeSend())) return
   emit('send')
+}
+
+/**
+ * Send the reply or private note and set conversation status
+ */
+const handleSendAndSetStatus = async (status) => {
+  if (!(await validateBeforeSend())) return
+  emit('sendAndSetStatus', status)
 }
 
 const handleFileUpload = (event) => {

@@ -50,14 +50,29 @@ var (
 	//go:embed queries.sql
 	efs                             embed.FS
 	errConversationNotFound         = errors.New("conversation not found")
-	conversationsAllowedFields      = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "last_interaction_at", "created_at", "waiting_since", "next_sla_deadline_at", "priority_id"}
+	ErrConversationAlreadyAssigned  = errors.New("conversation already assigned")
+	conversationsAllowedFields      = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "last_interaction_at", "last_interaction_sender", "created_at", "waiting_since", "next_sla_deadline_at", "snoozed_until", "sla_policy_id"}
 	conversationStatusAllowedFields = []string{"id", "name"}
-	usersAllowedFields              = []string{"email"}
+	usersAllowedFields              = []string{"email", "external_user_id"}
+	inboxesAllowedFields            = []string{"channel"}
 )
 
 const (
 	conversationsListMaxPageSize = 500
 )
+
+var conversationFilterRenderers = dbutil.FieldRenderers{
+	"conversations": {
+		"tags": renderTagFilter,
+	},
+}
+
+var conversationListAllowedFields = dbutil.AllowedFields{
+	"conversations":         conversationsAllowedFields,
+	"conversation_statuses": conversationStatusAllowedFields,
+	"users":                 usersAllowedFields,
+	"inboxes":               inboxesAllowedFields,
+}
 
 // Manager handles the operations related to conversations
 type Manager struct {
@@ -278,6 +293,7 @@ type queries struct {
 	UpsertUserLastSeen                 *sqlx.Stmt `query:"upsert-user-last-seen"`
 	MarkConversationUnread             *sqlx.Stmt `query:"mark-conversation-unread"`
 	UpdateConversationAssignedUser     *sqlx.Stmt `query:"update-conversation-assigned-user"`
+	ClaimUnassignedConversation        *sqlx.Stmt `query:"claim-unassigned-conversation"`
 	UpdateConversationAssignedTeam     *sqlx.Stmt `query:"update-conversation-assigned-team"`
 	UpdateConversationCustomAttributes *sqlx.Stmt `query:"update-conversation-custom-attributes"`
 	UpdateConversationPriority         *sqlx.Stmt `query:"update-conversation-priority"`
@@ -839,14 +855,11 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 			found := false
 
 			for _, uid := range visibleUsers {
-
 				switch v := uid.(type) {
-
 				case float64:
 					if int(v) == assigneeID {
 						found = true
 					}
-
 				case int:
 					if v == assigneeID {
 						found = true
@@ -862,26 +875,43 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 				visibleUsers = append(visibleUsers, assigneeID)
 				attrs["visible_users"] = visibleUsers
 
-				c.lo.Info(
-					"PRIVATE VISIBILITY ADD",
-					"conversation", uuid,
-					"new_user", assigneeID,
-				)
-
-				_ = c.UpdateConversationCustomAttributes(
-					uuid,
-					attrs,
-				)
+				_ = c.UpdateConversationCustomAttributes(uuid, attrs)
 			}
 		}
 	}
 
-	if err := c.UpdateAssignee(uuid, assigneeID, models.AssigneeTypeUser); err != nil {
+	if err := c.updateAssignee(uuid, assigneeID, models.AssigneeTypeUser); err != nil {
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	// Refetch the conversation to get the updated details.
-	conversation, err = c.GetConversation(0, uuid, "")
+	return c.afterUserAssignedHooks(uuid, assigneeID, actor)
+}
+
+// ClaimUnassignedConversation atomically assigns a conversation only if still unassigned and still in expectedTeamID, else returns ErrConversationAlreadyAssigned.
+func (c *Manager) ClaimUnassignedConversation(uuid string, assigneeID, expectedTeamID int, actor umodels.User) error {
+	prev, prevErr := c.GetConversationListItem(uuid)
+
+	res, err := c.q.ClaimUnassignedConversation.Exec(uuid, assigneeID, expectedTeamID)
+	if err != nil {
+		c.lo.Error("error claiming unassigned conversation", "uuid", uuid, "error", err)
+		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		c.lo.Error("error reading rows affected for conversation claim", "uuid", uuid, "error", err)
+		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+	if rows == 0 {
+		return ErrConversationAlreadyAssigned
+	}
+
+	c.broadcastReassignment(uuid, prev, prevErr)
+	return c.afterUserAssignedHooks(uuid, assigneeID, actor)
+}
+
+// afterUserAssignedHooks runs the side-effects shared by every user-assignment path.
+func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umodels.User) error {
+	conversation, err := c.GetConversation(0, uuid, "")
 	if err != nil {
 		return err
 	}
@@ -893,10 +923,8 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		"conversation":      conversation,
 	})
 
-	// Evaluate automation rules.
 	c.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationUserAssigned)
 
-	// Send notifications to assignee (skip if self-assigning).
 	if assigneeID != actor.ID {
 		if err := c.NotifyAssignment([]int{assigneeID}, conversation); err != nil {
 			c.lo.Error("error sending assignment notification", "error", err)
@@ -907,7 +935,6 @@ func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, ac
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	// Broadcast conversation update to widget clients with assignee info.
 	agent, err := c.userStore.GetAgent(assigneeID, "")
 	if err == nil {
 		c.SignAvatarURL(&agent.AvatarURL)
@@ -1001,7 +1028,7 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 	}
 	previousAssignedTeamID := conversation.AssignedTeamID.Int
 
-	if err := c.UpdateAssignee(uuid, teamID, models.AssigneeTypeTeam); err != nil {
+	if err := c.updateAssignee(uuid, teamID, models.AssigneeTypeTeam); err != nil {
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
@@ -1047,34 +1074,18 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 	return nil
 }
 
-// UpdateAssignee updates the assignee of a conversation.
-func (c *Manager) UpdateAssignee(uuid string, assigneeID int, assigneeType string) error {
-	prev, prevErr := c.GetConversationListItem(uuid)
-	switch assigneeType {
-	case models.AssigneeTypeUser:
-		if _, err := c.q.UpdateConversationAssignedUser.Exec(uuid, assigneeID); err != nil {
-			c.lo.Error("error updating conversation assignee", "error", err)
-			return fmt.Errorf("updating assignee: %w", err)
-		}
-	case models.AssigneeTypeTeam:
-		if _, err := c.q.UpdateConversationAssignedTeam.Exec(uuid, assigneeID); err != nil {
-			c.lo.Error("error updating conversation assignee", "error", err)
-			return fmt.Errorf("updating assignee: %w", err)
-		}
-	default:
-		return fmt.Errorf("invalid assignee type: %s", assigneeType)
-	}
+// broadcastReassignment broadcasts a reassignment to agents, given the conversation's prior list item.
+func (c *Manager) broadcastReassignment(uuid string, prev models.ConversationListItem, prevErr error) {
 	next, nextErr := c.GetConversationListItem(uuid)
 	if nextErr != nil {
 		c.lo.Error("error fetching conversation list item for assignee broadcast", "uuid", uuid, "error", nextErr)
-		return nil
+		return
 	}
 	var prevPtr *models.ConversationListItem
 	if prevErr == nil {
 		prevPtr = &prev
 	}
 	c.BroadcastConvReassignment(prevPtr, &next)
-	return nil
 }
 
 // UpdateConversationPriority updates the priority of a conversation.
@@ -1946,35 +1957,6 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 		return "", nil, fmt.Errorf("no conversation list types specified")
 	}
 
-	// Parse filters to extract tag filters
-	var (
-		filters          []dbutil.Filter
-		tagFilters       []dbutil.Filter
-		remainingFilters []dbutil.Filter
-	)
-	if filtersJSON != "" && filtersJSON != "[]" {
-		if err := json.Unmarshal([]byte(filtersJSON), &filters); err != nil {
-			return "", nil, fmt.Errorf("invalid filters JSON: %w", err)
-		}
-
-		// Separate tag filters from other filters
-		for _, f := range filters {
-			if f.Field == "tags" && (f.Operator == "contains" || f.Operator == "not contains" || f.Operator == "set" || f.Operator == "not set") {
-				tagFilters = append(tagFilters, f)
-			} else {
-				remainingFilters = append(remainingFilters, f)
-			}
-		}
-
-		// Update filtersJSON with remaining filters for the generic builder
-		if len(remainingFilters) > 0 {
-			b, _ := json.Marshal(remainingFilters)
-			filtersJSON = string(b)
-		} else {
-			filtersJSON = "[]"
-		}
-	}
-
 	// Prepare the conditions based on the list types.
 	conditions := []string{}
 	for _, lt := range listTypes {
@@ -2047,52 +2029,6 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 		whereClause = "AND (" + strings.Join(conditions, " OR ") + ")"
 	}
 
-	// Add tag filter conditions
-	// TODO: Evaluate - https://github.com/Masterminds/squirrel when required.
-	for _, tf := range tagFilters {
-		switch tf.Operator {
-		case "contains", "not contains":
-			var tagIDs []int
-			if err := json.Unmarshal([]byte(tf.Value), &tagIDs); err != nil {
-				return "", nil, fmt.Errorf("invalid tag IDs in filter: %w", err)
-			}
-			if len(tagIDs) > 0 {
-				paramIdx := len(qArgs) + 1
-				switch tf.Operator {
-				case "contains":
-					// Has any of the tags
-					tagCondition := fmt.Sprintf(` AND conversations.id IN (
-						SELECT DISTINCT conversation_id 
-						FROM conversation_tags 
-						WHERE tag_id = ANY($%d::int[])
-					)`, paramIdx)
-					whereClause += tagCondition
-				case "not contains":
-					// Doesn't have any of the tags
-					tagCondition := fmt.Sprintf(` AND conversations.id NOT IN (
-						SELECT DISTINCT conversation_id 
-						FROM conversation_tags 
-						WHERE tag_id = ANY($%d::int[])
-					)`, paramIdx)
-					whereClause += tagCondition
-				}
-				qArgs = append(qArgs, pq.Array(tagIDs))
-			}
-		case "set":
-			// Has any tags at all
-			whereClause += ` AND EXISTS (
-				SELECT 1 FROM conversation_tags 
-				WHERE conversation_id = conversations.id
-			)`
-		case "not set":
-			// Has no tags at all
-			whereClause += ` AND NOT EXISTS (
-				SELECT 1 FROM conversation_tags 
-				WHERE conversation_id = conversations.id
-			)`
-		}
-	}
-
 	baseQuery = fmt.Sprintf(baseQuery, whereClause)
 
 	return dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
@@ -2100,11 +2036,21 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 		OrderBy:  orderBy,
 		Page:     page,
 		PageSize: pageSize,
-	}, filtersJSON, dbutil.AllowedFields{
-		"conversations":         conversationsAllowedFields,
-		"conversation_statuses": conversationStatusAllowedFields,
-		"users":                 usersAllowedFields,
-	})
+		Location: c.filterLocation(),
+	}, filtersJSON, conversationListAllowedFields, conversationFilterRenderers)
+}
+
+// ValidateListFilters structurally validates a conversation view's filters payload.
+func (c *Manager) ValidateListFilters(filtersJSON string) error {
+	err := dbutil.ValidateFilters(filtersJSON, conversationListAllowedFields, conversationFilterRenderers)
+	if err == nil {
+		return nil
+	}
+	c.lo.Error("error validating view filters", "error", err)
+	if errors.Is(err, dbutil.ErrTooManyGroups) {
+		return envelope.NewError(envelope.InputError, c.i18n.Ts("conversation.filters.tooManyGroups", "max", fmt.Sprintf("%d", dbutil.MaxFilterGroups)), nil)
+	}
+	return envelope.NewError(envelope.InputError, c.i18n.T("globals.messages.invalidFilters"), nil)
 }
 
 // ProcessCSATStatus processes messages and adds CSAT submission status for CSAT messages.
@@ -2361,9 +2307,68 @@ func (c *Manager) FilterAuthorizedListUUIDs(agentID int, uuids []string) ([]stri
 	return authorized, nil
 }
 
+// updateAssignee updates the team / user assignee of a conversation and broadcasts the reassignment to connected clients.
+func (c *Manager) updateAssignee(uuid string, assigneeID int, assigneeType string) error {
+	prev, prevErr := c.GetConversationListItem(uuid)
+	switch assigneeType {
+	case models.AssigneeTypeUser:
+		if _, err := c.q.UpdateConversationAssignedUser.Exec(uuid, assigneeID); err != nil {
+			c.lo.Error("error updating conversation assignee", "error", err)
+			return fmt.Errorf("updating assignee: %w", err)
+		}
+	case models.AssigneeTypeTeam:
+		if _, err := c.q.UpdateConversationAssignedTeam.Exec(uuid, assigneeID); err != nil {
+			c.lo.Error("error updating conversation assignee", "error", err)
+			return fmt.Errorf("updating assignee: %w", err)
+		}
+	default:
+		return fmt.Errorf("invalid assignee type: %s", assigneeType)
+	}
+	c.broadcastReassignment(uuid, prev, prevErr)
+	return nil
+}
+
+// filterLocation returns the configured app timezone for resolving date filters. The builder normalizes invalid/empty values to UTC.
+func (c *Manager) filterLocation() string {
+	b, err := c.settingsStore.Get("app.timezone")
+	if err != nil {
+		return ""
+	}
+	var tz string
+	if err := json.Unmarshal(b, &tz); err != nil {
+		return ""
+	}
+	return tz
+}
+
 func nullTimeOrNil(t null.Time) any {
 	if !t.Valid || t.Time.IsZero() {
 		return nil
 	}
 	return t.Time.Format(time.RFC3339)
+}
+
+func renderTagFilter(operator, value string, paramIndex int) (string, []any, error) {
+	switch operator {
+	case "contains", "not contains":
+		var tagIDs []int
+		if err := json.Unmarshal([]byte(value), &tagIDs); err != nil {
+			return "", nil, fmt.Errorf("invalid tag IDs in filter: %w", err)
+		}
+		if len(tagIDs) == 0 {
+			return "", nil, nil
+		}
+		op := "IN"
+		if operator == "not contains" {
+			op = "NOT IN"
+		}
+		sql := fmt.Sprintf("conversations.id %s (SELECT DISTINCT conversation_id FROM conversation_tags WHERE tag_id = ANY($%d::int[]))", op, paramIndex)
+		return sql, []any{pq.Array(tagIDs)}, nil
+	case "set":
+		return "EXISTS (SELECT 1 FROM conversation_tags WHERE conversation_id = conversations.id)", nil, nil
+	case "not set":
+		return "NOT EXISTS (SELECT 1 FROM conversation_tags WHERE conversation_id = conversations.id)", nil, nil
+	default:
+		return "", nil, fmt.Errorf("invalid operator for tags: %s", operator)
+	}
 }

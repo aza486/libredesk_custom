@@ -356,6 +356,7 @@ import { UserTypeAgent } from '@/constants/user'
 import { IdCard } from 'lucide-vue-next'
 import api from '@/api'
 import { hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
+import { useRouter } from 'vue-router'
 
 const dialogOpen = defineModel({
   required: false,
@@ -371,8 +372,10 @@ const loading = ref(false)
 const searchResults = ref([])
 const emailQuery = ref('')
 const conversationStore = useConversationStore()
+const router = useRouter()
 const macroStore = useMacroStore()
 let timeoutId = null
+let previousMacroView = ''
 const insertContent = ref('')
 const selectedContact = ref(null)
 const emailInputRef = ref(null)
@@ -423,6 +426,7 @@ onUnmounted(() => {
   clearTimeout(timeoutId)
   clearMediaFiles()
   conversationStore.resetMacro(MACRO_CONTEXT.NEW_CONVERSATION)
+  macroStore.setCurrentView(previousMacroView)
   emitter.emit(EMITTER_EVENTS.SET_NESTED_COMMAND, {
     command: null,
     open: false
@@ -430,6 +434,7 @@ onUnmounted(() => {
 })
 
 onMounted(() => {
+  previousMacroView = macroStore.currentView
   macroStore.setCurrentView('starting_conversation')
   emitter.emit(EMITTER_EVENTS.SET_NESTED_COMMAND, {
     command: 'apply-macro-to-new-conversation',
@@ -533,7 +538,7 @@ const createConversation = form.handleSubmit(async (values) => {
         return
       }
 
-    values.inbox_id = 3
+    values.inbox_id = 2
 
     if (values.agent_id) {
 
@@ -586,6 +591,14 @@ const createConversation = form.handleSubmit(async (values) => {
     }
     dialogOpen.value = false
     form.resetForm()
+
+    await router.push({
+      name: 'inbox-conversation',
+      params: {
+        type: 'created',
+        uuid: conversationUUID
+      }
+    })
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
