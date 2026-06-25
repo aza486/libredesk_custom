@@ -603,12 +603,15 @@ for (const view of props.userViews || []) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton :isActive="isActiveParent('/inboxes/all')" @click="navigateToInbox('all')">
-                    <List />
-                    <span>
-                      {{ t('globals.messages.all') }}
-                    </span>
+              <SidebarMenuItem v-if="userStore.roles.includes('Admin')">
+                <SidebarMenuButton
+                  :isActive="isActiveParent('/inboxes/all')"
+                  @click="navigateToInbox('all')"
+                >
+                  <List />
+                  <span>
+                    {{ t('globals.messages.all') }}
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

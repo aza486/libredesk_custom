@@ -8,6 +8,7 @@ import { useAppSettingsStore } from '../stores/appSettings'
 import { getI18n } from '../i18n'
 import { abortRouteScope } from '../api'
 
+
 const routes = [
   {
     path: '/',
