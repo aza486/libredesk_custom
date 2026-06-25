@@ -158,7 +158,7 @@ import CreateConversation from '@/features/conversation/CreateConversation.vue'
 import { Inbox, Shield, FileLineChart, BookUser } from 'lucide-vue-next'
 import SmallScreenOverlay from '@/components/SmallScreenOverlay.vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -176,6 +176,7 @@ import NotificationBell from '@main/components/sidebar/NotificationBell.vue'
 import api from '@main/api'
 
 const route = useRoute()
+const router = useRouter()
 const emitter = useEmitter()
 
 // Small screen overlay - shown once per session for screens < 768px.
@@ -237,6 +238,19 @@ onMounted(() => {
   listenViewRefresh()
   initStores()
 })
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (
+      route.path.startsWith('/inboxes/all') &&
+      !userStore.roles.includes('Admin')
+    ) {
+      router.replace('/inboxes/assigned')
+    }
+  },
+  { immediate: true }
+)
 
 // Initialize data stores
 const initStores = async () => {
