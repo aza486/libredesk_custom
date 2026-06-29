@@ -44,6 +44,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
+	tagmanager "github.com/abhinavxd/libredesk/internal/tag"
 )
 
 var (
@@ -1223,6 +1224,11 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 
 // SetConversationTags sets the tags associated with a conversation.
 func (c *Manager) SetConversationTags(uuid string, action string, tagNames []string, actor umodels.User) error {
+		c.lo.Info(
+		"SET TAGS DEBUG",
+		"action", action,
+		"tagNames", tagNames,
+	)
 	// Get current tags list.
 	prevTags, err := c.getConversationTags(uuid)
 	if err != nil {
@@ -1232,6 +1238,18 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 		prevTags = []string{}
 	}
 
+	if action == amodels.ActionAddTags {
+	for _, tagName := range tagNames {
+		if tagmanager.IsSystemTagName(tagName) {
+			return envelope.NewError(
+				envelope.InputError,
+				"System tags cannot be added manually.",
+				nil,
+			)
+		}
+	}
+}
+
 	// Add specified tags, ignore existing ones.
 	if action == amodels.ActionAddTags {
 		if _, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
@@ -1240,6 +1258,18 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 		}
 	}
 
+	if action == amodels.ActionSetTags {
+	for _, prevTag := range prevTags {
+		if tagmanager.IsSystemTagName(prevTag) && !slices.Contains(tagNames, prevTag) {
+			return envelope.NewError(
+				envelope.InputError,
+				"System tags cannot be removed.",
+				nil,
+			)
+		}
+	}
+}
+
 	// Set specified tags and remove all other existing ones.
 	if action == amodels.ActionSetTags {
 		if _, err := c.q.SetConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
@@ -1247,6 +1277,18 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 			return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 		}
 	}
+
+	if action == amodels.ActionRemoveTags {
+	for _, tagName := range tagNames {
+		if tagmanager.IsSystemTagName(tagName) {
+			return envelope.NewError(
+				envelope.InputError,
+				"System tags cannot be removed.",
+				nil,
+			)
+		}
+	}
+}
 
 	// Delete specified tags, ignore all others.
 	if action == amodels.ActionRemoveTags {
@@ -1303,6 +1345,29 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	}
 
 	c.BroadcastConversationUpdate(uuid, map[string]any{"tags": newTags})
+
+	return nil
+}
+
+// AddSystemTags adds system-managed tags to a conversation without
+// recording user activity or triggering tag change webhooks.
+func (c *Manager) AddSystemTags(uuid string, tagNames []string) error {
+	c.lo.Info("ADD SYSTEM TAGS", "uuid", uuid, "tags", tagNames)
+
+	if len(tagNames) == 0 {
+		return nil
+	}
+
+	if _, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
+		c.lo.Error("error adding system conversation tags", "uuid", uuid, "error", err)
+		return envelope.NewError(
+			envelope.GeneralError,
+			c.i18n.T("globals.messages.somethingWentWrong"),
+			nil,
+		)
+	}
+
+	c.lo.Info("SYSTEM TAGS ADDED", "uuid", uuid)
 
 	return nil
 }

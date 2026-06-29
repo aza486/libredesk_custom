@@ -60,7 +60,17 @@ func (t *Manager) GetAll() ([]models.Tag, error) {
 		t.lo.Error("error fetching tags", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, t.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-	return tags, nil
+	filtered := make([]models.Tag, 0, len(tags))
+
+	for _, tag := range tags {
+		if IsSystemTag(tag.ID) {
+			continue
+		}
+
+		filtered = append(filtered, tag)
+	}
+
+	return filtered, nil
 }
 
 // Create creates a new tag.
@@ -78,6 +88,13 @@ func (t *Manager) Create(name string) (models.Tag, error) {
 
 // Delete deletes a tag by ID.
 func (t *Manager) Delete(id int) error {
+	if IsSystemTag(id) {
+		return envelope.NewError(
+			envelope.InputError,
+			"System tags cannot be deleted.",
+			nil,
+		)
+	}
 	if _, err := t.q.DeleteTag.Exec(id); err != nil {
 		t.lo.Error("error deleting tag", "error", err)
 		return envelope.NewError(envelope.GeneralError, t.i18n.T("globals.messages.somethingWentWrong"), nil)
@@ -87,6 +104,14 @@ func (t *Manager) Delete(id int) error {
 
 // Update updates a tag by id.
 func (t *Manager) Update(id int, name string) (models.Tag, error) {
+	if IsSystemTag(id) {
+		return models.Tag{},
+			envelope.NewError(
+				envelope.InputError,
+				"System tags cannot be modified.",
+				nil,
+			)
+	}
 	var tag models.Tag
 	if err := t.q.UpdateTag.Get(&tag, id, name); err != nil {
 		t.lo.Error("error updating tag", "error", err)
