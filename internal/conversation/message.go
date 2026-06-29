@@ -1301,6 +1301,13 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 		if err != nil || conversationID == 0 {
 			return 0, "", false, err
 		}
+		if err := m.AddSystemTags(conversationUUID, []string{"🦽Kundenticket"}); err != nil {
+			m.lo.Error(
+				"failed to add customer system tag",
+				"conversation_uuid", conversationUUID,
+				"error", err,
+			)
+		}
 		return conversationID, conversationUUID, true, nil
 	}
 

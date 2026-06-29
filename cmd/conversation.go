@@ -1110,6 +1110,9 @@ func handleCreateConversation(r *fastglue.Request) error {
 		app.lo.Error("error creating conversation", "error", err)
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
 	}
+	if err := app.conversation.AddSystemTags(conversationUUID, []string{"🏢Intern"}); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
 
 	// Get media for the attachment ids, skip any already associated with a model.
 	media, err := getUnassociatedMedia(app, req.Attachments)
