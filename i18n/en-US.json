@@ -486,6 +486,8 @@
   "contextLink.urlTemplate": "URL template",
   "contextLink.urlTemplateHelp": "{'{{token}}'} is a base64-encoded AES-256-GCM encrypted blob containing all contact and agent fields (requires secret). Individual variables like {'{{email}}'}, {'{{phone}}'}, {'{{external_user_id}}'}, {'{{contact_id}}'}, {'{{first_name}}'}, {'{{last_name}}'}, {'{{conversation_uuid}}'} are passed as plain text.",
   "conversation.agentAssigned": "Agent assigned",
+  "conversation.ai.useReply": "Use AI reply",
+  "conversation.ai.writeOwnReply": "Write own reply",
   "conversation.allLoaded": "All conversations loaded",
   "conversation.assignSelfAction": "Assign to me",
   "conversation.assignSelfPrompt": "This conversation isn't assigned to anyone.",

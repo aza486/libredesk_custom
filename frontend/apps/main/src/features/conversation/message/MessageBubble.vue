@@ -152,6 +152,20 @@
             <!-- CSAT Response -->
             <CSATResponseDisplay :message="message" />
 
+            <!-- Actions for AI-generated private notes -->
+            <div
+              v-if="aiSuggestedReply"
+              class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/60"
+            >
+              <Button size="sm" @click="emit('composeReply', { content: aiSuggestedReply })">
+                {{ t('conversation.ai.useReply') }}
+              </Button>
+
+              <Button size="sm" variant="outline" @click="emit('composeReply')">
+                {{ t('conversation.ai.writeOwnReply') }}
+              </Button>
+            </div>
+
             <!-- Spinner for Pending Messages (outgoing only) -->
             <Spinner v-if="isOutgoing && message.status === 'pending'" size="sm" />
 
@@ -268,6 +282,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/u
 import { Spinner } from '@shared-ui/components/ui/spinner'
 import { formatMessageTimestamp, formatFullTimestamp } from '@shared-ui/utils/datetime.js'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
+import { Button } from '@shared-ui/components/ui/button'
 import { Letter } from 'vue-letter'
 import { allowedCssProperties } from 'lettersanitizer'
 import ImageLightbox from '@/components/ImageLightbox.vue'
@@ -276,6 +291,7 @@ import MessageEnvelope from './MessageEnvelope.vue'
 import CSATResponseDisplay from './CSATResponseDisplay.vue'
 import api from '@main/api'
 import { containsQuoteMarkers } from '@shared-ui/utils/quotedContent.js'
+import { extractAiSuggestedReply } from '@main/utils/ai-note.js'
 
 const extendedCssProperties = [...allowedCssProperties, 'transform', 'transform-origin']
 
@@ -317,6 +333,7 @@ const props = defineProps({
     default: false
   }
 })
+const emit = defineEmits(['composeReply'])
 
 const convStore = useConversationStore()
 const { t } = useI18n()
@@ -358,6 +375,8 @@ const sanitizedContent = computed(() => {
   }
   return props.message.content || ''
 })
+
+const aiSuggestedReply = computed(() => extractAiSuggestedReply(props.message))
 
 const nonInlineAttachments = computed(() =>
   props.message.attachments.filter((attachment) => attachment.disposition !== 'inline')

@@ -394,6 +394,8 @@
   "contextLink.tokenExpiry": "Token-Ablaufzeit (Sekunden)",
   "contextLink.urlTemplate": "URL-Vorlage",
   "conversation.agentAssigned": "Mitarbeiter zugewiesen",
+  "conversation.ai.useReply": "KI-Antwort übernehmen",
+  "conversation.ai.writeOwnReply": "Eigene Antwort",
   "conversation.allLoaded": "Alle Konversationen geladen",
   "conversation.couldNotFetch": "Konversationen konnten nicht abgerufen werden",
   "conversation.createdByMe": "Von mir erstellt",

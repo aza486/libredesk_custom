@@ -65,14 +65,15 @@
 
     <!-- Messages & reply box -->
     <div class="flex flex-col flex-grow overflow-hidden">
-      <MessageList class="flex-1 overflow-y-auto" />
-      <ReplyBox />
+      <MessageList class="flex-1 overflow-y-auto" @compose-reply="handleComposeReply" />
+      <ReplyBox ref="replyBoxRef" />
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { ref } from 'vue'
 import { useConversationStore } from '../../stores/conversation'
 import { Clock, MoreHorizontal } from 'lucide-vue-next'
 import {
@@ -95,6 +96,11 @@ import api from '@main/api'
 const conversationStore = useConversationStore()
 const emitter = useEmitter()
 const { t } = useI18n()
+const replyBoxRef = ref(null)
+
+const handleComposeReply = (payload) => {
+  replyBoxRef.value?.openReply(payload)
+}
 
 const isSnoozed = computed(
   () => conversationStore.current?.status === CONVERSATION_DEFAULT_STATUSES.SNOOZED
