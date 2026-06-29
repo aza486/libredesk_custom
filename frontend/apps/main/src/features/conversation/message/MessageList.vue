@@ -43,6 +43,7 @@
                 :direction="row.message.type"
                 :group-with-prev="row.groupWithPrev"
                 :group-with-next="row.groupWithNext"
+                @compose-reply="emit('composeReply', $event)"
               />
             </div>
             <div v-else-if="row.message.type === 'outgoing' && row.message.private">
@@ -51,6 +52,7 @@
                 direction="outgoing"
                 :group-with-prev="row.groupWithPrev"
                 :group-with-next="row.groupWithNext"
+                @compose-reply="emit('composeReply', $event)"
               />
             </div>
             <div v-else-if="row.message.type === 'activity'">
@@ -101,6 +103,8 @@ import { useBulkActionPermissions } from '@main/composables/useBulkActionPermiss
 import MessagesSkeleton from './MessagesSkeleton.vue'
 import { TypingIndicator } from '@shared-ui/components/TypingIndicator'
 import { useStickyScroll } from '@shared-ui/composables'
+
+const emit = defineEmits(['composeReply'])
 
 const MENTION_TOP_OFFSET_RATIO = 0.25
 const MENTION_SETTLE_FRAMES = 3

@@ -149,7 +149,8 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, toRaw } from 'vue'
+import { ref, watch, computed, toRaw, nextTick } from 'vue'
+import { useStorage } from '@vueuse/core'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 import { MACRO_CONTEXT } from '@main/constants/conversation'
@@ -269,6 +270,16 @@ const showContactEmailWarning = ref(false)
 const showMissingTagsWarning = ref(false)
 const deferredStatus = ref(null)
 const mentions = ref([])
+
+const openReply = async ({ content } = {}) => {
+  isEditorFullscreen.value = false
+  messageType.value = 'reply'
+  if (typeof content === 'string') htmlContent.value = content
+  await nextTick()
+  replyBoxContentRef.value?.focus()
+}
+
+defineExpose({ openReply })
 
 aiPromptStore.fetchPrompts()
 
