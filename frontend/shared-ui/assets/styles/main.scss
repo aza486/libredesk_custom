@@ -13,6 +13,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;
@@ -20,6 +21,7 @@
 }
 
 @layer base {
+
   html,
   body {
     font-family: 'Instrument Sans', sans-serif;
@@ -49,6 +51,7 @@
   }
 
   @media (max-width: 768px) {
+
     html,
     body {
       overflow-x: auto;
@@ -111,6 +114,7 @@
       font-weight: 500;
     }
   }
+
   :root {
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.9% 10%;
@@ -121,6 +125,7 @@
     --sidebar-border: 240 5% 88%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --sidebar-background: 240 5% 7%;
     --sidebar-foreground: 0 0% 100%;
@@ -158,6 +163,10 @@
     --primary: 240 5.9% 10%;
     --primary-foreground: 0 0% 98%;
 
+    --accent-blue: 240 100% 50%;
+    --accent-orange: 24 100% 50%;
+    --accent-red: 0 100% 100%;
+
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
 
@@ -190,6 +199,10 @@
 
     --primary: 240 4% 94%;
     --primary-foreground: 240 7% 11%;
+
+    --accent-blue: 240 100% 50%;
+    --accent-orange: 24 100% 50%;
+    --accent-red: 0 100% 50%;
 
     --secondary: 240 5% 16%;
     --secondary-foreground: 240 4% 94%;
@@ -301,6 +314,7 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 }
+
 // Scrollbar end
 
 .show-quoted-text {
@@ -310,6 +324,7 @@
 }
 
 .hide-quoted-text {
+
   // Selectors below use attribute-suffix matching because vue-letter
   // prefixes every id/class with a random "msg_XYZ_" at render time, so
   // raw "#appendonsend" would never match.
@@ -318,13 +333,13 @@
   // after it. Outlook always top-posts, so trailing siblings are quote.
   blockquote,
   [id$="_divRplyFwdMsg"],
-  [id$="_divRplyFwdMsg"] ~ *,
+  [id$="_divRplyFwdMsg"]~*,
   [id$="_appendonsend"],
-  [id$="_appendonsend"] ~ *,
+  [id$="_appendonsend"]~*,
   [id$="_OLK_SRC_BODY_SECTION"],
-  [id$="_OLK_SRC_BODY_SECTION"] ~ *,
+  [id$="_OLK_SRC_BODY_SECTION"]~*,
   [class*="_OutlookMessageHeader"],
-  [class*="_OutlookMessageHeader"] ~ *,
+  [class*="_OutlookMessageHeader"]~*,
   [class*="_yahoo_quoted"],
   [class*="_gmail_quote_container"] {
     @apply hidden;
@@ -353,6 +368,7 @@
 // Hide number input spinners.
 .hide-number-spinners {
   -moz-appearance: textfield;
+
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;

@@ -1,7 +1,10 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- Header -->
-    <div class="h-12 flex-shrink-0 px-2 border-b flex items-center justify-between">
+    <div
+      class="conversation-header h-12 flex-shrink-0 px-2 border-b flex items-center justify-between"
+      :class="headerClass"
+    >
       <div class="flex flex-col min-w-0">
         <span class="font-semibold">
           {{ conversationStore.currentContactName }}
@@ -72,8 +75,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { ref } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useConversationStore } from '../../stores/conversation'
 import { Clock, MoreHorizontal } from 'lucide-vue-next'
 import {
@@ -94,9 +96,38 @@ import { useI18n } from 'vue-i18n'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import api from '@main/api'
 const conversationStore = useConversationStore()
+watch(
+  () => conversationStore.current,
+  (value) => {
+    console.log(value)
+  },
+  { immediate: true }
+)
 const emitter = useEmitter()
 const { t } = useI18n()
 const replyBoxRef = ref(null)
+
+const headerClass = computed(() => {
+  const tags = conversationStore.current?.tags ?? []
+
+  if (tags.includes("🧙🏼Mensch erforderlich")) {
+    return "conversation-header--human"
+  }
+
+  if (conversationStore.current?.priority === "High") {
+    return "conversation-header--human"
+  }
+
+  if (tags.includes("🏢Intern")) {
+    return "conversation-header--internal"
+  }
+
+  if (tags.includes("🦽Kundenticket")) {
+    return "conversation-header--customer"
+  }
+
+  return ""
+})
 
 const handleComposeReply = (payload) => {
   replyBoxRef.value?.openReply(payload)
@@ -150,3 +181,17 @@ const handleUpdateStatus = (status) => {
   conversationStore.updateStatus(status)
 }
 </script>
+
+<style scoped>
+.conversation-header--internal {
+  border-left: 5px solid hsl(var(--accent-blue));
+}
+
+.conversation-header--customer {
+  border-left: 5px solid hsl(var(--accent-orange));
+}
+
+.conversation-header--human {
+  border-left: 5px solid hsl(var(--accent-red));
+}
+</style>
