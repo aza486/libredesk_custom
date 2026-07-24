@@ -169,13 +169,15 @@
             <!-- Spinner for Pending Messages (outgoing only) -->
             <Spinner v-if="isOutgoing && message.status === 'pending'" size="sm" />
 
-            <button
-              v-if="canDeletePrivateNote"
-              @click="deletePrivateNote"
-              class="text-xs text-muted-foreground hover:text-destructive transition-colors"
-            >
-              Löschen
-            </button>
+            <div v-if="canDeletePrivateNote" class="flex justify-end mt-3">
+              <button
+                @click="alertOpen = true"
+                class="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                <Trash2 :size="12" />
+                Löschen
+              </button>
+            </div>
 
             <!-- Status Icons (outgoing only) -->
             <div v-if="isOutgoing" class="flex items-center space-x-2 mt-2 self-end">
@@ -277,12 +279,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@shared-ui/components/ui/alert-dialog'
+
 import { Button } from '@shared-ui/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/ui/tooltip'
 import { Spinner } from '@shared-ui/components/ui/spinner'
 import { formatMessageTimestamp, formatFullTimestamp } from '@shared-ui/utils/datetime.js'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
-import { Button } from '@shared-ui/components/ui/button'
 import { Letter } from 'vue-letter'
 import { allowedCssProperties } from 'lettersanitizer'
 import ImageLightbox from '@/components/ImageLightbox.vue'
@@ -341,10 +343,8 @@ const userStore = useUserStore()
 
 const alertOpen = ref(false)
 
-const deleteNote = () => {
-  const conversationUUID = convStore.current?.uuid
-  if (!conversationUUID) return
-  convStore.deleteMessage(conversationUUID, props.message.uuid)
+const deleteNote = async () => {
+  await deletePrivateNote()
   alertOpen.value = false
 }
 

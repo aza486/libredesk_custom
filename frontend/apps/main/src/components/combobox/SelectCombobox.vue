@@ -172,7 +172,7 @@ const isCurrentUser = (item) => {
   )
 }
 
-defineEmits(['update:modelValue', 'select'])
+const emit = defineEmits(['update:modelValue', 'select'])
 const toggleFavorite = (userId) => {
 
   const id = String(userId)
@@ -185,5 +185,4 @@ const toggleFavorite = (userId) => {
   }
 }
 
-defineEmits(['update:modelValue'])
 </script>
