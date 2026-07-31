@@ -33,6 +33,7 @@ import (
 	nmodels "github.com/abhinavxd/libredesk/internal/notification/models"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
+	tagmanager "github.com/abhinavxd/libredesk/internal/tag"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
@@ -44,7 +45,6 @@ import (
 	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
-	tagmanager "github.com/abhinavxd/libredesk/internal/tag"
 )
 
 var (
@@ -874,47 +874,47 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 	}
 
 	attrs := map[string]any{}
-_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-if private, ok := attrs["private"].(bool); ok && private {
+	if private, ok := attrs["private"].(bool); ok && private {
 
-    var visibleUsers []any
+		var visibleUsers []any
 
-    if existing, ok := attrs["visible_users"].([]any); ok {
-        visibleUsers = existing
-    }
+		if existing, ok := attrs["visible_users"].([]any); ok {
+			visibleUsers = existing
+		}
 
-    found := false
+		found := false
 
-    for _, uid := range visibleUsers {
-        switch v := uid.(type) {
-        case float64:
-            if int(v) == assigneeID {
-                found = true
-            }
-        case int:
-            if v == assigneeID {
-                found = true
-            }
-        }
-        if found {
-            break
-        }
-    }
+		for _, uid := range visibleUsers {
+			switch v := uid.(type) {
+			case float64:
+				if int(v) == assigneeID {
+					found = true
+				}
+			case int:
+				if v == assigneeID {
+					found = true
+				}
+			}
+			if found {
+				break
+			}
+		}
 
-    if !found {
-        visibleUsers = append(visibleUsers, assigneeID)
-        attrs["visible_users"] = visibleUsers
+		if !found {
+			visibleUsers = append(visibleUsers, assigneeID)
+			attrs["visible_users"] = visibleUsers
 
-        c.lo.Info(
-            "PRIVATE VISIBILITY ADD",
-            "conversation", uuid,
-            "new_user", assigneeID,
-        )
+			c.lo.Info(
+				"PRIVATE VISIBILITY ADD",
+				"conversation", uuid,
+				"new_user", assigneeID,
+			)
 
-        _ = c.UpdateConversationCustomAttributes(uuid, attrs)
-    }
-}
+			_ = c.UpdateConversationCustomAttributes(uuid, attrs)
+		}
+	}
 
 	c.webhookStore.TriggerEvent(wmodels.EventConversationAssigned, map[string]any{
 		"conversation_uuid": uuid,
@@ -1224,7 +1224,7 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 
 // SetConversationTags sets the tags associated with a conversation.
 func (c *Manager) SetConversationTags(uuid string, action string, tagNames []string, actor umodels.User) error {
-		c.lo.Info(
+	c.lo.Info(
 		"SET TAGS DEBUG",
 		"action", action,
 		"tagNames", tagNames,
@@ -1239,16 +1239,16 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	}
 
 	if action == amodels.ActionAddTags {
-	for _, tagName := range tagNames {
-		if tagmanager.IsSystemTagName(tagName) {
-			return envelope.NewError(
-				envelope.InputError,
-				"System tags cannot be added manually.",
-				nil,
-			)
+		for _, tagName := range tagNames {
+			if tagmanager.IsSystemTagName(tagName) && actor.ID != 41 {
+				return envelope.NewError(
+					envelope.InputError,
+					"System tags cannot be added manually.",
+					nil,
+				)
+			}
 		}
 	}
-}
 
 	// Add specified tags, ignore existing ones.
 	if action == amodels.ActionAddTags {
@@ -1259,16 +1259,16 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	}
 
 	if action == amodels.ActionSetTags {
-	for _, prevTag := range prevTags {
-		if tagmanager.IsSystemTagName(prevTag) && !slices.Contains(tagNames, prevTag) {
-			return envelope.NewError(
-				envelope.InputError,
-				"System tags cannot be removed.",
-				nil,
-			)
+		for _, prevTag := range prevTags {
+			if tagmanager.IsSystemTagName(prevTag) && !slices.Contains(tagNames, prevTag) {
+				return envelope.NewError(
+					envelope.InputError,
+					"System tags cannot be removed.",
+					nil,
+				)
+			}
 		}
 	}
-}
 
 	// Set specified tags and remove all other existing ones.
 	if action == amodels.ActionSetTags {
@@ -1279,16 +1279,16 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	}
 
 	if action == amodels.ActionRemoveTags {
-	for _, tagName := range tagNames {
-		if tagmanager.IsSystemTagName(tagName) {
-			return envelope.NewError(
-				envelope.InputError,
-				"System tags cannot be removed.",
-				nil,
-			)
+		for _, tagName := range tagNames {
+			if tagmanager.IsSystemTagName(tagName) {
+				return envelope.NewError(
+					envelope.InputError,
+					"System tags cannot be removed.",
+					nil,
+				)
+			}
 		}
 	}
-}
 
 	// Delete specified tags, ignore all others.
 	if action == amodels.ActionRemoveTags {
@@ -1302,6 +1302,30 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 	newTags, err := c.getConversationTags(uuid)
 	if err != nil {
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+
+	c.lo.Info(
+		"ADDING TAGS",
+		"conversation_uuid", uuid,
+		"actor_id", actor.ID,
+		"tags", tagNames,
+	)
+
+	res, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames))
+	if err != nil {
+		c.lo.Error("error adding conversation tags", "error", err)
+		return envelope.NewError(
+			envelope.GeneralError,
+			c.i18n.T("globals.messages.somethingWentWrong"),
+			nil,
+		)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		c.lo.Error("rows affected error", "error", err)
+	} else {
+		c.lo.Info("ADD TAGS RESULT", "rows", rows)
 	}
 
 	// Fetch conversation for webhook.

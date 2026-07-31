@@ -110,7 +110,7 @@ const replyBoxRef = ref(null)
 const headerClass = computed(() => {
   const tags = conversationStore.current?.tags ?? []
 
-  if (tags.includes("🧙🏼Mensch erforderlich")) {
+  if (tags.includes("😎Mensch erforderlich")) {
     return "conversation-header--human"
   }
 

@@ -15,7 +15,7 @@ var systemTagIDs = map[int]struct{}{
 var systemTagNames = map[string]struct{}{
     "🏢Intern": {},
     "🦽Kundenticket": {},
-    "🧙🏼Mensch erforderlich": {},
+    "😎Mensch erforderlich": {},
 }
 
 func IsSystemTag(id int) bool {
