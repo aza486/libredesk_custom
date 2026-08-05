@@ -297,6 +297,10 @@ func handleUpdateAgent(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	// AI assistant identity users are managed via the AI assistant endpoints only.
+	if agent.Type != models.UserTypeAgent {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", app.i18n.T("globals.terms.agent")), nil, envelope.NotFoundError)
+	}
 	oldAvailabilityStatus := agent.AvailabilityStatus
 
 	app.lo.Info("password change requested", "user_id", auser.ID) // Log
@@ -497,9 +501,35 @@ func handleSetPassword(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// validateAvatarFile checks avatar type and size without side effects.
+func validateAvatarFile(r *fastglue.Request, files []*multipart.FileHeader) error {
+	var app = r.Context.(*App)
+
+	if len(files) == 0 {
+		return nil
+	}
+	fileHeader := files[0]
+	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(stringutil.SanitizeFilename(fileHeader.Filename))), ".")
+	if !slices.Contains(image.Exts, srcExt) {
+		return envelope.NewError(envelope.InputError, app.i18n.T("globals.messages.fileTypeisNotAnImage"), nil)
+	}
+	if bytesToMegabytes(fileHeader.Size) > maxAvatarSizeMB {
+		return envelope.NewError(
+			envelope.InputError,
+			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", maxAvatarSizeMB)),
+			nil,
+		)
+	}
+	return nil
+}
+
 // uploadUserAvatar uploads the user avatar.
 func uploadUserAvatar(r *fastglue.Request, user models.User, files []*multipart.FileHeader) error {
 	var app = r.Context.(*App)
+
+	if err := validateAvatarFile(r, files); err != nil {
+		return err
+	}
 
 	fileHeader := files[0]
 	file, err := fileHeader.Open()
@@ -509,25 +539,9 @@ func uploadUserAvatar(r *fastglue.Request, user models.User, files []*multipart.
 	}
 	defer file.Close()
 
-	// Sanitize filename.
 	srcFileName := stringutil.SanitizeFilename(fileHeader.Filename)
 	srcContentType := fileHeader.Header.Get("Content-Type")
 	srcFileSize := fileHeader.Size
-	srcExt := strings.TrimPrefix(strings.ToLower(filepath.Ext(srcFileName)), ".")
-
-	if !slices.Contains(image.Exts, srcExt) {
-		return envelope.NewError(envelope.InputError, app.i18n.T("globals.messages.fileTypeisNotAnImage"), nil)
-	}
-
-	// Check file size
-	if bytesToMegabytes(srcFileSize) > maxAvatarSizeMB {
-		app.lo.Error("error uploaded file size is larger than max allowed", "user_id", user.ID, "size", bytesToMegabytes(srcFileSize), "max_allowed", maxAvatarSizeMB)
-		return envelope.NewError(
-			envelope.InputError,
-			app.i18n.Ts("media.fileSizeTooLarge", "size", fmt.Sprintf("%dMB", maxAvatarSizeMB)),
-			nil,
-		)
-	}
 
 	// Reset ptr.
 	file.Seek(0, 0)
@@ -572,6 +586,9 @@ func handleGenerateAPIKey(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	if user.Type != models.UserTypeAgent {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", app.i18n.T("globals.terms.agent")), nil, envelope.NotFoundError)
+	}
 
 	// Generate API key and secret
 	apiKey, apiSecret, err := app.user.GenerateAPIKey(user.ID)
@@ -603,9 +620,12 @@ func handleRevokeAPIKey(r *fastglue.Request) error {
 	}
 
 	// Check if user exists
-	_, err := app.user.GetAgent(id, "")
+	user, err := app.user.GetAgent(id, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+	if user.Type != models.UserTypeAgent {
+		return r.SendErrorEnvelope(fasthttp.StatusNotFound, app.i18n.Ts("globals.messages.notFound", "name", app.i18n.T("globals.terms.agent")), nil, envelope.NotFoundError)
 	}
 
 	// Revoke API key
