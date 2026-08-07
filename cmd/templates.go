@@ -25,6 +25,20 @@ func handleGetTemplates(r *fastglue.Request) error {
 	return r.SendEnvelope(t)
 }
 
+// handleGetOutgoingTemplates returns all outgoing email templates.
+// This endpoint is intended for agents selecting an email template
+// when replying to a conversation.
+func handleGetOutgoingTemplates(r *fastglue.Request) error {
+	app := r.Context.(*App)
+
+	t, err := app.tmpl.GetAll("email_outgoing")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
+	return r.SendEnvelope(t)
+}
+
 // handleGetTemplate returns a template by id.
 func handleGetTemplate(r *fastglue.Request) error {
 	var (

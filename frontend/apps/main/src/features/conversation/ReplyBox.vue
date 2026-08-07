@@ -91,6 +91,8 @@
         :isDraftLoading="isDraftLoading"
         :uploadingFiles="uploadingFiles"
         :uploadedFiles="mediaFiles"
+        :outgoingTemplates="outgoingTemplates"
+        v-model:selectedTemplateId="selectedTemplateId"
         v-model:htmlContent="htmlContent"
         v-model:textContent="textContent"
         v-model:to="to"
@@ -203,6 +205,11 @@ const cc = ref('')
 const bcc = ref('')
 const showBcc = ref(false)
 const emailErrors = ref([])
+
+// Outgoing email templates available for this reply.
+const outgoingTemplates = ref([])
+const selectedTemplateId = ref(null)
+
 const aiPromptStore = useAiPromptStore()
 const aiPrompts = computed(() => aiPromptStore.prompts)
 const replyBoxContentRef = ref(null)
@@ -258,9 +265,6 @@ const handleCopilotInsertReply = (html) => {
   htmlContent.value = html
 }
 
-onMounted(() => {
-  emitter.on(EMITTER_EVENTS.COPILOT_INSERT_REPLY, handleCopilotInsertReply)
-})
 
 onUnmounted(() => {
   emitter.off(EMITTER_EVENTS.COPILOT_INSERT_REPLY, handleCopilotInsertReply)
@@ -387,7 +391,8 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
         cc: parsedCC,
         bcc: parsedBCC,
         to: parsedTo,
-        echo_id: isPrivate ? '' : tempUUID
+        echo_id: isPrivate ? '' : tempUUID,
+        template_id: isPrivate ? null : selectedTemplateId.value
       })
 
       // Private notes are sent immediately so replace immediately.
@@ -437,6 +442,32 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
   }
   isSending.value = false
 }
+
+const loadOutgoingTemplates = async () => {
+  try {
+    const response = await api.getOutgoingTemplates()
+    outgoingTemplates.value = response?.data?.data || []
+
+    const defaultTemplate = outgoingTemplates.value.find((template) => template.is_default)
+
+    selectedTemplateId.value =
+      defaultTemplate?.id || outgoingTemplates.value[0]?.id || null
+  } catch (error) {
+    outgoingTemplates.value = []
+    selectedTemplateId.value = null
+
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  }
+}
+
+onMounted(() => {
+  emitter.on(EMITTER_EVENTS.COPILOT_INSERT_REPLY, handleCopilotInsertReply)
+  loadOutgoingTemplates()
+})
+
 
 const processSendAndSetStatus = (status) => processSend(false, false, status)
 

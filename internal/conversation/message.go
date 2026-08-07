@@ -297,19 +297,33 @@ func (m *Manager) RenderMessageInTemplate(channel string, message *models.Messag
 			return err
 		}
 
-		// Expose message meta flags to the template.
+		// Expose message meta flags to the template and determine the
+		// outgoing email template selected for this message.
 		var (
 			isContinuity bool
+			templateID   int
 			meta         map[string]any
 		)
+
 		if len(message.Meta) > 0 && json.Unmarshal(message.Meta, &meta) == nil {
 			isContinuity, _ = meta["continuity_email"].(bool)
+
+			// JSON numbers decoded into map[string]any are float64.
+			if id, ok := meta["template_id"].(float64); ok && id > 0 {
+				templateID = int(id)
+			}
 		}
+
 		data["IsContinuityEmail"] = isContinuity
 
-		message.Content, err = m.template.RenderEmailWithTemplate(data, message.Content)
+		message.Content, err = m.template.RenderEmailWithTemplateID(data, message.Content, templateID)
 		if err != nil {
-			m.lo.Error("could not render email content using template", "id", message.ID, "error", err)
+			m.lo.Error(
+				"could not render email content using template",
+				"id", message.ID,
+				"template_id", templateID,
+				"error", err,
+			)
 			return fmt.Errorf("could not render email content using template: %w", err)
 		}
 	case inbox.ChannelLiveChat:

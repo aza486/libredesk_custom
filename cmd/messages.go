@@ -23,6 +23,7 @@ type messageReq struct {
 	SenderType  string                 `json:"sender_type"`
 	Mentions    []cmodels.MentionInput `json:"mentions"`
 	EchoID      string                 `json:"echo_id"`
+	TemplateID  int                    `json:"template_id"`
 }
 
 // handleGetMessages returns messages for a conversation.
@@ -292,6 +293,13 @@ func handleSendMessage(r *fastglue.Request) error {
 	if req.EchoID != "" {
 		meta["echo_id"] = req.EchoID
 	}
+
+	// Store the selected outgoing email template in message meta.
+	// If no template is selected, the default outgoing template is used.
+	if req.TemplateID > 0 {
+		meta["template_id"] = req.TemplateID
+	}
+
 	message, err := app.conversation.QueueReply(media, conv.InboxID, user.ID, conv.ContactID, cuuid, req.Message, req.To, req.CC, req.BCC, meta)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
