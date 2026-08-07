@@ -225,6 +225,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Templates.
 	g.GET("/api/v1/templates", perm(handleGetTemplates, "templates:manage"))
+	g.GET("/api/v1/templates/outgoing", perm(handleGetOutgoingTemplates, "messages:write"))
 	g.GET("/api/v1/templates/{id}", perm(handleGetTemplate, "templates:manage"))
 	g.POST("/api/v1/templates", perm(handleCreateTemplate, "templates:manage"))
 	g.PUT("/api/v1/templates/{id}", perm(handleUpdateTemplate, "templates:manage"))

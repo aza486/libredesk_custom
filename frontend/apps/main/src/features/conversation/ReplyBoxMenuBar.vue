@@ -51,6 +51,39 @@
       </Toggle>
     </div>
     <div class="flex items-center">
+      <DropdownMenu
+        v-if="showTemplateSelector && outgoingTemplates.length > 0"
+      >
+        <DropdownMenuTrigger as-child>
+          <Button
+            variant="outline"
+            class="h-8 mr-2 px-3 max-w-52"
+            :disabled="isSending"
+          >
+            <span class="text-muted-foreground mr-1">Signatur:</span>
+            <span class="truncate">{{ selectedTemplateName }}</span>
+            <ChevronDownIcon class="ml-2 h-4 w-4 shrink-0" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Signatur auswählen</DropdownMenuLabel>
+
+          <DropdownMenuItem
+            v-for="template in outgoingTemplates"
+            :key="template.id"
+            @click="selectedTemplateId = template.id"
+          >
+            <span>{{ template.name }}</span>
+            <span
+              v-if="template.is_default"
+              class="ml-2 text-xs text-muted-foreground"
+            >
+              Standard
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Button
         class="h-8 px-4 rounded-r-none"
         @click="handleSend"
@@ -85,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, defineAsyncComponent } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import { Button } from '@shared-ui/components/ui/button'
 import { Toggle } from '@shared-ui/components/ui/toggle'
@@ -113,9 +146,18 @@ const attachmentInput = ref(null)
 const isEmojiPickerVisible = ref(false)
 const emojiPickerRef = ref(null)
 const emit = defineEmits(['emojiSelect', 'generateReply'])
+const selectedTemplateId = defineModel('selectedTemplateId', { default: null })
+
+const selectedTemplateName = computed(() => {
+  const template = props.outgoingTemplates.find(
+    (template) => template.id === selectedTemplateId.value
+  )
+
+  return template?.name || 'Signatur'
+})
 
 // Using defineProps for props that don't need two-way binding
-defineProps({
+const props = defineProps({
   isFullscreen: Boolean,
   isSending: Boolean,
   isGenerating: Boolean,
@@ -127,6 +169,14 @@ defineProps({
     default: true
   },
   showGenerateReply: {
+    type: Boolean,
+    default: true
+  },
+    outgoingTemplates: {
+    type: Array,
+    default: () => []
+  },
+  showTemplateSelector: {
     type: Boolean,
     default: true
   },

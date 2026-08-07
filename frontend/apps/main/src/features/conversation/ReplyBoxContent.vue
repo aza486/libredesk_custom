@@ -133,6 +133,9 @@
       :handleSendAndSetStatus="handleSendAndSetStatus"
       :isGenerating="isGenerating"
       :showGenerateReply="messageType !== 'private_note'"
+      :outgoingTemplates="props.outgoingTemplates"
+      v-model:selectedTemplateId="selectedTemplateId"
+      :showTemplateSelector="messageType === 'reply'"
       @emojiSelect="handleEmojiSelect"
       @generateReply="$emit('generateReply')"
     />
@@ -172,6 +175,7 @@ const mentions = defineModel('mentions', { default: () => [] })
 const macroStore = useMacroStore()
 const usersStore = useUsersStore()
 const teamStore = useTeamStore()
+const selectedTemplateId = defineModel('selectedTemplateId', { default: null })
 
 
 
@@ -277,7 +281,11 @@ const props = defineProps({
   isGenerating: {
     type: Boolean,
     default: false
-  }
+  },
+  outgoingTemplates: {
+    type: Array,
+    default: () => []
+  },
 })
 
 const emit = defineEmits([

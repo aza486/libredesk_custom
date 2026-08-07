@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/abhinavxd/libredesk/internal/template/models"
 	"github.com/valyala/fasthttp"
 )
 
@@ -65,6 +66,61 @@ func (m *Manager) RenderEmailWithTemplate(data any, content string) (string, err
 	}
 
 	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(defaultTmpl.Body)
+	if err != nil {
+		return "", fmt.Errorf("parsing base template: %w", err)
+	}
+
+	contentTemplate, err := template.New(TmplContent).Funcs(m.funcMap).Parse(content)
+	if err != nil {
+		return "", fmt.Errorf("parsing content template: %w", err)
+	}
+
+	baseTemplate, err = baseTemplate.AddParseTree(TmplContent, contentTemplate.Tree)
+	if err != nil {
+		return "", fmt.Errorf("adding content template: %w", err)
+	}
+
+	var rendered strings.Builder
+	if err := baseTemplate.ExecuteTemplate(&rendered, TmplBase, data); err != nil {
+		return "", fmt.Errorf("executing base template: %w", err)
+	}
+
+	return rendered.String(), nil
+}
+
+// RenderEmailWithTemplateID renders content inside a specific outgoing email template.
+// If templateID is 0, it falls back to the default outgoing email template.
+func (m *Manager) RenderEmailWithTemplateID(data any, content string, templateID int) (string, error) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	var (
+		baseTmpl models.Template
+		err      error
+	)
+
+	if templateID > 0 {
+		baseTmpl, err = m.Get(templateID)
+		if err != nil {
+			return "", fmt.Errorf("fetching outgoing email template %d: %w", templateID, err)
+		}
+
+		// Only outgoing email templates may be used as the email wrapper.
+		if baseTmpl.Type != TypeEmailOutgoing {
+			return "", fmt.Errorf("template %d is not an outgoing email template", templateID)
+		}
+	} else {
+		baseTmpl, err = m.getDefaultOutgoingEmailTemplate()
+		if err != nil {
+			m.lo.Error("error fetching default outgoing email template", "error", err)
+		}
+	}
+
+	if baseTmpl.Body == "" {
+		baseTmpl.Body = `{{ template "content" . }}`
+	}
+
+	baseTemplate, err := template.New(TmplBase).Funcs(m.funcMap).Parse(baseTmpl.Body)
 	if err != nil {
 		return "", fmt.Errorf("parsing base template: %w", err)
 	}
