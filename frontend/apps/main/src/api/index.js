@@ -83,6 +83,7 @@ const updateTag = (id, data) => http.put(`/api/v1/tags/${id}`, data)
 const deleteTag = (id) => http.delete(`/api/v1/tags/${id}`)
 const getTemplate = (id) => http.get(`/api/v1/templates/${id}`)
 const getTemplates = (type) => http.get('/api/v1/templates', { params: { type: type } })
+const getOutgoingTemplates = () => http.get('/api/v1/templates/outgoing')
 const createTemplate = (data) =>
   http.post('/api/v1/templates', data, {
     headers: {
@@ -672,6 +673,7 @@ export default {
   deleteOIDC,
   getTemplate,
   getTemplates,
+  getOutgoingTemplates,
   createTemplate,
   updateTemplate,
   deleteTemplate,
