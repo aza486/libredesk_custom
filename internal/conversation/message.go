@@ -229,8 +229,9 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 
 		m.BroadcastConversationUpdate(message.ConversationUUID, wsData)
 
-		// Evaluate automation rules for outgoing message.
-		m.automation.EvaluateConversationUpdateRulesByID(message.ConversationID, "", amodels.EventConversationMessageOutgoing)
+		if message.ShouldEvaluateAutomation(systemUser.ID) {
+			m.automation.EvaluateConversationUpdateRulesByID(message.ConversationID, "", amodels.EventConversationMessageOutgoing, umodels.User{ID: message.SenderID})
+		}
 	}
 }
 
@@ -906,7 +907,7 @@ func (m *Manager) ProcessIncomingMessage(in models.IncomingMessage) (models.Mess
 			Email:     in.Contact.Email,
 			Type:      umodels.UserTypeContact,
 		}
-		if err := m.userStore.CreateContact(&user); err != nil {
+		if err := m.userStore.ResolveContact(&user, umodels.ContactSync); err != nil {
 			m.lo.Error("error creating contact for incoming message", "message_source_id", in.SourceID.String, "error", err)
 			return models.Message{}, fmt.Errorf("creating contact: %w", err)
 		}
@@ -1007,7 +1008,7 @@ func (m *Manager) resolveByPlusAddress(in *models.IncomingMessage) (senderID, co
 	conversationUUID = conversation.UUID
 	senderID = conversation.Contact.ID
 
-	// Already a contact - if same email, return as sender. If different email, let CreateContact resolve actual sender.
+	// Already a contact - if same email, return as sender. If different email, let contact resolution find the actual sender.
 	if conversation.Contact.Type == umodels.UserTypeContact {
 		if !strings.EqualFold(conversation.Contact.Email.String, in.Contact.Email.String) {
 			return 0, conversationID, conversationUUID, nil
@@ -1025,7 +1026,7 @@ func (m *Manager) resolveByPlusAddress(in *models.IncomingMessage) (senderID, co
 	if contactErr == nil {
 		m.lo.Debug("a contact already exists with the same email as visitor; not upgrading visitor", "conversation_uuid", conversation.UUID, "contact_email", in.Contact.Email.String, "contact_user_id", user.ID)
 		// A contact with this email already exists; don't upgrade visitor.
-		// Let CreateContact resolve the correct sender ID.
+		// Let contact resolution find the correct sender ID.
 		return 0, conversationID, conversationUUID, nil
 	}
 
@@ -1478,6 +1479,12 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 		return nil
 	}
 
+	// Snapshot before reopening so previous_* filters see the pre-reopen state.
+	var previousValues map[string]string
+	if preReopen, err := m.GetConversation(0, conversationUUID, ""); err == nil {
+		previousValues = amodels.PreviousValues(preReopen)
+	}
+
 	// Reopen conversation if it's not Open.
 	systemUser, err := m.userStore.GetSystemUser()
 	if err != nil {
@@ -1495,7 +1502,10 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 		m.lo.Error("error fetching conversation for incoming message hooks", "conversation_uuid", conversationUUID, "error", err)
 	} else {
 		// Trigger automations on incoming message event.
-		m.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationMessageIncoming)
+		if previousValues == nil {
+			previousValues = amodels.PreviousValues(conversation)
+		}
+		m.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationMessageIncoming, previousValues, umodels.User{ID: conversation.ContactID})
 
 		// If assigned to an AI assistant, let it respond to this inbound customer message.
 		if m.aiAgent != nil && conversation.AssignedUserID.Valid {
