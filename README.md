@@ -1,21 +1,54 @@
 # LibreDesk Custom
 
-> A customized LibreDesk instance extended for an internal customer-support and email automation workflow.
+> A customized LibreDesk instance extended for an internal customer-support and AI-assisted email workflow.
 
 This repository contains my customized version of [LibreDesk](https://github.com/abhinavxd/libredesk), an open-source, self-hosted customer support platform.
 
-The project was extended and adapted to fit a specific internal workflow around **customer emails, ticket management and AI-assisted response generation**.
+The project was extended and adapted for a specific internal workflow around **customer emails, ticket management, AI-assisted processing and human approval**.
+
+## ⚠️ Project Scope & Dependencies
+
+This repository contains the **LibreDesk application and my custom modifications**, but it is only one part of the complete system.
+
+The fully functional internal solution consists of several connected components:
+
+```text
+Customer Email
+      ↓
+   LibreDesk
+      ↓
+      n8n
+      ↓
+  AI Processing
+      ↓
+ PostgreSQL
+      ↓
+ Human Approval
+      ↓
+   LibreDesk
+      ↓
+ Customer Response
+```
+
+The corresponding **n8n workflows and PostgreSQL databases are private and are therefore not included in this repository**.
+
+This means that cloning this repository provides the LibreDesk application and its visible code-level customizations, but **does not reproduce the complete production system**.
+
+Some functionality may therefore be unavailable or behave differently in a standalone installation.
+
+This separation is intentional because the private components contain **internal business logic, customer-related data structures, workflow configurations and other non-public information**.
 
 ## About the Project
 
 Instead of building a customer-support system from scratch, I used LibreDesk as an existing open-source foundation and focused on extending it for a real-world use case.
 
-The main goal was to connect:
+The complete system combines:
 
 * Customer email handling
 * Ticket management
 * AI-assisted processing
 * Automated workflows
+* Product database integration
 * Human approval
 * Internal support processes
 
@@ -23,38 +56,36 @@ The project therefore combines **frontend development, backend/API integration, 
 
 ## My Contributions
 
-My work primarily focused on adapting and extending the existing LibreDesk application.
-
-### Frontend
+### Frontend & LibreDesk
 
 * Customized the Vue.js interface
 * Modified navigation and inbox views
 * Added and adjusted ticket counters and badges
 * Customized tags, teams and ticket states
-* Improved the handling of incoming customer requests
 * Adapted UI elements to the internal workflow
+* Integrated LibreDesk into the surrounding automation architecture
 
 ### Automation & AI
 
-LibreDesk was integrated into a larger automation workflow using **n8n**.
+The customized LibreDesk instance is connected to a private **n8n automation environment**.
 
 The workflow can:
 
 1. Receive incoming customer emails
 2. Anonymize relevant personal data
 3. Store and process email information
-4. Classify customer requests using AI
+4. Classify requests using AI
 5. Query internal product information
 6. Generate a suggested response
 7. Present the result for human approval
 8. Send the approved response
 9. Update the ticket status
 
-This creates a workflow where AI assists employees rather than replacing the human approval process.
+The automation and database components are intentionally kept private and are not part of this repository.
 
 ### Infrastructure
 
-The project also involved working with:
+The complete environment involves:
 
 * Docker & Docker Compose
 * PostgreSQL
@@ -63,6 +94,8 @@ The project also involved working with:
 * Git & GitHub
 * API integrations
 * Webhooks
+* n8n automation
+* AI services
 * Backup and recovery workflows
 
 ## What I Learned
@@ -77,8 +110,9 @@ I learned how to:
 * Work with Dockerized applications
 * Work with PostgreSQL and Redis
 * Design automation workflows with n8n
-* Connect AI services with existing software
-* Use Git for ongoing development and version control
+* Integrate AI services with existing software
+* Connect multiple services into one workflow
+* Use Git for ongoing development
 * Think about reliability, backups and production environments
 
 One of the biggest lessons was learning that software development is often less about building everything yourself and more about **understanding existing systems and extending them without breaking their architecture**.
@@ -98,9 +132,22 @@ I primarily used AI for:
 
 AI did **not independently design or implement the project**.
 
-The decisions regarding the architecture, workflow, UI changes, integrations, testing and final implementation were made and validated by me.
+The architecture, workflow design, UI changes, integrations, testing and final implementation were developed and validated by me.
 
-AI was used as a development and learning assistant, with generated suggestions being reviewed, adapted and tested before use.
+AI was used as a development and learning assistant. Generated suggestions were reviewed, adapted and tested before being integrated.
+
+## 🔒 Privacy & Confidential Components
+
+The repository intentionally does **not** contain:
+
+* Production customer data
+* Private PostgreSQL databases
+* Internal n8n workflows
+* Credentials or API keys
+* Internal business logic that is not required for the LibreDesk application
+* Other confidential infrastructure configuration
+
+The public repository therefore represents the **LibreDesk/custom-development part of the project**, while the complete production architecture remains private.
 
 ## Original Project
 
@@ -118,7 +165,7 @@ This repository contains modifications and extensions made for my specific use c
 
 🚧 **Active development**
 
-The project continues to evolve as the internal workflow, automation and LibreDesk customizations are improved.
+The LibreDesk customizations and the connected internal automation system continue to evolve.
 
 ---
 
@@ -126,7 +173,7 @@ The project continues to evolve as the internal workflow, automation and LibreDe
 
 **Daniel Podjapolski**
 
-Media Design · Frontend Development · Automation · UI/UX
+Media Design · Frontend Development · Automation · AI Workflows
 
 ### Based on
 
