@@ -1,110 +1,136 @@
-<a href="https://zerodha.tech"><img src="https://zerodha.tech/static/images/github-badge.svg" align="right" alt="Zerodha Tech Badge" /></a>
+# LibreDesk Custom
 
-<br>
-<picture>
-  <source
-    media="(prefers-color-scheme: dark)"
-    srcset="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_white.png?q=1">
-  <source
-    media="(prefers-color-scheme: light)"
-    srcset="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_black.png">
-  <img
-    alt="LibreDesk"
-    src="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_white.png"
-    width="250">
-</picture>
+> A customized LibreDesk instance extended for an internal customer-support and email automation workflow.
 
-<br> Modern, open source, self-hosted omnichannel customer support desk. Live chat, email, and more in a single binary.
+This repository contains my customized version of [LibreDesk](https://github.com/abhinavxd/libredesk), an open-source, self-hosted customer support platform.
 
-![image](https://libredesk.io/hero-dark-v2.png?q=3)
+The project was extended and adapted to fit a specific internal workflow around **customer emails, ticket management and AI-assisted response generation**.
 
+## About the Project
 
-Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**live demo**](https://demo.libredesk.io/).
+Instead of building a customer-support system from scratch, I used LibreDesk as an existing open-source foundation and focused on extending it for a real-world use case.
 
-## Features
+The main goal was to connect:
 
-- **Omnichannel inbox**  
-  Live chat and email in one inbox. Every conversation lands in the same place, whichever channel it came from.
-- **Live chat widget**  
-  Embed a real-time chat widget on your website. Replies go out from the same inbox your team already works in.
-- **AI assistant**  
-  Answer live chat conversations automatically with an AI assistant grounded in your knowledge base. Hands off to a human when it can't help.
-- **Agent copilot**  
-  Draft replies, summarize conversations, and look up answers from the knowledge base without leaving the inbox.
-- **Automations**  
-  Rules that run on conversation events. Tag, assign, and route conversations based on conditions you define.
-- **Granular permissions**  
-  Role-based access control. Create custom roles with per-action permissions for teams and individual agents.
-- **CSAT & analytics**  
-  Send CSAT surveys automatically after a conversation closes. Track response times, resolution rates, and agent activity.
-- **Custom attributes**  
-  Create custom attributes for contacts or conversations such as the subscription plan or the date of their first purchase.
-- **Macros**  
-  Save replies you send often. One macro can send the message, set tags, and assign the conversation to a team.
-- **Organization**  
-  Tags, custom statuses, and snoozing to keep the inbox in order. Search covers every conversation.
-- **Auto assignment**  
-  Assign incoming conversations automatically, based on agent capacity or on criteria you define.
-- **SLA management**  
-  Set and track response time targets. Get notified when conversations are at risk of breaching SLA commitments.
-- **SSO logins**  
-  Google, Microsoft, and any OIDC provider are supported out of the box.
-- **API**  
-  HTTP/JSON APIs and webhooks for custom integrations and workflows.
-- **Activity logs**  
-  Track all actions performed by agents and admins, for auditing and accountability.
-- **Command bar**  
-  Opens with a simple shortcut (CTRL+K) and lets you quickly perform actions on conversations.
+* Customer email handling
+* Ticket management
+* AI-assisted processing
+* Automated workflows
+* Human approval
+* Internal support processes
 
-And more — checkout [libredesk.io](https://libredesk.io) or try the [live demo](https://demo.libredesk.io/).
+The project therefore combines **frontend development, backend/API integration, Docker, PostgreSQL, automation and AI workflows**.
 
+## My Contributions
 
-## Installation
+My work primarily focused on adapting and extending the existing LibreDesk application.
 
-### Docker
+### Frontend
 
-The latest image is available on DockerHub at [`libredesk/libredesk:latest`](https://hub.docker.com/r/libredesk/libredesk/tags?page=1&ordering=last_updated&name=latest)
+* Customized the Vue.js interface
+* Modified navigation and inbox views
+* Added and adjusted ticket counters and badges
+* Customized tags, teams and ticket states
+* Improved the handling of incoming customer requests
+* Adapted UI elements to the internal workflow
 
-```shell
-# Download the compose file and sample config file in the current directory.
-curl -LO https://github.com/abhinavxd/libredesk/raw/main/docker-compose.yml
-curl -LO https://github.com/abhinavxd/libredesk/raw/main/config.sample.toml
+### Automation & AI
 
-# Copy the config.sample.toml to config.toml and edit it as needed.
-cp config.sample.toml config.toml
+LibreDesk was integrated into a larger automation workflow using **n8n**.
 
-# Run the services in the background.
-docker compose up -d
+The workflow can:
 
-# Setting System user password.
-docker exec -it libredesk_app ./libredesk --set-system-user-password
-```
+1. Receive incoming customer emails
+2. Anonymize relevant personal data
+3. Store and process email information
+4. Classify customer requests using AI
+5. Query internal product information
+6. Generate a suggested response
+7. Present the result for human approval
+8. Send the approved response
+9. Update the ticket status
 
-Go to `http://localhost:9000` and login with username `System` and the password you set using the `--set-system-user-password` command.
+This creates a workflow where AI assists employees rather than replacing the human approval process.
 
-See [installation docs](https://docs.libredesk.io/getting-started/installation)
+### Infrastructure
 
-__________________
+The project also involved working with:
 
-### Binary
-- Download the [latest release](https://github.com/abhinavxd/libredesk/releases) and extract the libredesk binary.
-- Edit config.toml as needed.
-- `./libredesk --install` to setup the Postgres DB.
-- Run `./libredesk --set-system-user-password` to set the password for the System user.
-- Run `./libredesk` and visit `http://localhost:9000` and login with email `System` and the password you set using the --set-system-user-password command.
+* Docker & Docker Compose
+* PostgreSQL
+* Redis
+* Linux server administration
+* Git & GitHub
+* API integrations
+* Webhooks
+* Backup and recovery workflows
 
-See [installation docs](https://docs.libredesk.io/getting-started/installation)
-__________________
+## What I Learned
 
-## Developers
+Working on LibreDesk gave me practical experience with a larger existing codebase rather than only developing isolated applications from scratch.
 
-- If you are interested in contributing, **please read [CONTRIBUTING.md](./CONTRIBUTING.md) first**.
-- For local development and setup, refer to the [developer setup](https://docs.libredesk.io/contributing/developer-setup).
-- For planned features and project direction, see [ROADMAP.md](./ROADMAP.md).
+I learned how to:
 
-The backend is written in Go and the frontend is Vue.js 3 with Shadcn UI.
+* Navigate and understand an unfamiliar codebase
+* Extend an existing Vue application
+* Debug frontend/API communication
+* Work with Dockerized applications
+* Work with PostgreSQL and Redis
+* Design automation workflows with n8n
+* Connect AI services with existing software
+* Use Git for ongoing development and version control
+* Think about reliability, backups and production environments
 
+One of the biggest lessons was learning that software development is often less about building everything yourself and more about **understanding existing systems and extending them without breaking their architecture**.
 
+## 🤖 AI Transparency
 
-## Translators
-You can help translate libredesk into your language on [Crowdin](https://crowdin.com/project/libredesk).  
+AI tools were used as part of the development process.
+
+I primarily used AI for:
+
+* Understanding unfamiliar code
+* Explaining errors
+* Debugging
+* Exploring implementation approaches
+* Reviewing code and architecture
+* Working through API and automation problems
+
+AI did **not independently design or implement the project**.
+
+The decisions regarding the architecture, workflow, UI changes, integrations, testing and final implementation were made and validated by me.
+
+AI was used as a development and learning assistant, with generated suggestions being reviewed, adapted and tested before use.
+
+## Original Project
+
+This project is based on **LibreDesk** by Abhinav Raut.
+
+Original repository:
+
+https://github.com/abhinavxd/libredesk
+
+LibreDesk is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+This repository contains modifications and extensions made for my specific use case. The original project and its respective authors remain credited.
+
+## Status
+
+🚧 **Active development**
+
+The project continues to evolve as the internal workflow, automation and LibreDesk customizations are improved.
+
+---
+
+### Author
+
+**Daniel Podjapolski**
+
+Media Design · Frontend Development · Automation · UI/UX
+
+### Based on
+
+**LibreDesk**
+by **Abhinav Raut**
+
+Licensed under **AGPL-3.0**
