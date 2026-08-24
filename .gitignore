@@ -13,4 +13,5 @@ backup.sql
 *_backup.sql
 frontend/package-lock.json
 uploads/*
-!uploads/.gitkeepconfig.test.toml
+!uploads/.gitkeep
+config.test.toml
