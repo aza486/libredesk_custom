@@ -217,9 +217,13 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 			m.lo.Error("error updating conversation reply timestamps", "error", err)
 		} else if isFirstReply {
 			wsData["first_reply_at"] = nowStr
+			// Stamp the first-response SLA immediately.
+			if err := m.slaStore.EvaluateConversationSLA(message.ConversationID); err != nil {
+				m.lo.Error("error evaluating SLA after first reply", "conversation_id", message.ConversationID, "error", err)
+			}
 		}
 
-		// Mark latest SLA event for next response as met.
+		// Mark latest SLA event for next response metric as met.
 		metAt, err := m.slaStore.SetLatestSLAEventMetAt(conversation.AppliedSLAID.Int, sla.MetricNextResponse)
 		if err != nil && !errors.Is(err, sla.ErrLatestSLAEventNotFound) {
 			m.lo.Error("error setting next response SLA event `met_at`", "conversation_id", conversation.ID, "metric", sla.MetricNextResponse, "applied_sla_id", conversation.AppliedSLAID.Int, "error", err)
@@ -1159,6 +1163,7 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 			attachment.Size,
 			null.StringFrom(attachment.Disposition),
 			[]byte("{}"), /** meta **/
+			true,          /** private **/
 		)
 		if err != nil {
 			m.lo.Error("failed to upload attachment", "name", attachment.Name, "content_type", attachment.ContentType, "size", attachment.Size, "content_id", contentID, "disposition", attachment.Disposition, "conversation_uuid", message.ConversationUUID, "message_source_id", message.SourceID.String, "error", err)
@@ -1399,9 +1404,6 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 		m.lo.Error("error fetching conversation for incoming message hooks", "conversation_uuid", conversationUUID, "error", err)
 	} else {
 		// Trigger automations on incoming message event.
-		if previousValues == nil {
-			previousValues = amodels.PreviousValues(conversation)
-		}
 		m.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationMessageIncoming, previousValues, umodels.User{ID: conversation.ContactID})
 
 		// If assigned to an AI assistant, let it respond to this inbound customer message.

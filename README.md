@@ -4,19 +4,19 @@
 <picture>
   <source
     media="(prefers-color-scheme: dark)"
-    srcset="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_white.png?q=1">
+    srcset="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_white.png?v=2">
   <source
     media="(prefers-color-scheme: light)"
-    srcset="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_black.png">
+    srcset="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_black.png?v=3">
   <img
     alt="LibreDesk"
-    src="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_white.png"
+    src="https://s3.ap-south-1.amazonaws.com/libredesk.io/libredesk_white.png?v=4"
     width="250">
 </picture>
 
 <br> Modern, open source, self-hosted omnichannel customer support desk. Live chat, email, and more in a single binary.
 
-![image](https://libredesk.io/hero-dark-v2.png?q=3)
+![image](https://libredesk.io/hero-dark.png?q=5)
 
 
 Visit [libredesk.io](https://libredesk.io) for more info. Check out the [**live demo**](https://demo.libredesk.io/).
@@ -60,6 +60,14 @@ And more — checkout [libredesk.io](https://libredesk.io) or try the [live demo
 
 
 ## Installation
+
+### Railway (1-click deploy)
+
+The fastest way to get a libredesk instance running. Railway provisions the app, Postgres, and Redis for you.
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/libredesk?referralCode=4gdm5b&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+__________________
 
 ### Docker
 

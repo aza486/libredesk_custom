@@ -330,6 +330,63 @@ func TestSplitName(t *testing.T) {
 		})
 	}
 }
+func TestGenerateSlug(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple title",
+			input:    "Hello World",
+			expected: "hello-world",
+		},
+		{
+			name:     "title with special characters",
+			input:    "Hello, World! How are you?",
+			expected: "hello-world-how-are-you",
+		},
+		{
+			name:     "title with numbers",
+			input:    "Article 123: How to Code",
+			expected: "article-123-how-to-code",
+		},
+		{
+			name:     "title with underscores",
+			input:    "test_article_name",
+			expected: "test_article_name",
+		},
+		{
+			name:     "title with multiple spaces",
+			input:    "Hello     World",
+			expected: "hello-world",
+		},
+		{
+			name:     "title with leading/trailing spaces",
+			input:    "  Hello World  ",
+			expected: "hello-world",
+		},
+		{
+			name:     "title with multiple hyphens",
+			input:    "Hello---World",
+			expected: "hello-world",
+		},
+		{
+			name:     "unicode characters",
+			input:    "Hello World",
+			expected: "hello-world",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GenerateSlug(tt.input)
+			if result != tt.expected {
+				t.Errorf("GenerateSlug(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
 
 func TestHTML2TextMarkdownLinks(t *testing.T) {
 	tests := []struct {
@@ -366,6 +423,41 @@ func TestHTML2TextMarkdownLinks(t *testing.T) {
 			name: "url with parentheses is wrapped in angle brackets",
 			html: `<p><a href="https://example.com/a(b)">See</a></p>`,
 			want: "[See](<https://example.com/a(b)>)",
+		},
+		{
+			name: "mailto link becomes markdown",
+			html: `<p>Mail <a href="mailto:billing@example.com">billing</a>.</p>`,
+			want: "Mail [billing](mailto:billing@example.com).",
+		},
+		{
+			name: "linked image becomes bare url",
+			html: `<a href="https://x.io"><img src="cid:1" alt="Banner"></a>`,
+			want: "https://x.io",
+		},
+		{
+			name: "bold kept as markdown",
+			html: `<div>Abra&ccedil;os,<br><b>Jo&atilde;o</b></div>`,
+			want: "Abraços,\n*João*",
+		},
+		{
+			name: "lists keep bullets",
+			html: `<ul><li>First</li><li>Second</li></ul>`,
+			want: "* First\n* Second",
+		},
+		{
+			name: "blockquote kept",
+			html: `<blockquote>quoted line</blockquote>after quote`,
+			want: "> \n> quoted line\n\nafter quote",
+		},
+		{
+			name: "multilingual",
+			html: `<div>visible 您好 مرحبا שלום Grüße</div>`,
+			want: "visible 您好 مرحبا שלום Grüße",
+		},
+		{
+			name: "empty input",
+			html: ``,
+			want: "",
 		},
 		{
 			name: "anchor without href keeps its text",
