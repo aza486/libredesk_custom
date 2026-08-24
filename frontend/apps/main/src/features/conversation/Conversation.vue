@@ -1,10 +1,21 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- Header -->
-    <div
-      class="conversation-header h-12 flex-shrink-0 px-2 border-b flex items-center justify-between"
-      :class="headerClass"
+  <div
+    class="conversation-header h-12 flex-shrink-0 px-2 border-b flex items-center justify-between gap-2"
+    :class="headerClass"
     >
+    <div class="flex items-center gap-1 min-w-0">
+      <Button
+        v-if="isMobile"
+        variant="ghost"
+        class="w-11 h-11 md:w-8 md:h-8 p-0 shrink-0 -ml-2 md:-ml-1"
+        :aria-label="t('globals.messages.back')"
+        @click="goBackToList"
+      >
+        <ChevronLeft class="w-4 h-4" />
+      </Button>
+
       <div class="flex flex-col min-w-0">
         <span class="font-semibold">
           {{ conversationStore.currentContactName }}
@@ -18,60 +29,77 @@
           {{ conversationStore.current.subject }}
         </span>
       </div>
-      <div class="flex items-center gap-2">
-        <Tooltip v-if="isSnoozed && snoozedUntilLabel">
-          <TooltipTrigger as-child>
-            <span class="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
-              <Clock :size="12" />
-              {{ snoozedUntilLabel }}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            {{ t('conversation.snoozedUntil', { time: snoozedUntilLabel }) }}
-          </TooltipContent>
-        </Tooltip>
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <div
-              v-if="conversationStore.current?.status"
-              class="flex items-center space-x-1 cursor-pointer bg-primary px-2 py-1 rounded-md text-sm"
-            >
-              <span class="text-primary-foreground font-medium inline-block">
-                {{ conversationStore.current?.status }}
-              </span>
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              v-for="status in conversationStore.statusOptions"
-              :key="status.value"
-              @click="handleUpdateStatus(status.label)"
-            >
-              {{ status.label }}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger as-child>
-            <Button variant="ghost" class="w-8 h-8 p-0">
-              <MoreHorizontal class="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem @click="downloadTranscript">
-              {{ t('conversation.downloadTranscript') }}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              v-if="userStore.can('messages:write')"
-              :disabled="isSummarizing"
-              @click="summarize"
-            >
-              {{ t('conversation.summarize') }}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <Button
+        v-if="isMobile"
+        variant="ghost"
+        class="w-11 h-11 md:w-8 md:h-8 p-0"
+        :aria-label="t('globals.terms.contact')"
+        @click="emitter.emit(EMITTER_EVENTS.CONVERSATION_SIDEBAR_TOGGLE)"
+      >
+        <PanelRight class="w-4 h-4" />
+      </Button>
+
+      <Tooltip v-if="isSnoozed && snoozedUntilLabel">
+        <TooltipTrigger as-child>
+          <span class="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+            <Clock :size="12" />
+            {{ snoozedUntilLabel }}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          {{ t('conversation.snoozedUntil', { time: snoozedUntilLabel }) }}
+        </TooltipContent>
+      </Tooltip>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger>
+          <div
+            v-if="conversationStore.current?.status"
+            class="flex items-center space-x-1 cursor-pointer bg-primary px-3 py-3 md:px-2 md:py-1 rounded-md text-sm"
+          >
+            <span class="text-primary-foreground font-medium inline-block">
+              {{ conversationStore.current?.status }}
+            </span>
+          </div>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent>
+          <DropdownMenuItem
+            v-for="status in conversationStore.statusOptions"
+            :key="status.value"
+            @click="handleUpdateStatus(status.label)"
+          >
+            {{ status.label }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="ghost" class="w-11 h-11 md:w-8 md:h-8 p-0">
+            <MoreHorizontal class="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem @click="downloadTranscript">
+            {{ t('conversation.downloadTranscript') }}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            v-if="userStore.can('messages:write')"
+            :disabled="isSummarizing"
+            @click="summarize"
+          >
+            {{ t('conversation.summarize') }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  </div>
 
     <!-- Messages & reply box -->
     <div class="flex flex-col flex-grow overflow-hidden">
@@ -83,9 +111,11 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useConversationStore } from '../../stores/conversation'
+import { useConversationStore } from '@main/stores/conversation'
 import { useUserStore } from '@main/stores/user'
-import { Clock, MoreHorizontal } from 'lucide-vue-next'
+import { Clock, MoreHorizontal, ChevronLeft, PanelRight } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { useIsMobile } from '@shared-ui/composables'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,43 +127,61 @@ import { formatMessageTimestamp } from '@shared-ui/utils/datetime.js'
 import { Button } from '@shared-ui/components/ui/button'
 import MessageList from '@/features/conversation/message/MessageList.vue'
 import ReplyBox from './ReplyBox.vue'
-import { EMITTER_EVENTS } from '../../constants/emitterEvents.js'
-import { CONVERSATION_DEFAULT_STATUSES } from '../../constants/conversation'
-import { useEmitter } from '../../composables/useEmitter'
+import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
+import { CONVERSATION_DEFAULT_STATUSES } from '@main/constants/conversation'
+import { useEmitter } from '@main/composables/useEmitter'
 import { useI18n } from 'vue-i18n'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
+import { downloadBlobResponse, parseBlobError } from '@shared-ui/utils/file'
 import api from '@main/api'
 const conversationStore = useConversationStore()
 const userStore = useUserStore()
 const emitter = useEmitter()
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
+const isMobile = useIsMobile()
+
 const replyBoxRef = ref(null)
 
 const headerClass = computed(() => {
   const tags = conversationStore.current?.tags ?? []
 
-  if (tags.includes("😎Mensch erforderlich")) {
-    return "conversation-header--human"
+  if (tags.includes('😎Mensch erforderlich')) {
+    return 'conversation-header--human'
   }
 
-  if (conversationStore.current?.priority === "High") {
-    return "conversation-header--human"
+  if (conversationStore.current?.priority === 'High') {
+    return 'conversation-header--human'
   }
 
-  if (tags.includes("🏢Intern")) {
-    return "conversation-header--internal"
+  if (tags.includes('🏢Intern')) {
+    return 'conversation-header--internal'
   }
 
-  if (tags.includes("🦽Kundenticket")) {
-    return "conversation-header--customer"
+  if (tags.includes('🦽Kundenticket')) {
+    return 'conversation-header--customer'
   }
 
-  return ""
+  return ''
 })
 
 const handleComposeReply = (payload) => {
   replyBoxRef.value?.openReply(payload)
 }
+
+const goBackToList = () => {
+  const listName = String(route.name).replace(/-conversation$/, '')
+  const { uuid, ...params } = route.params
+  const target = router.resolve({ name: listName, params })
+
+  if (window.history.state?.back?.split('?')[0] === target.path) {
+    router.back()
+  } else {
+    router.push(target)
+  }
+}
+
 
 const isSnoozed = computed(
   () => conversationStore.current?.status === CONVERSATION_DEFAULT_STATUSES.SNOOZED
@@ -149,25 +197,11 @@ const downloadTranscript = async () => {
   if (!conversation) return
   try {
     const response = await api.getConversationTranscript(conversation.uuid)
-    const url = URL.createObjectURL(response.data)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `transcript-${conversation.reference_number}.txt`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 0)
+    downloadBlobResponse(response, `transcript-${conversation.reference_number}.txt`)
   } catch (error) {
-    if (error.response?.data instanceof Blob) {
-      try {
-        error.response.data = JSON.parse(await error.response.data.text())
-      } catch {
-        // keep the original blob, handleHTTPError falls back to a generic message
-      }
-    }
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
-      description: handleHTTPError(error).message
+      description: handleHTTPError(await parseBlobError(error)).message
     })
   }
 }

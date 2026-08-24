@@ -1,7 +1,7 @@
 <template>
   <div>
     <Dialog v-model:open="dialogOpen">
-      <DialogContent class="max-w-5xl w-full h-[90vh] flex flex-col" >
+      <DialogContent class="max-w-5xl h-[90vh] flex flex-col" >
         <DialogHeader>
             <div class="flex gap-2 mb-4">
               <Button
@@ -249,7 +249,7 @@
                     <Editor
                       v-model:htmlContent="componentField.modelValue"
                       @update:htmlContent="(value) => componentField.onChange(value)"
-                      :placeholder="t('editor.hint.newLineCtrlK')"
+                      :placeholder="isCramped ? t('globals.terms.typeMessage') : t('editor.hint.newLineCtrlK')"
                       :insertContent="insertContent"
                       :autoFocus="false"
                       :enableInlineImages="true"
@@ -350,13 +350,14 @@ import {
 } from '@shared-ui/components/ui/select'
 import { useI18n } from 'vue-i18n'
 import { useFileUpload } from '@/composables/useFileUpload'
-import Editor from '@/components/editor/TextEditor.vue'
+import Editor from '@/components/editor/ConversationEditor.vue'
 import { useMacroStore } from '@/stores/macro'
 import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 import { UserTypeAgent } from '@/constants/user'
 import { IdCard } from 'lucide-vue-next'
 import api from '@/api'
 import { hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
+import { useIsComposerCramped } from '@main/composables/useIsComposerCramped'
 
 const dialogOpen = defineModel({
   required: false,
@@ -368,6 +369,7 @@ const { t } = useI18n()
 const uStore = useUsersStore()
 const teamStore = useTeamStore()
 const emitter = useEmitter()
+const isCramped = useIsComposerCramped()
 const loading = ref(false)
 const searchResults = ref([])
 const emailQuery = ref('')

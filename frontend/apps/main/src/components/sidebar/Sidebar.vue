@@ -60,7 +60,8 @@ import {
   NotebookText,
   Wrench,
   Bot,
-  Lightbulb
+  Lightbulb,
+  BookOpen
 } from 'lucide-vue-next'
 
 const navIconMap = {
@@ -90,7 +91,8 @@ const navIconMap = {
   NotebookText,
   Wrench,
   Bot,
-  Lightbulb
+  Lightbulb,
+  BookOpen
 }
 import {
   DropdownMenu,
@@ -108,6 +110,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@shared-ui/components/ui/alert-dialog'
+import MobileDrawerNav from './MobileDrawerNav.vue'
+import MobileDrawerFooter from './MobileDrawerFooter.vue'
 import { filterNavItems } from '@main/utils/nav-permissions'
 import { permissions } from '@main/constants/permissions'
 import { useStorage } from '@vueuse/core'
@@ -116,6 +120,7 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
 import  UnreadCountBadge  from '@main/components/UnreadCountBadge.vue'
+import { useIsMobile } from '@shared-ui/composables'
 
 const props = defineProps({
   userTeams: { type: Array, default: () => [] },
@@ -158,6 +163,7 @@ const myOpenCount = computed(() => {
 const settingsStore = useAppSettingsStore()
 const route = useRoute()
 const router = useRouter()
+const isMobile = useIsMobile()
 const { t } = useI18n()
 const emit = defineEmits(['createView', 'editView', 'deleteView', 'createConversation'])
 
@@ -190,9 +196,13 @@ const handleDeleteView = () => {
   }
 }
 
-// Navigation methods with conversation retention
+const keepConversationOpen = () =>
+  !isMobile.value &&
+  conversationStore.isConversationOpen &&
+  Boolean(conversationStore.conversation.data?.uuid)
+
 const navigateToInbox = (type) => {
-  if (conversationStore.isConversationOpen && conversationStore.conversation.data?.uuid) {
+  if (keepConversationOpen()) {
     router.push({
       name: 'inbox-conversation',
       params: {
@@ -209,7 +219,7 @@ const navigateToInbox = (type) => {
 }
 
 const navigateToTeamInbox = (teamID) => {
-  if (conversationStore.isConversationOpen && conversationStore.conversation.data?.uuid) {
+  if (keepConversationOpen()) {
     router.push({
       name: 'team-inbox-conversation',
       params: {
@@ -226,7 +236,7 @@ const navigateToTeamInbox = (teamID) => {
 }
 
 const navigateToViewInbox = (viewID) => {
-  if (conversationStore.isConversationOpen && conversationStore.conversation.data?.uuid) {
+  if (keepConversationOpen()) {
     router.push({
       name: 'view-inbox-conversation',
       params: {
@@ -271,9 +281,6 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
 const teamInboxOpen = useStorage('teamInboxOpen', true)
 const viewInboxOpen = useStorage('viewInboxOpen', true)
 const sharedViewInboxOpen = useStorage('sharedViewInboxOpen', true)
-
-// Track which view is being hovered for ellipsis menu visibility
-const hoveredViewId = ref(null)
 
 // Track delete confirmation dialog state
 const isDeleteOpen = ref(false)
@@ -385,6 +392,7 @@ for (const view of props.userViews || []) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
+          <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem v-for="item in filteredContactsNavItems" :key="item.titleKey">
@@ -398,6 +406,7 @@ for (const view of props.userViews || []) {
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <MobileDrawerFooter />
       </Sidebar>
     </template>
 
@@ -421,6 +430,7 @@ for (const view of props.userViews || []) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
+          <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem v-for="item in filteredReportsNavItems" :key="item.titleKey">
@@ -434,6 +444,7 @@ for (const view of props.userViews || []) {
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <MobileDrawerFooter />
       </Sidebar>
     </template>
 
@@ -456,6 +467,7 @@ for (const view of props.userViews || []) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
+          <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.titleKey">
@@ -507,6 +519,7 @@ for (const view of props.userViews || []) {
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <MobileDrawerFooter />
       </Sidebar>
     </template>
 
@@ -525,6 +538,7 @@ for (const view of props.userViews || []) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
+          <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem v-for="item in accountNavItems" :key="item.titleKey">
@@ -541,6 +555,7 @@ for (const view of props.userViews || []) {
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <MobileDrawerFooter />
       </Sidebar>
     </template>
 
@@ -565,6 +580,7 @@ for (const view of props.userViews || []) {
         </SidebarHeader>
 
         <SidebarContent>
+          <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -686,7 +702,7 @@ for (const view of props.userViews || []) {
                           <Plus
                             size="18"
                             @click.stop="openCreateViewDialog"
-                            class="rounded-md cursor-pointer opacity-0 transition-colors duration-200 group-hover/item:opacity-100 hover:bg-sidebar-accent/50 text-muted-foreground hover:text-sidebar-accent-foreground p-1"
+                            class="rounded-md cursor-pointer transition-colors duration-200 can-hover:opacity-0 can-hover:group-hover/item:opacity-100 hover:bg-sidebar-accent/50 text-muted-foreground hover:text-sidebar-accent-foreground p-1"
                           />
                         </div>
                         <ChevronRight
@@ -700,48 +716,42 @@ for (const view of props.userViews || []) {
                     <SidebarMenuSub>
                       <SidebarMenuSubItem
                         v-for="view in userViews" :key="view.id"
-                        @mouseenter="hoveredViewId = view.id"
-                        @mouseleave="hoveredViewId = null"
+                        class="group/view-item"
                       >
-                        <SidebarMenuButton
-                          size="sm"
-                          :isActive="route.params.viewID == view.id"
-                          @click="navigateToViewInbox(view.id)"
-                        >
-                          <div class="flex items-center justify-between w-full">
-                            
-                            <span class="flex-1 truncate" :title="view.name">
-                              {{ view.name }}
-                            </span>
+                      <SidebarMenuButton
+                        :isActive="route.params.viewID == view.id"
+                        @click="navigateToViewInbox(view.id)"
+                      >
+                        <div class="flex items-center justify-between w-full">
+                          <span class="flex-1 truncate" :title="view.name">
+                            {{ view.name }}
+                          </span>
 
-                            <UnreadCountBadge
-                              :count="sidebarCounts[`view_${view.id}`] || 0"
-                            />
+                          <UnreadCountBadge
+                            :count="sidebarCounts[`view_${view.id}`] || 0"
+                          />
+                        </div>
+                      </SidebarMenuButton>
 
-                          </div>
-                        </SidebarMenuButton>
-                        <SidebarMenuAction
-                          :class="[
-                            'mr-3',
-                            'md:opacity-0',
-                            'data-[state=open]:opacity-100',
-                            { 'md:opacity-100': hoveredViewId === view.id }
-                          ]"
-                        >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild @click.prevent>
-                              <EllipsisVertical />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem @click="() => editView(view)">
-                                <span>{{ t('globals.messages.edit') }}</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem @click="() => openDeleteConfirmation(view)">
-                                <span>{{ t('globals.messages.delete') }}</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </SidebarMenuAction>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                          <SidebarMenuAction
+                            class="mr-3 can-hover:opacity-0 can-hover:group-hover/view-item:opacity-100 data-[state=open]:opacity-100"
+                            @click.prevent
+                          >
+                            <EllipsisVertical />
+                          </SidebarMenuAction>
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent>
+                          <DropdownMenuItem @click="() => editView(view)">
+                            <span>{{ t('globals.messages.edit') }}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem @click="() => openDeleteConfirmation(view)">
+                            <span>{{ t('globals.messages.delete') }}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   </CollapsibleContent>
@@ -787,6 +797,7 @@ for (const view of props.userViews || []) {
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <MobileDrawerFooter />
       </Sidebar>
     </template>
 
