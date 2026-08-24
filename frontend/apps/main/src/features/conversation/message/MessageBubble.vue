@@ -442,7 +442,7 @@ const retryMessage = (msg) => {
 
 const deletePrivateNote = async () => {
   try {
-    await api.deleteMessage(props.message.uuid)
+    await api.deleteMessage(convStore.current.uuid, props.message.uuid)
 
     convStore.messages.data.removeMessage(
       convStore.current.uuid,
