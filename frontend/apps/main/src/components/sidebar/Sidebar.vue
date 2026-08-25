@@ -344,28 +344,46 @@ const loadSidebarCounts = async () => {
         ).length
     }
 
-    // Views
-for (const view of props.userViews || []) {
+     // Views
+    for (const view of props.userViews || []) {
+      const viewResponse =
+        await api.getViewConversations(
+          view.id,
+          {
+            page: 1,
+            page_size: 100
+          }
+        )
 
-  const viewResponse =
-    await api.getViewConversations(
-      view.id,
-      {
-        page: 1,
-        page_size: 100
-      }
-    )
+      sidebarCounts.value[`view_${view.id}`] =
+        viewResponse.data.data.results.filter(
+          conversation => conversation.status === 'Open'
+        ).length
+    }
 
-  sidebarCounts.value[`view_${view.id}`] =
-    viewResponse.data.data.results.filter(
-      conversation => conversation.status === 'Open'
-    ).length
-}
+    // Shared Views
+    for (const view of props.sharedViews || []) {
+      const viewResponse =
+        await api.getViewConversations(
+          view.id,
+          {
+            page: 1,
+            page_size: 100
+          }
+        )
+
+      sidebarCounts.value[`shared_view_${view.id}`] =
+        viewResponse.data.data.results.filter(
+          conversation => conversation.status === 'Open'
+        ).length
+    }
 
   } catch (error) {
     console.error('Failed loading sidebar counts', error)
   }
 }
+
+
 
 </script>
 
@@ -785,9 +803,15 @@ for (const view of props.userViews || []) {
                           :isActive="route.params.viewID == view.id"
                           @click="navigateToViewInbox(view.id)"
                         >
-                          <span class="flex-1 truncate" :title="view.name">{{
-                            view.name
-                          }}</span>
+                          <div class="flex items-center justify-between w-full">
+                            <span class="flex-1 truncate" :title="view.name">
+                              {{ view.name }}
+                            </span>
+
+                            <UnreadCountBadge
+                              :count="sidebarCounts[`shared_view_${view.id}`] || 0"
+                            />
+                          </div>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
