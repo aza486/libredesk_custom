@@ -9,7 +9,7 @@ const http = axios.create({
 // LLM calls can take 30-40s+, well past the default request timeout.
 const AI_TIMEOUT = 120000
 
-function getCSRFToken () {
+function getCSRFToken() {
   const name = 'csrf_token='
   const cookies = document.cookie.split(';')
   for (let i = 0; i < cookies.length; i++) {
@@ -23,7 +23,7 @@ function getCSRFToken () {
 
 // Route-scoped abort, opt-in via { abortOnRoute: true }. Default no-abort protects in-flight saves.
 let routeAbort = new AbortController()
-export function abortRouteScope () {
+export function abortRouteScope() {
   routeAbort.abort()
   routeAbort = new AbortController()
 }
@@ -613,7 +613,7 @@ const getActiveContextLinks = () => http.get('/api/v1/context-links/active')
 const getContextLinkURL = (id, conversationUUID) =>
   http.get(`/api/v1/context-links/${id}/url`, { params: { conversation_uuid: conversationUUID } })
 
-const generateAPIKey = (id) => 
+const generateAPIKey = (id) =>
   http.post(`/api/v1/agents/${id}/api-key`, {}, {
     headers: {
       'Content-Type': 'application/json'
