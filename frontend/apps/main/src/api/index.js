@@ -330,6 +330,27 @@ const updateConversationPriority = (uuid, data) =>
       'Content-Type': 'application/json'
     }
   })
+const addVisibleUser = (uuid, userID) =>
+  http.put(
+    `/api/v1/conversations/${uuid}/add-visible-user`,
+    { user_id: userID },
+    {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
+
+const removeVisibleUser = (uuid, userID) =>
+  http.put(
+    `/api/v1/conversations/${uuid}/remove-visible-user`,
+    { user_id: userID },
+    {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  )
 const updateAssigneeLastSeen = (uuid) => http.put(`/api/v1/conversations/${uuid}/last-seen`)
 const markConversationAsUnread = (uuid) => http.put(`/api/v1/conversations/${uuid}/mark-unread`)
 const getConversationMessage = (cuuid, uuid) =>
@@ -842,5 +863,7 @@ export default {
   markAllNotificationsAsRead,
   deleteNotification,
   deleteAllNotifications,
-  getContactPageVisits
+  getContactPageVisits,
+  addVisibleUser,
+  removeVisibleUser
 }
