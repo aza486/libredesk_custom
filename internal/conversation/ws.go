@@ -50,7 +50,7 @@ func (m *Manager) BroadcastNewMessage(message *cmodels.Message, conv *cmodels.Co
 		}
 	}
 
-	userIDs := m.AuthorizedConnectedAgentIDs(conv.AssignedUserID, conv.AssignedTeamID)
+	userIDs := m.AuthorizedConnectedAgentIDs(conv.UUID)
 	if len(userIDs) == 0 {
 		return
 	}
@@ -148,13 +148,13 @@ func (m *Manager) broadcastConvToAuthorized(conv, oldConv *cmodels.ConversationL
 	if conv == nil {
 		return
 	}
-	userIDs := m.AuthorizedConnectedAgentIDs(conv.AssignedUserID, conv.AssignedTeamID)
+	userIDs := m.AuthorizedConnectedAgentIDs(conv.UUID)
 	if oldConv != nil {
 		seen := make(map[int]struct{}, len(userIDs))
 		for _, id := range userIDs {
 			seen[id] = struct{}{}
 		}
-		for _, id := range m.AuthorizedConnectedAgentIDs(oldConv.AssignedUserID, oldConv.AssignedTeamID) {
+		for _, id := range m.AuthorizedConnectedAgentIDs(oldConv.UUID) {
 			if _, ok := seen[id]; !ok {
 				seen[id] = struct{}{}
 				userIDs = append(userIDs, id)

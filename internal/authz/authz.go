@@ -28,55 +28,59 @@ func (e *Enforcer) Enforce(user umodels.User, obj, act string) (bool, error) {
 	return slices.Contains(user.Permissions, obj+":"+act), nil
 }
 
-// EnforceConversationAccess determines if a user has access to a specific conversation.
-func (e *Enforcer) EnforceConversationAccess(
+// CanReadConversation determines if a user has visibility to a specific conversation.
+func CanReadConversation(
 	user umodels.User,
 	conversation cmodels.Conversation,
-) (bool, error) {
-
+) bool {
 	attrs := map[string]any{}
 
 	if len(conversation.CustomAttributes) > 0 {
 		_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 	}
 
-	e.lo.Info(
-		"PRIVATE ACCESS",
-		"user_id", user.ID,
-		"attrs", string(conversation.CustomAttributes),
-	)
-
 	if private, ok := attrs["private"].(bool); ok && private {
+		// Admins dürfen interne Tickets immer sehen.
+		if user.HasAdminRole() {
+			return true
+		}
 
+		// Creator darf sein eigenes internes Ticket immer sehen.
+		if creatorID, ok := attrs["creator_id"].(float64); ok && int(creatorID) == user.ID {
+			return true
+		}
+
+		// Explizit sichtbare User dürfen das Ticket sehen.
 		if visibleUsers, ok := attrs["visible_users"].([]any); ok {
-
 			for _, uid := range visibleUsers {
-
-				if int(uid.(float64)) == user.ID {
-
-					e.lo.Info(
-						"PRIVATE ACCESS GRANTED",
-						"user_id", user.ID,
-					)
-
-					return true, nil
+				switch v := uid.(type) {
+				case float64:
+					if int(v) == user.ID {
+						return true
+					}
+				case int:
+					if v == user.ID {
+						return true
+					}
 				}
 			}
 		}
 
-		e.lo.Info(
-			"PRIVATE ACCESS DENIED",
-			"user_id", user.ID,
-		)
-
-		return false, nil
+		return false
 	}
 
 	return CanReadAssignment(
 		user,
 		conversation.AssignedUserID,
 		conversation.AssignedTeamID,
-	), nil
+	)
+}
+
+func (e *Enforcer) EnforceConversationAccess(
+	user umodels.User,
+	conversation cmodels.Conversation,
+) (bool, error) {
+	return CanReadConversation(user, conversation), nil
 }
 
 // EnforceConversationAccess determines if a user has access to a specific conversation based on their permissions.

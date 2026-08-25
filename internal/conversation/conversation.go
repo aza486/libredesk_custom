@@ -796,8 +796,28 @@ func (c *Manager) GetViewConversationsList(viewingUserID, userID int, teamIDs []
 func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, listTypes []string, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
 	var conversations = make([]models.ConversationListItem, 0)
 
+	user, err := c.userStore.GetAgentCachedOrLoad(viewingUserID)
+	if err != nil {
+		c.lo.Error("error loading viewing user", "user_id", viewingUserID, "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+
+	isAdmin := user.HasAdminRole()
+
 	// Make the query.
-	query, qArgs, err := c.makeConversationsListQuery(viewingUserID, userID, teamIDs, listTypes, c.q.GetConversations, order, orderBy, page, pageSize, filters)
+	query, qArgs, err := c.makeConversationsListQuery(
+		viewingUserID,
+		userID,
+		teamIDs,
+		listTypes,
+		c.q.GetConversations,
+		order,
+		orderBy,
+		page,
+		pageSize,
+		filters,
+		isAdmin,
+	)
 	if err != nil {
 		c.lo.Error("error making conversations query", "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
@@ -2312,7 +2332,7 @@ func (c *Manager) getConversationTags(uuid string) ([]string, error) {
 // makeConversationsListQuery prepares a SQL query string for conversations list
 // viewingUserID is used as $1 for per-agent unread count calculation
 // $2 is includeMentions bool for conditional mentioned_message_uuid column
-func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string) (string, []interface{}, error) {
+func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin bool) (string, []interface{}, error) {
 	includeMentions := slices.Contains(listTypes, models.MentionedConversations)
 	qArgs := []any{viewingUserID, includeMentions}
 
@@ -2338,19 +2358,51 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 
 	// Prepare the conditions based on the list types.
 	conditions := []string{}
+	// Private/internal conversations are only visible to admins,
+	// the creator, or explicitly visible users.
+	// This condition is applied to the normal assignment-based lists
+	// so private tickets do not leak into Assigned/Unassigned/Team views.
+	privateAccessCondition := fmt.Sprintf(`
+	(
+			COALESCE((conversations.custom_attributes->>'private')::boolean, false) = false
+			OR %t
+			OR (conversations.custom_attributes->>'creator_id')::int = %d
+			OR (conversations.custom_attributes->'visible_users') @> '[%d]'
+	)
+	`, isAdmin, userID, userID)
 	for _, lt := range listTypes {
 		switch lt {
 		case models.AssignedConversations:
-			conditions = append(conditions, fmt.Sprintf("conversations.assigned_user_id = $%d", len(qArgs)+1))
+			conditions = append(
+				conditions,
+				fmt.Sprintf(
+					"(conversations.assigned_user_id = $%d AND %s)",
+					len(qArgs)+1,
+					privateAccessCondition,
+				),
+			)
 			qArgs = append(qArgs, userID)
 		case models.UnassignedConversations:
-			conditions = append(conditions, "conversations.assigned_user_id IS NULL AND conversations.assigned_team_id IS NULL")
+			conditions = append(
+				conditions,
+				fmt.Sprintf(
+					"(conversations.assigned_user_id IS NULL AND conversations.assigned_team_id IS NULL AND %s)",
+					privateAccessCondition,
+				),
+			)
 		case models.TeamUnassignedConversations:
 			placeholders := make([]string, len(teamIDs))
 			for i := range teamIDs {
 				placeholders[i] = fmt.Sprintf("$%d", len(qArgs)+i+1)
 			}
-			conditions = append(conditions, fmt.Sprintf("(conversations.assigned_team_id IN (%s) AND conversations.assigned_user_id IS NULL)", strings.Join(placeholders, ",")))
+			conditions = append(
+				conditions,
+				fmt.Sprintf(
+					"(conversations.assigned_team_id IN (%s) AND conversations.assigned_user_id IS NULL AND %s)",
+					strings.Join(placeholders, ","),
+					privateAccessCondition,
+				),
+			)
 			for _, id := range teamIDs {
 				qArgs = append(qArgs, id)
 			}
@@ -2359,23 +2411,41 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			for i := range teamIDs {
 				placeholders[i] = fmt.Sprintf("$%d", len(qArgs)+i+1)
 			}
-			conditions = append(conditions, fmt.Sprintf("(conversations.assigned_team_id IN (%s))", strings.Join(placeholders, ",")))
+			conditions = append(
+				conditions,
+				fmt.Sprintf(
+					"(conversations.assigned_team_id IN (%s) AND %s)",
+					strings.Join(placeholders, ","),
+					privateAccessCondition,
+				),
+			)
 			for _, id := range teamIDs {
 				qArgs = append(qArgs, id)
 			}
 		case models.AllConversations:
-			// No conditions needed for all conversations.
+			// All conversations, but still respect private/internal visibility.
+			conditions = append(
+				conditions,
+				privateAccessCondition,
+			)
 		case models.MentionedConversations:
-			// Filter to only conversations where user is mentioned (directly or via team)
-			conditions = append(conditions, `conversations.id IN (
-				SELECT cm.conversation_id
-				FROM conversation_mentions cm
-				WHERE cm.mentioned_user_id = $1
-				   OR EXISTS(
-					   SELECT 1 FROM team_members tm
-					   WHERE tm.team_id = cm.mentioned_team_id AND tm.user_id = $1
-				   )
-			)`)
+			conditions = append(
+				conditions,
+				fmt.Sprintf(`(
+								%s
+								AND conversations.id IN (
+										SELECT cm.conversation_id
+										FROM conversation_mentions cm
+										WHERE cm.mentioned_user_id = $1
+											OR EXISTS(
+													SELECT 1
+													FROM team_members tm
+													WHERE tm.team_id = cm.mentioned_team_id
+														AND tm.user_id = $1
+											)
+								)
+						)`, privateAccessCondition),
+			)
 
 		case models.VisibleConversations:
 
@@ -2637,24 +2707,39 @@ func (c *Manager) GetConversationListItem(uuid string) (models.ConversationListI
 	return item, nil
 }
 
-func (c *Manager) AuthorizedConnectedAgentIDs(assignedUserID, assignedTeamID null.Int) []int {
+func (c *Manager) AuthorizedConnectedAgentIDs(conversationUUID string) []int {
 	connected := c.wsHub.ConnectedUserIDs()
 	if len(connected) == 0 {
 		return nil
 	}
+
+	conversation, err := c.GetConversation(0, conversationUUID, "")
+	if err != nil {
+		c.lo.Error(
+			"error loading conversation for websocket authorization",
+			"conversation_uuid", conversationUUID,
+			"error", err,
+		)
+		return nil
+	}
+
 	out := make([]int, 0, len(connected))
+
 	for _, id := range connected {
 		agent, err := c.userStore.GetAgentCachedOrLoad(id)
 		if err != nil {
 			continue
 		}
+
 		if !agent.Enabled {
 			continue
 		}
-		if authz.CanReadAssignment(agent, assignedUserID, assignedTeamID) {
+
+		if authz.CanReadConversation(agent, conversation) {
 			out = append(out, id)
 		}
 	}
+
 	return out
 }
 
@@ -2681,6 +2766,7 @@ func (c *Manager) FilterAuthorizedListUUIDs(agentID int, uuids []string) ([]stri
 		slices.Contains(user.Permissions, authzmodels.PermConversationsReadTeamAll),
 		slices.Contains(user.Permissions, authzmodels.PermConversationsReadTeamInbox),
 		slices.Contains(user.Permissions, authzmodels.PermConversationsReadUnassigned),
+		user.HasAdminRole(),
 	)
 	if err != nil {
 		c.lo.Error("error filtering authorized list uuids", "agent_id", agentID, "error", err)

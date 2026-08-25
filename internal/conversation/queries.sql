@@ -1010,6 +1010,7 @@ LIMIT 50;
 -- $7: has 'conversations:read_team_all'
 -- $8: has 'conversations:read_team_inbox'
 -- $9: has 'conversations:read_unassigned'
+-- $10: is admin
 SELECT uuid::text
 FROM conversations
 WHERE uuid = ANY($1::uuid[])
@@ -1020,6 +1021,12 @@ WHERE uuid = ANY($1::uuid[])
     OR ($7 AND assigned_team_id = ANY($3::int[]))
     OR ($8 AND assigned_team_id = ANY($3::int[]) AND assigned_user_id IS NULL)
     OR ($9 AND assigned_user_id IS NULL AND assigned_team_id IS NULL)
+  )
+  AND (
+       COALESCE((custom_attributes->>'private')::boolean, false) = false
+    OR $10
+    OR (custom_attributes->>'creator_id')::int = $2
+    OR (custom_attributes->'visible_users') @> jsonb_build_array($2)
   );
 
 -- name: get-conversation-uuids-by-contact
