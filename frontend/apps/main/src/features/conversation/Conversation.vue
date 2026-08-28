@@ -17,16 +17,16 @@
       </Button>
 
       <div class="flex flex-col min-w-0">
-        <span class="font-semibold">
-          {{ conversationStore.currentContactName }}
-        </span>
-
         <span
           v-if="conversationStore.current?.subject"
-          class="text-xs text-muted-foreground truncate"
+          class="font-semibold truncate"
           :title="conversationStore.current.subject"
         >
           {{ conversationStore.current.subject }}
+        </span>
+
+        <span class="text-xs text-muted-foreground truncate">
+          {{ conversationStore.currentContactName }}
         </span>
       </div>
     </div>
