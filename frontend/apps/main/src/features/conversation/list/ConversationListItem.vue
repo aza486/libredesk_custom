@@ -384,27 +384,30 @@ const handleSelect = () => {
 </script>
 
 <style scoped>
+/* Verarbeitungsfehler – entsättigtes Grau mit Rotstich */
 .ticket-highlight-processing-error {
-  @apply bg-red-100 text-red-950 hover:bg-red-200 dark:bg-red-950/70 dark:text-red-100 dark:hover:bg-red-950;
+  @apply bg-[#F1E9E9] text-[#4B3032] hover:bg-[#E9DEDE] dark:bg-[#292224] dark:text-[#E8DADB] dark:hover:bg-[#33292B];
 }
 
 .ticket-highlight-processing-error :deep(.text-foreground) {
-  @apply text-red-950 dark:text-red-100;
+  @apply text-[#4B3032] dark:text-[#E8DADB];
 }
 
 .ticket-highlight-processing-error :deep(.text-muted-foreground) {
-  @apply text-red-800 dark:text-red-200;
+  @apply text-[#795C5F] dark:text-[#BDA8AA];
 }
 
+
+/* Mensch erforderlich – entsättigtes Grau mit warmem Orangestich */
 .ticket-highlight-human-required {
-  @apply bg-amber-100 text-amber-950 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-100 dark:hover:bg-amber-950;
+  @apply bg-[#F1EEE6] text-[#4A4030] hover:bg-[#E9E4D8] dark:bg-[#2B2923] dark:text-[#E5DCC8] dark:hover:bg-[#353127];
 }
 
 .ticket-highlight-human-required :deep(.text-foreground) {
-  @apply text-amber-950 dark:text-amber-100;
+  @apply text-[#4A4030] dark:text-[#E5DCC8];
 }
 
 .ticket-highlight-human-required :deep(.text-muted-foreground) {
-  @apply text-amber-800 dark:text-amber-200;
+  @apply text-[#786E5A] dark:text-[#BEB49D];
 }
 </style>
