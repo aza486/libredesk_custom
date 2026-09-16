@@ -131,7 +131,14 @@
               <span v-if="hiddenTagCount" class="shrink-0 text-xs text-muted-foreground">…</span>
             </div>
 
-            <div class="text-xs text-muted-foreground">{{ conversation.status }}</div>
+            <div class="flex items-center">
+              <span
+                class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium leading-4 transition-colors"
+                :class="statusClass"
+              >
+                {{ conversation.status }}
+              </span>
+            </div>
 
             <div v-if="hasSlaDeadlines" class="flex items-center gap-1">
               <SlaBadge
@@ -299,6 +306,57 @@ const tagHighlightClass = computed(() => {
   if (tags.includes('🛑verarbeitungsfehler')) return 'ticket-highlight-processing-error'
   if (tags.includes('😎menscherforderlich')) return 'ticket-highlight-human-required'
   return ''
+})
+
+const statusClass = computed(() => {
+  switch (props.conversation.status) {
+    case 'Open':
+      return [
+        'border-red-500/20',
+        'bg-red-500/10',
+        'text-red-700',
+        'dark:border-red-400/20',
+        'dark:bg-red-500/20',
+        'dark:text-red-300'
+      ]
+
+    case 'Resolved':
+      return [
+        'border-green-500/20',
+        'bg-green-500/10',
+        'text-green-700',
+        'dark:border-green-400/20',
+        'dark:bg-green-500/20',
+        'dark:text-green-300'
+      ]
+
+    case 'Snoozed':
+      return [
+        'border-blue-500/20',
+        'bg-blue-500/10',
+        'text-blue-700',
+        'dark:border-blue-400/20',
+        'dark:bg-blue-500/20',
+        'dark:text-blue-300'
+      ]
+
+    case 'Closed':
+      return [
+        'border-violet-500/20',
+        'bg-violet-500/10',
+        'text-violet-700',
+        'dark:border-violet-400/20',
+        'dark:bg-violet-500/20',
+        'dark:text-violet-300'
+      ]
+
+    default:
+      return [
+        'border-border',
+        'bg-muted',
+        'text-muted-foreground'
+      ]
+  }
 })
 
 const isItemSelected = computed(() => {
