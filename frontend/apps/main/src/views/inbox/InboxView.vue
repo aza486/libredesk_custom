@@ -13,6 +13,7 @@ import ConversationPlaceholder from '@/features/conversation/ConversationPlaceho
 
 const route = useRoute()
 const type = computed(() => route.params.type)
+const requestedStatus = computed(() => route.query.status || '')
 const teamID = computed(() => route.params.teamID)
 const viewID = computed(() => route.params.viewID)
 
@@ -23,16 +24,21 @@ let lastFetchedKey = ''
 const storeHasCurrentList = () => {
   const c = conversationStore.conversations
   if (!c.initialized) return false
-  if (viewID.value) return c.listType === CONVERSATION_LIST_TYPE.VIEW && String(c.viewID) === String(viewID.value)
-  if (type.value) return c.listType === type.value
-  if (teamID.value) return c.listType === CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED && String(c.teamID) === String(teamID.value)
+  if (viewID.value)
+    return c.listType === CONVERSATION_LIST_TYPE.VIEW && String(c.viewID) === String(viewID.value)
+  if (type.value) return c.listType === type.value && c.status === requestedStatus.value
+  if (teamID.value)
+    return (
+      c.listType === CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED &&
+      String(c.teamID) === String(teamID.value)
+    )
   return false
 }
 
 const fetchForCurrentRoute = () => {
   if (!type.value && !teamID.value && !viewID.value) return
 
-  const key = `${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}`
+  const key = `${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}`
   if (key === lastFetchedKey) return
   lastFetchedKey = key
 
@@ -48,24 +54,23 @@ const fetchForCurrentRoute = () => {
     return
   }
 
-  if (!conversationStore.getListStatus) {
-    conversationStore.setListStatus(CONVERSATION_DEFAULT_STATUSES.OPEN, false)
-  }
+  conversationStore.setListStatus(requestedStatus.value, false)
   if (type.value) {
     conversationStore.fetchConversationsList(true, type.value)
   } else {
-    conversationStore.fetchConversationsList(true, CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED, teamID.value)
+    conversationStore.fetchConversationsList(
+      true,
+      CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
+      teamID.value
+    )
   }
 }
 
 onMounted(fetchForCurrentRoute)
 
 const visibility = useDocumentVisibility()
-const { pause, resume } = useIntervalFn(
-  () => conversationStore.refreshConversationList(),
-  120000
-)
-watch(visibility, v => {
+const { pause, resume } = useIntervalFn(() => conversationStore.refreshConversationList(), 120000)
+watch(visibility, (v) => {
   if (v === 'visible') {
     conversationStore.refreshConversationList()
     resume()
@@ -74,5 +79,5 @@ watch(visibility, v => {
   }
 })
 
-watch([type, teamID, viewID], fetchForCurrentRoute)
+watch([type, teamID, viewID, requestedStatus], fetchForCurrentRoute)
 </script>

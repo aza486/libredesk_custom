@@ -685,6 +685,18 @@ func (c *Manager) GetVisibleConversationsList(
 	)
 }
 
+func (c *Manager) GetVisibleInternalConversationsList(viewingUserID int, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
+	return c.GetConversations(viewingUserID, viewingUserID, []int{}, []string{models.VisibleInternalConversations}, order, orderBy, filters, page, pageSize)
+}
+
+func (c *Manager) GetCustomerConversationsList(viewingUserID int, highPriority bool, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
+	listType := models.CustomerConversations
+	if highPriority {
+		listType = models.CustomerHighPriorityConversations
+	}
+	return c.GetConversations(viewingUserID, viewingUserID, []int{}, []string{listType}, order, orderBy, filters, page, pageSize)
+}
+
 func (c *Manager) GetCreatedConversationsList(
 	viewingUserID int,
 	order,
@@ -2539,6 +2551,18 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 					userID,
 				),
 			)
+		case models.VisibleInternalConversations:
+			conditions = append(conditions, fmt.Sprintf(`
+				(COALESCE((conversations.custom_attributes->>'private')::boolean, false) = true
+				AND (conversations.custom_attributes->'visible_users') @> '[%d]')`, userID))
+		case models.CustomerConversations, models.CustomerHighPriorityConversations:
+			customerCondition := fmt.Sprintf(`
+				(COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = true
+				AND %s)`, ticketAccessCondition)
+			if lt == models.CustomerHighPriorityConversations {
+				customerCondition = "(" + customerCondition + " AND conversation_priorities.name = 'High')"
+			}
+			conditions = append(conditions, customerCondition)
 
 		case models.CreatedConversations:
 

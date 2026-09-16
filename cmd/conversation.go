@@ -161,6 +161,50 @@ func handleGetVisibleConversations(r *fastglue.Request) error {
 	})
 }
 
+func handleGetVisibleInternalConversations(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	user := r.RequestCtx.UserValue("user").(amodels.User)
+	order := string(r.RequestCtx.QueryArgs().Peek("order"))
+	orderBy := string(r.RequestCtx.QueryArgs().Peek("order_by"))
+	filters := string(r.RequestCtx.QueryArgs().Peek("filters"))
+	page, pageSize := getPagination(r)
+	conversations, err := app.conversation.GetVisibleInternalConversationsList(user.ID, order, orderBy, filters, page, pageSize)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	total := 0
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+	return r.SendEnvelope(envelope.PageResults{Results: conversations, Total: total, PerPage: pageSize, TotalPages: (total + pageSize - 1) / pageSize, Page: page})
+}
+
+func handleGetCustomerConversations(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	user := r.RequestCtx.UserValue("user").(amodels.User)
+	fullUser, err := app.user.GetAgentCachedOrLoad(user.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if !fullUser.HasAdminRole() && !slices.Contains(fullUser.Roles, "Kundensupport") {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
+	}
+	order := string(r.RequestCtx.QueryArgs().Peek("order"))
+	orderBy := string(r.RequestCtx.QueryArgs().Peek("order_by"))
+	filters := string(r.RequestCtx.QueryArgs().Peek("filters"))
+	page, pageSize := getPagination(r)
+	highPriority := string(r.RequestCtx.QueryArgs().Peek("priority")) == "high"
+	conversations, err := app.conversation.GetCustomerConversationsList(user.ID, highPriority, order, orderBy, filters, page, pageSize)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	total := 0
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+	return r.SendEnvelope(envelope.PageResults{Results: conversations, Total: total, PerPage: pageSize, TotalPages: (total + pageSize - 1) / pageSize, Page: page})
+}
+
 // handleGetCreatedConversations retrieves conversations created by the current user.
 func handleGetCreatedConversations(r *fastglue.Request) error {
 	var (

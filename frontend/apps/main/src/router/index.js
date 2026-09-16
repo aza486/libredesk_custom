@@ -117,9 +117,9 @@ const routes = [
         meta: { titleKey: 'globals.terms.search', hidePageHeader: true }
       },
       {
-        path: '/inboxes/:type(assigned|unassigned|all|visible|created)?',
+        path: '/inboxes/:type(assigned|unassigned|all|visible|visible-internal|customer|customer-high|created)?',
         name: 'inboxes',
-        redirect: '/inboxes/assigned',
+        redirect: '/inboxes/assigned?status=Open',
         component: InboxLayout,
         props: true,
         meta: { titleKey: 'globals.terms.inbox', hidePageHeader: true },
@@ -135,6 +135,9 @@ const routes = [
                 if (route.params.type === 'unassigned') return 'globals.terms.unassigned'
                 if (route.params.type === 'all') return 'globals.messages.all'
                 if (route.params.type === 'visible') return 'conversation.visibleForMe'
+                if (route.params.type === 'visible-internal') return 'conversation.visibleForMe'
+                if (route.params.type === 'customer' || route.params.type === 'customer-high')
+                  return 'Kundentickets'
                 if (route.params.type === 'created') return 'conversation.createdByMe'
                 return ''
               }
@@ -152,6 +155,9 @@ const routes = [
                     if (route.params.type === 'unassigned') return 'globals.terms.unassigned'
                     if (route.params.type === 'all') return 'globals.messages.all'
                     if (route.params.type === 'visible') return 'conversation.visibleForMe'
+                    if (route.params.type === 'visible-internal') return 'conversation.visibleForMe'
+                    if (route.params.type === 'customer' || route.params.type === 'customer-high')
+                      return 'Kundentickets'
                     if (route.params.type === 'created') return 'conversation.createdByMe'
                     return ''
                   },

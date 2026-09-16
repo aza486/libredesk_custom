@@ -201,19 +201,22 @@ const keepConversationOpen = () =>
   conversationStore.isConversationOpen &&
   Boolean(conversationStore.conversation.data?.uuid)
 
-const navigateToInbox = (type) => {
+const navigateToInbox = (type, status = '') => {
+  const query = status ? { status } : {}
   if (keepConversationOpen()) {
     router.push({
       name: 'inbox-conversation',
       params: {
         type,
         uuid: conversationStore.conversation.data.uuid
-      }
+      },
+      query
     })
   } else {
     router.push({
       name: 'inbox',
-      params: { type }
+      params: { type },
+      query
     })
   }
 }
@@ -281,6 +284,9 @@ const sidebarOpen = useStorage('mainSidebarOpen', true)
 const teamInboxOpen = useStorage('teamInboxOpen', true)
 const viewInboxOpen = useStorage('viewInboxOpen', true)
 const sharedViewInboxOpen = useStorage('sharedViewInboxOpen', true)
+const myTicketsOpen = useStorage('myTicketsOpen', true)
+const customerTicketsOpen = useStorage('customerTicketsOpen', true)
+const isCustomerSupport = computed(() => userStore.roles.includes('Kundensupport'))
 
 // Track delete confirmation dialog state
 const isDeleteOpen = ref(false)
@@ -290,14 +296,30 @@ let sidebarCountInterval = null
 const loadSidebarCounts = async () => {
   try {
     // Assigned
+    const openFilter = JSON.stringify([
+      { model: 'conversation_statuses', field: 'name', operator: 'equals', value: 'Open' }
+    ])
     const assignedResponse = await api.getAssignedConversations({
       page: 1,
-      page_size: 100
+      page_size: 1,
+      filters: openFilter
     })
 
-    sidebarCounts.value.assigned = assignedResponse.data.data.results.filter(
-      (conversation) => conversation.status === 'Open'
-    ).length
+    sidebarCounts.value.assigned = assignedResponse.data.data.total || 0
+
+    if (isCustomerSupport.value || userStore.roles.includes('Admin')) {
+      const [customerResponse, highPriorityResponse] = await Promise.all([
+        api.getCustomerConversations({ page: 1, page_size: 1, filters: openFilter }),
+        api.getCustomerConversations({
+          page: 1,
+          page_size: 1,
+          priority: 'high',
+          filters: openFilter
+        })
+      ])
+      sidebarCounts.value.customer = customerResponse.data.data.total || 0
+      sidebarCounts.value.customer_high = highPriorityResponse.data.data.total || 0
+    }
 
     // Unassigned
     const unassignedResponse = await api.getUnassignedConversations({
@@ -576,28 +598,133 @@ const loadSidebarCounts = async () => {
                   <span>{{ t('conversation.newConversation') }}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  :isActive="isActiveParent('/inboxes/assigned')"
-                  @click="navigateToInbox('assigned')"
-                >
-                  <User />
-                  <div class="flex items-center justify-between w-full">
-                    <span>{{ t('globals.terms.myInbox') }}</span>
-                    <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <Collapsible class="group/collapsible" v-model:open="myTicketsOpen">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger as-child>
+                    <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')">
+                      <User />
+                      <span>{{ t('globals.terms.myInbox') }}</span>
+                      <ChevronRight
+                        class="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90"
+                      />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="
+                            isActiveParent('/inboxes/assigned') && route.query.status === 'Open'
+                          "
+                          @click="navigateToInbox('assigned', 'Open')"
+                        >
+                          <span>Offen</span
+                          ><UnreadCountBadge :count="sidebarCounts.assigned || 0" />
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem
+                        v-for="item in [
+                          { label: 'Beantwortet', status: 'Replied' },
+                          { label: 'Schlummernd', status: 'Snoozed' },
+                          { label: 'Geschlossen', status: 'Closed' }
+                        ]"
+                        :key="item.status"
+                      >
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="
+                            isActiveParent('/inboxes/assigned') &&
+                            route.query.status === item.status
+                          "
+                          @click="navigateToInbox('assigned', item.status)"
+                        >
+                          <span>{{ item.label }}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  :isActive="isActiveParent('/inboxes/visible')"
-                  @click="navigateToInbox('visible')"
+                  :isActive="
+                    isActiveParent(
+                      isCustomerSupport ? '/inboxes/visible-internal' : '/inboxes/visible'
+                    )
+                  "
+                  @click="navigateToInbox(isCustomerSupport ? 'visible-internal' : 'visible')"
                 >
                   <Eye />
-                  <span>Sichtbar für mich</span>
+                  <span>{{
+                    isCustomerSupport ? 'Sichtbar für mich (intern)' : 'Sichtbar für mich'
+                  }}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              <Collapsible
+                v-if="isCustomerSupport || userStore.roles.includes('Admin')"
+                class="group/collapsible"
+                v-model:open="customerTicketsOpen"
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger as-child>
+                    <SidebarMenuButton :isActive="isActiveParent('/inboxes/customer')">
+                      <Mail />
+                      <span>Kundentickets</span>
+                      <ChevronRight
+                        class="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90"
+                      />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="isActiveParent('/inboxes/customer-high')"
+                          @click="navigateToInbox('customer-high', 'Open')"
+                        >
+                          <span>Hohe Priorität</span
+                          ><UnreadCountBadge :count="sidebarCounts.customer_high || 0" />
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="
+                            isActiveParent('/inboxes/customer') && route.query.status === 'Open'
+                          "
+                          @click="navigateToInbox('customer', 'Open')"
+                        >
+                          <span>Offen</span
+                          ><UnreadCountBadge :count="sidebarCounts.customer || 0" />
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem
+                        v-for="item in [
+                          { label: 'Beantwortet', status: 'Replied' },
+                          { label: 'Schlummernd', status: 'Snoozed' },
+                          { label: 'Geschlossen', status: 'Closed' }
+                        ]"
+                        :key="item.status"
+                      >
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="
+                            isActiveParent('/inboxes/customer') &&
+                            route.query.status === item.status
+                          "
+                          @click="navigateToInbox('customer', item.status)"
+                        >
+                          <span>{{ item.label }}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
               <SidebarMenuItem>
                 <SidebarMenuButton

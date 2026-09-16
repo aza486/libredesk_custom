@@ -417,6 +417,10 @@ const getMentionedConversations = (params) =>
   http.get('/api/v1/conversations/mentioned', { params, abortOnRoute: true })
 const getVisibleConversations = (params) =>
   http.get('/api/v1/conversations/visible', { params, abortOnRoute: true })
+const getVisibleInternalConversations = (params) =>
+  http.get('/api/v1/conversations/visible-internal', { params, abortOnRoute: true })
+const getCustomerConversations = (params) =>
+  http.get('/api/v1/conversations/customer', { params, abortOnRoute: true })
 const getCreatedConversations = (params) =>
   http.get('/api/v1/conversations/created', { params, abortOnRoute: true })
 const getViewConversations = (id, params) =>
@@ -706,6 +710,8 @@ export default {
   getAllConversations,
   getMentionedConversations,
   getVisibleConversations,
+  getVisibleInternalConversations,
+  getCustomerConversations,
   getCreatedConversations,
   getTeamUnassignedConversations,
   getViewConversations,

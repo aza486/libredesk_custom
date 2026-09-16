@@ -6,6 +6,9 @@ export const CONVERSATION_LIST_TYPE = {
   ALL: 'all',
   MENTIONED: 'mentioned',
   VISIBLE: 'visible',
+  VISIBLE_INTERNAL: 'visible-internal',
+  CUSTOMER: 'customer',
+  CUSTOMER_HIGH: 'customer-high',
   CREATED: 'created'
 }
 
@@ -13,10 +16,10 @@ export const CONVERSATION_DEFAULT_STATUSES = {
   OPEN: 'Open',
   SNOOZED: 'Snoozed',
   RESOLVED: 'Resolved',
-  CLOSED: 'Closed',
+  CLOSED: 'Closed'
 }
 
-export const CONVERSATION_DEFAULT_STATUSES_LIST = Object.values(CONVERSATION_DEFAULT_STATUSES);
+export const CONVERSATION_DEFAULT_STATUSES_LIST = Object.values(CONVERSATION_DEFAULT_STATUSES)
 
 export const MACRO_CONTEXT = {
   REPLY: 'reply',
