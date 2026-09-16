@@ -27,6 +27,10 @@ type assigneeChangeReq struct {
 	AssigneeID int `json:"assignee_id"`
 }
 
+type assigneesChangeReq struct {
+	AssigneeIDs []int `json:"assignee_ids"`
+}
+
 type teamAssigneeChangeReq struct {
 	AssigneeID int `json:"assignee_id"`
 }
@@ -566,6 +570,33 @@ func handleUpdateUserAssignee(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+// handleSetUserAssignees replaces a ticket's complete user-assignment list.
+func handleSetUserAssignees(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	uuid := r.RequestCtx.UserValue("uuid").(string)
+	auser := r.RequestCtx.UserValue("user").(amodels.User)
+	var req assigneesChangeReq
+	if err := r.Decode(&req, "json"); err != nil {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("errors.parsingRequest"), nil, envelope.InputError)
+	}
+	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if _, err := enforceConversationAccess(app, uuid, user); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	for _, id := range req.AssigneeIDs {
+		if _, err := app.user.GetAgent(id, ""); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
+	if err := app.conversation.SetConversationUserAssignees(uuid, req.AssigneeIDs, user); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
 // handleUpdateTeamAssignee updates the team assigned to a conversation.
 func handleUpdateTeamAssignee(r *fastglue.Request) error {
 	var (
@@ -838,6 +869,13 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 				nil,
 			),
 		)
+	}
+	assigned, err := app.conversation.IsUserAssigned(uuid, req.UserID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if assigned {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Assigned users must be unassigned before visibility can be removed", nil))
 	}
 
 	if err := app.conversation.RemoveVisibleUser(

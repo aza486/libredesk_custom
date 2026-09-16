@@ -15,14 +15,22 @@
 
           <!-- Agent, team, priority, and tags assignment -->
           <AccordionContent class="accordion-content--actions">
-            <div>
-              <SelectComboBox
-                v-model="conversationStore.current.assigned_user_id"
+            <div v-if="conversationStore.current" class="space-y-2">
+              <UserMultiSelect
+                v-model="selectedAssignees"
                 :items="agentOptions"
                 :placeholder="t('placeholders.selectAgent')"
-                @select="selectAgent"
-                type="user"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                class="w-full"
+                :disabled="isSavingAssignees"
+                @click="saveAssignees"
+              >
+                {{ isSavingAssignees ? t('globals.messages.saving') : 'Zuweisungen speichern' }}
+              </Button>
             </div>
 
             <div>
@@ -87,8 +95,7 @@
           v-if="conversationStore.current?.custom_attributes?.visible_users"
         >
           <AccordionTrigger class="accordion-trigger">
-            Sichtbarkeit
-            ({{ conversationStore.current.custom_attributes.visible_users.length }})
+            Sichtbarkeit ({{ conversationStore.current.custom_attributes.visible_users.length }})
           </AccordionTrigger>
 
           <AccordionContent class="accordion-content">
@@ -96,7 +103,9 @@
               v-for="userId in sortedVisibleUsers"
               :key="userId"
               class="flex justify-between items-center py-1"
-              :class="{ 'font-medium': userId === conversationStore.current.custom_attributes.creator_id }"
+              :class="{
+                'font-medium': userId === conversationStore.current.custom_attributes.creator_id
+              }"
             >
               <span>
                 {{ getVisibleUserName(userId) }}
@@ -109,7 +118,10 @@
               </span>
 
               <button
-                v-if="userId !== conversationStore.current.custom_attributes.creator_id"
+                v-if="
+                  userId !== conversationStore.current.custom_attributes.creator_id &&
+                  !assignedUserIDs.some((id) => Number(id) === Number(userId))
+                "
                 @click="removeVisibleUser(userId)"
               >
                 ✕
@@ -255,6 +267,8 @@ const tagStore = useTagStore()
 const userStore = useUserStore()
 const tags = ref([])
 const selectedVisibleUsers = ref([])
+const selectedAssignees = ref([])
+const isSavingAssignees = ref(false)
 const accordionState = useStorage('conversation-sidebar-accordion', [])
 const activeTab = useStorage('conversation-sidebar-tab', 'details')
 const { t } = useI18n()
@@ -322,22 +336,53 @@ const applySuggestedTag = (tag) => {
 const priorityOptions = computed(() => conversationStore.priorityOptions)
 
 const agentOptions = computed(() => {
-  const none = { value: 'none', label: t('globals.terms.none') }
   const isMe = (option) => String(option.value) === String(userStore.userID)
   const me = usersStore.options.find(isMe)
-  if (!me) return [none, ...usersStore.options]
-  return [none, me, ...usersStore.options.filter((option) => !isMe(option))]
+  if (!me) return usersStore.options
+  return [me, ...usersStore.options.filter((option) => !isMe(option))]
 })
+
+watch(
+  () => conversationStore.current?.uuid,
+  () => {
+    const conversation = conversationStore.current
+    if (!conversation) {
+      selectedAssignees.value = []
+      return
+    }
+    const ids = conversation.assigned_user_ids?.length
+      ? conversation.assigned_user_ids
+      : conversation.assigned_user_id
+        ? [conversation.assigned_user_id]
+        : []
+    selectedAssignees.value = usersStore.options.filter((user) =>
+      ids.some((id) => Number(id) === Number(user.value))
+    )
+  },
+  { immediate: true }
+)
 
 const fetchTags = async () => {
   await tagStore.fetchTags()
   tags.value = tagStore.tags.map((item) => item.name)
 }
 
-const handleAssignedUserChange = (id) => {
-  conversationStore.updateAssignee('user', {
-    assignee_id: parseInt(id)
-  })
+const saveAssignees = async () => {
+  if (!conversationStore.current || isSavingAssignees.value) return
+  isSavingAssignees.value = true
+  const assigneeIDs = selectedAssignees.value.map((user) => Number(user.value))
+  try {
+    await api.setUserAssignees(conversationStore.current.uuid, assigneeIDs)
+    conversationStore.current.assigned_user_ids = assigneeIDs
+    conversationStore.current.assigned_user_id = assigneeIDs[0] || null
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
+  } finally {
+    isSavingAssignees.value = false
+  }
 }
 
 const handleAssignedTeamChange = (id) => {
@@ -352,15 +397,6 @@ const handleRemoveAssignee = (type) => {
 
 const handlePriorityChange = (priority) => {
   conversationStore.updatePriority(priority)
-}
-
-const selectAgent = (agent) => {
-  if (agent.value === 'none') {
-    handleRemoveAssignee('user')
-    return
-  }
-  conversationStore.current.assigned_user_id = agent.value
-  handleAssignedUserChange(agent.value)
 }
 
 const selectTeam = (team) => {
@@ -396,34 +432,24 @@ const updateContactCustomAttributes = async (attributes) => {
 
 // Custom: conversation visibility management
 const getVisibleUserName = (userId) => {
-  const user = usersStore.options.find(
-    u => Number(u.value) === Number(userId)
-  )
+  const user = usersStore.options.find((u) => Number(u.value) === Number(userId))
 
-  return user
-    ? `${user.first_name} ${user.last_name}`
-    : `User ${userId}`
+  return user ? `${user.first_name} ${user.last_name}` : `User ${userId}`
 }
 
 const removeVisibleUser = async (userId) => {
   try {
-    await api.removeVisibleUser(
-      conversationStore.current.uuid,
-      userId
-    )
+    await api.removeVisibleUser(conversationStore.current.uuid, userId)
 
     conversationStore.current.custom_attributes.visible_users =
       conversationStore.current.custom_attributes.visible_users.filter(
-        id => Number(id) !== Number(userId)
+        (id) => Number(id) !== Number(userId)
       )
   } catch (error) {
-    emitter.emit(
-      EMITTER_EVENTS.SHOW_TOAST,
-      {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      }
-    )
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   }
 }
 
@@ -431,32 +457,22 @@ const addVisibleUser = async (user) => {
   try {
     const userId = Number(user.value)
 
-    await api.addVisibleUser(
-      conversationStore.current.uuid,
-      userId
-    )
+    await api.addVisibleUser(conversationStore.current.uuid, userId)
 
-    const visibleUsers =
-      conversationStore.current.custom_attributes.visible_users || []
+    const visibleUsers = conversationStore.current.custom_attributes.visible_users || []
 
-    const exists = visibleUsers.some(
-      id => Number(id) === userId
-    )
+    const exists = visibleUsers.some((id) => Number(id) === userId)
 
     if (!exists) {
       visibleUsers.push(userId)
     }
 
-    conversationStore.current.custom_attributes.visible_users =
-      visibleUsers
+    conversationStore.current.custom_attributes.visible_users = visibleUsers
   } catch (error) {
-    emitter.emit(
-      EMITTER_EVENTS.SHOW_TOAST,
-      {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      }
-    )
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: handleHTTPError(error).message
+    })
   }
 }
 
@@ -469,12 +485,9 @@ const addSelectedVisibleUsers = async () => {
 }
 
 const sortedVisibleUsers = computed(() => {
-  const visibleUsers = [
-    ...(conversationStore.current?.custom_attributes?.visible_users || [])
-  ]
+  const visibleUsers = [...(conversationStore.current?.custom_attributes?.visible_users || [])]
 
-  const creatorID =
-    conversationStore.current?.custom_attributes?.creator_id
+  const creatorID = conversationStore.current?.custom_attributes?.creator_id
 
   return visibleUsers.sort((a, b) => {
     if (a === creatorID) return -1
@@ -483,18 +496,23 @@ const sortedVisibleUsers = computed(() => {
   })
 })
 
-const availableUsers = computed(() => {
-  const visibleUsers =
-    conversationStore.current?.custom_attributes?.visible_users || []
-
-  return usersStore.options.filter(
-    user =>
-      !visibleUsers.some(
-        id => Number(id) === Number(user.value)
-      )
-  )
+const assignedUserIDs = computed(() => {
+  const conversation = conversationStore.current
+  if (!conversation) return []
+  return conversation.assigned_user_ids?.length
+    ? conversation.assigned_user_ids
+    : conversation.assigned_user_id
+      ? [conversation.assigned_user_id]
+      : []
 })
 
+const availableUsers = computed(() => {
+  const visibleUsers = conversationStore.current?.custom_attributes?.visible_users || []
+
+  return usersStore.options.filter(
+    (user) => !visibleUsers.some((id) => Number(id) === Number(user.value))
+  )
+})
 </script>
 
 <style scoped>

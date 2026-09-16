@@ -904,21 +904,124 @@ func (c *Manager) UpdateConversationWaitingSince(conversationUUID string, at *ti
 
 // UpdateConversationUserAssignee sets the assignee of a conversation to a specifc user.
 func (c *Manager) UpdateConversationUserAssignee(uuid string, assigneeID int, actor umodels.User) error {
-	previousConversation, err := c.GetConversation(0, uuid, "")
+	return c.SetConversationUserAssignees(uuid, []int{assigneeID}, actor)
+}
+
+// SetConversationUserAssignees replaces the complete user-assignee set. The
+// legacy assigned_user_id is updated to the first selected user only as a
+// compatibility projection for integrations not migrated yet.
+func (c *Manager) SetConversationUserAssignees(uuid string, assigneeIDs []int, actor umodels.User) error {
+	unique := make([]int, 0, len(assigneeIDs))
+	seen := make(map[int]struct{}, len(assigneeIDs))
+	for _, id := range assigneeIDs {
+		if id <= 0 {
+			return envelope.NewError(envelope.InputError, "invalid assignee", nil)
+		}
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			unique = append(unique, id)
+		}
+	}
+
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var conversationID int
+	var rawAttrs []byte
+	if err := tx.QueryRowx(`SELECT id, custom_attributes FROM conversations WHERE uuid = $1 FOR UPDATE`, uuid).Scan(&conversationID, &rawAttrs); err != nil {
+		return err
+	}
+
+	var previous []int
+	if err := tx.Select(&previous, `SELECT user_id FROM conversation_assignees WHERE conversation_id = $1`, conversationID); err != nil {
+		return err
+	}
+	previousSet := make(map[int]struct{}, len(previous))
+	for _, id := range previous {
+		previousSet[id] = struct{}{}
+	}
+	added := make([]int, 0, len(unique))
+	for _, id := range unique {
+		if _, exists := previousSet[id]; !exists {
+			added = append(added, id)
+		}
+	}
+
+	if len(unique) == 0 {
+		if _, err := tx.Exec(`DELETE FROM conversation_assignees WHERE conversation_id = $1`, conversationID); err != nil {
+			return err
+		}
+	} else {
+		if _, err := tx.Exec(`DELETE FROM conversation_assignees WHERE conversation_id = $1 AND NOT (user_id = ANY($2::bigint[]))`, conversationID, pq.Array(unique)); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO conversation_assignees (conversation_id, user_id, assigned_by_user_id)
+			SELECT $1, unnest($2::bigint[]), $3 ON CONFLICT (conversation_id, user_id) DO NOTHING`, conversationID, pq.Array(unique), actor.ID); err != nil {
+			return err
+		}
+	}
+
+	attrs := map[string]any{}
+	_ = json.Unmarshal(rawAttrs, &attrs)
+	visible, _ := attrs["visible_users"].([]any)
+	visibleSet := map[int]bool{}
+	for _, value := range visible {
+		switch v := value.(type) {
+		case float64:
+			visibleSet[int(v)] = true
+		case int:
+			visibleSet[v] = true
+		}
+	}
+	visibilityChanged := false
+	for _, id := range unique {
+		if !visibleSet[id] {
+			visible = append(visible, id)
+			visibleSet[id] = true
+			visibilityChanged = true
+		}
+	}
+	if visibilityChanged {
+		attrs["visible_users"] = visible
+	}
+	attrsJSON, err := json.Marshal(attrs)
 	if err != nil {
 		return err
 	}
 
-	// Return early on a no-op write, else automation rules acting on the user assigned event re-trigger themselves.
-	if previousConversation.AssignedUserID.Valid && previousConversation.AssignedUserID.Int == assigneeID {
-		c.lo.Debug("no assignee update: conversation assignee unchanged", "uuid", uuid, "assignee_id", assigneeID)
-		return nil
+	var primary any
+	if len(unique) > 0 {
+		primary = unique[0]
+	}
+	if _, err := tx.Exec(`UPDATE conversations SET assigned_user_id = $2, custom_attributes = CASE WHEN $3 THEN $4 ELSE custom_attributes END, updated_at = NOW() WHERE id = $1`, conversationID, primary, visibilityChanged, attrsJSON); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 
-	if err := c.updateAssignee(uuid, assigneeID, models.AssigneeTypeUser); err != nil {
-		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	if visibilityChanged {
+		c.BroadcastConversationUpdate(uuid, map[string]any{"custom_attributes": attrs})
 	}
-	return c.afterUserAssignedHooks(uuid, assigneeID, actor, amodels.PreviousValues(previousConversation))
+	for _, id := range added {
+		previousValues := map[string]string{}
+		if err := c.afterUserAssignedHooks(uuid, id, actor, previousValues); err != nil {
+			return err
+		}
+	}
+	c.BroadcastConversationUpdate(uuid, map[string]any{"assigned_user_id": primary, "assigned_user_ids": unique})
+	return nil
+}
+
+// IsUserAssigned reports whether a user is protected from being removed from
+// ticket visibility because they are still assigned to the ticket.
+func (c *Manager) IsUserAssigned(uuid string, userID int) (bool, error) {
+	var exists bool
+	err := c.db.Get(&exists, `SELECT EXISTS(SELECT 1 FROM conversation_assignees ca JOIN conversations c ON c.id = ca.conversation_id WHERE c.uuid = $1 AND ca.user_id = $2)`, uuid, userID)
+	return exists, err
 }
 
 // ClaimUnassignedConversation atomically assigns a conversation only if still unassigned and still in expectedTeamID, else returns ErrConversationAlreadyAssigned.
@@ -2061,9 +2164,15 @@ func (m *Manager) resolveNotifyRecipients(entries []string, conv models.Conversa
 // RemoveConversationAssignee removes assigned user from a conversation.
 func (m *Manager) RemoveConversationAssignee(uuid, typ string, actor umodels.User) error {
 	prev, prevErr := m.GetConversationListItem(uuid)
-	if _, err := m.q.RemoveConversationAssignee.Exec(uuid, typ); err != nil {
-		m.lo.Error("error removing conversation assignee", "error", err)
-		return envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.errorUpdatingConversation"), nil)
+	if typ == models.AssigneeTypeUser {
+		if err := m.SetConversationUserAssignees(uuid, nil, actor); err != nil {
+			return err
+		}
+	} else {
+		if _, err := m.q.RemoveConversationAssignee.Exec(uuid, typ); err != nil {
+			m.lo.Error("error removing conversation assignee", "error", err)
+			return envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.errorUpdatingConversation"), nil)
+		}
 	}
 
 	// Trigger webhook for conversation unassigned from user.
@@ -2376,7 +2485,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(conversations.assigned_user_id = $%d AND %s)",
+					"(EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id AND ca.user_id = $%d) AND %s)",
 					len(qArgs)+1,
 					privateAccessCondition,
 				),
@@ -2386,7 +2495,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(conversations.assigned_user_id IS NULL AND conversations.assigned_team_id IS NULL AND %s)",
+					"(NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id) AND conversations.assigned_team_id IS NULL AND %s)",
 					privateAccessCondition,
 				),
 			)
@@ -2398,7 +2507,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(conversations.assigned_team_id IN (%s) AND conversations.assigned_user_id IS NULL AND %s)",
+					"(conversations.assigned_team_id IN (%s) AND NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id) AND %s)",
 					strings.Join(placeholders, ","),
 					privateAccessCondition,
 				),

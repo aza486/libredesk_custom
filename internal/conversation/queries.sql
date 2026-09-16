@@ -65,6 +65,7 @@ SELECT
     conversations.next_sla_deadline_at,
     conversations.priority_id,
     conversations.assigned_user_id,
+    COALESCE(ARRAY(SELECT user_id FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id ORDER BY ca.created_at, ca.user_id), ARRAY[]::BIGINT[]) AS assigned_user_ids,
     conversations.assigned_team_id,
     (
     SELECT CASE WHEN COUNT(*) > 9 THEN 10 ELSE COUNT(*) END
@@ -203,6 +204,7 @@ SELECT
    c.waiting_since,
    c.snoozed_until,
    c.assigned_user_id,
+   COALESCE(ARRAY(SELECT user_id FROM conversation_assignees ca WHERE ca.conversation_id = c.id ORDER BY ca.created_at, ca.user_id), ARRAY[]::BIGINT[]) AS assigned_user_ids,
    c.assigned_team_id,
    c.subject,
    c.contact_id,

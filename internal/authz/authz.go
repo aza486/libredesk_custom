@@ -73,7 +73,22 @@ func CanReadConversation(
 		user,
 		conversation.AssignedUserID,
 		conversation.AssignedTeamID,
-	)
+	) || CanReadAdditionalAssignees(user, conversation.AssignedUserIDs)
+}
+
+// CanReadAdditionalAssignees grants the normal "read assigned" permission to
+// every user in the canonical multi-assignee relation.
+func CanReadAdditionalAssignees(user umodels.User, assigneeIDs []int64) bool {
+	if !slices.Contains(user.Permissions, authzmodels.PermConversationsRead) ||
+		!slices.Contains(user.Permissions, authzmodels.PermConversationsReadAssigned) {
+		return false
+	}
+	for _, id := range assigneeIDs {
+		if int(id) == user.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func (e *Enforcer) EnforceConversationAccess(

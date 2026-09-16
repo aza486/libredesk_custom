@@ -298,6 +298,18 @@ CREATE INDEX index_conversations_on_next_sla_deadline_at ON conversations (next_
 CREATE INDEX index_conversations_on_waiting_since ON conversations (waiting_since);
 CREATE INDEX index_conversations_on_last_continuity_email_sent_at ON conversations (last_continuity_email_sent_at);
 
+-- Canonical user assignments. assigned_user_id above is retained as a
+-- compatibility projection while clients migrate to this relation.
+DROP TABLE IF EXISTS conversation_assignees CASCADE;
+CREATE TABLE conversation_assignees (
+	conversation_id BIGINT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+	user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	assigned_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (conversation_id, user_id)
+);
+CREATE INDEX index_conversation_assignees_on_user_id ON conversation_assignees (user_id, conversation_id);
+
 DROP TABLE IF EXISTS conversation_messages CASCADE;
 CREATE TABLE conversation_messages (
     id BIGSERIAL PRIMARY KEY,
