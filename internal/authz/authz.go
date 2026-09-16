@@ -7,6 +7,7 @@ import (
 	authzmodels "github.com/abhinavxd/libredesk/internal/authz/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
 
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/knadh/go-i18n"
@@ -69,11 +70,41 @@ func CanReadConversation(
 		return false
 	}
 
+	// Customer tickets use the same explicit visibility list. Every active
+	// Kundensupport member is added when such a ticket is created; assignees
+	// are added later by the assignment service.
+	if customerVisibility, ok := attrs["customer_visibility"].(bool); ok && customerVisibility {
+		if user.HasAdminRole() || slices.Contains(user.Roles, rmodels.RoleCustomerSupport) {
+			return true
+		}
+		return hasVisibleUser(attrs, user.ID)
+	}
+
 	return CanReadAssignment(
 		user,
 		conversation.AssignedUserID,
 		conversation.AssignedTeamID,
 	) || CanReadAdditionalAssignees(user, conversation.AssignedUserIDs)
+}
+
+func hasVisibleUser(attrs map[string]any, userID int) bool {
+	visibleUsers, ok := attrs["visible_users"].([]any)
+	if !ok {
+		return false
+	}
+	for _, uid := range visibleUsers {
+		switch value := uid.(type) {
+		case float64:
+			if int(value) == userID {
+				return true
+			}
+		case int:
+			if value == userID {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // CanReadAdditionalAssignees grants the normal "read assigned" permission to

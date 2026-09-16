@@ -31,6 +31,7 @@ import (
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	nmodels "github.com/abhinavxd/libredesk/internal/notification/models"
+	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	tagmanager "github.com/abhinavxd/libredesk/internal/tag"
@@ -167,6 +168,7 @@ type userStore interface {
 	GetAgent(int, string) (umodels.User, error)
 	GetAgentCachedOrLoad(int) (umodels.User, error)
 	GetAgents() ([]umodels.UserCompact, error)
+	GetEnabledAgentIDsByRoleName(string) ([]int, error)
 	GetSystemUser() (umodels.User, error)
 	ResolveContact(user *umodels.User, policy umodels.ContactPolicy) error
 	UpgradeVisitorToContact(visitorID int) error
@@ -390,6 +392,11 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 	if customAttributes == nil {
 		customAttributes = map[string]any{}
 	}
+	if private, _ := customAttributes["private"].(bool); !private {
+		if err := c.initializeCustomerVisibility(customAttributes); err != nil {
+			return 0, "", err
+		}
+	}
 
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
@@ -420,6 +427,35 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 		c.lo.Error("error fetching conversation list item for broadcast", "uuid", uuid, "error", err)
 	}
 	return id, uuid, nil
+}
+
+// initializeCustomerVisibility grants every active Kundensupport member both
+// visibility and Creator-level visibility management for a customer ticket.
+func (c *Manager) initializeCustomerVisibility(attrs map[string]any) error {
+	supportIDs, err := c.userStore.GetEnabledAgentIDsByRoleName(rmodels.RoleCustomerSupport)
+	if err != nil {
+		return err
+	}
+	visible, _ := attrs["visible_users"].([]any)
+	known := make(map[int]bool, len(visible))
+	for _, value := range visible {
+		switch id := value.(type) {
+		case float64:
+			known[int(id)] = true
+		case int:
+			known[id] = true
+		}
+	}
+	for _, id := range supportIDs {
+		if !known[id] {
+			visible = append(visible, id)
+			known[id] = true
+		}
+	}
+	attrs["customer_visibility"] = true
+	attrs["visibility_managers"] = supportIDs
+	attrs["visible_users"] = visible
+	return nil
 }
 
 // GetConversation retrieves a conversation by its ID or UUID.
@@ -724,6 +760,7 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 	}
 
 	isAdmin := user.HasAdminRole()
+	isCustomerSupport := slices.Contains(user.Roles, rmodels.RoleCustomerSupport)
 
 	// Make the query.
 	query, qArgs, err := c.makeConversationsListQuery(
@@ -738,6 +775,7 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 		pageSize,
 		filters,
 		isAdmin,
+		isCustomerSupport,
 	)
 	if err != nil {
 		c.lo.Error("error making conversations query", "error", err)
@@ -2362,7 +2400,7 @@ func (c *Manager) getConversationTags(uuid string) ([]string, error) {
 // makeConversationsListQuery prepares a SQL query string for conversations list
 // viewingUserID is used as $1 for per-agent unread count calculation
 // $2 is includeMentions bool for conditional mentioned_message_uuid column
-func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin bool) (string, []interface{}, error) {
+func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin, isCustomerSupport bool) (string, []interface{}, error) {
 	includeMentions := slices.Contains(listTypes, models.MentionedConversations)
 	qArgs := []any{viewingUserID, includeMentions}
 
@@ -2388,18 +2426,33 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 
 	// Prepare the conditions based on the list types.
 	conditions := []string{}
-	// Private/internal conversations are only visible to admins,
-	// the creator, or explicitly visible users.
-	// This condition is applied to the normal assignment-based lists
-	// so private tickets do not leak into Assigned/Unassigned/Team views.
-	privateAccessCondition := fmt.Sprintf(`
+	// Internal conversations are only visible to admins, their creator, or
+	// explicitly visible users. Customer conversations marked with
+	// customer_visibility are visible to admins, Kundensupport, and explicitly
+	// visible users (including every assignee).
+	// This condition is applied to assignment-based lists so neither ticket
+	// kind can leak into Assigned/Unassigned/Team views.
+	ticketAccessCondition := fmt.Sprintf(`
 	(
+		(
+			COALESCE((conversations.custom_attributes->>'private')::boolean, false) = true
+			AND (
+				%t
+				OR (conversations.custom_attributes->>'creator_id')::int = %d
+				OR (conversations.custom_attributes->'visible_users') @> '[%d]'
+			)
+		)
+		OR (
 			COALESCE((conversations.custom_attributes->>'private')::boolean, false) = false
-			OR %t
-			OR (conversations.custom_attributes->>'creator_id')::int = %d
-			OR (conversations.custom_attributes->'visible_users') @> '[%d]'
+			AND (
+				COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = false
+				OR %t
+				OR %t
+				OR (conversations.custom_attributes->'visible_users') @> '[%d]'
+			)
+		)
 	)
-	`, isAdmin, userID, userID)
+	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID)
 	for _, lt := range listTypes {
 		switch lt {
 		case models.AssignedConversations:
@@ -2408,7 +2461,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 				fmt.Sprintf(
 					"(EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id AND ca.user_id = $%d) AND %s)",
 					len(qArgs)+1,
-					privateAccessCondition,
+					ticketAccessCondition,
 				),
 			)
 			qArgs = append(qArgs, userID)
@@ -2417,7 +2470,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 				conditions,
 				fmt.Sprintf(
 					"(NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id) AND conversations.assigned_team_id IS NULL AND %s)",
-					privateAccessCondition,
+					ticketAccessCondition,
 				),
 			)
 		case models.TeamUnassignedConversations:
@@ -2430,7 +2483,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 				fmt.Sprintf(
 					"(conversations.assigned_team_id IN (%s) AND NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id) AND %s)",
 					strings.Join(placeholders, ","),
-					privateAccessCondition,
+					ticketAccessCondition,
 				),
 			)
 			for _, id := range teamIDs {
@@ -2446,7 +2499,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 				fmt.Sprintf(
 					"(conversations.assigned_team_id IN (%s) AND %s)",
 					strings.Join(placeholders, ","),
-					privateAccessCondition,
+					ticketAccessCondition,
 				),
 			)
 			for _, id := range teamIDs {
@@ -2456,7 +2509,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			// All conversations, but still respect private/internal visibility.
 			conditions = append(
 				conditions,
-				privateAccessCondition,
+				ticketAccessCondition,
 			)
 		case models.MentionedConversations:
 			conditions = append(
@@ -2474,7 +2527,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 														AND tm.user_id = $1
 											)
 								)
-						)`, privateAccessCondition),
+						)`, ticketAccessCondition),
 			)
 
 		case models.VisibleConversations:

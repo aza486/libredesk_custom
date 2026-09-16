@@ -443,6 +443,13 @@ SELECT
 -- name: get-user-ids-by-role
 SELECT user_id FROM user_roles WHERE role_id = $1;
 
+-- name: get-enabled-agent-ids-by-role-name
+SELECT u.id
+FROM users u
+JOIN user_roles ur ON ur.user_id = u.id
+JOIN roles r ON r.id = ur.role_id
+WHERE r.name = $1 AND u.type = 'agent' AND u.enabled = true;
+
 -- name: delete-contact
 DELETE FROM users
 WHERE id = $1 AND type IN ('contact', 'visitor');

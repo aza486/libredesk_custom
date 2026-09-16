@@ -82,6 +82,7 @@ type queries struct {
 	GetNotes                      *sqlx.Stmt `query:"get-notes"`
 	GetNote                       *sqlx.Stmt `query:"get-note"`
 	GetUserIDsByRole              *sqlx.Stmt `query:"get-user-ids-by-role"`
+	GetEnabledAgentIDsByRoleName  *sqlx.Stmt `query:"get-enabled-agent-ids-by-role-name"`
 	GetUserByExternalID           *sqlx.Stmt `query:"get-user-by-external-id"`
 	GetUsersCompact               string     `query:"get-users-compact"`
 	UpdateContact                 *sqlx.Stmt `query:"update-contact"`
@@ -500,6 +501,16 @@ func (u *Manager) GetUserIDsByRole(roleID int) ([]int, error) {
 	var ids []int
 	if err := u.q.GetUserIDsByRole.Select(&ids, roleID); err != nil {
 		u.lo.Error("error fetching user ids by role", "role_id", roleID, "error", err)
+		return nil, err
+	}
+	return ids, nil
+}
+
+// GetEnabledAgentIDsByRoleName returns active agents that currently hold a role.
+func (u *Manager) GetEnabledAgentIDsByRoleName(roleName string) ([]int, error) {
+	var ids []int
+	if err := u.q.GetEnabledAgentIDsByRoleName.Select(&ids, roleName); err != nil {
+		u.lo.Error("error fetching agents by role", "role", roleName, "error", err)
 		return nil, err
 	}
 	return ids, nil

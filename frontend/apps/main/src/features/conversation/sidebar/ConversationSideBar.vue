@@ -103,23 +103,19 @@
               v-for="userId in sortedVisibleUsers"
               :key="userId"
               class="flex justify-between items-center py-1"
-              :class="{
-                'font-medium': userId === conversationStore.current.custom_attributes.creator_id
-              }"
+              :class="{ 'font-medium': isVisibilityManager(userId) }"
             >
               <span>
                 {{ getVisibleUserName(userId) }}
-                <span
-                  v-if="userId === conversationStore.current.custom_attributes.creator_id"
-                  class="text-xs text-muted-foreground"
-                >
+                <span v-if="isVisibilityManager(userId)" class="text-xs text-muted-foreground">
                   (Creator)
                 </span>
               </span>
 
               <button
                 v-if="
-                  userId !== conversationStore.current.custom_attributes.creator_id &&
+                  canManageVisibility &&
+                  !isVisibilityManager(userId) &&
                   !assignedUserIDs.some((id) => Number(id) === Number(userId))
                 "
                 @click="removeVisibleUser(userId)"
@@ -128,7 +124,7 @@
               </button>
             </div>
 
-            <div class="mt-3 space-y-2">
+            <div v-if="canManageVisibility" class="mt-3 space-y-2">
               <UserMultiSelect
                 v-model="selectedVisibleUsers"
                 :items="availableUsers"
@@ -505,6 +501,23 @@ const assignedUserIDs = computed(() => {
       ? [conversation.assigned_user_id]
       : []
 })
+
+const visibilityManagerIDs = computed(() => {
+  const attrs = conversationStore.current?.custom_attributes || {}
+  const managers = attrs.visibility_managers || []
+  return attrs.creator_id ? [...managers, attrs.creator_id] : managers
+})
+
+const isVisibilityManager = (userID) =>
+  visibilityManagerIDs.value.some((id) => Number(id) === Number(userID))
+
+const canManageVisibility = computed(
+  () =>
+    userStore.roles.includes('Admin') ||
+    (conversationStore.current?.custom_attributes?.customer_visibility === true &&
+      userStore.roles.includes('Kundensupport')) ||
+    isVisibilityManager(userStore.userID)
+)
 
 const availableUsers = computed(() => {
   const visibleUsers = conversationStore.current?.custom_attributes?.visible_users || []

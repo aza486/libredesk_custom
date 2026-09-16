@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	RoleAdmin = "Admin"
-	RoleAgent = "Agent"
+	RoleAdmin           = "Admin"
+	RoleAgent           = "Agent"
+	RoleCustomerSupport = "Kundensupport"
 )
 
 var DefaultRoles = []string{

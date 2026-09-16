@@ -792,16 +792,7 @@ func handleAddVisibleUser(r *fastglue.Request) error {
 	attrs := map[string]any{}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-	creatorID := 0
-
-	switch v := attrs["creator_id"].(type) {
-	case float64:
-		creatorID = int(v)
-	case int:
-		creatorID = v
-	}
-
-	if creatorID != auser.ID {
+	if !canManageConversationVisibility(attrs, user) {
 		return sendErrorEnvelope(
 			r,
 			envelope.NewError(
@@ -851,16 +842,7 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 	attrs := map[string]any{}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-	creatorID := 0
-
-	switch v := attrs["creator_id"].(type) {
-	case float64:
-		creatorID = int(v)
-	case int:
-		creatorID = v
-	}
-
-	if creatorID != auser.ID {
+	if !canManageConversationVisibility(attrs, user) {
 		return sendErrorEnvelope(
 			r,
 			envelope.NewError(
@@ -886,6 +868,25 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 	}
 
 	return r.SendEnvelope(true)
+}
+
+func canManageConversationVisibility(attrs map[string]any, user umodels.User) bool {
+	if user.HasAdminRole() {
+		return true
+	}
+	if customerVisibility, _ := attrs["customer_visibility"].(bool); customerVisibility && slices.Contains(user.Roles, "Kundensupport") {
+		return true
+	}
+	if creatorID, ok := attrs["creator_id"].(float64); ok && int(creatorID) == user.ID {
+		return true
+	}
+	managers, _ := attrs["visibility_managers"].([]any)
+	for _, value := range managers {
+		if id, ok := value.(float64); ok && int(id) == user.ID {
+			return true
+		}
+	}
+	return false
 }
 
 // handleUpdateConversationCustomAttributes updates custom attributes of a conversation.
