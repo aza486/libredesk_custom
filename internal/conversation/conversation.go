@@ -697,6 +697,10 @@ func (c *Manager) GetCustomerConversationsList(viewingUserID int, highPriority b
 	return c.GetConversations(viewingUserID, viewingUserID, []int{}, []string{listType}, order, orderBy, filters, page, pageSize)
 }
 
+func (c *Manager) GetServiceMailConversationsList(viewingUserID int, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
+	return c.GetConversations(viewingUserID, viewingUserID, []int{}, []string{models.ServiceMailConversations}, order, orderBy, filters, page, pageSize)
+}
+
 func (c *Manager) GetCreatedConversationsList(
 	viewingUserID int,
 	order,
@@ -992,6 +996,28 @@ func (c *Manager) SetConversationUserAssignees(uuid string, assigneeIDs []int, a
 func (c *Manager) IsUserAssigned(uuid string, userID int) (bool, error) {
 	var exists bool
 	err := c.db.Get(&exists, `SELECT EXISTS(SELECT 1 FROM conversation_assignees ca JOIN conversations c ON c.id = ca.conversation_id WHERE c.uuid = $1 AND ca.user_id = $2)`, uuid, userID)
+	return exists, err
+}
+
+func (c *Manager) GetServiceEmailAddresses() ([]string, error) {
+	var addresses []string
+	err := c.db.Select(&addresses, `SELECT address FROM service_email_addresses ORDER BY address`)
+	return addresses, err
+}
+
+func (c *Manager) AddServiceEmailAddress(address string) error {
+	_, err := c.db.Exec(`INSERT INTO service_email_addresses (address) VALUES (LOWER($1)) ON CONFLICT (address) DO NOTHING`, address)
+	return err
+}
+
+func (c *Manager) RemoveServiceEmailAddress(address string) error {
+	_, err := c.db.Exec(`DELETE FROM service_email_addresses WHERE address = LOWER($1)`, address)
+	return err
+}
+
+func (c *Manager) IsServiceEmailAddress(address string) (bool, error) {
+	var exists bool
+	err := c.db.Get(&exists, `SELECT EXISTS(SELECT 1 FROM service_email_addresses WHERE address = LOWER($1))`, address)
 	return exists, err
 }
 
@@ -2563,6 +2589,11 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 				customerCondition = "(" + customerCondition + " AND conversation_priorities.name = 'High')"
 			}
 			conditions = append(conditions, customerCondition)
+		case models.ServiceMailConversations:
+			conditions = append(conditions, fmt.Sprintf(`
+				(EXISTS (SELECT 1 FROM service_email_addresses sea WHERE LOWER(sea.address) = LOWER(users.email))
+				AND COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = true
+				AND %s)`, ticketAccessCondition))
 
 		case models.CreatedConversations:
 

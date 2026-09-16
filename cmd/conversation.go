@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime"
+	"net/mail"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,6 +30,45 @@ type assigneeChangeReq struct {
 
 type assigneesChangeReq struct {
 	AssigneeIDs []int `json:"assignee_ids"`
+}
+
+type serviceEmailAddressReq struct {
+	Address string `json:"address"`
+}
+
+func handleGetServiceEmailAddresses(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	addresses, err := app.conversation.GetServiceEmailAddresses()
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(addresses)
+}
+
+func handleAddServiceEmailAddress(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	var req serviceEmailAddressReq
+	if err := r.Decode(&req, "json"); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	requestedAddress := strings.TrimSpace(req.Address)
+	address, err := mail.ParseAddress(requestedAddress)
+	if err != nil || address.Address != requestedAddress {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid email address", nil, envelope.InputError)
+	}
+	if err := app.conversation.AddServiceEmailAddress(address.Address); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+func handleRemoveServiceEmailAddress(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	address := r.RequestCtx.UserValue("address").(string)
+	if err := app.conversation.RemoveServiceEmailAddress(address); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
 }
 
 type teamAssigneeChangeReq struct {
@@ -195,6 +235,31 @@ func handleGetCustomerConversations(r *fastglue.Request) error {
 	page, pageSize := getPagination(r)
 	highPriority := string(r.RequestCtx.QueryArgs().Peek("priority")) == "high"
 	conversations, err := app.conversation.GetCustomerConversationsList(user.ID, highPriority, order, orderBy, filters, page, pageSize)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	total := 0
+	if len(conversations) > 0 {
+		total = conversations[0].Total
+	}
+	return r.SendEnvelope(envelope.PageResults{Results: conversations, Total: total, PerPage: pageSize, TotalPages: (total + pageSize - 1) / pageSize, Page: page})
+}
+
+func handleGetServiceMailConversations(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	user := r.RequestCtx.UserValue("user").(amodels.User)
+	fullUser, err := app.user.GetAgentCachedOrLoad(user.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if !fullUser.HasAdminRole() && !slices.Contains(fullUser.Roles, "Kundensupport") {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, "Permission denied", nil))
+	}
+	order := string(r.RequestCtx.QueryArgs().Peek("order"))
+	orderBy := string(r.RequestCtx.QueryArgs().Peek("order_by"))
+	filters := string(r.RequestCtx.QueryArgs().Peek("filters"))
+	page, pageSize := getPagination(r)
+	conversations, err := app.conversation.GetServiceMailConversationsList(user.ID, order, orderBy, filters, page, pageSize)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

@@ -9,6 +9,7 @@ export const CONVERSATION_LIST_TYPE = {
   VISIBLE_INTERNAL: 'visible-internal',
   CUSTOMER: 'customer',
   CUSTOMER_HIGH: 'customer-high',
+  SERVICE_MAILS: 'service-mails',
   CREATED: 'created'
 }
 

@@ -56,6 +56,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/conversations/visible", perm(handleGetVisibleConversations, "conversations:read"))
 	g.GET("/api/v1/conversations/visible-internal", perm(handleGetVisibleInternalConversations, "conversations:read"))
 	g.GET("/api/v1/conversations/customer", perm(handleGetCustomerConversations, "conversations:read"))
+	g.GET("/api/v1/conversations/service-mails", perm(handleGetServiceMailConversations, "conversations:read"))
 	g.GET("/api/v1/conversations/created", perm(handleGetCreatedConversations, "conversations:read"))
 	g.GET("/api/v1/teams/{id}/conversations/unassigned", perm(handleGetTeamUnassignedConversations, "conversations:read_team_inbox"))
 	g.GET("/api/v1/views/{id}/conversations", perm(handleGetViewConversations, "conversations:read"))
@@ -84,6 +85,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/conversations/{uuid}/remove-visible-user", auth(handleRemoveVisibleUser))
 	g.PUT("/api/v1/conversations/{uuid}/add-visible-user", auth(handleAddVisibleUser))
 	g.PUT("/api/v1/conversations/{uuid}/contacts/custom-attributes", auth(handleUpdateContactCustomAttributes))
+	g.GET("/api/v1/service-email-addresses", perm(handleGetServiceEmailAddresses, "general_settings:manage"))
+	g.POST("/api/v1/service-email-addresses", perm(handleAddServiceEmailAddress, "general_settings:manage"))
+	g.DELETE("/api/v1/service-email-addresses/{address}", perm(handleRemoveServiceEmailAddress, "general_settings:manage"))
 	// Draft endpoints
 	g.GET("/api/v1/drafts", auth(handleGetAllDrafts))
 	g.POST("/api/v1/conversations/{uuid}/draft", auth(handleUpsertConversationDraft))

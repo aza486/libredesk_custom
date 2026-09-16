@@ -421,6 +421,13 @@ const getVisibleInternalConversations = (params) =>
   http.get('/api/v1/conversations/visible-internal', { params, abortOnRoute: true })
 const getCustomerConversations = (params) =>
   http.get('/api/v1/conversations/customer', { params, abortOnRoute: true })
+const getServiceMailConversations = (params) =>
+  http.get('/api/v1/conversations/service-mails', { params, abortOnRoute: true })
+const getServiceEmailAddresses = () => http.get('/api/v1/service-email-addresses')
+const addServiceEmailAddress = (address) =>
+  http.post('/api/v1/service-email-addresses', { address })
+const removeServiceEmailAddress = (address) =>
+  http.delete(`/api/v1/service-email-addresses/${encodeURIComponent(address)}`)
 const getCreatedConversations = (params) =>
   http.get('/api/v1/conversations/created', { params, abortOnRoute: true })
 const getViewConversations = (id, params) =>
@@ -712,6 +719,10 @@ export default {
   getVisibleConversations,
   getVisibleInternalConversations,
   getCustomerConversations,
+  getServiceMailConversations,
+  getServiceEmailAddresses,
+  addServiceEmailAddress,
+  removeServiceEmailAddress,
   getCreatedConversations,
   getTeamUnassignedConversations,
   getViewConversations,

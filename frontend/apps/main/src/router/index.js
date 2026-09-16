@@ -117,7 +117,7 @@ const routes = [
         meta: { titleKey: 'globals.terms.search', hidePageHeader: true }
       },
       {
-        path: '/inboxes/:type(assigned|unassigned|all|visible|visible-internal|customer|customer-high|created)?',
+        path: '/inboxes/:type(assigned|unassigned|all|visible|visible-internal|customer|customer-high|service-mails|created)?',
         name: 'inboxes',
         redirect: '/inboxes/assigned?status=Open',
         component: InboxLayout,
@@ -138,6 +138,7 @@ const routes = [
                 if (route.params.type === 'visible-internal') return 'conversation.visibleForMe'
                 if (route.params.type === 'customer' || route.params.type === 'customer-high')
                   return 'Kundentickets'
+                if (route.params.type === 'service-mails') return 'Service-Mails'
                 if (route.params.type === 'created') return 'conversation.createdByMe'
                 return ''
               }
@@ -158,6 +159,7 @@ const routes = [
                     if (route.params.type === 'visible-internal') return 'conversation.visibleForMe'
                     if (route.params.type === 'customer' || route.params.type === 'customer-high')
                       return 'Kundentickets'
+                    if (route.params.type === 'service-mails') return 'Service-Mails'
                     if (route.params.type === 'created') return 'conversation.createdByMe'
                     return ''
                   },
@@ -201,6 +203,12 @@ const routes = [
             name: 'general',
             component: () => import('@main/views/admin/general/General.vue'),
             meta: { titleKey: 'globals.terms.general' }
+          },
+          {
+            path: 'service-emails',
+            name: 'service-emails',
+            component: () => import('@main/views/admin/service-emails/ServiceEmails.vue'),
+            meta: { titleKey: 'Service-Mails' }
           },
           {
             path: 'ai',

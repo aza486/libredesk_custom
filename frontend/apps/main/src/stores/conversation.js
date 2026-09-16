@@ -754,6 +754,18 @@ export const useConversationStore = defineStore('conversation', () => {
           ...(listType === CONVERSATION_LIST_TYPE.CUSTOMER_HIGH && { priority: 'high' })
         })
 
+      case CONVERSATION_LIST_TYPE.SERVICE_MAILS:
+        return await api.getServiceMailConversations({
+          page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by:
+            sortFieldMap[conversations.sortField].model +
+            '.' +
+            sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters
+        })
+
       case CONVERSATION_LIST_TYPE.CREATED:
         return await api.getCreatedConversations({
           page: page,

@@ -4,25 +4,21 @@
       <router-link
         :to="conversationRoute"
         class="group relative block px-3 py-2.5 transition-colors duration-150 ease-in-out cursor-pointer"
-        :class="{
-          'bg-accent': isCurrent,
-          'bg-primary/5 hover:bg-primary/10': isItemSelected && !isCurrent,
-          'hover:bg-accent/40': !isCurrent && !isItemSelected
-        }"
+        :class="[
+          tagHighlightClass,
+          {
+            'bg-accent': isCurrent,
+            'bg-primary/5 hover:bg-primary/10': isItemSelected && !isCurrent,
+            'hover:bg-accent/40': !isCurrent && !isItemSelected
+          }
+        ]"
       >
         <div class="flex items-start gap-2">
           <!-- Avatar with channel indicator (checkbox overlays on hover / when selecting) -->
           <div class="relative flex-shrink-0 w-10 h-10">
-            <div
-              class="transition-opacity"
-              :class="avatarOpacityClass"
-              :aria-hidden="showCheckbox"
-            >
+            <div class="transition-opacity" :class="avatarOpacityClass" :aria-hidden="showCheckbox">
               <Avatar class="w-10 h-10 rounded-full">
-                <AvatarImage
-                  :src="conversation.contact.avatar_url || ''"
-                  class="object-cover"
-                />
+                <AvatarImage :src="conversation.contact.avatar_url || ''" class="object-cover" />
                 <AvatarFallback>
                   {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
                 </AvatarFallback>
@@ -114,11 +110,29 @@
                 v-if="isUnread"
                 class="flex items-center justify-center w-5 h-5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex-shrink-0"
               >
-                {{ conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count }}
+                {{
+                  conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count
+                }}
               </div>
             </div>
 
             <!-- SLA Badges -->
+            <div
+              v-if="conversation.tags?.length"
+              class="flex min-w-0 items-center gap-1 overflow-hidden"
+            >
+              <span
+                v-for="tag in visibleTags"
+                :key="tag"
+                class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+              >
+                {{ tag }}
+              </span>
+              <span v-if="hiddenTagCount" class="shrink-0 text-xs text-muted-foreground">…</span>
+            </div>
+
+            <div class="text-xs text-muted-foreground">{{ conversation.status }}</div>
+
             <div v-if="hasSlaDeadlines" class="flex items-center gap-1">
               <SlaBadge
                 v-show="frdStatus === 'overdue' || frdStatus === 'remaining'"
@@ -260,7 +274,8 @@ const draftPreview = computed(() => {
   if (!draft?.content && !draft?.meta?.attachments?.length) return ''
   const text = (draft.content || '').replace(/<[^>]*>/g, '').trim()
   if (text) return text.length > 120 ? text.slice(0, 120) + '...' : text
-  if (draft.meta?.attachments?.length) return conversationStore.getMediaPreview(draft.meta.attachments)
+  if (draft.meta?.attachments?.length)
+    return conversationStore.getMediaPreview(draft.meta.attachments)
   if (/<img\b/i.test(draft.content || '')) return t('globals.terms.image', 1)
   return ''
 })
@@ -272,6 +287,19 @@ const showSubject = computed(
 const isUnread = computed(() => props.conversation.unread_message_count > 0)
 
 const isCurrent = computed(() => props.conversation.uuid === props.currentConversation?.uuid)
+
+const visibleTags = computed(() => (props.conversation.tags || []).slice(0, 3))
+const hiddenTagCount = computed(() =>
+  Math.max(0, (props.conversation.tags || []).length - visibleTags.value.length)
+)
+const tagHighlightClass = computed(() => {
+  const tags = (props.conversation.tags || []).map((tag) => String(tag).toLowerCase())
+  if (tags.some((tag) => ['dringend', 'urgent', 'vip'].includes(tag)))
+    return 'ticket-highlight-critical'
+  if (tags.some((tag) => ['wichtig', 'important'].includes(tag)))
+    return 'ticket-highlight-important'
+  return ''
+})
 
 const isItemSelected = computed(() => {
   return conversationStore.isSelected(props.conversation.uuid)
@@ -296,3 +324,12 @@ const handleSelect = () => {
   conversationStore.toggleSelect(props.conversation.uuid, false)
 }
 </script>
+
+<style scoped>
+.ticket-highlight-critical {
+  @apply bg-red-500/10 hover:bg-red-500/15;
+}
+.ticket-highlight-important {
+  @apply bg-amber-500/10 hover:bg-amber-500/15;
+}
+</style>

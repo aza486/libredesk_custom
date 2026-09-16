@@ -18,6 +18,12 @@ export const adminNavItems = [
         icon: 'Settings'
       },
       {
+        titleKey: 'Service-Mails',
+        href: '/admin/service-emails',
+        permission: 'general_settings:manage',
+        icon: 'Mail'
+      },
+      {
         titleKey: 'globals.terms.businessHour',
         href: '/admin/business-hours',
         permission: 'business_hours:manage',

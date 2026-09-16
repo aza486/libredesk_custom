@@ -83,6 +83,12 @@ SELECT
     ) as unread_message_count,
     conversation_statuses.name as status,
     conversation_priorities.name as priority,
+    COALESCE((
+        SELECT json_agg(t.name ORDER BY t.name)
+        FROM tags t
+        JOIN conversation_tags ct ON ct.tag_id = t.id
+        WHERE ct.conversation_id = conversations.id
+    ), '[]'::json) AS tags,
     as_latest.first_response_deadline_at,
     as_latest.resolution_deadline_at,
     as_latest.id as applied_sla_id,
@@ -154,6 +160,12 @@ SELECT
     conversations.assigned_team_id,
     conversation_statuses.name as status,
     conversation_priorities.name as priority,
+    COALESCE((
+        SELECT json_agg(t.name ORDER BY t.name)
+        FROM tags t
+        JOIN conversation_tags ct ON ct.tag_id = t.id
+        WHERE ct.conversation_id = conversations.id
+    ), '[]'::json) AS tags,
     as_latest.first_response_deadline_at,
     as_latest.resolution_deadline_at,
     as_latest.id as applied_sla_id,

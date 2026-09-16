@@ -1511,7 +1511,12 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 
 		// If assigned to an AI assistant, let it respond to this inbound customer message.
 		if m.aiAgent != nil && conversation.AssignedUserID.Valid {
-			m.aiAgent.HandleConversationEvent(conversation.ID, conversation.AssignedUserID.Int)
+			isServiceMail, serviceErr := m.IsServiceEmailAddress(conversation.Contact.Email.String)
+			if serviceErr != nil {
+				m.lo.Error("error checking service email address", "email", conversation.Contact.Email.String, "error", serviceErr)
+			} else if !isServiceMail {
+				m.aiAgent.HandleConversationEvent(conversation.ID, conversation.AssignedUserID.Int)
+			}
 		}
 
 		if conversation.SLAPolicyID.Int == 0 {

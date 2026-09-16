@@ -33,6 +33,7 @@ var (
 	VisibleInternalConversations      = "visible_internal"
 	CustomerConversations             = "customer"
 	CustomerHighPriorityConversations = "customer_high_priority"
+	ServiceMailConversations          = "service_mail"
 	CreatedConversations              = "created"
 
 	MessageIncoming = "incoming"
@@ -145,6 +146,7 @@ type ConversationListItem struct {
 	UnreadMessageCount    int                     `db:"unread_message_count" json:"unread_message_count"`
 	Status                null.String             `db:"status" json:"status"`
 	Priority              null.String             `db:"priority" json:"priority"`
+	Tags                  null.JSON               `db:"tags" json:"tags"`
 	FirstResponseDueAt    null.Time               `db:"first_response_deadline_at" json:"first_response_deadline_at"`
 	ResolutionDueAt       null.Time               `db:"resolution_deadline_at" json:"resolution_deadline_at"`
 	AppliedSLAID          null.Int                `db:"applied_sla_id" json:"applied_sla_id"`

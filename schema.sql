@@ -310,6 +310,13 @@ CREATE TABLE conversation_assignees (
 );
 CREATE INDEX index_conversation_assignees_on_user_id ON conversation_assignees (user_id, conversation_id);
 
+DROP TABLE IF EXISTS service_email_addresses CASCADE;
+CREATE TABLE service_email_addresses (
+	id SERIAL PRIMARY KEY,
+	address TEXT NOT NULL UNIQUE,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 DROP TABLE IF EXISTS conversation_messages CASCADE;
 CREATE TABLE conversation_messages (
     id BIGSERIAL PRIMARY KEY,

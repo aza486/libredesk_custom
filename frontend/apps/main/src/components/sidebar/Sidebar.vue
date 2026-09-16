@@ -721,6 +721,15 @@ const loadSidebarCounts = async () => {
                           <span>{{ item.label }}</span>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="isActiveParent('/inboxes/service-mails')"
+                          @click="navigateToInbox('service-mails')"
+                        >
+                          <span>Service-Mails</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
