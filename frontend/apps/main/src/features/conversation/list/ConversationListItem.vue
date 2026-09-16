@@ -39,57 +39,68 @@
           </div>
 
           <!-- Content container -->
-          <div class="flex-1 min-w-0 space-y-1.5">
-            <!-- Name + Subject group -->
+          <div class="flex-1 min-w-0 space-y-1">
+            <!-- Subject + Contact group -->
             <div class="space-y-0.5">
-              <!-- Contact name + channel + time -->
+              <!-- Subject + channel + time -->
               <div class="flex items-baseline justify-between gap-2">
-                <Tooltip>
+                <Tooltip v-if="showSubject && conversation.subject">
                   <TooltipTrigger asChild>
                     <h3
-                      class="text-sm truncate min-w-0 text-foreground"
-                      :class="isUnread ? 'font-semibold' : 'font-medium'"
+                      class="min-w-0 truncate text-sm font-semibold leading-5 text-foreground"
+                      :class="isUnread ? 'font-bold' : 'font-semibold'"
                     >
-                      {{ contactFullName }}
+                      {{ conversation.subject }}
                     </h3>
                   </TooltipTrigger>
-                  <TooltipContent>{{ contactFullName }}</TooltipContent>
+                  <TooltipContent>{{ conversation.subject }}</TooltipContent>
                 </Tooltip>
-                <div class="flex items-center gap-1 flex-shrink-0">
+
+                <!-- Fallback: contact name when subject is unavailable -->
+                <h3
+                  v-else
+                  class="min-w-0 truncate text-sm font-semibold leading-5 text-foreground"
+                  :class="isUnread ? 'font-bold' : 'font-semibold'"
+                >
+                  {{ contactFullName }}
+                </h3>
+
+                <div class="flex shrink-0 items-center gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <component
                         :is="conversation.inbox_channel === 'livechat' ? MessageSquare : Mail"
-                        class="w-3 h-3 text-muted-foreground"
+                        class="h-3 w-3 text-muted-foreground"
                         role="img"
                         :aria-label="conversation.inbox_name"
                       />
                     </TooltipTrigger>
                     <TooltipContent>{{ conversation.inbox_name }}</TooltipContent>
                   </Tooltip>
+
                   <span
-                    class="text-xs text-muted-foreground whitespace-nowrap tabular-nums"
                     v-if="conversation.last_message_at"
+                    class="whitespace-nowrap text-xs tabular-nums text-muted-foreground"
                   >
                     {{ relativeLastMessageTime }}
                   </span>
                 </div>
               </div>
 
-              <!-- Subject -->
+              <!-- Contact name -->
               <p
                 v-if="showSubject && conversation.subject"
-                class="text-xs text-muted-foreground truncate"
+                class="truncate text-xs leading-4 text-muted-foreground"
               >
-                {{ conversation.subject }}
+                {{ contactFullName }}
               </p>
             </div>
 
             <!-- Message preview + unread count -->
             <div class="flex items-center justify-between gap-2">
               <p
-                class="text-sm flex-1 min-w-0 truncate"
-                :class="isUnread ? 'text-foreground font-medium' : 'text-muted-foreground'"
+                class="min-w-0 flex-1 truncate text-sm leading-5"
+                :class="isUnread ? 'font-medium text-foreground' : 'text-muted-foreground'"
               >
                 <template v-if="isTyping">
                   <span class="italic text-foreground">{{ $t('globals.terms.typing') }}</span>
@@ -133,7 +144,7 @@
 
             <div class="flex items-center">
               <span
-                class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium leading-4 transition-colors"
+                class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium leading-4 transition-colors"
                 :class="statusClass"
               >
                 {{ conversation.status }}
