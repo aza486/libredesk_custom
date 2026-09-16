@@ -293,11 +293,11 @@ const hiddenTagCount = computed(() =>
   Math.max(0, (props.conversation.tags || []).length - visibleTags.value.length)
 )
 const tagHighlightClass = computed(() => {
-  const tags = (props.conversation.tags || []).map((tag) => String(tag).toLowerCase())
-  if (tags.some((tag) => ['dringend', 'urgent', 'vip'].includes(tag)))
-    return 'ticket-highlight-critical'
-  if (tags.some((tag) => ['wichtig', 'important'].includes(tag)))
-    return 'ticket-highlight-important'
+  const tags = (props.conversation.tags || []).map((tag) =>
+    String(tag).replace(/\s+/g, '').toLocaleLowerCase()
+  )
+  if (tags.includes('🛑verarbeitungsfehler')) return 'ticket-highlight-processing-error'
+  if (tags.includes('😎menscherforderlich')) return 'ticket-highlight-human-required'
   return ''
 })
 
@@ -326,10 +326,27 @@ const handleSelect = () => {
 </script>
 
 <style scoped>
-.ticket-highlight-critical {
-  @apply bg-red-500/10 hover:bg-red-500/15;
+.ticket-highlight-processing-error {
+  @apply bg-red-100 text-red-950 hover:bg-red-200 dark:bg-red-950/70 dark:text-red-100 dark:hover:bg-red-950;
 }
-.ticket-highlight-important {
-  @apply bg-amber-500/10 hover:bg-amber-500/15;
+
+.ticket-highlight-processing-error :deep(.text-foreground) {
+  @apply text-red-950 dark:text-red-100;
+}
+
+.ticket-highlight-processing-error :deep(.text-muted-foreground) {
+  @apply text-red-800 dark:text-red-200;
+}
+
+.ticket-highlight-human-required {
+  @apply bg-amber-100 text-amber-950 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-100 dark:hover:bg-amber-950;
+}
+
+.ticket-highlight-human-required :deep(.text-foreground) {
+  @apply text-amber-950 dark:text-amber-100;
+}
+
+.ticket-highlight-human-required :deep(.text-muted-foreground) {
+  @apply text-amber-800 dark:text-amber-200;
 }
 </style>
