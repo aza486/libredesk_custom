@@ -8,7 +8,6 @@ import { useAppSettingsStore } from '../stores/appSettings'
 import { getI18n } from '../i18n'
 import { abortRouteScope } from '../api'
 
-
 const routes = [
   {
     path: '/',
@@ -118,7 +117,7 @@ const routes = [
         meta: { titleKey: 'globals.terms.search', hidePageHeader: true }
       },
       {
-        path: '/inboxes/:type(assigned|unassigned|all|mentioned|visible|created)?',
+        path: '/inboxes/:type(assigned|unassigned|all|visible|created)?',
         name: 'inboxes',
         redirect: '/inboxes/assigned',
         component: InboxLayout,
@@ -133,7 +132,6 @@ const routes = [
               titleKey: 'globals.terms.inbox',
               typeKey: (route) => {
                 if (route.params.type === 'assigned') return 'conversation.myInbox'
-                if (route.params.type === 'mentioned') return 'conversation.mentions'
                 if (route.params.type === 'unassigned') return 'globals.terms.unassigned'
                 if (route.params.type === 'all') return 'globals.messages.all'
                 if (route.params.type === 'visible') return 'conversation.visibleForMe'
@@ -151,7 +149,6 @@ const routes = [
                   titleKey: 'globals.terms.inbox',
                   typeKey: (route) => {
                     if (route.params.type === 'assigned') return 'conversation.myInbox'
-                    if (route.params.type === 'mentioned') return 'conversation.mentions'
                     if (route.params.type === 'unassigned') return 'globals.terms.unassigned'
                     if (route.params.type === 'all') return 'globals.messages.all'
                     if (route.params.type === 'visible') return 'conversation.visibleForMe'
@@ -680,9 +677,7 @@ router.beforeEach((to, from, next) => {
   const i18n = getI18n()
   const typeKey = typeof to.meta?.typeKey === 'function' ? to.meta.typeKey(to) : ''
   const titleKey = typeKey || to.meta?.titleKey
-  const pageTitle = titleKey && i18n
-    ? i18n.global.t(titleKey, to.meta?.titleCount || 1)
-    : ''
+  const pageTitle = titleKey && i18n ? i18n.global.t(titleKey, to.meta?.titleCount || 1) : ''
   document.title = `${pageTitle} - ${siteName}`
   next()
 })

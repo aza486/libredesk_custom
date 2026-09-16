@@ -560,12 +560,12 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 		return models.Message{}, err
 	}
 
-	// Insert mentions if any.
+	// Mentions extend the ticket's assignee list and use assignment
+	// notifications; there is no separate mentions inbox anymore.
 	if len(mentions) > 0 {
 		if err := m.InsertMentions(message.ConversationID, message.ID, senderID, mentions); err != nil {
-			m.lo.Error("error inserting mentions", "error", err)
+			m.lo.Error("error applying mention assignments", "error", err)
 		}
-		go m.NotifyMention(conversationUUID, message, mentions, senderID)
 	}
 
 	return message, nil
@@ -1259,7 +1259,7 @@ func (m *Manager) uploadMessageAttachments(message *models.Message) error {
 			attachment.Size,
 			null.StringFrom(attachment.Disposition),
 			[]byte("{}"), /** meta **/
-			true,          /** private **/
+			true,         /** private **/
 		)
 		if err != nil {
 			m.lo.Error("failed to upload attachment", "name", attachment.Name, "content_type", attachment.ContentType, "size", attachment.Size, "content_id", contentID, "disposition", attachment.Disposition, "conversation_uuid", message.ConversationUUID, "message_source_id", message.SourceID.String, "error", err)

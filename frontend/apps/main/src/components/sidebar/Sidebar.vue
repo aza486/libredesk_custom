@@ -7,7 +7,11 @@ import {
   contactNavItems
 } from '../../constants/navigation'
 import { useRoute, useRouter } from 'vue-router'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@shared-ui/components/ui/collapsible'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from '@shared-ui/components/ui/collapsible'
 import { Badge } from '@shared-ui/components/ui/badge'
 import {
   Sidebar,
@@ -32,7 +36,6 @@ import {
   Plus,
   CircleDashed,
   List,
-  AtSign,
   Settings,
   Clock,
   Timer,
@@ -119,7 +122,7 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
-import  UnreadCountBadge  from '@main/components/UnreadCountBadge.vue'
+import UnreadCountBadge from '@main/components/UnreadCountBadge.vue'
 import { useIsMobile } from '@shared-ui/composables'
 
 const props = defineProps({
@@ -131,7 +134,7 @@ const props = defineProps({
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
 const openConversationCount = computed(() => {
-  return conversationStore.conversationsList.filter(conversation => {
+  return conversationStore.conversationsList.filter((conversation) => {
     return conversation.status === 'Open'
   }).length
 })
@@ -153,11 +156,8 @@ onUnmounted(() => {
   }
 })
 const myOpenCount = computed(() => {
-  return conversationStore.conversationsList.filter(conversation => {
-    return (
-      conversation.status === 'Open' &&
-      conversation.assignee_id === userStore.user.id
-    )
+  return conversationStore.conversationsList.filter((conversation) => {
+    return conversation.status === 'Open' && conversation.assignee_id === userStore.user.id
   }).length
 })
 const settingsStore = useAppSettingsStore()
@@ -289,102 +289,65 @@ const sidebarCounts = ref({})
 let sidebarCountInterval = null
 const loadSidebarCounts = async () => {
   try {
-
     // Assigned
-    const assignedResponse =
-      await api.getAssignedConversations({
-        page: 1,
-        page_size: 100
-      })
+    const assignedResponse = await api.getAssignedConversations({
+      page: 1,
+      page_size: 100
+    })
 
-    sidebarCounts.value.assigned =
-      assignedResponse.data.data.results.filter(
-        conversation => conversation.status === 'Open'
-      ).length
+    sidebarCounts.value.assigned = assignedResponse.data.data.results.filter(
+      (conversation) => conversation.status === 'Open'
+    ).length
 
     // Unassigned
-    const unassignedResponse =
-      await api.getUnassignedConversations({
-        page: 1,
-        page_size: 100
-      })
+    const unassignedResponse = await api.getUnassignedConversations({
+      page: 1,
+      page_size: 100
+    })
 
-    sidebarCounts.value.unassigned =
-      unassignedResponse.data.data.results.filter(
-        conversation => conversation.status === 'Open'
-      ).length
-
-    // Mentions
-    const mentionedResponse =
-      await api.getMentionedConversations({
-        page: 1,
-        page_size: 100
-      })
-
-    sidebarCounts.value.mentioned =
-      mentionedResponse.data.data.results.filter(
-        conversation => conversation.status === 'Open'
-      ).length
+    sidebarCounts.value.unassigned = unassignedResponse.data.data.results.filter(
+      (conversation) => conversation.status === 'Open'
+    ).length
 
     // Teams
     for (const team of props.userTeams || []) {
+      const teamResponse = await api.getTeamUnassignedConversations(team.id, {
+        page: 1,
+        page_size: 100
+      })
 
-      const teamResponse =
-        await api.getTeamUnassignedConversations(
-          team.id,
-          {
-            page: 1,
-            page_size: 100
-          }
-        )
-
-      sidebarCounts.value[`team_${team.id}`] =
-        teamResponse.data.data.results.filter(
-          conversation => conversation.status === 'Open'
-        ).length
+      sidebarCounts.value[`team_${team.id}`] = teamResponse.data.data.results.filter(
+        (conversation) => conversation.status === 'Open'
+      ).length
     }
 
-     // Views
+    // Views
     for (const view of props.userViews || []) {
-      const viewResponse =
-        await api.getViewConversations(
-          view.id,
-          {
-            page: 1,
-            page_size: 100
-          }
-        )
+      const viewResponse = await api.getViewConversations(view.id, {
+        page: 1,
+        page_size: 100
+      })
 
-      sidebarCounts.value[`view_${view.id}`] =
-        viewResponse.data.data.results.filter(
-          conversation => conversation.status === 'Open'
-        ).length
+      sidebarCounts.value[`view_${view.id}`] = viewResponse.data.data.results.filter(
+        (conversation) => conversation.status === 'Open'
+      ).length
     }
 
     // Shared Views
     for (const view of props.sharedViews || []) {
-      const viewResponse =
-        await api.getViewConversations(
-          view.id,
-          {
-            page: 1,
-            page_size: 100
-          }
-        )
+      const viewResponse = await api.getViewConversations(view.id, {
+        page: 1,
+        page_size: 100
+      })
 
-      sidebarCounts.value[`shared_view_${view.id}`] =
-        viewResponse.data.data.results.filter(
-          conversation => conversation.status === 'Open'
-        ).length
+      sidebarCounts.value[`shared_view_${view.id}`] = viewResponse.data.data.results.filter(
+        (conversation) => conversation.status === 'Open'
+      ).length
     }
-
   } catch (error) {
     console.error('Failed loading sidebar counts', error)
   }
 }
-
-
-
 </script>
 
 <template>
@@ -526,7 +489,9 @@ const loadSidebarCounts = async () => {
                         <SidebarMenuButton size="sm" :isActive="isActiveParent(child.href)" asChild>
                           <router-link :to="child.href">
                             <component :is="navIconMap[child.icon]" v-if="child.icon" />
-                            <span>{{ t(child.titleKey, child.isTitleKeyPlural === true ? 2 : 1) }}</span>
+                            <span>{{
+                              t(child.titleKey, child.isTitleKeyPlural === true ? 2 : 1)
+                            }}</span>
                           </router-link>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
@@ -589,7 +554,11 @@ const loadSidebarCounts = async () => {
                 </div>
                 <div class="mr-1 mt-1 transition-colors">
                   <router-link :to="{ name: 'search' }">
-                    <Search size="18" stroke-width="2.5" class="text-muted-foreground hover:text-foreground" />
+                    <Search
+                      size="18"
+                      stroke-width="2.5"
+                      class="text-muted-foreground hover:text-foreground"
+                    />
                   </router-link>
                 </div>
               </div>
@@ -603,55 +572,55 @@ const loadSidebarCounts = async () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton @click="emit('createConversation')">
-                    <Plus />
-                    <span>{{ t('conversation.newConversation') }}</span>
+                  <Plus />
+                  <span>{{ t('conversation.newConversation') }}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')" @click="navigateToInbox('assigned')">
+                <SidebarMenuButton
+                  :isActive="isActiveParent('/inboxes/assigned')"
+                  @click="navigateToInbox('assigned')"
+                >
                   <User />
-                    <div class="flex items-center justify-between w-full">
-                      <span>{{ t('globals.terms.myInbox') }}</span>
+                  <div class="flex items-center justify-between w-full">
+                    <span>{{ t('globals.terms.myInbox') }}</span>
                     <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
                   </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton :isActive="isActiveParent('/inboxes/visible')" @click="navigateToInbox('visible')" >
+                <SidebarMenuButton
+                  :isActive="isActiveParent('/inboxes/visible')"
+                  @click="navigateToInbox('visible')"
+                >
                   <Eye />
                   <span>Sichtbar für mich</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton :isActive="isActiveParent('/inboxes/created')" @click="navigateToInbox('created')">
+                <SidebarMenuButton
+                  :isActive="isActiveParent('/inboxes/created')"
+                  @click="navigateToInbox('created')"
+                >
                   <FilePlus />
                   <span>Von mir erstellt</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton :isActive="isActiveParent('/inboxes/mentioned')" @click="navigateToInbox('mentioned')">
-                    <AtSign />
-                      <div class="flex items-center justify-between w-full">
-                        <span>
-                        {{ t('globals.terms.mention', 2) }}
-                      </span>
-                    <UnreadCountBadge :count="sidebarCounts.mentioned || 0" />
-                    </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton :isActive="isActiveParent('/inboxes/unassigned')" @click="navigateToInbox('unassigned')">
+                <SidebarMenuButton
+                  :isActive="isActiveParent('/inboxes/unassigned')"
+                  @click="navigateToInbox('unassigned')"
+                >
                   <CircleDashed />
-                    <div class="flex items-center justify-between w-full">
-                      <span>
-                        {{ t('globals.terms.unassigned') }}
-                      </span>
-                      <UnreadCountBadge :count="sidebarCounts.unassigned || 0" />
-                    </div>
+                  <div class="flex items-center justify-between w-full">
+                    <span>
+                      {{ t('globals.terms.unassigned') }}
+                    </span>
+                    <UnreadCountBadge :count="sidebarCounts.unassigned || 0" />
+                  </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -677,12 +646,12 @@ const loadSidebarCounts = async () => {
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton>
-                        <span class="sidebar-section-label">
-                          {{ t('globals.terms.teamInbox', 2) }}
-                        </span>
-                        <ChevronRight
-                          class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                        />
+                      <span class="sidebar-section-label">
+                        {{ t('globals.terms.teamInbox', 2) }}
+                      </span>
+                      <ChevronRight
+                        class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                      />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
@@ -709,67 +678,71 @@ const loadSidebarCounts = async () => {
               </Collapsible>
 
               <!-- Views -->
-              <Collapsible class="group/collapsible" defaultOpen v-model:open="viewInboxOpen" v-if="userStore.can(permissions.VIEW_MANAGE)">
+              <Collapsible
+                class="group/collapsible"
+                defaultOpen
+                v-model:open="viewInboxOpen"
+                v-if="userStore.can(permissions.VIEW_MANAGE)"
+              >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton class="group/item !p-2">
-                        <span class="sidebar-section-label">
-                          {{ t('globals.terms.view', 2) }}
-                        </span>
-                        <div>
-                          <Plus
-                            size="18"
-                            @click.stop="openCreateViewDialog"
-                            class="rounded-md cursor-pointer transition-colors duration-200 can-hover:opacity-0 can-hover:group-hover/item:opacity-100 hover:bg-sidebar-accent/50 text-muted-foreground hover:text-sidebar-accent-foreground p-1"
-                          />
-                        </div>
-                        <ChevronRight
-                          class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                          v-if="userViews.length"
+                      <span class="sidebar-section-label">
+                        {{ t('globals.terms.view', 2) }}
+                      </span>
+                      <div>
+                        <Plus
+                          size="18"
+                          @click.stop="openCreateViewDialog"
+                          class="rounded-md cursor-pointer transition-colors duration-200 can-hover:opacity-0 can-hover:group-hover/item:opacity-100 hover:bg-sidebar-accent/50 text-muted-foreground hover:text-sidebar-accent-foreground p-1"
                         />
+                      </div>
+                      <ChevronRight
+                        class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                        v-if="userViews.length"
+                      />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
 
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       <SidebarMenuSubItem
-                        v-for="view in userViews" :key="view.id"
+                        v-for="view in userViews"
+                        :key="view.id"
                         class="group/view-item"
                       >
-                      <SidebarMenuButton
-                        :isActive="route.params.viewID == view.id"
-                        @click="navigateToViewInbox(view.id)"
-                      >
-                        <div class="flex items-center justify-between w-full">
-                          <span class="flex-1 truncate" :title="view.name">
-                            {{ view.name }}
-                          </span>
+                        <SidebarMenuButton
+                          :isActive="route.params.viewID == view.id"
+                          @click="navigateToViewInbox(view.id)"
+                        >
+                          <div class="flex items-center justify-between w-full">
+                            <span class="flex-1 truncate" :title="view.name">
+                              {{ view.name }}
+                            </span>
 
-                          <UnreadCountBadge
-                            :count="sidebarCounts[`view_${view.id}`] || 0"
-                          />
-                        </div>
-                      </SidebarMenuButton>
+                            <UnreadCountBadge :count="sidebarCounts[`view_${view.id}`] || 0" />
+                          </div>
+                        </SidebarMenuButton>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger as-child>
-                          <SidebarMenuAction
-                            class="mr-3 can-hover:opacity-0 can-hover:group-hover/view-item:opacity-100 data-[state=open]:opacity-100"
-                            @click.prevent
-                          >
-                            <EllipsisVertical />
-                          </SidebarMenuAction>
-                        </DropdownMenuTrigger>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger as-child>
+                            <SidebarMenuAction
+                              class="mr-3 can-hover:opacity-0 can-hover:group-hover/view-item:opacity-100 data-[state=open]:opacity-100"
+                              @click.prevent
+                            >
+                              <EllipsisVertical />
+                            </SidebarMenuAction>
+                          </DropdownMenuTrigger>
 
-                        <DropdownMenuContent>
-                          <DropdownMenuItem @click="() => editView(view)">
-                            <span>{{ t('globals.messages.edit') }}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem @click="() => openDeleteConfirmation(view)">
-                            <span>{{ t('globals.messages.delete') }}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem @click="() => editView(view)">
+                              <span>{{ t('globals.messages.edit') }}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem @click="() => openDeleteConfirmation(view)">
+                              <span>{{ t('globals.messages.delete') }}</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   </CollapsibleContent>
@@ -786,12 +759,12 @@ const loadSidebarCounts = async () => {
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton class="!p-2">
-                        <span class="sidebar-section-label">
-                          {{ t('globals.terms.sharedView', 2) }}
-                        </span>
-                        <ChevronRight
-                          class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
-                        />
+                      <span class="sidebar-section-label">
+                        {{ t('globals.terms.sharedView', 2) }}
+                      </span>
+                      <ChevronRight
+                        class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                      />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
 
@@ -853,7 +826,7 @@ const loadSidebarCounts = async () => {
 <style scoped>
 :deep(.sidebar-secondary) {
   @apply border border-sidebar-border ml-[3.2rem] rounded-lg overflow-hidden;
-  top: 0.40rem !important;
+  top: 0.4rem !important;
   bottom: 0.35rem !important;
   height: auto !important;
 }
@@ -863,5 +836,4 @@ const loadSidebarCounts = async () => {
   min-height: auto !important;
   height: 100%;
 }
-
 </style>

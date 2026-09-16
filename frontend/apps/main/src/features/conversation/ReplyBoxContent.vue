@@ -24,7 +24,11 @@
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <Button class="text-muted-foreground max-md:h-11 max-md:w-11 max-md:p-0" variant="ghost" @click="toggleFullscreen">
+      <Button
+        class="text-muted-foreground max-md:h-11 max-md:w-11 max-md:p-0"
+        variant="ghost"
+        @click="toggleFullscreen"
+      >
         <component :is="isFullscreen ? Minimize2 : Maximize2" />
       </Button>
     </div>
@@ -162,7 +166,6 @@ import { useI18n } from 'vue-i18n'
 import { validateEmail } from '@shared-ui/utils/string'
 import { useMacroStore } from '@main/stores/macro'
 import { useUsersStore } from '@main/stores/users'
-import { useTeamStore } from '@main/stores/team'
 
 const messageType = defineModel('messageType', { default: 'reply' })
 const to = defineModel('to', { default: '' })
@@ -175,10 +178,7 @@ const textContent = defineModel('textContent', { default: '' })
 const mentions = defineModel('mentions', { default: () => [] })
 const macroStore = useMacroStore()
 const usersStore = useUsersStore()
-const teamStore = useTeamStore()
 const selectedTemplateId = defineModel('selectedTemplateId', { default: null })
-
-
 
 // Get suggestions for the mention dropdown
 const getSuggestions = async (query) => {
@@ -187,14 +187,11 @@ const getSuggestions = async (query) => {
     return []
   }
 
-
-  await Promise.all([usersStore.fetchUsers(), teamStore.fetchTeams()])
+  await usersStore.fetchUsers()
 
   const q = query.toLowerCase()
 
-  const favoriteAgents = JSON.parse(
-  localStorage.getItem('favoriteAgents') || '[]'
-)
+  const favoriteAgents = JSON.parse(localStorage.getItem('favoriteAgents') || '[]')
 
   const users = usersStore.users
     .filter((u) => u.enabled && u.type !== 'ai_assistant')
@@ -207,45 +204,19 @@ const getSuggestions = async (query) => {
       favorite: favoriteAgents.includes(String(u.id))
     }))
 
-    users.sort((a, b) => {
+  users.sort((a, b) => {
+    const aFav = favoriteAgents.includes(String(a.id))
 
-  const aFav =
-    favoriteAgents.includes(String(a.id))
+    const bFav = favoriteAgents.includes(String(b.id))
 
-  const bFav =
-    favoriteAgents.includes(String(b.id))
+    if (aFav && !bFav) return -1
+    if (!aFav && bFav) return 1
 
-  if (aFav && !bFav) return -1
-  if (!aFav && bFav) return 1
+    return a.label.localeCompare(b.label)
+  })
 
-  return a.label.localeCompare(b.label)
-})
-
-  const teams = teamStore.teams
-    .filter((t) => t.name.toLowerCase().includes(q))
-    .map((t) => ({
-      id: t.id,
-      type: 'team',
-      label: t.name,
-      emoji: t.emoji
-    }))
-
-    const special = []
-
-    if (
-      q === '' ||
-      'alle'.includes(q) ||
-      'alle mitarbeiter'.includes(q)
-    ) {
-      special.push({
-        id: -1,
-        type: 'all',
-        label: 'Alle Mitarbeiter'
-      })
-    }
-
-    return [...special, ...users, ...teams].slice(0, 25)
-  }
+  return users.slice(0, 25)
+}
 
 // Handle mentions changed from editor
 const handleMentionsChanged = (newMentions) => {
@@ -286,7 +257,7 @@ const props = defineProps({
   outgoingTemplates: {
     type: Array,
     default: () => []
-  },
+  }
 })
 
 const emit = defineEmits([
@@ -332,7 +303,8 @@ const enableSend = computed(() => {
       conversationStore.getMacro('reply')?.actions?.length > 0 ||
       props.uploadedFiles.length > 0) &&
     emailErrors.value.length === 0 &&
-    !props.uploadingFiles.length && !props.isDraftLoading
+    !props.uploadingFiles.length &&
+    !props.isDraftLoading
   )
 })
 

@@ -671,120 +671,41 @@ func (c *Manager) GetCreatedConversationsList(
 	)
 }
 
-// InsertMentions inserts mentions for a message.
+// InsertMentions turns private-note mentions into ticket assignments. The
+// assignment is the durable action and produces assignment notifications;
+// separate mention records and the former mention inbox are no longer used.
 func (c *Manager) InsertMentions(conversationID, messageID, mentionedByUserID int, mentions []models.MentionInput) error {
 	conversationUUID, err := c.GetConversationUUID(conversationID)
 	if err != nil {
 		return err
 	}
+	actor, err := c.userStore.GetAgent(mentionedByUserID, "")
+	if err != nil {
+		return err
+	}
+	conversation, err := c.GetConversation(0, conversationUUID, "")
+	if err != nil {
+		return err
+	}
+
+	assigneeIDs := make([]int, 0, len(conversation.AssignedUserIDs)+len(mentions))
+	for _, id := range conversation.AssignedUserIDs {
+		assigneeIDs = append(assigneeIDs, int(id))
+	}
+	if len(assigneeIDs) == 0 && conversation.AssignedUserID.Valid {
+		assigneeIDs = append(assigneeIDs, conversation.AssignedUserID.Int)
+	}
+
 	for _, mention := range mentions {
-		var userID, teamID any
-
-		if mention.Type == "all" {
-
-			agents, err := c.userStore.GetAgents()
-
-			if err != nil {
-				c.lo.Error(
-					"error loading agents for @all",
-					"error", err,
-				)
-				continue
-			}
-
-			for _, agent := range agents {
-
-				if !agent.Enabled {
-					continue
-				}
-
-				if err := c.AddVisibleUser(
-					conversationUUID,
-					agent.ID,
-				); err != nil {
-
-					c.lo.Error(
-						"error adding @all visibility user",
-						"user_id", agent.ID,
-						"error", err,
-					)
-				}
-
-				if _, err := c.q.InsertMention.Exec(
-					conversationID,
-					messageID,
-					agent.ID,
-					nil,
-					mentionedByUserID,
-				); err != nil {
-
-					c.lo.Error(
-						"error inserting @all mention",
-						"user_id", agent.ID,
-						"error", err,
-					)
-				}
-			}
-
-			continue
-		}
-
 		switch mention.Type {
 		case models.MentionTypeAgent:
-			userID = mention.ID
-
-			if err := c.AddVisibleUser(
-				conversationUUID,
-				mention.ID,
-			); err != nil {
-				c.lo.Error(
-					"error adding mentioned user to visibility",
-					"conversation_uuid", conversationUUID,
-					"user_id", mention.ID,
-					"error", err,
-				)
-			}
-		case models.MentionTypeTeam:
-			teamID = mention.ID
-
-			members, err := c.teamStore.GetMembers(mention.ID)
-
-			if err != nil {
-
-				c.lo.Error(
-					"error loading team members for visibility",
-					"team_id", mention.ID,
-					"error", err,
-				)
-
-			} else {
-
-				for _, member := range members {
-
-					if err := c.AddVisibleUser(
-						conversationUUID,
-						member.ID,
-					); err != nil {
-
-						c.lo.Error(
-							"error adding team member to visibility",
-							"conversation_uuid", conversationUUID,
-							"user_id", member.ID,
-							"error", err,
-						)
-					}
-				}
-			}
+			assigneeIDs = append(assigneeIDs, mention.ID)
 		default:
-			c.lo.Warn("invalid mention type, skipping", "type", mention.Type)
-			continue
-		}
-
-		if _, err := c.q.InsertMention.Exec(conversationID, messageID, userID, teamID, mentionedByUserID); err != nil {
-			c.lo.Error("error inserting mention", "error", err)
+			c.lo.Warn("only agent mentions can create assignments", "type", mention.Type)
 		}
 	}
-	return nil
+
+	return c.SetConversationUserAssignees(conversationUUID, assigneeIDs, actor)
 }
 
 func (c *Manager) GetViewConversationsList(viewingUserID, userID int, teamIDs []int, listType []string, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
