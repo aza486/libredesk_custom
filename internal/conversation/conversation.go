@@ -2507,7 +2507,21 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id) AND conversations.assigned_team_id IS NULL AND %s)",
+					`(
+										NOT EXISTS (
+												SELECT 1
+												FROM conversation_assignees ca
+												WHERE ca.conversation_id = conversations.id
+										)
+										AND conversations.assigned_team_id IS NULL
+										AND NOT EXISTS (
+												SELECT 1
+												FROM conversation_tags ct
+												WHERE ct.conversation_id = conversations.id
+													AND ct.tag_id = 14
+										)
+										AND %s
+								)`,
 					ticketAccessCondition,
 				),
 			)
@@ -2516,14 +2530,30 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			for i := range teamIDs {
 				placeholders[i] = fmt.Sprintf("$%d", len(qArgs)+i+1)
 			}
+
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(conversations.assigned_team_id IN (%s) AND NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id) AND %s)",
+					`(
+				conversations.assigned_team_id IN (%s)
+				AND NOT EXISTS (
+					SELECT 1
+					FROM conversation_assignees ca
+					WHERE ca.conversation_id = conversations.id
+				)
+				AND NOT EXISTS (
+					SELECT 1
+					FROM conversation_tags ct
+					WHERE ct.conversation_id = conversations.id
+					  AND ct.tag_id = 14
+				)
+				AND %s
+			)`,
 					strings.Join(placeholders, ","),
 					ticketAccessCondition,
 				),
 			)
+
 			for _, id := range teamIDs {
 				qArgs = append(qArgs, id)
 			}
@@ -2532,14 +2562,32 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			for i := range teamIDs {
 				placeholders[i] = fmt.Sprintf("$%d", len(qArgs)+i+1)
 			}
+
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(conversations.assigned_team_id IN (%s) AND %s)",
+					`(
+						conversations.assigned_team_id IN (%s)
+						AND (
+							NOT EXISTS (
+								SELECT 1
+								FROM conversation_tags ct
+								WHERE ct.conversation_id = conversations.id
+									AND ct.tag_id = 14
+							)
+							OR EXISTS (
+								SELECT 1
+								FROM conversation_assignees ca
+								WHERE ca.conversation_id = conversations.id
+							)
+						)
+						AND %s
+					)`,
 					strings.Join(placeholders, ","),
 					ticketAccessCondition,
 				),
 			)
+
 			for _, id := range teamIDs {
 				qArgs = append(qArgs, id)
 			}
@@ -2581,19 +2629,46 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(conditions, fmt.Sprintf(`
 				(COALESCE((conversations.custom_attributes->>'private')::boolean, false) = true
 				AND (conversations.custom_attributes->'visible_users') @> '[%d]')`, userID))
-		case models.CustomerConversations, models.CustomerHighPriorityConversations:
 			customerCondition := fmt.Sprintf(`
-				(COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = true
-				AND %s)`, ticketAccessCondition)
+					(
+							COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = true
+							AND NOT EXISTS (
+									SELECT 1
+									FROM conversation_tags ct
+									WHERE ct.conversation_id = conversations.id
+										AND ct.tag_id = 14
+							)
+							AND %s
+					)`,
+				ticketAccessCondition)
 			if lt == models.CustomerHighPriorityConversations {
 				customerCondition = "(" + customerCondition + " AND conversation_priorities.name = 'High')"
 			}
 			conditions = append(conditions, customerCondition)
 		case models.ServiceMailConversations:
 			conditions = append(conditions, fmt.Sprintf(`
-				(EXISTS (SELECT 1 FROM service_email_addresses sea WHERE LOWER(sea.address) = LOWER(users.email))
-				AND COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = true
-				AND %s)`, ticketAccessCondition))
+						(
+								EXISTS (
+										SELECT 1
+										FROM conversation_tags ct
+										WHERE ct.conversation_id = conversations.id
+											AND ct.tag_id = 14
+								)
+								AND (
+										%t
+										OR %t
+										OR EXISTS (
+												SELECT 1
+												FROM conversation_assignees ca
+												WHERE ca.conversation_id = conversations.id
+													AND ca.user_id = %d
+										)
+								)
+						)`,
+				isAdmin,
+				isCustomerSupport,
+				userID,
+			))
 
 		case models.CreatedConversations:
 

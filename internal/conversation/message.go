@@ -1315,12 +1315,30 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 		if err != nil || conversationID == 0 {
 			return 0, "", false, err
 		}
-		if err := m.AddSystemTags(conversationUUID, []string{"🦽Kundenticket"}); err != nil {
+		isServiceMail, serviceErr := m.IsServiceEmailAddress(in.Contact.Email.String)
+
+		if serviceErr != nil {
 			m.lo.Error(
-				"failed to add customer system tag",
-				"conversation_uuid", conversationUUID,
-				"error", err,
+				"failed to check service email address",
+				"email", in.Contact.Email.String,
+				"error", serviceErr,
 			)
+		} else if isServiceMail {
+			if err := m.AddSystemTags(conversationUUID, []string{"🧷Service-Mail"}); err != nil {
+				m.lo.Error(
+					"failed to add service mail system tag",
+					"conversation_uuid", conversationUUID,
+					"error", err,
+				)
+			}
+		} else {
+			if err := m.AddSystemTags(conversationUUID, []string{"🦽Kundenticket"}); err != nil {
+				m.lo.Error(
+					"failed to add customer system tag",
+					"conversation_uuid", conversationUUID,
+					"error", err,
+				)
+			}
 		}
 		return conversationID, conversationUUID, true, nil
 	}
@@ -1506,6 +1524,23 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 	if err != nil {
 		m.lo.Error("error fetching conversation for incoming message hooks", "conversation_uuid", conversationUUID, "error", err)
 	} else {
+		isServiceMail, serviceErr := m.IsServiceEmailAddress(conversation.Contact.Email.String)
+
+		if serviceErr != nil {
+			m.lo.Error(
+				"failed to check service email address",
+				"email", conversation.Contact.Email.String,
+				"error", serviceErr,
+			)
+		} else if isServiceMail {
+			if err := m.AddSystemTags(conversationUUID, []string{"🧷Service-Mail"}); err != nil {
+				m.lo.Error(
+					"failed to add service mail system tag",
+					"conversation_uuid", conversationUUID,
+					"error", err,
+				)
+			}
+		}
 		// Trigger automations on incoming message event.
 		m.automation.EvaluateConversationUpdateRules(conversation, amodels.EventConversationMessageIncoming, previousValues, umodels.User{ID: conversation.ContactID})
 

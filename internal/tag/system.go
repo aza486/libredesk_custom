@@ -1,21 +1,24 @@
 package tag
 
 const (
-	SystemTagInternal = 8
-	SystemTagCustomer = 9
-	SystemTagHuman    = 11
+	SystemTagInternal    = 8
+	SystemTagCustomer    = 9
+	SystemTagHuman       = 11
+	SystemTagServiceMail = 14
 )
 
 var systemTagIDs = map[int]struct{}{
-	SystemTagInternal: {},
-	SystemTagCustomer: {},
-	SystemTagHuman:    {},
+	SystemTagInternal:    {},
+	SystemTagCustomer:    {},
+	SystemTagHuman:       {},
+	SystemTagServiceMail: {},
 }
 
 var systemTagNames = map[string]struct{}{
-    "🏢Intern": {},
-    "🦽Kundenticket": {},
-    "😎Mensch erforderlich": {},
+	"🏢Intern":              {},
+	"🦽Kundenticket":        {},
+	"😎Mensch erforderlich": {},
+	"🧷Service-Mail":        {},
 }
 
 func IsSystemTag(id int) bool {
