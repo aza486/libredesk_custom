@@ -64,7 +64,11 @@ func handleAddServiceEmailAddress(r *fastglue.Request) error {
 
 func handleRemoveServiceEmailAddress(r *fastglue.Request) error {
 	app := r.Context.(*App)
-	address := r.RequestCtx.UserValue("address").(string)
+	address := strings.TrimSpace(string(r.RequestCtx.QueryArgs().Peek("address")))
+	parsedAddress, err := mail.ParseAddress(address)
+	if err != nil || parsedAddress.Address != address {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid email address", nil, envelope.InputError)
+	}
 	if err := app.conversation.RemoveServiceEmailAddress(address); err != nil {
 		return sendErrorEnvelope(r, err)
 	}

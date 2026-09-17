@@ -427,7 +427,7 @@ const getServiceEmailAddresses = () => http.get('/api/v1/service-email-addresses
 const addServiceEmailAddress = (address) =>
   http.post('/api/v1/service-email-addresses', { address })
 const removeServiceEmailAddress = (address) =>
-  http.delete(`/api/v1/service-email-addresses/${encodeURIComponent(address)}`)
+  http.delete('/api/v1/service-email-addresses', { params: { address } })
 const getCreatedConversations = (params) =>
   http.get('/api/v1/conversations/created', { params, abortOnRoute: true })
 const getViewConversations = (id, params) =>
