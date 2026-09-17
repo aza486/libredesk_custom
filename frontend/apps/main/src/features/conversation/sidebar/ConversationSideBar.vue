@@ -16,21 +16,18 @@
           <!-- Agent, team, priority, and tags assignment -->
           <AccordionContent class="accordion-content--actions">
             <div v-if="conversationStore.current" class="space-y-2">
+              <p class="text-sm font-medium">Zuweisungen</p>
               <UserMultiSelect
-                v-model="selectedAssignees"
+                :model-value="selectedAssignees"
                 :items="agentOptions"
-                :placeholder="t('placeholders.selectAgent')"
+                placeholder="Mitarbeiter hinzufügen"
+                @update:modelValue="updateAssignees"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                class="w-full"
-                :disabled="isSavingAssignees"
-                @click="saveAssignees"
-              >
-                {{ isSavingAssignees ? t('globals.messages.saving') : 'Zuweisungen speichern' }}
-              </Button>
+              <AssignmentSaveState
+                :state="assigneeSaveState"
+                :can-undo="canUndoAssignees"
+                @undo="undoAssignees"
+              />
             </div>
 
             <div>
@@ -99,46 +96,21 @@
           </AccordionTrigger>
 
           <AccordionContent class="accordion-content">
-            <div
-              v-for="userId in sortedVisibleUsers"
-              :key="userId"
-              class="flex justify-between items-center py-1"
-              :class="{ 'font-medium': isVisibilityManager(userId) }"
-            >
-              <span>
-                {{ getVisibleUserName(userId) }}
-                <span v-if="isVisibilityManager(userId)" class="text-xs text-muted-foreground">
-                  (Creator)
-                </span>
-              </span>
-
-              <button
-                v-if="
-                  canManageVisibility &&
-                  !isVisibilityManager(userId) &&
-                  !assignedUserIDs.some((id) => Number(id) === Number(userId))
-                "
-                @click="removeVisibleUser(userId)"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div v-if="canManageVisibility" class="mt-3 space-y-2">
+            <div class="mt-3 space-y-2">
               <UserMultiSelect
-                v-model="selectedVisibleUsers"
-                :items="availableUsers"
-                placeholder="Benutzer auswählen"
+                :model-value="selectedVisibleUsers"
+                :items="usersStore.options"
+                :locked-values="lockedVisibleUserIDs"
+                :readonly="!canManageVisibility"
+                placeholder="Mitarbeiter hinzufügen"
+                @update:modelValue="updateVisibleUsers"
               />
-
-              <button
-                v-if="selectedVisibleUsers.length"
-                class="w-full px-3 py-2 rounded border text-sm"
-                @click="addSelectedVisibleUsers"
-              >
-                {{ selectedVisibleUsers.length }}
-                Benutzer hinzufügen
-              </button>
+              <AssignmentSaveState
+                v-if="canManageVisibility"
+                :state="visibilitySaveState"
+                :can-undo="canUndoVisibleUsers"
+                @undo="undoVisibleUsers"
+              />
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -249,6 +221,7 @@ import { useCustomAttributeStore } from '@/stores/customAttributes'
 import ContactNotes from '@/features/contact/ContactNotes.vue'
 import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
 import ConversationSideBarPageVisits from '@/features/conversation/sidebar/ConversationSideBarPageVisits.vue'
+import AssignmentSaveState from './AssignmentSaveState.vue'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { TAG_ACTION } from '@/constants/conversation'
@@ -262,9 +235,19 @@ const teamsStore = useTeamStore()
 const tagStore = useTagStore()
 const userStore = useUserStore()
 const tags = ref([])
-const selectedVisibleUsers = ref([])
-const selectedAssignees = ref([])
-const isSavingAssignees = ref(false)
+const selectedAssigneeIDs = ref([])
+const selectedVisibleUserIDs = ref([])
+const originalAssigneeIDs = ref([])
+const originalVisibleUserIDs = ref([])
+const savedAssigneeIDs = ref([])
+const savedVisibleUserIDs = ref([])
+const assigneeSaveState = ref('idle')
+const visibilitySaveState = ref('idle')
+const assigneeSaveQueues = new Map()
+const visibilitySaveQueues = new Map()
+const savedVisibleUserIDsByUUID = new Map()
+let assigneeChangeVersion = 0
+let visibilityChangeVersion = 0
 const accordionState = useStorage('conversation-sidebar-accordion', [])
 const activeTab = useStorage('conversation-sidebar-tab', 'details')
 const { t } = useI18n()
@@ -338,22 +321,47 @@ const agentOptions = computed(() => {
   return [me, ...usersStore.options.filter((option) => !isMe(option))]
 })
 
+const normalizeUserIDs = (ids) => [...new Set(ids.map(Number).filter((id) => id > 0))]
+const sameUserIDs = (left, right) => {
+  const a = normalizeUserIDs(left).sort((x, y) => x - y)
+  const b = normalizeUserIDs(right).sort((x, y) => x - y)
+  return a.length === b.length && a.every((id, index) => id === b[index])
+}
+const usersForIDs = (ids) =>
+  normalizeUserIDs(ids).map(
+    (id) => usersStore.options.find((user) => Number(user.value) === id) || { value: id, label: `User ${id}` }
+  )
+const selectedAssignees = computed(() => usersForIDs(selectedAssigneeIDs.value))
+const selectedVisibleUsers = computed(() => usersForIDs(selectedVisibleUserIDs.value))
+
 watch(
   () => conversationStore.current?.uuid,
   () => {
     const conversation = conversationStore.current
     if (!conversation) {
-      selectedAssignees.value = []
+      selectedAssigneeIDs.value = []
+      selectedVisibleUserIDs.value = []
+      assigneeSaveState.value = 'idle'
+      visibilitySaveState.value = 'idle'
       return
     }
-    const ids = conversation.assigned_user_ids?.length
+    const assigneeIDs = conversation.assigned_user_ids?.length
       ? conversation.assigned_user_ids
       : conversation.assigned_user_id
         ? [conversation.assigned_user_id]
         : []
-    selectedAssignees.value = usersStore.options.filter((user) =>
-      ids.some((id) => Number(id) === Number(user.value))
-    )
+    const visibleUserIDs = conversation.custom_attributes?.visible_users || []
+    selectedAssigneeIDs.value = normalizeUserIDs(assigneeIDs)
+    selectedVisibleUserIDs.value = normalizeUserIDs(visibleUserIDs)
+    originalAssigneeIDs.value = [...selectedAssigneeIDs.value]
+    originalVisibleUserIDs.value = [...selectedVisibleUserIDs.value]
+    savedAssigneeIDs.value = [...selectedAssigneeIDs.value]
+    savedVisibleUserIDs.value = [...selectedVisibleUserIDs.value]
+    savedVisibleUserIDsByUUID.set(conversation.uuid, [...selectedVisibleUserIDs.value])
+    assigneeSaveState.value = 'idle'
+    visibilitySaveState.value = 'idle'
+    assigneeChangeVersion += 1
+    visibilityChangeVersion += 1
   },
   { immediate: true }
 )
@@ -363,22 +371,52 @@ const fetchTags = async () => {
   tags.value = tagStore.tags.map((item) => item.name)
 }
 
-const saveAssignees = async () => {
-  if (!conversationStore.current || isSavingAssignees.value) return
-  isSavingAssignees.value = true
-  const assigneeIDs = selectedAssignees.value.map((user) => Number(user.value))
-  try {
-    await api.setUserAssignees(conversationStore.current.uuid, assigneeIDs)
-    conversationStore.current.assigned_user_ids = assigneeIDs
-    conversationStore.current.assigned_user_id = assigneeIDs[0] || null
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  } finally {
-    isSavingAssignees.value = false
-  }
+const canUndoAssignees = computed(
+  () => !sameUserIDs(selectedAssigneeIDs.value, originalAssigneeIDs.value)
+)
+
+const updateAssignees = (users) => {
+  const ids = normalizeUserIDs(users.map((user) => user.value))
+  if (sameUserIDs(ids, selectedAssigneeIDs.value)) return
+  selectedAssigneeIDs.value = ids
+  saveAssignees(ids)
+}
+
+const saveAssignees = (assigneeIDs) => {
+  const conversation = conversationStore.current
+  if (!conversation) return
+  const uuid = conversation.uuid
+  const ids = normalizeUserIDs(assigneeIDs)
+  const version = ++assigneeChangeVersion
+  assigneeSaveState.value = 'saving'
+  const previous = assigneeSaveQueues.get(uuid) || Promise.resolve()
+  const request = previous.catch(() => {}).then(async () => {
+    try {
+      await api.setUserAssignees(uuid, ids)
+      if (conversationStore.current?.uuid !== uuid) return
+      savedAssigneeIDs.value = [...ids]
+      conversationStore.current.assigned_user_ids = [...ids]
+      conversationStore.current.assigned_user_id = ids[0] || null
+      if (version === assigneeChangeVersion) assigneeSaveState.value = 'saved'
+    } catch (error) {
+      if (conversationStore.current?.uuid !== uuid || version !== assigneeChangeVersion) return
+      selectedAssigneeIDs.value = [...savedAssigneeIDs.value]
+      conversationStore.current.assigned_user_ids = [...savedAssigneeIDs.value]
+      conversationStore.current.assigned_user_id = savedAssigneeIDs.value[0] || null
+      assigneeSaveState.value = 'error'
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  })
+  assigneeSaveQueues.set(uuid, request)
+}
+
+const undoAssignees = () => {
+  if (!canUndoAssignees.value) return
+  selectedAssigneeIDs.value = [...originalAssigneeIDs.value]
+  saveAssignees(selectedAssigneeIDs.value)
 }
 
 const handleAssignedTeamChange = (id) => {
@@ -426,80 +464,8 @@ const updateContactCustomAttributes = async (attributes) => {
   }
 }
 
-// Custom: conversation visibility management
-const getVisibleUserName = (userId) => {
-  const user = usersStore.options.find((u) => Number(u.value) === Number(userId))
-
-  return user ? `${user.first_name} ${user.last_name}` : `User ${userId}`
-}
-
-const removeVisibleUser = async (userId) => {
-  try {
-    await api.removeVisibleUser(conversationStore.current.uuid, userId)
-
-    conversationStore.current.custom_attributes.visible_users =
-      conversationStore.current.custom_attributes.visible_users.filter(
-        (id) => Number(id) !== Number(userId)
-      )
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  }
-}
-
-const addVisibleUser = async (user) => {
-  try {
-    const userId = Number(user.value)
-
-    await api.addVisibleUser(conversationStore.current.uuid, userId)
-
-    const visibleUsers = conversationStore.current.custom_attributes.visible_users || []
-
-    const exists = visibleUsers.some((id) => Number(id) === userId)
-
-    if (!exists) {
-      visibleUsers.push(userId)
-    }
-
-    conversationStore.current.custom_attributes.visible_users = visibleUsers
-  } catch (error) {
-    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      variant: 'destructive',
-      description: handleHTTPError(error).message
-    })
-  }
-}
-
-const addSelectedVisibleUsers = async () => {
-  for (const user of selectedVisibleUsers.value) {
-    await addVisibleUser(user)
-  }
-
-  selectedVisibleUsers.value = []
-}
-
-const sortedVisibleUsers = computed(() => {
-  const visibleUsers = [...(conversationStore.current?.custom_attributes?.visible_users || [])]
-
-  const creatorID = conversationStore.current?.custom_attributes?.creator_id
-
-  return visibleUsers.sort((a, b) => {
-    if (a === creatorID) return -1
-    if (b === creatorID) return 1
-    return 0
-  })
-})
-
 const assignedUserIDs = computed(() => {
-  const conversation = conversationStore.current
-  if (!conversation) return []
-  return conversation.assigned_user_ids?.length
-    ? conversation.assigned_user_ids
-    : conversation.assigned_user_id
-      ? [conversation.assigned_user_id]
-      : []
+  return selectedAssigneeIDs.value
 })
 
 const visibilityManagerIDs = computed(() => {
@@ -511,6 +477,11 @@ const visibilityManagerIDs = computed(() => {
 const isVisibilityManager = (userID) =>
   visibilityManagerIDs.value.some((id) => Number(id) === Number(userID))
 
+const lockedVisibleUserIDs = computed(() => [
+  ...visibilityManagerIDs.value,
+  ...assignedUserIDs.value
+])
+
 const canManageVisibility = computed(
   () =>
     userStore.roles.includes('Admin') ||
@@ -519,13 +490,71 @@ const canManageVisibility = computed(
     isVisibilityManager(userStore.userID)
 )
 
-const availableUsers = computed(() => {
-  const visibleUsers = conversationStore.current?.custom_attributes?.visible_users || []
+const canUndoVisibleUsers = computed(
+  () => !sameUserIDs(selectedVisibleUserIDs.value, originalVisibleUserIDs.value)
+)
 
-  return usersStore.options.filter(
-    (user) => !visibleUsers.some((id) => Number(id) === Number(user.value))
-  )
-})
+const updateVisibleUsers = (users) => {
+  const ids = normalizeUserIDs(users.map((user) => user.value))
+  if (sameUserIDs(ids, selectedVisibleUserIDs.value)) return
+  selectedVisibleUserIDs.value = ids
+  if (conversationStore.current?.custom_attributes) {
+    conversationStore.current.custom_attributes.visible_users = [...ids]
+  }
+  saveVisibleUsers(ids)
+}
+
+const saveVisibleUsers = (visibleUserIDs) => {
+  const conversation = conversationStore.current
+  if (!conversation) return
+  const uuid = conversation.uuid
+  const ids = normalizeUserIDs(visibleUserIDs)
+  const version = ++visibilityChangeVersion
+  visibilitySaveState.value = 'saving'
+  const previous = visibilitySaveQueues.get(uuid) || Promise.resolve()
+  const request = previous.catch(() => {}).then(async () => {
+    try {
+      const currentSavedIDs = [...(savedVisibleUserIDsByUUID.get(uuid) || [])]
+      for (const userID of currentSavedIDs.filter((id) => !ids.includes(id))) {
+        await api.removeVisibleUser(uuid, userID)
+        const savedIDs = savedVisibleUserIDsByUUID.get(uuid) || []
+        savedVisibleUserIDsByUUID.set(
+          uuid,
+          savedIDs.filter((id) => id !== userID)
+        )
+      }
+      const savedAfterRemovals = savedVisibleUserIDsByUUID.get(uuid) || []
+      for (const userID of ids.filter((id) => !savedAfterRemovals.includes(id))) {
+        await api.addVisibleUser(uuid, userID)
+        savedVisibleUserIDsByUUID.set(uuid, [...(savedVisibleUserIDsByUUID.get(uuid) || []), userID])
+      }
+      if (conversationStore.current?.uuid === uuid && version === visibilityChangeVersion) {
+        savedVisibleUserIDs.value = [...ids]
+        savedVisibleUserIDsByUUID.set(uuid, [...ids])
+        visibilitySaveState.value = 'saved'
+      }
+    } catch (error) {
+      if (conversationStore.current?.uuid !== uuid || version !== visibilityChangeVersion) return
+      const savedIDs = savedVisibleUserIDsByUUID.get(uuid) || []
+      selectedVisibleUserIDs.value = [...savedIDs]
+      savedVisibleUserIDs.value = [...savedIDs]
+      conversationStore.current.custom_attributes.visible_users = [...savedIDs]
+      visibilitySaveState.value = 'error'
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        variant: 'destructive',
+        description: handleHTTPError(error).message
+      })
+    }
+  })
+  visibilitySaveQueues.set(uuid, request)
+}
+
+const undoVisibleUsers = () => {
+  if (!canUndoVisibleUsers.value) return
+  selectedVisibleUserIDs.value = [...originalVisibleUserIDs.value]
+  conversationStore.current.custom_attributes.visible_users = [...originalVisibleUserIDs.value]
+  saveVisibleUsers(selectedVisibleUserIDs.value)
+}
 </script>
 
 <style scoped>

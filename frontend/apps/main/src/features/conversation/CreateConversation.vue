@@ -161,23 +161,11 @@
                   </FormItem>
                 </FormField>
 
-                <!-- Set assigned agent -->
-                <FormField v-slot="{ componentField }" name="agent_id">
+                <!-- Set assigned agents -->
+                <FormField v-if="conversationMode === 'external'" v-slot="{ componentField }" name="agent_id">
                   <FormItem>
                     <FormLabel>
-                      {{ $t('actions.assignAgent') }}
-
-                      <template v-if="conversationMode === 'internal'">
-                        <span v-if="hasAgent"> ✓ </span>
-                        <span v-else-if="hasTeam">
-                          ({{ $t('globals.terms.optional') }})
-                        </span>
-                        <span v-else>*</span>
-                      </template>
-
-                      <template v-else>
-                        ({{ $t('globals.terms.optional') }})
-                      </template>
+                      {{ $t('actions.assignAgent') }} ({{ $t('globals.terms.optional') }})
                     </FormLabel>
                     <FormControl>
                       <SelectComboBox
@@ -193,6 +181,25 @@
                     <FormMessage />
                   </FormItem>
                 </FormField>
+
+                <div v-else>
+                  <FormLabel>
+                    {{ $t('actions.assignAgent') }}
+
+                    <template v-if="conversationMode === 'internal'">
+                      <span v-if="hasAgent"> ✓ </span>
+                      <span v-else-if="hasTeam">({{ $t('globals.terms.optional') }})</span>
+                      <span v-else>*</span>
+                    </template>
+
+                    <template v-else>({{ $t('globals.terms.optional') }})</template>
+                  </FormLabel>
+                  <UserMultiSelect
+                    v-model="selectedInternalAssignees"
+                    :items="uStore.options"
+                    placeholder="Mitarbeiter hinzufügen"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -353,6 +360,7 @@ import { useFileUpload } from '@/composables/useFileUpload'
 import Editor from '@/components/editor/ConversationEditor.vue'
 import { useMacroStore } from '@/stores/macro'
 import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
+import UserMultiSelect from '@/components/combobox/UserMultiSelect.vue'
 import { UserTypeAgent } from '@/constants/user'
 import { IdCard } from 'lucide-vue-next'
 import api from '@/api'
@@ -381,11 +389,13 @@ const insertContent = ref('')
 const selectedContact = ref(null)
 const emailInputRef = ref(null)
 const conversationMode = ref('external')
+const selectedInternalAssignees = ref([])
 const hasTeam = computed(() => {
   return !!form.values.team_id
 })
 
 const hasAgent = computed(() => {
+  if (conversationMode.value === 'internal') return selectedInternalAssignees.value.length > 0
   return !!form.values.agent_id
 })
 
@@ -527,15 +537,20 @@ const createConversation = form.handleSubmit(async (values) => {
   loading.value = true
 
   try {
+    const internalAssigneeIDs = selectedInternalAssignees.value.map((agent) => Number(agent.value))
     // Convert ids to numbers if they are not already
     values.inbox_id = Number(values.inbox_id)
     values.team_id = values.team_id ? Number(values.team_id) : null
     values.agent_id = values.agent_id ? Number(values.agent_id) : null
 
     if (conversationMode.value === 'internal') {
+      values.agent_id = internalAssigneeIDs[0] || null
 
       if (!values.agent_id && !values.team_id) {
-        toast.error('Bitte Mitarbeiter oder Team auswählen')
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive',
+          description: 'Bitte Mitarbeiter oder Team auswählen'
+        })
         return
       }
 
@@ -583,6 +598,10 @@ const createConversation = form.handleSubmit(async (values) => {
     const conversation = await api.createConversation(values)
     const conversationUUID = conversation.data.data.uuid
 
+    if (conversationMode.value === 'internal' && internalAssigneeIDs.length > 0) {
+      await api.setUserAssignees(conversationUUID, internalAssigneeIDs)
+    }
+
     // Get macro from context, and set if any actions are available.
     const macro = conversationStore.getMacro(MACRO_CONTEXT.NEW_CONVERSATION)
     if (conversationUUID !== '' && macro?.id) {
@@ -597,6 +616,7 @@ const createConversation = form.handleSubmit(async (values) => {
     }
     dialogOpen.value = false
     form.resetForm()
+    selectedInternalAssignees.value = []
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
