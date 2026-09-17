@@ -2629,6 +2629,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(conditions, fmt.Sprintf(`
 				(COALESCE((conversations.custom_attributes->>'private')::boolean, false) = true
 				AND (conversations.custom_attributes->'visible_users') @> '[%d]')`, userID))
+		case models.CustomerConversations, models.CustomerHighPriorityConversations:
 			customerCondition := fmt.Sprintf(`
 					(
 							COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = true
