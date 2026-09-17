@@ -951,9 +951,17 @@ export const useConversationStore = defineStore('conversation', () => {
 
   // trailing=true: fires one final refresh after a burst so the list converges to latest state.
   const throttledFetchFirstPage = useThrottleFn(fetchFirstPageConversations, 60000, true)
+  // A list cannot always determine from a WebSocket payload whether it belongs to
+  // a visibility- or filter-based inbox. Re-fetch those lists promptly from the
+  // backend, while combining bursts of incoming events into one follow-up request.
+  const throttledRealtimeFetchFirstPage = useThrottleFn(fetchFirstPageConversations, 1000, true)
 
   function refreshConversationList() {
     throttledFetchFirstPage()
+  }
+
+  function refreshConversationListForRealtimeEvent() {
+    throttledRealtimeFetchFirstPage()
   }
 
   function updateConversationLastMessage(uuid, message) {
@@ -1118,7 +1126,10 @@ export const useConversationStore = defineStore('conversation', () => {
       }
       return
     }
-    if (!canPushInsert(payload)) return
+    if (!canPushInsert(payload)) {
+      refreshConversationListForRealtimeEvent()
+      return
+    }
     if (conversations.status !== '' && payload.status !== conversations.status) return
     if (!conversations.data) conversations.data = []
     conversations.data.unshift(payload)
