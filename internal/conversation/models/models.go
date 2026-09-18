@@ -25,9 +25,11 @@ var (
 
 	AllConversations                  = "all"
 	AssignedConversations             = "assigned"
+	AssignedHighPriorityConversations = "assigned-high"
 	UnassignedConversations           = "unassigned"
 	TeamUnassignedConversations       = "team_unassigned"
 	TeamAllConversations              = "team_all"
+	TeamHighPriorityConversations     = "team_high"
 	MentionedConversations            = "mentioned"
 	VisibleConversations              = "visible"
 	VisibleInternalConversations      = "visible_internal"

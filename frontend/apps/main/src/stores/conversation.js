@@ -651,6 +651,7 @@ export const useConversationStore = defineStore('conversation', () => {
     filters = filters.length > 0 ? JSON.stringify(filters) : []
     switch (listType) {
       case CONVERSATION_LIST_TYPE.ASSIGNED:
+      case CONVERSATION_LIST_TYPE.ASSIGNED_HIGH:
         return await api.getAssignedConversations({
           page: page,
           page_size: CONV_LIST_PAGE_SIZE,
@@ -659,7 +660,8 @@ export const useConversationStore = defineStore('conversation', () => {
             '.' +
             sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
-          filters
+          filters,
+          ...(listType === CONVERSATION_LIST_TYPE.ASSIGNED_HIGH && { priority: 'high' })
         })
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return await api.getUnassignedConversations({
@@ -693,6 +695,19 @@ export const useConversationStore = defineStore('conversation', () => {
             sortFieldMap[conversations.sortField].field,
           order: sortFieldMap[conversations.sortField].order,
           filters
+        })
+      case CONVERSATION_LIST_TYPE.TEAM_ALL:
+      case CONVERSATION_LIST_TYPE.TEAM_HIGH:
+        return await api.getTeamConversations(teamID, {
+          page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by:
+            sortFieldMap[conversations.sortField].model +
+            '.' +
+            sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters,
+          ...(listType === CONVERSATION_LIST_TYPE.TEAM_HIGH && { priority: 'high' })
         })
       case CONVERSATION_LIST_TYPE.VIEW:
         return await api.getViewConversations(viewID, {

@@ -1,7 +1,10 @@
 export const CONVERSATION_LIST_TYPE = {
   ASSIGNED: 'assigned',
+  ASSIGNED_HIGH: 'assigned-high',
   UNASSIGNED: 'unassigned',
   TEAM_UNASSIGNED: 'team_unassigned',
+  TEAM_ALL: 'team_all',
+  TEAM_HIGH: 'team_high',
   VIEW: 'view',
   ALL: 'all',
   MENTIONED: 'mentioned',

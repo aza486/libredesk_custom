@@ -14,6 +14,7 @@ import ConversationPlaceholder from '@/features/conversation/ConversationPlaceho
 const route = useRoute()
 const type = computed(() => route.params.type)
 const requestedStatus = computed(() => route.query.status || '')
+const requestedPriority = computed(() => route.query.priority || '')
 const teamID = computed(() => route.params.teamID)
 const viewID = computed(() => route.params.viewID)
 
@@ -21,24 +22,48 @@ const conversationStore = useConversationStore()
 
 let lastFetchedKey = ''
 
+const requestedFilters = computed(() => {
+  const raw = route.query.filters
+  if (!raw) return []
+
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+})
+
 const storeHasCurrentList = () => {
   const c = conversationStore.conversations
   if (!c.initialized) return false
+
   if (viewID.value)
     return c.listType === CONVERSATION_LIST_TYPE.VIEW && String(c.viewID) === String(viewID.value)
-  if (type.value) return c.listType === type.value && c.status === requestedStatus.value
-  if (teamID.value)
+
+  if (type.value)
+    return c.listType === type.value && c.status === requestedStatus.value
+
+  if (teamID.value) {
+    const teamListType =
+      route.query.priority === 'high'
+        ? CONVERSATION_LIST_TYPE.TEAM_HIGH
+        : CONVERSATION_LIST_TYPE.TEAM_ALL
+
     return (
-      c.listType === CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED &&
-      String(c.teamID) === String(teamID.value)
+      c.listType === teamListType &&
+      String(c.teamID) === String(teamID.value) &&
+      c.status === requestedStatus.value
     )
+  }
+
   return false
 }
 
 const fetchForCurrentRoute = () => {
   if (!type.value && !teamID.value && !viewID.value) return
 
-  const key = `${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}`
+  const key = `${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}|${requestedPriority.value}|${route.query.filters || ''}`
   if (key === lastFetchedKey) return
   lastFetchedKey = key
 
@@ -55,13 +80,25 @@ const fetchForCurrentRoute = () => {
   }
 
   conversationStore.setListStatus(requestedStatus.value, false)
+
   if (type.value) {
-    conversationStore.fetchConversationsList(true, type.value)
-  } else {
     conversationStore.fetchConversationsList(
       true,
-      CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
-      teamID.value
+      type.value,
+      0,
+      requestedFilters.value
+    )
+  } else {
+    const teamListType =
+      requestedPriority.value === 'high'
+        ? CONVERSATION_LIST_TYPE.TEAM_HIGH
+        : CONVERSATION_LIST_TYPE.TEAM_ALL
+
+    conversationStore.fetchConversationsList(
+      true,
+      teamListType,
+      teamID.value,
+      requestedFilters.value
     )
   }
 }
@@ -79,5 +116,8 @@ watch(visibility, (v) => {
   }
 })
 
-watch([type, teamID, viewID, requestedStatus], fetchForCurrentRoute)
+watch(
+  [type, teamID, viewID, requestedStatus, requestedPriority, requestedFilters],
+  fetchForCurrentRoute
+)
 </script>

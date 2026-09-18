@@ -58,6 +58,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/conversations/customer", perm(handleGetCustomerConversations, "conversations:read"))
 	g.GET("/api/v1/conversations/service-mails", perm(handleGetServiceMailConversations, "conversations:read"))
 	g.GET("/api/v1/conversations/created", perm(handleGetCreatedConversations, "conversations:read"))
+	g.GET("/api/v1/teams/{id}/conversations", perm(handleGetTeamConversations, "conversations:read_team_all"))
 	g.GET("/api/v1/teams/{id}/conversations/unassigned", perm(handleGetTeamUnassignedConversations, "conversations:read_team_inbox"))
 	g.GET("/api/v1/views/{id}/conversations", perm(handleGetViewConversations, "conversations:read"))
 	g.GET("/api/v1/conversations/{uuid}", perm(handleGetConversation, "conversations:read"))

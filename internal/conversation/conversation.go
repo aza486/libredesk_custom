@@ -644,8 +644,28 @@ func (c *Manager) GetAllConversationsList(viewingUserID int, order, orderBy, fil
 }
 
 // GetAssignedConversationsList retrieves conversations assigned to a specific user with optional filtering, ordering, and pagination.
-func (c *Manager) GetAssignedConversationsList(viewingUserID, userID int, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
-	return c.GetConversations(viewingUserID, userID, []int{}, []string{models.AssignedConversations}, order, orderBy, filters, page, pageSize)
+func (c *Manager) GetAssignedConversationsList(
+	viewingUserID, userID int,
+	highPriority bool,
+	order, orderBy, filters string,
+	page, pageSize int,
+) ([]models.ConversationListItem, error) {
+	listType := models.AssignedConversations
+	if highPriority {
+		listType = models.AssignedHighPriorityConversations
+	}
+
+	return c.GetConversations(
+		viewingUserID,
+		userID,
+		[]int{},
+		[]string{listType},
+		order,
+		orderBy,
+		filters,
+		page,
+		pageSize,
+	)
 }
 
 // GetUnassignedConversationsList retrieves conversations assigned to a team the user is part of with optional filtering, ordering, and pagination.
@@ -656,6 +676,31 @@ func (c *Manager) GetUnassignedConversationsList(viewingUserID int, order, order
 // GetTeamUnassignedConversationsList retrieves conversations assigned to a team with optional filtering, ordering, and pagination.
 func (c *Manager) GetTeamUnassignedConversationsList(viewingUserID, teamID int, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
 	return c.GetConversations(viewingUserID, 0, []int{teamID}, []string{models.TeamUnassignedConversations}, order, orderBy, filters, page, pageSize)
+}
+
+// GetTeamConversationsList retrieves all conversations assigned to a team with optional filtering, ordering, and pagination.
+func (c *Manager) GetTeamConversationsList(
+	viewingUserID, teamID int,
+	highPriority bool,
+	order, orderBy, filters string,
+	page, pageSize int,
+) ([]models.ConversationListItem, error) {
+	listType := models.TeamAllConversations
+	if highPriority {
+		listType = models.TeamHighPriorityConversations
+	}
+
+	return c.GetConversations(
+		viewingUserID,
+		0,
+		[]int{teamID},
+		[]string{listType},
+		order,
+		orderBy,
+		filters,
+		page,
+		pageSize,
+	)
 }
 
 // GetMentionedConversationsList retrieves conversations where the user is mentioned (directly or via team).
@@ -2493,13 +2538,28 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID)
 	for _, lt := range listTypes {
 		switch lt {
-		case models.AssignedConversations:
+		case models.AssignedConversations, models.AssignedHighPriorityConversations:
+			priorityCondition := ""
+			if lt == models.AssignedHighPriorityConversations {
+				priorityCondition = "AND conversation_priorities.name = 'High'"
+			}
+
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id AND ca.user_id = $%d) AND %s)",
+					`(
+						EXISTS (
+							SELECT 1
+							FROM conversation_assignees ca
+							WHERE ca.conversation_id = conversations.id
+								AND ca.user_id = $%d
+						)
+						AND %s
+						%s
+					)`,
 					len(qArgs)+1,
 					ticketAccessCondition,
+					priorityCondition,
 				),
 			)
 			qArgs = append(qArgs, userID)
@@ -2557,10 +2617,15 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			for _, id := range teamIDs {
 				qArgs = append(qArgs, id)
 			}
-		case models.TeamAllConversations:
+		case models.TeamAllConversations, models.TeamHighPriorityConversations:
 			placeholders := make([]string, len(teamIDs))
 			for i := range teamIDs {
 				placeholders[i] = fmt.Sprintf("$%d", len(qArgs)+i+1)
+			}
+
+			priorityCondition := ""
+			if lt == models.TeamHighPriorityConversations {
+				priorityCondition = "AND conversation_priorities.name = 'High'"
 			}
 
 			conditions = append(
@@ -2582,9 +2647,11 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 							)
 						)
 						AND %s
+						%s
 					)`,
 					strings.Join(placeholders, ","),
 					ticketAccessCondition,
+					priorityCondition,
 				),
 			)
 
