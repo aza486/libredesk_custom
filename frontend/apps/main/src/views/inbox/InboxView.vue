@@ -18,6 +18,17 @@ const requestedPriority = computed(() => route.query.priority || '')
 const teamID = computed(() => route.params.teamID)
 const viewID = computed(() => route.params.viewID)
 
+const requestedListType = computed(() => {
+  if (
+    type.value === CONVERSATION_LIST_TYPE.ASSIGNED &&
+    requestedPriority.value === 'high'
+  ) {
+    return CONVERSATION_LIST_TYPE.ASSIGNED_HIGH
+  }
+
+  return type.value
+})
+
 const conversationStore = useConversationStore()
 
 let lastFetchedKey = ''
@@ -41,8 +52,12 @@ const storeHasCurrentList = () => {
   if (viewID.value)
     return c.listType === CONVERSATION_LIST_TYPE.VIEW && String(c.viewID) === String(viewID.value)
 
-  if (type.value)
-    return c.listType === type.value && c.status === requestedStatus.value
+  if (type.value) {
+    return (
+      c.listType === requestedListType.value &&
+      c.status === requestedStatus.value
+    )
+  }
 
   if (teamID.value) {
     const teamListType =
@@ -84,7 +99,7 @@ const fetchForCurrentRoute = () => {
   if (type.value) {
     conversationStore.fetchConversationsList(
       true,
-      type.value,
+      requestedListType.value,
       0,
       requestedFilters.value
     )
