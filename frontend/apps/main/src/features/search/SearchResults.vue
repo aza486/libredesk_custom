@@ -56,16 +56,34 @@
                       </Badge>
                     </div>
 
-                    <!-- Content -->
+                    <!-- Subject / message context -->
                     <div
-                      class="text-foreground font-medium mb-2 text-lg group-hover:text-primary transition duration-200"
+                      class="text-foreground font-medium mb-1 text-lg group-hover:text-primary transition duration-200"
                     >
                       {{
                         truncateText(
-                          type === 'conversations' ? item.subject : item.text_content,
+                          type === 'conversations'
+                            ? item.subject
+                            : item.conversation_subject,
                           100
                         )
                       }}
+                    </div>
+
+                    <!-- Contact email -->
+                    <div
+                      v-if="item.contact_email"
+                      class="text-sm text-muted-foreground mb-2"
+                    >
+                      {{ item.contact_email }}
+                    </div>
+
+                    <!-- Message match -->
+                    <div
+                      v-if="type === 'messages'"
+                      class="text-sm text-foreground/80 leading-5 mb-2"
+                    >
+                      {{ truncateText(item.text_content, 180) }}
                     </div>
 
                     <!-- Timestamp -->
@@ -73,7 +91,9 @@
                       <ClockIcon class="h-4 w-4 mr-1" />
                       {{
                         formatDate(
-                          type === 'conversations' ? item.created_at : item.conversation_created_at
+                          type === 'conversations'
+                            ? item.created_at
+                            : item.created_at
                         )
                       }}
                     </div>

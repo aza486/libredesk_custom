@@ -4,8 +4,10 @@ SELECT
     conversations.uuid,
     conversations.reference_number,
     conversations.subject,
+    users.email AS contact_email,
     cs.name AS status
 FROM conversations
+LEFT JOIN users ON conversations.contact_id = users.id
 LEFT JOIN conversation_statuses cs ON conversations.status_id = cs.id
 WHERE reference_number::text = $1;
 
@@ -15,6 +17,7 @@ SELECT
     conversations.uuid,
     conversations.reference_number,
     conversations.subject,
+    users.email AS contact_email,
     cs.name AS status
 FROM conversations
 JOIN users ON conversations.contact_id = users.id
@@ -25,15 +28,20 @@ LIMIT 1000;
 
 -- name: search-messages
 SELECT
-    c.created_at as "conversation_created_at",
-    c.reference_number as "conversation_reference_number",
-    c.uuid as "conversation_uuid",
+    m.created_at,
+    c.created_at AS conversation_created_at,
+    c.reference_number AS conversation_reference_number,
+    c.uuid AS conversation_uuid,
+    c.subject AS conversation_subject,
+    u.email AS contact_email,
     LEFT(m.text_content, 200) AS text_content,
-    cs.name as "conversation_status"
+    cs.name AS conversation_status
 FROM conversation_messages m
-    JOIN conversations c ON m.conversation_id = c.id
-    LEFT JOIN conversation_statuses cs ON c.status_id = cs.id
-WHERE m.type != 'activity' and m.text_content ILIKE '%' || $1 || '%'
+JOIN conversations c ON m.conversation_id = c.id
+LEFT JOIN users u ON c.contact_id = u.id
+LEFT JOIN conversation_statuses cs ON c.status_id = cs.id
+WHERE m.type != 'activity'
+  AND m.text_content ILIKE '%' || $1 || '%'
 LIMIT 30;
 
 -- name: search-contacts

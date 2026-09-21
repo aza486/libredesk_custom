@@ -11,6 +11,7 @@ type ConversationResult struct {
 	UUID            string    `db:"uuid" json:"uuid"`
 	ReferenceNumber string    `db:"reference_number" json:"reference_number"`
 	Subject         string    `db:"subject" json:"subject"`
+	ContactEmail    string    `db:"contact_email" json:"contact_email"`
 	Status          string    `db:"status" json:"status"`
 }
 
@@ -20,6 +21,8 @@ type MessageResult struct {
 	ConversationCreatedAt       time.Time `db:"conversation_created_at" json:"conversation_created_at"`
 	ConversationUUID            string    `db:"conversation_uuid" json:"conversation_uuid"`
 	ConversationReferenceNumber string    `db:"conversation_reference_number" json:"conversation_reference_number"`
+	ConversationSubject         string    `db:"conversation_subject" json:"conversation_subject"`
+	ContactEmail                string    `db:"contact_email" json:"contact_email"`
 	ConversationStatus          string    `db:"conversation_status" json:"conversation_status"`
 }
 
