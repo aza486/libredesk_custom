@@ -49,6 +49,7 @@ import {
   Shield,
   ScrollText,
   Mail,
+  MailCheck,
   FileText,
   KeyRound,
   Webhook,
@@ -81,6 +82,7 @@ const navIconMap = {
   Shield,
   ScrollText,
   Mail,
+  MailCheck,
   FileText,
   KeyRound,
   Webhook,
@@ -1093,6 +1095,7 @@ onUnmounted(() => {
                     navigateToInbox('service-mails')
                   "
                 >
+                  <MailCheck />
                   <span>Service-Mails</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
