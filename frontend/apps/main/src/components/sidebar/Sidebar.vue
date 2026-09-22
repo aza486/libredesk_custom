@@ -914,7 +914,7 @@ onUnmounted(() => {
                                   v-for="item in [
                                     {
                                       label: 'Beantwortet',
-                                      status: 'Replied'
+                                      status: 'Resolved'
                                     },
                                     {
                                       label: 'Schlummernd',

@@ -675,7 +675,7 @@ func (c *Manager) GetUnassignedConversationsList(viewingUserID int, order, order
 
 // GetTeamUnassignedConversationsList retrieves conversations assigned to a team with optional filtering, ordering, and pagination.
 func (c *Manager) GetTeamUnassignedConversationsList(viewingUserID, teamID int, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
-	return c.GetConversations(viewingUserID, 0, []int{teamID}, []string{models.TeamUnassignedConversations}, order, orderBy, filters, page, pageSize)
+	return c.GetConversations(viewingUserID, viewingUserID, []int{teamID}, []string{models.TeamUnassignedConversations}, order, orderBy, filters, page, pageSize)
 }
 
 // GetTeamConversationsList retrieves all conversations assigned to a team with optional filtering, ordering, and pagination.
@@ -692,7 +692,7 @@ func (c *Manager) GetTeamConversationsList(
 
 	return c.GetConversations(
 		viewingUserID,
-		0,
+		viewingUserID,
 		[]int{teamID},
 		[]string{listType},
 		order,
@@ -2628,6 +2628,22 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 				priorityCondition = "AND conversation_priorities.name = 'High'"
 			}
 
+			// The team route has already verified membership and the required
+			// team-wide-read permission. A member of the selected team may read
+			// non-private customer tickets assigned to that team, even when
+			// customer_visibility is enabled.
+			teamMemberAccessCondition := fmt.Sprintf(`
+				(
+					COALESCE((conversations.custom_attributes->>'private')::boolean, false) = false
+					AND EXISTS (
+						SELECT 1
+						FROM team_members tm
+						WHERE tm.team_id = conversations.assigned_team_id
+							AND tm.user_id = %d
+					)
+				)
+			`, viewingUserID)
+
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
@@ -2646,11 +2662,15 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 								WHERE ca.conversation_id = conversations.id
 							)
 						)
-						AND %s
+						AND (
+							%s
+							OR %s
+						)
 						%s
 					)`,
 					strings.Join(placeholders, ","),
 					ticketAccessCondition,
+					teamMemberAccessCondition,
 					priorityCondition,
 				),
 			)
@@ -3048,6 +3068,7 @@ func (c *Manager) FilterAuthorizedListUUIDs(agentID int, uuids []string) ([]stri
 		slices.Contains(user.Permissions, authzmodels.PermConversationsReadTeamInbox),
 		slices.Contains(user.Permissions, authzmodels.PermConversationsReadUnassigned),
 		user.HasAdminRole(),
+		slices.Contains(user.Roles, rmodels.RoleCustomerSupport),
 	)
 	if err != nil {
 		c.lo.Error("error filtering authorized list uuids", "agent_id", agentID, "error", err)

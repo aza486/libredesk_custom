@@ -77,7 +77,18 @@ func CanReadConversation(
 		if user.HasAdminRole() || slices.Contains(user.Roles, rmodels.RoleCustomerSupport) {
 			return true
 		}
-		return hasVisibleUser(attrs, user.ID)
+
+		if hasVisibleUser(attrs, user.ID) {
+			return true
+		}
+
+		// Members of the assigned team may also read customer-visible tickets
+		// when they have the normal team-wide read permission.
+		return CanReadAssignment(
+			user,
+			conversation.AssignedUserID,
+			conversation.AssignedTeamID,
+		) || CanReadAdditionalAssignees(user, conversation.AssignedUserIDs)
 	}
 
 	return CanReadAssignment(

@@ -1025,22 +1025,81 @@ LIMIT 50;
 -- $8: has 'conversations:read_team_inbox'
 -- $9: has 'conversations:read_unassigned'
 -- $10: is admin
+-- $11: is customer support
 SELECT uuid::text
 FROM conversations
 WHERE uuid = ANY($1::uuid[])
-  AND $4
   AND (
-       $5
-    OR ($6 AND assigned_user_id = $2)
-    OR ($7 AND assigned_team_id = ANY($3::int[]))
-    OR ($8 AND assigned_team_id = ANY($3::int[]) AND assigned_user_id IS NULL)
-    OR ($9 AND assigned_user_id IS NULL AND assigned_team_id IS NULL)
-  )
-  AND (
-       COALESCE((custom_attributes->>'private')::boolean, false) = false
-    OR $10
-    OR (custom_attributes->>'creator_id')::int = $2
-    OR (custom_attributes->'visible_users') @> jsonb_build_array($2)
+    -- Private/internal conversations:
+    -- Admin, creator and explicitly visible users may read.
+    (
+      COALESCE((custom_attributes->>'private')::boolean, false) = true
+      AND (
+           $10
+        OR (custom_attributes->>'creator_id')::int = $2
+        OR (custom_attributes->'visible_users') @> jsonb_build_array($2)
+      )
+    )
+
+    OR
+
+    -- Normal/customer conversations.
+    (
+      COALESCE((custom_attributes->>'private')::boolean, false) = false
+      AND (
+        -- Customer visibility is explicitly enabled:
+        -- Admin, Kundensupport and explicitly visible users may read.
+        (
+          COALESCE((custom_attributes->>'customer_visibility')::boolean, false) = true
+          AND (
+               $10
+            OR $11
+            OR (custom_attributes->'visible_users') @> jsonb_build_array($2)
+          )
+        )
+
+        OR
+
+        -- Legacy/assignment-based visibility.
+        (
+          COALESCE((custom_attributes->>'customer_visibility')::boolean, false) = false
+          AND $4
+          AND (
+               $5
+
+            OR (
+              $6
+              AND (
+                assigned_user_id = $2
+                OR EXISTS (
+                  SELECT 1
+                  FROM conversation_assignees ca
+                  WHERE ca.conversation_id = conversations.id
+                    AND ca.user_id = $2
+                )
+              )
+            )
+
+            OR (
+              $7
+              AND assigned_team_id = ANY($3::int[])
+            )
+
+            OR (
+              $8
+              AND assigned_team_id = ANY($3::int[])
+              AND assigned_user_id IS NULL
+            )
+
+            OR (
+              $9
+              AND assigned_user_id IS NULL
+              AND assigned_team_id IS NULL
+            )
+          )
+        )
+      )
+    )
   );
 
 -- name: get-conversation-uuids-by-contact
