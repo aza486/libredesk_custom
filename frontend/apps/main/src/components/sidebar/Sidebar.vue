@@ -742,7 +742,7 @@ onUnmounted(() => {
                       <!-- Weitere Status -->
                       <SidebarMenuSubItem
                         v-for="item in [
-                          { label: 'Beantwortet', status: 'Replied' },
+                          { label: 'Beantwortet', status: 'Resolved' },
                           { label: 'Schlummernd', status: 'Snoozed' },
                           { label: 'Geschlossen', status: 'Closed' }
                         ]"
@@ -1034,7 +1034,7 @@ onUnmounted(() => {
                       <!-- Weitere Status -->
                       <SidebarMenuSubItem
                         v-for="item in [
-                          { label: 'Beantwortet', status: 'Replied' },
+                          { label: 'Beantwortet', status: 'Resolved' },
                           { label: 'Schlummernd', status: 'Snoozed' },
                           { label: 'Geschlossen', status: 'Closed' }
                         ]"

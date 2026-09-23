@@ -15,10 +15,12 @@ import (
 
 var (
 	StatusOpen     = "Open"
-	StatusReplied  = "Replied"
 	StatusResolved = "Resolved"
-	StatusClosed   = "Closed"
-	StatusSnoozed  = "Snoozed"
+	// StatusReplied is retained as a compatibility alias. The persisted
+	// status for answered conversations is Resolved.
+	StatusReplied = StatusResolved
+	StatusClosed  = "Closed"
+	StatusSnoozed = "Snoozed"
 
 	AssigneeTypeTeam = "team"
 	AssigneeTypeUser = "user"
