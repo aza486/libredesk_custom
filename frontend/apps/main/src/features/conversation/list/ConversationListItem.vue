@@ -400,7 +400,7 @@ const handleSelect = () => {
 <style scoped>
 /* Verarbeitungsfehler – entsättigtes Grau mit Rotstich */
 .ticket-highlight-processing-error {
-  @apply bg-[#F1E9E9] text-[#4B3032] hover:bg-[#E9DEDE] dark:bg-[#292224] dark:text-[#E8DADB] dark:hover:bg-[#33292B];
+  @apply bg-[#F1E9E9] text-[#4B3032] hover:bg-[#E9DEDE] dark:bg-[#4b2222] dark:text-[#E8DADB] dark:hover:bg-[#33292B];
 }
 
 .ticket-highlight-processing-error :deep(.text-foreground) {
