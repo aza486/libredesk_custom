@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col relative h-full">
-    <div ref="threadEl" class="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none]" @scroll="handleScroll">
+    <div ref="threadEl" class="flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none]" @scroll="handleMessageScroll">      
       <div ref="contentEl" class="min-h-full px-4 pb-10 relative">
         <div
           v-if="showLoadMore"
@@ -68,7 +68,12 @@
       </div>
     </div>
 
-    <!-- Sticky container for the scroll arrow -->
+    <!-- Sticky container for the scroll arrows -->
+    <ScrollToTopButton
+      :is-at-top="isAtTop"
+      @scroll-to-top="handleScrollToTop"
+    />
+
     <ScrollToBottomButton
       :is-at-bottom="!hasUserScrolled"
       :unread-count="unReadMessages"
@@ -93,6 +98,7 @@ import { useConversationStore } from '@main/stores/conversation'
 import { useUserStore } from '@main/stores/user'
 import { Button } from '@shared-ui/components/ui/button'
 import { RefreshCw, Loader2 } from 'lucide-vue-next'
+import ScrollToTopButton from '@shared-ui/components/ScrollToTopButton'
 import ScrollToBottomButton from '@shared-ui/components/ScrollToBottomButton'
 import DaySeparator from '@shared-ui/components/DaySeparator'
 import { isSameDay } from 'date-fns'
@@ -135,6 +141,25 @@ const { hasUserScrolled, scrollToBottom, scrollToOffset, handleScroll } = useSti
 const handleScrollToBottom = () => {
   hasUserScrolled.value = false
   scrollToBottom()
+}
+
+const handleMessageScroll = (event) => {
+  handleScroll(event)
+  updateTopState()
+}
+
+const isAtTop = ref(true)
+
+const updateTopState = () => {
+  const thread = threadEl.value
+  if (!thread) return
+
+  isAtTop.value = thread.scrollTop <= 10
+}
+
+const handleScrollToTop = () => {
+  isAtTop.value = true
+  scrollToOffset(0)
 }
 
 const applyOpenScroll = () => {
