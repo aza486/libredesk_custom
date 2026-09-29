@@ -392,7 +392,22 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 	if customAttributes == nil {
 		customAttributes = map[string]any{}
 	}
-	if private, _ := customAttributes["private"].(bool); !private {
+	// Lock the inbox through commit: access-mode and owner updates cannot race creation.
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return 0, "", err
+	}
+	defer tx.Rollback()
+	var accessMode string
+	var ownerID null.Int
+	if err := tx.QueryRowx(`SELECT access_mode, owner_user_id FROM inboxes WHERE id=$1 FOR UPDATE`, inboxID).Scan(&accessMode, &ownerID); err != nil {
+		return 0, "", err
+	}
+	delete(customAttributes, "access_mode")
+	delete(customAttributes, "owner_user_id")
+	if accessMode == "personal" {
+		initializePersonalVisibility(customAttributes, ownerID.Int)
+	} else if private, _ := customAttributes["private"].(bool); !private {
 		if err := c.initializeCustomerVisibility(customAttributes); err != nil {
 			return 0, "", err
 		}
@@ -414,11 +429,19 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 		since = time.Now().Add(-rateLimitWindow)
 	}
 
-	if err := c.q.InsertConversation.QueryRow(contactID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject, prefix, appendRefNumToSubject, metaJSON, customAttrsJSON, since, maxConversations, c.subjectRefFormat).Scan(&id, &uuid); err != nil {
+	if err := tx.Stmtx(c.q.InsertConversation).QueryRow(contactID, models.StatusOpen, inboxID, lastMessage, lastMessageAt, subject, prefix, appendRefNumToSubject, metaJSON, customAttrsJSON, since, maxConversations, c.subjectRefFormat).Scan(&id, &uuid); err != nil {
 		if err == sql.ErrNoRows {
 			return 0, "", envelope.NewError(envelope.RateLimitError, c.i18n.T("globals.messages.tooManyRequests"), nil)
 		}
 		c.lo.Error("error inserting new conversation into the DB", "error", err)
+		return 0, "", err
+	}
+	if accessMode == "personal" {
+		if err := replaceUserAssignees(tx, id, []int{ownerID.Int}, ownerID.Int); err != nil {
+			return 0, "", err
+		}
+	}
+	if err := tx.Commit(); err != nil {
 		return 0, "", err
 	}
 	if item, err := c.GetConversationListItem(uuid); err == nil {
@@ -970,18 +993,8 @@ func (c *Manager) SetConversationUserAssignees(uuid string, assigneeIDs []int, a
 		}
 	}
 
-	if len(unique) == 0 {
-		if _, err := tx.Exec(`DELETE FROM conversation_assignees WHERE conversation_id = $1`, conversationID); err != nil {
-			return err
-		}
-	} else {
-		if _, err := tx.Exec(`DELETE FROM conversation_assignees WHERE conversation_id = $1 AND NOT (user_id = ANY($2::bigint[]))`, conversationID, pq.Array(unique)); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(`INSERT INTO conversation_assignees (conversation_id, user_id, assigned_by_user_id)
-			SELECT $1, unnest($2::bigint[]), $3 ON CONFLICT (conversation_id, user_id) DO NOTHING`, conversationID, pq.Array(unique), actor.ID); err != nil {
-			return err
-		}
+	if err := replaceUserAssignees(tx, conversationID, unique, actor.ID); err != nil {
+		return err
 	}
 
 	attrs := map[string]any{}
@@ -1950,6 +1963,10 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 		}
 	}
 
+	if isPersonalConversation(conv.CustomAttributes) && user.IsSystemUser() && (action.Type == amodels.ActionAssignUser || action.Type == amodels.ActionAssignTeam) {
+		return nil
+	}
+
 	m.lo.Debug("executing action",
 		"type", action.Type,
 		"value", action.Value,
@@ -2536,7 +2553,9 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 		)
 	)
 	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID)
+	personalAccess := authz.PersonalAccessSQL("conversations", viewingUserID, isAdmin)
 	for _, lt := range listTypes {
+		conditionStart := len(conditions)
 		switch lt {
 		case models.AssignedConversations, models.AssignedHighPriorityConversations:
 			priorityCondition := ""
@@ -2714,7 +2733,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			)
 		case models.VisibleInternalConversations:
 			conditions = append(conditions, fmt.Sprintf(`
-				(COALESCE((conversations.custom_attributes->>'private')::boolean, false) = true
+				((COALESCE((conversations.custom_attributes->>'private')::boolean, false) = true OR conversations.custom_attributes->>'access_mode' = 'personal')
 				AND (conversations.custom_attributes->'visible_users') @> '[%d]')`, userID))
 		case models.CustomerConversations, models.CustomerHighPriorityConversations:
 			customerCondition := fmt.Sprintf(`
@@ -2770,6 +2789,14 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 
 		default:
 			return "", nil, fmt.Errorf("unknown conversation type: %s", lt)
+		}
+		for i := conditionStart; i < len(conditions); i++ {
+			switch lt {
+			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations:
+				conditions[i] = "(COALESCE(conversations.custom_attributes->>'access_mode', 'public') <> 'personal' AND " + conditions[i] + ")"
+			default:
+				conditions[i] = "(" + personalAccess + " AND " + conditions[i] + ")"
+			}
 		}
 	}
 

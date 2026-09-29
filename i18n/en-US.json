@@ -1535,5 +1535,12 @@
   "webhook.sentSuccessfully": "Webhook sent successfully",
   "widget.conversationClosed": "This conversation has been closed",
   "widget.ipBlocked": "Access denied",
-  "widget.prechatForm.startChat": "Start chat"
+  "widget.prechatForm.startChat": "Start chat",
+  "admin.inbox.accessMode": "Access",
+  "admin.inbox.accessMode.public": "Public",
+  "admin.inbox.accessMode.personal": "Personal",
+  "admin.inbox.accessMode.description": "Access mode can only change while the inbox contains no conversations.",
+  "admin.inbox.owner": "Owner",
+  "admin.inbox.owner.select": "Select an active employee",
+  "admin.inbox.owner.description": "Owner changes apply only to new conversations. Existing visibility is retained."
 }

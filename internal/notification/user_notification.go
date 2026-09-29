@@ -33,6 +33,7 @@ type UserNotificationOpts struct {
 }
 
 type queries struct {
+	CanReceiveConversation *sqlx.Stmt `query:"can-receive-conversation"`
 	GetNotifications       *sqlx.Stmt `query:"get-notifications"`
 	GetNotificationStats   *sqlx.Stmt `query:"get-notification-stats"`
 	InsertNotification     *sqlx.Stmt `query:"insert-notification"`
@@ -179,4 +180,10 @@ func (m *UserNotificationManager) RunNotificationCleaner(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (m *UserNotificationManager) CanReceiveConversation(userID, conversationID int) (bool, error) {
+	var allowed bool
+	err := m.q.CanReceiveConversation.Get(&allowed, userID, conversationID)
+	return allowed, err
 }

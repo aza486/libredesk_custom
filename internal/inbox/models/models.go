@@ -19,6 +19,8 @@ const (
 
 // Inbox represents a inbox record in DB.
 type Inbox struct {
+	AccessMode         string          `db:"access_mode" json:"access_mode"`
+	OwnerUserID        null.Int        `db:"owner_user_id" json:"owner_user_id"`
 	ID                 int             `db:"id" json:"id"`
 	UUID               string          `db:"uuid" json:"uuid"`
 	CreatedAt          time.Time       `db:"created_at" json:"created_at"`

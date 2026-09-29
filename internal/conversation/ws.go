@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/abhinavxd/libredesk/internal/authz"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/inbox"
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/livechat"
@@ -91,7 +92,7 @@ func (m *Manager) BroadcastContactUpdate(contactID int, data map[string]any) {
 	}
 	seen := map[*ws.Client]struct{}{}
 	for _, uuid := range uuids {
-		for _, c := range m.wsHub.ListSubscribers(uuid) {
+		for _, c := range m.authorizedConversationSubscribers(uuid) {
 			seen[c] = struct{}{}
 		}
 	}
@@ -131,7 +132,7 @@ func (m *Manager) BroadcastTypingToConversation(conversationUUID string, isTypin
 	}
 
 	// Always broadcast to agent clients (main app WebSocket clients)
-	m.wsHub.BroadcastTypingToAllConversationClients(conversationUUID, messageBytes)
+	m.wsHub.PushToClients(m.authorizedConversationSubscribers(conversationUUID), messageBytes)
 
 	// Broadcast to widget clients (customers) only if this typing event comes from agents
 	if broadcastToWidgets {
@@ -185,7 +186,7 @@ func (m *Manager) broadcastToUsers(userIDs []int, message wsmodels.Message) {
 
 // broadcastToConversationListSubs pushes a message to the conversation's list and open subscribers.
 func (m *Manager) broadcastToConversationListSubs(conversationUUID string, message wsmodels.Message) {
-	clients := m.wsHub.ListSubscribers(conversationUUID)
+	clients := m.authorizedConversationSubscribers(conversationUUID)
 	if len(clients) == 0 {
 		return
 	}
@@ -264,4 +265,27 @@ func convToBroadcast(conv *cmodels.ConversationListItem) *broadcastConv {
 		return nil
 	}
 	return &broadcastConv{ConversationListItem: conv}
+}
+
+// Recheck personal visibility at delivery time: a revoked subscription is not a grant.
+func (m *Manager) authorizedConversationSubscribers(uuid string) []*ws.Client {
+	clients := m.wsHub.ListSubscribers(uuid)
+	if len(clients) == 0 {
+		return nil
+	}
+	conv, err := m.GetConversation(0, uuid, "")
+	if err != nil {
+		return nil
+	}
+	if !isPersonalConversation(conv.CustomAttributes) {
+		return clients
+	}
+	out := make([]*ws.Client, 0, len(clients))
+	for _, client := range clients {
+		viewer, err := m.userStore.GetAgentCachedOrLoad(client.ID)
+		if err == nil && viewer.Enabled && authz.CanReadConversation(viewer, conv) {
+			out = append(out, client)
+		}
+	}
+	return out
 }

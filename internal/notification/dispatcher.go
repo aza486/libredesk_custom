@@ -76,6 +76,9 @@ func NewDispatcher(opts DispatcherOpts) *Dispatcher {
 // and sends email if Email field is provided.
 func (d *Dispatcher) Send(n Notification) {
 	for i, recipientID := range n.RecipientIDs {
+		if !d.canReceive(recipientID, n) {
+			continue
+		}
 		d.sendToRecipient(recipientID, n)
 
 		if d.outbound != nil && n.Email != nil && d.emailEnabled {
@@ -96,6 +99,9 @@ func (d *Dispatcher) Send(n Notification) {
 // This is useful when email content is personalized per recipient.
 func (d *Dispatcher) SendWithEmails(n Notification, emails []EmailNotification) {
 	for i, recipientID := range n.RecipientIDs {
+		if !d.canReceive(recipientID, n) {
+			continue
+		}
 		d.sendToRecipient(recipientID, n)
 
 		if d.outbound != nil && i < len(emails) && len(emails[i].Recipients) > 0 && d.emailEnabled {
@@ -166,4 +172,19 @@ func (d *Dispatcher) broadcastNotification(userIDs []int, notification any) {
 		Data:  msgB,
 		Users: userIDs,
 	})
+}
+
+func (d *Dispatcher) canReceive(userID int, n Notification) bool {
+	if !n.ConversationID.Valid {
+		return true
+	}
+	if d.inApp == nil {
+		return false
+	}
+	allowed, err := d.inApp.CanReceiveConversation(userID, n.ConversationID.Int)
+	if err != nil {
+		d.lo.Error("error checking notification visibility", "error", err)
+		return false
+	}
+	return allowed
 }

@@ -71,7 +71,7 @@ func handleSearchMessages(r *fastglue.Request) error {
 
 // handleSearchContacts searches contacts based on the query.
 func handleSearchContacts(r *fastglue.Request) error {
-	app, _, q, err := searchInputs(r)
+	app, auser, q, err := searchInputs(r)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -79,7 +79,21 @@ func handleSearchContacts(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(results)
+	viewer, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	out := make([]smodels.ContactResult, 0, len(results))
+	for _, contact := range results {
+		allowed, err := app.user.CanAccessContact(contact.ID, viewer)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if allowed {
+			out = append(out, contact)
+		}
+	}
+	return r.SendEnvelope(out)
 }
 
 func searchInputs(r *fastglue.Request) (*App, amodels.User, string, error) {

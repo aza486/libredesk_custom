@@ -103,3 +103,11 @@ FROM media m
 LEFT JOIN conversation_messages cm ON cm.id = m.model_id AND m.model_type = 'messages'
 WHERE m.uuid = $1
   AND (COALESCE(m.model_id, 0) = 0 OR cm.conversation_id = $2);
+
+-- name: personal-access
+SELECT EXISTS (
+ SELECT 1 FROM media m
+ JOIN conversation_messages msg ON m.model_type='messages' AND msg.id=m.model_id
+ JOIN conversations c ON c.id=msg.conversation_id
+ WHERE m.uuid=$1 AND c.custom_attributes->>'access_mode'='personal'
+);

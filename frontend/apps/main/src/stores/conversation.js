@@ -269,6 +269,16 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function matchesAssignmentScope(conv) {
+    if (conv.custom_attributes?.access_mode === 'personal') {
+      if ([CONVERSATION_LIST_TYPE.CUSTOMER, CONVERSATION_LIST_TYPE.CUSTOMER_HIGH,
+        CONVERSATION_LIST_TYPE.SERVICE_MAILS, CONVERSATION_LIST_TYPE.UNASSIGNED,
+        CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED].includes(conversations.listType)) return false
+      const visible = (conv.custom_attributes.visible_users || []).some(id => Number(id) === Number(userStore.userID))
+      if (!userStore.roles.includes('Admin') && !visible) return false
+      if (conversations.listType === CONVERSATION_LIST_TYPE.ASSIGNED) {
+        return (conv.assigned_user_ids || [conv.assigned_user_id]).some(id => Number(id) === Number(userStore.userID))
+      }
+    }
     switch (conversations.listType) {
       case CONVERSATION_LIST_TYPE.ASSIGNED:
         return conv.assigned_user_id === userStore.userID

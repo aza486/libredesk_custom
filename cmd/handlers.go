@@ -158,16 +158,16 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 
 	// Contacts.
 	g.GET("/api/v1/contacts", perm(handleGetContacts, "contacts:read_all"))
-	g.GET("/api/v1/contacts/{id}", perm(handleGetContact, "contacts:read"))
-	g.PUT("/api/v1/contacts/{id}", perm(handleUpdateContact, "contacts:write"))
-	g.PUT("/api/v1/contacts/{id}/block", perm(handleBlockContact, "contacts:block"))
-	g.DELETE("/api/v1/contacts/{id}", perm(handleDeleteContact, "contacts:delete"))
-	g.GET("/api/v1/contacts/{id}/export", perm(handleExportContact, "contacts:export"))
+	g.GET("/api/v1/contacts/{id}", perm(personalContactAccess(handleGetContact), "contacts:read"))
+	g.PUT("/api/v1/contacts/{id}", perm(personalContactAccess(handleUpdateContact), "contacts:write"))
+	g.PUT("/api/v1/contacts/{id}/block", perm(personalContactAccess(handleBlockContact), "contacts:block"))
+	g.DELETE("/api/v1/contacts/{id}", perm(personalContactAccess(handleDeleteContact), "contacts:delete"))
+	g.GET("/api/v1/contacts/{id}/export", perm(personalContactAccess(handleExportContact), "contacts:export"))
 
 	// Contact notes.
-	g.GET("/api/v1/contacts/{id}/notes", perm(handleGetContactNotes, "contact_notes:read"))
-	g.POST("/api/v1/contacts/{id}/notes", perm(handleCreateContactNote, "contact_notes:write"))
-	g.DELETE("/api/v1/contacts/{id}/notes/{note_id}", perm(handleDeleteContactNote, "contact_notes:delete"))
+	g.GET("/api/v1/contacts/{id}/notes", perm(personalContactAccess(handleGetContactNotes), "contact_notes:read"))
+	g.POST("/api/v1/contacts/{id}/notes", perm(personalContactAccess(handleCreateContactNote), "contact_notes:write"))
+	g.DELETE("/api/v1/contacts/{id}/notes/{note_id}", perm(personalContactAccess(handleDeleteContactNote), "contact_notes:delete"))
 
 	// Teams.
 	g.GET("/api/v1/teams/compact", auth(handleGetTeamsCompact))

@@ -8,7 +8,6 @@ import (
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
-
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/knadh/go-i18n"
 	"github.com/volatiletech/null/v9"
@@ -38,6 +37,10 @@ func CanReadConversation(
 
 	if len(conversation.CustomAttributes) > 0 {
 		_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+	}
+
+	if attrs["access_mode"] == "personal" {
+		return user.HasAdminRole() || hasVisibleUser(attrs, user.ID)
 	}
 
 	if private, ok := attrs["private"].(bool); ok && private {

@@ -6,10 +6,9 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
-
-	"slices"
 
 	"github.com/abhinavxd/libredesk/internal/attachment"
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
@@ -187,6 +186,36 @@ func handleServeMedia(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	if media.Model.String == mmodels.ModelMessages && media.ModelID.Int > 0 {
+		conversation, err := app.conversation.GetConversationByMessageID(media.ModelID.Int)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		var attrs map[string]any
+		if err := json.Unmarshal(conversation.CustomAttributes, &attrs); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if attrs["access_mode"] == "personal" {
+			auser, ok := r.RequestCtx.UserValue("user").(amodels.User)
+			if !ok {
+				return r.SendErrorEnvelope(http.StatusUnauthorized, app.i18n.T("auth.invalidOrExpiredSession"), nil, envelope.UnauthorizedError)
+			}
+			user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			allowed, err := app.authz.EnforceConversationAccess(user, conversation)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			if !allowed {
+				return r.SendErrorEnvelope(http.StatusForbidden, app.i18n.T("status.deniedPermission"), nil, envelope.PermissionError)
+			}
+			r.RequestCtx.SetUserValue("personal_media", true)
+			return serveMediaFile(r, app, uuid, &media)
+		}
+	}
+
 	// Public serve as is.
 	if !media.Private {
 		return serveMediaFile(r, app, uuid, &media)
@@ -272,8 +301,28 @@ func serveMediaFile(r *fastglue.Request, app *App, uuid string, media *mmodels.M
 		}
 		r.RequestCtx.Response.Header.Set("Cache-Control", fmt.Sprintf("%s, max-age=%d, immutable", cacheVisibility(media.Private), int(mediaCacheTTL.Seconds())))
 
+		if r.RequestCtx.UserValue("personal_media") == true {
+			r.RequestCtx.Response.Header.Set("Cache-Control", "private, no-store")
+		}
 		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), uuid))
 	case "s3":
+		if r.RequestCtx.UserValue("personal_media") == true {
+			blob, err := app.media.GetBlob(uuid)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			disposition := "attachment"
+			if !forceDownload && media.ContentType != "image/svg+xml" && (strings.HasPrefix(media.ContentType, "image/") || strings.HasPrefix(media.ContentType, "video/") || media.ContentType == "application/pdf") {
+				disposition = "inline"
+			}
+			r.RequestCtx.Response.Header.Set("Content-Type", media.ContentType)
+			r.RequestCtx.Response.Header.Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": media.Filename}))
+			r.RequestCtx.Response.Header.Set("Cache-Control", "private, no-store")
+			r.RequestCtx.Response.Header.Set("X-Content-Type-Options", "nosniff")
+			r.RequestCtx.Response.Header.Set("Content-Security-Policy", "sandbox")
+			r.RequestCtx.SetBody(blob)
+			return nil
+		}
 		url := app.media.GetURL(uuid, media.ContentType, media.Filename)
 		if forceDownload {
 			url = app.media.GetURLForDownload(uuid, media.Filename)

@@ -5,6 +5,8 @@ import { AUTH_TYPE_PASSWORD, AUTH_TYPE_OAUTH2 } from '@main/constants/auth.js'
 const FROM_NAME_TEMPLATE_VARS = ['.Agent.FirstName', '.Agent.LastName', '.Agent.FullName', '.Inbox.Name']
 
 export const createFormSchema = (t) => z.object({
+  access_mode: z.enum(['public', 'personal']).default('public'),
+  owner_user_id: z.number().int().positive().nullable().optional(),
   name: z.string().min(1, t('globals.messages.required')),
   from: z.string().min(1, t('globals.messages.required')),
   from_name_template: z
@@ -66,4 +68,8 @@ export const createFormSchema = (t) => z.object({
     hello_hostname: z.string().optional(),
     auth_protocol: z.enum(['login', 'cram', 'plain', 'none'])
   })
+}).superRefine((values, ctx) => {
+  if (values.access_mode === 'personal' && !values.owner_user_id) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['owner_user_id'], message: t('globals.messages.required') })
+  }
 })

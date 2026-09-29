@@ -601,7 +601,22 @@ func handleGetConversation(r *fastglue.Request) error {
 	}
 
 	prev, _ := app.conversation.GetContactPreviousConversations(conv.ContactID, 10)
-	conv.PreviousConversations = filterCurrentPreviousConv(prev, conv.UUID)
+	previousUUIDs := make([]string, 0, len(prev))
+	for _, item := range prev {
+		previousUUIDs = append(previousUUIDs, item.UUID)
+	}
+	allowedPrevious, err := app.conversation.FilterAuthorizedListUUIDs(user.ID, previousUUIDs)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	allowedSet := uuidSet(allowedPrevious)
+	visiblePrevious := prev[:0]
+	for _, item := range prev {
+		if _, ok := allowedSet[item.UUID]; ok {
+			visiblePrevious = append(visiblePrevious, item)
+		}
+	}
+	conv.PreviousConversations = filterCurrentPreviousConv(visiblePrevious, conv.UUID)
 	return r.SendEnvelope(conv)
 }
 
@@ -1100,9 +1115,23 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	_, err = enforceConversationAccess(app, uuid, user)
+	conversation, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	protectedKeys := []string{"access_mode", "owner_user_id"}
+	var currentAttrs map[string]any
+	if err := json.Unmarshal(conversation.CustomAttributes, &currentAttrs); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if currentAttrs["access_mode"] == "personal" {
+		protectedKeys = append(protectedKeys, "customer_visibility", "visibility_managers", "visible_users")
+	}
+	for _, key := range protectedKeys {
+		if _, ok := attributes[key]; ok {
+			return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, key+" is read only; use the visibility endpoints", nil))
+		}
 	}
 
 	// Systemfelder dürfen niemals geändert werden
@@ -1137,6 +1166,12 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 				nil,
 			),
 		)
+	}
+
+	if currentAttrs["access_mode"] == "personal" {
+		for _, key := range append(protectedKeys, "creator_id") {
+			attributes[key] = currentAttrs[key]
+		}
 	}
 
 	// Update custom attributes.

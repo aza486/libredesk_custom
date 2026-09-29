@@ -71,7 +71,7 @@ type Inbox interface {
 
 // MessageStore defines methods for storing and processing messages.
 type MessageStore interface {
-	MessageExists(string) (bool, error)
+	MessageExists(string, int) (bool, error)
 	EnqueueIncoming(models.IncomingMessage) error
 }
 
@@ -94,6 +94,7 @@ type receiverState struct {
 }
 
 type Manager struct {
+	db            *sqlx.DB
 	mu            sync.RWMutex
 	queries       queries
 	inboxes       map[int]Inbox
@@ -127,6 +128,7 @@ func New(lo *logf.Logger, db *sqlx.DB, i18n *i18n.I18n, encryptionKey string) (*
 	}
 
 	m := &Manager{
+		db:            db,
 		lo:            lo,
 		inboxes:       make(map[int]Inbox),
 		receivers:     make(map[int]receiverState),
@@ -232,6 +234,12 @@ func (m *Manager) GetAll() ([]imodels.Inbox, error) {
 
 // Create creates an inbox in the DB.
 func (m *Manager) Create(inbox imodels.Inbox) (imodels.Inbox, error) {
+	if inbox.AccessMode == "" {
+		inbox.AccessMode = "public"
+	}
+	if err := m.ValidateAccess(inbox); err != nil {
+		return imodels.Inbox{}, err
+	}
 	if inbox.Channel == ChannelLiveChat {
 		secret := inbox.Secret.String
 		if secret == "" {
@@ -256,7 +264,7 @@ func (m *Manager) Create(inbox imodels.Inbox) (imodels.Inbox, error) {
 	}
 
 	var createdInbox imodels.Inbox
-	if err := m.queries.InsertInbox.Get(&createdInbox, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.Enabled, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate); err != nil {
+	if err := m.queries.InsertInbox.Get(&createdInbox, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.Enabled, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -332,6 +340,12 @@ func (m *Manager) ReloadInbox(ctx context.Context, id int, initFn initFn) error 
 
 // Update updates an inbox in the DB.
 func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
+	if inbox.AccessMode == "" {
+		inbox.AccessMode = "public"
+	}
+	if err := m.ValidateAccess(inbox); err != nil {
+		return imodels.Inbox{}, err
+	}
 	current, err := m.GetDBRecord(id)
 	if err != nil {
 		return imodels.Inbox{}, err
@@ -432,7 +446,10 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 
 	// Update the inbox in the DB.
 	var updatedInbox imodels.Inbox
-	if err := m.queries.Update.Get(&updatedInbox, id, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Enabled, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate); err != nil {
+	if err := m.queries.Update.Get(&updatedInbox, id, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Enabled, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
+		if accessErr := accessConstraintError(err); accessErr != nil {
+			return imodels.Inbox{}, accessErr
+		}
 		m.lo.Error("error updating inbox", "error", err)
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}

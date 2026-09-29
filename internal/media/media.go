@@ -92,6 +92,7 @@ func New(opt Opts) (*Manager, error) {
 
 // queries holds the prepared SQL statements.
 type queries struct {
+	PersonalAccess              *sqlx.Stmt `query:"personal-access"`
 	Insert                      *sqlx.Stmt `query:"insert-media"`
 	Get                         *sqlx.Stmt `query:"get-media"`
 	GetByUUID                   *sqlx.Stmt `query:"get-media-by-uuid"`
@@ -260,6 +261,9 @@ func (m *Manager) GetBlob(name string) ([]byte, error) {
 
 // GetURL returns the URL for accessing a media file by its name.
 func (m *Manager) GetURL(uuid, contentType, fileName string) string {
+	if url, personal := m.personalURL(uuid); personal {
+		return url
+	}
 	// Keep some content types inline. SVG excluded.
 	disposition := "attachment"
 	if contentType != "image/svg+xml" &&
@@ -272,12 +276,18 @@ func (m *Manager) GetURL(uuid, contentType, fileName string) string {
 }
 
 func (m *Manager) GetURLForDownload(uuid, fileName string) string {
+	if url, personal := m.personalURL(uuid); personal {
+		return url + "?download=1"
+	}
 	return m.store.GetURL(uuid, "attachment", fileName)
 }
 
 // GetSignedURL generates a signed URL for secure media access if the store supports it.
 // Returns a regular URL if the store doesn't support signed URLs.
 func (m *Manager) GetSignedURL(name string) string {
+	if url, personal := m.personalURL(name); personal {
+		return url
+	}
 	if signedStore, ok := m.store.(SignedURLStore); ok {
 		return signedStore.GetSignedURL(name)
 	}
@@ -287,6 +297,9 @@ func (m *Manager) GetSignedURL(name string) string {
 
 // GetThumbnailURL returns the URL for an image thumbnail.
 func (m *Manager) GetThumbnailURL(uuid string) string {
+	if url, personal := m.personalURL(image.ThumbPrefix + uuid); personal {
+		return url
+	}
 	if m.store.Name() == "fs" {
 		// FS validates thumbnail requests with the original UUID signature.
 		u, err := url.Parse(m.GetSignedURL(uuid))
@@ -463,4 +476,22 @@ func (m *Manager) detectContentType(sourceContentType string, content io.ReadSee
 
 	content.Seek(0, io.SeekStart)
 	return detectedType, nil
+}
+
+// Personal attachments always pass through session authorization, including S3.
+func (m *Manager) personalURL(name string) (string, bool) {
+	if m.queries.PersonalAccess == nil {
+		return "", false
+	}
+	var personal bool
+	err := m.queries.PersonalAccess.Get(&personal, strings.TrimPrefix(name, image.ThumbPrefix))
+	if err == nil && !personal {
+		return "", false
+	}
+	// On a lookup failure, use the authenticated route rather than minting a bearer URL.
+	root := ""
+	if m.rootURL != nil {
+		root = strings.TrimRight(m.rootURL(), "/")
+	}
+	return root + "/uploads/" + name, true
 }

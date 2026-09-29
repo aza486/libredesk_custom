@@ -34,7 +34,11 @@ func handleGetContacts(r *fastglue.Request) error {
 		total   = 0
 	)
 	page, pageSize := getPagination(r)
-	contacts, err := app.user.GetContacts(page, pageSize, order, orderBy, filters, app.setting.GetAppTimezone())
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	contacts, err := app.user.GetContacts(page, pageSize, order, orderBy, filters, app.setting.GetAppTimezone(), viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -232,7 +236,11 @@ func handleExportContact(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	data, err := app.user.ExportContactData(id)
+	viewer, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	data, err := app.user.ExportContactData(id, viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

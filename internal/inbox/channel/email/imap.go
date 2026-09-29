@@ -336,7 +336,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	}
 
 	// Check if the message already exists in the database; if it does, ignore it.
-	exists, err := e.messageStore.MessageExists(messageID)
+	exists, err := e.messageStore.MessageExists(messageID, e.Identifier())
 	if err != nil {
 		e.lo.Error("error checking if message exists", "message_id", messageID)
 		return fmt.Errorf("checking if message exists in DB: %w", err)

@@ -1,5 +1,42 @@
 <template>
   <form @submit="onSubmit" novalidate class="space-y-6 w-full">
+    <FormField v-slot="{ componentField }" name="access_mode">
+      <FormItem>
+        <FormLabel>{{ t('admin.inbox.accessMode') }}</FormLabel>
+        <FormControl>
+          <RadioGroup v-bind="componentField" class="flex gap-5">
+            <label class="flex items-center gap-2"
+              ><RadioGroupItem value="public" />{{ t('admin.inbox.accessMode.public') }}</label
+            >
+            <label class="flex items-center gap-2"
+              ><RadioGroupItem value="personal" />{{ t('admin.inbox.accessMode.personal') }}</label
+            >
+          </RadioGroup>
+        </FormControl>
+        <FormDescription>{{ t('admin.inbox.accessMode.description') }}</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+    <FormField
+      v-if="form.values.access_mode === 'personal'"
+      v-slot="{ componentField, handleChange }"
+      name="owner_user_id"
+    >
+      <FormItem>
+        <FormLabel>{{ t('admin.inbox.owner') }}</FormLabel>
+        <FormControl>
+          <SelectComboBox
+            :model-value="componentField.modelValue"
+            :items="ownerOptions"
+            :placeholder="t('admin.inbox.owner.select')"
+            type="user"
+            @update:model-value="handleChange(Number($event))"
+          />
+        </FormControl>
+        <FormDescription>{{ t('admin.inbox.owner.description') }}</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
     <!-- Basic Fields -->
     <FormField v-if="showFormFields" v-slot="{ componentField }" name="name">
       <FormItem>
@@ -87,7 +124,10 @@
       </FormItem>
       <p class="!mt-2 text-muted-foreground text-xs flex items-start gap-1.5">
         <Lightbulb class="size-4" />
-        <span>{{ $t('admin.inbox.csatSurveys.description_2') }} {{ $t('admin.inbox.csatSurveys.description_3') }}</span>
+        <span
+          >{{ $t('admin.inbox.csatSurveys.description_2') }}
+          {{ $t('admin.inbox.csatSurveys.description_3') }}</span
+        >
       </p>
     </FormField>
 
@@ -104,10 +144,7 @@
           :disabled="isMicrosoftInbox && componentField.modelValue"
           @update:checked="handleChange"
         />
-        <p
-          v-if="isMicrosoftInbox"
-          class="!mt-2 text-destructive text-xs flex items-start gap-1.5"
-        >
+        <p v-if="isMicrosoftInbox" class="!mt-2 text-destructive text-xs flex items-start gap-1.5">
           <Lightbulb class="size-4" />
           <span>{{ $t('admin.inbox.enablePlusAddressing.requiredForMicrosoft') }}</span>
         </p>
@@ -176,10 +213,7 @@
     </div>
 
     <!-- OAuth Connected Status -->
-    <div
-      v-show="isOAuthInbox"
-      class="box p-4 bg-success/10 border-success/20"
-    >
+    <div v-show="isOAuthInbox" class="box p-4 bg-success/10 border-success/20">
       <div class="flex items-start justify-between">
         <div class="flex items-center space-x-3 flex-1">
           <CheckCircle2 class="w-5 h-5 text-success flex-shrink-0" />
@@ -188,10 +222,7 @@
               {{ $t('admin.inbox.oauth.connectedVia', { provider: oauthProvider }) }}
             </p>
             <p class="text-sm text-success">{{ oauthEmail }}</p>
-            <p
-              v-show="oauthClientId"
-              class="text-xs text-success font-mono mt-1"
-            >
+            <p v-show="oauthClientId" class="text-xs text-success font-mono mt-1">
               {{ $t('globals.terms.clientID') }}: {{ oauthClientId.substring(0, 20) }}...{{
                 oauthClientId.slice(-8)
               }}
@@ -780,7 +811,10 @@
 </template>
 
 <script setup>
-import { watch, computed, ref } from 'vue'
+import { watch, computed, ref, onMounted } from 'vue'
+import { RadioGroup, RadioGroupItem } from '@shared-ui/components/ui/radio-group'
+import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
+import { useUsersStore } from '@main/stores/users'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { createFormSchema } from './formSchema.js'
@@ -883,9 +917,23 @@ const showFormFields = computed(
     (props.initialValues?.imap && Object.keys(props.initialValues?.imap).length > 0)
 )
 
+const usersStore = useUsersStore()
+onMounted(() => usersStore.fetchUsers(true))
+const ownerOptions = computed(() =>
+  usersStore.users
+    .filter((user) => user.enabled && user.type === 'agent')
+    .map((user) => ({
+      ...user,
+      value: String(user.id),
+      label: `${user.first_name} ${user.last_name}`.trim()
+    }))
+)
+
 const form = useForm({
   validationSchema: computed(() => toTypedSchema(createFormSchema(t))),
   initialValues: {
+    access_mode: 'public',
+    owner_user_id: null,
     name: '',
     from: '',
     from_name_template: '',
@@ -947,7 +995,10 @@ const submitLabel = computed(() => {
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
-  await props.submitForm(values)
+  await props.submitForm({
+    ...values,
+    owner_user_id: values.access_mode === 'personal' ? values.owner_user_id : null
+  })
 })
 
 const connectWithGoogle = () => {
@@ -983,6 +1034,14 @@ const reconnectOAuth = () => {
 }
 
 const submitOAuthCredentials = async () => {
+  if (
+    flowType.value === 'new_inbox' &&
+    form.values.access_mode === 'personal' &&
+    !form.values.owner_user_id
+  ) {
+    form.setFieldError('owner_user_id', t('globals.messages.required'))
+    return
+  }
   if (!oauthCredentials.value.client_id || !oauthCredentials.value.client_secret) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
@@ -995,7 +1054,9 @@ const submitOAuthCredentials = async () => {
     isSubmittingOAuth.value = true
     const payload = {
       ...oauthCredentials.value,
-      flow_type: flowType.value
+      flow_type: flowType.value,
+      access_mode: form.values.access_mode,
+      owner_user_id: form.values.access_mode === 'personal' ? form.values.owner_user_id : null
     }
 
     // Include inbox_id for reconnect flow (props.initialValues.id exists in edit mode)

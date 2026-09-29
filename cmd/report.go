@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 
+	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/zerodha/fastglue"
 )
 
@@ -11,7 +12,11 @@ func handleOverviewCounts(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 	)
-	counts, err := app.report.GetOverViewCounts()
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	counts, err := app.report.GetOverViewCounts(viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -24,7 +29,11 @@ func handleOverviewCharts(r *fastglue.Request) error {
 		app     = r.Context.(*App)
 		days, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("days")))
 	)
-	charts, err := app.report.GetOverviewChart(days)
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	charts, err := app.report.GetOverviewChart(days, viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -37,7 +46,11 @@ func handleOverviewSLA(r *fastglue.Request) error {
 		app     = r.Context.(*App)
 		days, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("days")))
 	)
-	sla, err := app.report.GetOverviewSLA(days)
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	sla, err := app.report.GetOverviewSLA(days, viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -50,7 +63,11 @@ func handleOverviewCSAT(r *fastglue.Request) error {
 		app     = r.Context.(*App)
 		days, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("days")))
 	)
-	csat, err := app.report.GetOverviewCSAT(days)
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	csat, err := app.report.GetOverviewCSAT(days, viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -63,7 +80,11 @@ func handleOverviewMessageVolume(r *fastglue.Request) error {
 		app     = r.Context.(*App)
 		days, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("days")))
 	)
-	volume, err := app.report.GetOverviewMessageVolume(days)
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	volume, err := app.report.GetOverviewMessageVolume(days, viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -76,7 +97,11 @@ func handleOverviewTagDistribution(r *fastglue.Request) error {
 		app     = r.Context.(*App)
 		days, _ = strconv.Atoi(string(r.RequestCtx.QueryArgs().Peek("days")))
 	)
-	tags, err := app.report.GetOverviewTagDistribution(days)
+	viewer, err := app.user.GetAgentCachedOrLoad(r.RequestCtx.UserValue("user").(amodels.User).ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	tags, err := app.report.GetOverviewTagDistribution(days, viewer)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

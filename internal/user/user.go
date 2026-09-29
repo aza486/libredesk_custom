@@ -11,13 +11,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"log"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
@@ -160,11 +159,15 @@ func (u *Manager) VerifyPassword(email string, password []byte) (models.User, er
 }
 
 // GetAllUsers returns a list of all users.
-func (u *Manager) GetAllUsers(page, pageSize int, userTypes []string, order, orderBy string, filtersJSON, location string) ([]models.UserCompact, error) {
+func (u *Manager) GetAllUsers(page, pageSize int, userTypes []string, order, orderBy string, filtersJSON, location string, viewers ...models.User) ([]models.UserCompact, error) {
 	query, qArgs, err := u.makeUserListQuery(page, pageSize, userTypes, order, orderBy, filtersJSON, location)
 	if err != nil {
 		u.lo.Error("error creating user list query", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+
+	if len(viewers) > 0 {
+		query = "WITH users AS (SELECT * FROM users WHERE " + personalContactCondition(viewers[0]) + ") " + query
 	}
 
 	// Start a read-only txn.
@@ -414,6 +417,9 @@ func (u *Manager) SaveCustomAttributes(id int, customAttributes map[string]any, 
 // ToggleEnabled toggles the enabled status of an user.
 func (u *Manager) ToggleEnabled(id int, typ string, enabled bool) error {
 	if _, err := u.q.ToggleEnable.Exec(id, typ, enabled); err != nil {
+		if ownerErr := personalOwnerError(err); ownerErr != nil {
+			return ownerErr
+		}
 		u.lo.Error("error toggling user enabled status", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}

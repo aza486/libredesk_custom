@@ -254,6 +254,13 @@ func (m *Manager) SendTestWebhook(id int) error {
 
 // TriggerEvent triggers webhooks for a specific event with the provided data.
 func (m *Manager) TriggerEvent(event models.WebhookEvent, data any) {
+	enriched, err := m.withInboxAccess(event, data)
+	if err != nil {
+		m.lo.Error("error enriching webhook payload", "event", event, "error", err)
+		return
+	}
+	data = enriched
+
 	m.closedMu.RLock()
 	defer m.closedMu.RUnlock()
 	if m.closed {
@@ -272,6 +279,13 @@ func (m *Manager) TriggerEvent(event models.WebhookEvent, data any) {
 
 // TriggerWebhook enqueues a delivery of the given event to one specific webhook.
 func (m *Manager) TriggerWebhook(webhookID int, event models.WebhookEvent, data any) {
+	enriched, err := m.withInboxAccess(event, data)
+	if err != nil {
+		m.lo.Error("error enriching webhook payload", "event", event, "error", err)
+		return
+	}
+	data = enriched
+
 	// A non-positive ID would be treated as a fan out to every subscriber of the event.
 	if webhookID <= 0 {
 		m.lo.Warn("dropping targeted webhook delivery, webhook ID is not positive", "webhook_id", webhookID, "event", event)

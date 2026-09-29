@@ -9,6 +9,11 @@ LEFT JOIN users u ON u.id = n.actor_id
 LEFT JOIN conversations c ON c.id = n.conversation_id
 LEFT JOIN conversation_messages m ON m.id = n.message_id
 WHERE n.user_id = $1
+ AND (
+   COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
+   OR (c.custom_attributes->'visible_users') @> jsonb_build_array($1::bigint)
+   OR EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.name='Admin')
+ )
 ORDER BY n.created_at DESC
 LIMIT $2 OFFSET $3;
 
@@ -16,8 +21,14 @@ LIMIT $2 OFFSET $3;
 SELECT
     COUNT(*) FILTER (WHERE is_read = false) as unread_count,
     COUNT(*) as total_count
-FROM user_notifications
-WHERE user_id = $1;
+FROM user_notifications n
+LEFT JOIN conversations c ON c.id=n.conversation_id
+WHERE n.user_id = $1
+ AND (
+   COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
+   OR (c.custom_attributes->'visible_users') @> jsonb_build_array($1::bigint)
+   OR EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.name='Admin')
+ );
 
 -- name: insert-notification
 INSERT INTO user_notifications (user_id, notification_type, title, body, conversation_id, message_id, actor_id, meta)
@@ -46,3 +57,12 @@ DELETE FROM user_notifications WHERE user_id = $1;
 
 -- name: delete-old-notifications
 DELETE FROM user_notifications WHERE created_at < NOW() - INTERVAL '30 days';
+
+-- name: can-receive-conversation
+SELECT EXISTS (
+ SELECT 1 FROM conversations c WHERE c.id=$2 AND (
+   COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
+   OR (c.custom_attributes->'visible_users') @> jsonb_build_array($1::bigint)
+   OR EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.name='Admin')
+ )
+);

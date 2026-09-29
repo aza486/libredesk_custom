@@ -145,6 +145,9 @@ func (u *Manager) UpdateAgent(id int, firstName, lastName, email string, roles [
 		if dbutil.IsUniqueViolationError(err) {
 			return envelope.NewError(envelope.GeneralError, u.i18n.T("user.sameEmailAlreadyExists"), nil)
 		}
+		if ownerErr := personalOwnerError(err); ownerErr != nil {
+			return ownerErr
+		}
 		u.lo.Error("error updating user", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -163,6 +166,9 @@ func (u *Manager) SoftDeleteAgent(id int) error {
 	}
 	var deleted int
 	if err := u.q.SoftDeleteAgent.Get(&deleted, id); err != nil {
+		if ownerErr := personalOwnerError(err); ownerErr != nil {
+			return ownerErr
+		}
 		u.lo.Error("error deleting user", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}

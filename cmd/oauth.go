@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/valyala/fasthttp"
+	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
 	"golang.org/x/oauth2"
 )
@@ -26,6 +28,8 @@ const (
 
 // OAuthCredentialsRequest represents the OAuth credentials from the request body.
 type OAuthCredentialsRequest struct {
+	AccessMode   string `json:"access_mode"`
+	OwnerUserID  int    `json:"owner_user_id"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	TenantID     string `json:"tenant_id,omitempty"` // Optional for Microsoft
@@ -61,6 +65,15 @@ func handleOAuthAuthorize(r *fastglue.Request) error {
 		req.FlowType = FlowTypeNewInbox
 	}
 
+	if req.FlowType == FlowTypeNewInbox {
+		if req.AccessMode == "" {
+			req.AccessMode = "public"
+		}
+		if err := app.inbox.ValidateAccess(imodels.Inbox{AccessMode: req.AccessMode, OwnerUserID: null.NewInt(req.OwnerUserID, req.OwnerUserID != 0), Channel: inbox.ChannelEmail}); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
+
 	// Build redirect URI
 	redirectURI := app.consts.Load().(*constants).AppBaseURL + "/api/v1/inboxes/oauth/" + provider + "/callback"
 
@@ -80,6 +93,8 @@ func handleOAuthAuthorize(r *fastglue.Request) error {
 		"client_secret": req.ClientSecret,
 		"flow_type":     req.FlowType,
 		"inbox_id":      req.InboxID,
+		"access_mode":   req.AccessMode,
+		"owner_user_id": req.OwnerUserID,
 	}
 
 	// Add tenant ID for Microsoft if provided
@@ -325,7 +340,10 @@ func handleOAuthCallback(r *fastglue.Request) error {
 	}
 
 	// Create inbox
+	ownerID, _ := strconv.Atoi(oauthData["owner_user_id"])
 	newInbox := imodels.Inbox{
+		AccessMode:        oauthData["access_mode"],
+		OwnerUserID:       null.NewInt(ownerID, ownerID != 0),
 		Name:              fmt.Sprintf("%s Inbox", userEmail),
 		From:              userEmail,
 		Channel:           inbox.ChannelEmail,

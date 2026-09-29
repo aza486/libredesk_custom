@@ -536,6 +536,7 @@ SELECT
 FROM conversations c
     JOIN inboxes inb ON c.inbox_id = inb.id 
 WHERE assigned_user_id IS NULL AND assigned_team_id IS NOT NULL
+AND COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
 ORDER BY c.created_at ASC;
 
 -- name: add-conversation-tags
@@ -650,7 +651,10 @@ SELECT
     c.id,
     c.uuid,
     c.assigned_team_id,
-    c.assigned_user_id
+    c.assigned_user_id,
+    c.inbox_id,
+    c.custom_attributes,
+    ARRAY(SELECT ca.user_id FROM conversation_assignees ca WHERE ca.conversation_id=c.id) AS assigned_user_ids
 FROM conversation_messages m
 JOIN conversations c ON m.conversation_id = c.id
 WHERE m.id = $1;
@@ -863,9 +867,13 @@ inserted_msg AS (
 SELECT * FROM inserted_msg;
 
 -- name: message-exists-by-source-id
-SELECT conversation_id
-FROM conversation_messages
-WHERE source_id = ANY($1::text []);
+SELECT m.conversation_id
+FROM conversation_messages m
+JOIN conversations c ON c.id=m.conversation_id
+JOIN inboxes i ON i.id=$2
+WHERE m.source_id = ANY($1::text [])
+  AND (c.inbox_id=$2 OR (COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal' AND i.access_mode <> 'personal'))
+ORDER BY m.id DESC LIMIT 1;
 
 -- name: update-message-status
 update conversation_messages set status = $1, updated_at = NOW() where uuid = $2;
@@ -1030,6 +1038,8 @@ SELECT uuid::text
 FROM conversations
 WHERE uuid = ANY($1::uuid[])
   AND (
+    (custom_attributes->>'access_mode' = 'personal' AND ($10 OR (custom_attributes->'visible_users') @> jsonb_build_array($2::int)))
+    OR (COALESCE(custom_attributes->>'access_mode', 'public') <> 'personal' AND (
     -- Private/internal conversations:
     -- Admin, creator and explicitly visible users may read.
     (
@@ -1037,7 +1047,7 @@ WHERE uuid = ANY($1::uuid[])
       AND (
            $10
         OR (custom_attributes->>'creator_id')::int = $2
-        OR (custom_attributes->'visible_users') @> jsonb_build_array($2)
+        OR (custom_attributes->'visible_users') @> jsonb_build_array($2::int)
       )
     )
 
@@ -1054,7 +1064,7 @@ WHERE uuid = ANY($1::uuid[])
           AND (
                $10
             OR $11
-            OR (custom_attributes->'visible_users') @> jsonb_build_array($2)
+            OR (custom_attributes->'visible_users') @> jsonb_build_array($2::int)
           )
         )
 
@@ -1100,7 +1110,7 @@ WHERE uuid = ANY($1::uuid[])
         )
       )
     )
-  );
+  )));
 
 -- name: get-conversation-uuids-by-contact
 SELECT uuid::text

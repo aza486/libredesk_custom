@@ -4,9 +4,7 @@
       <div></div>
       <router-link :to="{ name: 'new-inbox' }">
         <Button>
-          {{
-            $t('inbox.newInbox')
-          }}
+          {{ $t('inbox.newInbox') }}
         </Button>
       </router-link>
     </div>
@@ -68,9 +66,7 @@ onMounted(async () => {
     }, 500)
   } else if (successCode) {
     const msg =
-      successCode === 'oauth_reconnected'
-        ? t('toast.inboxReconnected')
-        : t('toast.inboxConnected')
+      successCode === 'oauth_reconnected' ? t('toast.inboxReconnected') : t('toast.inboxConnected')
     setTimeout(() => {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: msg })
     }, 500)
@@ -97,13 +93,24 @@ const getInboxes = async () => {
 // Columns for the data table
 const columns = [
   {
+    accessorKey: 'access_mode',
+    header: () => t('admin.inbox.accessMode'),
+    cell: ({ row }) =>
+      h(Badge, { variant: 'secondary' }, () =>
+        t(`admin.inbox.accessMode.${row.original.access_mode || 'public'}`)
+      )
+  },
+  {
     accessorKey: 'name',
     header: function () {
       return h('div', { class: 'text-center' }, t('globals.terms.name'))
     },
     cell: function ({ row }) {
-      return h('div', { class: 'text-center' },
-        h(RouterLink,
+      return h(
+        'div',
+        { class: 'text-center' },
+        h(
+          RouterLink,
           {
             to: { name: 'edit-inbox', params: { id: row.original.id } },
             class: 'text-foreground font-medium hover:underline'

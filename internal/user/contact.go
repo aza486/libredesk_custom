@@ -59,16 +59,16 @@ func (u *Manager) DeleteContact(id int) error {
 }
 
 // ExportContactData returns a contact's profile, non-private conversation messages, and CSAT responses as JSON.
-func (u *Manager) ExportContactData(id int) ([]byte, error) {
+func (u *Manager) ExportContactData(id int, viewer models.User) ([]byte, error) {
 	var data []byte
-	if err := u.q.ExportContactData.Get(&data, id); err != nil {
+	if err := u.q.ExportContactData.Get(&data, id, viewer.ID, viewer.HasAdminRole()); err != nil {
 		u.lo.Error("error exporting contact data", "contact_id", id, "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 	return data, nil
 }
 
-func (u *Manager) GetContacts(page, pageSize int, order, orderBy string, filtersJSON, location string) ([]models.UserCompact, error) {
+func (u *Manager) GetContacts(page, pageSize int, order, orderBy string, filtersJSON, location string, viewer models.User) ([]models.UserCompact, error) {
 	if pageSize > maxListPageSize {
 		pageSize = maxListPageSize
 	}
@@ -78,7 +78,7 @@ func (u *Manager) GetContacts(page, pageSize int, order, orderBy string, filters
 	if pageSize < 1 {
 		pageSize = 10
 	}
-	return u.GetAllUsers(page, pageSize, []string{models.UserTypeContact, models.UserTypeVisitor}, order, orderBy, filtersJSON, location)
+	return u.GetAllUsers(page, pageSize, []string{models.UserTypeContact, models.UserTypeVisitor}, order, orderBy, filtersJSON, location, viewer)
 }
 
 // reuseContact resolves to an existing contact without ever updating it, inserting one only if absent.

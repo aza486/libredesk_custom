@@ -889,7 +889,7 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 // inserts the message, uploads any attachments, and queues the conversation evaluation of automation rules.
 func (m *Manager) ProcessIncomingMessage(in models.IncomingMessage) (models.Message, error) {
 	// Return early if this message already exists (same source ID).
-	dupConvID, err := m.messageExistsBySourceID([]string{in.SourceID.String})
+	dupConvID, err := m.messageExistsBySourceID([]string{in.SourceID.String}, in.InboxID)
 	if err != nil && err != errConversationNotFound {
 		return models.Message{}, err
 	}
@@ -901,6 +901,16 @@ func (m *Manager) ProcessIncomingMessage(in models.IncomingMessage) (models.Mess
 	senderID, conversationID, conversationUUID, err := m.resolveSender(&in)
 	if err != nil {
 		return models.Message{}, err
+	}
+
+	if conversationID != 0 {
+		allowed, checkErr := m.canThreadIntoInbox(conversationID, in.InboxID)
+		if checkErr != nil {
+			return models.Message{}, checkErr
+		}
+		if !allowed {
+			senderID, conversationID, conversationUUID = 0, 0, ""
+		}
 	}
 
 	// Find or create contact.
@@ -1099,8 +1109,8 @@ func (m *Manager) ProcessIncomingLiveChatMessage(msg models.Message) (models.Mes
 }
 
 // MessageExists checks if a message with the given messageID exists.
-func (m *Manager) MessageExists(messageID string) (bool, error) {
-	_, err := m.messageExistsBySourceID([]string{messageID})
+func (m *Manager) MessageExists(messageID string, inboxID int) (bool, error) {
+	_, err := m.messageExistsBySourceID([]string{messageID}, inboxID)
 	if err != nil {
 		if errors.Is(err, errConversationNotFound) {
 			return false, nil
@@ -1291,7 +1301,7 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 	m.lo.Debug("searching conversation using in-reply-to and references", "in_reply_to", in.InReplyTo, "references", in.References)
 
 	sourceIDs := append([]string{in.InReplyTo}, in.References...)
-	conversationID, err = m.messageExistsBySourceID(sourceIDs)
+	conversationID, err = m.messageExistsBySourceID(sourceIDs, in.InboxID)
 	if err != nil && err != errConversationNotFound {
 		return 0, "", false, err
 	}
@@ -1314,6 +1324,13 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 		)
 		if err != nil || conversationID == 0 {
 			return 0, "", false, err
+		}
+		created, err := m.GetConversation(0, conversationUUID, "")
+		if err != nil {
+			return 0, "", false, err
+		}
+		if isPersonalConversation(created.CustomAttributes) {
+			return conversationID, conversationUUID, true, nil
 		}
 		isServiceMail, serviceErr := m.IsServiceEmailAddress(in.Contact.Email.String)
 
@@ -1352,13 +1369,13 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 }
 
 // messageExistsBySourceID returns conversation ID if a message with any of the given source IDs exists.
-func (m *Manager) messageExistsBySourceID(messageSourceIDs []string) (int, error) {
+func (m *Manager) messageExistsBySourceID(messageSourceIDs []string, inboxID int) (int, error) {
 	messageSourceIDs = stringutil.RemoveEmpty(messageSourceIDs)
 	if len(messageSourceIDs) == 0 {
 		return 0, errConversationNotFound
 	}
 	var conversationID int
-	if err := m.q.MessageExistsBySourceID.QueryRow(pq.Array(messageSourceIDs)).Scan(&conversationID); err != nil {
+	if err := m.q.MessageExistsBySourceID.QueryRow(pq.Array(messageSourceIDs), inboxID).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
 			return conversationID, errConversationNotFound
 		}
@@ -1532,7 +1549,7 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 				"email", conversation.Contact.Email.String,
 				"error", serviceErr,
 			)
-		} else if isServiceMail {
+		} else if isServiceMail && !isPersonalConversation(conversation.CustomAttributes) {
 			if err := m.AddSystemTags(conversationUUID, []string{"🧷Service-Mail"}); err != nil {
 				m.lo.Error(
 					"failed to add service mail system tag",

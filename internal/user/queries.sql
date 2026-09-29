@@ -507,6 +507,6 @@ SELECT jsonb_build_object(
         ) ORDER BY c.created_at), '[]'::jsonb)
         FROM conversations c
         LEFT JOIN conversation_statuses cs ON cs.id = c.status_id
-        WHERE c.contact_id = $1
+        WHERE c.contact_id = $1 AND (COALESCE(c.custom_attributes->>'access_mode', 'public') <> 'personal' OR $3 OR (c.custom_attributes->'visible_users') @> jsonb_build_array($2::int))
     )
 );
