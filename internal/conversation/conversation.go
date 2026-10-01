@@ -1203,69 +1203,49 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 
 // UpdateConversationTeamAssignee sets the assignee of a conversation to a specific team and sets the assigned user id to NULL.
 func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error {
-	// Private Ticket: alle Teammitglieder dauerhaft sichtbar machen
+	// Private tickets and personal-inbox tickets rely on visible_users for access,
+	// so every member of the assigned team is made permanently visible.
 	conversation, err := c.GetConversation(0, uuid, "")
 	if err == nil {
-
 		attrs := map[string]any{}
 		_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-		if private, ok := attrs["private"].(bool); ok && private {
+		private, _ := attrs["private"].(bool)
+		accessMode, _ := attrs["access_mode"].(string)
 
+		if private || accessMode == "personal" {
 			members, err := c.teamStore.GetMembers(teamID)
-			if err == nil {
-
-				var visibleUsers []any
-
-				if existing, ok := attrs["visible_users"].([]any); ok {
-					visibleUsers = existing
+			if err != nil {
+				c.lo.Error("error fetching team members for visibility", "uuid", uuid, "team_id", teamID, "error", err)
+			} else {
+				visibleUsers, _ := attrs["visible_users"].([]any)
+				known := make(map[int]bool, len(visibleUsers))
+				for _, uid := range visibleUsers {
+					switch v := uid.(type) {
+					case float64:
+						known[int(v)] = true
+					case int:
+						known[v] = true
+					}
 				}
 
+				changed := false
 				for _, member := range members {
-
-					found := false
-
-					for _, uid := range visibleUsers {
-
-						switch v := uid.(type) {
-
-						case float64:
-							if int(v) == member.ID {
-								found = true
-							}
-
-						case int:
-							if v == member.ID {
-								found = true
-							}
-						}
-
-						if found {
-							break
-						}
+					if known[member.ID] {
+						continue
 					}
-
-					if !found {
-
-						visibleUsers = append(
-							visibleUsers,
-							member.ID,
-						)
-
-						c.lo.Info(
-							"PRIVATE TEAM VISIBILITY ADD",
-							"user_id", member.ID,
-							"team_id", teamID,
-						)
-					}
+					visibleUsers = append(visibleUsers, member.ID)
+					known[member.ID] = true
+					changed = true
+					c.lo.Info("PRIVATE TEAM VISIBILITY ADD", "user_id", member.ID, "team_id", teamID)
 				}
 
-				attrs["visible_users"] = visibleUsers
-
-				_ = c.UpdateConversationCustomAttributes(
-					uuid,
-					attrs,
-				)
+				if changed {
+					attrs["visible_users"] = visibleUsers
+					if err := c.UpdateConversationCustomAttributes(uuid, attrs); err != nil {
+						c.lo.Error("error adding team members to visible users", "uuid", uuid, "team_id", teamID, "error", err)
+					}
+				}
 			}
 		}
 	}

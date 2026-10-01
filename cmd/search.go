@@ -10,7 +10,9 @@ import (
 )
 
 const (
-	minSearchQueryLength = 3
+	minSearchQueryLength   = 3
+	maxConversationResults = 100
+	maxMessageResults      = 50
 )
 
 // handleSearchConversations searches conversations based on the query.
@@ -37,6 +39,9 @@ func handleSearchConversations(r *fastglue.Request) error {
 		if _, ok := set[c.UUID]; ok {
 			out = append(out, c)
 		}
+	}
+		if len(out) > maxConversationResults {
+		out = out[:maxConversationResults]
 	}
 	return r.SendEnvelope(out)
 }
@@ -65,6 +70,9 @@ func handleSearchMessages(r *fastglue.Request) error {
 		if _, ok := set[m.ConversationUUID]; ok {
 			out = append(out, m)
 		}
+	}
+	if len(out) > maxMessageResults {
+		out = out[:maxMessageResults]
 	}
 	return r.SendEnvelope(out)
 }

@@ -33,10 +33,9 @@ type Opts struct {
 
 // queries contains all the prepared queries
 type queries struct {
-	SearchConversationsByRefNum       *sqlx.Stmt `query:"search-conversations-by-reference-number"`
-	SearchConversationsByContactEmail *sqlx.Stmt `query:"search-conversations-by-contact-email"`
-	SearchMessages                    *sqlx.Stmt `query:"search-messages"`
-	SearchContacts                    *sqlx.Stmt `query:"search-contacts"`
+	SearchConversations *sqlx.Stmt `query:"search-conversations"`
+	SearchMessages      *sqlx.Stmt `query:"search-messages"`
+	SearchContacts      *sqlx.Stmt `query:"search-contacts"`
 }
 
 // New creates a new search manager
@@ -48,23 +47,18 @@ func New(opts Opts) (*Manager, error) {
 	return &Manager{q: q, lo: opts.Lo, i18n: opts.I18n}, nil
 }
 
-// Conversations searches conversations based on the query
+// Conversations searches conversations by reference number, subject or contact email.
+// Results are ordered with an exact reference number match first, then newest first.
 func (s *Manager) Conversations(query string) ([]models.ConversationResult, error) {
-	var refNumResults = make([]models.ConversationResult, 0)
-	if err := s.q.SearchConversationsByRefNum.Select(&refNumResults, query); err != nil {
+	var results = make([]models.ConversationResult, 0)
+	if err := s.q.SearchConversations.Select(&results, query); err != nil {
 		s.lo.Error("error searching conversations", "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, s.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-
-	var emailResults = make([]models.ConversationResult, 0)
-	if err := s.q.SearchConversationsByContactEmail.Select(&emailResults, query); err != nil {
-		s.lo.Error("error searching conversations", "error", err)
-		return nil, envelope.NewError(envelope.GeneralError, s.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
-	return append(refNumResults, emailResults...), nil
+	return results, nil
 }
 
-// Messages searches messages based on the query
+// Messages searches messages based on the query, newest first, one hit per conversation.
 func (s *Manager) Messages(query string) ([]models.MessageResult, error) {
 	var results = make([]models.MessageResult, 0)
 	if err := s.q.SearchMessages.Select(&results, query); err != nil {
