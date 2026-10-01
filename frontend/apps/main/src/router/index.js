@@ -63,6 +63,30 @@ const routes = [
         ]
       },
       {
+        path: '/inboxes/personal/:inboxID',
+        name: 'personal-inboxes',
+        props: true,
+        component: InboxLayout,
+        meta: { titleKey: 'inbox.personalMailboxes', hidePageHeader: true },
+        children: [
+          {
+            path: '',
+            name: 'personal-inbox',
+            component: () => import('@main/views/inbox/InboxView.vue'),
+            meta: { titleKey: 'inbox.personalMailboxes' },
+            children: [
+              {
+                path: 'conversation/:uuid',
+                name: 'personal-inbox-conversation',
+                component: () => import('@main/views/conversation/ConversationDetailView.vue'),
+                props: true,
+                meta: { titleKey: 'inbox.personalMailboxes', hidePageHeader: true }
+              }
+            ]
+          }
+        ]
+      },
+      {
         path: '/inboxes/teams/:teamID',
         name: 'teams',
         props: true,

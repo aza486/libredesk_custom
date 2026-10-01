@@ -1028,5 +1028,11 @@
   "webhook.sentSuccessfully": "वेबहुक यशस्वीरित्या पाठवले",
   "widget.conversationClosed": "हे संभाषण बंद करण्यात आले आहे",
   "widget.ipBlocked": "प्रवेश नाकारला",
-  "widget.prechatForm.startChat": "चॅट सुरू करा"
+  "widget.prechatForm.startChat": "चॅट सुरू करा",
+  "inbox.personalMailboxes": "वैयक्तिक मेलबॉक्स",
+  "inbox.personalHighPriority": "उच्च प्राधान्य",
+  "inbox.personalAnswered": "उत्तर दिलेले",
+  "inbox.personalSpam": "स्पॅम",
+  "conversation.personalInboxOwnerOnly": "केवळ मालक हा वैयक्तिक मेलबॉक्स उघडू शकतो.",
+  "conversation.personalOwnerVisibilityProtected": "वैयक्तिक मेलबॉक्सच्या मालकाला पाहण्याची परवानगी असलेल्या वापरकर्त्यांमधून काढता येत नाही."
 }

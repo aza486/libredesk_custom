@@ -1025,5 +1025,11 @@
   "webhook.sentSuccessfully": "Webhook با موفقیت ارسال شد",
   "widget.conversationClosed": "این مکالمه بسته شده است",
   "widget.ipBlocked": "دسترسی رد شد",
-  "widget.prechatForm.startChat": "شروع چت"
+  "widget.prechatForm.startChat": "شروع چت",
+  "inbox.personalMailboxes": "صندوق‌های شخصی",
+  "inbox.personalHighPriority": "اولویت بالا",
+  "inbox.personalAnswered": "پاسخ داده شده",
+  "inbox.personalSpam": "هرزنامه",
+  "conversation.personalInboxOwnerOnly": "فقط مالک می‌تواند این صندوق شخصی را باز کند.",
+  "conversation.personalOwnerVisibilityProtected": "مالک صندوق شخصی را نمی‌توان از فهرست کاربران دارای دسترسی مشاهده حذف کرد."
 }

@@ -63,6 +63,26 @@ func TestPersonalInboxValidationAndModeLock(t *testing.T) {
 	}
 }
 
+func TestGetOwnPersonalInboxes(t *testing.T) {
+	db := testutil.NewPersonalDB(t, "own_personal_inboxes")
+	lo := logf.New(logf.Opts{})
+	m, err := New(&lo, db, testutil.NewI18n(t), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO inboxes(id,name,channel,access_mode,owner_user_id) VALUES(103,'Second','email','personal',101)`); err != nil {
+		t.Fatal(err)
+	}
+	ownerInboxes, err := m.GetOwnPersonalInboxes(101)
+	if err != nil || len(ownerInboxes) != 2 {
+		t.Fatalf("owner inboxes: %v %v", ownerInboxes, err)
+	}
+	otherInboxes, err := m.GetOwnPersonalInboxes(102)
+	if err != nil || len(otherInboxes) != 0 {
+		t.Fatalf("other user inboxes: %v %v", otherInboxes, err)
+	}
+}
+
 func TestModeChangeWaitsForConversationCreation(t *testing.T) {
 	db := testutil.NewPersonalDB(t, "personal_mode_race")
 	tx, err := db.Beginx()

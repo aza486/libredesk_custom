@@ -69,7 +69,7 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	if err := json.Unmarshal(conv.CustomAttributes, &attrs); err != nil {
 		t.Fatal(err)
 	}
-	if attrs["access_mode"] != "personal" || attrs["customer_visibility"] != false || attrs["creator_id"] != float64(101) || attrs["owner_user_id"] != float64(101) {
+	if attrs["access_mode"] != "personal" || attrs["customer_visibility"] != false || attrs["creator_id"] != nil || attrs["owner_user_id"] != float64(101) {
 		t.Fatalf("attributes: %v", attrs)
 	}
 	for _, key := range []string{"visible_users", "visibility_managers"} {
@@ -111,9 +111,13 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	db.MustExec(`INSERT INTO teams(id,name,conversation_assignment_type) VALUES(1,'Team','Manual'); INSERT INTO team_members(team_id,user_id) VALUES(1,102)`)
 	db.MustExec(`UPDATE conversations SET assigned_team_id=1,priority_id=101 WHERE id=$1`, id)
 	// Execute each real list query: catches missing switch cases and SQL errors.
-	for _, list := range []string{models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations, models.TeamAllConversations, models.TeamHighPriorityConversations, models.VisibleInternalConversations, models.AssignedConversations, models.VisibleConversations, models.AllConversations} {
+	for _, list := range []string{models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations, models.TeamAllConversations, models.TeamHighPriorityConversations, models.VisibleInternalConversations, models.AssignedConversations, models.VisibleConversations, models.AllConversations, models.CreatedConversations, models.PersonalConversations, models.PersonalHighPriorityConversations} {
 		for _, viewer := range []int{101, 102, 104} {
-			query, args, err := m.makeConversationsListQuery(viewer, viewer, []int{1}, []string{list}, m.q.GetConversations, "", "", 1, 20, "", viewer == 104, false)
+			var inboxIDs []int
+			if list == models.PersonalConversations || list == models.PersonalHighPriorityConversations {
+				inboxIDs = []int{101}
+			}
+			query, args, err := m.makeConversationsListQuery(viewer, viewer, []int{1}, []string{list}, m.q.GetConversations, "", "", 1, 20, "", viewer == 104, false, inboxIDs...)
 			if err != nil {
 				t.Fatal(list, err)
 			}
@@ -121,10 +125,18 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 			if err := db.Select(&rows, query, args...); err != nil {
 				t.Fatal(list, err)
 			}
-			want := (list == models.AssignedConversations || list == models.VisibleConversations || list == models.VisibleInternalConversations) && viewer == 101 || (list == models.AllConversations || list == models.TeamAllConversations || list == models.TeamHighPriorityConversations) && (viewer == 101 || viewer == 104)
+			want := (list == models.VisibleConversations || list == models.VisibleInternalConversations || list == models.PersonalConversations || list == models.PersonalHighPriorityConversations) && viewer == 101 || (list == models.AllConversations || list == models.TeamAllConversations || list == models.TeamHighPriorityConversations) && (viewer == 101 || viewer == 104)
 			if (len(rows) > 0) != want {
 				t.Errorf("list %s viewer %d: %d rows, want present %v", list, viewer, len(rows), want)
 			}
+		}
+	}
+	if rows, err := m.GetPersonalConversationsList(101, 101, false, "", "", "", 1, 20); err != nil || len(rows) != 1 {
+		t.Fatalf("owner personal list: rows=%d err=%v", len(rows), err)
+	}
+	for _, viewer := range []int{102, 103, 104} {
+		if _, err := m.GetPersonalConversationsList(viewer, 101, false, "", "", "", 1, 20); err == nil {
+			t.Errorf("non-owner %d opened personal inbox", viewer)
 		}
 	}
 	// Even an old subscription is rechecked before personal events are delivered.
@@ -148,15 +160,46 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	if got := m.authorizedConversationSubscribers(uuid); len(got) != 3 {
 		t.Fatal("sharing did not authorize events")
 	}
+	tx := db.MustBegin()
+	if err := replaceUserAssignees(tx, id, []int{102}, 101); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	query, args, err := m.makeConversationsListQuery(102, 102, nil, []string{models.AssignedConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var colleagueRows []models.ConversationListItem
+	if err := db.Select(&colleagueRows, query, args...); err != nil || len(colleagueRows) != 1 {
+		t.Fatalf("assigned colleague list: rows=%d err=%v", len(colleagueRows), err)
+	}
+	query, args, err = m.makeConversationsListQuery(102, 102, nil, []string{models.VisibleConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var colleagueVisibleRows []models.ConversationListItem
+	if err := db.Select(&colleagueVisibleRows, query, args...); err != nil || len(colleagueVisibleRows) != 1 {
+		t.Fatalf("visible colleague list: rows=%d err=%v", len(colleagueVisibleRows), err)
+	}
+	query, args, err = m.makeConversationsListQuery(101, 101, nil, []string{models.AssignedConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ownerAssignedRows []models.ConversationListItem
+	if err := db.Select(&ownerAssignedRows, query, args...); err != nil || len(ownerAssignedRows) != 0 {
+		t.Fatalf("owner assigned list: rows=%d err=%v", len(ownerAssignedRows), err)
+	}
 	if err := m.RemoveVisibleUser(uuid, 102); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.RemoveVisibleUser(uuid, 101); err != nil {
-		t.Fatal(err)
+	if err := m.RemoveVisibleUser(uuid, 101); err == nil {
+		t.Fatal("personal owner visibility removal was accepted")
 	}
 	protected, _ := m.GetConversation(id, "", "")
 	if !authz.CanReadConversation(umodels.User{ID: 101}, protected) {
-		t.Fatal("creator removed")
+		t.Fatal("owner removed from visibility")
 	}
 	if got := m.authorizedConversationSubscribers(uuid); len(got) != 2 {
 		t.Fatal("revoked subscriber still receives events")

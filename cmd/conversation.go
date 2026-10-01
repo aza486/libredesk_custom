@@ -1060,6 +1060,10 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 			),
 		)
 	}
+	if err := app.conversation.ValidateVisibleUserRemoval(conversation, req.UserID); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	assigned, err := app.conversation.IsUserAssigned(uuid, req.UserID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)

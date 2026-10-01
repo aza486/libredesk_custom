@@ -329,7 +329,11 @@ const sameUserIDs = (left, right) => {
 }
 const usersForIDs = (ids) =>
   normalizeUserIDs(ids).map(
-    (id) => usersStore.options.find((user) => Number(user.value) === id) || { value: id, label: `User ${id}` }
+    (id) =>
+      usersStore.options.find((user) => Number(user.value) === id) || {
+        value: id,
+        label: `User ${id}`
+      }
   )
 const selectedAssignees = computed(() => usersForIDs(selectedAssigneeIDs.value))
 const selectedVisibleUsers = computed(() => usersForIDs(selectedVisibleUserIDs.value))
@@ -390,26 +394,28 @@ const saveAssignees = (assigneeIDs) => {
   const version = ++assigneeChangeVersion
   assigneeSaveState.value = 'saving'
   const previous = assigneeSaveQueues.get(uuid) || Promise.resolve()
-  const request = previous.catch(() => {}).then(async () => {
-    try {
-      await api.setUserAssignees(uuid, ids)
-      if (conversationStore.current?.uuid !== uuid) return
-      savedAssigneeIDs.value = [...ids]
-      conversationStore.current.assigned_user_ids = [...ids]
-      conversationStore.current.assigned_user_id = ids[0] || null
-      if (version === assigneeChangeVersion) assigneeSaveState.value = 'saved'
-    } catch (error) {
-      if (conversationStore.current?.uuid !== uuid || version !== assigneeChangeVersion) return
-      selectedAssigneeIDs.value = [...savedAssigneeIDs.value]
-      conversationStore.current.assigned_user_ids = [...savedAssigneeIDs.value]
-      conversationStore.current.assigned_user_id = savedAssigneeIDs.value[0] || null
-      assigneeSaveState.value = 'error'
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
-    }
-  })
+  const request = previous
+    .catch(() => {})
+    .then(async () => {
+      try {
+        await api.setUserAssignees(uuid, ids)
+        if (conversationStore.current?.uuid !== uuid) return
+        savedAssigneeIDs.value = [...ids]
+        conversationStore.current.assigned_user_ids = [...ids]
+        conversationStore.current.assigned_user_id = ids[0] || null
+        if (version === assigneeChangeVersion) assigneeSaveState.value = 'saved'
+      } catch (error) {
+        if (conversationStore.current?.uuid !== uuid || version !== assigneeChangeVersion) return
+        selectedAssigneeIDs.value = [...savedAssigneeIDs.value]
+        conversationStore.current.assigned_user_ids = [...savedAssigneeIDs.value]
+        conversationStore.current.assigned_user_id = savedAssigneeIDs.value[0] || null
+        assigneeSaveState.value = 'error'
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive',
+          description: handleHTTPError(error).message
+        })
+      }
+    })
   assigneeSaveQueues.set(uuid, request)
 }
 
@@ -477,7 +483,15 @@ const visibilityManagerIDs = computed(() => {
 const isVisibilityManager = (userID) =>
   visibilityManagerIDs.value.some((id) => Number(id) === Number(userID))
 
+const personalOwnerIDs = computed(() => {
+  const conv = conversationStore.current
+  if (conv?.inbox_access_mode !== 'personal' && conv?.custom_attributes?.access_mode !== 'personal')
+    return []
+  return [conv.inbox_owner_user_id, conv.custom_attributes?.owner_user_id].filter(Boolean)
+})
+
 const lockedVisibleUserIDs = computed(() => [
+  ...personalOwnerIDs.value,
   ...visibilityManagerIDs.value,
   ...assignedUserIDs.value
 ])
@@ -512,40 +526,45 @@ const saveVisibleUsers = (visibleUserIDs) => {
   const version = ++visibilityChangeVersion
   visibilitySaveState.value = 'saving'
   const previous = visibilitySaveQueues.get(uuid) || Promise.resolve()
-  const request = previous.catch(() => {}).then(async () => {
-    try {
-      const currentSavedIDs = [...(savedVisibleUserIDsByUUID.get(uuid) || [])]
-      for (const userID of currentSavedIDs.filter((id) => !ids.includes(id))) {
-        await api.removeVisibleUser(uuid, userID)
+  const request = previous
+    .catch(() => {})
+    .then(async () => {
+      try {
+        const currentSavedIDs = [...(savedVisibleUserIDsByUUID.get(uuid) || [])]
+        for (const userID of currentSavedIDs.filter((id) => !ids.includes(id))) {
+          await api.removeVisibleUser(uuid, userID)
+          const savedIDs = savedVisibleUserIDsByUUID.get(uuid) || []
+          savedVisibleUserIDsByUUID.set(
+            uuid,
+            savedIDs.filter((id) => id !== userID)
+          )
+        }
+        const savedAfterRemovals = savedVisibleUserIDsByUUID.get(uuid) || []
+        for (const userID of ids.filter((id) => !savedAfterRemovals.includes(id))) {
+          await api.addVisibleUser(uuid, userID)
+          savedVisibleUserIDsByUUID.set(uuid, [
+            ...(savedVisibleUserIDsByUUID.get(uuid) || []),
+            userID
+          ])
+        }
+        if (conversationStore.current?.uuid === uuid && version === visibilityChangeVersion) {
+          savedVisibleUserIDs.value = [...ids]
+          savedVisibleUserIDsByUUID.set(uuid, [...ids])
+          visibilitySaveState.value = 'saved'
+        }
+      } catch (error) {
+        if (conversationStore.current?.uuid !== uuid || version !== visibilityChangeVersion) return
         const savedIDs = savedVisibleUserIDsByUUID.get(uuid) || []
-        savedVisibleUserIDsByUUID.set(
-          uuid,
-          savedIDs.filter((id) => id !== userID)
-        )
+        selectedVisibleUserIDs.value = [...savedIDs]
+        savedVisibleUserIDs.value = [...savedIDs]
+        conversationStore.current.custom_attributes.visible_users = [...savedIDs]
+        visibilitySaveState.value = 'error'
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive',
+          description: handleHTTPError(error).message
+        })
       }
-      const savedAfterRemovals = savedVisibleUserIDsByUUID.get(uuid) || []
-      for (const userID of ids.filter((id) => !savedAfterRemovals.includes(id))) {
-        await api.addVisibleUser(uuid, userID)
-        savedVisibleUserIDsByUUID.set(uuid, [...(savedVisibleUserIDsByUUID.get(uuid) || []), userID])
-      }
-      if (conversationStore.current?.uuid === uuid && version === visibilityChangeVersion) {
-        savedVisibleUserIDs.value = [...ids]
-        savedVisibleUserIDsByUUID.set(uuid, [...ids])
-        visibilitySaveState.value = 'saved'
-      }
-    } catch (error) {
-      if (conversationStore.current?.uuid !== uuid || version !== visibilityChangeVersion) return
-      const savedIDs = savedVisibleUserIDsByUUID.get(uuid) || []
-      selectedVisibleUserIDs.value = [...savedIDs]
-      savedVisibleUserIDs.value = [...savedIDs]
-      conversationStore.current.custom_attributes.visible_users = [...savedIDs]
-      visibilitySaveState.value = 'error'
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: handleHTTPError(error).message
-      })
-    }
-  })
+    })
   visibilitySaveQueues.set(uuid, request)
 }
 

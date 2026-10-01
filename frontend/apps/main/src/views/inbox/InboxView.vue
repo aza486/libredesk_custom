@@ -1,5 +1,7 @@
 <template>
-  <ConversationPlaceholder v-if="['inbox', 'team-inbox', 'view-inbox'].includes(route.name)" />
+  <ConversationPlaceholder
+    v-if="['inbox', 'team-inbox', 'personal-inbox', 'view-inbox'].includes(route.name)"
+  />
   <router-view />
 </template>
 
@@ -16,13 +18,16 @@ const type = computed(() => route.params.type)
 const requestedStatus = computed(() => route.query.status || '')
 const requestedPriority = computed(() => route.query.priority || '')
 const teamID = computed(() => route.params.teamID)
+const inboxID = computed(() => route.params.inboxID)
+const personalListType = computed(() =>
+  requestedPriority.value === 'high'
+    ? CONVERSATION_LIST_TYPE.PERSONAL_HIGH
+    : CONVERSATION_LIST_TYPE.PERSONAL
+)
 const viewID = computed(() => route.params.viewID)
 
 const requestedListType = computed(() => {
-  if (
-    type.value === CONVERSATION_LIST_TYPE.ASSIGNED &&
-    requestedPriority.value === 'high'
-  ) {
+  if (type.value === CONVERSATION_LIST_TYPE.ASSIGNED && requestedPriority.value === 'high') {
     return CONVERSATION_LIST_TYPE.ASSIGNED_HIGH
   }
 
@@ -53,9 +58,16 @@ const storeHasCurrentList = () => {
     return c.listType === CONVERSATION_LIST_TYPE.VIEW && String(c.viewID) === String(viewID.value)
 
   if (type.value) {
+    return c.listType === requestedListType.value && c.status === requestedStatus.value
+  }
+
+  if (inboxID.value) {
     return (
-      c.listType === requestedListType.value &&
-      c.status === requestedStatus.value
+      c.listType === personalListType.value &&
+      String(c.inboxID) === String(inboxID.value) &&
+      c.status === requestedStatus.value &&
+      JSON.stringify(c.listFilters.filter((f) => f.model !== 'conversation_statuses')) ===
+        JSON.stringify(requestedFilters.value)
     )
   }
 
@@ -76,9 +88,9 @@ const storeHasCurrentList = () => {
 }
 
 const fetchForCurrentRoute = () => {
-  if (!type.value && !teamID.value && !viewID.value) return
+  if (!type.value && !teamID.value && !viewID.value && !inboxID.value) return
 
-  const key = `${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}|${requestedPriority.value}|${route.query.filters || ''}`
+  const key = `${inboxID.value || ''}|${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}|${requestedPriority.value}|${route.query.filters || ''}`
   if (key === lastFetchedKey) return
   lastFetchedKey = key
 
@@ -96,7 +108,17 @@ const fetchForCurrentRoute = () => {
 
   conversationStore.setListStatus(requestedStatus.value, false)
 
-  if (type.value) {
+  if (inboxID.value) {
+    conversationStore.fetchConversationsList(
+      true,
+      personalListType.value,
+      0,
+      requestedFilters.value,
+      0,
+      0,
+      inboxID.value
+    )
+  } else if (type.value) {
     conversationStore.fetchConversationsList(
       true,
       requestedListType.value,
@@ -132,7 +154,7 @@ watch(visibility, (v) => {
 })
 
 watch(
-  [type, teamID, viewID, requestedStatus, requestedPriority, requestedFilters],
+  [type, teamID, inboxID, viewID, requestedStatus, requestedPriority, requestedFilters],
   fetchForCurrentRoute
 )
 </script>

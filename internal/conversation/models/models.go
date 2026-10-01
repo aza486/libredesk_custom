@@ -31,6 +31,8 @@ var (
 	UnassignedConversations           = "unassigned"
 	TeamUnassignedConversations       = "team_unassigned"
 	TeamAllConversations              = "team_all"
+	PersonalConversations             = "personal"
+	PersonalHighPriorityConversations = "personal-high"
 	TeamHighPriorityConversations     = "team_high"
 	MentionedConversations            = "mentioned"
 	VisibleConversations              = "visible"
@@ -121,6 +123,9 @@ type ChatMessage struct {
 
 // ConversationListItem represents a conversation in list views
 type ConversationListItem struct {
+	InboxID               int                     `db:"inbox_id" json:"inbox_id"`
+	InboxAccessMode       string                  `db:"inbox_access_mode" json:"inbox_access_mode"`
+	InboxOwnerUserID      null.Int                `db:"inbox_owner_user_id" json:"inbox_owner_user_id"`
 	Total                 int                     `db:"total" json:"-"`
 	ID                    int                     `db:"id" json:"id"`
 	CreatedAt             time.Time               `db:"created_at" json:"created_at"`
@@ -170,6 +175,8 @@ type ConversationListContact struct {
 }
 
 type Conversation struct {
+	InboxAccessMode           string                 `db:"inbox_access_mode" json:"inbox_access_mode"`
+	InboxOwnerUserID          null.Int               `db:"inbox_owner_user_id" json:"inbox_owner_user_id"`
 	ID                        int                    `db:"id" json:"id"`
 	CreatedAt                 time.Time              `db:"created_at" json:"created_at"`
 	UpdatedAt                 time.Time              `db:"updated_at" json:"updated_at"`

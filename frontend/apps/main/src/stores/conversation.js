@@ -165,6 +165,7 @@ export const useConversationStore = defineStore('conversation', () => {
     listFilters: [],
     viewID: 0,
     teamID: 0,
+    inboxID: 0,
     loading: false,
     fetching: false,
     initialized: false,
@@ -276,15 +277,43 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function matchesAssignmentScope(conv) {
     if (conv.custom_attributes?.access_mode === 'personal') {
-      if ([CONVERSATION_LIST_TYPE.CUSTOMER, CONVERSATION_LIST_TYPE.CUSTOMER_HIGH,
-      CONVERSATION_LIST_TYPE.SERVICE_MAILS, CONVERSATION_LIST_TYPE.UNASSIGNED,
-      CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED].includes(conversations.listType)) return false
-      const visible = (conv.custom_attributes.visible_users || []).some(id => Number(id) === Number(userStore.userID))
+      if (
+        [
+          CONVERSATION_LIST_TYPE.CUSTOMER,
+          CONVERSATION_LIST_TYPE.CUSTOMER_HIGH,
+          CONVERSATION_LIST_TYPE.SERVICE_MAILS,
+          CONVERSATION_LIST_TYPE.UNASSIGNED,
+          CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
+          CONVERSATION_LIST_TYPE.CREATED
+        ].includes(conversations.listType)
+      )
+        return false
+      const visible = (conv.custom_attributes.visible_users || []).some(
+        (id) => Number(id) === Number(userStore.userID)
+      )
       if (!userStore.roles.includes('Admin') && !visible) return false
     }
     switch (conversations.listType) {
+      case CONVERSATION_LIST_TYPE.PERSONAL:
+      case CONVERSATION_LIST_TYPE.PERSONAL_HIGH:
+        return (
+          conv.inbox_access_mode === 'personal' &&
+          Number(conv.inbox_owner_user_id) === Number(userStore.userID) &&
+          Number(conv.inbox_id) === Number(conversations.inboxID) &&
+          (conversations.listType !== CONVERSATION_LIST_TYPE.PERSONAL_HIGH ||
+            conv.priority === 'High')
+        )
       case CONVERSATION_LIST_TYPE.ASSIGNED:
-        return isAssignedToMe(conv)
+      case CONVERSATION_LIST_TYPE.ASSIGNED_HIGH:
+        return (
+          isAssignedToMe(conv) &&
+          !(
+            conv.inbox_access_mode === 'personal' &&
+            Number(conv.inbox_owner_user_id) === Number(userStore.userID)
+          ) &&
+          (conversations.listType !== CONVERSATION_LIST_TYPE.ASSIGNED_HIGH ||
+            conv.priority === 'High')
+        )
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return !conv.assigned_user_id && !conv.assigned_team_id
       case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
@@ -577,7 +606,8 @@ export const useConversationStore = defineStore('conversation', () => {
       conversations.teamID,
       conversations.listFilters,
       conversations.viewID,
-      conversations.page + 1
+      conversations.page + 1,
+      conversations.inboxID
     )
   }
 
@@ -588,7 +618,8 @@ export const useConversationStore = defineStore('conversation', () => {
       conversations.teamID,
       conversations.listFilters,
       conversations.viewID,
-      conversations.page
+      conversations.page,
+      conversations.inboxID
     )
   }
 
@@ -599,7 +630,8 @@ export const useConversationStore = defineStore('conversation', () => {
       conversations.teamID,
       conversations.listFilters,
       conversations.viewID,
-      1
+      1,
+      conversations.inboxID
     )
   }
 
@@ -609,17 +641,20 @@ export const useConversationStore = defineStore('conversation', () => {
     teamID = 0,
     filters = [],
     viewID = 0,
-    page = 0
+    page = 0,
+    inboxID = 0
   ) {
     if (!listType) return
     if (
       conversations.listType !== listType ||
       conversations.teamID !== teamID ||
+      conversations.inboxID !== inboxID ||
       conversations.viewID !== viewID
     ) {
       resetConversations()
     }
     conversations.listType = listType
+    conversations.inboxID = inboxID
     if (teamID) conversations.teamID = teamID
     if (viewID) conversations.viewID = viewID
     if (conversations.status) {
@@ -639,7 +674,14 @@ export const useConversationStore = defineStore('conversation', () => {
     const isStale = () => seq !== contextSeq
     try {
       conversations.errorMessage = ''
-      const response = await makeConversationListRequest(listType, teamID, viewID, filters, page)
+      const response = await makeConversationListRequest(
+        listType,
+        teamID,
+        viewID,
+        filters,
+        page,
+        inboxID
+      )
       if (isStale()) return
       processConversationListResponse(response)
     } catch (error) {
@@ -660,9 +702,23 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function makeConversationListRequest(listType, teamID, viewID, filters, page) {
+  async function makeConversationListRequest(listType, teamID, viewID, filters, page, inboxID) {
     filters = filters.length > 0 ? JSON.stringify(filters) : []
     switch (listType) {
+      case CONVERSATION_LIST_TYPE.PERSONAL:
+      case CONVERSATION_LIST_TYPE.PERSONAL_HIGH:
+        return await api.getPersonalConversations(inboxID, {
+          page,
+          page_size: CONV_LIST_PAGE_SIZE,
+          order_by:
+            sortFieldMap[conversations.sortField].model +
+            '.' +
+            sortFieldMap[conversations.sortField].field,
+          order: sortFieldMap[conversations.sortField].order,
+          filters,
+          ...(listType === CONVERSATION_LIST_TYPE.PERSONAL_HIGH && { priority: 'high' })
+        })
+
       case CONVERSATION_LIST_TYPE.ASSIGNED:
       case CONVERSATION_LIST_TYPE.ASSIGNED_HIGH:
         return await api.getAssignedConversations({
@@ -964,7 +1020,7 @@ export const useConversationStore = defineStore('conversation', () => {
   async function updateAssigneeLastSeen(uuid) {
     if (!isViewingConversation(uuid)) return
     markConversationAsRead(uuid)
-    api.updateAssigneeLastSeen(uuid).catch(() => { })
+    api.updateAssigneeLastSeen(uuid).catch(() => {})
   }
 
   function isConversationInList(uuid) {
@@ -1141,6 +1197,14 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function canPushInsert(conv) {
+    // Tag and custom filters are evaluated by the backend, including Spam.
+    if (
+      [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
+        conversations.listType
+      ) &&
+      conversations.listFilters.some((filter) => filter.model !== 'conversation_statuses')
+    )
+      return false
     const matched = matchesAssignmentScope(conv)
     if (matched !== null) return matched
     return conversations.listType === CONVERSATION_LIST_TYPE.ALL
@@ -1148,9 +1212,24 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function handleConvPush(payload) {
     if (!payload || !payload.uuid) return
-    if (mergeIntoList(payload.uuid, payload)) {
+    const existing = mergeIntoList(payload.uuid, payload)
+    if (existing) {
       if (conversation.data?.uuid === payload.uuid) {
         deepMerge(conversation.data, payload)
+      }
+      const scopeMatch = matchesAssignmentScope(existing)
+      const hasServerOnlyFilters =
+        [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
+          conversations.listType
+        ) && conversations.listFilters.some((filter) => filter.model !== 'conversation_statuses')
+      if (
+        scopeMatch === false ||
+        hasServerOnlyFilters ||
+        (conversations.status !== '' && existing.status !== conversations.status)
+      ) {
+        conversations.data = conversations.data.filter((item) => item.uuid !== payload.uuid)
+        conversations.total = Math.max(0, conversations.total - 1)
+        refreshConversationListForRealtimeEvent()
       }
       return
     }

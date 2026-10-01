@@ -1015,5 +1015,11 @@
   "webhook.sentSuccessfully": "Webhookが正常に送信されました",
   "widget.conversationClosed": "この会話はクローズされました",
   "widget.ipBlocked": "アクセスが拒否されました",
-  "widget.prechatForm.startChat": "チャットを開始"
+  "widget.prechatForm.startChat": "チャットを開始",
+  "inbox.personalMailboxes": "個人用メールボックス",
+  "inbox.personalHighPriority": "高優先度",
+  "inbox.personalAnswered": "返信済み",
+  "inbox.personalSpam": "迷惑メール",
+  "conversation.personalInboxOwnerOnly": "この個人用メールボックスを開けるのは所有者のみです。",
+  "conversation.personalOwnerVisibilityProtected": "個人用メールボックスの所有者を閲覧可能なユーザーから削除することはできません。"
 }

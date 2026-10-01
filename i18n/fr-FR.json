@@ -1078,5 +1078,11 @@
   "webhook.sentSuccessfully": "Webhook envoyé avec succès",
   "widget.conversationClosed": "Cette conversation a été fermée",
   "widget.ipBlocked": "Accès refusé",
-  "widget.prechatForm.startChat": "Démarrer le chat"
+  "widget.prechatForm.startChat": "Démarrer le chat",
+  "inbox.personalMailboxes": "Boîtes personnelles",
+  "inbox.personalHighPriority": "Priorité élevée",
+  "inbox.personalAnswered": "Répondu",
+  "inbox.personalSpam": "Spam",
+  "conversation.personalInboxOwnerOnly": "Seul le propriétaire peut ouvrir cette boîte personnelle.",
+  "conversation.personalOwnerVisibilityProtected": "Le propriétaire d’une boîte personnelle ne peut pas être retiré de la liste de visibilité."
 }

@@ -944,5 +944,11 @@
   "admin.inbox.accessMode.description": "Der Modus kann nur geändert werden, solange der Posteingang keine Conversations enthält.",
   "admin.inbox.owner": "Inhaber",
   "admin.inbox.owner.select": "Aktiven Mitarbeiter auswählen",
-  "admin.inbox.owner.description": "Ein Inhaberwechsel gilt nur für neue Conversations. Bestehende Sichtbarkeit bleibt erhalten."
+  "admin.inbox.owner.description": "Ein Inhaberwechsel gilt nur für neue Conversations. Bestehende Sichtbarkeit bleibt erhalten.",
+  "inbox.personalMailboxes": "Private Postfächer",
+  "inbox.personalHighPriority": "Hohe Priorität",
+  "inbox.personalAnswered": "Beantwortet",
+  "inbox.personalSpam": "Spam",
+  "conversation.personalInboxOwnerOnly": "Nur der Inhaber kann dieses persönliche Postfach öffnen.",
+  "conversation.personalOwnerVisibilityProtected": "Der Inhaber eines persönlichen Postfachs kann nicht aus der Sichtbarkeit entfernt werden."
 }

@@ -177,6 +177,17 @@ const navigateToTeamInbox = (teamID, query = {}) => {
   }
 }
 
+const navigateToPersonalInbox = (inboxID, query) => {
+  router.push({
+    name: keepConversationOpen() ? 'personal-inbox-conversation' : 'personal-inbox',
+    params: {
+      inboxID,
+      ...(keepConversationOpen() && { uuid: conversationStore.conversation.data.uuid })
+    },
+    query
+  })
+}
+
 const filteredAdminNavItems = computed(() => filterNavItems(adminNavItems, userStore.can))
 const filteredReportsNavItems = computed(() => filterNavItems(reportsNavItems, userStore.can))
 const filteredContactsNavItems = computed(() => filterNavItems(contactNavItems, userStore.can))
@@ -185,8 +196,7 @@ const filteredContactsNavItems = computed(() => filterNavItems(contactNavItems, 
 const openAdminCollapsible = ref(null)
 
 const toggleAdminCollapsible = (titleKey) => {
-  openAdminCollapsible.value =
-    openAdminCollapsible.value === titleKey ? null : titleKey
+  openAdminCollapsible.value = openAdminCollapsible.value === titleKey ? null : titleKey
 }
 
 // Watch for route changes and update the active collapsible
@@ -208,22 +218,20 @@ watch(
 // Sidebar open state in local storage
 const sidebarOpen = useStorage('mainSidebarOpen', true)
 const teamInboxOpen = useStorage('teamInboxOpen', true)
+const personalInboxes = ref([])
+const personalInboxOpen = useStorage('personalInboxOpen', true)
+const personalInboxOpenStates = useStorage('personalInboxOpenStates', {})
 const myTicketsOpen = useStorage('myTicketsOpen', true)
 const customerTicketsOpen = useStorage('customerTicketsOpen', true)
 
-const isCustomerSupport = computed(() =>
-  userStore.roles.includes('Kundensupport')
-)
+const isCustomerSupport = computed(() => userStore.roles.includes('Kundensupport'))
 
-const isAdmin = computed(() =>
-  userStore.roles.includes('Admin')
-)
+const isAdmin = computed(() => userStore.roles.includes('Admin'))
 
 // Individual team collapsible state
 const teamInboxOpenStates = useStorage('teamInboxOpenStates', {})
 
-const isTeamInboxOpen = (teamID) =>
-  teamInboxOpenStates.value[teamID] !== false
+const isTeamInboxOpen = (teamID) => teamInboxOpenStates.value[teamID] !== false
 
 const setTeamInboxOpen = (teamID, open) => {
   teamInboxOpenStates.value = {
@@ -250,11 +258,58 @@ const spamFilter = JSON.stringify([
   }
 ])
 
+// Reuse the customer inbox's tag filter and the team inbox's status queries.
+const personalInboxItems = computed(() => [
+  { key: 'open', label: t('globals.terms.open'), query: { status: 'Open' } },
+  {
+    key: 'high',
+    label: t('inbox.personalHighPriority'),
+    query: { status: 'Open', priority: 'high' }
+  },
+  { key: 'resolved', label: t('inbox.personalAnswered'), query: { status: 'Resolved' } },
+  { key: 'snoozed', label: t('globals.terms.snoozed'), query: { status: 'Snoozed' } },
+  { key: 'closed', label: t('globals.terms.closed'), query: { status: 'Closed' } },
+  { key: 'spam', label: t('inbox.personalSpam'), query: { filters: spamFilter } }
+])
+
+const isPersonalRouteActive = (inboxID, query) =>
+  String(route.params.inboxID) === String(inboxID) &&
+  ['status', 'priority', 'filters'].every((key) => (route.query[key] || '') === (query[key] || ''))
+
 const sidebarCounts = ref({})
 let sidebarCountInterval = null
+let loadingSidebarCounts = false
 
 const loadSidebarCounts = async () => {
+  if (loadingSidebarCounts) return
+  loadingSidebarCounts = true
   try {
+    const ownInboxesResponse = await api.getOwnPersonalInboxes()
+    personalInboxes.value = ownInboxesResponse.data.data
+    await Promise.all(
+      personalInboxes.value.flatMap((inbox) =>
+        personalInboxItems.value.map(async (item) => {
+          const filters =
+            item.query.filters ||
+            JSON.stringify([
+              {
+                model: 'conversation_statuses',
+                field: 'name',
+                operator: 'equals',
+                value: item.query.status
+              }
+            ])
+          const response = await api.getPersonalConversations(inbox.id, {
+            page: 1,
+            page_size: 1,
+            filters,
+            ...(item.query.priority && { priority: item.query.priority })
+          })
+          sidebarCounts.value[`personal_${inbox.id}_${item.key}`] = response.data.data.total || 0
+        })
+      )
+    )
+
     const openFilter = JSON.stringify([
       {
         model: 'conversation_statuses',
@@ -279,11 +334,9 @@ const loadSidebarCounts = async () => {
       })
     ])
 
-    sidebarCounts.value.assigned =
-      assignedResponse.data.data.total || 0
+    sidebarCounts.value.assigned = assignedResponse.data.data.total || 0
 
-    sidebarCounts.value.assigned_high =
-      assignedHighResponse.data.data.total || 0
+    sidebarCounts.value.assigned_high = assignedHighResponse.data.data.total || 0
 
     // Kundentickets
     if (isCustomerSupport.value || isAdmin.value) {
@@ -301,11 +354,9 @@ const loadSidebarCounts = async () => {
         })
       ])
 
-      sidebarCounts.value.customer =
-        customerResponse.data.data.total || 0
+      sidebarCounts.value.customer = customerResponse.data.data.total || 0
 
-      sidebarCounts.value.customer_high =
-        highPriorityResponse.data.data.total || 0
+      sidebarCounts.value.customer_high = highPriorityResponse.data.data.total || 0
     }
 
     // Admin-only unassigned
@@ -315,10 +366,9 @@ const loadSidebarCounts = async () => {
         page_size: 100
       })
 
-      sidebarCounts.value.unassigned =
-        unassignedResponse.data.data.results.filter(
-          (conversation) => conversation.status === 'Open'
-        ).length
+      sidebarCounts.value.unassigned = unassignedResponse.data.data.results.filter(
+        (conversation) => conversation.status === 'Open'
+      ).length
     }
 
     // Teams
@@ -337,14 +387,14 @@ const loadSidebarCounts = async () => {
         })
       ])
 
-      sidebarCounts.value[`team_${team.id}`] =
-        teamOpenResponse.data.data.total || 0
+      sidebarCounts.value[`team_${team.id}`] = teamOpenResponse.data.data.total || 0
 
-      sidebarCounts.value[`team_high_${team.id}`] =
-        teamHighResponse.data.data.total || 0
+      sidebarCounts.value[`team_high_${team.id}`] = teamHighResponse.data.data.total || 0
     }
   } catch (error) {
     console.error('Failed loading sidebar counts', error)
+  } finally {
+    loadingSidebarCounts = false
   }
 }
 
@@ -371,11 +421,7 @@ onUnmounted(() => {
   >
     <!-- Contacts sidebar -->
     <template
-      v-if="
-        route.matched.some(
-          (record) => record.name && record.name.startsWith('contact')
-        )
-      "
+      v-if="route.matched.some((record) => record.name && record.name.startsWith('contact'))"
     >
       <Sidebar collapsible="offcanvas" class="sidebar-secondary">
         <SidebarHeader>
@@ -394,19 +440,10 @@ onUnmounted(() => {
           <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem
-                v-for="item in filteredContactsNavItems"
-                :key="item.titleKey"
-              >
-                <SidebarMenuButton
-                  :isActive="isActiveParent(item.href)"
-                  asChild
-                >
+              <SidebarMenuItem v-for="item in filteredContactsNavItems" :key="item.titleKey">
+                <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
                   <router-link :to="item.href">
-                    <component
-                      :is="navIconMap[item.icon]"
-                      v-if="item.icon"
-                    />
+                    <component :is="navIconMap[item.icon]" v-if="item.icon" />
                     <span>{{ t(item.allLabelKey) }}</span>
                   </router-link>
                 </SidebarMenuButton>
@@ -423,9 +460,7 @@ onUnmounted(() => {
     <template
       v-if="
         userStore.hasReportTabPermissions &&
-        route.matched.some(
-          (record) => record.name && record.name.startsWith('reports')
-        )
+        route.matched.some((record) => record.name && record.name.startsWith('reports'))
       "
     >
       <Sidebar collapsible="offcanvas" class="sidebar-secondary">
@@ -445,19 +480,10 @@ onUnmounted(() => {
           <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem
-                v-for="item in filteredReportsNavItems"
-                :key="item.titleKey"
-              >
-                <SidebarMenuButton
-                  :isActive="isActiveParent(item.href)"
-                  asChild
-                >
+              <SidebarMenuItem v-for="item in filteredReportsNavItems" :key="item.titleKey">
+                <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
                   <router-link :to="item.href">
-                    <component
-                      :is="navIconMap[item.icon]"
-                      v-if="item.icon"
-                    />
+                    <component :is="navIconMap[item.icon]" v-if="item.icon" />
                     <span>{{ t(item.titleKey) }}</span>
                   </router-link>
                 </SidebarMenuButton>
@@ -471,13 +497,7 @@ onUnmounted(() => {
     </template>
 
     <!-- Admin Sidebar -->
-    <template
-      v-if="
-        route.matched.some(
-          (record) => record.name && record.name.startsWith('admin')
-        )
-      "
-    >
+    <template v-if="route.matched.some((record) => record.name && record.name.startsWith('admin'))">
       <Sidebar collapsible="offcanvas" class="sidebar-secondary">
         <SidebarHeader>
           <SidebarMenu>
@@ -499,10 +519,7 @@ onUnmounted(() => {
           <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem
-                v-for="item in filteredAdminNavItems"
-                :key="item.titleKey"
-              >
+              <SidebarMenuItem v-for="item in filteredAdminNavItems" :key="item.titleKey">
                 <SidebarMenuButton
                   v-if="!item.children"
                   :isActive="isActiveParent(item.href)"
@@ -520,9 +537,7 @@ onUnmounted(() => {
                   @update:open="toggleAdminCollapsible(item.titleKey)"
                 >
                   <CollapsibleTrigger as-child>
-                    <SidebarMenuButton
-                      :isActive="isActiveParent(item.href)"
-                    >
+                    <SidebarMenuButton :isActive="isActiveParent(item.href)">
                       <span>
                         {{ t(item.titleKey, item.isTitleKeyPlural === true ? 2 : 1) }}
                       </span>
@@ -543,27 +558,12 @@ onUnmounted(() => {
 
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      <SidebarMenuSubItem
-                        v-for="child in item.children"
-                        :key="child.titleKey"
-                      >
-                        <SidebarMenuButton
-                          size="sm"
-                          :isActive="isActiveParent(child.href)"
-                          asChild
-                        >
+                      <SidebarMenuSubItem v-for="child in item.children" :key="child.titleKey">
+                        <SidebarMenuButton size="sm" :isActive="isActiveParent(child.href)" asChild>
                           <router-link :to="child.href">
-                            <component
-                              :is="navIconMap[child.icon]"
-                              v-if="child.icon"
-                            />
+                            <component :is="navIconMap[child.icon]" v-if="child.icon" />
                             <span>
-                              {{
-                                t(
-                                  child.titleKey,
-                                  child.isTitleKeyPlural === true ? 2 : 1
-                                )
-                              }}
+                              {{ t(child.titleKey, child.isTitleKeyPlural === true ? 2 : 1) }}
                             </span>
                           </router-link>
                         </SidebarMenuButton>
@@ -599,19 +599,10 @@ onUnmounted(() => {
           <MobileDrawerNav />
           <SidebarGroup>
             <SidebarMenu>
-              <SidebarMenuItem
-                v-for="item in accountNavItems"
-                :key="item.titleKey"
-              >
-                <SidebarMenuButton
-                  :isActive="isActiveParent(item.href)"
-                  asChild
-                >
+              <SidebarMenuItem v-for="item in accountNavItems" :key="item.titleKey">
+                <SidebarMenuButton :isActive="isActiveParent(item.href)" asChild>
                   <router-link :to="item.href">
-                    <component
-                      :is="navIconMap[item.icon]"
-                      v-if="item.icon"
-                    />
+                    <component :is="navIconMap[item.icon]" v-if="item.icon" />
                     <span>{{ t(item.titleKey) }}</span>
                   </router-link>
                 </SidebarMenuButton>
@@ -658,7 +649,6 @@ onUnmounted(() => {
 
           <SidebarGroup>
             <SidebarMenu>
-
               <!-- New conversation -->
               <SidebarMenuItem>
                 <SidebarMenuButton @click="emit('createConversation')">
@@ -668,15 +658,10 @@ onUnmounted(() => {
               </SidebarMenuItem>
 
               <!-- Meine Tickets -->
-              <Collapsible
-                class="group/collapsible"
-                v-model:open="myTicketsOpen"
-              >
+              <Collapsible class="group/collapsible" v-model:open="myTicketsOpen">
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
-                    <SidebarMenuButton
-                      :isActive="isActiveParent('/inboxes/assigned')"
-                    >
+                    <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')">
                       <User />
 
                       <span>
@@ -691,7 +676,6 @@ onUnmounted(() => {
 
                   <CollapsibleContent>
                     <SidebarMenuSub>
-
                       <!-- Offen -->
                       <SidebarMenuSubItem>
                         <SidebarMenuButton
@@ -709,9 +693,7 @@ onUnmounted(() => {
                         >
                           <span>Offen</span>
 
-                          <UnreadCountBadge
-                            :count="sidebarCounts.assigned || 0"
-                          />
+                          <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -733,9 +715,7 @@ onUnmounted(() => {
                         >
                           <span>Hohe Priorität</span>
 
-                          <UnreadCountBadge
-                            :count="sidebarCounts.assigned_high || 0"
-                          />
+                          <UnreadCountBadge :count="sidebarCounts.assigned_high || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -763,7 +743,6 @@ onUnmounted(() => {
                           <span>{{ item.label }}</span>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
-
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
@@ -788,16 +767,68 @@ onUnmounted(() => {
                       ? isActiveParent('/inboxes/visible-internal')
                       : isActiveParent('/inboxes/visible')
                   "
-                  @click="
-                    navigateToInbox(
-                      isCustomerSupport ? 'visible-internal' : 'visible'
-                    )
-                  "
+                  @click="navigateToInbox(isCustomerSupport ? 'visible-internal' : 'visible')"
                 >
                   <Eye />
                   <span>Sichtbar für mich</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              <Collapsible v-if="personalInboxes.length" v-model:open="personalInboxOpen" as-child>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger as-child>
+                    <SidebarMenuButton>
+                      <Mail class="h-4 w-4" />
+                      <span>{{ t('inbox.personalMailboxes') }}</span>
+                      <ChevronRight
+                        class="ml-auto transition-transform duration-200"
+                        :class="{ 'rotate-90': personalInboxOpen }"
+                      />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      <SidebarMenuSubItem v-for="inbox in personalInboxes" :key="inbox.id">
+                        <Collapsible
+                          :open="personalInboxOpenStates[inbox.id] !== false"
+                          @update:open="personalInboxOpenStates[inbox.id] = $event"
+                        >
+                          <CollapsibleTrigger as-child>
+                            <SidebarMenuButton size="sm">
+                              <span>{{ inbox.name }}</span>
+                              <ChevronRight
+                                class="ml-auto transition-transform duration-200"
+                                :class="{
+                                  'rotate-90': personalInboxOpenStates[inbox.id] !== false
+                                }"
+                              />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              <SidebarMenuSubItem
+                                v-for="item in personalInboxItems"
+                                :key="item.key"
+                              >
+                                <SidebarMenuButton
+                                  size="sm"
+                                  :isActive="isPersonalRouteActive(inbox.id, item.query)"
+                                  @click="navigateToPersonalInbox(inbox.id, item.query)"
+                                >
+                                  <span>{{ item.label }}</span>
+                                  <UnreadCountBadge
+                                    :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
+                                  />
+                                </SidebarMenuButton>
+                              </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
               <!-- Team-Posteingänge -->
               <Collapsible
@@ -808,7 +839,9 @@ onUnmounted(() => {
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton>
-                      <span class="sidebar-section-label">
+                      <UsersRound />
+
+                      <span>
                         {{ t('globals.terms.teamInbox', 2) }}
                       </span>
 
@@ -820,19 +853,12 @@ onUnmounted(() => {
 
                   <CollapsibleContent>
                     <SidebarMenuSub>
-
-                      <SidebarMenuSubItem
-                        v-for="team in userTeams"
-                        :key="team.id"
-                      >
+                      <SidebarMenuSubItem v-for="team in userTeams" :key="team.id">
                         <Collapsible
                           :open="isTeamInboxOpen(team.id)"
-                          @update:open="
-                            setTeamInboxOpen(team.id, $event)
-                          "
+                          @update:open="setTeamInboxOpen(team.id, $event)"
                         >
                           <div class="w-full">
-
                             <CollapsibleTrigger as-child>
                               <SidebarMenuButton size="sm">
                                 <div class="flex items-center gap-2">
@@ -851,17 +877,11 @@ onUnmounted(() => {
 
                             <CollapsibleContent>
                               <SidebarMenuSub>
-
                                 <!-- Team Offen -->
                                 <SidebarMenuSubItem>
                                   <SidebarMenuButton
                                     size="sm"
-                                    :isActive="
-                                      isTeamRouteActive(
-                                        team.id,
-                                        'Open'
-                                      )
-                                    "
+                                    :isActive="isTeamRouteActive(team.id, 'Open')"
                                     @click="
                                       navigateToTeamInbox(team.id, {
                                         status: 'Open'
@@ -871,10 +891,7 @@ onUnmounted(() => {
                                     <span>Offen</span>
 
                                     <UnreadCountBadge
-                                      :count="
-                                        sidebarCounts[`team_${team.id}`] ||
-                                        0
-                                      "
+                                      :count="sidebarCounts[`team_${team.id}`] || 0"
                                     />
                                   </SidebarMenuButton>
                                 </SidebarMenuSubItem>
@@ -883,13 +900,7 @@ onUnmounted(() => {
                                 <SidebarMenuSubItem>
                                   <SidebarMenuButton
                                     size="sm"
-                                    :isActive="
-                                      isTeamRouteActive(
-                                        team.id,
-                                        'Open',
-                                        'high'
-                                      )
-                                    "
+                                    :isActive="isTeamRouteActive(team.id, 'Open', 'high')"
                                     @click="
                                       navigateToTeamInbox(team.id, {
                                         status: 'Open',
@@ -900,11 +911,7 @@ onUnmounted(() => {
                                     <span>Hohe Priorität</span>
 
                                     <UnreadCountBadge
-                                      :count="
-                                        sidebarCounts[
-                                          `team_high_${team.id}`
-                                        ] || 0
-                                      "
+                                      :count="sidebarCounts[`team_high_${team.id}`] || 0"
                                     />
                                   </SidebarMenuButton>
                                 </SidebarMenuSubItem>
@@ -929,12 +936,7 @@ onUnmounted(() => {
                                 >
                                   <SidebarMenuButton
                                     size="sm"
-                                    :isActive="
-                                      isTeamRouteActive(
-                                        team.id,
-                                        item.status
-                                      )
-                                    "
+                                    :isActive="isTeamRouteActive(team.id, item.status)"
                                     @click="
                                       navigateToTeamInbox(team.id, {
                                         status: item.status
@@ -944,13 +946,11 @@ onUnmounted(() => {
                                     <span>{{ item.label }}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuSubItem>
-
                               </SidebarMenuSub>
                             </CollapsibleContent>
                           </div>
                         </Collapsible>
                       </SidebarMenuSubItem>
-
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
@@ -964,11 +964,7 @@ onUnmounted(() => {
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
-                    <SidebarMenuButton
-                      :isActive="
-                        isActiveParent('/inboxes/customer')
-                      "
-                    >
+                    <SidebarMenuButton :isActive="isActiveParent('/inboxes/customer')">
                       <Mail />
 
                       <span>Kundentickets</span>
@@ -981,14 +977,11 @@ onUnmounted(() => {
 
                   <CollapsibleContent>
                     <SidebarMenuSub>
-
                       <!-- Hohe Priorität -->
                       <SidebarMenuSubItem>
                         <SidebarMenuButton
                           size="sm"
-                          :isActive="
-                            isActiveParent('/inboxes/customer-high')
-                          "
+                          :isActive="isActiveParent('/inboxes/customer-high')"
                           @click="
                             navigateToInbox('customer-high', {
                               status: 'Open'
@@ -997,11 +990,7 @@ onUnmounted(() => {
                         >
                           <span>Hohe Priorität</span>
 
-                          <UnreadCountBadge
-                            :count="
-                              sidebarCounts.customer_high || 0
-                            "
-                          />
+                          <UnreadCountBadge :count="sidebarCounts.customer_high || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -1011,9 +1000,7 @@ onUnmounted(() => {
                           size="sm"
                           :isActive="
                             isActiveParent('/inboxes/customer') &&
-                            !route.path.startsWith(
-                              '/inboxes/customer-high'
-                            ) &&
+                            !route.path.startsWith('/inboxes/customer-high') &&
                             route.query.status === 'Open' &&
                             !route.query.filters
                           "
@@ -1025,9 +1012,7 @@ onUnmounted(() => {
                         >
                           <span>Offen</span>
 
-                          <UnreadCountBadge
-                            :count="sidebarCounts.customer || 0"
-                          />
+                          <UnreadCountBadge :count="sidebarCounts.customer || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -1044,9 +1029,7 @@ onUnmounted(() => {
                           size="sm"
                           :isActive="
                             isActiveParent('/inboxes/customer') &&
-                            !route.path.startsWith(
-                              '/inboxes/customer-high'
-                            ) &&
+                            !route.path.startsWith('/inboxes/customer-high') &&
                             route.query.status === item.status &&
                             !route.query.filters
                           "
@@ -1077,23 +1060,16 @@ onUnmounted(() => {
                           <span>Spam</span>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
-
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
 
               <!-- Service-Mails -->
-              <SidebarMenuItem
-                v-if="isCustomerSupport || isAdmin"
-              >
+              <SidebarMenuItem v-if="isCustomerSupport || isAdmin">
                 <SidebarMenuButton
-                  :isActive="
-                    isActiveParent('/inboxes/service-mails')
-                  "
-                  @click="
-                    navigateToInbox('service-mails')
-                  "
+                  :isActive="isActiveParent('/inboxes/service-mails')"
+                  @click="navigateToInbox('service-mails')"
                 >
                   <MailCheck />
                   <span>Service-Mails</span>
@@ -1103,12 +1079,8 @@ onUnmounted(() => {
               <!-- Nicht zugewiesen - Admin only -->
               <SidebarMenuItem v-if="isAdmin">
                 <SidebarMenuButton
-                  :isActive="
-                    isActiveParent('/inboxes/unassigned')
-                  "
-                  @click="
-                    navigateToInbox('unassigned')
-                  "
+                  :isActive="isActiveParent('/inboxes/unassigned')"
+                  @click="navigateToInbox('unassigned')"
                 >
                   <CircleDashed />
 
@@ -1117,9 +1089,7 @@ onUnmounted(() => {
                       {{ t('globals.terms.unassigned') }}
                     </span>
 
-                    <UnreadCountBadge
-                      :count="sidebarCounts.unassigned || 0"
-                    />
+                    <UnreadCountBadge :count="sidebarCounts.unassigned || 0" />
                   </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -1137,7 +1107,6 @@ onUnmounted(() => {
                   </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>

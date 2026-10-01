@@ -1011,5 +1011,11 @@
   "webhook.sentSuccessfully": "Webhook inviato con successo",
   "widget.conversationClosed": "Questa conversazione è stata chiusa",
   "widget.ipBlocked": "Accesso negato",
-  "widget.prechatForm.startChat": "Avvia chat"
+  "widget.prechatForm.startChat": "Avvia chat",
+  "inbox.personalMailboxes": "Caselle personali",
+  "inbox.personalHighPriority": "Alta priorità",
+  "inbox.personalAnswered": "Con risposta",
+  "inbox.personalSpam": "Spam",
+  "conversation.personalInboxOwnerOnly": "Solo il proprietario può aprire questa casella personale.",
+  "conversation.personalOwnerVisibilityProtected": "Il proprietario di una casella personale non può essere rimosso dalla visibilità."
 }

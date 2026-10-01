@@ -1542,5 +1542,11 @@
   "admin.inbox.accessMode.description": "Access mode can only change while the inbox contains no conversations.",
   "admin.inbox.owner": "Owner",
   "admin.inbox.owner.select": "Select an active employee",
-  "admin.inbox.owner.description": "Owner changes apply only to new conversations. Existing visibility is retained."
+  "admin.inbox.owner.description": "Owner changes apply only to new conversations. Existing visibility is retained.",
+  "inbox.personalMailboxes": "Personal mailboxes",
+  "inbox.personalHighPriority": "High priority",
+  "inbox.personalAnswered": "Answered",
+  "inbox.personalSpam": "Spam",
+  "conversation.personalInboxOwnerOnly": "Only the owner can open this personal mailbox.",
+  "conversation.personalOwnerVisibilityProtected": "The owner of a personal mailbox cannot be removed from visibility."
 }

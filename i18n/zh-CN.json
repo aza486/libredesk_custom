@@ -1077,5 +1077,11 @@
   "webhook.sentSuccessfully": "Webhook 发送成功",
   "widget.conversationClosed": "此会话已关闭",
   "widget.ipBlocked": "访问被拒绝",
-  "widget.prechatForm.startChat": "开始聊天"
+  "widget.prechatForm.startChat": "开始聊天",
+  "inbox.personalMailboxes": "个人邮箱",
+  "inbox.personalHighPriority": "高优先级",
+  "inbox.personalAnswered": "已回复",
+  "inbox.personalSpam": "垃圾邮件",
+  "conversation.personalInboxOwnerOnly": "只有所有者可以打开此个人邮箱。",
+  "conversation.personalOwnerVisibilityProtected": "不能从可见用户中移除个人邮箱的所有者。"
 }

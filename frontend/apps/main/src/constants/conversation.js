@@ -1,4 +1,6 @@
 export const CONVERSATION_LIST_TYPE = {
+  PERSONAL: 'personal',
+  PERSONAL_HIGH: 'personal-high',
   ASSIGNED: 'assigned',
   ASSIGNED_HIGH: 'assigned-high',
   UNASSIGNED: 'unassigned',

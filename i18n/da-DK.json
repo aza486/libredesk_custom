@@ -1008,5 +1008,11 @@
   "webhook.sendTest": "Send testbesked",
   "webhook.sentSuccessfully": "Webhook sendt",
   "widget.conversationClosed": "Denne samtale er blevet lukket",
-  "widget.ipBlocked": "Adgang nægtet"
+  "widget.ipBlocked": "Adgang nægtet",
+  "inbox.personalMailboxes": "Personlige postkasser",
+  "inbox.personalHighPriority": "Høj prioritet",
+  "inbox.personalAnswered": "Besvaret",
+  "inbox.personalSpam": "Spam",
+  "conversation.personalInboxOwnerOnly": "Kun ejeren kan åbne denne personlige postkasse.",
+  "conversation.personalOwnerVisibilityProtected": "Ejeren af en personlig postkasse kan ikke fjernes fra synligheden."
 }

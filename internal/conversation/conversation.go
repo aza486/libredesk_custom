@@ -834,7 +834,7 @@ func (c *Manager) GetViewConversationsList(viewingUserID, userID int, teamIDs []
 
 // GetConversations retrieves conversations list based on user ID, type, and optional filtering, ordering, and pagination.
 // viewingUserID is used to calculate per-agent unread counts.
-func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, listTypes []string, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
+func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, listTypes []string, order, orderBy, filters string, page, pageSize int, inboxIDs ...int) ([]models.ConversationListItem, error) {
 	var conversations = make([]models.ConversationListItem, 0)
 
 	user, err := c.userStore.GetAgentCachedOrLoad(viewingUserID)
@@ -860,6 +860,7 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 		filters,
 		isAdmin,
 		isCustomerSupport,
+		inboxIDs...,
 	)
 	if err != nil {
 		c.lo.Error("error making conversations query", "error", err)
@@ -2384,6 +2385,10 @@ func (c *Manager) RemoveVisibleUser(
 		return err
 	}
 
+	if err := c.ValidateVisibleUserRemoval(&conversation, userID); err != nil {
+		return err
+	}
+
 	attrs := map[string]any{}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
@@ -2480,7 +2485,7 @@ func (c *Manager) getConversationTags(uuid string) ([]string, error) {
 // makeConversationsListQuery prepares a SQL query string for conversations list
 // viewingUserID is used as $1 for per-agent unread count calculation
 // $2 is includeMentions bool for conditional mentioned_message_uuid column
-func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin, isCustomerSupport bool) (string, []interface{}, error) {
+func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin, isCustomerSupport bool, inboxIDs ...int) (string, []interface{}, error) {
 	includeMentions := slices.Contains(listTypes, models.MentionedConversations)
 	qArgs := []any{viewingUserID, includeMentions}
 
@@ -2537,6 +2542,16 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
 		switch lt {
+		case models.PersonalConversations, models.PersonalHighPriorityConversations:
+			if len(inboxIDs) != 1 || inboxIDs[0] <= 0 {
+				return "", nil, fmt.Errorf("personal inbox ID required")
+			}
+			condition := fmt.Sprintf("(inboxes.id = $%d AND inboxes.access_mode = 'personal' AND inboxes.owner_user_id = $1)", len(qArgs)+1)
+			qArgs = append(qArgs, inboxIDs[0])
+			if lt == models.PersonalHighPriorityConversations {
+				condition += " AND conversation_priorities.name = 'High'"
+			}
+			conditions = append(conditions, "("+condition+")")
 		case models.AssignedConversations, models.AssignedHighPriorityConversations:
 			priorityCondition := ""
 			if lt == models.AssignedHighPriorityConversations {
@@ -2762,7 +2777,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			conditions = append(
 				conditions,
 				fmt.Sprintf(
-					"(conversations.custom_attributes->>'creator_id')::int = %d",
+					"(COALESCE(inboxes.access_mode, 'public') <> 'personal' AND (conversations.custom_attributes->>'creator_id')::int = %d)",
 					userID,
 				),
 			)
@@ -2772,8 +2787,10 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 		}
 		for i := conditionStart; i < len(conditions); i++ {
 			switch lt {
-			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations:
+			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations, models.CreatedConversations:
 				conditions[i] = "(COALESCE(conversations.custom_attributes->>'access_mode', 'public') <> 'personal' AND " + conditions[i] + ")"
+			case models.AssignedConversations, models.AssignedHighPriorityConversations:
+				conditions[i] = "(" + personalAccess + " AND NOT EXISTS (SELECT 1 FROM inboxes owned WHERE owned.id = conversations.inbox_id AND owned.access_mode = 'personal' AND owned.owner_user_id = $1) AND " + conditions[i] + ")"
 			default:
 				conditions[i] = "(" + personalAccess + " AND " + conditions[i] + ")"
 			}

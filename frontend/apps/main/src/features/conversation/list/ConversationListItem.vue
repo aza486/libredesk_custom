@@ -237,15 +237,18 @@ const handleMarkAsUnread = () => {
 }
 
 const conversationRoute = computed(() => {
-  const baseRoute = route.params.teamID
-    ? 'team-inbox-conversation'
-    : route.params.viewID
-      ? 'view-inbox-conversation'
-      : 'inbox-conversation'
+  const baseRoute = route.params.inboxID
+    ? 'personal-inbox-conversation'
+    : route.params.teamID
+      ? 'team-inbox-conversation'
+      : route.params.viewID
+        ? 'view-inbox-conversation'
+        : 'inbox-conversation'
   return {
     name: baseRoute,
     params: {
       uuid: props.conversation.uuid,
+      ...(baseRoute === 'personal-inbox-conversation' && { inboxID: route.params.inboxID }),
       ...(baseRoute === 'team-inbox-conversation' && { teamID: route.params.teamID }),
       ...(baseRoute === 'view-inbox-conversation' && { viewID: route.params.viewID })
     },
@@ -365,11 +368,7 @@ const statusClass = computed(() => {
       ]
 
     default:
-      return [
-        'border-border',
-        'bg-muted',
-        'text-muted-foreground'
-      ]
+      return ['border-border', 'bg-muted', 'text-muted-foreground']
   }
 })
 
@@ -410,7 +409,6 @@ const handleSelect = () => {
 .ticket-highlight-processing-error :deep(.text-muted-foreground) {
   @apply text-[#795C5F] dark:text-[#BDA8AA];
 }
-
 
 /* Mensch erforderlich – entsättigtes Grau mit warmem Orangestich */
 .ticket-highlight-human-required {
