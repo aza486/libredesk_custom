@@ -283,6 +283,20 @@ const isPersonalRouteActive = (inboxID, query) =>
   ['status', 'priority', 'filters'].every((key) => (route.query[key] || '') === (query[key] || ''))
 
 const sidebarCounts = ref({})
+const hasAnyPositiveCount = (...counts) => counts.some((count) => Number(count) > 0)
+const hasPersonalInboxCount = (inboxID) =>
+  hasAnyPositiveCount(
+    sidebarCounts.value[`personal_${inboxID}_high`],
+    sidebarCounts.value[`personal_${inboxID}_open`]
+  )
+const hasAnyPersonalInboxCount = () =>
+  personalInboxes.value.some((inbox) => hasPersonalInboxCount(inbox.id))
+const hasTeamCount = (teamID) =>
+  hasAnyPositiveCount(
+    sidebarCounts.value[`team_high_${teamID}`],
+    sidebarCounts.value[`team_${teamID}`]
+  )
+const hasAnyTeamCount = () => (props.userTeams || []).some((team) => hasTeamCount(team.id))
 let sidebarCountInterval = null
 let loadingSidebarCounts = false
 const handleInboxRefresh = (event) => {
@@ -684,6 +698,11 @@ onUnmounted(() => {
                       <span>
                         {{ t('globals.terms.myInbox') }}
                       </span>
+                      <span
+                        v-if="!myTicketsOpen && hasAnyPositiveCount(sidebarCounts.assigned_high, sidebarCounts.assigned)"
+                        class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                        aria-hidden="true"
+                      />
 
                       <ChevronRight
                         class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
@@ -798,6 +817,11 @@ onUnmounted(() => {
                     <SidebarMenuButton>
                       <Mail class="h-4 w-4" />
                       <span>{{ t('inbox.personalMailboxes') }}</span>
+                      <span
+                        v-if="!personalInboxOpen && hasAnyPersonalInboxCount()"
+                        class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                        aria-hidden="true"
+                      />
                       <ChevronRight
                         class="ml-auto transition-transform duration-200"
                         :class="{ 'rotate-90': personalInboxOpen }"
@@ -814,6 +838,11 @@ onUnmounted(() => {
                           <CollapsibleTrigger as-child>
                             <SidebarMenuButton size="sm">
                               <span>{{ inbox.name }}</span>
+                              <span
+                                v-if="personalInboxOpenStates[inbox.id] === false && hasPersonalInboxCount(inbox.id)"
+                                class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                                aria-hidden="true"
+                              />
                               <ChevronRight
                                 class="ml-auto transition-transform duration-200"
                                 :class="{
@@ -863,6 +892,11 @@ onUnmounted(() => {
                       <span>
                         {{ t('globals.terms.teamInbox', 2) }}
                       </span>
+                      <span
+                        v-if="!teamInboxOpen && hasAnyTeamCount()"
+                        class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                        aria-hidden="true"
+                      />
 
                       <ChevronRight
                         class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
@@ -884,6 +918,11 @@ onUnmounted(() => {
                                   <span>{{ team.emoji }}</span>
                                   <span>{{ team.name }}</span>
                                 </div>
+                                <span
+                                  v-if="!isTeamInboxOpen(team.id) && hasTeamCount(team.id)"
+                                  class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                                  aria-hidden="true"
+                                />
 
                                 <ChevronRight
                                   class="ml-auto transition-transform duration-200"
@@ -987,6 +1026,11 @@ onUnmounted(() => {
                       <Mail />
 
                       <span>Kundentickets</span>
+                      <span
+                        v-if="!customerTicketsOpen && hasAnyPositiveCount(sidebarCounts.customer_high, sidebarCounts.customer)"
+                        class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                        aria-hidden="true"
+                      />
 
                       <ChevronRight
                         class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
