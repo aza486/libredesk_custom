@@ -108,6 +108,8 @@ import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
 import UnreadCountBadge from '@main/components/UnreadCountBadge.vue'
 import { useIsMobile } from '@shared-ui/composables'
+import { useEmitter } from '@main/composables/useEmitter'
+import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 
 const props = defineProps({
   userTeams: { type: Array, default: () => [] },
@@ -117,6 +119,7 @@ const props = defineProps({
 
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
+const emitter = useEmitter()
 
 const settingsStore = useAppSettingsStore()
 const route = useRoute()
@@ -260,11 +263,12 @@ const spamFilter = JSON.stringify([
 
 // Reuse the customer inbox's tag filter and the team inbox's status queries.
 const personalInboxItems = computed(() => [
-  { key: 'open', label: t('globals.terms.open'), query: { status: 'Open' } },
+  { key: 'open', label: t('globals.terms.open'), query: { status: 'Open' }, count: true },
   {
     key: 'high',
     label: t('inbox.personalHighPriority'),
-    query: { status: 'Open', priority: 'high' }
+    query: { status: 'Open', priority: 'high' },
+    count: true
   },
   { key: 'resolved', label: t('inbox.personalAnswered'), query: { status: 'Resolved' } },
   { key: 'snoozed', label: t('globals.terms.snoozed'), query: { status: 'Snoozed' } },
@@ -279,6 +283,11 @@ const isPersonalRouteActive = (inboxID, query) =>
 const sidebarCounts = ref({})
 let sidebarCountInterval = null
 let loadingSidebarCounts = false
+const handleInboxRefresh = (event) => {
+  if (event?.model && ['inbox', 'inbox-list', 'personal-inbox'].includes(event.model)) {
+    loadSidebarCounts()
+  }
+}
 
 const loadSidebarCounts = async () => {
   if (loadingSidebarCounts) return
@@ -288,7 +297,9 @@ const loadSidebarCounts = async () => {
     personalInboxes.value = ownInboxesResponse.data.data
     await Promise.all(
       personalInboxes.value.flatMap((inbox) =>
-        personalInboxItems.value.map(async (item) => {
+        personalInboxItems.value
+          .filter((item) => item.count)
+          .map(async (item) => {
           const filters =
             item.query.filters ||
             JSON.stringify([
@@ -399,6 +410,8 @@ const loadSidebarCounts = async () => {
 }
 
 onMounted(() => {
+  emitter.on(EMITTER_EVENTS.REFRESH_LIST, handleInboxRefresh)
+  window.addEventListener('focus', loadSidebarCounts)
   loadSidebarCounts()
 
   sidebarCountInterval = setInterval(() => {
@@ -407,6 +420,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  emitter.off(EMITTER_EVENTS.REFRESH_LIST, handleInboxRefresh)
+  window.removeEventListener('focus', loadSidebarCounts)
   if (sidebarCountInterval) {
     clearInterval(sidebarCountInterval)
   }
@@ -816,9 +831,10 @@ onUnmounted(() => {
                                   @click="navigateToPersonalInbox(inbox.id, item.query)"
                                 >
                                   <span>{{ item.label }}</span>
-                                  <UnreadCountBadge
-                                    :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
-                                  />
+                                    <UnreadCountBadge
+                                      v-if="item.count"
+                                      :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
+                                    />
                                 </SidebarMenuButton>
                               </SidebarMenuSubItem>
                             </SidebarMenuSub>

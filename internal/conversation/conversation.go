@@ -2539,6 +2539,42 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 	)
 	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID)
 	personalAccess := authz.PersonalAccessSQL("conversations", viewingUserID, isAdmin)
+	personalSpamFilterActive := func() bool {
+		if filtersJSON == "" || filtersJSON == "[]" {
+			return false
+		}
+		var fs []struct {
+			Model    string `json:"model"`
+			Field    string `json:"field"`
+			Operator string `json:"operator"`
+			Value    any    `json:"value"`
+		}
+		if err := json.Unmarshal([]byte(filtersJSON), &fs); err != nil {
+			return false
+		}
+		for _, f := range fs {
+			if f.Model != "conversations" || f.Field != "tags" || f.Operator != "contains" {
+				continue
+			}
+			switch v := f.Value.(type) {
+			case string:
+				if strings.Contains(v, "12") {
+					return true
+				}
+			case []any:
+				for _, part := range v {
+					if fmt.Sprint(part) == "12" {
+						return true
+					}
+				}
+			case float64:
+				if v == 12 {
+					return true
+				}
+			}
+		}
+		return false
+	}
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
 		switch lt {
@@ -2550,6 +2586,9 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			qArgs = append(qArgs, inboxIDs[0])
 			if lt == models.PersonalHighPriorityConversations {
 				condition += " AND conversation_priorities.name = 'High'"
+			}
+			if !personalSpamFilterActive() {
+				condition += " AND NOT EXISTS (SELECT 1 FROM conversation_tags ct WHERE ct.conversation_id = conversations.id AND ct.tag_id = 12)"
 			}
 			conditions = append(conditions, "("+condition+")")
 		case models.AssignedConversations, models.AssignedHighPriorityConversations:

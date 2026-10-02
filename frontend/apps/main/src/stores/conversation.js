@@ -275,6 +275,38 @@ export const useConversationStore = defineStore('conversation', () => {
     return ids.some((id) => Number(id) === me)
   }
 
+  function isSpamConversation(conv) {
+    const tags = Array.isArray(conv?.tags) ? conv.tags : []
+    return tags.some((tag) => {
+      const isObj = typeof tag === 'object' && tag !== null
+      const id = isObj ? tag.id : tag
+      const name = isObj ? tag.name : tag
+      if (String(id) === '12') return true
+      return (
+        String(name ?? '')
+          .replace(/[^\p{L}\p{N}]/gu, '')
+          .toLowerCase() === 'spam'
+      )
+    })
+  }
+
+  function hasPersonalSpamFilter() {
+    return conversations.listFilters.some((filter) => {
+      if (filter.model !== 'conversations' || filter.field !== 'tags' || filter.operator !== 'contains') {
+        return false
+      }
+      const rawValue = filter.value
+      const values = Array.isArray(rawValue)
+        ? rawValue
+        : String(rawValue ?? '')
+          .replace(/\[|\]|"/g, '')
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean)
+      return values.some((value) => ['12', 12].includes(String(value)))
+    })
+  }
+
   function matchesAssignmentScope(conv) {
     if (conv.custom_attributes?.access_mode === 'personal') {
       if (
@@ -296,12 +328,22 @@ export const useConversationStore = defineStore('conversation', () => {
     switch (conversations.listType) {
       case CONVERSATION_LIST_TYPE.PERSONAL:
       case CONVERSATION_LIST_TYPE.PERSONAL_HIGH:
+        if (
+          !(
+            conv.inbox_access_mode === 'personal' &&
+            Number(conv.inbox_owner_user_id) === Number(userStore.userID) &&
+            Number(conv.inbox_id) === Number(conversations.inboxID)
+          )
+        ) {
+          return false
+        }
+        if (hasPersonalSpamFilter()) {
+          return isSpamConversation(conv) &&
+            (conversations.listType !== CONVERSATION_LIST_TYPE.PERSONAL_HIGH || conv.priority === 'High')
+        }
         return (
-          conv.inbox_access_mode === 'personal' &&
-          Number(conv.inbox_owner_user_id) === Number(userStore.userID) &&
-          Number(conv.inbox_id) === Number(conversations.inboxID) &&
-          (conversations.listType !== CONVERSATION_LIST_TYPE.PERSONAL_HIGH ||
-            conv.priority === 'High')
+          !isSpamConversation(conv) &&
+          (conversations.listType !== CONVERSATION_LIST_TYPE.PERSONAL_HIGH || conv.priority === 'High')
         )
       case CONVERSATION_LIST_TYPE.ASSIGNED:
       case CONVERSATION_LIST_TYPE.ASSIGNED_HIGH:
@@ -686,6 +728,20 @@ export const useConversationStore = defineStore('conversation', () => {
       processConversationListResponse(response)
     } catch (error) {
       if (isStale()) return
+      if (
+        [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
+          listType
+        ) &&
+        (error?.response?.status === 403 || error?.response?.status === 404)
+      ) {
+        const route = router.currentRoute.value
+        if (route?.name !== 'inbox' || route.params?.type !== 'assigned') {
+          router.replace({ name: 'inbox', params: { type: 'assigned' }, query: { status: 'Open' } })
+        }
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          description: handleHTTPError(error).message
+        })
+      }
       if (conversations.data.length === 0) {
         conversations.errorMessage = handleHTTPError(error).message
         conversations.total = 0
@@ -1020,7 +1076,7 @@ export const useConversationStore = defineStore('conversation', () => {
   async function updateAssigneeLastSeen(uuid) {
     if (!isViewingConversation(uuid)) return
     markConversationAsRead(uuid)
-    api.updateAssigneeLastSeen(uuid).catch(() => {})
+    api.updateAssigneeLastSeen(uuid).catch(() => { })
   }
 
   function isConversationInList(uuid) {
@@ -1222,9 +1278,12 @@ export const useConversationStore = defineStore('conversation', () => {
         [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
           conversations.listType
         ) && conversations.listFilters.some((filter) => filter.model !== 'conversation_statuses')
+      if (hasServerOnlyFilters) {
+        refreshConversationListForRealtimeEvent()
+        return
+      }
       if (
         scopeMatch === false ||
-        hasServerOnlyFilters ||
         (conversations.status !== '' && existing.status !== conversations.status)
       ) {
         conversations.data = conversations.data.filter((item) => item.uuid !== payload.uuid)

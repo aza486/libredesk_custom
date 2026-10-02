@@ -2,6 +2,7 @@ package conversation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/automation"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/testutil"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/abhinavxd/libredesk/internal/ws"
@@ -41,6 +43,47 @@ func (personalUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
 type personalSettings struct{ settingsStore }
 
 func (personalSettings) Get(string) (types.JSONText, error) { return types.JSONText(`"UTC"`), nil }
+
+func TestPersonalInboxSpamFilter(t *testing.T) {
+	db := testutil.NewPersonalDB(t, "personal_spam_filter")
+	lo := logf.New(logf.Opts{})
+	m := &Manager{db: db, lo: &lo, i18n: testutil.NewI18n(t), userStore: personalUsers{}, settingsStore: personalSettings{}, wsHub: ws.NewHub(&lo, nil)}
+	if err := dbutil.ScanSQLFile("queries.sql", &m.q, db, efs); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := db.Exec(`INSERT INTO conversations(contact_id,inbox_id,status_id,uuid) VALUES(105,101,101,'spam-personal-1')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO conversation_tags(conversation_id,tag_id) VALUES((SELECT id FROM conversations WHERE uuid='spam-personal-1'),12)`); err != nil {
+		t.Fatal(err)
+	}
+
+	query, args, err := m.makeConversationsListQuery(101, 101, nil, []string{models.PersonalConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false, 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var normalRows []models.ConversationListItem
+	if err := db.Select(&normalRows, query, args...); err != nil {
+		t.Fatal(err)
+	}
+	if len(normalRows) != 0 {
+		t.Fatalf("spam conversation leaked into ordinary personal list: %d rows", len(normalRows))
+	}
+
+	spamFilter := `[{"model":"conversations","field":"tags","operator":"contains","value":"[12]"}]`
+	query, args, err = m.makeConversationsListQuery(101, 101, nil, []string{models.PersonalConversations}, m.q.GetConversations, "", "", 1, 20, spamFilter, false, false, 101)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spamRows []models.ConversationListItem
+	if err := db.Select(&spamRows, query, args...); err != nil {
+		t.Fatal(err)
+	}
+	if len(spamRows) != 1 {
+		t.Fatalf("spam filter did not match spam conversation: %d rows", len(spamRows))
+	}
+}
 
 func TestPersonalIncomingAndVisibility(t *testing.T) {
 	db := testutil.NewPersonalDB(t, "personal_conversation")
@@ -138,6 +181,16 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 		if _, err := m.GetPersonalConversationsList(viewer, 101, false, "", "", "", 1, 20); err == nil {
 			t.Errorf("non-owner %d opened personal inbox", viewer)
 		}
+	}
+	var env envelope.Error
+	if _, err := m.GetPersonalConversationsList(101, 999, false, "", "", "", 1, 20); !errors.As(err, &env) || env.ErrorType != envelope.NotFoundError {
+		t.Fatalf("missing inbox should 404: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE inboxes SET deleted_at=now() WHERE id=101`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.GetPersonalConversationsList(101, 101, false, "", "", "", 1, 20); !errors.As(err, &env) || env.ErrorType != envelope.NotFoundError {
+		t.Fatalf("deleted inbox should 404: %v", err)
 	}
 	// Even an old subscription is rechecked before personal events are delivered.
 	clients := []*ws.Client{}

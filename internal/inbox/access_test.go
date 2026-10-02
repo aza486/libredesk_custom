@@ -73,9 +73,23 @@ func TestGetOwnPersonalInboxes(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO inboxes(id,name,channel,access_mode,owner_user_id) VALUES(103,'Second','email','personal',101)`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec(`INSERT INTO inboxes(id,name,channel,access_mode,owner_user_id,enabled,deleted_at) VALUES(104,'Deleted','email','personal',101,false,now())`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO inboxes(id,name,channel,access_mode,owner_user_id,enabled) VALUES(105,'Disabled','email','personal',101,false)`); err != nil {
+		t.Fatal(err)
+	}
 	ownerInboxes, err := m.GetOwnPersonalInboxes(101)
-	if err != nil || len(ownerInboxes) != 2 {
-		t.Fatalf("owner inboxes: %v %v", ownerInboxes, err)
+	if err != nil {
+		t.Fatalf("owner inboxes: %v", err)
+	}
+	if len(ownerInboxes) != 2 {
+		t.Fatalf("owner inboxes: got %d, want 2: %#v", len(ownerInboxes), ownerInboxes)
+	}
+	for _, inbox := range ownerInboxes {
+		if inbox.Name == "Deleted" || inbox.Name == "Disabled" {
+			t.Fatalf("deleted or disabled inbox leaked: %#v", ownerInboxes)
+		}
 	}
 	otherInboxes, err := m.GetOwnPersonalInboxes(102)
 	if err != nil || len(otherInboxes) != 0 {

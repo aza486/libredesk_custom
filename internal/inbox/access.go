@@ -54,6 +54,6 @@ type PersonalInboxSummary struct {
 
 func (m *Manager) GetOwnPersonalInboxes(userID int) ([]PersonalInboxSummary, error) {
 	inboxes := make([]PersonalInboxSummary, 0)
-	err := m.db.Select(&inboxes, `SELECT id,name FROM inboxes WHERE access_mode='personal' AND owner_user_id=$1 ORDER BY name,id`, userID)
+	err := m.db.Select(&inboxes, `SELECT id,name FROM inboxes WHERE access_mode='personal' AND owner_user_id=$1 AND deleted_at IS NULL ORDER BY name,id`, userID)
 	return inboxes, err
 }

@@ -55,11 +55,11 @@ func (m *Manager) canThreadIntoInbox(conversationID, inboxID int) (bool, error) 
 // including administrators. The list query repeats this check to avoid a TOCTOU leak.
 func (c *Manager) GetPersonalConversationsList(viewerID, inboxID int, highPriority bool, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
 	var owned bool
-	if err := c.db.Get(&owned, `SELECT EXISTS(SELECT 1 FROM inboxes WHERE id=$1 AND access_mode='personal' AND owner_user_id=$2)`, inboxID, viewerID); err != nil {
+	if err := c.db.Get(&owned, `SELECT EXISTS(SELECT 1 FROM inboxes WHERE id=$1 AND access_mode='personal' AND owner_user_id=$2 AND deleted_at IS NULL)`, inboxID, viewerID); err != nil {
 		return nil, err
 	}
 	if !owned {
-		return nil, envelope.NewError(envelope.PermissionError, c.i18n.T("conversation.personalInboxOwnerOnly"), nil)
+		return nil, envelope.NewError(envelope.NotFoundError, c.i18n.T("globals.messages.notFound"), nil)
 	}
 	listType := models.PersonalConversations
 	if highPriority {

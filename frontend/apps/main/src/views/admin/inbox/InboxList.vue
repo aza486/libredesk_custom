@@ -187,11 +187,13 @@ const handleEditInbox = (id) => {
 
 const handleDeleteInbox = async (id) => {
   await api.deleteInbox(id)
+  emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'inbox' })
   getInboxes()
 }
 
 const handleToggleInbox = async (id) => {
   await api.toggleInbox(id)
+  emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'inbox' })
   getInboxes()
 }
 </script>
