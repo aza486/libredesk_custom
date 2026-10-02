@@ -261,15 +261,17 @@ const spamFilter = JSON.stringify([
   }
 ])
 
+// Einheitliche Reihenfolge in allen Bereichen:
+// Hohe Priorität > Offen > Beantwortet > Schlummernd > Geschlossen > Spam
 // Reuse the customer inbox's tag filter and the team inbox's status queries.
 const personalInboxItems = computed(() => [
-  { key: 'open', label: t('globals.terms.open'), query: { status: 'Open' }, count: true },
   {
     key: 'high',
     label: t('inbox.personalHighPriority'),
     query: { status: 'Open', priority: 'high' },
     count: true
   },
+  { key: 'open', label: t('globals.terms.open'), query: { status: 'Open' }, count: true },
   { key: 'resolved', label: t('inbox.personalAnswered'), query: { status: 'Resolved' } },
   { key: 'snoozed', label: t('globals.terms.snoozed'), query: { status: 'Snoozed' } },
   { key: 'closed', label: t('globals.terms.closed'), query: { status: 'Closed' } },
@@ -300,24 +302,24 @@ const loadSidebarCounts = async () => {
         personalInboxItems.value
           .filter((item) => item.count)
           .map(async (item) => {
-          const filters =
-            item.query.filters ||
-            JSON.stringify([
-              {
-                model: 'conversation_statuses',
-                field: 'name',
-                operator: 'equals',
-                value: item.query.status
-              }
-            ])
-          const response = await api.getPersonalConversations(inbox.id, {
-            page: 1,
-            page_size: 1,
-            filters,
-            ...(item.query.priority && { priority: item.query.priority })
+            const filters =
+              item.query.filters ||
+              JSON.stringify([
+                {
+                  model: 'conversation_statuses',
+                  field: 'name',
+                  operator: 'equals',
+                  value: item.query.status
+                }
+              ])
+            const response = await api.getPersonalConversations(inbox.id, {
+              page: 1,
+              page_size: 1,
+              filters,
+              ...(item.query.priority && { priority: item.query.priority })
+            })
+            sidebarCounts.value[`personal_${inbox.id}_${item.key}`] = response.data.data.total || 0
           })
-          sidebarCounts.value[`personal_${inbox.id}_${item.key}`] = response.data.data.total || 0
-        })
       )
     )
 
@@ -691,27 +693,6 @@ onUnmounted(() => {
 
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      <!-- Offen -->
-                      <SidebarMenuSubItem>
-                        <SidebarMenuButton
-                          size="sm"
-                          :isActive="
-                            isActiveParent('/inboxes/assigned') &&
-                            route.query.status === 'Open' &&
-                            !route.query.priority
-                          "
-                          @click="
-                            navigateToInbox('assigned', {
-                              status: 'Open'
-                            })
-                          "
-                        >
-                          <span>Offen</span>
-
-                          <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
-                        </SidebarMenuButton>
-                      </SidebarMenuSubItem>
-
                       <!-- Hohe Priorität -->
                       <SidebarMenuSubItem>
                         <SidebarMenuButton
@@ -731,6 +712,27 @@ onUnmounted(() => {
                           <span>Hohe Priorität</span>
 
                           <UnreadCountBadge :count="sidebarCounts.assigned_high || 0" />
+                        </SidebarMenuButton>
+                      </SidebarMenuSubItem>
+
+                      <!-- Offen -->
+                      <SidebarMenuSubItem>
+                        <SidebarMenuButton
+                          size="sm"
+                          :isActive="
+                            isActiveParent('/inboxes/assigned') &&
+                            route.query.status === 'Open' &&
+                            !route.query.priority
+                          "
+                          @click="
+                            navigateToInbox('assigned', {
+                              status: 'Open'
+                            })
+                          "
+                        >
+                          <span>Offen</span>
+
+                          <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -789,6 +791,7 @@ onUnmounted(() => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
+              <!-- Private Postfächer -->
               <Collapsible v-if="personalInboxes.length" v-model:open="personalInboxOpen" as-child>
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
@@ -831,10 +834,10 @@ onUnmounted(() => {
                                   @click="navigateToPersonalInbox(inbox.id, item.query)"
                                 >
                                   <span>{{ item.label }}</span>
-                                    <UnreadCountBadge
-                                      v-if="item.count"
-                                      :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
-                                    />
+                                  <UnreadCountBadge
+                                    v-if="item.count"
+                                    :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
+                                  />
                                 </SidebarMenuButton>
                               </SidebarMenuSubItem>
                             </SidebarMenuSub>
@@ -893,25 +896,6 @@ onUnmounted(() => {
 
                             <CollapsibleContent>
                               <SidebarMenuSub>
-                                <!-- Team Offen -->
-                                <SidebarMenuSubItem>
-                                  <SidebarMenuButton
-                                    size="sm"
-                                    :isActive="isTeamRouteActive(team.id, 'Open')"
-                                    @click="
-                                      navigateToTeamInbox(team.id, {
-                                        status: 'Open'
-                                      })
-                                    "
-                                  >
-                                    <span>Offen</span>
-
-                                    <UnreadCountBadge
-                                      :count="sidebarCounts[`team_${team.id}`] || 0"
-                                    />
-                                  </SidebarMenuButton>
-                                </SidebarMenuSubItem>
-
                                 <!-- Team Hohe Priorität -->
                                 <SidebarMenuSubItem>
                                   <SidebarMenuButton
@@ -928,6 +912,25 @@ onUnmounted(() => {
 
                                     <UnreadCountBadge
                                       :count="sidebarCounts[`team_high_${team.id}`] || 0"
+                                    />
+                                  </SidebarMenuButton>
+                                </SidebarMenuSubItem>
+
+                                <!-- Team Offen -->
+                                <SidebarMenuSubItem>
+                                  <SidebarMenuButton
+                                    size="sm"
+                                    :isActive="isTeamRouteActive(team.id, 'Open')"
+                                    @click="
+                                      navigateToTeamInbox(team.id, {
+                                        status: 'Open'
+                                      })
+                                    "
+                                  >
+                                    <span>Offen</span>
+
+                                    <UnreadCountBadge
+                                      :count="sidebarCounts[`team_${team.id}`] || 0"
                                     />
                                   </SidebarMenuButton>
                                 </SidebarMenuSubItem>
