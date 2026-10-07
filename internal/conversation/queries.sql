@@ -1046,7 +1046,7 @@ SELECT uuid::text
 FROM conversations
 WHERE uuid = ANY($1::uuid[])
   AND (
-    (custom_attributes->>'access_mode' = 'personal' AND ($10 OR EXISTS (SELECT 1 FROM personal_inbox_owners pio WHERE pio.inbox_id=conversations.inbox_id AND pio.user_id=$2)))
+    (custom_attributes->>'access_mode' = 'personal' AND ($10 OR EXISTS (SELECT 1 FROM personal_inbox_owners pio WHERE pio.inbox_id=conversations.inbox_id AND pio.user_id=$2) OR (custom_attributes->'visible_users') @> jsonb_build_array($2::int)))
     OR (COALESCE(custom_attributes->>'access_mode', 'public') <> 'personal' AND (
     -- Private/internal conversations:
     -- Admin, creator and explicitly visible users may read.

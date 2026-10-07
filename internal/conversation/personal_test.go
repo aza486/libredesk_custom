@@ -51,12 +51,21 @@ func TestPersonalInboxSpamFilter(t *testing.T) {
 	if err := dbutil.ScanSQLFile("queries.sql", &m.q, db, efs); err != nil {
 		t.Fatal(err)
 	}
+	const systemSpamTagID = 12
+	spamTagName := "\U0001F5D1Spam"
+	if _, err := db.Exec(`INSERT INTO tags(id,name) VALUES($1,$2)`, systemSpamTagID, spamTagName); err != nil {
+		t.Fatal(err)
+	}
+	var spamTagID int
+	if err := db.Get(&spamTagID, `SELECT id FROM tags WHERE name=$1`, spamTagName); err != nil {
+		t.Fatal(err)
+	}
 
 	var spamConversationID int
 	if err := db.QueryRow(`INSERT INTO conversations(contact_id,inbox_id,status_id) VALUES(105,101,101) RETURNING id`).Scan(&spamConversationID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO conversation_tags(conversation_id,tag_id) VALUES($1,12)`, spamConversationID); err != nil {
+	if _, err := db.Exec(`INSERT INTO conversation_tags(conversation_id,tag_id) VALUES($1,$2)`, spamConversationID, spamTagID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -72,7 +81,7 @@ func TestPersonalInboxSpamFilter(t *testing.T) {
 		t.Fatalf("spam conversation leaked into ordinary personal list: %d rows", len(normalRows))
 	}
 
-	spamFilter := `[{"model":"conversations","field":"tags","operator":"contains","value":"[12]"}]`
+	spamFilter := fmt.Sprintf(`[{"model":"conversations","field":"tags","operator":"contains","value":"[%d]"}]`, spamTagID)
 	query, args, err = m.makeConversationsListQuery(101, 101, nil, []string{models.PersonalConversations}, m.q.GetConversations, "", "", 1, 20, spamFilter, false, false, 101)
 	if err != nil {
 		t.Fatal(err)
@@ -299,13 +308,27 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+	var publicConversationID int
+	if err := db.QueryRow(`INSERT INTO conversations(contact_id,inbox_id,status_id,assigned_user_id) VALUES(105,102,101,102) RETURNING id`).Scan(&publicConversationID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO conversation_assignees(conversation_id,user_id) VALUES($1,102)`, publicConversationID); err != nil {
+		t.Fatal(err)
+	}
 	query, args, err := m.makeConversationsListQuery(102, 102, nil, []string{models.AssignedConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var colleagueRows []models.ConversationListItem
-	if err := db.Select(&colleagueRows, query, args...); err != nil || len(colleagueRows) != 1 {
+	if err := db.Select(&colleagueRows, query, args...); err != nil || len(colleagueRows) != 2 {
 		t.Fatalf("assigned colleague list: rows=%d err=%v", len(colleagueRows), err)
+	}
+	assignedIDs := map[int]bool{}
+	for _, row := range colleagueRows {
+		assignedIDs[row.ID] = true
+	}
+	if !assignedIDs[id] || !assignedIDs[publicConversationID] {
+		t.Fatalf("assigned personal share/public conversation missing: %v", assignedIDs)
 	}
 	query, args, err = m.makeConversationsListQuery(102, 102, nil, []string{models.VisibleConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false)
 	if err != nil {
@@ -350,7 +373,7 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !isPersonalConversation(mediaConv.CustomAttributes) || authz.CanReadConversation(umodels.User{ID: 102}, mediaConv) || !authz.CanReadConversation(umodels.User{ID: 101}, mediaConv) {
+	if !isPersonalConversation(mediaConv.CustomAttributes) || !authz.CanReadConversation(umodels.User{ID: 102}, mediaConv) || !authz.CanReadConversation(umodels.User{ID: 101}, mediaConv) {
 		t.Fatal("media lookup lost personal visibility")
 	}
 	in.InReplyTo = "personal-source"
@@ -451,6 +474,14 @@ func TestPersonalIncomingAssignsEveryInboxOwner(t *testing.T) {
 		rows, err := m.GetPersonalConversationsList(ownerID, 101, false, "", "", "", 1, 20)
 		if err != nil || len(rows) != 1 {
 			t.Errorf("owner %d personal list: rows=%d err=%v", ownerID, len(rows), err)
+		}
+		query, args, err := m.makeConversationsListQuery(ownerID, ownerID, nil, []string{models.AssignedConversations}, m.q.GetConversations, "", "", 1, 20, "", false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var assignedRows []models.ConversationListItem
+		if err := db.Select(&assignedRows, query, args...); err != nil || len(assignedRows) != 0 {
+			t.Errorf("owner %d personal conversation leaked into Assigned: rows=%d err=%v", ownerID, len(assignedRows), err)
 		}
 	}
 }

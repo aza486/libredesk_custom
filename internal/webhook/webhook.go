@@ -429,7 +429,7 @@ func (m *Manager) deliverSingleWebhook(webhook models.Webhook, task DeliveryTask
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		m.lo.Error("error reading webhook response", "webhook_id", webhook.ID, "error", err)
-		responseBody = []byte(fmt.Sprintf("Error reading response: %v", err))
+		responseBody = fmt.Appendf(nil, "Error reading response: %v", err)
 	}
 
 	// Check if delivery was successful (2xx status codes)
