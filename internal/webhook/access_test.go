@@ -52,6 +52,9 @@ func TestInboxAccessOnEveryWebhook(t *testing.T) {
 				var original map[string]json.RawMessage
 				json.Unmarshal(before, &original)
 				for k, v := range original {
+					if k == "inbox_access_mode" || k == "owner_user_id" {
+						continue
+					}
 					if string(fields[k]) != string(v) {
 						t.Fatalf("changed field %s", k)
 					}

@@ -75,6 +75,6 @@ type PersonalInboxSummary struct {
 
 func (m *Manager) GetOwnPersonalInboxes(userID int) ([]PersonalInboxSummary, error) {
 	inboxes := make([]PersonalInboxSummary, 0)
-	err := m.db.Select(&inboxes, `SELECT i.id,i.name,COALESCE(ARRAY(SELECT pio.user_id FROM personal_inbox_owners pio WHERE pio.inbox_id=i.id ORDER BY pio.created_at,pio.user_id),ARRAY[]::BIGINT[]) AS owner_user_ids FROM inboxes i WHERE i.access_mode='personal' AND i.deleted_at IS NULL AND EXISTS (SELECT 1 FROM personal_inbox_owners pio WHERE pio.inbox_id=i.id AND pio.user_id=$1) ORDER BY i.name,i.id`, userID)
+	err := m.db.Select(&inboxes, `SELECT i.id,i.name,COALESCE(ARRAY(SELECT pio.user_id FROM personal_inbox_owners pio WHERE pio.inbox_id=i.id ORDER BY pio.created_at,pio.user_id),ARRAY[]::BIGINT[]) AS owner_user_ids FROM inboxes i WHERE i.access_mode='personal' AND i.enabled IS TRUE AND i.deleted_at IS NULL AND EXISTS (SELECT 1 FROM personal_inbox_owners pio WHERE pio.inbox_id=i.id AND pio.user_id=$1) ORDER BY i.name,i.id`, userID)
 	return inboxes, err
 }

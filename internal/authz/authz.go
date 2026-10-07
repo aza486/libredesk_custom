@@ -49,9 +49,10 @@ func CanReadConversation(
 					return true
 				}
 			}
-			return false
+		} else if conversation.InboxOwnerUserID.Valid && conversation.InboxOwnerUserID.Int == user.ID {
+			return true
 		}
-		return conversation.InboxOwnerUserID.Valid && conversation.InboxOwnerUserID.Int == user.ID
+		return hasVisibleUser(attrs, user.ID)
 	}
 
 	if private, ok := attrs["private"].(bool); ok && private {

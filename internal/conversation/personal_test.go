@@ -52,10 +52,11 @@ func TestPersonalInboxSpamFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := db.Exec(`INSERT INTO conversations(contact_id,inbox_id,status_id,uuid) VALUES(105,101,101,'spam-personal-1')`); err != nil {
+	var spamConversationID int
+	if err := db.QueryRow(`INSERT INTO conversations(contact_id,inbox_id,status_id) VALUES(105,101,101) RETURNING id`).Scan(&spamConversationID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO conversation_tags(conversation_id,tag_id) VALUES((SELECT id FROM conversations WHERE uuid='spam-personal-1'),12)`); err != nil {
+	if _, err := db.Exec(`INSERT INTO conversation_tags(conversation_id,tag_id) VALUES($1,12)`, spamConversationID); err != nil {
 		t.Fatal(err)
 	}
 

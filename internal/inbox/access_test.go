@@ -49,6 +49,7 @@ func TestPersonalInboxValidationAndModeLock(t *testing.T) {
 	record.Config = []byte(`{"imap":[{}],"smtp":[{}]}`)
 	record.AccessMode = "public"
 	record.OwnerUserID = null.Int{}
+	record.OwnerUserIDs = nil
 	_, err = m.Update(101, record)
 	if !errors.As(err, &env) || env.Code != 409 {
 		t.Fatalf("API mode lock must be HTTP 409: %v", err)
