@@ -695,7 +695,7 @@ onUnmounted(() => {
                     <SidebarMenuButton :isActive="isActiveParent('/inboxes/assigned')">
                       <User />
 
-                      <span>
+                      <span class="truncate">
                         {{ t('globals.terms.myInbox') }}
                       </span>
                       <span
@@ -816,7 +816,7 @@ onUnmounted(() => {
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton>
                       <Mail class="h-4 w-4" />
-                      <span>{{ t('inbox.personalMailboxes') }}</span>
+                      <span class="truncate">{{ t('inbox.personalMailboxes') }}</span>
                       <span
                         v-if="!personalInboxOpen && hasAnyPersonalInboxCount()"
                         class="ml-2 size-2 shrink-0 rounded-full bg-success"
@@ -837,7 +837,7 @@ onUnmounted(() => {
                         >
                           <CollapsibleTrigger as-child>
                             <SidebarMenuButton size="sm">
-                              <span>{{ inbox.name }}</span>
+                              <span class="truncate">{{ inbox.name }}</span>
                               <span
                                 v-if="personalInboxOpenStates[inbox.id] === false && hasPersonalInboxCount(inbox.id)"
                                 class="ml-2 size-2 shrink-0 rounded-full bg-success"
@@ -889,7 +889,7 @@ onUnmounted(() => {
                     <SidebarMenuButton>
                       <UsersRound />
 
-                      <span>
+                      <span class="truncate">
                         {{ t('globals.terms.teamInbox', 2) }}
                       </span>
                       <span
@@ -914,10 +914,10 @@ onUnmounted(() => {
                           <div class="w-full">
                             <CollapsibleTrigger as-child>
                               <SidebarMenuButton size="sm">
-                                <div class="flex items-center gap-2">
-                                  <span>{{ team.emoji }}</span>
-                                  <span>{{ team.name }}</span>
-                                </div>
+                              <div class="flex items-center gap-2 min-w-0">
+                                <span>{{ team.emoji }}</span>
+                                <span class="truncate">{{ team.name }}</span>
+                              </div>
                                 <span
                                   v-if="!isTeamInboxOpen(team.id) && hasTeamCount(team.id)"
                                   class="ml-2 size-2 shrink-0 rounded-full bg-success"
@@ -1025,7 +1025,7 @@ onUnmounted(() => {
                     <SidebarMenuButton :isActive="isActiveParent('/inboxes/customer')">
                       <Mail />
 
-                      <span>Kundentickets</span>
+                      <span class="truncate">Kundentickets</span>
                       <span
                         v-if="!customerTicketsOpen && hasAnyPositiveCount(sidebarCounts.customer_high, sidebarCounts.customer)"
                         class="ml-2 size-2 shrink-0 rounded-full bg-success"
