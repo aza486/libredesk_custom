@@ -13,6 +13,14 @@ import {
   CollapsibleTrigger
 } from '@shared-ui/components/ui/collapsible'
 import { Badge } from '@shared-ui/components/ui/badge'
+import { Button } from '@shared-ui/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@shared-ui/components/ui/dialog'
 import {
   Sidebar,
   SidebarContent,
@@ -106,7 +114,9 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
+import { useUsersStore } from '@main/stores/users'
 import UnreadCountBadge from '@main/components/UnreadCountBadge.vue'
+import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { useIsMobile } from '@shared-ui/composables'
 import { useEmitter } from '@main/composables/useEmitter'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
@@ -119,6 +129,7 @@ const props = defineProps({
 
 const userStore = useUserStore()
 const conversationStore = useConversationStore()
+const usersStore = useUsersStore()
 const emitter = useEmitter()
 
 const settingsStore = useAppSettingsStore()
@@ -224,6 +235,27 @@ const teamInboxOpen = useStorage('teamInboxOpen', true)
 const personalInboxes = ref([])
 const personalInboxOpen = useStorage('personalInboxOpen', true)
 const personalInboxOpenStates = useStorage('personalInboxOpenStates', {})
+const ownerDialogOpen = ref(false)
+const ownerDialogInbox = ref(null)
+const selectedOwnerIDs = ref([])
+const savingOwnerIDs = ref(false)
+const ownerUserOptions = computed(() =>
+  usersStore.users
+    .filter((user) => user.enabled && user.type === 'agent')
+    .map((user) => ({
+      value: String(user.id),
+      label: `${user.first_name} ${user.last_name}`.trim()
+    }))
+)
+const selectedOwnerUsers = computed(() =>
+  selectedOwnerIDs.value.map(
+    (id) =>
+      ownerUserOptions.value.find((option) => Number(option.value) === Number(id)) || {
+        value: String(id),
+        label: `User ${id}`
+      }
+  )
+)
 const myTicketsOpen = useStorage('myTicketsOpen', true)
 const customerTicketsOpen = useStorage('customerTicketsOpen', true)
 
@@ -297,6 +329,35 @@ const hasTeamCount = (teamID) =>
     sidebarCounts.value[`team_${teamID}`]
   )
 const hasAnyTeamCount = () => (props.userTeams || []).some((team) => hasTeamCount(team.id))
+
+const openOwnerDialog = async (inbox) => {
+  await usersStore.fetchUsers()
+  ownerDialogInbox.value = inbox
+  selectedOwnerIDs.value = (inbox.owner_user_ids || []).map(Number)
+  ownerDialogOpen.value = true
+}
+
+const savePersonalInboxOwners = async () => {
+  if (!ownerDialogInbox.value || selectedOwnerIDs.value.length === 0 || savingOwnerIDs.value) return
+  savingOwnerIDs.value = true
+  try {
+    await api.updatePersonalInboxOwners(ownerDialogInbox.value.id, selectedOwnerIDs.value)
+    ownerDialogOpen.value = false
+    emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'personal-inbox' })
+    await loadSidebarCounts()
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      description: t('globals.messages.savedSuccessfully')
+    })
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: error?.response?.data?.message || t('globals.messages.somethingWentWrong')
+    })
+  } finally {
+    savingOwnerIDs.value = false
+  }
+}
+
 let sidebarCountInterval = null
 let loadingSidebarCounts = false
 const handleInboxRefresh = (event) => {
@@ -835,22 +896,35 @@ onUnmounted(() => {
                           :open="personalInboxOpenStates[inbox.id] !== false"
                           @update:open="personalInboxOpenStates[inbox.id] = $event"
                         >
-                          <CollapsibleTrigger as-child>
-                            <SidebarMenuButton size="sm">
-                              <span class="truncate">{{ inbox.name }}</span>
-                              <span
-                                v-if="personalInboxOpenStates[inbox.id] === false && hasPersonalInboxCount(inbox.id)"
-                                class="ml-2 size-2 shrink-0 rounded-full bg-success"
-                                aria-hidden="true"
-                              />
-                              <ChevronRight
-                                class="ml-auto transition-transform duration-200"
-                                :class="{
-                                  'rotate-90': personalInboxOpenStates[inbox.id] !== false
-                                }"
-                              />
-                            </SidebarMenuButton>
-                          </CollapsibleTrigger>
+                          <div class="flex items-center gap-1">
+                            <CollapsibleTrigger as-child>
+                              <SidebarMenuButton size="sm" class="min-w-0 flex-1">
+                                <span class="truncate">{{ inbox.name }}</span>
+                                <span
+                                  v-if="personalInboxOpenStates[inbox.id] === false && hasPersonalInboxCount(inbox.id)"
+                                  class="ml-2 size-2 shrink-0 rounded-full bg-success"
+                                  aria-hidden="true"
+                                />
+                                <ChevronRight
+                                  class="ml-auto transition-transform duration-200"
+                                  :class="{
+                                    'rotate-90': personalInboxOpenStates[inbox.id] !== false
+                                  }"
+                                />
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              class="size-7 shrink-0"
+                              :aria-label="`${t('admin.inbox.owner')} ${inbox.name}`"
+                              :title="t('admin.inbox.owner')"
+                              @click.stop="openOwnerDialog(inbox)"
+                            >
+                              <UsersRound class="size-3.5" />
+                            </Button>
+                          </div>
                           <CollapsibleContent>
                             <SidebarMenuSub>
                               <SidebarMenuSubItem
@@ -1182,6 +1256,32 @@ onUnmounted(() => {
     <SidebarInset class="bg-canvas !min-h-0 !h-full">
       <slot></slot>
     </SidebarInset>
+
+    <Dialog v-model:open="ownerDialogOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{{ t('admin.inbox.owner') }}: {{ ownerDialogInbox?.name }}</DialogTitle>
+        </DialogHeader>
+        <UserMultiSelect
+          :model-value="selectedOwnerUsers"
+          :items="ownerUserOptions"
+          :placeholder="t('admin.inbox.owner.select')"
+          @update:modelValue="selectedOwnerIDs = $event.map((user) => Number(user.value))"
+        />
+        <DialogFooter>
+          <Button type="button" variant="outline" @click="ownerDialogOpen = false">
+            {{ t('globals.messages.cancel') }}
+          </Button>
+          <Button
+            type="button"
+            :disabled="savingOwnerIDs || selectedOwnerIDs.length === 0"
+            @click="savePersonalInboxOwners"
+          >
+            {{ savingOwnerIDs ? t('globals.messages.saving') : t('globals.messages.save') }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </SidebarProvider>
 </template>
 

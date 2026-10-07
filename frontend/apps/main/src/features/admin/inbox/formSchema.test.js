@@ -244,7 +244,8 @@ describe('Email Inbox Form Schema', () => {
 })
 
 describe('Personal inbox owner', () => {
-  test('public is the default', () => expect(schema.parse(validForm).access_mode).toBe('public'))
-  test('personal requires an owner', () => expect(() => schema.parse({ ...validForm, access_mode: 'personal' })).toThrow())
-  test('personal accepts an owner', () => expect(schema.parse({ ...validForm, access_mode: 'personal', owner_user_id: 101 }).owner_user_id).toBe(101))
+    test('public is the default', () => expect(schema.parse(validForm).access_mode).toBe('public'))
+    test('personal requires an owner', () => expect(() => schema.parse({ ...validForm, access_mode: 'personal' })).toThrow())
+    test('personal accepts an owner', () => expect(schema.parse({ ...validForm, access_mode: 'personal', owner_user_id: 101 }).owner_user_id).toBe(101))
+    test('personal accepts multiple owners', () => expect(schema.parse({ ...validForm, access_mode: 'personal', owner_user_ids: [101, 102] }).owner_user_ids).toEqual([101, 102]))
 })

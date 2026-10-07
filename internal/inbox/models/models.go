@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/stringutil"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
 
@@ -21,10 +22,12 @@ const (
 type Inbox struct {
 	AccessMode         string          `db:"access_mode" json:"access_mode"`
 	OwnerUserID        null.Int        `db:"owner_user_id" json:"owner_user_id"`
+	OwnerUserIDs       pq.Int64Array   `db:"owner_user_ids" json:"owner_user_ids"`
 	ID                 int             `db:"id" json:"id"`
 	UUID               string          `db:"uuid" json:"uuid"`
 	CreatedAt          time.Time       `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time       `db:"updated_at" json:"updated_at"`
+	DeletedAt          null.Time       `db:"deleted_at" json:"deleted_at"`
 	Name               string          `db:"name" json:"name"`
 	Channel            string          `db:"channel" json:"channel"`
 	Enabled            bool            `db:"enabled" json:"enabled"`

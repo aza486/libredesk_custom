@@ -205,6 +205,14 @@ CREATE UNIQUE INDEX index_unique_users_on_email_when_no_ext_id_contact
 	ON users (email)
 	WHERE type = 'contact' AND deleted_at IS NULL AND external_user_id IS NULL;
 
+CREATE TABLE personal_inbox_owners (
+	inbox_id INT NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+	user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	PRIMARY KEY (inbox_id, user_id)
+);
+CREATE INDEX index_personal_inbox_owners_on_user_id ON personal_inbox_owners(user_id, inbox_id);
+
 DROP TABLE IF EXISTS user_roles CASCADE;
 CREATE TABLE user_roles (
 	id SERIAL PRIMARY KEY,

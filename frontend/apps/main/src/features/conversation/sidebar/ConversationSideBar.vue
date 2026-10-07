@@ -92,7 +92,7 @@
           v-if="conversationStore.current?.custom_attributes?.visible_users"
         >
           <AccordionTrigger class="accordion-trigger">
-            Sichtbarkeit ({{ conversationStore.current.custom_attributes.visible_users.length }})
+            Sichtbarkeit ({{ selectedVisibleUsers.length }})
           </AccordionTrigger>
 
           <AccordionContent class="accordion-content">
@@ -336,7 +336,33 @@ const usersForIDs = (ids) =>
       }
   )
 const selectedAssignees = computed(() => usersForIDs(selectedAssigneeIDs.value))
-const selectedVisibleUsers = computed(() => usersForIDs(selectedVisibleUserIDs.value))
+
+const isPersonalInboxConversation = (conversation) =>
+  conversation?.inbox_access_mode === 'personal' ||
+  conversation?.custom_attributes?.access_mode === 'personal'
+
+const personalOwnerIDs = computed(() => {
+  const conversation = conversationStore.current
+  if (!isPersonalInboxConversation(conversation)) return []
+  const ownerIDs = conversation.inbox_owner_user_ids?.length
+    ? conversation.inbox_owner_user_ids
+    : [conversation.inbox_owner_user_id, conversation.custom_attributes?.owner_user_id]
+  return normalizeUserIDs(ownerIDs)
+})
+
+const selectedVisibleUsers = computed(() => {
+  const conversation = conversationStore.current
+  let visibleUserIDs = selectedVisibleUserIDs.value
+  const legacyOwnerID = Number(conversation?.custom_attributes?.owner_user_id)
+  if (
+    personalOwnerIDs.value.length > 0 &&
+    legacyOwnerID > 0 &&
+    !personalOwnerIDs.value.includes(legacyOwnerID)
+  ) {
+    visibleUserIDs = visibleUserIDs.filter((id) => Number(id) !== legacyOwnerID)
+  }
+  return usersForIDs([...visibleUserIDs, ...personalOwnerIDs.value])
+})
 
 watch(
   () => conversationStore.current?.uuid,
@@ -483,13 +509,6 @@ const visibilityManagerIDs = computed(() => {
 const isVisibilityManager = (userID) =>
   visibilityManagerIDs.value.some((id) => Number(id) === Number(userID))
 
-const personalOwnerIDs = computed(() => {
-  const conv = conversationStore.current
-  if (conv?.inbox_access_mode !== 'personal' && conv?.custom_attributes?.access_mode !== 'personal')
-    return []
-  return [conv.inbox_owner_user_id, conv.custom_attributes?.owner_user_id].filter(Boolean)
-})
-
 const lockedVisibleUserIDs = computed(() => [
   ...personalOwnerIDs.value,
   ...visibilityManagerIDs.value,
@@ -499,6 +518,7 @@ const lockedVisibleUserIDs = computed(() => [
 const canManageVisibility = computed(
   () =>
     userStore.roles.includes('Admin') ||
+    personalOwnerIDs.value.some((id) => Number(id) === Number(userStore.userID)) ||
     (conversationStore.current?.custom_attributes?.customer_visibility === true &&
       userStore.roles.includes('Kundensupport')) ||
     isVisibilityManager(userStore.userID)
@@ -509,7 +529,12 @@ const canUndoVisibleUsers = computed(
 )
 
 const updateVisibleUsers = (users) => {
-  const ids = normalizeUserIDs(users.map((user) => user.value))
+  const ownerIDs = personalOwnerIDs.value
+  const ids = normalizeUserIDs(users.map((user) => user.value)).filter(
+    (id) =>
+      !ownerIDs.includes(id) ||
+      selectedVisibleUserIDs.value.some((visibleID) => Number(visibleID) === id)
+  )
   if (sameUserIDs(ids, selectedVisibleUserIDs.value)) return
   selectedVisibleUserIDs.value = ids
   if (conversationStore.current?.custom_attributes) {

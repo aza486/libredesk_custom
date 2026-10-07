@@ -126,6 +126,7 @@ type ConversationListItem struct {
 	InboxID               int                     `db:"inbox_id" json:"inbox_id"`
 	InboxAccessMode       string                  `db:"inbox_access_mode" json:"inbox_access_mode"`
 	InboxOwnerUserID      null.Int                `db:"inbox_owner_user_id" json:"inbox_owner_user_id"`
+	InboxOwnerUserIDs     pq.Int64Array           `db:"inbox_owner_user_ids" json:"inbox_owner_user_ids"`
 	Total                 int                     `db:"total" json:"-"`
 	ID                    int                     `db:"id" json:"id"`
 	CreatedAt             time.Time               `db:"created_at" json:"created_at"`
@@ -177,6 +178,7 @@ type ConversationListContact struct {
 type Conversation struct {
 	InboxAccessMode           string                 `db:"inbox_access_mode" json:"inbox_access_mode"`
 	InboxOwnerUserID          null.Int               `db:"inbox_owner_user_id" json:"inbox_owner_user_id"`
+	InboxOwnerUserIDs         pq.Int64Array          `db:"inbox_owner_user_ids" json:"inbox_owner_user_ids"`
 	ID                        int                    `db:"id" json:"id"`
 	CreatedAt                 time.Time              `db:"created_at" json:"created_at"`
 	UpdatedAt                 time.Time              `db:"updated_at" json:"updated_at"`

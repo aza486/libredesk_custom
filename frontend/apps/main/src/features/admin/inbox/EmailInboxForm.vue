@@ -20,17 +20,16 @@
     <FormField
       v-if="form.values.access_mode === 'personal'"
       v-slot="{ componentField, handleChange }"
-      name="owner_user_id"
+      name="owner_user_ids"
     >
       <FormItem>
         <FormLabel>{{ t('admin.inbox.owner') }}</FormLabel>
         <FormControl>
-          <SelectComboBox
-            :model-value="componentField.modelValue"
+          <UserMultiSelect
+            :model-value="ownerOptions.filter((option) => (componentField.modelValue || []).some((id) => Number(id) === Number(option.value)))"
             :items="ownerOptions"
             :placeholder="t('admin.inbox.owner.select')"
-            type="user"
-            @update:model-value="handleChange(Number($event))"
+            @update:model-value="handleChange($event.map((option) => Number(option.value)))"
           />
         </FormControl>
         <FormDescription>{{ t('admin.inbox.owner.description') }}</FormDescription>
@@ -814,6 +813,7 @@
 import { watch, computed, ref, onMounted } from 'vue'
 import { RadioGroup, RadioGroupItem } from '@shared-ui/components/ui/radio-group'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
+import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { useUsersStore } from '@main/stores/users'
 import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -934,6 +934,7 @@ const form = useForm({
   initialValues: {
     access_mode: 'public',
     owner_user_id: null,
+    owner_user_ids: [],
     name: '',
     from: '',
     from_name_template: '',
@@ -995,9 +996,17 @@ const submitLabel = computed(() => {
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
+  const ownerUserIDs = values.access_mode === 'personal'
+    ? values.owner_user_ids?.length
+      ? values.owner_user_ids
+      : values.owner_user_id
+        ? [values.owner_user_id]
+        : []
+    : []
   await props.submitForm({
     ...values,
-    owner_user_id: values.access_mode === 'personal' ? values.owner_user_id : null
+    owner_user_ids: ownerUserIDs,
+    owner_user_id: ownerUserIDs[0] || null
   })
 })
 
@@ -1034,12 +1043,17 @@ const reconnectOAuth = () => {
 }
 
 const submitOAuthCredentials = async () => {
+  const ownerUserIDs = form.values.owner_user_ids?.length
+    ? form.values.owner_user_ids
+    : form.values.owner_user_id
+      ? [form.values.owner_user_id]
+      : []
   if (
     flowType.value === 'new_inbox' &&
     form.values.access_mode === 'personal' &&
-    !form.values.owner_user_id
+    !ownerUserIDs.length
   ) {
-    form.setFieldError('owner_user_id', t('globals.messages.required'))
+    form.setFieldError('owner_user_ids', t('globals.messages.required'))
     return
   }
   if (!oauthCredentials.value.client_id || !oauthCredentials.value.client_secret) {
@@ -1056,7 +1070,8 @@ const submitOAuthCredentials = async () => {
       ...oauthCredentials.value,
       flow_type: flowType.value,
       access_mode: form.values.access_mode,
-      owner_user_id: form.values.access_mode === 'personal' ? form.values.owner_user_id : null
+      owner_user_ids: form.values.access_mode === 'personal' ? ownerUserIDs : [],
+      owner_user_id: form.values.access_mode === 'personal' ? ownerUserIDs[0] || null : null
     }
 
     // Include inbox_id for reconnect flow (props.initialValues.id exists in edit mode)

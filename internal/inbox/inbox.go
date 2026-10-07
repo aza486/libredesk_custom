@@ -21,6 +21,7 @@ import (
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
@@ -149,6 +150,81 @@ func (m *Manager) SetUserStore(store UserStore) {
 	m.usrStore = store
 }
 
+func replacePersonalInboxOwners(tx *sqlx.Tx, inboxID int, ownerIDs []int64) error {
+	if len(ownerIDs) > 0 {
+		if _, err := tx.Exec(`INSERT INTO personal_inbox_owners(inbox_id,user_id) SELECT $1,unnest($2::bigint[]) ON CONFLICT(inbox_id,user_id) DO NOTHING`, inboxID, pq.Array(ownerIDs)); err != nil {
+			return err
+		}
+	}
+	_, err := tx.Exec(`DELETE FROM personal_inbox_owners WHERE inbox_id=$1 AND NOT (user_id=ANY($2::bigint[]))`, inboxID, pq.Array(ownerIDs))
+	return err
+}
+
+func (m *Manager) UpdatePersonalInboxOwners(inboxID, actorID int, ownerIDs []int64, canManageAll bool) error {
+	unique := make([]int64, 0, len(ownerIDs))
+	seen := make(map[int64]bool, len(ownerIDs))
+	for _, id := range ownerIDs {
+		if id <= 0 {
+			return envelope.NewError(envelope.InputError, "invalid personal inbox owner", nil)
+		}
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, id)
+		}
+	}
+	if len(unique) == 0 {
+		return envelope.NewError(envelope.InputError, "A personal inbox must have at least one owner", nil)
+	}
+
+	tx, err := m.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var accessMode string
+	if err := tx.Get(&accessMode, `SELECT access_mode FROM inboxes WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, inboxID); err != nil {
+		if err == sql.ErrNoRows {
+			return envelope.NewError(envelope.NotFoundError, m.i18n.T("globals.messages.notFound"), nil)
+		}
+		return err
+	}
+	if accessMode != "personal" {
+		return envelope.NewError(envelope.NotFoundError, m.i18n.T("globals.messages.notFound"), nil)
+	}
+	if !canManageAll {
+		var isOwner bool
+		if err := tx.Get(&isOwner, `SELECT EXISTS(SELECT 1 FROM personal_inbox_owners WHERE inbox_id=$1 AND user_id=$2)`, inboxID, actorID); err != nil {
+			return err
+		}
+		if !isOwner {
+			return envelope.NewError(envelope.PermissionError, "Only current personal inbox owners can manage its owners", nil)
+		}
+	}
+
+	var activeCount int
+	if err := tx.Get(&activeCount, `SELECT COUNT(DISTINCT id) FROM users WHERE id=ANY($1::bigint[]) AND type='agent' AND email IS DISTINCT FROM 'System' AND enabled AND deleted_at IS NULL`, pq.Array(unique)); err != nil {
+		return err
+	}
+	if activeCount != len(unique) {
+		return envelope.NewError(envelope.InputError, "Personal inbox owners must be active employees", nil)
+	}
+
+	if err := replacePersonalInboxOwners(tx, inboxID, unique); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE inboxes SET owner_user_id=$2,updated_at=NOW() WHERE id=$1`, inboxID, unique[0]); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (m *Manager) loadPersonalInboxOwners(inboxID int) (pq.Int64Array, error) {
+	ownerIDs := make(pq.Int64Array, 0)
+	err := m.db.Select(&ownerIDs, `SELECT user_id FROM personal_inbox_owners WHERE inbox_id=$1 ORDER BY created_at,user_id`, inboxID)
+	return ownerIDs, err
+}
+
 // Register registers the inbox with the manager.
 func (m *Manager) Register(i Inbox) {
 	m.mu.Lock()
@@ -202,6 +278,10 @@ func (m *Manager) GetDBRecord(identifier any) (imodels.Inbox, error) {
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 	inbox.Config = decryptedConfig
+	inbox.OwnerUserIDs, err = m.loadPersonalInboxOwners(inbox.ID)
+	if err != nil {
+		return imodels.Inbox{}, err
+	}
 
 	m.decryptInboxSecret(&inbox)
 
@@ -240,6 +320,13 @@ func (m *Manager) Create(inbox imodels.Inbox) (imodels.Inbox, error) {
 	if err := m.ValidateAccess(inbox); err != nil {
 		return imodels.Inbox{}, err
 	}
+	inbox.OwnerUserIDs = personalOwnerIDs(inbox)
+	if inbox.AccessMode == "personal" {
+		inbox.OwnerUserID = null.IntFrom(int(inbox.OwnerUserIDs[0]))
+	} else {
+		inbox.OwnerUserID = null.Int{}
+		inbox.OwnerUserIDs = nil
+	}
 	if inbox.Channel == ChannelLiveChat {
 		secret := inbox.Secret.String
 		if secret == "" {
@@ -264,10 +351,22 @@ func (m *Manager) Create(inbox imodels.Inbox) (imodels.Inbox, error) {
 	}
 
 	var createdInbox imodels.Inbox
-	if err := m.queries.InsertInbox.Get(&createdInbox, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.Enabled, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
+	tx, err := m.db.Beginx()
+	if err != nil {
+		return imodels.Inbox{}, err
+	}
+	defer tx.Rollback()
+	if err := tx.Stmtx(m.queries.InsertInbox).Get(&createdInbox, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.Enabled, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
+	if err := replacePersonalInboxOwners(tx, createdInbox.ID, inbox.OwnerUserIDs); err != nil {
+		return imodels.Inbox{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return imodels.Inbox{}, err
+	}
+	createdInbox.OwnerUserIDs = append(pq.Int64Array(nil), inbox.OwnerUserIDs...)
 
 	// Decrypt before returning
 	decryptedConfig, err := m.decryptInboxConfig(createdInbox.Config)
@@ -345,6 +444,13 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 	}
 	if err := m.ValidateAccess(inbox); err != nil {
 		return imodels.Inbox{}, err
+	}
+	inbox.OwnerUserIDs = personalOwnerIDs(inbox)
+	if inbox.AccessMode == "personal" {
+		inbox.OwnerUserID = null.IntFrom(int(inbox.OwnerUserIDs[0]))
+	} else {
+		inbox.OwnerUserID = null.Int{}
+		inbox.OwnerUserIDs = nil
 	}
 	current, err := m.GetDBRecord(id)
 	if err != nil {
@@ -446,13 +552,25 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 
 	// Update the inbox in the DB.
 	var updatedInbox imodels.Inbox
-	if err := m.queries.Update.Get(&updatedInbox, id, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Enabled, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
+	tx, err := m.db.Beginx()
+	if err != nil {
+		return imodels.Inbox{}, err
+	}
+	defer tx.Rollback()
+	if err := tx.Stmtx(m.queries.Update).Get(&updatedInbox, id, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Enabled, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
 		if accessErr := accessConstraintError(err); accessErr != nil {
 			return imodels.Inbox{}, accessErr
 		}
 		m.lo.Error("error updating inbox", "error", err)
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
+	if err := replacePersonalInboxOwners(tx, id, inbox.OwnerUserIDs); err != nil {
+		return imodels.Inbox{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return imodels.Inbox{}, err
+	}
+	updatedInbox.OwnerUserIDs = append(pq.Int64Array(nil), inbox.OwnerUserIDs...)
 
 	// Decrypt before returning
 	decryptedConfig, err := m.decryptInboxConfig(updatedInbox.Config)

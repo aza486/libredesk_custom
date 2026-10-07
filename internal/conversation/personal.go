@@ -10,13 +10,14 @@ import (
 	"github.com/lib/pq"
 )
 
-func initializePersonalVisibility(attrs map[string]any, ownerID int) {
+func initializePersonalVisibility(attrs map[string]any, ownerIDs []int) {
+	primaryOwnerID := ownerIDs[0]
 	attrs["access_mode"] = "personal"
-	attrs["owner_user_id"] = ownerID
+	attrs["owner_user_id"] = primaryOwnerID
 	delete(attrs, "creator_id")
 	attrs["customer_visibility"] = false
-	attrs["visibility_managers"] = []int{ownerID}
-	attrs["visible_users"] = []int{ownerID}
+	attrs["visibility_managers"] = append([]int(nil), ownerIDs...)
+	attrs["visible_users"] = append([]int(nil), ownerIDs...)
 }
 
 func isPersonalConversation(raw json.RawMessage) bool {
@@ -55,7 +56,7 @@ func (m *Manager) canThreadIntoInbox(conversationID, inboxID int) (bool, error) 
 // including administrators. The list query repeats this check to avoid a TOCTOU leak.
 func (c *Manager) GetPersonalConversationsList(viewerID, inboxID int, highPriority bool, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
 	var owned bool
-	if err := c.db.Get(&owned, `SELECT EXISTS(SELECT 1 FROM inboxes WHERE id=$1 AND access_mode='personal' AND owner_user_id=$2 AND deleted_at IS NULL)`, inboxID, viewerID); err != nil {
+	if err := c.db.Get(&owned, `SELECT EXISTS(SELECT 1 FROM inboxes i JOIN personal_inbox_owners pio ON pio.inbox_id=i.id WHERE i.id=$1 AND i.access_mode='personal' AND pio.user_id=$2 AND i.deleted_at IS NULL)`, inboxID, viewerID); err != nil {
 		return nil, err
 	}
 	if !owned {
@@ -76,8 +77,15 @@ func (c *Manager) ValidateVisibleUserRemoval(conversation *models.Conversation, 
 		OwnerUserID int    `json:"owner_user_id"`
 	}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+	isOwner := conversation.InboxOwnerUserID.Int == userID || attrs.OwnerUserID == userID
+	for _, ownerID := range conversation.InboxOwnerUserIDs {
+		if int(ownerID) == userID {
+			isOwner = true
+			break
+		}
+	}
 	if (conversation.InboxAccessMode == "personal" || attrs.AccessMode == "personal") &&
-		(conversation.InboxOwnerUserID.Int == userID || attrs.OwnerUserID == userID) {
+		isOwner {
 		return envelope.NewError(envelope.InputError, c.i18n.T("conversation.personalOwnerVisibilityProtected"), nil)
 	}
 	return nil

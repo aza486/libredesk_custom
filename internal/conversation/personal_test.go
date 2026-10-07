@@ -85,6 +85,84 @@ func TestPersonalInboxSpamFilter(t *testing.T) {
 	}
 }
 
+func TestSharedPersonalInboxOwnerAccess(t *testing.T) {
+	db := testutil.NewPersonalDB(t, "shared_personal_inbox_access")
+	lo := logf.New(logf.Opts{})
+	m := &Manager{db: db, lo: &lo, i18n: testutil.NewI18n(t), userStore: personalUsers{}, settingsStore: personalSettings{}, wsHub: ws.NewHub(&lo, nil)}
+	if err := dbutil.ScanSQLFile("queries.sql", &m.q, db, efs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO personal_inbox_owners(inbox_id,user_id) VALUES(101,102)`); err != nil {
+		t.Fatal(err)
+	}
+	attrs := `{"access_mode":"personal","owner_user_id":101,"visible_users":[101],"visibility_managers":[101]}`
+	var id int
+	var uuid string
+	if err := db.QueryRow(`INSERT INTO conversations(contact_id,inbox_id,status_id,custom_attributes) VALUES(105,101,101,$1::jsonb) RETURNING id,uuid::text`, attrs).Scan(&id, &uuid); err != nil {
+		t.Fatal(err)
+	}
+
+	conversation, err := m.GetConversation(id, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.ValidateVisibleUserRemoval(&conversation, 102); err == nil {
+		t.Fatal("secondary inbox owner could be removed from personal visibility")
+	}
+	for _, viewer := range []struct {
+		id   int
+		want bool
+	}{{101, true}, {102, true}, {103, false}, {104, true}} {
+		user := umodels.User{ID: viewer.id}
+		if viewer.id == 104 {
+			user.Roles = []string{"Admin"}
+		}
+		if got := authz.CanReadConversation(user, conversation); got != viewer.want {
+			t.Errorf("conversation access for %d: %v, want %v", viewer.id, got, viewer.want)
+		}
+	}
+
+	rows, err := m.GetPersonalConversationsList(102, 101, false, "", "", "", 1, 20)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("secondary owner conversation list: %d rows, %v", len(rows), err)
+	}
+	if _, err := m.GetPersonalConversationsList(103, 101, false, "", "", "", 1, 20); err == nil {
+		t.Fatal("non-owner opened the personal inbox")
+	}
+	var allowed []string
+	if err := m.q.FilterAuthorizedListUUIDs.Select(&allowed, pq.Array([]string{uuid}), 102, pq.Array([]int{}), true, true, true, true, true, true, false, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(allowed) != 1 {
+		t.Fatalf("secondary owner UUID access: %v", allowed)
+	}
+
+	clients := []*ws.Client{}
+	for _, userID := range []int{101, 102, 103, 104} {
+		client := &ws.Client{ID: userID, Hub: m.wsHub, Send: make(chan wsmodels.WSMessage, 10)}
+		m.wsHub.AddClient(client)
+		m.wsHub.SubscribeListReplace(client, []string{uuid})
+		clients = append(clients, client)
+	}
+	if got := m.authorizedConversationSubscribers(uuid); len(got) != 3 {
+		t.Fatalf("authorized shared-inbox subscribers: %v", got)
+	}
+	if _, err := db.Exec(`INSERT INTO conversation_messages(conversation_id,type,status,sender_id,sender_type,content,source_id) VALUES($1,'incoming','received',105,'contact','Message','shared-owner-media')`, id); err != nil {
+		t.Fatal(err)
+	}
+	var messageID int
+	if err := db.Get(&messageID, `SELECT id FROM conversation_messages WHERE conversation_id=$1`, id); err != nil {
+		t.Fatal(err)
+	}
+	mediaConversation, err := m.GetConversationByMessageID(messageID)
+	if err != nil || !authz.CanReadConversation(umodels.User{ID: 102}, mediaConversation) {
+		t.Fatalf("shared owner media access: %v, %v", authz.CanReadConversation(umodels.User{ID: 102}, mediaConversation), err)
+	}
+	for _, client := range clients {
+		m.wsHub.RemoveClient(client)
+	}
+}
+
 func TestPersonalIncomingAndVisibility(t *testing.T) {
 	db := testutil.NewPersonalDB(t, "personal_conversation")
 	lo := logf.New(logf.Opts{})
@@ -329,5 +407,49 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	db.Select(&tagNames, `SELECT t.name FROM tags t JOIN conversation_tags ct ON ct.tag_id=t.id WHERE ct.conversation_id=$1`, customerID)
 	if len(tagNames) != 1 || tagNames[0] != "🦽Kundenticket" {
 		t.Fatalf("public customer tags: %v", tagNames)
+	}
+}
+
+func TestPersonalIncomingAssignsEveryInboxOwner(t *testing.T) {
+	db := testutil.NewPersonalDB(t, "personal_multi_owner_assignment")
+	lo := logf.New(logf.Opts{})
+	m := &Manager{db: db, lo: &lo, i18n: testutil.NewI18n(t), userStore: personalUsers{}, settingsStore: personalSettings{}, wsHub: ws.NewHub(&lo, nil)}
+	if err := dbutil.ScanSQLFile("queries.sql", &m.q, db, efs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO personal_inbox_owners(inbox_id,user_id) VALUES(101,102)`); err != nil {
+		t.Fatal(err)
+	}
+	incoming := models.IncomingMessage{
+		InboxID: 101,
+		Subject: "Shared personal inbox",
+		Contact: models.IncomingContact{ID: 105, Email: null.StringFrom("contact@example.com")},
+	}
+	_, uuid, created, err := m.findOrCreateConversation(incoming)
+	if err != nil || !created {
+		t.Fatalf("incoming conversation creation: created=%v err=%v", created, err)
+	}
+	conversation, err := m.GetConversation(0, uuid, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conversation.AssignedUserIDs) != 2 || conversation.AssignedUserIDs[0] != 101 || conversation.AssignedUserIDs[1] != 102 {
+		t.Fatalf("personal conversation assignees: %v", conversation.AssignedUserIDs)
+	}
+	var attrs map[string]any
+	if err := json.Unmarshal(conversation.CustomAttributes, &attrs); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"visible_users", "visibility_managers"} {
+		ids := attrs[key].([]any)
+		if len(ids) != 2 || ids[0] != float64(101) || ids[1] != float64(102) {
+			t.Errorf("%s: %v", key, ids)
+		}
+	}
+	for _, ownerID := range []int{101, 102} {
+		rows, err := m.GetPersonalConversationsList(ownerID, 101, false, "", "", "", 1, 20)
+		if err != nil || len(rows) != 1 {
+			t.Errorf("owner %d personal list: rows=%d err=%v", ownerID, len(rows), err)
+		}
 	}
 }

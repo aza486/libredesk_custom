@@ -8,6 +8,7 @@ import (
 
 	autoModels "github.com/abhinavxd/libredesk/internal/automation/models"
 	clmodels "github.com/abhinavxd/libredesk/internal/context_link/models"
+	convmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/custom_attribute/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/helpcenter"
@@ -18,11 +19,29 @@ import (
 	"github.com/abhinavxd/libredesk/internal/testutil"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
 	wmodels "github.com/abhinavxd/libredesk/internal/webhook/models"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
 
 const testAppBaseURL = "https://desk.example.com"
+
+func TestCanManageConversationVisibilityForPersonalInboxOwners(t *testing.T) {
+	conversation := &convmodels.Conversation{
+		InboxAccessMode:   "personal",
+		InboxOwnerUserID:  null.IntFrom(101),
+		InboxOwnerUserIDs: pq.Int64Array{101, 102},
+	}
+	attrs := map[string]any{"visibility_managers": []any{float64(101)}}
+	for _, tc := range []struct {
+		userID int
+		want   bool
+	}{{101, true}, {102, true}, {103, false}} {
+		if got := canManageConversationVisibility(attrs, umodels.User{ID: tc.userID}, conversation); got != tc.want {
+			t.Errorf("owner %d visibility management: got %v, want %v", tc.userID, got, tc.want)
+		}
+	}
+}
 
 func TestValidateAgentRequest(t *testing.T) {
 	app := newValidatorTestApp(t)

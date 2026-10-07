@@ -408,6 +408,8 @@ const applyMacro = (uuid, id, data) =>
 const getTeamUnassignedConversations = (teamID, params) =>
   http.get(`/api/v1/teams/${teamID}/conversations/unassigned`, { params, abortOnRoute: true })
 const getOwnPersonalInboxes = () => http.get('/api/v1/agents/me/personal-inboxes')
+const updatePersonalInboxOwners = (inboxID, ownerUserIDs) =>
+  http.put(`/api/v1/personal-inboxes/${inboxID}/owners`, { owner_user_ids: ownerUserIDs })
 const getPersonalConversations = (inboxID, params) =>
   http.get(`/api/v1/personal-inboxes/${inboxID}/conversations`, { params, abortOnRoute: true })
 const getTeamConversations = (teamID, params) =>
@@ -732,6 +734,7 @@ export default {
   getTeamUnassignedConversations,
   getTeamConversations,
   getOwnPersonalInboxes,
+  updatePersonalInboxOwners,
   getPersonalConversations,
   getViewConversations,
   getOverviewCharts,

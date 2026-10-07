@@ -40,7 +40,18 @@ func CanReadConversation(
 	}
 
 	if attrs["access_mode"] == "personal" {
-		return user.HasAdminRole() || hasVisibleUser(attrs, user.ID)
+		if user.HasAdminRole() {
+			return true
+		}
+		if len(conversation.InboxOwnerUserIDs) > 0 {
+			for _, ownerID := range conversation.InboxOwnerUserIDs {
+				if int(ownerID) == user.ID {
+					return true
+				}
+			}
+			return false
+		}
+		return conversation.InboxOwnerUserID.Valid && conversation.InboxOwnerUserID.Int == user.ID
 	}
 
 	if private, ok := attrs["private"].(bool); ok && private {

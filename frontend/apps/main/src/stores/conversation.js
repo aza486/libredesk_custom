@@ -275,6 +275,13 @@ export const useConversationStore = defineStore('conversation', () => {
     return ids.some((id) => Number(id) === me)
   }
 
+  function isPersonalInboxOwner(conv, userID = userStore.userID) {
+    const ownerIDs = conv.inbox_owner_user_ids?.length
+      ? conv.inbox_owner_user_ids
+      : [conv.inbox_owner_user_id]
+    return ownerIDs.some((id) => Number(id) === Number(userID))
+  }
+
   function isSpamConversation(conv) {
     const tags = Array.isArray(conv?.tags) ? conv.tags : []
     return tags.some((tag) => {
@@ -320,10 +327,7 @@ export const useConversationStore = defineStore('conversation', () => {
         ].includes(conversations.listType)
       )
         return false
-      const visible = (conv.custom_attributes.visible_users || []).some(
-        (id) => Number(id) === Number(userStore.userID)
-      )
-      if (!userStore.roles.includes('Admin') && !visible) return false
+      if (!userStore.roles.includes('Admin') && !isPersonalInboxOwner(conv)) return false
     }
     switch (conversations.listType) {
       case CONVERSATION_LIST_TYPE.PERSONAL:
@@ -331,7 +335,7 @@ export const useConversationStore = defineStore('conversation', () => {
         if (
           !(
             conv.inbox_access_mode === 'personal' &&
-            Number(conv.inbox_owner_user_id) === Number(userStore.userID) &&
+            isPersonalInboxOwner(conv) &&
             Number(conv.inbox_id) === Number(conversations.inboxID)
           )
         ) {
@@ -351,7 +355,7 @@ export const useConversationStore = defineStore('conversation', () => {
           isAssignedToMe(conv) &&
           !(
             conv.inbox_access_mode === 'personal' &&
-            Number(conv.inbox_owner_user_id) === Number(userStore.userID)
+            isPersonalInboxOwner(conv)
           ) &&
           (conversations.listType !== CONVERSATION_LIST_TYPE.ASSIGNED_HIGH ||
             conv.priority === 'High')

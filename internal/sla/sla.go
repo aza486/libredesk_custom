@@ -1025,9 +1025,10 @@ func (m *Manager) handleSLABreach(appliedSLAID, slaPolicyID int, metric string) 
 	}
 
 	var firstResponse, resolution null.Time
-	if metric == MetricFirstResponse {
+	switch metric {
+	case MetricFirstResponse:
 		firstResponse = null.TimeFrom(time.Now())
-	} else if metric == MetricResolution {
+	case MetricResolution:
 		resolution = null.TimeFrom(time.Now())
 	}
 

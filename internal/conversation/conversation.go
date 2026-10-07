@@ -403,10 +403,36 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 	if err := tx.QueryRowx(`SELECT access_mode, owner_user_id FROM inboxes WHERE id=$1 FOR UPDATE`, inboxID).Scan(&accessMode, &ownerID); err != nil {
 		return 0, "", err
 	}
+	var personalOwnerIDs []int64
+	if accessMode == "personal" {
+		if err := tx.Select(&personalOwnerIDs, `SELECT user_id FROM personal_inbox_owners WHERE inbox_id=$1 ORDER BY created_at,user_id`, inboxID); err != nil {
+			return 0, "", err
+		}
+		if len(personalOwnerIDs) == 0 && ownerID.Valid {
+			personalOwnerIDs = []int64{int64(ownerID.Int)}
+		}
+		if len(personalOwnerIDs) == 0 {
+			return 0, "", fmt.Errorf("personal inbox %d has no owner", inboxID)
+		}
+		if ownerID.Valid {
+			orderedOwnerIDs := make([]int64, 0, len(personalOwnerIDs))
+			orderedOwnerIDs = append(orderedOwnerIDs, int64(ownerID.Int))
+			for _, id := range personalOwnerIDs {
+				if id != int64(ownerID.Int) {
+					orderedOwnerIDs = append(orderedOwnerIDs, id)
+				}
+			}
+			personalOwnerIDs = orderedOwnerIDs
+		}
+	}
 	delete(customAttributes, "access_mode")
 	delete(customAttributes, "owner_user_id")
 	if accessMode == "personal" {
-		initializePersonalVisibility(customAttributes, ownerID.Int)
+		ownerIDs := make([]int, len(personalOwnerIDs))
+		for i, id := range personalOwnerIDs {
+			ownerIDs[i] = int(id)
+		}
+		initializePersonalVisibility(customAttributes, ownerIDs)
 	} else if private, _ := customAttributes["private"].(bool); !private {
 		if err := c.initializeCustomerVisibility(customAttributes); err != nil {
 			return 0, "", err
@@ -437,7 +463,11 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 		return 0, "", err
 	}
 	if accessMode == "personal" {
-		if err := replaceUserAssignees(tx, id, []int{ownerID.Int}, ownerID.Int); err != nil {
+		ownerIDs := make([]int, len(personalOwnerIDs))
+		for i, id := range personalOwnerIDs {
+			ownerIDs[i] = int(id)
+		}
+		if err := replaceUserAssignees(tx, id, ownerIDs, ownerID.Int); err != nil {
 			return 0, "", err
 		}
 	}
@@ -497,6 +527,11 @@ func (c *Manager) GetConversation(id int, uuid, refNum string) (models.Conversat
 		c.lo.Error("error fetching conversation", "error", err)
 		return conversation, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
+	ownerIDs, err := c.loadPersonalInboxOwnerIDs(conversation.InboxID)
+	if err != nil {
+		return models.Conversation{}, err
+	}
+	conversation.InboxOwnerUserIDs = ownerIDs
 
 	// Strip name and extract plain email from "Name <email>"
 	if conversation.InboxMail != "" {
@@ -880,7 +915,48 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 		c.lo.Error("error fetching conversations", "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
+	if err := tx.Commit(); err != nil {
+		return conversations, err
+	}
+	if err := c.populateListInboxOwners(conversations); err != nil {
+		return conversations, err
+	}
 	return conversations, nil
+}
+
+func (c *Manager) loadPersonalInboxOwnerIDs(inboxID int) (pq.Int64Array, error) {
+	ids := make(pq.Int64Array, 0)
+	err := c.db.Select(&ids, `SELECT user_id FROM personal_inbox_owners WHERE inbox_id=$1 ORDER BY created_at,user_id`, inboxID)
+	return ids, err
+}
+
+func (c *Manager) populateListInboxOwners(conversations []models.ConversationListItem) error {
+	inboxIDs := make([]int, 0, len(conversations))
+	seen := make(map[int]bool, len(conversations))
+	for _, conversation := range conversations {
+		if conversation.InboxAccessMode == "personal" && !seen[conversation.InboxID] {
+			seen[conversation.InboxID] = true
+			inboxIDs = append(inboxIDs, conversation.InboxID)
+		}
+	}
+	if len(inboxIDs) == 0 {
+		return nil
+	}
+	var rows []struct {
+		InboxID int   `db:"inbox_id"`
+		UserID  int64 `db:"user_id"`
+	}
+	if err := c.db.Select(&rows, `SELECT inbox_id,user_id FROM personal_inbox_owners WHERE inbox_id=ANY($1::int[]) ORDER BY inbox_id,created_at,user_id`, pq.Array(inboxIDs)); err != nil {
+		return err
+	}
+	owners := make(map[int]pq.Int64Array, len(inboxIDs))
+	for _, row := range rows {
+		owners[row.InboxID] = append(owners[row.InboxID], row.UserID)
+	}
+	for i := range conversations {
+		conversations[i].InboxOwnerUserIDs = owners[conversations[i].InboxID]
+	}
+	return nil
 }
 
 // ReOpenConversation reopens a conversation if it's snoozed, resolved or closed.
@@ -2582,7 +2658,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			if len(inboxIDs) != 1 || inboxIDs[0] <= 0 {
 				return "", nil, fmt.Errorf("personal inbox ID required")
 			}
-			condition := fmt.Sprintf("(inboxes.id = $%d AND inboxes.access_mode = 'personal' AND inboxes.owner_user_id = $1)", len(qArgs)+1)
+			condition := fmt.Sprintf("(inboxes.id = $%d AND inboxes.access_mode = 'personal' AND EXISTS (SELECT 1 FROM personal_inbox_owners pio WHERE pio.inbox_id=inboxes.id AND pio.user_id=$1))", len(qArgs)+1)
 			qArgs = append(qArgs, inboxIDs[0])
 			if lt == models.PersonalHighPriorityConversations {
 				condition += " AND conversation_priorities.name = 'High'"
@@ -2829,7 +2905,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations, models.CreatedConversations:
 				conditions[i] = "(COALESCE(conversations.custom_attributes->>'access_mode', 'public') <> 'personal' AND " + conditions[i] + ")"
 			case models.AssignedConversations, models.AssignedHighPriorityConversations:
-				conditions[i] = "(" + personalAccess + " AND NOT EXISTS (SELECT 1 FROM inboxes owned WHERE owned.id = conversations.inbox_id AND owned.access_mode = 'personal' AND owned.owner_user_id = $1) AND " + conditions[i] + ")"
+				conditions[i] = "(" + personalAccess + " AND NOT EXISTS (SELECT 1 FROM inboxes owned JOIN personal_inbox_owners pio ON pio.inbox_id=owned.id WHERE owned.id=conversations.inbox_id AND owned.access_mode='personal' AND pio.user_id=$1) AND " + conditions[i] + ")"
 			default:
 				conditions[i] = "(" + personalAccess + " AND " + conditions[i] + ")"
 			}
@@ -3067,6 +3143,13 @@ func (c *Manager) GetConversationListItem(uuid string) (models.ConversationListI
 	var item models.ConversationListItem
 	if err := c.q.GetConversationListItem.Get(&item, uuid); err != nil {
 		return item, err
+	}
+	if item.InboxAccessMode == "personal" {
+		ownerIDs, err := c.loadPersonalInboxOwnerIDs(item.InboxID)
+		if err != nil {
+			return item, err
+		}
+		item.InboxOwnerUserIDs = ownerIDs
 	}
 	return item, nil
 }

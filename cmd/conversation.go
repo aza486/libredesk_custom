@@ -1000,7 +1000,7 @@ func handleAddVisibleUser(r *fastglue.Request) error {
 	attrs := map[string]any{}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-	if !canManageConversationVisibility(attrs, user) {
+	if !canManageConversationVisibility(attrs, user, conversation) {
 		return sendErrorEnvelope(
 			r,
 			envelope.NewError(
@@ -1050,7 +1050,7 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 	attrs := map[string]any{}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-	if !canManageConversationVisibility(attrs, user) {
+	if !canManageConversationVisibility(attrs, user, conversation) {
 		return sendErrorEnvelope(
 			r,
 			envelope.NewError(
@@ -1082,9 +1082,19 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
-func canManageConversationVisibility(attrs map[string]any, user umodels.User) bool {
+func canManageConversationVisibility(attrs map[string]any, user umodels.User, conversation *cmodels.Conversation) bool {
 	if user.HasAdminRole() {
 		return true
+	}
+	if conversation != nil && conversation.InboxAccessMode == "personal" {
+		for _, ownerID := range conversation.InboxOwnerUserIDs {
+			if int(ownerID) == user.ID {
+				return true
+			}
+		}
+		if conversation.InboxOwnerUserID.Valid && conversation.InboxOwnerUserID.Int == user.ID {
+			return true
+		}
 	}
 	if customerVisibility, _ := attrs["customer_visibility"].(bool); customerVisibility && slices.Contains(user.Roles, "Kundensupport") {
 		return true

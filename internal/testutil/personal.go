@@ -15,7 +15,7 @@ func NewPersonalDB(t *testing.T, name string) *sqlx.DB {
 		func(db *sqlx.DB) error { return migrations.V2_9_0(db, nil, nil) },
 		func(db *sqlx.DB) error { return migrations.V2_11_0(db, nil, nil) },
 		func(db *sqlx.DB) error { return migrations.V2_12_0(db, nil, nil) },
-		func(db *sqlx.DB) error { return migrations.V2_12_0(db, nil, nil) },
+		func(db *sqlx.DB) error { return migrations.V2_13_0(db, nil, nil) },
 	} {
 		if err := migrate(db); err != nil {
 			t.Fatal(err)

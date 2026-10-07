@@ -15,6 +15,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/inbox/channel/email/oauth"
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
+	"github.com/lib/pq"
 	"github.com/valyala/fasthttp"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/fastglue"
@@ -28,13 +29,14 @@ const (
 
 // OAuthCredentialsRequest represents the OAuth credentials from the request body.
 type OAuthCredentialsRequest struct {
-	AccessMode   string `json:"access_mode"`
-	OwnerUserID  int    `json:"owner_user_id"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	TenantID     string `json:"tenant_id,omitempty"` // Optional for Microsoft
-	FlowType     string `json:"flow_type,omitempty"` // "new_inbox" or "reconnect"
-	InboxID      int    `json:"inbox_id,omitempty"`  // Required for reconnect flow
+	AccessMode   string  `json:"access_mode"`
+	OwnerUserID  int     `json:"owner_user_id"`
+	OwnerUserIDs []int64 `json:"owner_user_ids"`
+	ClientID     string  `json:"client_id"`
+	ClientSecret string  `json:"client_secret"`
+	TenantID     string  `json:"tenant_id,omitempty"` // Optional for Microsoft
+	FlowType     string  `json:"flow_type,omitempty"` // "new_inbox" or "reconnect"
+	InboxID      int     `json:"inbox_id,omitempty"`  // Required for reconnect flow
 }
 
 // handleOAuthAuthorize initiates the OAuth authorization flow for creating a new email inbox.
@@ -69,9 +71,14 @@ func handleOAuthAuthorize(r *fastglue.Request) error {
 		if req.AccessMode == "" {
 			req.AccessMode = "public"
 		}
-		if err := app.inbox.ValidateAccess(imodels.Inbox{AccessMode: req.AccessMode, OwnerUserID: null.NewInt(req.OwnerUserID, req.OwnerUserID != 0), Channel: inbox.ChannelEmail}); err != nil {
+		ownerIDs := req.OwnerUserIDs
+		if len(ownerIDs) == 0 && req.OwnerUserID != 0 {
+			ownerIDs = []int64{int64(req.OwnerUserID)}
+		}
+		if err := app.inbox.ValidateAccess(imodels.Inbox{AccessMode: req.AccessMode, OwnerUserID: null.NewInt(req.OwnerUserID, req.OwnerUserID != 0), OwnerUserIDs: pq.Int64Array(ownerIDs), Channel: inbox.ChannelEmail}); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
+		req.OwnerUserIDs = ownerIDs
 	}
 
 	// Build redirect URI
@@ -86,15 +93,17 @@ func handleOAuthAuthorize(r *fastglue.Request) error {
 
 	// Store OAuth data in Redis with 15 min expiry
 	redisKey := "inbox_oauth:" + state
+	ownerUserIDsJSON, _ := json.Marshal(req.OwnerUserIDs)
 	oauthData := map[string]any{
-		"provider":      provider,
-		"redirect_uri":  redirectURI,
-		"client_id":     req.ClientID,
-		"client_secret": req.ClientSecret,
-		"flow_type":     req.FlowType,
-		"inbox_id":      req.InboxID,
-		"access_mode":   req.AccessMode,
-		"owner_user_id": req.OwnerUserID,
+		"provider":       provider,
+		"redirect_uri":   redirectURI,
+		"client_id":      req.ClientID,
+		"client_secret":  req.ClientSecret,
+		"flow_type":      req.FlowType,
+		"inbox_id":       req.InboxID,
+		"access_mode":    req.AccessMode,
+		"owner_user_id":  req.OwnerUserID,
+		"owner_user_ids": string(ownerUserIDsJSON),
 	}
 
 	// Add tenant ID for Microsoft if provided
@@ -341,9 +350,15 @@ func handleOAuthCallback(r *fastglue.Request) error {
 
 	// Create inbox
 	ownerID, _ := strconv.Atoi(oauthData["owner_user_id"])
+	var ownerIDs []int64
+	_ = json.Unmarshal([]byte(oauthData["owner_user_ids"]), &ownerIDs)
+	if len(ownerIDs) == 0 && ownerID != 0 {
+		ownerIDs = []int64{int64(ownerID)}
+	}
 	newInbox := imodels.Inbox{
 		AccessMode:        oauthData["access_mode"],
 		OwnerUserID:       null.NewInt(ownerID, ownerID != 0),
+		OwnerUserIDs:      pq.Int64Array(ownerIDs),
 		Name:              fmt.Sprintf("%s Inbox", userEmail),
 		From:              userEmail,
 		Channel:           inbox.ChannelEmail,
