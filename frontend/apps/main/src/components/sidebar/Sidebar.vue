@@ -71,7 +71,9 @@ import {
   Wrench,
   Bot,
   Lightbulb,
-  BookOpen
+  BookOpen,
+  ShieldUser,
+  Accessibility,
 } from 'lucide-vue-next'
 
 const navIconMap = {
@@ -876,7 +878,7 @@ onUnmounted(() => {
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton>
-                      <Mail class="h-4 w-4" />
+                      <ShieldUser class="h-4 w-4" />
                       <span class="truncate">{{ t('inbox.personalMailboxes') }}</span>
                       <span
                         v-if="!personalInboxOpen && hasAnyPersonalInboxCount()"
@@ -1097,7 +1099,7 @@ onUnmounted(() => {
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
                     <SidebarMenuButton :isActive="isActiveParent('/inboxes/customer')">
-                      <Mail />
+                      <Accessibility />
 
                       <span class="truncate">Kundentickets</span>
                       <span
@@ -1208,7 +1210,7 @@ onUnmounted(() => {
                   :isActive="isActiveParent('/inboxes/service-mails')"
                   @click="navigateToInbox('service-mails')"
                 >
-                  <MailCheck />
+                  <Wrench />
                   <span>Service-Mails</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
