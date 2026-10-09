@@ -15,3 +15,5 @@ frontend/package-lock.json
 uploads/*
 !uploads/.gitkeep
 config.test.toml
+docs
+backups

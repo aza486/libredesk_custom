@@ -183,3 +183,20 @@ requests_per_minute = 100
 [rate_limit.media]
 enabled = true
 requests_per_minute = 300
+
+# Optional trusted AI feedback receiver. Disabled when all four values are empty.
+# Requires a synchronous, transactional receiver; HTTPS is the default.
+# See docs/ai-feedback.md for the narrowly scoped internal HTTP exception.
+[ai_feedback]
+endpoint = ""
+token = "" # Prefer LIBREDESK_AI_FEEDBACK__TOKEN from the deployment secret store.
+# Both must be explicitly configured for HTTP, and endpoint must match exactly.
+# Use one stable private n8n IP in the network shared with Libredesk, never a CIDR.
+internal_http_endpoint = ""
+internal_http_ip = ""
+
+# Dedicated inbound AI-analysis-note endpoint. Empty disables access.
+[ai_analysis]
+# IDs of dedicated integration agents with API keys and messages:write.
+# Do not use general employee accounts. Configuration changes require restart.
+allowed_agent_ids = []

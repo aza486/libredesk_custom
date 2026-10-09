@@ -1,4 +1,89 @@
 <template>
+  <Dialog :open="aiModalOpen" @update:open="aiModalOpen = $event">
+    <DialogContent @close-auto-focus="restoreAiFocus">
+      <DialogHeader>
+        <DialogTitle>{{
+          aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Eigene Antwort verfassen'
+        }}</DialogTitle>
+        <DialogDescription>
+          {{
+            aiAction?.mode === 'adopt'
+              ? 'Der Vorschlag ersetzt den öffentlichen Antwortentwurf. Du kannst ihn vor dem Versand bearbeiten.'
+              : 'Schreibe deine Antwort anschließend im vorhandenen Editor. Feedback wird erst nach bestätigtem Versand gespeichert.'
+          }}
+        </DialogDescription>
+      </DialogHeader>
+      <div
+        class="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted p-3 text-sm"
+        aria-label="Ursprünglicher KI-Antwortvorschlag"
+      >
+        {{ aiAction?.note.suggestion }}
+      </div>
+      <template v-if="aiAction?.mode === 'own'">
+        <label for="ai-feedback-reason" class="text-sm font-medium"
+          >Warum möchtest du anders antworten? (optional)</label
+        >
+        <textarea
+          id="ai-feedback-reason"
+          v-model="aiReason"
+          rows="4"
+          class="w-full rounded-md border bg-background p-2 text-sm"
+          :aria-invalid="aiReasonBytes > 8000"
+          aria-describedby="ai-feedback-limit"
+        />
+        <p
+          id="ai-feedback-limit"
+          class="text-xs"
+          :class="aiReasonBytes > 8000 ? 'text-destructive' : 'text-muted-foreground'"
+        >
+          {{ aiReasonBytes }} / 8000 UTF-8-Bytes
+        </p>
+      </template>
+      <p v-if="aiModalError" role="alert" class="text-sm text-destructive">{{ aiModalError }}</p>
+      <DialogFooter>
+        <Button variant="outline" :disabled="aiModalBusy" @click="aiModalOpen = false"
+          >Abbrechen</Button
+        >
+        <Button
+          :disabled="aiModalBusy || aiReasonBytes > 8000 || isSending"
+          @click="continueAiReply"
+          >{{ aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Weiter zur Antwort' }}</Button
+        >
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+  <div
+    v-if="feedbackRecord"
+    class="mx-2 mt-2 rounded-md border p-3 text-sm"
+    role="status"
+    aria-live="polite"
+  >
+    <p>{{ feedbackStatus }}</p>
+    <p v-if="feedbackRecord.phase === 'composing'" class="mt-1 text-muted-foreground">
+      Die nächste öffentliche Antwort wird mit der ursprünglichen Kundenmail verknüpft. Private
+      Notizen erzeugen kein Feedback.
+    </p>
+    <Button
+      v-if="feedbackRecord.phase === 'composing'"
+      size="sm"
+      variant="ghost"
+      @click="cancelFeedback"
+      >Feedback abbrechen (Antwort behalten)</Button
+    >
+    <Button
+      v-if="['error', 'uncertain', 'failed', 'waiting'].includes(feedbackRecord.phase)"
+      size="sm"
+      variant="outline"
+      class="mt-2"
+      @click="retryFeedback"
+      >{{
+        feedbackRecord.deliveryConfirmed && feedbackRecord.phase === 'error'
+          ? 'Feedback erneut speichern'
+          : 'Versandstatus prüfen'
+      }}</Button
+    >
+  </div>
+
   <AlertDialog :open="showContactEmailWarning" @update:open="showContactEmailWarning = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
@@ -53,6 +138,7 @@
       >
         <ReplyBoxContent
           v-if="isEditorFullscreen"
+          ref="fullscreenContentRef"
           :isFullscreen="true"
           :aiPrompts="aiPrompts"
           :isSending="isSending"
@@ -93,7 +179,11 @@
         <Pencil class="shrink-0 text-muted-foreground" />
         <span v-if="draftPreview" class="truncate">{{ draftPreview }}</span>
         <span v-else class="truncate text-muted-foreground">
-          {{ messageType === 'private_note' ? $t('globals.terms.privateNote') : $t('globals.terms.reply') }}
+          {{
+            messageType === 'private_note'
+              ? $t('globals.terms.privateNote')
+              : $t('globals.terms.reply')
+          }}
         </span>
         <span
           v-if="attachmentCount"
@@ -146,7 +236,6 @@
 
 <script setup>
 import { ref, watch, computed, toRaw, nextTick, onMounted, onUnmounted } from 'vue'
-import { useStorage } from '@vueuse/core'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 import { MACRO_CONTEXT } from '@main/constants/conversation'
@@ -168,7 +257,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@shared-ui/components/ui/alert-dialog'
-import { Dialog, DialogContent } from '@shared-ui/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@shared-ui/components/ui/dialog'
 import { Button } from '@shared-ui/components/ui/button'
 import { Pencil, Paperclip } from 'lucide-vue-next'
 import { useVisualViewportHeight } from '@main/composables/useVisualViewportHeight'
@@ -177,6 +273,12 @@ import { useEmitter } from '@main/composables/useEmitter'
 import { useFileUpload } from '@main/composables/useFileUpload'
 import { hasInlineImage, hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
+import { createAIFeedback } from '@main/utils/ai-feedback'
+import {
+  feedbackReasonBytes,
+  isOriginalCustomerMessage,
+  suggestionToHTML
+} from '@main/utils/ai-note'
 import { UserTypeAgent } from '@/constants/user'
 
 const { t } = useI18n()
@@ -253,13 +355,197 @@ const showMissingTagsWarning = ref(false)
 const deferredStatus = ref(null)
 const mentions = ref([])
 
-const openReply = async ({ content } = {}) => {
-  isEditorFullscreen.value = false
+const feedback = createAIFeedback({
+  api,
+  drafts: conversationStore,
+  userID: () => userStore.userID
+})
+const feedbackRecord = computed(() => feedback.records[currentConversationUUID.value])
+const aiModalOpen = ref(false)
+const aiAction = ref(null)
+const aiReason = ref('')
+const aiModalError = ref('')
+const aiModalBusy = ref(false)
+const aiReasonBytes = computed(() => feedbackReasonBytes(aiReason.value))
+const fullscreenContentRef = ref(null)
+let aiPreviousFocus = null
+let focusAfterModal = false
+let pollTimer = null
+let pollGeneration = 0
+const pollCount = ref(0)
+const feedbackStatus = computed(
+  () =>
+    ({
+      composing: 'Eigene Antwort: optionales Feedback vorgemerkt',
+      waiting:
+        pollCount.value >= 40
+          ? 'Versand noch nicht bestätigt. Du kannst den Status erneut prüfen.'
+          : 'Antwort wird versendet',
+      uncertain:
+        'Die Annahme der Antwort ist noch unklar. Bitte den Versandstatus prüfen; nicht erneut senden.',
+      saving: 'Versand bestätigt, Feedback wird gespeichert',
+      saved: 'Feedback gespeichert',
+      error:
+        'Feedback konnte nicht gespeichert werden. Die Begründung bleibt erhalten; die Antwort wird nicht erneut versendet.',
+      failed: 'Nachrichtenversand fehlgeschlagen. Es wurde kein Feedback gespeichert.'
+    })[feedbackRecord.value?.phase]
+)
+const focusReply = async (uuid) => {
   messageType.value = 'reply'
-  if (typeof content === 'string') htmlContent.value = content
+  isEditorFullscreen.value = isCramped.value
   await nextTick()
-  replyBoxContentRef.value?.focus()
+  for (let count = 0; isDraftLoading.value && count < 150; count++)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  if (uuid !== currentConversationUUID.value || isDraftLoading.value) return false
+  await nextTick()
+  ;(fullscreenContentRef.value || replyBoxContentRef.value)?.focus()
+  return true
 }
+const restoreAiFocus = (event) => {
+  event.preventDefault()
+  if (!focusAfterModal) aiPreviousFocus?.focus?.()
+  focusAfterModal = false
+}
+const openReply = async ({ aiNote, mode, content } = {}) => {
+  const uuid = currentConversationUUID.value
+  if (aiNote) {
+    if (
+      isSending.value ||
+      isGenerating.value ||
+      isDraftLoading.value ||
+      !userStore.can('messages:write') ||
+      conversationStore.current?.inbox_channel !== 'email'
+    )
+      return
+    if (feedbackRecord.value && !['composing', 'saved'].includes(feedbackRecord.value.phase)) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        variant: 'destructive',
+        description: 'Bitte zuerst das ausstehende Feedback abschließen.'
+      })
+      return
+    }
+    try {
+      const original = (await api.getConversationMessage(uuid, aiNote.originalUUID))?.data?.data
+      if (uuid !== currentConversationUUID.value) return
+      if (!isOriginalCustomerMessage(original, uuid, aiNote.originalUUID))
+        throw new Error('Die ursprüngliche Kundenmail ist nicht eindeutig zugeordnet.')
+      aiPreviousFocus = document.activeElement
+      aiAction.value = { uuid, note: aiNote, mode }
+      aiReason.value =
+        feedbackRecord.value?.phase === 'composing' &&
+        feedbackRecord.value.originalUUID === aiNote.originalUUID
+          ? feedbackRecord.value.reason
+          : ''
+      aiModalError.value = ''
+      aiModalOpen.value = true
+    } catch {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+        variant: 'destructive',
+        description: 'Die ursprüngliche Kundenmail konnte nicht sicher geprüft werden.'
+      })
+    }
+    return
+  }
+  if ((await focusReply(uuid)) && typeof content === 'string') htmlContent.value = content
+}
+const continueAiReply = async () => {
+  if (aiModalBusy.value || aiReasonBytes.value > 8000) return
+  const action = aiAction.value
+  if (!action || action.uuid !== currentConversationUUID.value) return
+  aiModalBusy.value = true
+  try {
+    if (action.mode === 'own') await feedback.arm(action.uuid, action.note, aiReason.value)
+    else await feedback.cancel(action.uuid)
+    if (action.uuid !== currentConversationUUID.value) return
+    focusAfterModal = true
+    aiModalOpen.value = false
+    if ((await focusReply(action.uuid)) && action.mode === 'adopt')
+      htmlContent.value = suggestionToHTML(action.note.suggestion)
+  } catch {
+    aiModalError.value =
+      'Die Feedback-Vormerkung konnte nicht sicher gespeichert werden. Bitte erneut versuchen.'
+  } finally {
+    aiModalBusy.value = false
+  }
+}
+const cancelFeedback = async () => {
+  try {
+    await feedback.cancel(currentConversationUUID.value)
+  } catch {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive',
+      description: 'Abbruch konnte nicht gespeichert werden.'
+    })
+  }
+}
+const retryFeedback = async () => {
+  const uuid = currentConversationUUID.value
+  await feedback.check(uuid, true)
+  if (
+    uuid === currentConversationUUID.value &&
+    ['waiting', 'uncertain'].includes(feedback.records[uuid]?.phase)
+  ) {
+    stopPolling()
+    pollCount.value = 0
+    pollFeedback(uuid)
+  }
+}
+const stopPolling = () => {
+  pollGeneration++
+  clearTimeout(pollTimer)
+  pollTimer = null
+}
+const pollFeedback = async (uuid, generation = pollGeneration) => {
+  if (
+    generation !== pollGeneration ||
+    uuid !== currentConversationUUID.value ||
+    pollCount.value >= 40
+  )
+    return
+  pollCount.value++
+  await feedback.check(uuid)
+  if (
+    generation === pollGeneration &&
+    uuid === currentConversationUUID.value &&
+    ['waiting', 'uncertain'].includes(feedback.records[uuid]?.phase) &&
+    pollCount.value < 40
+  ) {
+    pollTimer = setTimeout(() => pollFeedback(uuid, generation), 3000)
+  }
+}
+watch(
+  currentConversationUUID,
+  async (uuid) => {
+    stopPolling()
+    aiModalOpen.value = false
+    aiReason.value = ''
+    aiAction.value = null
+    pollCount.value = 0
+    await conversationStore.draftsReady
+    if (uuid && uuid === currentConversationUUID.value) {
+      feedback.hydrate(uuid)
+      pollFeedback(uuid)
+    }
+  },
+  { immediate: true }
+)
+watch(
+  () => conversationStore.messages.version,
+  () => {
+    if (currentConversationUUID.value) feedback.check(currentConversationUUID.value)
+  }
+)
+onUnmounted(stopPolling)
+watch(
+  () => userStore.userID,
+  () => {
+    stopPolling()
+    feedback.reset()
+    aiModalOpen.value = false
+    aiReason.value = ''
+    aiAction.value = null
+  }
+)
 
 defineExpose({ openReply })
 
@@ -300,7 +586,6 @@ const handleCopilotInsertReply = (html) => {
   htmlContent.value = html
 }
 
-
 onUnmounted(() => {
   emitter.off(EMITTER_EVENTS.COPILOT_INSERT_REPLY, handleCopilotInsertReply)
 })
@@ -316,7 +601,12 @@ const draftPreview = computed(() => textContent.value.trim())
 
 const attachmentCount = computed(() => mediaFiles.value.length + uploadingFiles.value.length)
 
-const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck = false, statusToSet = null) => {
+const processSend = async (
+  skipContactEmailCheck = false,
+  skipMissingTagsCheck = false,
+  statusToSet = null
+) => {
+  if (isSending.value) return
   let hasMessageSendingErrored = false
   isEditorFullscreen.value = false
 
@@ -324,11 +614,13 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
   if (hasPendingInlineUpload(html)) return
   const hasContent = hasTextContent.value || hasInlineImage(html) || mediaFiles.value.length > 0
   const convUUID = conversationStore.current.uuid
+  const sendingAgentID = userStore.userID
   const isPrivate = messageType.value === 'private_note'
-
-  const currentInbox = inboxStore.inboxes.find(
-    (i) => i.id === conversationStore.current.inbox_id
+  const macroForSend = JSON.parse(
+    JSON.stringify(conversationStore.getMacro(MACRO_CONTEXT.REPLY) || {})
   )
+
+  const currentInbox = inboxStore.inboxes.find((i) => i.id === conversationStore.current.inbox_id)
   if (
     !isPrivate &&
     !skipMissingTagsCheck &&
@@ -373,6 +665,9 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
   // Add pending message to cache for instant display.
   if (hasContent) {
     const savedContent = htmlContent.value
+    const savedAttachmentIDs = mediaFiles.value.map((file) => file.id)
+    const savedMentions = [...mentions.value]
+    const savedTemplateID = selectedTemplateId.value
     const author = {
       id: userStore.userID,
       first_name: userStore.firstName,
@@ -416,8 +711,28 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
       meta
     )
 
+    let feedbackOriginalUUID = null
+    if (!isPrivate && feedbackRecord.value?.phase === 'composing') {
+      isSending.value = true
+      try {
+        feedbackOriginalUUID = await feedback.prepare(convUUID, tempUUID)
+      } catch {
+        conversationStore.removePendingMessage(convUUID, tempUUID)
+        isSending.value = false
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive',
+          description: 'Feedback konnte nicht vorgemerkt werden. Die Antwort wurde nicht versendet.'
+        })
+        return
+      }
+    }
+    if (sendingAgentID !== userStore.userID) {
+      conversationStore.removePendingMessage(convUUID, tempUUID)
+      isSending.value = false
+      return
+    }
     // Clear editor immediately.
-    htmlContent.value = ''
+    if (convUUID === currentConversationUUID.value) htmlContent.value = ''
 
     try {
       isSending.value = true
@@ -425,28 +740,51 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
         sender_type: UserTypeAgent,
         private: isPrivate,
         message: savedContent,
-        attachments: mediaFiles.value.map((file) => file.id),
-        mentions: isPrivate ? mentions.value : [],
+        attachments: savedAttachmentIDs,
+        mentions: isPrivate ? savedMentions : [],
         cc: parsedCC,
         bcc: parsedBCC,
         to: parsedTo,
         echo_id: isPrivate ? '' : tempUUID,
-        template_id: isPrivate ? null : selectedTemplateId.value
+        template_id: isPrivate ? null : savedTemplateID,
+        ...(feedbackOriginalUUID ? { ai_feedback_original_message_uuid: feedbackOriginalUUID } : {})
       })
+
+      if (sendingAgentID !== userStore.userID) {
+        isSending.value = false
+        return
+      }
+      if (feedbackOriginalUUID) {
+        try {
+          await feedback.queued(convUUID, response?.data?.data)
+        } catch {
+          // The message was already accepted. Never route feedback persistence
+          // failures through the send error handler or restore the sent draft.
+          if (feedback.records[convUUID]) feedback.records[convUUID].phase = 'uncertain'
+        }
+        pollCount.value = 0
+        if (convUUID === currentConversationUUID.value) {
+          stopPolling()
+          pollFeedback(convUUID)
+        }
+      }
 
       // Private notes are sent immediately so replace immediately.
       if (isPrivate && response?.data?.data) {
         conversationStore.replacePendingMessage(convUUID, tempUUID, response.data.data)
       }
 
-      await conversationStore.refreshCurrentConversation(convUUID)
+      await conversationStore.refreshCurrentConversation(convUUID).catch(() => {})
       notificationStore.markAssignmentAsReadForConversation(convUUID)
-
     } catch (error) {
       hasMessageSendingErrored = true
       // Remove pending message and restore editor content.
       conversationStore.removePendingMessage(convUUID, tempUUID)
-      htmlContent.value = savedContent
+      if (feedbackOriginalUUID) {
+        await feedback.uncertain(convUUID).catch(() => {})
+        // A lost HTTP response is not proof that the queue rejected the reply.
+        // Keep the intent for status recovery and never restore a resendable draft.
+      } else if (convUUID === currentConversationUUID.value) htmlContent.value = savedContent
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
         description: handleHTTPError(error).message
@@ -456,8 +794,8 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
 
   // Apply macro actions if any.
   if (!hasMessageSendingErrored) {
-    const macroID = conversationStore.getMacro(MACRO_CONTEXT.REPLY)?.id
-    const macroActions = conversationStore.getMacro(MACRO_CONTEXT.REPLY)?.actions || []
+    const macroID = macroForSend.id
+    const macroActions = macroForSend.actions || []
     if (macroID > 0) {
       try {
         await api.applyMacro(convUUID, macroID, macroActions)
@@ -473,11 +811,13 @@ const processSend = async (skipContactEmailCheck = false, skipMissingTagsCheck =
   // Clear state on success.
   if (!hasMessageSendingErrored) {
     clearDraft(convUUID, isPrivate ? 'private_note' : 'reply')
-    conversationStore.resetMacro(MACRO_CONTEXT.REPLY)
-    clearMediaFiles()
-    emailErrors.value = []
-    mentions.value = []
-    if (statusToSet) conversationStore.updateStatus(statusToSet)
+    if (convUUID === currentConversationUUID.value) {
+      conversationStore.resetMacro(MACRO_CONTEXT.REPLY)
+      clearMediaFiles()
+      emailErrors.value = []
+      mentions.value = []
+      if (statusToSet) conversationStore.updateStatus(statusToSet)
+    }
   }
   isSending.value = false
 }
@@ -489,8 +829,7 @@ const loadOutgoingTemplates = async () => {
 
     const defaultTemplate = outgoingTemplates.value.find((template) => template.is_default)
 
-    selectedTemplateId.value =
-      defaultTemplate?.id || outgoingTemplates.value[0]?.id || null
+    selectedTemplateId.value = defaultTemplate?.id || outgoingTemplates.value[0]?.id || null
   } catch (error) {
     outgoingTemplates.value = []
     selectedTemplateId.value = null
@@ -506,7 +845,6 @@ onMounted(() => {
   emitter.on(EMITTER_EVENTS.COPILOT_INSERT_REPLY, handleCopilotInsertReply)
   loadOutgoingTemplates()
 })
-
 
 const processSendAndSetStatus = (status) => processSend(false, false, status)
 
@@ -532,8 +870,10 @@ watch(
   [loadedMacroID, loadedMacroActions],
   ([id, actions]) => {
     conversationStore.resetMacro(MACRO_CONTEXT.REPLY)
-    if (id > 0) conversationStore.setMacro({ id, actions: [...toRaw(actions)] }, MACRO_CONTEXT.REPLY)
-    else if (actions.length) conversationStore.setMacroActions([...toRaw(actions)], MACRO_CONTEXT.REPLY)
+    if (id > 0)
+      conversationStore.setMacro({ id, actions: [...toRaw(actions)] }, MACRO_CONTEXT.REPLY)
+    else if (actions.length)
+      conversationStore.setMacroActions([...toRaw(actions)], MACRO_CONTEXT.REPLY)
   },
   { deep: true }
 )

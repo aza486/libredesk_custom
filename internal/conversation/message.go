@@ -15,6 +15,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/abhinavxd/libredesk/internal/aifeedback"
 	"github.com/abhinavxd/libredesk/internal/attachment"
 	amodels "github.com/abhinavxd/libredesk/internal/automation/models"
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
@@ -183,6 +184,19 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 
 		// Set "In-Reply-To" and "References" headers for email threading.
 		outbound.References, outbound.InReplyTo = m.BuildEmailThreadingHeaders(message.ConversationID, outbound.SourceID)
+	}
+
+	// Persist the rendered transport body before sending feedback-enabled replies.
+	// Failure here is a send failure before any transport side effect.
+	var feedbackMeta map[string]any
+	if json.Unmarshal(message.Meta, &feedbackMeta) == nil && feedbackMeta[aifeedback.OriginalKey] != nil {
+		snapshot, err := json.Marshal(map[string]any{aifeedback.BodyKey: outbound.Content})
+		if err == nil {
+			_, err = m.q.UpdateMessageFeedbackSnapshot.Exec(string(snapshot), message.UUID)
+		}
+		if handleError(err, "error persisting feedback reply snapshot") {
+			return
+		}
 	}
 
 	// Send message
@@ -540,9 +554,15 @@ func (m *Manager) MarkMessageAsPending(uuid string) error {
 
 // SendPrivateNote inserts a private message in a conversation.
 func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string, mentions []models.MentionInput) (models.Message, error) {
+	return m.sendPrivateNote(media, senderID, conversationUUID, content, mentions, nil, true)
+}
+
+func (m *Manager) sendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string, mentions []models.MentionInput, meta json.RawMessage, renderTemplate bool) (models.Message, error) {
 	// Best-effort render template variables before saving.
-	if data, err := m.BuildTemplateData(conversationUUID, senderID); err == nil {
-		content = m.template.RenderString(data, content)
+	if renderTemplate {
+		if data, err := m.BuildTemplateData(conversationUUID, senderID); err == nil {
+			content = m.template.RenderString(data, content)
+		}
 	}
 
 	message := models.Message{
@@ -555,6 +575,7 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 		ContentType:      models.ContentTypeHTML,
 		Private:          true,
 		Media:            media,
+		Meta:             meta,
 	}
 	if err := m.InsertMessage(&message); err != nil {
 		return models.Message{}, err

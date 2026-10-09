@@ -4,6 +4,7 @@ import { useConversationStore } from '@main/stores/conversation'
 import { MACRO_CONTEXT } from '@main/constants/conversation'
 import { getTextFromHTML } from '@shared-ui/utils/string.js'
 import api from '@main/api'
+import { syncServerDraft } from '@main/utils/draft-sync'
 
 const hasKeys = (obj, keys) => Boolean(obj) && keys.every(key => key in obj)
 
@@ -29,13 +30,14 @@ const isDraftEmpty = (draft) => {
   const hasInlineImage = /<img\b/i.test(content)
   const hasAttachments = draft?.meta?.attachments?.length > 0
   const hasMacroActions = draft?.meta?.macro_actions?.length > 0
-  return !hasText && !hasInlineImage && !hasAttachments && !hasMacroActions
+  return !hasText && !hasInlineImage && !hasAttachments && !hasMacroActions && !draft?.meta?.ai_feedback
 }
 
 const draftKey = (uuid, type) => `${uuid}::${type}`
 
 const metaSignature = (meta) =>
   JSON.stringify({
+    ai_feedback: meta?.ai_feedback || null,
     macro_id: meta?.macro_id || 0,
     macro_actions: meta?.macro_actions || [],
     attachments: (meta?.attachments || []).map(a => a.uuid)
@@ -59,8 +61,9 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const loadedKey = ref(null)
   const currentKey = () => draftKey(conversationUUID.value, messageType.value)
 
-  const buildDraft = () => {
-    const meta = {}
+  const buildDraft = (uuid = conversationUUID.value, type = messageType.value) => {
+    const feedback = conversationStore.getDraft(uuid, 'reply')?.meta?.ai_feedback
+    const meta = type === 'reply' && feedback ? { ai_feedback: feedback } : {}
     const macro = conversationStore.getMacro(MACRO_CONTEXT.REPLY)
     const macroActions = macro?.actions || []
     if (macro?.id > 0) meta.macro_id = macro.id
@@ -101,22 +104,16 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     isLoading.value = false
   }
 
-  // Serialize every server write so a delete can never land before an earlier save and resurrect the row.
-  let syncChain = Promise.resolve()
-  const queueSync = (fn) => {
-    syncChain = syncChain.then(fn, fn)
-  }
-
   // Update the store synchronously; server sync runs in the background, never awaited.
   const save = (uuid, type) => {
-    const draft = buildDraft()
+    const draft = buildDraft(uuid, type)
     if (sameDraft(draft, conversationStore.getDraft(uuid, type))) return
     if (isDraftEmpty(draft)) {
       conversationStore.removeDraft(uuid, type)
-      queueSync(() => api.deleteDraft(uuid, type).catch(() => {}))
+      syncServerDraft(api, conversationStore, uuid, type).catch(() => {})
     } else {
       conversationStore.setDraft(uuid, type, draft)
-      queueSync(() => api.saveDraft(uuid, type, draft).catch(() => {}))
+      syncServerDraft(api, conversationStore, uuid, type).catch(() => {})
     }
   }
 
@@ -126,8 +123,10 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
 
   const clearDraft = (uuid = conversationUUID.value, type = messageType.value) => {
     if (!uuid) return
-    conversationStore.removeDraft(uuid, type)
-    queueSync(() => api.deleteDraft(uuid, type).catch(() => {}))
+    const feedback = type === 'reply' && conversationStore.getDraft(uuid, type)?.meta?.ai_feedback
+    if (feedback) conversationStore.setDraft(uuid, type, { content: '', meta: { ai_feedback: feedback } })
+    else conversationStore.removeDraft(uuid, type)
+    syncServerDraft(api, conversationStore, uuid, type).catch(() => {})
     if (uuid === conversationUUID.value && type === messageType.value) applyDraft(null)
   }
 

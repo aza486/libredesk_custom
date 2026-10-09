@@ -35,6 +35,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/view"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/abhinavxd/libredesk/internal/aifeedback"
 	"github.com/abhinavxd/libredesk/internal/automation"
 	contextlink "github.com/abhinavxd/libredesk/internal/context_link"
 	"github.com/abhinavxd/libredesk/internal/conversation"
@@ -94,6 +95,8 @@ const (
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
+	aiNoteAgentIDs   []int
+	aiFeedback       *aifeedback.Client
 	ctx              context.Context
 	fs               stuffbin.FileSystem
 	consts           atomic.Value
@@ -288,7 +291,19 @@ func main() {
 	go aiAgent.Run(ctx, cmp.Or(ko.Int("ai_agent.worker_count"), 10))
 	go ai.Run(ctx)
 
+	feedbackClient, err := aifeedback.NewWithConfig(aifeedback.Config{
+		Endpoint:             ko.String("ai_feedback.endpoint"),
+		Token:                ko.String("ai_feedback.token"),
+		InternalHTTPEndpoint: ko.String("ai_feedback.internal_http_endpoint"),
+		InternalHTTPIP:       ko.String("ai_feedback.internal_http_ip"),
+		DialControl:          ssrfControl,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	var app = &App{
+		aiFeedback:       feedbackClient,
+		aiNoteAgentIDs:   ko.Ints("ai_analysis.allowed_agent_ids"),
 		ctx:              ctx,
 		lo:               lo,
 		fs:               fs,

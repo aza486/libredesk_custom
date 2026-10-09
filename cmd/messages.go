@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/abhinavxd/libredesk/internal/aifeedback"
+	inboxmodels "github.com/abhinavxd/libredesk/internal/inbox"
+
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
@@ -14,16 +17,17 @@ import (
 )
 
 type messageReq struct {
-	Attachments []int                  `json:"attachments"`
-	Message     string                 `json:"message"`
-	Private     bool                   `json:"private"`
-	To          []string               `json:"to"`
-	CC          []string               `json:"cc"`
-	BCC         []string               `json:"bcc"`
-	SenderType  string                 `json:"sender_type"`
-	Mentions    []cmodels.MentionInput `json:"mentions"`
-	EchoID      string                 `json:"echo_id"`
-	TemplateID  int                    `json:"template_id"`
+	AIFeedbackOriginalMessageUUID string                 `json:"ai_feedback_original_message_uuid"`
+	Attachments                   []int                  `json:"attachments"`
+	Message                       string                 `json:"message"`
+	Private                       bool                   `json:"private"`
+	To                            []string               `json:"to"`
+	CC                            []string               `json:"cc"`
+	BCC                           []string               `json:"bcc"`
+	SenderType                    string                 `json:"sender_type"`
+	Mentions                      []cmodels.MentionInput `json:"mentions"`
+	EchoID                        string                 `json:"echo_id"`
+	TemplateID                    int                    `json:"template_id"`
 }
 
 // handleGetMessages returns messages for a conversation.
@@ -259,6 +263,19 @@ func handleSendMessage(r *fastglue.Request) error {
 		}
 	}
 
+	if req.AIFeedbackOriginalMessageUUID != "" {
+		if r.RequestCtx.UserValue("auth_method") != authMethodSession || req.Private || req.SenderType != umodels.UserTypeAgent || inbox.Channel != inboxmodels.ChannelEmail {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "AI feedback requires a public agent email reply from a session", nil, envelope.InputError)
+		}
+		original, err := app.conversation.GetMessage(req.AIFeedbackOriginalMessageUUID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if err := aifeedback.ValidateOriginal(original, cuuid); err != nil {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid original customer message", nil, envelope.InputError)
+		}
+	}
+
 	// Get media for all attachments, skip any already associated with a model.
 	media, err := getUnassociatedMedia(app, req.Attachments)
 	if err != nil {
@@ -290,6 +307,9 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	// Queue outgoing reply.
 	meta := map[string]any{}
+	if req.AIFeedbackOriginalMessageUUID != "" {
+		meta[aifeedback.OriginalKey] = req.AIFeedbackOriginalMessageUUID
+	}
 	if req.EchoID != "" {
 		meta["echo_id"] = req.EchoID
 	}

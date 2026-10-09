@@ -883,8 +883,24 @@ WHERE m.source_id = ANY($1::text [])
   AND (c.inbox_id=$2 OR (COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal' AND i.access_mode <> 'personal'))
 ORDER BY m.id DESC LIMIT 1;
 
+-- name: update-message-feedback-snapshot
+UPDATE conversation_messages SET meta = meta || $1::jsonb WHERE uuid = $2;
+
 -- name: update-message-status
-update conversation_messages set status = $1, updated_at = NOW() where uuid = $2;
+UPDATE conversation_messages
+SET
+    status = $1::message_status,
+    updated_at = NOW(),
+    meta = CASE
+        WHEN $1::message_status = 'sent'::message_status
+             AND meta ? 'ai_feedback_original_message_uuid'
+        THEN meta || jsonb_build_object(
+            'ai_feedback_sent_at',
+            NOW()
+        )
+        ELSE meta
+    END
+WHERE uuid = $2;
 
 -- name: update-message-source-id
 UPDATE conversation_messages SET source_id = $1 WHERE id = $2;

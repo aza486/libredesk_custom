@@ -354,6 +354,7 @@ type queries struct {
 	MessageExistsBySourceID            *sqlx.Stmt `query:"message-exists-by-source-id"`
 	GetConversationByMessageID         *sqlx.Stmt `query:"get-conversation-by-message-id"`
 	InsertMessage                      *sqlx.Stmt `query:"insert-message"`
+	UpdateMessageFeedbackSnapshot      *sqlx.Stmt `query:"update-message-feedback-snapshot"`
 	UpdateMessageStatus                *sqlx.Stmt `query:"update-message-status"`
 	UpdateMessageSourceID              *sqlx.Stmt `query:"update-message-source-id"`
 	DeleteMessage                      *sqlx.Stmt `query:"delete-message"`

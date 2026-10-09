@@ -160,14 +160,14 @@
 
             <!-- Actions for AI-generated private notes -->
             <div
-              v-if="aiSuggestedReply"
+              v-if="canUseAiNote"
               class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/60"
             >
-              <Button size="sm" @click="emit('composeReply', { content: aiSuggestedReply })">
+              <Button size="sm" @click="emit('composeReply', { aiNote, mode: 'adopt' })">
                 {{ t('conversation.ai.useReply') }}
               </Button>
 
-              <Button size="sm" variant="outline" @click="emit('composeReply')">
+              <Button size="sm" variant="outline" @click="emit('composeReply', { aiNote, mode: 'own' })">
                 {{ t('conversation.ai.writeOwnReply') }}
               </Button>
             </div>
@@ -311,7 +311,7 @@ import MessageEnvelope from './MessageEnvelope.vue'
 import CSATResponseDisplay from './CSATResponseDisplay.vue'
 import api from '@main/api'
 import { containsQuoteMarkers } from '@shared-ui/utils/quotedContent.js'
-import { extractAiSuggestedReply } from '@main/utils/ai-note.js'
+import { readAiAnalysisNote } from '@main/utils/ai-note.js'
 
 const extendedCssProperties = [...allowedCssProperties, 'transform', 'transform-origin']
 
@@ -402,7 +402,8 @@ const sanitizedContent = computed(() => {
   return props.message.content || ''
 })
 
-const aiSuggestedReply = computed(() => extractAiSuggestedReply(props.message))
+const aiNote = computed(() => readAiAnalysisNote(props.message))
+const canUseAiNote = computed(() => aiNote.value && convStore.current?.inbox_channel === 'email' && userStore.can('messages:write'))
 
 const nonInlineAttachments = computed(() =>
   props.message.attachments.filter((attachment) => attachment.disposition !== 'inline')
