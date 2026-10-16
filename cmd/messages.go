@@ -17,6 +17,7 @@ import (
 )
 
 type messageReq struct {
+	AIResponse                    *responseProvenance    `json:"ai_response,omitempty"`
 	AIFeedbackOriginalMessageUUID string                 `json:"ai_feedback_original_message_uuid"`
 	Attachments                   []int                  `json:"attachments"`
 	Message                       string                 `json:"message"`
@@ -276,6 +277,35 @@ func handleSendMessage(r *fastglue.Request) error {
 		}
 	}
 
+	if p := req.AIResponse; p != nil {
+		if !validProvenance(*p, req.Private, req.SenderType, inbox.Channel, fmt.Sprint(r.RequestCtx.UserValue("auth_method")), req.AIFeedbackOriginalMessageUUID) {
+			return r.SendErrorEnvelope(400, "Invalid response provenance", nil, envelope.InputError)
+		}
+		original, err := app.conversation.GetMessage(p.SourceUUID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if aifeedback.ValidateOriginal(original, cuuid) != nil {
+			return r.SendErrorEnvelope(400, "Invalid provenance source", nil, envelope.InputError)
+		}
+		if p.Source != "human" {
+			note, err := app.conversation.GetMessage(p.NoteUUID)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			analysis, ok := validatedNote(note, cuuid)
+			if !ok || analysis.OriginalMessageUUID != p.SourceUUID {
+				return r.SendErrorEnvelope(400, "Invalid provenance note", nil, envelope.InputError)
+			}
+			used, err := app.conversation.AIResponseUsed(cuuid, p.SourceUUID)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			if used {
+				return r.SendErrorEnvelope(409, "AI suggestion already answered", nil, envelope.InputError)
+			}
+		}
+	}
 	// Get media for all attachments, skip any already associated with a model.
 	media, err := getUnassociatedMedia(app, req.Attachments)
 	if err != nil {
@@ -307,6 +337,9 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	// Queue outgoing reply.
 	meta := map[string]any{}
+	if req.AIResponse != nil {
+		meta["ai_response"] = req.AIResponse
+	}
 	if req.AIFeedbackOriginalMessageUUID != "" {
 		meta[aifeedback.OriginalKey] = req.AIFeedbackOriginalMessageUUID
 	}

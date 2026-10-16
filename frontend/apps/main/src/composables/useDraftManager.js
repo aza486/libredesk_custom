@@ -38,6 +38,7 @@ const draftKey = (uuid, type) => `${uuid}::${type}`
 const metaSignature = (meta) =>
   JSON.stringify({
     ai_feedback: meta?.ai_feedback || null,
+    ai_response: meta?.ai_response || null,
     macro_id: meta?.macro_id || 0,
     macro_actions: meta?.macro_actions || [],
     attachments: (meta?.attachments || []).map(a => a.uuid)
@@ -50,6 +51,7 @@ const sameDraft = (a, b) => {
 
 export function useDraftManager (conversationUUID, messageType, uploadedFiles = null) {
   const conversationStore = useConversationStore()
+  const aiResponse = ref(null)
   const htmlContent = ref('')
   const textContent = ref('')
   const isLoading = ref(false)
@@ -64,6 +66,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const buildDraft = (uuid = conversationUUID.value, type = messageType.value) => {
     const feedback = conversationStore.getDraft(uuid, 'reply')?.meta?.ai_feedback
     const meta = type === 'reply' && feedback ? { ai_feedback: feedback } : {}
+    if (type === 'reply' && aiResponse.value) meta.ai_response = aiResponse.value
     const macro = conversationStore.getMacro(MACRO_CONTEXT.REPLY)
     const macroActions = macro?.actions || []
     if (macro?.id > 0) meta.macro_id = macro.id
@@ -83,6 +86,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   }
 
   const applyDraft = (draft) => {
+    aiResponse.value = draft?.meta?.ai_response || null
     htmlContent.value = draft?.content || ''
     textContent.value = ''
     loadedAttachments.value = validateAttachments(draft?.meta?.attachments)
@@ -132,6 +136,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
 
   const watchSources = [
     htmlContent,
+    aiResponse,
     textContent,
     () => conversationStore.macros[MACRO_CONTEXT.REPLY]
   ]
@@ -168,6 +173,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
 
   return {
     htmlContent,
+    aiResponse,
     textContent,
     isLoading,
     clearDraft,

@@ -200,3 +200,17 @@ internal_http_ip = ""
 # IDs of dedicated integration agents with API keys and messages:write.
 # Do not use general employee accounts. Configuration changes require restart.
 allowed_agent_ids = []
+
+# Optional text-only style webhook. No browser credentials. Restart after changes.
+[ai_style]
+endpoint = ""
+token = "" # LIBREDESK_AI_STYLE__TOKEN; n8n Header Auth: X-Libredesk-Style-Token.
+internal_http_endpoint = ""
+internal_http_ip = ""
+
+# Optional independent sent-provenance delivery (never creates learning feedback).
+[ai_provenance]
+endpoint = ""
+token = "" # LIBREDESK_AI_PROVENANCE__TOKEN; X-Libredesk-Provenance-Token.
+internal_http_endpoint = ""
+internal_http_ip = ""

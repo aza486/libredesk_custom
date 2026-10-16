@@ -93,6 +93,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/service-email-addresses", perm(handleGetServiceEmailAddresses, "general_settings:manage"))
 	g.POST("/api/v1/service-email-addresses", perm(handleAddServiceEmailAddress, "general_settings:manage"))
 	g.DELETE("/api/v1/service-email-addresses", perm(handleRemoveServiceEmailAddress, "general_settings:manage"))
+	g.POST("/api/v1/conversations/{cuuid}/ai-style-adjust", perm(handleAIStyleAdjust, "messages:write"))
 	g.POST("/api/v1/conversations/{cuuid}/messages/{uuid}/ai-feedback", perm(handleAIFeedback, "messages:write"))
 	g.POST("/api/v1/conversations/{cuuid}/ai-analysis-notes", perm(handleCreateAIAnalysisNote, "messages:write"))
 	// Draft endpoints

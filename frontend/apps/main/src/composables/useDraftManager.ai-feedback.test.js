@@ -56,3 +56,22 @@ test('clearing a queued response retains the server-side pending feedback record
     meta: { ai_feedback: record }
   })
 })
+
+test('draft hydration and saving retain only provenance metadata, clear removes it', async () => {
+  const map = new Map()
+  const provenance = { response_source: 'ai_adapted', source_message_uuid: 'source', note_uuid: 'note' }
+  map.set('conversation:reply', { content: 'Adapted', meta: { ai_response: provenance } })
+  mocks.store = {
+    draftsReady: Promise.resolve(), macros: {}, getMacro: () => ({}),
+    getDraft: (uuid, type) => map.get(`${uuid}:${type}`),
+    setDraft: (uuid, type, draft) => map.set(`${uuid}:${type}`, draft),
+    removeDraft: (uuid, type) => map.delete(`${uuid}:${type}`)
+  }
+  let manager
+  app = createApp(defineComponent({ setup() { manager = useDraftManager(ref('conversation'), ref('reply')); return () => h('div') } }))
+  host = document.createElement('div'); document.body.append(host); app.mount(host); await flush()
+  expect(manager.aiResponse.value).toEqual(provenance)
+  manager.clearDraft(); await flush()
+  expect(manager.aiResponse.value).toBeNull()
+  expect(map.has('conversation:reply')).toBe(false)
+})

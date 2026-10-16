@@ -167,6 +167,7 @@
                 {{ t('conversation.ai.useReply') }}
               </Button>
 
+              <Button v-if="canAdjustStyle" size="sm" variant="outline" @click="emit('composeReply', { aiNote, mode: 'style' })">Stil anpassen</Button>
               <Button size="sm" variant="outline" @click="emit('composeReply', { aiNote, mode: 'own' })">
                 {{ t('conversation.ai.writeOwnReply') }}
               </Button>
@@ -311,6 +312,7 @@ import MessageEnvelope from './MessageEnvelope.vue'
 import CSATResponseDisplay from './CSATResponseDisplay.vue'
 import api from '@main/api'
 import { containsQuoteMarkers } from '@shared-ui/utils/quotedContent.js'
+import { styleTextLength, sourceAlreadyAnswered } from '@main/utils/ai-style'
 import { readAiAnalysisNote } from '@main/utils/ai-note.js'
 
 const extendedCssProperties = [...allowedCssProperties, 'transform', 'transform-origin']
@@ -403,6 +405,13 @@ const sanitizedContent = computed(() => {
 })
 
 const aiNote = computed(() => readAiAnalysisNote(props.message))
+const canAdjustStyle = computed(() => {
+  // MessageCache changes are announced through the version counter.
+  void convStore.messages.version
+  const note = aiNote.value
+  const messages = convStore.messages.data?.getAllPagesMessages(convStore.current?.uuid) || []
+  return note && styleTextLength(note.suggestion) <= 8000 && !sourceAlreadyAnswered(messages, note.originalUUID)
+})
 const canUseAiNote = computed(() => aiNote.value && convStore.current?.inbox_channel === 'email' && userStore.can('messages:write'))
 
 const nonInlineAttachments = computed(() =>

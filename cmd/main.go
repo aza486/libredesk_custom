@@ -20,6 +20,7 @@ import (
 	activitylog "github.com/abhinavxd/libredesk/internal/activity_log"
 	"github.com/abhinavxd/libredesk/internal/ai"
 	"github.com/abhinavxd/libredesk/internal/aiagent"
+	"github.com/abhinavxd/libredesk/internal/aiassist"
 	auth_ "github.com/abhinavxd/libredesk/internal/auth"
 	"github.com/abhinavxd/libredesk/internal/authz"
 	businesshours "github.com/abhinavxd/libredesk/internal/business_hours"
@@ -97,6 +98,7 @@ const (
 type App struct {
 	aiNoteAgentIDs   []int
 	aiFeedback       *aifeedback.Client
+	aiStyle          *aiassist.Client
 	ctx              context.Context
 	fs               stuffbin.FileSystem
 	consts           atomic.Value
@@ -301,8 +303,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	newAIClient := func(prefix string) *aiassist.Client {
+		client, err := aiassist.NewWithConfig(aiassist.Config{Endpoint: ko.String(prefix + ".endpoint"), Token: ko.String(prefix + ".token"), InternalHTTPEndpoint: ko.String(prefix + ".internal_http_endpoint"), InternalHTTPIP: ko.String(prefix + ".internal_http_ip"), DialControl: ssrfControl})
+		if err != nil {
+			log.Fatal(err)
+		}
+		return client
+	}
+	styleClient := newAIClient("ai_style")
+	provenanceClient := newAIClient("ai_provenance")
+	if provenanceClient != nil {
+		go conversation.RunAIProvenance(ctx, provenanceClient)
+	}
 	var app = &App{
 		aiFeedback:       feedbackClient,
+		aiStyle:          styleClient,
 		aiNoteAgentIDs:   ko.Ints("ai_analysis.allowed_agent_ids"),
 		ctx:              ctx,
 		lo:               lo,

@@ -899,7 +899,7 @@ SET
             NOW()
         )
         ELSE meta
-    END
+    END || CASE WHEN $1::message_status = 'sent'::message_status AND meta ? 'ai_response' THEN jsonb_build_object('ai_response_sent_at',COALESCE(meta->'ai_response_sent_at',to_jsonb(NOW()))) ELSE '{}'::jsonb END
 WHERE uuid = $2;
 
 -- name: update-message-source-id

@@ -239,6 +239,7 @@ test('own answer keeps editor, passes original UUID, and double-click queues onc
   expect(mocks.api.sendMessage.mock.calls[0][1]).toMatchObject({
     message: 'Existing employee answer',
     ai_feedback_original_message_uuid: originalUUID,
+    ai_response: { response_source: 'human', source_message_uuid: originalUUID, note_uuid: note.noteUUID },
     private: false
   })
   expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
@@ -312,4 +313,19 @@ test('sent status event saves feedback and retry never posts another message', a
   expect(mocks.api.saveAIFeedback).toHaveBeenCalledTimes(2)
   expect(mocks.api.getConversationMessage).toHaveBeenCalledTimes(getCalls)
   expect(root.textContent).toContain('Feedback gespeichert')
+})
+
+test.each([['ai', undefined], ['ai_adapted', 'Angepasster Text']])('adoption confirms composer replacement and sends %s provenance without feedback', async (source, adaptedText) => {
+  await exposed.openReply({ aiNote: note, mode: 'adopt', adaptedText })
+  await flush()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  click('KI-Antwort übernehmen'); await flush()
+  expect(mocks.draft.htmlContent.value).toBe(adaptedText || 'Hallo<br>KI-Vorschlag')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  root.querySelector('[data-send]').click(); await flush()
+  expect(mocks.api.sendMessage).toHaveBeenCalledTimes(1)
+  expect(mocks.api.sendMessage.mock.calls[0][1]).toMatchObject({ ai_response: { response_source: source, source_message_uuid: originalUUID, note_uuid: note.noteUUID } })
+  expect(mocks.api.sendMessage.mock.calls[0][1].ai_feedback_original_message_uuid).toBeUndefined()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
 })

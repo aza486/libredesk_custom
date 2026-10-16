@@ -1,4 +1,5 @@
 <template>
+  <AIStyleDialog :open="styleOpen" :note="styleNote" :conversation-u-u-i-d="currentConversationUUID || ''" @update:open="styleOpen = $event" @adopt="adoptStyledReply" />
   <Dialog :open="aiModalOpen" @update:open="aiModalOpen = $event">
     <DialogContent @close-auto-focus="restoreAiFocus">
       <DialogHeader>
@@ -15,9 +16,9 @@
       </DialogHeader>
       <div
         class="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted p-3 text-sm"
-        aria-label="Ursprünglicher KI-Antwortvorschlag"
+        :aria-label="aiAction?.adaptedText !== undefined ? 'Angepasster KI-Antwortvorschlag' : 'Ursprünglicher KI-Antwortvorschlag'"
       >
-        {{ aiAction?.note.suggestion }}
+        {{ aiAction?.adaptedText ?? aiAction?.note.suggestion }}
       </div>
       <template v-if="aiAction?.mode === 'own'">
         <label for="ai-feedback-reason" class="text-sm font-medium"
@@ -272,6 +273,8 @@ import { useIsComposerCramped } from '@main/composables/useIsComposerCramped'
 import { useEmitter } from '@main/composables/useEmitter'
 import { useFileUpload } from '@main/composables/useFileUpload'
 import { hasInlineImage, hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
+import AIStyleDialog from './AIStyleDialog.vue'
+import { sourceAlreadyAnswered } from '@main/utils/ai-style'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
 import { createAIFeedback } from '@main/utils/ai-feedback'
 import {
@@ -325,6 +328,7 @@ watch(
 // Setup draft management composable, keyed per conversation and message type.
 const {
   htmlContent,
+  aiResponse: draftAIResponse,
   textContent,
   isLoading: isDraftLoading,
   clearDraft,
@@ -333,6 +337,10 @@ const {
   loadedMacroID
 } = useDraftManager(currentConversationUUID, messageType, mediaFiles)
 
+const aiResponse = draftAIResponse || ref(null)
+const styleOpen = ref(false)
+const styleNote = ref(null)
+const adoptStyledReply = ({ note, text }) => openReply({ aiNote: note, mode: 'adopt', adaptedText: text })
 // Rest of existing state
 const isEditorFullscreen = ref(false)
 const isSending = ref(false)
@@ -406,7 +414,7 @@ const restoreAiFocus = (event) => {
   if (!focusAfterModal) aiPreviousFocus?.focus?.()
   focusAfterModal = false
 }
-const openReply = async ({ aiNote, mode, content } = {}) => {
+const openReply = async ({ aiNote, mode, content, adaptedText } = {}) => {
   const uuid = currentConversationUUID.value
   if (aiNote) {
     if (
@@ -429,8 +437,15 @@ const openReply = async ({ aiNote, mode, content } = {}) => {
       if (uuid !== currentConversationUUID.value) return
       if (!isOriginalCustomerMessage(original, uuid, aiNote.originalUUID))
         throw new Error('Die ursprüngliche Kundenmail ist nicht eindeutig zugeordnet.')
-      aiPreviousFocus = document.activeElement
-      aiAction.value = { uuid, note: aiNote, mode }
+      if (mode === 'style') {
+        aiPreviousFocus = document.activeElement
+        if (sourceAlreadyAnswered(conversationStore.messages.data?.getAllPagesMessages(uuid) || conversationStore.conversationMessages || [], aiNote.originalUUID)) throw new Error('Bereits beantwortet')
+        styleNote.value = aiNote
+        styleOpen.value = true
+        return
+      }
+      if (adaptedText === undefined) aiPreviousFocus = document.activeElement
+      aiAction.value = { uuid, note: aiNote, mode, adaptedText }
       aiReason.value =
         feedbackRecord.value?.phase === 'composing' &&
         feedbackRecord.value.originalUUID === aiNote.originalUUID
@@ -459,8 +474,10 @@ const continueAiReply = async () => {
     if (action.uuid !== currentConversationUUID.value) return
     focusAfterModal = true
     aiModalOpen.value = false
-    if ((await focusReply(action.uuid)) && action.mode === 'adopt')
-      htmlContent.value = suggestionToHTML(action.note.suggestion)
+    if (await focusReply(action.uuid)) {
+      aiResponse.value = { response_source: action.mode === 'own' ? 'human' : action.adaptedText !== undefined ? 'ai_adapted' : 'ai', source_message_uuid: action.note.originalUUID, note_uuid: action.note.noteUUID }
+      if (action.mode === 'adopt') htmlContent.value = suggestionToHTML(action.adaptedText ?? action.note.suggestion)
+    }
   } catch {
     aiModalError.value =
       'Die Feedback-Vormerkung konnte nicht sicher gespeichert werden. Bitte erneut versuchen.'
@@ -518,6 +535,8 @@ watch(
   async (uuid) => {
     stopPolling()
     aiModalOpen.value = false
+    styleOpen.value = false
+    styleNote.value = null
     aiReason.value = ''
     aiAction.value = null
     pollCount.value = 0
@@ -542,6 +561,8 @@ watch(
     stopPolling()
     feedback.reset()
     aiModalOpen.value = false
+    styleOpen.value = false
+    styleNote.value = null
     aiReason.value = ''
     aiAction.value = null
   }
@@ -665,6 +686,9 @@ const processSend = async (
   // Add pending message to cache for instant display.
   if (hasContent) {
     const savedContent = htmlContent.value
+    const savedProvenance = !isPrivate && aiResponse.value &&
+      (aiResponse.value.response_source !== 'human' || feedbackRecord.value?.phase === 'composing')
+      ? { ...aiResponse.value } : null
     const savedAttachmentIDs = mediaFiles.value.map((file) => file.id)
     const savedMentions = [...mentions.value]
     const savedTemplateID = selectedTemplateId.value
@@ -696,7 +720,7 @@ const processSend = async (
             .map((e) => e.trim())
             .filter(Boolean)
         : []
-    const meta = {}
+    const meta = savedProvenance ? { ai_response: savedProvenance } : {}
     if (parsedTo.length) meta.to = parsedTo
     if (parsedCC.length) meta.cc = parsedCC
     if (parsedBCC.length) meta.bcc = parsedBCC
@@ -747,6 +771,7 @@ const processSend = async (
         to: parsedTo,
         echo_id: isPrivate ? '' : tempUUID,
         template_id: isPrivate ? null : savedTemplateID,
+        ...(savedProvenance && (savedProvenance.response_source !== 'human' || feedbackOriginalUUID) ? { ai_response: savedProvenance } : {}),
         ...(feedbackOriginalUUID ? { ai_feedback_original_message_uuid: feedbackOriginalUUID } : {})
       })
 

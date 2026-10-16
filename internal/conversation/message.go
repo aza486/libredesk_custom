@@ -199,6 +199,16 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		}
 	}
 
+	// Snapshot provenance before transport; this is never a feedback submission.
+	if feedbackMeta["ai_response"] != nil {
+		snapshot, err := json.Marshal(map[string]any{"ai_response_sent_body": outbound.Content})
+		if err == nil {
+			_, err = m.q.UpdateMessageFeedbackSnapshot.Exec(string(snapshot), message.UUID)
+		}
+		if handleError(err, "error persisting response provenance snapshot") {
+			return
+		}
+	}
 	// Send message
 	err = inb.Send(outbound)
 	if err != nil && err != livechat.ErrClientNotConnected {
