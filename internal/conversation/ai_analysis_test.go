@@ -61,7 +61,31 @@ func TestAIAnalysisPersistenceAndMessageRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := validAnalysis()
-	if _, err := db.Exec(`INSERT INTO conversation_messages(uuid,conversation_id,type,status,sender_id,sender_type,content) SELECT $1,id,'incoming','received',105,'contact','Customer' FROM conversations WHERE uuid=$2`, a.OriginalMessageUUID, convUUID); err != nil {
+	if _, err := db.Exec(`
+			INSERT INTO conversation_messages (
+					uuid,
+					conversation_id,
+					type,
+					status,
+					sender_id,
+					sender_type,
+					content,
+					text_content,
+					content_type
+			)
+			SELECT
+					$1,
+					id,
+					'incoming',
+					'received',
+					105,
+					'contact',
+					'Customer',
+					'Customer',
+					'text'
+			FROM conversations
+			WHERE uuid = $2
+	`, a.OriginalMessageUUID, convUUID); err != nil {
 		t.Fatal(err)
 	}
 	original, err := m.GetMessage(a.OriginalMessageUUID)

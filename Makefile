@@ -26,7 +26,7 @@ $(STUFFBIN):
 .PHONY: install-deps
 install-deps: $(STUFFBIN)
 	@echo "→ Installing frontend dependencies..."
-	@cd ${FRONTEND_DIR} && pnpm install
+	@cd ${FRONTEND_DIR} && pnpm install --frozen-lockfile
 
 # Build the frontend for production (both apps).
 .PHONY: frontend-build
