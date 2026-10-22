@@ -65,27 +65,36 @@ func validSourceTx(ctx context.Context, db sqlx.QueryerContext, cuuid, source st
 	return version, nil
 }
 
-// prepareMailCompletion runs before InsertMessage. The immutable source version
-// is the resolve baseline, never a guessed most-recent message.
+// prepareMailCompletion captures the input clock and source in one committed
+// database snapshot. Concurrent later inputs are handled by resolve-if-current.
 func (m *Manager) prepareMailCompletion(cuuid string, sender int, meta map[string]any) (*MailCompletion, error) {
+	ctx := context.Background()
+	tx, err := m.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead, ReadOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 	var employee bool
-	if err := m.db.Get(&employee, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND type='agent' AND email IS DISTINCT FROM 'System')`, sender); err != nil {
+	if err = tx.GetContext(ctx, &employee, `SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND type='agent' AND email IS DISTINCT FROM 'System')`, sender); err != nil {
 		return nil, err
 	}
 	if !employee || meta["is_automated"] == true || meta["continuity_email"] == true || meta["is_csat"] == true {
 		return nil, nil
 	}
-	source, _ := meta["reply_to_message_uuid"].(string)
+	source := ""
 	var explicit struct {
 		Source string `json:"response_source"`
 		UUID   string `json:"source_message_uuid"`
 	}
 	raw, _ := json.Marshal(meta["ai_response"])
-	_ = json.Unmarshal(raw, &explicit)
+	if err = json.Unmarshal(raw, &explicit); err != nil {
+		return nil, ErrReplySource
+	}
 	feedback, _ := meta["ai_feedback_original_message_uuid"].(string)
+	manual, _ := meta["reply_to_message_uuid"].(string)
 	for _, candidate := range []string{explicit.UUID, feedback} {
 		if candidate != "" {
-			if source != "" && source != candidate {
+			if (source != "" && source != candidate) || (manual != "" && manual != candidate) {
 				return nil, ErrReplySource
 			}
 			source = candidate
@@ -93,6 +102,9 @@ func (m *Manager) prepareMailCompletion(cuuid string, sender int, meta map[strin
 	}
 	state := &MailCompletion{AgentID: ptr(strconv.Itoa(sender))}
 	if explicit.Source != "" {
+		if explicit.UUID == "" {
+			return nil, ErrReplySource
+		}
 		switch explicit.Source {
 		case "ai", "ai_adapted", "human":
 			state.ResponseSource = ptr(explicit.Source)
@@ -103,31 +115,47 @@ func (m *Manager) prepareMailCompletion(cuuid string, sender int, meta map[strin
 		state.ResponseSource = ptr("human")
 	}
 	var version int64
-	if err := m.db.Get(&version, `SELECT COALESCE((SELECT v.version FROM conversation_mail_versions v JOIN conversations c ON c.id=v.conversation_id WHERE c.uuid=$1),0)`, cuuid); err != nil {
+	if err = tx.GetContext(ctx, &version, `SELECT COALESCE((SELECT v.version FROM conversation_mail_versions v JOIN conversations c ON c.id=v.conversation_id WHERE c.uuid=$1),0)`, cuuid); err != nil {
 		return nil, err
 	}
 	state.QueuedVersion = strconv.FormatInt(version, 10)
-	if source == "" {
-		candidates, total, err := m.ReplySources(cuuid, 2, 0)
-		if err != nil {
-			return nil, err
-		}
-		if total == 1 && len(candidates) == 1 {
-			source = candidates[0].UUID
-		}
-	}
 	if source != "" {
-		v, err := validSourceTx(context.Background(), m.db, cuuid, source)
-		if err != nil {
-			return nil, err
+		v, e := validSourceTx(ctx, tx, cuuid, source)
+		if e != nil {
+			return nil, e
 		}
 		state.SourceUUID = ptr(source)
 		state.ExpectedVersion = v
-		chosen, _ := strconv.ParseInt(v, 10, 64)
-		if chosen > version {
-			state.QueuedVersion = v
+	} else {
+		// Legacy manual draft/client references cannot override normal automation.
+		// Numeric input versions, not timestamps or message IDs, define this order.
+		var latest struct {
+			UUID    string `db:"uuid"`
+			Version string `db:"version"`
 		}
-		meta["reply_to_message_uuid"] = source
+		err = tx.GetContext(ctx, &latest, `SELECT m.uuid,m.meta->>'mail_input_version' AS version
+   FROM conversation_messages m JOIN conversations c ON c.id=m.conversation_id JOIN inboxes i ON i.id=c.inbox_id
+   WHERE c.uuid=$1 AND i.channel='email' AND m.type='incoming' AND m.sender_type='contact' AND NOT m.private
+   AND NOT(m.meta ? 'deleted_at') AND (m.meta->>'mail_input_version')::bigint > 0
+   AND (m.meta->>'mail_input_version')::bigint <= $2
+   ORDER BY (m.meta->>'mail_input_version')::bigint DESC LIMIT 1`, cuuid, version)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if err == nil {
+			source = latest.UUID
+			state.SourceUUID = ptr(source)
+			state.ExpectedVersion = latest.Version
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	if meta != nil {
+		delete(meta, "reply_to_message_uuid")
+		if source != "" {
+			meta["reply_to_message_uuid"] = source
+		}
 	}
 	return state, nil
 }

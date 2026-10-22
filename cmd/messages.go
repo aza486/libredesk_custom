@@ -36,6 +36,14 @@ type messageReq struct {
 	TemplateID                    int                    `json:"template_id"`
 }
 
+// ignoreNormalReplySource keeps older clients compatible while normal replies
+// receive their authoritative anchor only from the backend input snapshot.
+func (req *messageReq) ignoreNormalReplySource(channel string) {
+	if req.AIResponse == nil && req.AIFeedbackOriginalMessageUUID == "" && !req.Private && req.SenderType == "agent" && channel == "email" {
+		req.ReplyToMessageUUID = ""
+	}
+}
+
 // handleGetMessages returns messages for a conversation.
 func handleGetMessages(r *fastglue.Request) error {
 	var (
@@ -311,6 +319,9 @@ func handleSendMessage(r *fastglue.Request) error {
 			}
 		}
 	}
+	// Older normal clients may still submit a manual draft source. Only the
+	// backend input-version snapshot decides the anchor for normal replies.
+	req.ignoreNormalReplySource(inbox.Channel)
 	if req.ReplyToMessageUUID != "" {
 		if _, err := uuid.Parse(req.ReplyToMessageUUID); err != nil {
 			return r.SendErrorEnvelope(400, "Invalid reply source UUID", nil, envelope.InputError)

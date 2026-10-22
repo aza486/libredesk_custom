@@ -21,7 +21,7 @@ afterEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
 })
-test('server draft source survives editing and switching; old drafts remain usable', async () => {
+test('legacy normal source is ignored and dropped on save; content and switching remain usable', async () => {
   vi.useFakeTimers()
   const map = new Map([
     ['a:reply', { content: 'Existing draft', meta: { reply_to_message_uuid: 'customer-a' } }],
@@ -49,24 +49,24 @@ test('server draft source survives editing and switching; old drafts remain usab
   document.body.append(host)
   app.mount(host)
   await flush()
-  expect(manager.replyToMessageUUID.value).toBe('customer-a')
+  expect(manager.replyToMessageUUID).toBeUndefined()
   manager.htmlContent.value = 'Edited draft'
   await flush()
   await vi.advanceTimersByTimeAsync(600)
   await flush()
   expect(mocks.api.saveDraft).toHaveBeenCalledWith('a', 'reply', {
     content: 'Edited draft',
-    meta: { reply_to_message_uuid: 'customer-a' }
+    meta: {}
   })
   uuid.value = 'b'
   await flush()
-  expect(manager.replyToMessageUUID.value).toBe('')
+  expect(manager.replyToMessageUUID).toBeUndefined()
   expect(manager.htmlContent.value).toBe('Old draft without metadata')
   uuid.value = 'a'
   await flush()
-  expect(manager.replyToMessageUUID.value).toBe('customer-a')
+  expect(manager.replyToMessageUUID).toBeUndefined()
   expect(manager.aiResponse.value).toBeNull()
   manager.clearDraft()
   await flush()
-  expect(manager.replyToMessageUUID.value).toBe('')
+  expect(manager.replyToMessageUUID).toBeUndefined()
 })

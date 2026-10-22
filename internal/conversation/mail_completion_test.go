@@ -139,53 +139,59 @@ func TestMailCompletionAllSourcesAndRetry(t *testing.T) {
 		t.Fatal("duplicate email")
 	}
 }
-func TestMailCompletionAmbiguityAndSourceValidation(t *testing.T) {
+func TestMailCompletionAutomaticAnchorAndExplicitValidation(t *testing.T) {
 	m, c, cid := completionFixture(t, "completion_mapping")
 	a := input(t, m, cid)
 	only, err := m.prepareMailCompletion(c, 101, map[string]any{})
-	if err != nil || only.SourceUUID == nil || *only.SourceUUID != a {
-		t.Fatal("single source", err)
+	if err != nil || only.SourceUUID == nil || *only.SourceUUID != a || only.ExpectedVersion != "1" || only.QueuedVersion != "1" {
+		t.Fatal("single source", only, err)
 	}
-	b := input(t, m, cid)
-	unknown, err := m.prepareMailCompletion(c, 101, map[string]any{})
-	if err != nil || unknown.SourceUUID != nil || unknown.ResponseSource != nil {
-		t.Fatal("guessed latest source", err)
-	}
+	input(t, m, cid)
+	latest := input(t, m, cid)
 	otherConv := uuid.NewString()
 	m.db.MustExec(`INSERT INTO conversations(uuid,contact_id,inbox_id,status_id) VALUES($1,105,102,101)`, otherConv)
 	var otherID int
 	m.db.Get(&otherID, `SELECT id FROM conversations WHERE uuid=$1`, otherConv)
 	foreign := input(t, m, otherID)
-	for _, src := range []string{foreign, uuid.NewString()} {
-		if _, err := m.prepareMailCompletion(c, 101, map[string]any{"reply_to_message_uuid": src}); !errors.Is(err, ErrReplySource) {
-			t.Fatal("invalid source accepted", err)
+	for _, old := range []string{"", a, foreign, uuid.NewString(), "invalid old client UUID"} {
+		meta := map[string]any{"reply_to_message_uuid": old}
+		state, e := m.prepareMailCompletion(c, 101, meta)
+		if e != nil || state.SourceUUID == nil || *state.SourceUUID != latest || state.ResponseSource != nil || state.ExpectedVersion != "3" || state.QueuedVersion != "3" || meta["reply_to_message_uuid"] != latest {
+			t.Fatal("normal source not automatic", state, e)
 		}
 	}
-	if _, err := m.prepareMailCompletion(c, 101, map[string]any{"reply_to_message_uuid": a, "ai_response": map[string]string{"response_source": "ai", "source_message_uuid": b}}); !errors.Is(err, ErrReplySource) {
-		t.Fatal("conflicting sources", err)
+	for _, src := range []string{foreign, uuid.NewString(), "malformed"} {
+		if _, e := m.prepareMailCompletion(c, 101, map[string]any{"ai_response": map[string]string{"response_source": "ai", "source_message_uuid": src}}); !errors.Is(e, ErrReplySource) {
+			t.Fatal("invalid explicit source accepted", e)
+		}
 	}
+	if _, e := m.prepareMailCompletion(c, 101, map[string]any{"reply_to_message_uuid": a, "ai_response": map[string]string{"response_source": "ai", "source_message_uuid": latest}}); !errors.Is(e, ErrReplySource) {
+		t.Fatal("conflicting explicit sources", e)
+	}
+	// Keep the explicit repair contract for already persisted unassigned V2 records.
 	out := queuedCompletion(t, m, c, cid, map[string]any{})
 	sent(t, m, out)
+	m.db.MustExec(`UPDATE conversation_messages SET meta=(meta-'reply_to_message_uuid') || jsonb_build_object('mail_completion',(meta->'mail_completion') || '{"source_message_uuid":null,"expected_incoming_version":""}'::jsonb) WHERE uuid=$1`, out)
 	probe := &provenanceProbe{}
 	m.deliverAIProvenance(context.Background(), probe)
 	if probe.calls != 0 {
 		t.Fatal("unassigned event delivered")
 	}
 	future := input(t, m, cid)
-	if err := m.AssignReplySource(context.Background(), c, out, future); !errors.Is(err, ErrReplySource) {
-		t.Fatal("future source accepted", err)
+	if e := m.AssignReplySource(context.Background(), c, out, future); !errors.Is(e, ErrReplySource) {
+		t.Fatal("future source accepted", e)
 	}
-	if err := m.AssignReplySource(context.Background(), c, out, b); err != nil {
-		t.Fatal(err)
+	if e := m.AssignReplySource(context.Background(), c, out, latest); e != nil {
+		t.Fatal(e)
 	}
-	if err := m.AssignReplySource(context.Background(), c, out, b); err != nil {
-		t.Fatal("idempotent assignment", err)
+	if e := m.AssignReplySource(context.Background(), c, out, latest); e != nil {
+		t.Fatal("idempotent assignment", e)
 	}
-	if err := m.AssignReplySource(context.Background(), c, out, a); !errors.Is(err, ErrReplySource) {
-		t.Fatal("association changed", err)
+	if e := m.AssignReplySource(context.Background(), c, out, a); !errors.Is(e, ErrReplySource) {
+		t.Fatal("association changed", e)
 	}
 	m.deliverAIProvenance(context.Background(), probe)
-	if probe.calls != 1 || probe.payload["source_message_uuid"] != b {
+	if probe.calls != 1 || probe.payload["source_message_uuid"] != latest {
 		t.Fatal("repair not delivered")
 	}
 }
@@ -219,10 +225,12 @@ func TestMailCompletionConditionalResolveAndReplay(t *testing.T) {
 	if status != "Open" {
 		t.Fatal("replay reclosed ticket")
 	}
-	out2 := queuedCompletion(t, m, c, cid, map[string]any{"reply_to_message_uuid": a})
+	out2 := queuedCompletion(t, m, c, cid, map[string]any{})
+	expected := stateOf(t, m, out2).ExpectedVersion
+	input(t, m, cid)
 	sent(t, m, out2)
 	for i := 0; i < 2; i++ {
-		result, err = m.ResolveMailCompletion(ctx, c, out2, "1")
+		result, err = m.ResolveMailCompletion(ctx, c, out2, expected)
 		if !errors.Is(err, ErrCompletionConflict) || result.Outcome != "superseded" || result.Replayed != (i == 1) {
 			t.Fatal("stale resolve", result, err)
 		}

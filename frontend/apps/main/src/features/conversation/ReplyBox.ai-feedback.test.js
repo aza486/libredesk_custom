@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createApp, defineComponent, h, reactive, ref, nextTick } from 'vue'
 import ReplyBox from './ReplyBox.vue'
 
-const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null }))
+const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null, cramped: null }))
 vi.mock('@main/api', () => ({ default: mocks.api }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => mocks.store }))
 vi.mock('@main/stores/user', () => ({ useUserStore: () => ({ userID: 42, can: () => true }) }))
@@ -18,7 +18,7 @@ vi.mock('@main/composables/useEmitter', () => ({
   useEmitter: () => ({ on: () => {}, off: () => {}, emit: () => {} })
 }))
 vi.mock('@main/composables/useIsComposerCramped', () => ({
-  useIsComposerCramped: () => ref(false)
+  useIsComposerCramped: () => mocks.cramped
 }))
 vi.mock('@main/composables/useVisualViewportHeight', () => ({ useVisualViewportHeight: () => {} }))
 vi.mock('@main/composables/useDraftManager', () => ({ useDraftManager: () => mocks.draft }))
@@ -115,6 +115,7 @@ function click(text) {
 }
 
 beforeEach(async () => {
+  mocks.cramped = ref(false)
   const map = new Map()
   mocks.store = reactive({
     current: {
@@ -137,7 +138,6 @@ beforeEach(async () => {
     refreshCurrentConversation: vi.fn().mockResolvedValue({})
   })
   mocks.draft = {
-    replyToMessageUUID: ref(''),
     htmlContent: ref('Existing employee answer'),
     textContent: ref('Existing employee answer'),
     isLoading: ref(false),
@@ -152,7 +152,6 @@ beforeEach(async () => {
     clearMediaFiles: vi.fn(),
     setMediaFiles: vi.fn()
   }
-  mocks.api.getReplySources = vi.fn().mockResolvedValue({ data: { data: { results: [], total: 0, has_more: false } } })
   mocks.api.getOutgoingTemplates = vi.fn().mockResolvedValue({ data: { data: [] } })
   mocks.api.saveDraft = vi.fn().mockResolvedValue({})
   mocks.api.deleteDraft = vi.fn().mockResolvedValue({})
@@ -333,26 +332,37 @@ test.each([['ai', undefined], ['ai_adapted', 'Angepasster Text']])('adoption con
 })
 
 
-test('normal employee reply carries chosen customer UUID without AI or feedback classification', async () => {
-  mocks.draft.replyToMessageUUID.value = originalUUID
+test('normal employee reply sends without a client-selected source or classification', async () => {
   root.querySelector('[data-send]').click(); await flush()
   expect(mocks.api.sendMessage).toHaveBeenCalledTimes(1)
   const body = mocks.api.sendMessage.mock.calls[0][1]
-  expect(body.reply_to_message_uuid).toBe(originalUUID)
+  expect(body.reply_to_message_uuid).toBeUndefined()
   expect(body.ai_response).toBeUndefined()
   expect(body.ai_feedback_original_message_uuid).toBeUndefined()
   expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
 })
 
 
-test('cancelled human feedback permits a new normal reply source without reclassification', async () => {
+test('cancelled human feedback resumes normal backend assignment without reclassification', async () => {
   await exposed.openReply({ aiNote: note, mode: 'own' }); await flush()
   click('Weiter zur Antwort'); await flush()
   click('Feedback abbrechen (Antwort behalten)'); await flush()
-  mocks.draft.replyToMessageUUID.value = 'different-customer'
   root.querySelector('[data-send]').click(); await flush()
   const body = mocks.api.sendMessage.mock.calls[0][1]
-  expect(body.reply_to_message_uuid).toBe('different-customer')
+  expect(body.reply_to_message_uuid).toBeUndefined()
   expect(body.ai_response).toBeUndefined()
   expect(body.ai_feedback_original_message_uuid).toBeUndefined()
+})
+
+
+test('desktop and mobile composers have no source selector or mandatory selection', async () => {
+  expect(root.querySelector('[data-editor]')).toBeTruthy()
+  expect(root.textContent).not.toContain('Antwort auf Kundenmail')
+  expect(root.querySelector('[aria-label="Ursprüngliche Kundenmail auswählen"]')).toBeNull()
+  mocks.cramped.value = true; await flush()
+  await exposed.openReply({ content: 'Mobile reply without source selection' }); await flush()
+  expect(root.querySelector('[data-dialog]')).toBeTruthy()
+  expect(root.querySelector('[data-editor]').textContent).toBe('Mobile reply without source selection')
+  expect(root.textContent).not.toContain('Antwort auf Kundenmail')
+  expect(root.querySelector('[aria-label="Ursprüngliche Kundenmail auswählen"]')).toBeNull()
 })
