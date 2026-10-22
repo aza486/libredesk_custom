@@ -13,12 +13,13 @@ import (
 type provenanceProbe struct {
 	calls   int
 	fail    bool
-	payload map[string]string
+	payload map[string]any
 }
 
 func (p *provenanceProbe) Call(_ context.Context, header, id string, payload, result any) (int, error) {
 	p.calls++
-	p.payload = payload.(map[string]string)
+	raw, _ := json.Marshal(payload)
+	json.Unmarshal(raw, &p.payload)
 	if p.fail {
 		return 502, errors.New("offline")
 	}

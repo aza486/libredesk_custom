@@ -164,6 +164,24 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 		return
 	}
 
+	// Cover pending messages created before V2 as well as direct internal queues.
+	if inb.Channel() == inbox.ChannelEmail {
+		var meta map[string]any
+		if json.Unmarshal(message.Meta, &meta) == nil && meta["mail_completion"] == nil {
+			state, err := m.prepareMailCompletion(message.ConversationUUID, message.SenderID, meta)
+			if handleError(err, "error preparing mail completion") {
+				return
+			}
+			if state != nil {
+				meta["mail_completion"] = state
+				raw, _ := json.Marshal(meta)
+				if _, err = m.q.UpdateMessageFeedbackSnapshot.Exec(string(raw), message.UUID); handleError(err, "error storing mail completion") {
+					return
+				}
+				message.Meta = raw
+			}
+		}
+	}
 	// Render content in template
 	if err := m.RenderMessageInTemplate(inb.Channel(), &message); err != nil {
 		handleError(err, "error rendering content in template")
@@ -206,6 +224,12 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 			_, err = m.q.UpdateMessageFeedbackSnapshot.Exec(string(snapshot), message.UUID)
 		}
 		if handleError(err, "error persisting response provenance snapshot") {
+			return
+		}
+	}
+	if feedbackMeta["mail_completion"] != nil {
+		_, err := m.db.Exec(`UPDATE conversation_messages SET meta=jsonb_set(meta,'{mail_completion}',(meta->'mail_completion') || jsonb_build_object('sent_message',$1::text,'snapshot_ready',true)) WHERE uuid=$2`, outbound.Content, message.UUID)
+		if handleError(err, "error storing rendered completion text") {
 			return
 		}
 	}
@@ -669,6 +693,15 @@ func (m *Manager) QueueReply(media []mmodels.Media, inboxID, senderID, contactID
 		}
 	}
 
+	if inboxRecord.Channel == inbox.ChannelEmail {
+		state, err := m.prepareMailCompletion(conversationUUID, senderID, metaMap)
+		if err != nil {
+			return message, err
+		}
+		if state != nil {
+			metaMap["mail_completion"] = state
+		}
+	}
 	// Marshal meta.
 	metaJSON, err := json.Marshal(metaMap)
 	if err != nil {

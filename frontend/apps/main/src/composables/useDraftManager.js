@@ -39,6 +39,7 @@ const metaSignature = (meta) =>
   JSON.stringify({
     ai_feedback: meta?.ai_feedback || null,
     ai_response: meta?.ai_response || null,
+    reply_to_message_uuid: meta?.reply_to_message_uuid || null,
     macro_id: meta?.macro_id || 0,
     macro_actions: meta?.macro_actions || [],
     attachments: (meta?.attachments || []).map(a => a.uuid)
@@ -51,6 +52,7 @@ const sameDraft = (a, b) => {
 
 export function useDraftManager (conversationUUID, messageType, uploadedFiles = null) {
   const conversationStore = useConversationStore()
+  const replyToMessageUUID = ref('')
   const aiResponse = ref(null)
   const htmlContent = ref('')
   const textContent = ref('')
@@ -67,6 +69,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     const feedback = conversationStore.getDraft(uuid, 'reply')?.meta?.ai_feedback
     const meta = type === 'reply' && feedback ? { ai_feedback: feedback } : {}
     if (type === 'reply' && aiResponse.value) meta.ai_response = aiResponse.value
+    if (type === 'reply' && replyToMessageUUID.value) meta.reply_to_message_uuid = replyToMessageUUID.value
     const macro = conversationStore.getMacro(MACRO_CONTEXT.REPLY)
     const macroActions = macro?.actions || []
     if (macro?.id > 0) meta.macro_id = macro.id
@@ -87,6 +90,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
 
   const applyDraft = (draft) => {
     aiResponse.value = draft?.meta?.ai_response || null
+    replyToMessageUUID.value = draft?.meta?.reply_to_message_uuid || aiResponse.value?.source_message_uuid || ''
     htmlContent.value = draft?.content || ''
     textContent.value = ''
     loadedAttachments.value = validateAttachments(draft?.meta?.attachments)
@@ -137,6 +141,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const watchSources = [
     htmlContent,
     aiResponse,
+    replyToMessageUUID,
     textContent,
     () => conversationStore.macros[MACRO_CONTEXT.REPLY]
   ]
@@ -174,6 +179,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   return {
     htmlContent,
     aiResponse,
+    replyToMessageUUID,
     textContent,
     isLoading,
     clearDraft,

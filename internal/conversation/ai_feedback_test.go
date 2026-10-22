@@ -11,7 +11,7 @@ import (
 
 func TestAIFeedbackSnapshotAndDeliveryConfirmation(t *testing.T) {
 	db := testutil.NewPersonalDB(t, "ai_feedback_delivery")
-	m := &Manager{db: db}
+	m := &Manager{}
 	if err := dbutil.ScanSQLFile("queries.sql", &m.q, db, efs); err != nil {
 		t.Fatal(err)
 	}

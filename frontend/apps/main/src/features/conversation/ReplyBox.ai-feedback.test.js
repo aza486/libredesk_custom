@@ -137,6 +137,7 @@ beforeEach(async () => {
     refreshCurrentConversation: vi.fn().mockResolvedValue({})
   })
   mocks.draft = {
+    replyToMessageUUID: ref(''),
     htmlContent: ref('Existing employee answer'),
     textContent: ref('Existing employee answer'),
     isLoading: ref(false),
@@ -151,6 +152,7 @@ beforeEach(async () => {
     clearMediaFiles: vi.fn(),
     setMediaFiles: vi.fn()
   }
+  mocks.api.getReplySources = vi.fn().mockResolvedValue({ data: { data: { results: [], total: 0, has_more: false } } })
   mocks.api.getOutgoingTemplates = vi.fn().mockResolvedValue({ data: { data: [] } })
   mocks.api.saveDraft = vi.fn().mockResolvedValue({})
   mocks.api.deleteDraft = vi.fn().mockResolvedValue({})
@@ -328,4 +330,29 @@ test.each([['ai', undefined], ['ai_adapted', 'Angepasster Text']])('adoption con
   expect(mocks.api.sendMessage.mock.calls[0][1]).toMatchObject({ ai_response: { response_source: source, source_message_uuid: originalUUID, note_uuid: note.noteUUID } })
   expect(mocks.api.sendMessage.mock.calls[0][1].ai_feedback_original_message_uuid).toBeUndefined()
   expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+
+
+test('normal employee reply carries chosen customer UUID without AI or feedback classification', async () => {
+  mocks.draft.replyToMessageUUID.value = originalUUID
+  root.querySelector('[data-send]').click(); await flush()
+  expect(mocks.api.sendMessage).toHaveBeenCalledTimes(1)
+  const body = mocks.api.sendMessage.mock.calls[0][1]
+  expect(body.reply_to_message_uuid).toBe(originalUUID)
+  expect(body.ai_response).toBeUndefined()
+  expect(body.ai_feedback_original_message_uuid).toBeUndefined()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+
+
+test('cancelled human feedback permits a new normal reply source without reclassification', async () => {
+  await exposed.openReply({ aiNote: note, mode: 'own' }); await flush()
+  click('Weiter zur Antwort'); await flush()
+  click('Feedback abbrechen (Antwort behalten)'); await flush()
+  mocks.draft.replyToMessageUUID.value = 'different-customer'
+  root.querySelector('[data-send]').click(); await flush()
+  const body = mocks.api.sendMessage.mock.calls[0][1]
+  expect(body.reply_to_message_uuid).toBe('different-customer')
+  expect(body.ai_response).toBeUndefined()
+  expect(body.ai_feedback_original_message_uuid).toBeUndefined()
 })

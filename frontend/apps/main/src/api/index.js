@@ -373,6 +373,8 @@ const deleteMessage = (cuuid, uuid) =>
   http.delete(`/api/v1/conversations/${cuuid}/messages/${uuid}`)
 const getConversationMessages = (uuid, params) =>
   http.get(`/api/v1/conversations/${uuid}/messages`, { params, abortOnRoute: true })
+const getReplySources = (cuuid, params) => http.get(`/api/v1/conversations/${cuuid}/reply-sources`, { params, abortOnRoute: true })
+const assignReplySource = (cuuid, uuid, data) => http.put(`/api/v1/conversations/${cuuid}/messages/${uuid}/reply-source`, data)
 const adjustAIStyle = (cuuid, data, signal) =>
   http.post(`/api/v1/conversations/${cuuid}/ai-style-adjust`, data, { signal, timeout: 50000 })
 const saveAIFeedback = (cuuid, uuid, data) =>
@@ -780,6 +782,8 @@ export default {
   sendMessage,
   saveAIFeedback,
   adjustAIStyle,
+  getReplySources,
+  assignReplySource,
   retryMessage,
   deleteMessage,
   createUser,

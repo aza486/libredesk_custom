@@ -137,6 +137,7 @@
         @escapeKeyDown="isEditorFullscreen = false"
         :hide-close-button="true"
       >
+        <ReplySourceSelector v-if="isEditorFullscreen && messageType !== 'private_note' && conversationStore.current?.inbox_channel === 'email'" v-model="replyToMessageUUID" :conversation-uuid="currentConversationUUID" :locked-source="lockedReplySource" :disabled="isSending || isDraftLoading" />
         <ReplyBoxContent
           v-if="isEditorFullscreen"
           ref="fullscreenContentRef"
@@ -202,6 +203,7 @@
       :class="{ '!bg-private': messageType === 'private_note', 'ai-generating': isGenerating }"
       v-if="!isCramped && !isEditorFullscreen"
     >
+      <ReplySourceSelector v-if="messageType !== 'private_note' && conversationStore.current?.inbox_channel === 'email'" v-model="replyToMessageUUID" :conversation-uuid="currentConversationUUID" :locked-source="lockedReplySource" :disabled="isSending || isDraftLoading" />
       <ReplyBoxContent
         ref="replyBoxContentRef"
         :isFullscreen="false"
@@ -273,6 +275,7 @@ import { useIsComposerCramped } from '@main/composables/useIsComposerCramped'
 import { useEmitter } from '@main/composables/useEmitter'
 import { useFileUpload } from '@main/composables/useFileUpload'
 import { hasInlineImage, hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
+import ReplySourceSelector from './ReplySourceSelector.vue'
 import AIStyleDialog from './AIStyleDialog.vue'
 import { sourceAlreadyAnswered } from '@main/utils/ai-style'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
@@ -329,6 +332,7 @@ watch(
 const {
   htmlContent,
   aiResponse: draftAIResponse,
+  replyToMessageUUID: draftReplyTo,
   textContent,
   isLoading: isDraftLoading,
   clearDraft,
@@ -338,6 +342,7 @@ const {
 } = useDraftManager(currentConversationUUID, messageType, mediaFiles)
 
 const aiResponse = draftAIResponse || ref(null)
+const replyToMessageUUID = draftReplyTo || ref('')
 const styleOpen = ref(false)
 const styleNote = ref(null)
 const adoptStyledReply = ({ note, text }) => openReply({ aiNote: note, mode: 'adopt', adaptedText: text })
@@ -369,6 +374,12 @@ const feedback = createAIFeedback({
   userID: () => userStore.userID
 })
 const feedbackRecord = computed(() => feedback.records[currentConversationUUID.value])
+const lockedReplySource = computed(() => {
+  const composing = feedbackRecord.value?.phase === 'composing'
+  const explicit = aiResponse.value
+  return (explicit && (explicit.response_source !== 'human' || composing) ? explicit.source_message_uuid : '') ||
+    (composing ? feedbackRecord.value.originalUUID : '') || ''
+})
 const aiModalOpen = ref(false)
 const aiAction = ref(null)
 const aiReason = ref('')
@@ -475,6 +486,7 @@ const continueAiReply = async () => {
     focusAfterModal = true
     aiModalOpen.value = false
     if (await focusReply(action.uuid)) {
+      replyToMessageUUID.value = action.note.originalUUID
       aiResponse.value = { response_source: action.mode === 'own' ? 'human' : action.adaptedText !== undefined ? 'ai_adapted' : 'ai', source_message_uuid: action.note.originalUUID, note_uuid: action.note.noteUUID }
       if (action.mode === 'adopt') htmlContent.value = suggestionToHTML(action.adaptedText ?? action.note.suggestion)
     }
@@ -686,6 +698,7 @@ const processSend = async (
   // Add pending message to cache for instant display.
   if (hasContent) {
     const savedContent = htmlContent.value
+    const savedReplySource = !isPrivate ? (lockedReplySource.value || replyToMessageUUID.value) : ''
     const savedProvenance = !isPrivate && aiResponse.value &&
       (aiResponse.value.response_source !== 'human' || feedbackRecord.value?.phase === 'composing')
       ? { ...aiResponse.value } : null
@@ -771,6 +784,7 @@ const processSend = async (
         to: parsedTo,
         echo_id: isPrivate ? '' : tempUUID,
         template_id: isPrivate ? null : savedTemplateID,
+        ...(savedReplySource ? { reply_to_message_uuid: savedReplySource } : {}),
         ...(savedProvenance && (savedProvenance.response_source !== 'human' || feedbackOriginalUUID) ? { ai_response: savedProvenance } : {}),
         ...(feedbackOriginalUUID ? { ai_feedback_original_message_uuid: feedbackOriginalUUID } : {})
       })

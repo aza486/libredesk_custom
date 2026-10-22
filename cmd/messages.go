@@ -1,8 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/abhinavxd/libredesk/internal/conversation"
+	"github.com/google/uuid"
 
 	"github.com/abhinavxd/libredesk/internal/aifeedback"
 	inboxmodels "github.com/abhinavxd/libredesk/internal/inbox"
@@ -17,6 +21,7 @@ import (
 )
 
 type messageReq struct {
+	ReplyToMessageUUID            string                 `json:"reply_to_message_uuid"`
 	AIResponse                    *responseProvenance    `json:"ai_response,omitempty"`
 	AIFeedbackOriginalMessageUUID string                 `json:"ai_feedback_original_message_uuid"`
 	Attachments                   []int                  `json:"attachments"`
@@ -306,6 +311,24 @@ func handleSendMessage(r *fastglue.Request) error {
 			}
 		}
 	}
+	if req.ReplyToMessageUUID != "" {
+		if _, err := uuid.Parse(req.ReplyToMessageUUID); err != nil {
+			return r.SendErrorEnvelope(400, "Invalid reply source UUID", nil, envelope.InputError)
+		}
+		if req.Private || req.SenderType != "agent" || inbox.Channel != "email" {
+			return r.SendErrorEnvelope(400, "Reply source requires a public employee email", nil, envelope.InputError)
+		}
+		original, err := app.conversation.GetMessage(req.ReplyToMessageUUID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if aifeedback.ValidateOriginal(original, cuuid) != nil {
+			return r.SendErrorEnvelope(400, "Reply source must be an incoming customer message in this conversation", nil, envelope.InputError)
+		}
+		if (req.AIResponse != nil && req.AIResponse.SourceUUID != req.ReplyToMessageUUID) || (req.AIFeedbackOriginalMessageUUID != "" && req.AIFeedbackOriginalMessageUUID != req.ReplyToMessageUUID) {
+			return r.SendErrorEnvelope(400, "Conflicting reply sources", nil, envelope.InputError)
+		}
+	}
 	// Get media for all attachments, skip any already associated with a model.
 	media, err := getUnassociatedMedia(app, req.Attachments)
 	if err != nil {
@@ -337,6 +360,9 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	// Queue outgoing reply.
 	meta := map[string]any{}
+	if req.ReplyToMessageUUID != "" {
+		meta["reply_to_message_uuid"] = req.ReplyToMessageUUID
+	}
 	if req.AIResponse != nil {
 		meta["ai_response"] = req.AIResponse
 	}
@@ -354,6 +380,9 @@ func handleSendMessage(r *fastglue.Request) error {
 	}
 
 	message, err := app.conversation.QueueReply(media, conv.InboxID, user.ID, conv.ContactID, cuuid, req.Message, req.To, req.CC, req.BCC, meta)
+	if errors.Is(err, conversation.ErrReplySource) {
+		return r.SendErrorEnvelope(400, "Invalid reply source", nil, envelope.InputError)
+	}
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
