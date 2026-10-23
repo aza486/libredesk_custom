@@ -117,7 +117,7 @@ import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
 import { useUsersStore } from '@main/stores/users'
-import UnreadCountBadge from '@main/components/UnreadCountBadge.vue'
+import SidebarCountBadge from './SidebarCountBadge.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { useIsMobile } from '@shared-ui/composables'
 import { useEmitter } from '@main/composables/useEmitter'
@@ -793,7 +793,7 @@ onUnmounted(() => {
                         >
                           <span>Hohe Priorität</span>
 
-                          <UnreadCountBadge :count="sidebarCounts.assigned_high || 0" />
+                          <SidebarCountBadge :count="sidebarCounts.assigned_high || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -814,7 +814,7 @@ onUnmounted(() => {
                         >
                           <span>Offen</span>
 
-                          <UnreadCountBadge :count="sidebarCounts.assigned || 0" />
+                          <SidebarCountBadge :count="sidebarCounts.assigned || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -939,7 +939,7 @@ onUnmounted(() => {
                                   @click="navigateToPersonalInbox(inbox.id, item.query)"
                                 >
                                   <span>{{ item.label }}</span>
-                                  <UnreadCountBadge
+                                  <SidebarCountBadge
                                     v-if="item.count"
                                     :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
                                   />
@@ -1025,7 +1025,7 @@ onUnmounted(() => {
                                   >
                                     <span>Hohe Priorität</span>
 
-                                    <UnreadCountBadge
+                                    <SidebarCountBadge
                                       :count="sidebarCounts[`team_high_${team.id}`] || 0"
                                     />
                                   </SidebarMenuButton>
@@ -1044,7 +1044,7 @@ onUnmounted(() => {
                                   >
                                     <span>Offen</span>
 
-                                    <UnreadCountBadge
+                                    <SidebarCountBadge
                                       :count="sidebarCounts[`team_${team.id}`] || 0"
                                     />
                                   </SidebarMenuButton>
@@ -1129,7 +1129,7 @@ onUnmounted(() => {
                         >
                           <span>Hohe Priorität</span>
 
-                          <UnreadCountBadge :count="sidebarCounts.customer_high || 0" />
+                          <SidebarCountBadge :count="sidebarCounts.customer_high || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -1151,7 +1151,7 @@ onUnmounted(() => {
                         >
                           <span>Offen</span>
 
-                          <UnreadCountBadge :count="sidebarCounts.customer || 0" />
+                          <SidebarCountBadge :count="sidebarCounts.customer || 0" />
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
 
@@ -1228,7 +1228,7 @@ onUnmounted(() => {
                       {{ t('globals.terms.unassigned') }}
                     </span>
 
-                    <UnreadCountBadge :count="sidebarCounts.unassigned || 0" />
+                    <SidebarCountBadge :count="sidebarCounts.unassigned || 0" />
                   </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>

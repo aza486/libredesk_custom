@@ -66,6 +66,7 @@
                 </h3>
 
                 <div class="flex shrink-0 items-center gap-1">
+                  <PriorityMarker :priority="conversation.priority" />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <component
@@ -208,6 +209,7 @@ import {
   ContextMenuTrigger
 } from '@shared-ui/components/ui/context-menu'
 import SlaBadge from '@main/features/sla/SlaBadge.vue'
+import PriorityMarker from '@main/features/conversation/PriorityMarker.vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/ui/tooltip'
 import { Checkbox } from '@shared-ui/components/ui/checkbox'
 import { useConversationStore } from '@main/stores/conversation'
