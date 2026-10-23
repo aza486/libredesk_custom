@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime"
+	"sort"
 	"strings"
 	"time"
 
@@ -282,7 +284,9 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		messages = append(messages, msgData{env: env, seqNum: msg.SeqNum, autoReply: autoReply, isLoop: isLoop, extractedMessageID: extractedMessageID})
 	}
 
-	// Now process each collected message.
+	// FETCH responses need not arrive in sequence order. Persist each message
+	// before importing its successors so replies can find an earlier delivery.
+	sort.Slice(messages, func(i, j int) bool { return messages[i].seqNum < messages[j].seqNum })
 	for _, msgData := range messages {
 		// Check for context cancellation before processing each message.
 		select {
@@ -304,8 +308,15 @@ func (e *Email) fetchAndProcessMessages(ctx context.Context, client *imapclient.
 		}
 
 		// Process the envelope.
-		if err := e.processEnvelope(ctx, client, msgData.env, msgData.seqNum, inboxID, msgData.extractedMessageID); err != nil && err != context.Canceled {
-			e.lo.Error("error processing envelope", "error", err)
+		if err := e.processEnvelope(ctx, client, msgData.env, msgData.seqNum, inboxID, msgData.extractedMessageID); err != nil {
+			var persistenceErr incomingEmailPersistenceError
+			if errors.As(err, &persistenceErr) || errors.Is(err, context.Canceled) {
+				// Leave this message and its successors for the next read-only scan.
+				return err
+			}
+			// Preserve the existing handling of malformed individual emails: one
+			// unparsable MIME message must not block the entire inbox forever.
+			e.lo.Error("error processing email envelope", "inbox_id", inboxID)
 		}
 	}
 
@@ -339,7 +350,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	exists, err := e.messageStore.MessageExists(messageID, e.Identifier())
 	if err != nil {
 		e.lo.Error("error checking if message exists", "message_id", messageID)
-		return fmt.Errorf("checking if message exists in DB: %w", err)
+		return incomingEmailPersistenceError{fmt.Errorf("checking if message exists in DB: %w", err)}
 	}
 	if exists {
 		return nil
@@ -348,7 +359,7 @@ func (e *Email) processEnvelope(ctx context.Context, client *imapclient.Client, 
 	// Check if any contact with this email is blocked, if so, ignore the message.
 	if blocked, err := e.userStore.IsEmailBlocked(fromAddress); err != nil {
 		e.lo.Error("error checking if email is blocked", "email", fromAddress, "error", err)
-		return fmt.Errorf("checking if email is blocked: %w", err)
+		return incomingEmailPersistenceError{fmt.Errorf("checking if email is blocked: %w", err)}
 	} else if blocked {
 		e.lo.Info("contact email is blocked dropping incoming email", "email", fromAddress)
 		return nil
@@ -486,15 +497,7 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 	e.lo.Debug("envelope HTML content", "message_id", incomingMsg.SourceID.String, "content", incomingMsg.Content)
 	e.lo.Debug("envelope text content", "message_id", incomingMsg.SourceID.String, "content", envelope.Text)
 
-	// Clean headers
-	inReplyTo := strings.ReplaceAll(strings.ReplaceAll(envelope.GetHeader("In-Reply-To"), "<", ""), ">", "")
-	references := strings.Fields(envelope.GetHeader("References"))
-	for i, ref := range references {
-		references[i] = strings.Trim(strings.TrimSpace(ref), " <>")
-	}
-
-	incomingMsg.InReplyTo = inReplyTo
-	incomingMsg.References = references
+	setThreadHeaders(envelope, &incomingMsg)
 
 	// Extract conversation UUID from plus-addressed recipient (e.g., inbox+conv-{uuid}@domain)
 	incomingMsg.ConversationUUIDFromReplyTo = extractConversationUUIDFromRecipient(envelope)
@@ -516,7 +519,11 @@ func (e *Email) processFullMessage(item imapclient.FetchItemDataBodySection, inc
 		"attachments", len(envelope.Attachments), "inline_attachments", len(envelope.Inlines),
 		"other_parts", len(envelope.OtherParts))
 
-	return e.messageStore.EnqueueIncoming(incomingMsg)
+	_, err = e.messageStore.ProcessIncomingMessage(incomingMsg)
+	if err != nil {
+		return incomingEmailPersistenceError{err}
+	}
+	return nil
 }
 
 // collectAttachments builds the attachment list from an envelope's attachment, inline, and unclassified parts.
@@ -656,8 +663,8 @@ func (e *Email) extractUUIDFromReplyAddress(address string) string {
 // This function handles problematic Message IDs by extracting them from raw headers
 // and cleaning them of angle brackets and whitespace.
 func extractMessageIDFromHeaders(envelope *enmime.Envelope) string {
-	if rawMessageID := envelope.GetHeader(headerMessageID); rawMessageID != "" {
-		return strings.TrimSpace(strings.Trim(rawMessageID, "<>"))
+	if ids := parseThreadMessageIDs(envelope.GetHeader(headerMessageID)); len(ids) == 1 {
+		return ids[0]
 	}
 	return ""
 }

@@ -352,6 +352,7 @@ type queries struct {
 	GetMessageSourceIDs                *sqlx.Stmt `query:"get-message-source-ids"`
 	GetConversationUUIDFromMessageUUID *sqlx.Stmt `query:"get-conversation-uuid-from-message-uuid"`
 	MessageExistsBySourceID            *sqlx.Stmt `query:"message-exists-by-source-id"`
+	ConversationByThreadSourceIDs      *sqlx.Stmt `query:"conversation-by-thread-source-ids"`
 	GetConversationByMessageID         *sqlx.Stmt `query:"get-conversation-by-message-id"`
 	InsertMessage                      *sqlx.Stmt `query:"insert-message"`
 	UpdateMessageFeedbackSnapshot      *sqlx.Stmt `query:"update-message-feedback-snapshot"`

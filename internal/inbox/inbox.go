@@ -74,6 +74,7 @@ type Inbox interface {
 type MessageStore interface {
 	MessageExists(string, int) (bool, error)
 	EnqueueIncoming(models.IncomingMessage) error
+	ProcessIncomingMessage(models.IncomingMessage) (models.Message, error)
 }
 
 // UserStore defines methods for fetching user information.

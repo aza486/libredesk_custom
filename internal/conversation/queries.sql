@@ -878,10 +878,19 @@ SELECT * FROM inserted_msg;
 SELECT m.conversation_id
 FROM conversation_messages m
 JOIN conversations c ON c.id=m.conversation_id
-JOIN inboxes i ON i.id=$2
 WHERE m.source_id = ANY($1::text [])
-  AND (c.inbox_id=$2 OR (COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal' AND i.access_mode <> 'personal'))
+  AND c.inbox_id=$2
 ORDER BY m.id DESC LIMIT 1;
+
+-- name: conversation-by-thread-source-ids
+-- Conflicting references (or reused IDs) must never merge unrelated tickets.
+SELECT min(m.conversation_id)
+FROM conversation_messages m
+JOIN conversations c ON c.id=m.conversation_id
+WHERE m.source_id = ANY($1::text[])
+  AND c.inbox_id=$2
+  AND m.private=false AND m.type IN ('incoming', 'outgoing')
+HAVING count(DISTINCT m.conversation_id)=1;
 
 -- name: update-message-feedback-snapshot
 UPDATE conversation_messages SET meta = meta || $1::jsonb WHERE uuid = $2;

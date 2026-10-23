@@ -952,6 +952,23 @@ func (m *Manager) getMessageActivityContent(activityType, newValue, actorName st
 // conversations, and creates a new conversation if necessary. It also
 // inserts the message, uploads any attachments, and queues the conversation evaluation of automation rules.
 func (m *Manager) ProcessIncomingMessage(in models.IncomingMessage) (models.Message, error) {
+	if in.Channel == "email" {
+		// Cover deduplication, lookup, conversation creation and persistence across
+		// importers/processes. A busy inbox is retried by the read-only IMAP scan.
+		// Do not wait while occupying a DB connection needed by the active import.
+		tx, err := m.db.Beginx()
+		if err != nil {
+			return models.Message{}, err
+		}
+		defer tx.Rollback()
+		var locked bool
+		if err := tx.QueryRow(`SELECT pg_try_advisory_xact_lock(732104, $1)`, in.InboxID).Scan(&locked); err != nil {
+			return models.Message{}, err
+		}
+		if !locked {
+			return models.Message{}, ErrIncomingInboxBusy
+		}
+	}
 	// Return early if this message already exists (same source ID).
 	dupConvID, err := m.messageExistsBySourceID([]string{in.SourceID.String}, in.InboxID)
 	if err != nil && err != errConversationNotFound {
@@ -1370,17 +1387,20 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 	)
 
 	// Search for existing conversation using the in-reply-to and references.
-	m.lo.Debug("searching conversation using in-reply-to and references", "in_reply_to", in.InReplyTo, "references", in.References)
+	m.lo.Debug("searching conversation using reply headers", "inbox_id", in.InboxID, "reference_count", len(in.References))
 
 	sourceIDs := append([]string{in.InReplyTo}, in.References...)
-	conversationID, err = m.messageExistsBySourceID(sourceIDs, in.InboxID)
+	err = m.q.ConversationByThreadSourceIDs.QueryRow(pq.Array(stringutil.RemoveEmpty(sourceIDs)), in.InboxID).Scan(&conversationID)
+	if err == sql.ErrNoRows {
+		err = errConversationNotFound
+	}
 	if err != nil && err != errConversationNotFound {
 		return 0, "", false, err
 	}
 
 	// Conversation not found, create one.
 	if conversationID == 0 {
-		m.lo.Debug("no conversation found with in-reply-to and references, creating new conversation", "in_reply_to", in.InReplyTo, "references", in.References)
+		m.lo.Debug("no unambiguous conversation found using reply headers", "inbox_id", in.InboxID)
 		lastMessage := stringutil.HTML2Text(in.Content)
 		lastMessageAt := time.Now()
 		conversationID, conversationUUID, err = m.CreateConversation(in.Contact.ID,
