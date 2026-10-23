@@ -3,9 +3,9 @@
     <ContextMenuTrigger asChild>
       <router-link
         :to="conversationRoute"
-        class="group relative block px-3 py-2.5 transition-colors duration-150 ease-in-out cursor-pointer"
+        class="conversation-card group relative block min-w-0 transition-colors duration-150 ease-in-out cursor-pointer"
+        data-conversation-card
         :class="[
-          tagHighlightClass,
           {
             'bg-accent': isCurrent,
             'bg-primary/5 hover:bg-primary/10': isItemSelected && !isCurrent,
@@ -13,171 +13,156 @@
           }
         ]"
       >
-        <div class="flex items-start gap-2">
-          <!-- Avatar with channel indicator (checkbox overlays on hover / when selecting) -->
-          <div class="relative flex-shrink-0 w-10 h-10">
-            <div class="transition-opacity" :class="avatarOpacityClass" :aria-hidden="showCheckbox">
-              <Avatar class="w-10 h-10 rounded-full">
-                <AvatarImage :src="conversation.contact.avatar_url || ''" class="object-cover" />
-                <AvatarFallback>
-                  {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <div
-              v-if="canBulkAct"
-              class="absolute inset-0 items-center justify-center"
-              :class="showCheckbox ? 'flex' : 'hidden can-hover:group-hover:flex'"
-              @click.prevent.stop="handleCheckboxClick"
-            >
-              <Checkbox
-                :checked="isItemSelected"
-                :aria-label="t('conversation.bulkActions.selectConversation')"
-                class="w-5 h-5"
-              />
-            </div>
-          </div>
-
-          <!-- Content container -->
-          <div class="flex-1 min-w-0 space-y-1">
-            <!-- Subject + Contact group -->
-            <div class="space-y-0.5">
-              <!-- Subject + channel + time -->
-              <div class="flex items-baseline justify-between gap-2">
-                <Tooltip v-if="showSubject && conversation.subject">
-                  <TooltipTrigger asChild>
-                    <h3
-                      class="min-w-0 truncate text-sm font-semibold leading-5 text-foreground"
-                      :class="isUnread ? 'font-bold' : 'font-semibold'"
-                    >
-                      {{ conversation.subject }}
-                    </h3>
-                  </TooltipTrigger>
-                  <TooltipContent>{{ conversation.subject }}</TooltipContent>
-                </Tooltip>
-
-                <!-- Fallback: contact name when subject is unavailable -->
-                <h3
-                  v-else
-                  class="min-w-0 truncate text-sm font-semibold leading-5 text-foreground"
-                  :class="isUnread ? 'font-bold' : 'font-semibold'"
-                >
-                  {{ contactFullName }}
-                </h3>
-
-                <div class="flex shrink-0 items-center gap-1">
-                  <PriorityMarker :priority="conversation.priority" />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <component
-                        :is="conversation.inbox_channel === 'livechat' ? MessageSquare : Mail"
-                        class="h-3 w-3 text-muted-foreground"
-                        role="img"
-                        :aria-label="conversation.inbox_name"
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>{{ conversation.inbox_name }}</TooltipContent>
-                  </Tooltip>
-
-                  <span
-                    v-if="conversation.last_message_at"
-                    class="whitespace-nowrap text-xs tabular-nums text-muted-foreground"
-                  >
-                    {{ relativeLastMessageTime }}
-                  </span>
-                </div>
+        <div class="card-body space-y-2 px-3 py-2.5">
+          <div class="card-heading flex min-w-0 items-start gap-2">
+            <!-- Avatar with channel indicator (checkbox overlays on hover / when selecting) -->
+            <div class="card-avatar relative h-8 w-8 shrink-0">
+              <div
+                class="h-full w-full transition-opacity"
+                :class="avatarOpacityClass"
+                :aria-hidden="showCheckbox"
+              >
+                <Avatar class="h-full w-full rounded-full">
+                  <AvatarImage :src="conversation.contact.avatar_url || ''" class="object-cover" />
+                  <AvatarFallback>
+                    {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
+                  </AvatarFallback>
+                </Avatar>
               </div>
+              <div
+                v-if="canBulkAct"
+                class="absolute inset-0 items-center justify-center"
+                :class="showCheckbox ? 'flex' : 'hidden can-hover:group-hover:flex'"
+                @click.prevent.stop="handleCheckboxClick"
+              >
+                <Checkbox
+                  :checked="isItemSelected"
+                  :aria-label="t('conversation.bulkActions.selectConversation')"
+                  class="w-5 h-5"
+                />
+              </div>
+            </div>
 
-              <!-- Contact name -->
+            <div class="card-heading-content grid min-w-0 flex-1 items-start gap-x-2">
+              <Tooltip v-if="showSubject && conversation.subject">
+                <TooltipTrigger asChild>
+                  <h3
+                    class="card-title min-w-0 truncate text-[13px] leading-5 text-foreground"
+                    :class="isUnread ? 'font-bold' : 'font-semibold'"
+                    data-conversation-title
+                  >
+                    {{ conversation.subject }}
+                  </h3>
+                </TooltipTrigger>
+                <TooltipContent>{{ conversation.subject }}</TooltipContent>
+              </Tooltip>
+              <h3
+                v-else
+                class="card-title min-w-0 truncate text-[13px] leading-5 text-foreground"
+                :class="isUnread ? 'font-bold' : 'font-semibold'"
+                :title="contactFullName"
+                data-conversation-title
+              >
+                {{ contactFullName }}
+              </h3>
+
               <p
                 v-if="showSubject && conversation.subject"
-                class="truncate text-xs leading-4 text-muted-foreground"
+                class="card-contact min-w-0 truncate text-xs font-normal leading-4 text-muted-foreground"
+                :title="contactFullName"
               >
                 {{ contactFullName }}
               </p>
-            </div>
 
-            <!-- Message preview + unread count -->
-            <div class="flex items-center justify-between gap-2">
-              <p
-                class="min-w-0 flex-1 truncate text-sm leading-5"
-                :class="isUnread ? 'font-medium text-foreground' : 'text-muted-foreground'"
-              >
-                <template v-if="isTyping">
-                  <span class="italic text-foreground">{{ $t('globals.terms.typing') }}</span>
-                </template>
-                <template v-else-if="hasDraftForConversation && !isCurrent">
-                  <span class="font-medium text-foreground">{{ $t('globals.terms.draft') }}:</span>
-                  {{ draftPreview }}
-                </template>
-                <template v-else>
-                  <Reply
-                    class="text-success inline-block align-text-bottom mr-0.5"
-                    :size="14"
-                    v-if="conversation.last_message_sender === 'agent'"
-                  />{{ trimmedLastMessage }}
-                </template>
-              </p>
-              <div
-                v-if="isUnread"
-                class="flex items-center justify-center w-5 h-5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex-shrink-0"
-              >
-                {{
-                  conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count
-                }}
+              <div class="card-metadata flex min-w-0 items-center justify-end gap-1">
+                <PriorityMarker :priority="conversation.priority" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <component
+                      :is="conversation.inbox_channel === 'livechat' ? MessageSquare : Mail"
+                      class="h-3 w-3 shrink-0 text-muted-foreground"
+                      role="img"
+                      :aria-label="conversation.inbox_name"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>{{ conversation.inbox_name }}</TooltipContent>
+                </Tooltip>
+                <span
+                  v-if="conversation.last_message_at"
+                  class="min-w-0 truncate text-[11px] font-normal tabular-nums text-muted-foreground"
+                  :title="relativeLastMessageTime"
+                  >{{ relativeLastMessageTime }}</span
+                >
               </div>
             </div>
+          </div>
 
-            <!-- SLA Badges -->
-            <div
-              v-if="conversation.tags?.length"
-              class="flex min-w-0 items-center gap-1 overflow-hidden"
+          <div class="flex min-w-0 items-center gap-2" data-conversation-preview>
+            <Reply
+              v-if="
+                !isTyping &&
+                !(hasDraftForConversation && !isCurrent) &&
+                conversation.last_message_sender === 'agent'
+              "
+              class="shrink-0 text-success"
+              :size="14"
+            />
+            <p
+              class="min-w-0 flex-1 truncate text-xs font-normal leading-4"
+              :class="isUnread ? 'text-foreground' : 'text-muted-foreground'"
             >
-              <span
-                v-for="tag in visibleTags"
-                :key="tag"
-                class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-              >
-                {{ tag }}
-              </span>
-              <span v-if="hiddenTagCount" class="shrink-0 text-xs text-muted-foreground">…</span>
+              <span v-if="isTyping" class="italic text-foreground">{{
+                $t('globals.terms.typing')
+              }}</span>
+              <template v-else-if="hasDraftForConversation && !isCurrent">
+                <span class="font-medium text-foreground">{{ $t('globals.terms.draft') }}:</span>
+                {{ draftPreview }}
+              </template>
+              <template v-else>{{ conversation.last_message }}</template>
+            </p>
+            <div
+              v-if="isUnread"
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
+            >
+              {{ conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count }}
             </div>
+          </div>
 
-            <div class="flex items-center">
-              <span
-                class="inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium leading-4 transition-colors"
-                :class="statusClass"
-              >
-                {{ conversation.status }}
-              </span>
-            </div>
+          <div class="card-footer grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+            <ConversationTagOverflow :tags="conversation.tags || []" />
+            <span
+              class="card-status inline-flex shrink-0 justify-self-end whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 transition-colors"
+              :class="statusClass"
+              data-conversation-status
+              >{{ conversation.status }}</span
+            >
+          </div>
 
-            <div v-if="hasSlaDeadlines" class="flex items-center gap-1">
-              <SlaBadge
-                v-show="frdStatus === 'overdue' || frdStatus === 'remaining'"
-                :dueAt="conversation.first_response_deadline_at"
-                :actualAt="conversation.first_reply_at"
-                :label="'FRD'"
-                :showExtra="false"
-                @status="frdStatus = $event"
-              />
-              <SlaBadge
-                v-show="rdStatus === 'overdue' || rdStatus === 'remaining'"
-                :dueAt="conversation.resolution_deadline_at"
-                :actualAt="conversation.resolved_at"
-                :label="'RD'"
-                :showExtra="false"
-                @status="rdStatus = $event"
-              />
-              <SlaBadge
-                v-show="nrdStatus === 'overdue' || nrdStatus === 'remaining'"
-                :dueAt="conversation.next_response_deadline_at"
-                :actualAt="conversation.next_response_met_at"
-                :label="'NRD'"
-                :showExtra="false"
-                @status="nrdStatus = $event"
-              />
-            </div>
+          <div v-if="hasSlaDeadlines" class="flex min-w-0 flex-wrap items-center gap-1">
+            <SlaBadge
+              v-show="frdStatus === 'overdue' || frdStatus === 'remaining'"
+              :dueAt="conversation.first_response_deadline_at"
+              :actualAt="conversation.first_reply_at"
+              :label="'FRD'"
+              :showExtra="false"
+              @status="frdStatus = $event"
+            />
+            <SlaBadge
+              v-show="rdStatus === 'overdue' || rdStatus === 'remaining'"
+              :dueAt="conversation.resolution_deadline_at"
+              :actualAt="conversation.resolved_at"
+              :label="'RD'"
+              :showExtra="false"
+              @status="rdStatus = $event"
+            />
+            <SlaBadge
+              v-show="nrdStatus === 'overdue' || nrdStatus === 'remaining'"
+              :dueAt="conversation.next_response_deadline_at"
+              :actualAt="conversation.next_response_met_at"
+              :label="'NRD'"
+              :showExtra="false"
+              @status="nrdStatus = $event"
+            />
           </div>
         </div>
       </router-link>
@@ -210,6 +195,7 @@ import {
 } from '@shared-ui/components/ui/context-menu'
 import SlaBadge from '@main/features/sla/SlaBadge.vue'
 import PriorityMarker from '@main/features/conversation/PriorityMarker.vue'
+import ConversationTagOverflow from './ConversationTagOverflow.vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/ui/tooltip'
 import { Checkbox } from '@shared-ui/components/ui/checkbox'
 import { useConversationStore } from '@main/stores/conversation'
@@ -273,11 +259,6 @@ onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 
-const trimmedLastMessage = computed(() => {
-  const message = props.conversation.last_message || ''
-  return message.length > 120 ? message.slice(0, 120) + '...' : message
-})
-
 const relativeLastMessageTime = computed(() => {
   return props.conversation.last_message_at
     ? getRelativeTime(props.conversation.last_message_at, now.value)
@@ -313,19 +294,6 @@ const showSubject = computed(
 const isUnread = computed(() => props.conversation.unread_message_count > 0)
 
 const isCurrent = computed(() => props.conversation.uuid === props.currentConversation?.uuid)
-
-const visibleTags = computed(() => (props.conversation.tags || []).slice(0, 3))
-const hiddenTagCount = computed(() =>
-  Math.max(0, (props.conversation.tags || []).length - visibleTags.value.length)
-)
-const tagHighlightClass = computed(() => {
-  const tags = (props.conversation.tags || []).map((tag) =>
-    String(tag).replace(/\s+/g, '').toLocaleLowerCase()
-  )
-  if (tags.includes('🛑verarbeitungsfehler')) return 'ticket-highlight-processing-error'
-  if (tags.includes('😎menscherforderlich')) return 'ticket-highlight-human-required'
-  return ''
-})
 
 const statusClass = computed(() => {
   switch (props.conversation.status) {
@@ -399,29 +367,56 @@ const handleSelect = () => {
 </script>
 
 <style scoped>
-/* Verarbeitungsfehler – entsättigtes Grau mit Rotstich */
-.ticket-highlight-processing-error {
-  @apply bg-[#F1E9E9] text-[#4B3032] hover:bg-[#E9DEDE] dark:bg-[#4b2222] dark:text-[#E8DADB] dark:hover:bg-[#33292B];
+.conversation-card {
+  container: conversation-card / inline-size;
 }
 
-.ticket-highlight-processing-error :deep(.text-foreground) {
-  @apply text-[#4B3032] dark:text-[#E8DADB];
+.card-heading-content {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.ticket-highlight-processing-error :deep(.text-muted-foreground) {
-  @apply text-[#795C5F] dark:text-[#BDA8AA];
+.card-title {
+  grid-column: 1;
+  grid-row: 1;
+}
+.card-contact {
+  grid-column: 1;
+  grid-row: 2;
+}
+.card-metadata {
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 
-/* Mensch erforderlich – entsättigtes Grau mit warmem Orangestich */
-.ticket-highlight-human-required {
-  @apply bg-[#F1EEE6] text-[#4A4030] hover:bg-[#E9E4D8] dark:bg-[#2B2923] dark:text-[#E5DCC8] dark:hover:bg-[#353127];
+@container conversation-card (max-width: 260px) {
+  .card-heading-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card-metadata {
+    grid-column: 1;
+    grid-row: 3;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
 }
 
-.ticket-highlight-human-required :deep(.text-foreground) {
-  @apply text-[#4A4030] dark:text-[#E5DCC8];
+@container conversation-card (max-width: 200px) {
+  .card-body {
+    padding-inline: 8px;
+  }
+  .card-avatar {
+    width: 24px;
+    height: 24px;
+  }
 }
 
-.ticket-highlight-human-required :deep(.text-muted-foreground) {
-  @apply text-[#786E5A] dark:text-[#BEB49D];
+@container conversation-card (max-width: 120px) {
+  .card-footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card-status {
+    grid-row: 1;
+  }
 }
 </style>
