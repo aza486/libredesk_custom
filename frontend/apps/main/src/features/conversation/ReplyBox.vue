@@ -4,40 +4,45 @@
     <DialogContent @close-auto-focus="restoreAiFocus">
       <DialogHeader>
         <DialogTitle>{{
-          aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Eigene Antwort verfassen'
+          isManualReason ? 'Feedback erstellen' : aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Eigene Antwort verfassen'
         }}</DialogTitle>
         <DialogDescription>
           {{
-            aiAction?.mode === 'adopt'
+            isManualReason
+              ? 'Die tatsächlich gesendete Mitarbeiterantwort wird automatisch als Lernantwort übernommen. Hier ist keine weitere Antwort nötig. Ein leeres Feld entfernt den zusätzlichen Grund.'
+              : aiAction?.mode === 'adopt'
               ? 'Der Vorschlag ersetzt den öffentlichen Antwortentwurf. Du kannst ihn vor dem Versand bearbeiten.'
               : 'Schreibe deine Antwort anschließend im vorhandenen Editor. Feedback wird erst nach bestätigtem Versand gespeichert.'
           }}
         </DialogDescription>
       </DialogHeader>
       <div
+        v-if="!isManualReason"
         class="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted p-3 text-sm"
         :aria-label="aiAction?.adaptedText !== undefined ? 'Angepasster KI-Antwortvorschlag' : 'Ursprünglicher KI-Antwortvorschlag'"
       >
         {{ aiAction?.adaptedText ?? aiAction?.note.suggestion }}
       </div>
-      <template v-if="aiAction?.mode === 'own'">
+      <template v-if="aiAction?.mode === 'own' || isManualReason">
         <label for="ai-feedback-reason" class="text-sm font-medium"
-          >Warum möchtest du anders antworten? (optional)</label
+          >{{ isManualReason ? 'Was soll die KI beim nächsten Mal anders machen? (optional)' : 'Warum möchtest du anders antworten? (optional)' }}</label
         >
         <textarea
           id="ai-feedback-reason"
           v-model="aiReason"
           rows="4"
           class="w-full rounded-md border bg-background p-2 text-sm"
-          :aria-invalid="aiReasonBytes > 8000"
+          :aria-invalid="aiReasonTooLong"
+          :disabled="isManualReason && (aiModalBusy || manualReadOnly)"
+          :placeholder="isManualReason ? 'Kurze Antwort und Entschuldigung' : undefined"
           aria-describedby="ai-feedback-limit"
         />
         <p
           id="ai-feedback-limit"
           class="text-xs"
-          :class="aiReasonBytes > 8000 ? 'text-destructive' : 'text-muted-foreground'"
+          :class="aiReasonTooLong ? 'text-destructive' : 'text-muted-foreground'"
         >
-          {{ aiReasonBytes }} / 8000 UTF-8-Bytes
+          {{ isManualReason ? `${manualReasonLength(aiReason)} / 2500 Zeichen` : `${aiReasonBytes} / 8000 UTF-8-Bytes` }}
         </p>
       </template>
       <p v-if="aiModalError" role="alert" class="text-sm text-destructive">{{ aiModalError }}</p>
@@ -46,33 +51,36 @@
           >Abbrechen</Button
         >
         <Button
-          :disabled="aiModalBusy || aiReasonBytes > 8000 || isSending"
+          :disabled="aiModalBusy || aiReasonTooLong || (isManualReason && manualReadOnly) || isSending"
           @click="continueAiReply"
-          >{{ aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Weiter zur Antwort' }}</Button
+          >{{ isManualReason ? (aiModalBusy ? (manualReadOnly ? 'Wird geladen …' : 'Wird gespeichert …') : 'Feedbackgrund speichern') : aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Weiter zur Antwort' }}</Button
         >
       </DialogFooter>
     </DialogContent>
   </Dialog>
   <div
-    v-if="feedbackRecord"
+    v-if="feedbackRecord || manualAnnotation"
     class="mx-2 mt-2 rounded-md border p-3 text-sm"
     role="status"
     aria-live="polite"
   >
-    <p>{{ feedbackStatus }}</p>
-    <p v-if="feedbackRecord.phase === 'composing'" class="mt-1 text-muted-foreground">
+    <p>{{ feedbackRecord ? feedbackStatus : 'Feedback für manuelle Antwort gespeichert' }}</p>
+    <p v-if="!feedbackRecord" class="mt-1 text-muted-foreground">
+      Dein Feedback wird mit deiner nächsten passenden öffentlichen Antwort verknüpft und nach erfolgreichem Versand zum Lernen verwendet. Private Notizen erzeugen kein Feedback.
+    </p>
+    <p v-if="feedbackRecord?.phase === 'composing'" class="mt-1 text-muted-foreground">
       Die nächste öffentliche Antwort wird mit der ursprünglichen Kundenmail verknüpft. Private
       Notizen erzeugen kein Feedback.
     </p>
     <Button
-      v-if="feedbackRecord.phase === 'composing'"
+      v-if="feedbackRecord?.phase === 'composing'"
       size="sm"
       variant="ghost"
       @click="cancelFeedback"
       >Feedback abbrechen (Antwort behalten)</Button
     >
     <Button
-      v-if="['error', 'uncertain', 'failed', 'waiting'].includes(feedbackRecord.phase)"
+      v-if="['error', 'uncertain', 'failed', 'waiting'].includes(feedbackRecord?.phase)"
       size="sm"
       variant="outline"
       class="mt-2"
@@ -279,6 +287,8 @@ import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
 import { createAIFeedback } from '@main/utils/ai-feedback'
 import {
   feedbackReasonBytes,
+  manualReasonLength,
+  readManualReviewNote,
   isOriginalCustomerMessage,
   suggestionToHTML
 } from '@main/utils/ai-note'
@@ -374,6 +384,9 @@ const aiAction = ref(null)
 const aiReason = ref('')
 const aiModalError = ref('')
 const aiModalBusy = ref(false)
+const isManualReason = computed(() => aiAction.value?.mode === 'manual')
+const manualReadOnly = ref(false)
+const aiReasonTooLong = computed(() => isManualReason.value ? manualReasonLength(aiReason.value) > 2500 : aiReasonBytes.value > 8000)
 const aiReasonBytes = computed(() => feedbackReasonBytes(aiReason.value))
 const fullscreenContentRef = ref(null)
 let aiPreviousFocus = null
@@ -414,10 +427,124 @@ const restoreAiFocus = (event) => {
   if (!focusAfterModal) aiPreviousFocus?.focus?.()
   focusAfterModal = false
 }
-const openReply = async ({ aiNote, mode, content, adaptedText } = {}) => {
+const manualReasonData = (response, action) => {
+  const data = response?.data?.data
+  if (!data || data.note_uuid !== action.note.noteUUID || data.original_message_uuid !== action.note.originalUUID ||
+      data.conversation_uuid !== action.uuid || data.agent_id !== userStore.userID ||
+      typeof data.editable !== 'boolean' || (data.feedback_reason !== null && typeof data.feedback_reason !== 'string'))
+    throw new Error('Invalid annotation response')
+  return data
+}
+// Component-local, server-confirmed annotation; never persisted in browser storage.
+const manualAnnotationData = ref(null)
+const manualAnnotation = computed(() => {
+  const data = manualAnnotationData.value
+  return data?.conversation_uuid === currentConversationUUID.value && data.agent_id === userStore.userID &&
+    (!aiResponse.value || aiResponse.value.source_message_uuid === data.original_message_uuid) ? data : null
+})
+let manualGeneration = 0
+const manualReads = new Map()
+const invalidateManualAnnotation = () => {
+  manualGeneration++
+  manualReads.clear()
+  manualAnnotationData.value = null
+}
+const readManualReason = (action) => {
+  const key = `${action.uuid}:${userStore.userID}:${action.note.noteUUID}`
+  if (!manualReads.has(key)) {
+    const request = api.getManualReviewReason(action.uuid, action.note.noteUUID)
+    manualReads.set(key, request)
+    request.finally(() => {
+      if (manualReads.get(key) === request) manualReads.delete(key)
+    }).catch(() => {})
+  }
+  return manualReads.get(key)
+}
+const acceptManualAnnotation = (data) => {
+  manualAnnotationData.value = data.editable && data.feedback_reason?.trim() ? data : null
+}
+const refreshManualAnnotation = async () => {
+  invalidateManualAnnotation()
+  const generation = manualGeneration
   const uuid = currentConversationUUID.value
+  if (!uuid || !userStore.can('messages:write') || conversationStore.current?.inbox_channel !== 'email') return
+  const rows = conversationStore.messages.data?.getAllPagesMessages(uuid) || conversationStore.conversationMessages || []
+  const notes = new Map()
+  for (const row of rows) {
+    const note = readManualReviewNote(row)
+    if (note) notes.set(note.originalUUID, note)
+  }
+  const action = toRaw(aiAction.value)
+  if (aiModalOpen.value && action?.mode === 'manual') notes.set(action.note.originalUUID, action.note)
+  else if (manualKnownNote?.uuid === uuid) notes.set(manualKnownNote.note.originalUUID, manualKnownNote.note)
+  const annotations = []
+  await Promise.all([...notes.values()].map(async (note) => {
+    const candidate = { uuid, note }
+    try {
+      const response = await readManualReason(candidate)
+      if (generation !== manualGeneration) return
+      const data = manualReasonData(response, candidate)
+      if (data.editable && data.feedback_reason?.trim()) annotations.push(data)
+      if (action?.mode === 'manual' && aiModalOpen.value && toRaw(aiAction.value) === action && note.noteUUID === action.note.noteUUID) {
+        if (!action.loaded) {
+          aiReason.value = data.feedback_reason ?? ''
+          manualReadOnly.value = !data.editable
+          action.loaded = true
+        }
+        if (!data.editable) {
+          manualReadOnly.value = true
+          aiModalError.value = manualLockedMessage
+        }
+      }
+    } catch {
+      if (generation === manualGeneration && action?.mode === 'manual' && note.noteUUID === action.note.noteUUID && toRaw(aiAction.value) === action && aiModalOpen.value) {
+        manualReadOnly.value = true
+        aiModalError.value = 'Der Feedbackgrund konnte nicht geladen werden. Bitte den Dialog erneut öffnen.'
+      }
+    }
+  }))
+  // Never choose arbitrarily between multiple sources, even if a response is inconsistent.
+  if (generation === manualGeneration && annotations.length === 1) acceptManualAnnotation(annotations[0])
+}
+let manualKnownNote = null
+const manualLockedMessage = 'Die Anfrage wurde bereits beantwortet oder eine neuere Kundenmail ist eingegangen. Der Feedbackgrund kann nicht mehr geändert werden.'
+const openReply = async ({ aiNote, manualReviewNote, mode, content, adaptedText } = {}) => {
+  const uuid = currentConversationUUID.value
+  if (manualReviewNote) {
+    if (aiModalBusy.value || isSending.value || !userStore.can('messages:write') || conversationStore.current?.inbox_channel !== 'email') return
+    const action = { uuid, note: manualReviewNote, mode: 'manual' }
+    manualKnownNote = action
+    const generation = manualGeneration
+    aiPreviousFocus = document.activeElement
+    aiAction.value = action
+    aiReason.value = ''
+    aiModalError.value = ''
+    manualReadOnly.value = true
+    aiModalOpen.value = true
+    aiModalBusy.value = true
+    try {
+      const response = await readManualReason(action)
+      if (toRaw(aiAction.value) !== action || !aiModalOpen.value || currentConversationUUID.value !== uuid || generation !== manualGeneration) return
+      const data = manualReasonData(response, action)
+      acceptManualAnnotation(data)
+      action.loaded = true
+      aiReason.value = data.feedback_reason ?? ''
+      manualReadOnly.value = !data.editable
+      if (!data.editable) aiModalError.value = manualLockedMessage
+    } catch {
+      if (toRaw(aiAction.value) === action) aiModalError.value = 'Der Feedbackgrund konnte nicht geladen werden. Bitte den Dialog erneut öffnen.'
+    } finally {
+      if (toRaw(aiAction.value) === action) {
+        aiModalBusy.value = false
+        await nextTick()
+        if (aiModalOpen.value && !manualReadOnly.value) document.getElementById('ai-feedback-reason')?.focus()
+      }
+    }
+    return
+  }
   if (aiNote) {
     if (
+      aiModalBusy.value ||
       isSending.value ||
       isGenerating.value ||
       isDraftLoading.value ||
@@ -464,11 +591,34 @@ const openReply = async ({ aiNote, mode, content, adaptedText } = {}) => {
   if ((await focusReply(uuid)) && typeof content === 'string') htmlContent.value = content
 }
 const continueAiReply = async () => {
-  if (aiModalBusy.value || aiReasonBytes.value > 8000) return
-  const action = aiAction.value
+  if (aiModalBusy.value || aiReasonTooLong.value || (isManualReason.value && manualReadOnly.value)) return
+  const action = toRaw(aiAction.value)
   if (!action || action.uuid !== currentConversationUUID.value) return
   aiModalBusy.value = true
   try {
+    if (action.mode === 'manual') {
+      invalidateManualAnnotation()
+      const generation = manualGeneration
+      try {
+        const response = aiReason.value.trim()
+          ? await api.saveManualReviewReason(action.uuid, action.note.noteUUID, { feedback_reason: aiReason.value })
+          : await api.deleteManualReviewReason(action.uuid, action.note.noteUUID)
+        if (toRaw(aiAction.value) !== action || !aiModalOpen.value || action.uuid !== currentConversationUUID.value) return
+        const data = manualReasonData(response, action)
+        if (generation === manualGeneration) acceptManualAnnotation(data)
+        else await refreshManualAnnotation()
+        if (toRaw(aiAction.value) !== action || action.uuid !== currentConversationUUID.value) return
+        aiModalOpen.value = false
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { description: 'Feedbackgrund gespeichert' })
+      } catch (error) {
+        if (toRaw(aiAction.value) !== action || action.uuid !== currentConversationUUID.value) return
+        if (error?.response?.status === 409) {
+          manualReadOnly.value = true
+          aiModalError.value = manualLockedMessage
+        } else aiModalError.value = 'Der Feedbackgrund konnte nicht gespeichert werden. Bitte erneut versuchen.'
+      }
+      return
+    }
     if (action.mode === 'own') await feedback.arm(action.uuid, action.note, aiReason.value)
     else await feedback.cancel(action.uuid)
     if (action.uuid !== currentConversationUUID.value) return
@@ -482,7 +632,7 @@ const continueAiReply = async () => {
     aiModalError.value =
       'Die Feedback-Vormerkung konnte nicht sicher gespeichert werden. Bitte erneut versuchen.'
   } finally {
-    aiModalBusy.value = false
+    if (toRaw(aiAction.value) === action) aiModalBusy.value = false
   }
 }
 const cancelFeedback = async () => {
@@ -539,6 +689,7 @@ watch(
     styleNote.value = null
     aiReason.value = ''
     aiAction.value = null
+    aiModalBusy.value = false
     pollCount.value = 0
     await conversationStore.draftsReady
     if (uuid && uuid === currentConversationUUID.value) {
@@ -554,7 +705,20 @@ watch(
     if (currentConversationUUID.value) feedback.check(currentConversationUUID.value)
   }
 )
-onUnmounted(stopPolling)
+watch(
+  [currentConversationUUID, () => userStore.userID, () => conversationStore.messages.version],
+  ([uuid, userID], previous = []) => {
+    if (uuid !== previous[0] || userID !== previous[1]) manualKnownNote = null
+    refreshManualAnnotation()
+  },
+  { immediate: true }
+)
+onUnmounted(() => {
+  invalidateManualAnnotation()
+  stopPolling()
+  aiAction.value = null
+  aiModalOpen.value = false
+})
 watch(
   () => userStore.userID,
   () => {
@@ -565,6 +729,7 @@ watch(
     styleNote.value = null
     aiReason.value = ''
     aiAction.value = null
+    aiModalBusy.value = false
   }
 )
 

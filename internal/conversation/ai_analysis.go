@@ -19,15 +19,24 @@ type AIAnalysis struct {
 	Kind                string `json:"kind"`
 	Version             int    `json:"version"`
 	OriginalMessageUUID string `json:"original_message_uuid"`
-	SuggestedMessage    string `json:"suggested_message"`
+	SuggestedMessage    string `json:"suggested_message,omitempty"`
 }
 
 var htmlTag = regexp.MustCompile(`(?is)<\s*(?:/?[a-z][a-z0-9:-]*(?:\s[^<>]*)?\s*/?|!--.*?--|!doctype[^<>]*)>`)
 
 func (a AIAnalysis) Validate() error {
-	invalid := errors.New("invalid ai_analysis: expected kind n8n_ai_analysis, version 1, canonical UUID and nonempty plaintext suggestion up to 65536 UTF-16 units")
+	invalid := errors.New("invalid ai_analysis: expected a supported kind, version 1 and canonical original UUID; analysis requires a plaintext suggestion, manual review must not contain one")
 	id, err := uuid.Parse(a.OriginalMessageUUID)
-	if err != nil || id == uuid.Nil || !strings.EqualFold(id.String(), a.OriginalMessageUUID) || a.Kind != "n8n_ai_analysis" || a.Version != 1 || !utf8.ValidString(a.SuggestedMessage) || strings.TrimSpace(a.SuggestedMessage) == "" || strings.ContainsRune(a.SuggestedMessage, 0) || htmlTag.MatchString(a.SuggestedMessage) {
+	if err != nil || id == uuid.Nil || !strings.EqualFold(id.String(), a.OriginalMessageUUID) || a.Version != 1 {
+		return invalid
+	}
+	if a.Kind == "n8n_manual_review" {
+		if a.SuggestedMessage != "" {
+			return invalid
+		}
+		return nil
+	}
+	if a.Kind != "n8n_ai_analysis" || !utf8.ValidString(a.SuggestedMessage) || strings.TrimSpace(a.SuggestedMessage) == "" || strings.ContainsRune(a.SuggestedMessage, 0) || htmlTag.MatchString(a.SuggestedMessage) {
 		return invalid
 	}
 	// JavaScript string.length uses UTF-16 units: enforce the actual frontend limit.
@@ -41,7 +50,9 @@ func ValidateAIAnalysisOriginal(a AIAnalysis, original models.Message, conversat
 	if err := a.Validate(); err != nil {
 		return err
 	}
-	if !strings.EqualFold(original.UUID, a.OriginalMessageUUID) || original.ConversationUUID != conversationUUID || original.Type != models.MessageIncoming || original.SenderType != models.SenderTypeContact || original.Private {
+	var meta map[string]json.RawMessage
+	_ = json.Unmarshal(original.Meta, &meta)
+	if !strings.EqualFold(original.UUID, a.OriginalMessageUUID) || original.ConversationUUID != conversationUUID || original.Type != models.MessageIncoming || original.SenderType != models.SenderTypeContact || original.Private || (a.Kind == "n8n_manual_review" && meta["deleted_at"] != nil) {
 		return errors.New("ai_analysis original must be a public incoming contact message in this conversation")
 	}
 	return nil

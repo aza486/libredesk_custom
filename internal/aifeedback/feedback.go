@@ -43,6 +43,20 @@ type Submission struct {
 	SentAt               time.Time `json:"sent_at"`
 }
 
+// Kept separate so response_feedback's existing JSON contract is unchanged.
+type ManualResolutionSubmission struct {
+	ID                   string    `json:"id"`
+	MailEventMessageUUID string    `json:"mail_event_message_uuid"`
+	ConversationUUID     string    `json:"conversation_uuid"`
+	OutgoingMessageUUID  string    `json:"outgoing_message_uuid"`
+	AgentID              string    `json:"agent_id"`
+	HumanAnswer          string    `json:"human_answer"`
+	FeedbackReason       *string   `json:"feedback_reason"`
+	FeedbackType         string    `json:"feedback_type"`
+	ResponseSource       string    `json:"response_source"`
+	SentAt               time.Time `json:"sent_at"`
+}
+
 func ValidateOriginal(original cmodels.Message, conversation string) error {
 	if original.ConversationUUID != conversation || original.Private || original.Type != cmodels.MessageIncoming || original.SenderType != cmodels.SenderTypeContact {
 		return ErrInvalid
@@ -203,6 +217,14 @@ func pinDestination(authority, target string, connect func(context.Context, stri
 
 // Submit performs one attempt. Only the receiver can guarantee transactional idempotency.
 func (c *Client) Submit(ctx context.Context, submission Submission) error {
+	return c.submit(ctx, submission.ID, submission)
+}
+
+func (c *Client) SubmitManualResolution(ctx context.Context, submission ManualResolutionSubmission) error {
+	return c.submit(ctx, submission.ID, submission)
+}
+
+func (c *Client) submit(ctx context.Context, id string, submission any) error {
 	body, err := json.Marshal(submission)
 	if err != nil {
 		return err
@@ -213,7 +235,7 @@ func (c *Client) Submit(ctx context.Context, submission Submission) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Idempotency-Key", submission.ID)
+	req.Header.Set("Idempotency-Key", id)
 	res, err := c.http.Do(req)
 	if err != nil {
 		return errors.New("feedback receiver unavailable; retry feedback only")
@@ -226,7 +248,7 @@ func (c *Client) Submit(ctx context.Context, submission Submission) error {
 		ID        string `json:"id"`
 		Committed bool   `json:"committed"`
 	}
-	if err := json.NewDecoder(io.LimitReader(res.Body, 4096)).Decode(&receipt); err != nil || receipt.ID != submission.ID || !receipt.Committed {
+	if err := json.NewDecoder(io.LimitReader(res.Body, 4096)).Decode(&receipt); err != nil || receipt.ID != id || !receipt.Committed {
 		return errors.New("feedback receiver did not confirm commit")
 	}
 	return nil

@@ -377,6 +377,12 @@ const adjustAIStyle = (cuuid, data, signal) =>
   http.post(`/api/v1/conversations/${cuuid}/ai-style-adjust`, data, { signal, timeout: 50000 })
 const saveAIFeedback = (cuuid, uuid, data) =>
   http.post(`/api/v1/conversations/${cuuid}/messages/${uuid}/ai-feedback`, data)
+const getManualReviewReason = (cuuid, uuid) =>
+  http.get(`/api/v1/conversations/${cuuid}/messages/${uuid}/manual-feedback-reason`)
+const saveManualReviewReason = (cuuid, uuid, data) =>
+  http.put(`/api/v1/conversations/${cuuid}/messages/${uuid}/manual-feedback-reason`, data)
+const deleteManualReviewReason = (cuuid, uuid) =>
+  http.delete(`/api/v1/conversations/${cuuid}/messages/${uuid}/manual-feedback-reason`)
 const sendMessage = (uuid, data) =>
   http.post(`/api/v1/conversations/${uuid}/messages`, data, {
     headers: {
@@ -779,6 +785,9 @@ export default {
   createConversation,
   sendMessage,
   saveAIFeedback,
+  getManualReviewReason,
+  saveManualReviewReason,
+  deleteManualReviewReason,
   adjustAIStyle,
   retryMessage,
   deleteMessage,

@@ -173,6 +173,10 @@
               </Button>
             </div>
 
+            <div v-if="canUseManualReview" class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/60">
+              <Button size="sm" variant="outline" @click="emit('composeReply', { manualReviewNote, mode: 'manual' })">Feedback erstellen</Button>
+            </div>
+
             <!-- Spinner for Pending Messages (outgoing only) -->
             <Spinner v-if="isOutgoing && message.status === 'pending'" size="sm" />
 
@@ -313,7 +317,7 @@ import CSATResponseDisplay from './CSATResponseDisplay.vue'
 import api from '@main/api'
 import { containsQuoteMarkers } from '@shared-ui/utils/quotedContent.js'
 import { styleTextLength, sourceAlreadyAnswered } from '@main/utils/ai-style'
-import { readAiAnalysisNote } from '@main/utils/ai-note.js'
+import { readAiAnalysisNote, readManualReviewNote } from '@main/utils/ai-note.js'
 
 const extendedCssProperties = [...allowedCssProperties, 'transform', 'transform-origin']
 
@@ -403,6 +407,9 @@ const sanitizedContent = computed(() => {
   }
   return props.message.content || ''
 })
+
+const manualReviewNote = computed(() => readManualReviewNote(props.message))
+const canUseManualReview = computed(() => manualReviewNote.value && convStore.current?.inbox_channel === 'email' && userStore.can('messages:write'))
 
 const aiNote = computed(() => readAiAnalysisNote(props.message))
 const canAdjustStyle = computed(() => {

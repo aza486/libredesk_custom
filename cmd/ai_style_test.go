@@ -29,6 +29,10 @@ func TestStyleDecodeAndNoteBinding(t *testing.T) {
 		t.Fatal("public note")
 	}
 	note.Private = true
+	note.Meta = json.RawMessage(`{"ai_analysis":{"kind":"n8n_manual_review","version":1,"original_message_uuid":"aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa"}}`)
+	if _, ok := validatedNote(note, "conversation"); ok {
+		t.Fatal("manual review accepted as actionable AI suggestion")
+	}
 	note.Meta = json.RawMessage(`{"deleted_at":"now"}`)
 	if _, ok := validatedNote(note, "conversation"); ok {
 		t.Fatal("deleted note")

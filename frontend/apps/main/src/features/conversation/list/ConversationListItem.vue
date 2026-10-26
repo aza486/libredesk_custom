@@ -13,37 +13,37 @@
           }
         ]"
       >
-        <div class="card-body space-y-2 px-3 py-2.5">
-          <div class="card-heading flex min-w-0 items-start gap-2">
-            <!-- Avatar with channel indicator (checkbox overlays on hover / when selecting) -->
-            <div class="card-avatar relative h-8 w-8 shrink-0">
-              <div
-                class="h-full w-full transition-opacity"
-                :class="avatarOpacityClass"
-                :aria-hidden="showCheckbox"
-              >
-                <Avatar class="h-full w-full rounded-full">
-                  <AvatarImage :src="conversation.contact.avatar_url || ''" class="object-cover" />
-                  <AvatarFallback>
-                    {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-              <div
-                v-if="canBulkAct"
-                class="absolute inset-0 items-center justify-center"
-                :class="showCheckbox ? 'flex' : 'hidden can-hover:group-hover:flex'"
-                @click.prevent.stop="handleCheckboxClick"
-              >
-                <Checkbox
-                  :checked="isItemSelected"
-                  :aria-label="t('conversation.bulkActions.selectConversation')"
-                  class="w-5 h-5"
-                />
-              </div>
+        <div class="card-body flex min-w-0 items-start gap-2 px-3 py-2.5">
+          <!-- Avatar with channel indicator (checkbox overlays on hover / when selecting) -->
+          <div class="card-avatar relative h-8 w-8 shrink-0">
+            <div
+              class="h-full w-full transition-opacity"
+              :class="avatarOpacityClass"
+              :aria-hidden="showCheckbox"
+            >
+              <Avatar class="h-full w-full rounded-full">
+                <AvatarImage :src="conversation.contact.avatar_url || ''" class="object-cover" />
+                <AvatarFallback>
+                  {{ conversation.contact.first_name.substring(0, 2).toUpperCase() }}
+                </AvatarFallback>
+              </Avatar>
             </div>
+            <div
+              v-if="canBulkAct"
+              class="absolute inset-0 items-center justify-center"
+              :class="showCheckbox ? 'flex' : 'hidden can-hover:group-hover:flex'"
+              @click.prevent.stop="handleCheckboxClick"
+            >
+              <Checkbox
+                :checked="isItemSelected"
+                :aria-label="t('conversation.bulkActions.selectConversation')"
+                class="w-5 h-5"
+              />
+            </div>
+          </div>
 
-            <div class="card-heading-content grid min-w-0 flex-1 items-start gap-x-2">
+          <div class="card-content min-w-0 flex-1 space-y-2">
+            <div class="card-heading-content grid min-w-0 items-start gap-x-2">
               <Tooltip v-if="showSubject && conversation.subject">
                 <TooltipTrigger asChild>
                   <h3
@@ -89,80 +89,91 @@
                 </Tooltip>
                 <span
                   v-if="conversation.last_message_at"
+                  data-conversation-time
                   class="min-w-0 truncate text-[11px] font-normal tabular-nums text-muted-foreground"
                   :title="relativeLastMessageTime"
                   >{{ relativeLastMessageTime }}</span
                 >
+                <div
+                  v-if="isUnread"
+                  data-conversation-unread
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
+                >
+                  {{
+                    conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count
+                  }}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="flex min-w-0 items-center gap-2" data-conversation-preview>
-            <Reply
-              v-if="
-                !isTyping &&
-                !(hasDraftForConversation && !isCurrent) &&
-                conversation.last_message_sender === 'agent'
-              "
-              class="shrink-0 text-success"
-              :size="14"
-            />
-            <p
-              class="min-w-0 flex-1 truncate text-xs font-normal leading-4"
-              :class="isUnread ? 'text-foreground' : 'text-muted-foreground'"
-            >
-              <span v-if="isTyping" class="italic text-foreground">{{
-                $t('globals.terms.typing')
-              }}</span>
-              <template v-else-if="hasDraftForConversation && !isCurrent">
-                <span class="font-medium text-foreground">{{ $t('globals.terms.draft') }}:</span>
-                {{ draftPreview }}
-              </template>
-              <template v-else>{{ conversation.last_message }}</template>
-            </p>
-            <div
-              v-if="isUnread"
-              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
-            >
-              {{ conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count }}
+            <div class="flex min-w-0 items-center gap-2" data-conversation-preview>
+              <Reply
+                v-if="
+                  !isTyping &&
+                  !(hasDraftForConversation && !isCurrent) &&
+                  conversation.last_message_sender === 'agent'
+                "
+                class="shrink-0 text-success"
+                :size="14"
+              />
+              <p
+                class="min-w-0 flex-1 truncate text-xs font-normal leading-4"
+                :class="isUnread ? 'text-foreground' : 'text-muted-foreground'"
+              >
+                <span v-if="isTyping" class="italic text-foreground">{{
+                  $t('globals.terms.typing')
+                }}</span>
+                <template v-else-if="hasDraftForConversation && !isCurrent">
+                  <span class="font-medium text-foreground">{{ $t('globals.terms.draft') }}:</span>
+                  {{ draftPreview }}
+                </template>
+                <template v-else>{{ conversation.last_message }}</template>
+              </p>
             </div>
-          </div>
 
-          <div class="card-footer grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-            <ConversationTagOverflow :tags="conversation.tags || []" />
-            <span
-              class="card-status inline-flex shrink-0 justify-self-end whitespace-nowrap rounded-md border px-2 py-0.5 text-[11px] font-medium leading-4 transition-colors"
-              :class="statusClass"
-              data-conversation-status
-              >{{ conversation.status }}</span
-            >
-          </div>
+            <div class="card-footer flex min-w-0 items-center">
+              <span
+                class="card-status inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-[11px] font-medium leading-4 transition-colors"
+                :class="statusClass"
+                data-conversation-status
+              >
+                <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
+                {{ conversation.status }}
+              </span>
+              <ConversationTagOverflow
+                v-if="conversation.tags?.length"
+                :tags="conversation.tags"
+                separator
+                class="flex-1"
+              />
+            </div>
 
-          <div v-if="hasSlaDeadlines" class="flex min-w-0 flex-wrap items-center gap-1">
-            <SlaBadge
-              v-show="frdStatus === 'overdue' || frdStatus === 'remaining'"
-              :dueAt="conversation.first_response_deadline_at"
-              :actualAt="conversation.first_reply_at"
-              :label="'FRD'"
-              :showExtra="false"
-              @status="frdStatus = $event"
-            />
-            <SlaBadge
-              v-show="rdStatus === 'overdue' || rdStatus === 'remaining'"
-              :dueAt="conversation.resolution_deadline_at"
-              :actualAt="conversation.resolved_at"
-              :label="'RD'"
-              :showExtra="false"
-              @status="rdStatus = $event"
-            />
-            <SlaBadge
-              v-show="nrdStatus === 'overdue' || nrdStatus === 'remaining'"
-              :dueAt="conversation.next_response_deadline_at"
-              :actualAt="conversation.next_response_met_at"
-              :label="'NRD'"
-              :showExtra="false"
-              @status="nrdStatus = $event"
-            />
+            <div v-if="hasSlaDeadlines" class="flex min-w-0 flex-wrap items-center gap-1">
+              <SlaBadge
+                v-show="frdStatus === 'overdue' || frdStatus === 'remaining'"
+                :dueAt="conversation.first_response_deadline_at"
+                :actualAt="conversation.first_reply_at"
+                :label="'FRD'"
+                :showExtra="false"
+                @status="frdStatus = $event"
+              />
+              <SlaBadge
+                v-show="rdStatus === 'overdue' || rdStatus === 'remaining'"
+                :dueAt="conversation.resolution_deadline_at"
+                :actualAt="conversation.resolved_at"
+                :label="'RD'"
+                :showExtra="false"
+                @status="rdStatus = $event"
+              />
+              <SlaBadge
+                v-show="nrdStatus === 'overdue' || nrdStatus === 'remaining'"
+                :dueAt="conversation.next_response_deadline_at"
+                :actualAt="conversation.next_response_met_at"
+                :label="'NRD'"
+                :showExtra="false"
+                @status="nrdStatus = $event"
+              />
+            </div>
           </div>
         </div>
       </router-link>
@@ -395,7 +406,7 @@ const handleSelect = () => {
   .card-metadata {
     grid-column: 1;
     grid-row: 3;
-    justify-content: flex-start;
+    justify-content: flex-end;
     flex-wrap: wrap;
     margin-top: 4px;
   }
@@ -410,13 +421,14 @@ const handleSelect = () => {
     height: 24px;
   }
 }
-
 @container conversation-card (max-width: 120px) {
-  .card-footer {
-    grid-template-columns: minmax(0, 1fr);
+  .card-body {
+    padding-inline: 4px;
+    gap: 4px;
   }
-  .card-status {
-    grid-row: 1;
+  .card-avatar {
+    width: 12px;
+    height: 12px;
   }
 }
 </style>

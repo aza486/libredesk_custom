@@ -312,6 +312,9 @@ func main() {
 	}
 	styleClient := newAIClient("ai_style")
 	provenanceClient := newAIClient("ai_provenance")
+	if feedbackClient != nil {
+		go conversation.RunManualResolutionFeedback(ctx, feedbackClient)
+	}
 	if provenanceClient != nil {
 		go conversation.RunAIProvenance(ctx, provenanceClient)
 	}

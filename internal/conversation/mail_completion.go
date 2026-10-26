@@ -18,17 +18,18 @@ var ErrCompletionNotSent = errors.New("completion requires a sent employee email
 
 // Strings preserve BIGINT versions across JavaScript and JSON clients.
 type MailCompletion struct {
-	SnapshotReady   bool    `json:"snapshot_ready,omitempty"`
-	SourceUUID      *string `json:"source_message_uuid"`
-	ResponseSource  *string `json:"response_source"`
-	AgentID         *string `json:"agent_id"`
-	ExpectedVersion string  `json:"expected_incoming_version"`
-	QueuedVersion   string  `json:"queued_incoming_version"`
-	SentMessage     string  `json:"sent_message"`
-	SentAt          string  `json:"sent_at,omitempty"`
-	Committed       bool    `json:"committed,omitempty"`
-	AttemptAt       string  `json:"attempt_at,omitempty"`
-	ResolveResult   string  `json:"resolve_result,omitempty"`
+	ManualReviewNoteUUID *string `json:"manual_review_note_uuid,omitempty"`
+	SnapshotReady        bool    `json:"snapshot_ready,omitempty"`
+	SourceUUID           *string `json:"source_message_uuid"`
+	ResponseSource       *string `json:"response_source"`
+	AgentID              *string `json:"agent_id"`
+	ExpectedVersion      string  `json:"expected_incoming_version"`
+	QueuedVersion        string  `json:"queued_incoming_version"`
+	SentMessage          string  `json:"sent_message"`
+	SentAt               string  `json:"sent_at,omitempty"`
+	Committed            bool    `json:"committed,omitempty"`
+	AttemptAt            string  `json:"attempt_at,omitempty"`
+	ResolveResult        string  `json:"resolve_result,omitempty"`
 }
 type ReplySource struct {
 	UUID      string    `db:"uuid" json:"uuid"`
@@ -146,6 +147,19 @@ func (m *Manager) prepareMailCompletion(cuuid string, sender int, meta map[strin
 			source = latest.UUID
 			state.SourceUUID = ptr(source)
 			state.ExpectedVersion = latest.Version
+		}
+	}
+	// Only an unclassified employee reply to the current input can arm this
+	// independent feedback path. Explicit AI/adopt/own actions retain their flow.
+	_, hasResponse := meta["ai_response"]
+	_, hasFeedback := meta["ai_feedback_original_message_uuid"]
+	if state.SourceUUID != nil && state.ExpectedVersion == state.QueuedVersion && !hasResponse && !hasFeedback {
+		note, e := manualReviewNote(ctx, tx, cuuid, *state.SourceUUID)
+		if e != nil {
+			return nil, e
+		}
+		if note != "" {
+			state.ManualReviewNoteUUID = ptr(note)
 		}
 	}
 	if err = tx.Commit(); err != nil {

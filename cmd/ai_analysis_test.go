@@ -2,11 +2,33 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
+	"testing"
+
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
-	"testing"
 )
+
+func TestManualReviewRequest(t *testing.T) {
+	body := strings.Replace(validAnalysisRequest, `"kind":"n8n_ai_analysis"`, `"kind":"n8n_manual_review"`, 1)
+	body = strings.Replace(body, `,"suggested_message":"Hallo\nAntwort als Text"`, "", 1)
+	req, err := decodeAIAnalysisRequest([]byte(body))
+	if err != nil || req.AIAnalysis.Kind != "n8n_manual_review" || req.AIAnalysis.SuggestedMessage != "" {
+		t.Fatalf("manual review: %+v %v", req, err)
+	}
+	for _, invalid := range []string{
+		strings.Replace(body, `"version":1`, `"version":2`, 1),
+		strings.Replace(body, `aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa`, "forged", 1),
+		strings.Replace(body, `"private":true`, `"private":false`, 1),
+		strings.Replace(body, `"version":1`, `"version":1,"unexpected":true`, 1),
+		strings.Replace(body, `"version":1`, `"version":1,"suggested_message":"invented"`, 1),
+	} {
+		if _, err := decodeAIAnalysisRequest([]byte(invalid)); err == nil {
+			t.Fatal("invalid manual note accepted")
+		}
+	}
+}
 
 const validAnalysisRequest = `{"private":true,"sender_type":"agent","message":"<b>KI-Analyse</b>","ai_analysis":{"kind":"n8n_ai_analysis","version":1,"original_message_uuid":"aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa","suggested_message":"Hallo\nAntwort als Text"}}`
 

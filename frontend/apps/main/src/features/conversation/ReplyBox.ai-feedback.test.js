@@ -3,10 +3,10 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createApp, defineComponent, h, reactive, ref, nextTick } from 'vue'
 import ReplyBox from './ReplyBox.vue'
 
-const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null, cramped: null }))
+const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null, cramped: null, user: null }))
 vi.mock('@main/api', () => ({ default: mocks.api }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => mocks.store }))
-vi.mock('@main/stores/user', () => ({ useUserStore: () => ({ userID: 42, can: () => true }) }))
+vi.mock('@main/stores/user', () => ({ useUserStore: () => mocks.user }))
 vi.mock('@main/stores/inbox', () => ({ useInboxStore: () => ({ inboxes: [] }) }))
 vi.mock('@main/stores/notification', () => ({
   useNotificationStore: () => ({ markAssignmentAsReadForConversation: () => {} })
@@ -115,6 +115,7 @@ function click(text) {
 }
 
 beforeEach(async () => {
+  mocks.user = reactive({ userID: 42, can: () => true })
   mocks.cramped = ref(false)
   const map = new Map()
   mocks.store = reactive({
@@ -141,6 +142,7 @@ beforeEach(async () => {
     htmlContent: ref('Existing employee answer'),
     textContent: ref('Existing employee answer'),
     isLoading: ref(false),
+    aiResponse: ref(null),
     clearDraft: vi.fn(),
     loadedAttachments: ref([]),
     loadedMacroActions: ref([]),
@@ -365,4 +367,211 @@ test('desktop and mobile composers have no source selector or mandatory selectio
   expect(root.querySelector('[data-editor]').textContent).toBe('Mobile reply without source selection')
   expect(root.textContent).not.toContain('Antwort auf Kundenmail')
   expect(root.querySelector('[aria-label="Ursprüngliche Kundenmail auswählen"]')).toBeNull()
+})
+
+const manualNote = { noteUUID: note.noteUUID, originalUUID }
+const manualResponse = (reason = null, editable = true) => ({ data: { data: {
+  note_uuid: note.noteUUID, original_message_uuid: originalUUID, conversation_uuid: 'conversation',
+  agent_id: 42, feedback_reason: reason, editable
+} } })
+function mockManual(reason = null, editable = true) {
+  mocks.api.getManualReviewReason = vi.fn().mockResolvedValue(manualResponse(reason, editable))
+  mocks.api.saveManualReviewReason = vi.fn().mockResolvedValue(manualResponse('saved'))
+  mocks.api.deleteManualReviewReason = vi.fn().mockResolvedValue(manualResponse())
+}
+function reasonInput(value) {
+  const input = root.querySelector('textarea')
+  input.value = value
+  input.dispatchEvent(new Event('input'))
+}
+test('manual variant reuses feedback dialog without proposal or composer changes', async () => {
+  mockManual('Previously saved')
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  expect(root.textContent).toContain('Feedback erstellen')
+  expect(root.textContent).toContain('Was soll die KI beim nächsten Mal anders machen?')
+  expect(root.textContent).toContain('tatsächlich gesendete Mitarbeiterantwort')
+  expect(root.textContent).not.toContain(note.suggestion)
+  expect(root.querySelector('[aria-label="Ursprünglicher KI-Antwortvorschlag"]')).toBeNull()
+  expect(root.querySelector('textarea').value).toBe('Previously saved')
+  expect(document.activeElement).toBe(root.querySelector('textarea'))
+  click('Abbrechen'); await flush()
+  expect(mocks.api.saveManualReviewReason).not.toHaveBeenCalled()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+test('manual save persists annotation only; normal reply remains unclassified', async () => {
+  mockManual()
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  reasonInput('Short reply and apology'); await flush()
+  click('Feedbackgrund speichern'); await flush()
+  expect(mocks.api.saveManualReviewReason).toHaveBeenCalledWith('conversation', note.noteUUID, { feedback_reason: 'Short reply and apology' })
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+  expect(root.querySelector('[data-dialog]')).toBeNull()
+  root.querySelector('[data-send]').click(); await flush()
+  const body = mocks.api.sendMessage.mock.calls[0][1]
+  expect(body.message).toBe('Existing employee answer')
+  expect(body.ai_response).toBeUndefined()
+  expect(body.ai_feedback_original_message_uuid).toBeUndefined()
+})
+test('manual empty reason deletes saved annotation and enforces Unicode length', async () => {
+  mockManual('old')
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  reasonInput('🙂'.repeat(2501)); await flush()
+  expect([...root.querySelectorAll('button')].find(b => b.textContent === 'Feedbackgrund speichern').disabled).toBe(true)
+  expect(root.textContent).toContain('2501 / 2500 Zeichen')
+  reasonInput('   '); await flush(); click('Feedbackgrund speichern'); await flush()
+  expect(mocks.api.deleteManualReviewReason).toHaveBeenCalledTimes(1)
+  expect(mocks.api.saveManualReviewReason).not.toHaveBeenCalled()
+})
+test('manual saving waits for confirmation, blocks double clicks, retains failures', async () => {
+  mockManual()
+  let reject
+  mocks.api.saveManualReviewReason.mockReturnValue(new Promise((_, fail) => { reject = fail }))
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  reasonInput('retain'); await flush(); click('Feedbackgrund speichern'); await flush()
+  expect(root.querySelector('[data-dialog]')).toBeTruthy()
+  expect(root.textContent).not.toContain('Feedbackgrund gespeichert')
+  expect(mocks.api.saveManualReviewReason).toHaveBeenCalledTimes(1)
+  reject(new Error('network')); await flush()
+  expect(root.querySelector('textarea').value).toBe('retain')
+  expect(root.textContent).toContain('konnte nicht gespeichert')
+  mocks.api.saveManualReviewReason.mockRejectedValue({ response: { status: 409 } })
+  click('Feedbackgrund speichern'); await flush()
+  expect(root.textContent).toContain('nicht mehr geändert')
+  expect(root.querySelector('textarea').disabled).toBe(true)
+})
+test('manual dialog cannot edit after SENT or a live status update', async () => {
+  mockManual('frozen', false)
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  expect(root.querySelector('textarea').disabled).toBe(true)
+  click('Abbrechen'); await flush()
+  mockManual('draft')
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  reasonInput('unsaved'); await flush()
+  mocks.api.getManualReviewReason.mockResolvedValue(manualResponse('frozen', false))
+  mocks.store.messages.version++; await flush()
+  expect(root.querySelector('textarea').value).toBe('unsaved')
+  expect(root.querySelector('textarea').disabled).toBe(true)
+})
+test('manual load failures and ticket switches never show false success', async () => {
+  mockManual()
+  mocks.api.getManualReviewReason.mockRejectedValue(new Error('network'))
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  expect(root.textContent).toContain('konnte nicht geladen')
+  expect(root.querySelector('textarea').disabled).toBe(true)
+  click('Abbrechen'); await flush()
+  let resolve
+  mocks.api.getManualReviewReason.mockReturnValue(new Promise(ok => { resolve = ok }))
+  const opening = exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  mocks.store.current.uuid = 'other'; await flush()
+  resolve(manualResponse('must not leak')); await opening; await flush()
+  expect(root.querySelector('[data-dialog]')).toBeNull()
+  expect(root.textContent).not.toContain('must not leak')
+})
+
+const manualTitle = 'Feedback für manuelle Antwort gespeichert'
+function loadManualNote() {
+  mocks.store.conversationMessages = [{
+    uuid: note.noteUUID, private: true, type: 'outgoing', sender_type: 'agent',
+    meta: { ai_analysis: { kind: 'n8n_manual_review', version: 1, original_message_uuid: originalUUID } }
+  }]
+  mocks.store.messages.version++
+}
+test('manual banner uses the existing status area only after server confirmation and disappears on delete', async () => {
+  mockManual()
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  let resolve
+  mocks.api.saveManualReviewReason.mockReturnValue(new Promise(ok => { resolve = ok }))
+  reasonInput('saved reason'); await flush(); click('Feedbackgrund speichern'); await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  resolve(manualResponse('saved reason')); await flush()
+  const banner = root.querySelector('[role="status"]')
+  expect(banner.textContent).toContain(manualTitle)
+  expect(banner.className).toBe('mx-2 mt-2 rounded-md border p-3 text-sm')
+  expect(banner.textContent).toContain('Private Notizen erzeugen kein Feedback.')
+  mocks.api.getManualReviewReason.mockResolvedValue(manualResponse('saved reason'))
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  reasonInput(''); await flush(); click('Feedbackgrund speichern'); await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+test('manual banner restores from GET on reopening and isolates employees and tickets', async () => {
+  mockManual('persisted')
+  loadManualNote(); await flush()
+  expect(root.textContent).toContain(manualTitle)
+  mocks.store.current.uuid = 'other'; await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  mocks.store.current.uuid = 'conversation'; await flush()
+  expect(root.textContent).toContain(manualTitle)
+  mocks.user.userID = 43; await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  mocks.user.userID = 42; await flush()
+  expect(root.textContent).toContain(manualTitle)
+  mocks.api.getManualReviewReason.mockRejectedValue(new Error('network'))
+  mocks.store.messages.version++; await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+})
+test.each(['SENT', 'new incoming', 'incompatible source'])('manual banner hides when server eligibility changes: %s', async () => {
+  mockManual('persisted')
+  loadManualNote(); await flush()
+  expect(root.textContent).toContain(manualTitle)
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  mocks.api.getManualReviewReason.mockResolvedValue(manualResponse('persisted', false))
+  mocks.store.messages.version++; await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  expect(root.querySelector('textarea').disabled).toBe(true)
+})
+test('stale GET cannot resurrect a deleted annotation or cross ticket and employee changes', async () => {
+  mockManual('persisted')
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  let resolve
+  mocks.api.getManualReviewReason.mockReturnValue(new Promise(ok => { resolve = ok }))
+  mocks.store.messages.version++; await flush()
+  reasonInput(''); await flush(); click('Feedbackgrund speichern'); await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  resolve(manualResponse('stale')); await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+  loadManualNote(); await flush()
+  mocks.user.userID = 43; await flush()
+  mocks.store.current.uuid = 'other'; await flush()
+  resolve(manualResponse('stale')); await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+})
+test('regular own-answer banner retains priority and its existing cancellation action', async () => {
+  mockManual('persisted')
+  loadManualNote(); await flush()
+  await exposed.openReply({ aiNote: note, mode: 'own' }); await flush()
+  click('Weiter zur Antwort'); await flush()
+  expect(root.querySelectorAll('[role="status"]')).toHaveLength(1)
+  expect(root.textContent).toContain('Eigene Antwort: optionales Feedback vorgemerkt')
+  expect(root.textContent).not.toContain(manualTitle)
+  expect([...root.querySelectorAll('button')].some(b => b.textContent === 'Feedback abbrechen (Antwort behalten)')).toBe(true)
+})
+
+test('a different composer source suppresses the manual confirmation', async () => {
+  mockManual('persisted')
+  loadManualNote(); await flush()
+  expect(root.textContent).toContain(manualTitle)
+  mocks.draft.aiResponse.value = { source_message_uuid: outgoingUUID, response_source: 'ai' }
+  await flush()
+  expect(root.textContent).not.toContain(manualTitle)
+})
+test('dialog shares an in-flight hydration GET and duplicate notes do not duplicate requests', async () => {
+  mockManual()
+  let resolve
+  mocks.api.getManualReviewReason.mockReturnValue(new Promise(ok => { resolve = ok }))
+  loadManualNote()
+  mocks.store.conversationMessages.push({ ...mocks.store.conversationMessages[0], uuid: outgoingUUID })
+  await flush()
+  const opening = exposed.openReply({ manualReviewNote: { ...manualNote, noteUUID: outgoingUUID } })
+  await flush()
+  expect(mocks.api.getManualReviewReason).toHaveBeenCalledTimes(1)
+  resolve({ data: { data: { ...manualResponse('persisted').data.data, note_uuid: outgoingUUID } } })
+  await opening; await flush()
+  expect(root.textContent).toContain(manualTitle)
+  expect(root.querySelector('textarea').value).toBe('persisted')
 })

@@ -46,6 +46,7 @@ beforeEach(() => {
       priority: 'High',
       last_message: 'Full message '.repeat(30),
       last_message_sender: 'agent',
+      last_message_at: '2026-10-23T10:00:00Z',
       unread_message_count: 12,
       inbox_channel: 'email',
       inbox_name: 'Support',
@@ -161,4 +162,37 @@ test('warning tags never recolour cards or override hover, active, selected and 
     expect(card.classList.contains('bg-primary/5')).toBe(true)
     expect(card.classList.contains('hover:bg-primary/10')).toBe(true)
   }
+})
+
+test('status is the first footer item with its own dot and no tag placeholder when tags are absent', async () => {
+  const status = host.querySelector('[data-conversation-status]')
+  const footer = status.parentElement
+  expect(footer.firstElementChild).toBe(status)
+  expect(status.querySelector('[aria-hidden=true]').classList.contains('bg-current')).toBe(true)
+  expect(status.classList.contains('shrink-0')).toBe(true)
+  expect(status.classList.contains('text-[11px]')).toBe(true)
+  props.conversation.tags = []
+  await nextTick()
+  expect(footer.children).toHaveLength(1)
+  expect(footer.firstElementChild).toBe(status)
+  expect(host.querySelector('[data-conversation-tags]')).toBeNull()
+  expect(host.querySelector('[data-tag-separator]')).toBeNull()
+})
+
+test('keeps title, contact, preview and footer in one content column and unread with metadata', () => {
+  const content = host.querySelector('.card-content')
+  expect(content.querySelector('[data-conversation-title]')).not.toBeNull()
+  expect(content.querySelector('.card-contact')).not.toBeNull()
+  expect(content.querySelector('[data-conversation-preview]').parentElement).toBe(content)
+  expect(content.querySelector('.card-footer').parentElement).toBe(content)
+  const metadata = content.querySelector('.card-metadata')
+  expect(metadata.querySelector('[data-conversation-unread]').textContent.trim()).toBe('9+')
+  const time = metadata.querySelector('[data-conversation-time]')
+  expect(time).not.toBeNull()
+  expect(
+    time.compareDocumentPosition(metadata.querySelector('[data-conversation-unread]')) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).not.toBe(0)
+  expect(content.querySelector('[data-conversation-preview] [data-conversation-unread]')).toBeNull()
+  expect(content.querySelector('.card-avatar')).toBeNull()
 })

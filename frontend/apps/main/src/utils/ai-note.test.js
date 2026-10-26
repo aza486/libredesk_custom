@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import {
   readAiAnalysisNote,
+  readManualReviewNote,
+  manualReasonLength,
   extractAiSuggestedReply,
   isOriginalCustomerMessage,
   feedbackReasonBytes
@@ -22,6 +24,20 @@ const message = {
 }
 
 describe('machine readable AI notes', () => {
+  test('manual-review notes never expose adoption, own-answer or style actions', () => {
+    for (const suggested of [undefined, '', 'Even a forged suggestion must not enable actions']) {
+      const manual = {
+        ...message,
+        meta: { ai_analysis: {
+          kind: 'n8n_manual_review', version: 1, original_message_uuid: originalUUID,
+          ...(suggested === undefined ? {} : { suggested_message: suggested })
+        } }
+      }
+      expect(readAiAnalysisNote(manual)).toBeNull()
+      expect(extractAiSuggestedReply(manual)).toBeNull()
+    }
+    expect(readAiAnalysisNote(message)).not.toBeNull()
+  })
   test('requires the versioned discriminator and one explicit UUID', () => {
     expect(readAiAnalysisNote(message)).toEqual({
       noteUUID: message.uuid,
@@ -89,4 +105,16 @@ describe('machine readable AI notes', () => {
     expect(feedbackReasonBytes('🙂'.repeat(2000))).toBe(8000)
     expect(feedbackReasonBytes('🙂'.repeat(2001))).toBe(8004)
   })
+})
+
+test('manual reason action requires a persisted private typed agent note', () => {
+  const manual = { ...message, sender_type: 'agent', meta: { ai_analysis: {
+    kind: 'n8n_manual_review', version: 1, original_message_uuid: originalUUID
+  } } }
+  expect(readManualReviewNote(manual)).toEqual({ noteUUID: manual.uuid, originalUUID })
+  for (const change of [{ private: false }, { type: 'incoming' }, { sender_type: 'contact' }, { uuid: 'bad' },
+    { meta: {} }, { meta: { ...manual.meta, deleted_at: null } }]) expect(readManualReviewNote({ ...manual, ...change })).toBeNull()
+  for (const change of [{ kind: 'n8n_ai_analysis' }, { version: 2 }, { original_message_uuid: ['fake'] },
+    { suggested_message: 'fabricated' }]) expect(readManualReviewNote({ ...manual, meta: { ai_analysis: { ...manual.meta.ai_analysis, ...change } } })).toBeNull()
+  expect(manualReasonLength(' 🙂\r\nx ')).toBe(3)
 })

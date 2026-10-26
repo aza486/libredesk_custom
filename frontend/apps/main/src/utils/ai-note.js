@@ -50,3 +50,15 @@ export const extractAiSuggestedReply = (message) => {
   return note ? suggestionToHTML(note.suggestion) : null
 }
 export const feedbackReasonBytes = (reason) => new TextEncoder().encode(reason.trim()).length
+
+// Only persisted typed metadata, never HTML, exposes manual annotation actions.
+export function readManualReviewNote(message) {
+  const note = message?.meta?.ai_analysis
+  if (message?.private !== true || message.type !== 'outgoing' || message.sender_type !== 'agent' ||
+      Object.hasOwn(message.meta || {}, 'deleted_at') ||
+      typeof message.uuid !== 'string' || !UUID_PATTERN.test(message.uuid) || note?.kind !== 'n8n_manual_review' || note.version !== 1 ||
+      typeof note.original_message_uuid !== 'string' || !UUID_PATTERN.test(note.original_message_uuid) ||
+      (note.suggested_message !== undefined && note.suggested_message !== '')) return null
+  return { noteUUID: message.uuid, originalUUID: note.original_message_uuid }
+}
+export const manualReasonLength = (reason) => [...reason.trim().replace(/\r\n?/g, '\n')].length

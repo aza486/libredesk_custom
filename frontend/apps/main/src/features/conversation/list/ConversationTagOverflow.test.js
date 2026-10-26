@@ -32,7 +32,9 @@ beforeEach(() => {
       ? width
       : this.hasAttribute('data-overflow-measure')
         ? 16
-        : widths[this.textContent.trim()] || 0
+        : this.hasAttribute('data-separator-measure')
+          ? 17
+          : widths[this.textContent.trim()] || 0
     return { width: measured, height: 20, x: 0, y: 0, top: 0, left: 0, right: measured, bottom: 20 }
   })
 })
@@ -53,14 +55,15 @@ async function flush() {
   await nextTick()
 }
 
-async function mount(tags) {
-  const props = reactive({ tags })
+async function mount(tags, separator = false) {
+  const props = reactive({ tags, separator })
   host = document.createElement('div')
   document.body.append(host)
   app = createApp({
     render: () => h(TooltipProvider, null, { default: () => h(ConversationTagOverflow, props) })
   })
   app.mount(host)
+  host.querySelector('[data-conversation-tags]').style.columnGap = '0px'
   host.querySelector('[data-conversation-tags]').firstElementChild.style.columnGap = '4px'
   await flush()
   return props
@@ -88,6 +91,33 @@ test('responds to container resizing without a viewport change and coalesces obs
     if (overflow)
       expect(overflow.getAttribute('aria-label')).toBe(['A', 'B', 'C'].slice(expected).join(', '))
   }
+})
+
+test('separator appears only alongside whole tags or a fully fitting overflow indicator', async () => {
+  const props = await mount(['A', 'B', 'C'], true)
+  const root = host.querySelector('[data-conversation-tags]')
+  for (const [available, expected, showContent] of [
+    [145, 3, true],
+    [111, 2, true],
+    [67, 1, true],
+    [66, 0, true],
+    [33, 0, true],
+    [32, 0, false],
+    [0, 0, false],
+    [145, 3, true]
+  ]) {
+    width = available
+    observer.callback([{ target: root }])
+    await flush()
+    expect(host.querySelectorAll('[data-visible-tag]')).toHaveLength(expected)
+    expect(Boolean(host.querySelector('[data-tag-separator]'))).toBe(showContent)
+    expect(Boolean(host.querySelector('[data-tag-overflow]'))).toBe(showContent && expected < 3)
+    expect(frames.size).toBe(0)
+  }
+  props.tags = []
+  await flush()
+  expect(host.querySelector('[data-tag-separator]')).toBeNull()
+  expect(host.querySelector('[data-tag-overflow]')).toBeNull()
 })
 
 test('updates changed tags and font measurements and stops observing on unmount', async () => {
@@ -152,5 +182,11 @@ test('fits prioritized warning borders, preserves icon labels and exposes hidden
     expect(badges[1].classList.contains('border-yellow-500')).toBe(true)
     expect(badges[2].classList.contains('border-transparent')).toBe(true)
     expect(badges[3].classList.contains('border-transparent')).toBe(true)
+    for (const badge of badges) {
+      expect(badge.classList.contains('h-6')).toBe(true)
+      expect(badge.classList.contains('text-[11px]')).toBe(true)
+      expect(badge.classList.contains('font-medium')).toBe(true)
+      expect(badge.classList.contains('rounded-md')).toBe(true)
+    }
   }
 })

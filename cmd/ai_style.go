@@ -48,7 +48,7 @@ func validatedNote(note cmodels.Message, cuuid string) (conversation.AIAnalysis,
 		Deleted  any                     `json:"deleted_at"`
 	}
 	err := json.Unmarshal(note.Meta, &meta)
-	return meta.Analysis, err == nil && meta.Deleted == nil && note.ConversationUUID == cuuid && note.Private && note.Type == "outgoing" && meta.Analysis.Validate() == nil
+	return meta.Analysis, err == nil && meta.Deleted == nil && note.ConversationUUID == cuuid && note.Private && note.Type == "outgoing" && meta.Analysis.Kind == "n8n_ai_analysis" && meta.Analysis.Validate() == nil
 }
 func handleAIStyleAdjust(r *fastglue.Request) error {
 	app := r.Context.(*App)

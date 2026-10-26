@@ -47,6 +47,39 @@ func TestAIAnalysisValidation(t *testing.T) {
 	}
 }
 
+func TestManualReviewValidation(t *testing.T) {
+	a := AIAnalysis{Kind: "n8n_manual_review", Version: 1, OriginalMessageUUID: validAnalysis().OriginalMessageUUID}
+	if err := a.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(a)
+	if strings.Contains(string(raw), "suggested_message") {
+		t.Fatal("manual note fabricated a suggestion field")
+	}
+	for _, change := range []func(*AIAnalysis){
+		func(a *AIAnalysis) { a.SuggestedMessage = "invented" },
+		func(a *AIAnalysis) { a.Version = 2 },
+		func(a *AIAnalysis) { a.OriginalMessageUUID = "bad" },
+	} {
+		bad := a
+		change(&bad)
+		if bad.Validate() == nil {
+			t.Fatal("invalid manual note accepted")
+		}
+	}
+	original := models.Message{UUID: a.OriginalMessageUUID, ConversationUUID: "conversation", Type: models.MessageIncoming, SenderType: models.SenderTypeContact}
+	if err := ValidateAIAnalysisOriginal(a, original, "conversation"); err != nil {
+		t.Fatal(err)
+	}
+	if ValidateAIAnalysisOriginal(a, original, "foreign") == nil {
+		t.Fatal("foreign conversation accepted")
+	}
+	original.Meta = json.RawMessage(`{"deleted_at":"now"}`)
+	if ValidateAIAnalysisOriginal(a, original, "conversation") == nil {
+		t.Fatal("deleted original accepted")
+	}
+}
+
 // Exercise the existing insert statement and the exact Manager.GetMessage path
 // used by the public message GET; the full hook stack is not duplicated here.
 func TestAIAnalysisPersistenceAndMessageRead(t *testing.T) {
