@@ -560,6 +560,9 @@ const previewAIAssistant = (id, data) =>
   http.post(`/api/v1/ai/assistants/${id}/preview`, data, { timeout: AI_TIMEOUT })
 const getAIAssistantStats = (id, range) =>
   http.get(`/api/v1/ai/assistants/${id}/stats`, { params: range ? { range } : {} })
+const getLearningItems = (params) => http.get('/api/v1/ai/learning', { params })
+const getLearningItem = (id) => http.get(`/api/v1/ai/learning/${id}`)
+const reviewLearningItem = (id, body) => http.post(`/api/v1/ai/learning/${id}/review`, body)
 const getAISnippets = () => http.get('/api/v1/ai/snippets')
 const createAISnippet = (data) => http.post('/api/v1/ai/snippets', data)
 const importAISnippetFromURL = (data) =>
@@ -857,6 +860,9 @@ export default {
   previewAIAssistant,
   getAIAssistantStats,
   getAISnippets,
+  getLearningItems,
+  getLearningItem,
+  reviewLearningItem,
   createAISnippet,
   importAISnippetFromURL,
   updateAISnippet,

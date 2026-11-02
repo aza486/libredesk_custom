@@ -27,6 +27,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/colorlog"
 	"github.com/abhinavxd/libredesk/internal/csat"
 	customAttribute "github.com/abhinavxd/libredesk/internal/custom_attribute"
+	"github.com/abhinavxd/libredesk/internal/learning"
 	"github.com/abhinavxd/libredesk/internal/macro"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	"github.com/abhinavxd/libredesk/internal/report"
@@ -96,6 +97,7 @@ const (
 
 // App is the global app context which is passed and injected in the http handlers.
 type App struct {
+	learning         *learning.Manager
 	aiNoteAgentIDs   []int
 	aiFeedback       *aifeedback.Client
 	aiStyle          *aiassist.Client
@@ -319,6 +321,7 @@ func main() {
 		go conversation.RunAIProvenance(ctx, provenanceClient)
 	}
 	var app = &App{
+		learning:         initLearning(ctx, lo),
 		aiFeedback:       feedbackClient,
 		aiStyle:          styleClient,
 		aiNoteAgentIDs:   ko.Ints("ai_analysis.allowed_agent_ids"),

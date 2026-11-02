@@ -35,6 +35,11 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/uploads/{uuid}", authOrSignedURL(handleServeMedia))
 	g.POST("/api/v1/media", auth(handleMediaUpload))
 
+	// Separate session-only learning administration; authorization is checked in the handler.
+	g.GET("/api/v1/ai/learning", auth(handleLearning))
+	g.GET("/api/v1/ai/learning/{id}", auth(handleLearning))
+	g.POST("/api/v1/ai/learning/{id}/review", auth(handleLearning))
+
 	// Settings.
 	g.GET("/api/v1/settings/general", auth(handleGetGeneralSettings))
 	g.PUT("/api/v1/settings/general", perm(clearsHCCache(handleUpdateGeneralSettings), "general_settings:manage"))

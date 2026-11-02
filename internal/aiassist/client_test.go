@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -89,5 +90,89 @@ func TestWebhookConfiguration(t *testing.T) {
 	}
 	if _, err := NewWithConfig(Config{Endpoint: "http://n8n:5678/webhook", Token: "secret", InternalHTTPEndpoint: "http://n8n:5678/webhook", InternalHTTPIP: "172.20.0.5"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestUnauthenticatedInternalServiceIsExplicitAndPinned(t *testing.T) {
+	base := Config{Endpoint: "http://anonymizer:8001/analyze", InternalHTTPEndpoint: "http://anonymizer:8001/analyze", InternalHTTPIP: "172.18.0.7"}
+	if _, e := NewWithConfig(base); e == nil {
+		t.Fatal("other clients lost token requirement")
+	}
+	base.AllowUnauthenticatedInternalHTTP = true
+	client, e := NewWithConfig(base)
+	if e != nil || client == nil {
+		t.Fatal(e)
+	}
+	transport := client.http.Transport.(*http.Transport)
+	if transport.Proxy != nil {
+		t.Fatal("proxy bypass")
+	}
+	if e = client.http.CheckRedirect(nil, nil); !errors.Is(e, http.ErrUseLastResponse) {
+		t.Fatal("redirect bypass")
+	}
+	// The only actual HTTP exchange in this test is a synthetic RoundTripper.
+	client.http.Transport = roundTrip(func(r *http.Request) (*http.Response, error) {
+		if _, ok := r.Header["Authorization"]; ok {
+			t.Fatal("empty/fabricated Authorization header")
+		}
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"clean_text":"Safe text"}`))}, nil
+	})
+	var result struct {
+		Clean string `json:"clean_text"`
+	}
+	if status, e := client.Call(context.Background(), "Authorization", "", map[string]string{"text": "Synthetic"}, &result); e != nil || status != 200 || result.Clean != "Safe text" {
+		t.Fatal(status, e)
+	}
+	for _, mutate := range []func(*Config){
+		func(c *Config) {
+			c.Endpoint = "https://example.org/analyze"
+			c.InternalHTTPEndpoint = ""
+			c.InternalHTTPIP = ""
+		},
+		func(c *Config) { c.InternalHTTPIP = "" }, func(c *Config) { c.InternalHTTPIP = "127.0.0.1" },
+		func(c *Config) { c.InternalHTTPIP = "169.254.169.254" }, func(c *Config) { c.InternalHTTPIP = "8.8.8.8" },
+		func(c *Config) { c.InternalHTTPIP = "::ffff:172.18.0.7" },
+		func(c *Config) { c.Endpoint = "http://172.18.0.8:8001/analyze"; c.InternalHTTPEndpoint = c.Endpoint },
+		func(c *Config) { c.Endpoint += "?next=http://example.org"; c.InternalHTTPEndpoint = c.Endpoint },
+		func(c *Config) {
+			c.Endpoint = "http://anonymizer:8001/a/../analyze"
+			c.InternalHTTPEndpoint = c.Endpoint
+		},
+		func(c *Config) { c.Token = "bad\nheader" }, func(c *Config) { c.Token = " " },
+	} {
+		cfg := base
+		mutate(&cfg)
+		if _, e := NewWithConfig(cfg); e == nil {
+			t.Fatal("unsafe override accepted")
+		}
+	}
+}
+func TestPinnedInternalDialerDoesNotResolveOrRetarget(t *testing.T) {
+	called := false
+	dial := pinDestination("anonymizer:8001", "172.18.0.7:8001", func(_ context.Context, network, address string) (net.Conn, error) {
+		called = true
+		if network != "tcp" || address != "172.18.0.7:8001" {
+			t.Fatal("pin bypass")
+		}
+		return nil, nil
+	})
+	if _, e := dial(context.Background(), "tcp", "anonymizer:8001"); e != nil || !called {
+		t.Fatal(e)
+	}
+	for _, authority := range []string{"example.org:8001", "172.18.0.8:8001", "anonymizer:80"} {
+		called = false
+		if _, e := dial(context.Background(), "tcp", authority); e == nil || called {
+			t.Fatal("authority bypass")
+		}
+	}
+}
+func TestWebhookErrorsAreTypedAndDoNotExposeUpstreamBodies(t *testing.T) {
+	client := &Client{endpoint: "https://example.org", http: &http.Client{Transport: roundTrip(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 401, Body: io.NopCloser(strings.NewReader("SECRET_RESPONSE_BODY"))}, nil
+	})}}
+	status, e := client.Call(context.Background(), "Authorization", "", nil, new(any))
+	var upstream *HTTPStatusError
+	if status != 502 || !errors.As(e, &upstream) || upstream.Status != 401 || strings.Contains(e.Error(), "SECRET") {
+		t.Fatal("unsafe upstream error")
 	}
 }

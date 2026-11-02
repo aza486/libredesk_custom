@@ -214,3 +214,14 @@ endpoint = ""
 token = "" # LIBREDESK_AI_PROVENANCE__TOKEN; X-Libredesk-Provenance-Token.
 internal_http_endpoint = ""
 internal_http_ip = ""
+
+# Optional human review integration. Separate least-privilege pg-n8n account.
+# SQL installation is explicit; this does not use the Libredesk database.
+[ai_learning]
+database_dsn = ""
+embedding_endpoint = "" # HTTPS /v1/embeddings (OpenAI-compatible)
+embedding_token = "" # Full Authorization header value, e.g. Bearer ...
+anonymizer_endpoint = "" # HTTPS text -> clean_text service; requires anonymizer_token. Leave empty for internal-only HTTP.
+anonymizer_token = "" # Required for HTTPS; optional only for explicitly pinned internal HTTP.
+anonymizer_internal_http_endpoint = "" # Exact http://host:port/path; selected when anonymizer_endpoint is empty.
+anonymizer_internal_http_ip = "" # Single private IP; no DNS or redirect fallback.

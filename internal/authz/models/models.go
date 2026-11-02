@@ -74,7 +74,8 @@ const (
 	PermOIDCManage = "oidc:manage"
 
 	// AI
-	PermAIManage = "ai:manage"
+	PermAIManage         = "ai:manage"
+	PermAILearningManage = "ai_learning:manage"
 
 	// Help center
 	PermHelpCenterManage = "help_center:manage"
@@ -100,6 +101,7 @@ const (
 )
 
 var validPermissions = map[string]struct{}{
+	PermAILearningManage:                {},
 	PermConversationsReadAll:            {},
 	PermConversationsReadUnassigned:     {},
 	PermConversationsReadAssigned:       {},

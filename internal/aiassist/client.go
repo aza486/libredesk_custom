@@ -19,6 +19,18 @@ import (
 	"unicode/utf8"
 )
 
+var ErrInvalidConfiguration = errors.New("invalid ai webhook configuration: authenticated HTTPS or an explicitly allowed internal HTTP URL with pinned private IP required")
+
+var ErrUnavailable = errors.New("webhook unavailable")
+var ErrTimeout = errors.New("webhook timeout")
+var ErrInvalidResponse = errors.New("invalid webhook response")
+
+// HTTPStatusError exposes only a numeric status, never the upstream response body.
+type HTTPStatusError struct{ Status int }
+
+func (e *HTTPStatusError) Error() string { return ErrUnavailable.Error() }
+func (e *HTTPStatusError) Unwrap() error { return ErrUnavailable }
+
 type Client struct {
 	endpoint, token string
 	http            *http.Client
@@ -31,6 +43,9 @@ type Config struct {
 	InternalHTTPEndpoint string
 	InternalHTTPIP       string
 	DialControl          ssrf.Control
+	// Opt-in for a deployment-owned internal service without authentication.
+	// Ignored for HTTPS; exact URL and pinned private IP remain mandatory.
+	AllowUnauthenticatedInternalHTTP bool
 }
 
 // New constructs an HTTPS webhook client.
@@ -43,9 +58,13 @@ func NewWithConfig(cfg Config) (*Client, error) {
 	if cfg.Endpoint == "" && cfg.Token == "" && cfg.InternalHTTPEndpoint == "" && cfg.InternalHTTPIP == "" {
 		return nil, nil
 	}
-	invalid := errors.New("invalid ai webhook configuration: HTTPS or an exact internal HTTP URL and pinned private IP, plus a token, are required")
+	invalid := ErrInvalidConfiguration
 	u, err := url.Parse(cfg.Endpoint)
-	if err != nil || u.Hostname() == "" || u.User != nil || u.Fragment != "" || u.Opaque != "" || strings.ContainsAny(cfg.Endpoint, "\\\r\n") || strings.TrimSpace(cfg.Token) == "" || strings.ContainsAny(cfg.Token, "\r\n") {
+	if err != nil || u.Hostname() == "" || u.User != nil || u.Fragment != "" || u.Opaque != "" || strings.ContainsAny(cfg.Endpoint, "\\\r\n") || strings.ContainsAny(cfg.Token, "\r\n") {
+		return nil, invalid
+	}
+	// A missing token is allowed only by explicit opt-in AND validated internal HTTP.
+	if strings.TrimSpace(cfg.Token) == "" && (cfg.Token != "" || !cfg.AllowUnauthenticatedInternalHTTP || u.Scheme != "http") {
 		return nil, invalid
 	}
 	if port := u.Port(); port != "" {
@@ -136,35 +155,37 @@ func (c *Client) Call(ctx context.Context, header, id string, payload, result an
 	}
 	req, err := http.NewRequestWithContext(ctx, "POST", c.endpoint, bytes.NewReader(body))
 	if err != nil {
-		return 502, errors.New("webhook unavailable")
+		return 502, ErrUnavailable
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set(header, c.token)
+	if c.token != "" {
+		req.Header.Set(header, c.token)
+	}
 	req.Header.Set("Idempotency-Key", id)
 	res, err := c.http.Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
-			return 504, errors.New("webhook timeout")
+			return 504, ErrTimeout
 		}
 		var e net.Error
 		if errors.As(err, &e) && e.Timeout() {
-			return 504, errors.New("webhook timeout")
+			return 504, ErrTimeout
 		}
-		return 502, errors.New("webhook unavailable")
+		return 502, ErrUnavailable
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		if res.StatusCode == 400 || res.StatusCode == 422 {
 			return res.StatusCode, errors.New("webhook rejected text")
 		}
-		return 502, errors.New("webhook unavailable")
+		return 502, &HTTPStatusError{Status: res.StatusCode}
 	}
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 131073))
 	if err != nil || len(raw) > 131072 || !utf8.Valid(raw) {
-		return 502, errors.New("invalid webhook response")
+		return 502, ErrInvalidResponse
 	}
 	if json.Unmarshal(raw, result) != nil {
-		return 502, errors.New("invalid webhook response")
+		return 502, ErrInvalidResponse
 	}
 	return 200, nil
 }

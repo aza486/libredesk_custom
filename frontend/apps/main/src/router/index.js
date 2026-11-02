@@ -265,6 +265,12 @@ const routes = [
             ]
           },
           {
+            path: 'ai/learning',
+            name: 'ai-learning',
+            component: () => import('@main/views/admin/ai/AILearning.vue'),
+            meta: { titleKey: 'KI-Lernverwaltung' }
+          },
+          {
             path: 'ai/providers',
             name: 'ai-providers',
             component: () => import('@main/views/admin/ai/AIProviders.vue'),

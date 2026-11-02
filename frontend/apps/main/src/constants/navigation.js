@@ -56,6 +56,12 @@ export const adminNavItems = [
     badge: 'BETA',
     children: [
       {
+        titleKey: 'KI-Lernverwaltung',
+        href: '/admin/ai/learning',
+        permission: 'ai_learning:manage',
+        icon: 'BookOpen'
+      },
+      {
         titleKey: 'globals.terms.provider',
         href: '/admin/ai/providers',
         permission: 'ai:manage',
