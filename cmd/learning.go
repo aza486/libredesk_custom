@@ -62,16 +62,7 @@ func initLearning(ctx context.Context, lo *logf.Logger) *learning.Manager {
 			return result.Data[0].Embedding, nil
 		}
 	}
-	m.Anonymize, err = newLearningAnonymizer(aiassist.Config{
-		Endpoint: ko.String("ai_learning.anonymizer_endpoint"), Token: ko.String("ai_learning.anonymizer_token"),
-		InternalHTTPEndpoint: ko.String("ai_learning.anonymizer_internal_http_endpoint"), InternalHTTPIP: ko.String("ai_learning.anonymizer_internal_http_ip"),
-	})
-	if err != nil {
-		logLearningFatal(lo, "anonymizer_config", err)
-	}
-	if m.Anonymize == nil {
-		reportLearningFailure(lo, "anonymizer_config", &learning.DependencyError{Service: "anonymizer", Kind: "not_configured"})
-	}
+	// Prepared proposals are validated locally; no display/review/publish spaCy calls.
 
 	go m.Run(ctx)
 	return m
@@ -145,6 +136,11 @@ func learningResult(r *fastglue.Request, data any, err error) error {
 	case errors.Is(err, learning.ErrForbidden):
 		return r.SendErrorEnvelope(403, "Kein Zugriff auf die zugrunde liegende Konversation.", nil, envelope.PermissionError)
 	case errors.Is(err, learning.ErrInput):
+		if learning.DiagnosticCode(err) != "" {
+			if app, ok := r.Context.(*App); ok {
+				reportLearningFailure(app.lo, "review_validation", err)
+			}
+		}
 		return r.SendErrorEnvelope(400, "Vorschlag kann nicht sicher übernommen werden.", nil, envelope.InputError)
 	case errors.Is(err, learning.ErrConflict):
 		return r.SendErrorEnvelope(409, "Eintrag geändert oder Aktion nicht zulässig. Bitte neu laden.", nil, envelope.InputError)

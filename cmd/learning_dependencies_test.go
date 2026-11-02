@@ -15,32 +15,6 @@ import (
 	"github.com/zerodha/logf"
 )
 
-func TestLearningAnonymizerConfiguration(t *testing.T) {
-	for _, tt := range []struct {
-		name             string
-		cfg              aiassist.Config
-		enabled, invalid bool
-	}{
-		{name: "disabled"},
-		{name: "internal only no token", cfg: aiassist.Config{InternalHTTPEndpoint: "http://anonymizer:8001/analyze", InternalHTTPIP: "172.18.0.7"}, enabled: true},
-		{name: "explicit internal with token", cfg: aiassist.Config{Endpoint: "http://anonymizer:8001/analyze", InternalHTTPEndpoint: "http://anonymizer:8001/analyze", InternalHTTPIP: "172.18.0.7", Token: "Bearer synthetic"}, enabled: true},
-		{name: "external authenticated HTTPS", cfg: aiassist.Config{Endpoint: "https://anonymizer.example/analyze", Token: "Bearer synthetic"}, enabled: true},
-		{name: "HTTPS must authenticate", cfg: aiassist.Config{Endpoint: "https://anonymizer.example/analyze"}, invalid: true},
-		{name: "internal missing pin", cfg: aiassist.Config{InternalHTTPEndpoint: "http://anonymizer:8001/analyze"}, invalid: true},
-		{name: "pin only", cfg: aiassist.Config{InternalHTTPIP: "172.18.0.7"}, invalid: true},
-		{name: "token only", cfg: aiassist.Config{Token: "Bearer synthetic"}, invalid: true},
-		{name: "public pin", cfg: aiassist.Config{InternalHTTPEndpoint: "http://anonymizer:8001/analyze", InternalHTTPIP: "8.8.8.8"}, invalid: true},
-		{name: "loopback pin", cfg: aiassist.Config{InternalHTTPEndpoint: "http://anonymizer:8001/analyze", InternalHTTPIP: "127.0.0.1"}, invalid: true},
-		{name: "ambiguous endpoints", cfg: aiassist.Config{Endpoint: "https://anonymizer.example/analyze", InternalHTTPEndpoint: "http://anonymizer:8001/analyze", InternalHTTPIP: "172.18.0.7", Token: "Bearer synthetic"}, invalid: true},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			anon, err := newLearningAnonymizer(tt.cfg)
-			if (err != nil) != tt.invalid || (anon != nil) != tt.enabled {
-				t.Fatal("configuration contract", err, anon != nil)
-			}
-		})
-	}
-}
 func TestLearningDependencyDiagnosticsNeverExposeData(t *testing.T) {
 	const secret = "CUSTOMER_TOKEN_PASSWORD_SENTINEL"
 	for _, tt := range []struct {
@@ -76,5 +50,23 @@ func TestLearningDependencyDiagnosticsNeverExposeData(t *testing.T) {
 				t.Fatal("sensitive diagnostic exposed")
 			}
 		})
+	}
+}
+
+func TestLearningLocalPrivacyDiagnosticKeepsHTTP400(t *testing.T) {
+	const secret = "PRIVATE_CUSTOMER_SENTINEL@example.org"
+	c := learning.Content{Type: "employee_fact", Category: "firmenfragen", Topic: "Versand", Retrieval: "Nachricht an " + secret}
+	err := learning.Validate(c, learning.Checks{}, false)
+	if !errors.Is(err, learning.ErrInput) {
+		t.Fatal("not an input error", err)
+	}
+	var output bytes.Buffer
+	lo := logf.New(logf.Opts{Writer: &output})
+	ctx := &fasthttp.RequestCtx{}
+	if e := learningResult(&fastglue.Request{RequestCtx: ctx, Context: &App{lo: &lo}}, nil, err); e != nil {
+		t.Fatal(e)
+	}
+	if ctx.Response.StatusCode() != 400 || !strings.Contains(output.String(), "privacy_email") || strings.Contains(output.String(), secret) || strings.Contains(string(ctx.Response.Body()), secret) {
+		t.Fatal("invalid privacy mapping/logging")
 	}
 }

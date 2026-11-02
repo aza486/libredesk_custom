@@ -56,9 +56,6 @@ func (m *Manager) PublishOne(ctx context.Context) (resultErr error) {
 		_, _ = m.DB.ExecContext(cleanup, `UPDATE learning_reviews SET publication='failed',lease=NULL,last_error=$3,retry_at=now()+interval '1 minute'*LEAST(30,attempts),updated_at=now() WHERE item_id=$1::uuid AND lease=$2::uuid`, id, lease, errorLabel(resultErr))
 	}()
 	err = Validate(content, checks, true)
-	if err == nil {
-		err = m.privacyChecked(ctx, content)
-	}
 	var vector []float64
 	if err == nil {
 		vector, err = m.Embed(ctx, content.Retrieval)

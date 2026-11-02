@@ -10,29 +10,6 @@ import (
 	"github.com/zerodha/logf"
 )
 
-// Select a configured internal destination, never a fallback after an HTTPS failure.
-// NewWithConfig validates the exact URL, canonical port/path and pinned private IP.
-func newLearningAnonymizer(cfg aiassist.Config) (learning.Anonymizer, error) {
-	if cfg.Endpoint == "" {
-		cfg.Endpoint = cfg.InternalHTTPEndpoint
-	}
-	cfg.AllowUnauthenticatedInternalHTTP = true
-	client, err := aiassist.NewWithConfig(cfg)
-	if err != nil || client == nil {
-		return nil, err
-	}
-	return func(ctx context.Context, text string) (string, error) {
-		var result struct {
-			Clean string `json:"clean_text"`
-		}
-		status, err := client.Call(ctx, "Authorization", "", map[string]any{"text": text}, &result)
-		if err != nil {
-			return "", learningDependencyFailure("anonymizer", status, err)
-		}
-		return result.Clean, nil
-	}, nil
-}
-
 func learningDependencyFailure(service string, status int, err error) error {
 	kind := "request_failed"
 	var upstream *aiassist.HTTPStatusError
@@ -53,7 +30,7 @@ func learningDependencyFailure(service string, status int, err error) error {
 // Never log err.Error(), pq.Message/Detail/Hint, HTTP bodies, DSNs or input values.
 func learningFailureFields(stage string, err error) []any {
 	switch stage {
-	case "database_open", "database_connect", "embedding_config", "anonymizer_config", "review_config", "review_request", "publish":
+	case "database_open", "database_connect", "embedding_config", "anonymizer_config", "review_config", "review_request", "review_validation", "publish":
 	default:
 		stage = "internal"
 	}
@@ -61,6 +38,8 @@ func learningFailureFields(stage string, err error) []any {
 	var dependency *learning.DependencyError
 	var database *pq.Error
 	switch {
+	case learning.DiagnosticCode(err) != "":
+		fields = append(fields, "cause", learning.DiagnosticCode(err))
 	case errors.As(err, &dependency):
 		service := "dependency"
 		if dependency.Service == "anonymizer" || dependency.Service == "embedding" {

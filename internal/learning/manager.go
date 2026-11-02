@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
@@ -24,13 +24,13 @@ var Schema string
 type Manager struct {
 	DB            *sqlx.DB
 	Embed         Embedder
-	Anonymize     Anonymizer
 	ReportFailure func(string, error)
 	// View is request-scoped. It must authorize the source conversation before any display output.
 	View func(context.Context, *Item) error
 }
 
-const projection = `SELECT jsonb_build_object('id',r.id,'record_type','candidate','learning_status',f.learning_status,'review_exists',v.item_id IS NOT NULL,'ai_suggestion',r.ai_answer,'sent_answer',f.human_answer,'content',jsonb_build_object(
+// Bound the feedback body on reads as well as during evidence verification.
+var projection = `SELECT jsonb_build_object('id',r.id,'record_type','candidate','learning_status',f.learning_status,'review_exists',v.item_id IS NOT NULL,'ai_suggestion',r.ai_answer,'sent_answer',CASE WHEN octet_length(f.human_answer)<=` + strconv.Itoa(maxEvidenceSourceBytes) + ` THEN f.human_answer END,'content',jsonb_build_object(
  'source_type',r.source_type,'category',r.category,'topic',r.topic,'retrieval_text',r.retrieval_text,
  'customer_question',r.customer_question,'human_answer',r.human_answer,
  'rule',COALESCE(r.learning_data->>'fact_statement',r.learning_data->>'guidance',''),
@@ -45,33 +45,6 @@ const projection = `SELECT jsonb_build_object('id',r.id,'record_type','candidate
  'original_message_uuid',f.mail_event_message_uuid,'outgoing_message_uuid',f.outgoing_message_uuid,'proposal_version',r.learning_data->'proposal_version','review_required',r.learning_data->'review_required','verification_status',r.learning_data->>'verification_status','factual_use_approved',r.learning_data->'factual_use_approved','publication_attempts',v.attempts),
  'created_at',r.created_at,'block_reason',COALESCE(v.last_error,r.learning_data->>'publish_block_reason',r.learning_data->>'review_reason'))
  FROM public.rag_items r LEFT JOIN learning_reviews v ON v.item_id=r.id LEFT JOIN public.ai_feedback f ON f.id=r.feedback_id `
-
-func (m *Manager) safe(ctx context.Context, s string) (string, error) {
-	if strings.TrimSpace(s) == "" {
-		return "", nil
-	}
-	if m.Anonymize == nil {
-		return "", &DependencyError{Service: "anonymizer", Kind: "not_configured"}
-	}
-	clean, err := m.Anonymize(ctx, s)
-	if err != nil {
-		var dependency *DependencyError
-		if errors.As(err, &dependency) {
-			return "", dependency
-		}
-		if errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
-			return "", &DependencyError{Service: "anonymizer", Kind: "timeout"}
-		}
-		return "", &DependencyError{Service: "anonymizer", Kind: "request_failed"}
-	}
-	if strings.TrimSpace(clean) == "" || !text(clean, 10000) {
-		return "", &DependencyError{Service: "anonymizer", Kind: "invalid_response"}
-	}
-	if sensitive.MatchString(clean) {
-		return "", &DependencyError{Service: "anonymizer", Kind: "privacy_rejected"}
-	}
-	return clean, nil
-}
 
 func normalizeDisplay(item *Item) {
 
@@ -324,33 +297,15 @@ func (m *Manager) Mutate(ctx context.Context, id, actor string, req Mutation) (s
 		if e != nil {
 			return "", e
 		}
-		if req.decisionV2 {
-			// Recheck the actual feedback evidence under the candidate lock; model metadata is not proof.
-			var source string
-			if item.Source != "human_answer" && item.Source != "feedback_reason" {
-				return "", ErrInput
-			}
-			e = tx.QueryRowContext(ctx, `SELECT CASE WHEN $2='human_answer' THEN f.human_answer ELSE f.feedback_reason END FROM public.ai_feedback f JOIN public.rag_items r ON r.feedback_id=f.id WHERE r.id=$1::uuid`, id, item.Source).Scan(&source)
-			if e != nil {
-				return "", ErrInput
-			}
-			if item.Source == "human_answer" {
-				source = stringutil.HTML2Text(source)
-			}
-			clean, e := m.safe(ctx, source)
-			if e != nil {
-				return "", e
-			}
-			if !strings.Contains(strings.Join(strings.Fields(clean), " "), strings.Join(strings.Fields(item.Evidence), " ")) {
-				return "", ErrInput
-			}
-		}
 		if err = Validate(item, req.Checks, true); err != nil {
 			return "", err
 		}
-		if err = m.privacyChecked(ctx, item); err != nil {
-			return "", err
+		if req.decisionV2 {
+			if err = verifyEvidence(ctx, tx, id, item); err != nil {
+				return "", err
+			}
 		}
+
 		if err = writeContent(ctx, tx, id, item); err != nil {
 			return "", err
 		}
@@ -454,25 +409,8 @@ func (m *Manager) Run(ctx context.Context) {
 }
 func vectorLiteral(v []float64) string { b, _ := json.Marshal(v); return string(b) }
 func errorLabel(err error) string {
-	if err == ErrInput {
+	if errors.Is(err, ErrInput) {
 		return "publication_validation_failed"
 	}
 	return "embedding_or_database_unavailable"
-}
-
-// Publication privacy checks remain mandatory independently of display configuration.
-func (m *Manager) privacyChecked(ctx context.Context, c Content) error {
-	if m.Anonymize == nil {
-		return &DependencyError{Service: "anonymizer", Kind: "not_configured"}
-	}
-	for _, value := range []string{c.Topic, c.Retrieval, c.Question, c.Answer, c.Rule, c.Evidence, c.Source, c.Limits} {
-		clean, err := m.safe(ctx, value)
-		if err != nil {
-			return err
-		}
-		if strings.TrimSpace(clean) != strings.TrimSpace(value) {
-			return ErrInput
-		}
-	}
-	return nil
 }

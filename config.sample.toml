@@ -221,7 +221,9 @@ internal_http_ip = ""
 database_dsn = ""
 embedding_endpoint = "" # HTTPS /v1/embeddings (OpenAI-compatible)
 embedding_token = "" # Full Authorization header value, e.g. Bearer ...
-anonymizer_endpoint = "" # HTTPS text -> clean_text service; requires anonymizer_token. Leave empty for internal-only HTTP.
-anonymizer_token = "" # Required for HTTPS; optional only for explicitly pinned internal HTTP.
-anonymizer_internal_http_endpoint = "" # Exact http://host:port/path; selected when anonymizer_endpoint is empty.
-anonymizer_internal_http_ip = "" # Single private IP; no DNS or redirect fallback.
+# Legacy keys below are ignored by Libredesk review/publishing (local validation only).
+# This does not change anonymization in the n8n ingestion/Learning Processor workflows.
+anonymizer_endpoint = ""
+anonymizer_token = ""
+anonymizer_internal_http_endpoint = ""
+anonymizer_internal_http_ip = ""

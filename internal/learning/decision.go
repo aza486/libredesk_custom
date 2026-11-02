@@ -19,8 +19,11 @@ func (m *Manager) Decide(ctx context.Context, id, actor string, d Decision) (str
 	if err != nil {
 		return "", err
 	}
-	if !Prepared(item) || item.Decision != "pending" || item.Active || item.Publish == "publishing" {
+	if item.Decision != "pending" || item.Active || item.Publish == "publishing" {
 		return "", ErrConflict
+	}
+	if err = validatePrepared(item); err != nil {
+		return "", err
 	}
 	action, reason := "approve", "Vorschlag bewusst geprüft und zum Lernen freigegeben."
 	if d.Action == "discard" {
@@ -31,13 +34,15 @@ func (m *Manager) Decide(ctx context.Context, id, actor string, d Decision) (str
 	return m.Mutate(ctx, id, actor, Mutation{decisionV2: true, Action: action, Revision: d.Revision, Reason: reason, Checks: Checks{Privacy: true, Content: true, General: true}})
 }
 
-func Prepared(item Item) bool {
+func Prepared(item Item) bool { return validatePrepared(item) == nil }
+
+func validatePrepared(item Item) error {
 	var p struct {
 		Version  int  `json:"proposal_version"`
 		Required bool `json:"review_required"`
 	}
 	if !item.ReviewExists || (item.Content.Source != "human_answer" && item.Content.Source != "feedback_reason") || json.Unmarshal(item.Provenance, &p) != nil || p.Version != 2 || !p.Required || item.Content.Type != "employee_fact" || item.Rationale == "" {
-		return false
+		return ErrConflict
 	}
-	return Validate(item.Content, Checks{Privacy: true, Content: true, General: true}, true) == nil
+	return Validate(item.Content, Checks{Privacy: true, Content: true, General: true}, true)
 }

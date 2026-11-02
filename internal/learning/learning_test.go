@@ -95,9 +95,8 @@ func isolated(t *testing.T) *Manager {
 	if _, err = db.Exec(Schema); err != nil {
 		t.Fatal("non-idempotent schema", err)
 	}
-	return &Manager{DB: db, Anonymize: func(_ context.Context, s string) (string, error) {
-		return strings.ReplaceAll(s, "Private Name", "[NAME]"), nil
-	}, Embed: func(context.Context, string) ([]float64, error) { v := make([]float64, 1536); v[0] = 1; return v, nil }}
+	return &Manager{DB: db, Embed: func(context.Context, string) ([]float64, error) { v := make([]float64, 1536); v[0] = 1; return v, nil }}
+
 }
 func candidate(t *testing.T, m *Manager, c Content) string {
 	t.Helper()
@@ -221,7 +220,6 @@ func TestPostgresEditRetryConflictAndPrivacy(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	m.Anonymize = nil
 	item, e = m.Get(ctx, id)
 	if e != nil || item.Content.Rule != c.Rule {
 		t.Fatal("display unnecessarily anonymized", e, item)
@@ -615,7 +613,6 @@ func TestDisplayMetadataCandidateAndAnonymization(t *testing.T) {
 	if Validate(c, allChecks(), false) == nil {
 		t.Fatal("display category changed write policy")
 	}
-	m.Anonymize = nil
 	item, e = m.Get(ctx, id)
 	if e != nil || item.AISuggestion != "Private Name erhält einen KI-Vorschlag" || item.Content.Rule != c.Rule {
 		t.Fatal("display still requires anonymizer", e, item)

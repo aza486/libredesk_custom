@@ -13,33 +13,34 @@ func preparedCandidate(t *testing.T, m *Manager) string {
 	c := validContent()
 	c.Source = "human_answer"
 	id := candidate(t, m, c)
+	insertPreparedFeedback(t, m, id, c)
+	return id
+}
+func insertPreparedFeedback(t *testing.T, m *Manager, id string, c Content) string {
+	t.Helper()
 	fid := uuid.NewString()
 	m.DB.MustExec(`INSERT INTO ai_feedback(id,human_answer) VALUES($1,$2)`, fid, c.Evidence)
 	m.DB.MustExec(`UPDATE rag_items SET feedback_id=$2 WHERE id=$1`, id, fid)
 	m.DB.MustExec(`UPDATE rag_items SET learning_data=learning_data||'{"proposal_version":2,"review_required":true,"managed_by_review":true,"rationale":"Allgemeine Firmeninformation aus tatsächlicher Antwort unabhängig prüfen.","review_reason":"Gültigkeit prüfen"}' WHERE id=$1`, id)
 	m.DB.MustExec(`INSERT INTO learning_reviews(item_id,revision,original) SELECT id,0,to_jsonb(r)-'embedding' FROM rag_items r WHERE id=$1`, id)
-	return id
+	return fid
 }
 func TestPostgresTwoDecisionProposalLifecycle(t *testing.T) {
 	m := isolated(t)
 	ctx := context.Background()
 	id := preparedCandidate(t, m)
-	// Display does not require an anonymizer; publication still does.
+	// Neither display, approval nor publication needs a remote anonymizer.
 	var calls atomic.Int64
 	m.View = func(_ context.Context, i *Item) error {
 		calls.Add(1)
 		i.Context = &DisplayContext{Question: "Kunde Original", Answer: "Transporttext"}
 		return nil
 	}
-	m.Anonymize = nil
 	page, e := m.List(ctx, Filter{Tab: "pending", Page: 1})
 	if e != nil || len(page.Items) != 1 || !page.Items[0].ReviewReady || calls.Load() != 1 {
 		t.Fatal("prepared view", e, page)
 	}
-	if _, e = m.Decide(ctx, id, "42", Decision{Action: "learn"}); e == nil {
-		t.Fatal("publication privacy bypass")
-	}
-	m.Anonymize = func(_ context.Context, s string) (string, error) { return s, nil }
+
 	var wg sync.WaitGroup
 	wins := make(chan error, 2)
 	for i := 0; i < 2; i++ {

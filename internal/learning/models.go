@@ -88,7 +88,6 @@ type Page struct {
 	HasMore bool   `json:"has_more"`
 }
 type Embedder func(context.Context, string) ([]float64, error)
-type Anonymizer func(context.Context, string) (string, error)
 
 func contains(xs []string, x string) bool {
 	for _, v := range xs {
@@ -108,24 +107,29 @@ var sensitive = regexp.MustCompile(`(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|ht
 var operational = regexp.MustCompile(`(?i)storn|widerruf|erstatt|rückzahl|ruckzahl|gutschrift|kulanz|preisnachlass|rabatt|garant|verbindlich|sp[äa]testens|spaetestens|sicher\s+(bis|am|morgen)|morgen|stopp|unterbrech|zurückstell|freigeb|umbuch|pausier|abbrech|lieferzusage|liefergarantie|priorisier|produktionsfreigabe|rückgängig|änder|verschieb|veranlass`)
 
 func Validate(c Content, checks Checks, approval bool) error {
-	if !contains(Types, c.Type) || !contains(Categories, c.Category) || !text(c.Topic, 150) || strings.TrimSpace(c.Topic) == "" || !text(c.Retrieval, 900) || utf8.RuneCountInString(strings.TrimSpace(c.Retrieval)) < 12 {
-		return ErrInput
+	if !contains(Types, c.Type) {
+		return invalid("source_type_invalid")
+	}
+	if !contains(Categories, c.Category) {
+		return invalid("category_invalid")
+	}
+	if !text(c.Topic, 150) || strings.TrimSpace(c.Topic) == "" || !text(c.Retrieval, 900) || utf8.RuneCountInString(strings.TrimSpace(c.Retrieval)) < 12 {
+		return invalid("candidate_fields_invalid")
 	}
 	for _, s := range []string{c.Question, c.Answer, c.Rule, c.Evidence, c.Source, c.Limits} {
 		if !text(s, 6000) {
-			return ErrInput
+			return invalid("candidate_fields_invalid")
 		}
 	}
-	for _, s := range []string{c.Topic, c.Retrieval, c.Question, c.Answer, c.Rule, c.Evidence, c.Source, c.Limits} {
-		if sensitive.MatchString(s) {
-			return ErrInput
-		}
+	if err := validatePrivacy(c); err != nil {
+		return err
 	}
+
 	if !approval {
 		return nil
 	}
 	if !checks.Privacy || !checks.Content {
-		return ErrInput
+		return invalid("review_checks_missing")
 	}
 	if c.Type == "factual_review" {
 		return ErrConflict
@@ -138,36 +142,36 @@ func Validate(c Content, checks Checks, approval bool) error {
 	unsafeIndividual := individualContext.MatchString(combined) && individualState.MatchString(combined)
 	unsafeFulfilment := fulfilmentSubject.MatchString(combined) && fulfilmentPromise.MatchString(combined)
 	if (c.Type == "employee_fact" || c.Type == "response_example" || c.Type == "style_rule") && (operational.MatchString(combined) || unsafeIndividual || unsafeFulfilment) {
-		return ErrInput
+		return invalid("operational_commitment")
 	}
 	switch c.Type {
 	case "employee_fact":
-		if !checks.General || len(strings.TrimSpace(c.Evidence)) < 8 || strings.TrimSpace(c.Source) == "" || strings.TrimSpace(c.Limits) == "" || len(strings.TrimSpace(c.Rule)) < 8 || !strings.Contains(strings.ToLower(c.Evidence), strings.ToLower(c.Rule)) {
-			return ErrInput
+		if !checks.General || len(strings.TrimSpace(c.Evidence)) < 8 || strings.TrimSpace(c.Source) == "" || strings.TrimSpace(c.Limits) == "" || len(strings.TrimSpace(c.Rule)) < 8 || !strings.Contains(strings.ToLower(strings.Join(strings.Fields(c.Evidence), " ")), strings.ToLower(strings.Join(strings.Fields(c.Rule), " "))) {
+			return invalid("learning_evidence_invalid")
 		}
 	case "response_example":
 		if !checks.StyleOnly || len(strings.TrimSpace(c.Answer)) < 25 {
-			return ErrInput
+			return invalid("learning_evidence_invalid")
 		}
 	case "style_rule":
 		if !checks.StyleOnly || len(strings.TrimSpace(c.Rule)) < 8 {
-			return ErrInput
+			return invalid("learning_evidence_invalid")
 		}
 	case "classification_example":
 		if !checks.Correction || len(c.CorrectedCategories) == 0 || strings.TrimSpace(c.Evidence) == "" || len(c.OriginalCategories) == 0 {
-			return ErrInput
+			return invalid("learning_evidence_invalid")
 		}
 		changed := false
 		for _, cat := range c.CorrectedCategories {
 			if !contains(Categories, cat) {
-				return ErrInput
+				return invalid("learning_evidence_invalid")
 			}
 			if !contains(c.OriginalCategories, cat) {
 				changed = true
 			}
 		}
 		if !changed {
-			return ErrInput
+			return invalid("learning_evidence_invalid")
 		}
 	}
 	return nil
