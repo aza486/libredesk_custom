@@ -12,7 +12,7 @@
     <!-- Filters (hidden when bulk selecting) -->
     <div v-else class="p-2 flex justify-between items-center">
       <!-- Status dropdown-menu, hidden when a view is selected as views are pre-filtered -->
-      <DropdownMenu v-if="!route.params.viewID">
+      <DropdownMenu v-if="!route.params.viewID && !route.query.folder">
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
             <div>
@@ -175,6 +175,7 @@ const { t } = useI18n()
 const hasSelection = computed(() => conversationStore.selectedCount > 0)
 
 const title = computed(() => {
+  if (route.query.folder) return route.query.folderName || 'Ordner'
   const typeKey = route.meta?.typeKey?.(route)
   if (typeKey) {
     return t(typeKey)

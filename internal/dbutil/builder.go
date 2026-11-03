@@ -151,6 +151,16 @@ func BuildPaginatedQuery(baseQuery string, existingArgs []any, opts PaginationOp
 	return query, args, nil
 }
 
+// BuildFilterClause reuses the view filter compiler without pagination. Callers
+// must AND the returned expression with their own authorization/scope boundary.
+func BuildFilterClause(filtersJSON string, existingArgs []any, allowedFields AllowedFields, renderers FieldRenderers, location string) (string, []any, error) {
+	root, err := parseFilters(filtersJSON)
+	if err != nil {
+		return "", nil, err
+	}
+	return buildWhereClause(root, existingArgs, allowedFields, renderers, stringutil.NormalizeTimezone(location))
+}
+
 // ValidateFilters parses and structurally validates a filters payload without running a query.
 func ValidateFilters(filtersJSON string, allowedFields AllowedFields, renderers FieldRenderers) error {
 	root, err := parseFilters(filtersJSON)

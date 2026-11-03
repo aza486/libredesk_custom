@@ -695,7 +695,17 @@ const markAllNotificationsAsRead = () => http.put('/api/v1/notifications/read-al
 const deleteNotification = (id) => http.delete(`/api/v1/notifications/${id}`)
 const deleteAllNotifications = () => http.delete('/api/v1/notifications')
 
+const folderBase = (scope, scopeID) => `/api/v1/sidebar-folders/${scope}/${scopeID}`
+const getSidebarFolders = (scope, id) => http.get(folderBase(scope, id))
+const getSidebarFolderCounts = (scope, id) => http.get(`${folderBase(scope, id)}/counts`)
+const createSidebarFolder = (scope, id, data) => http.post(folderBase(scope, id), data)
+const updateSidebarFolder = (scope, id, folderID, data) => http.put(`${folderBase(scope, id)}/${folderID}`, data)
+const deleteSidebarFolder = (scope, id, folderID) => http.delete(`${folderBase(scope, id)}/${folderID}`)
+const reorderSidebarFolders = (scope, id, ids) => http.put(`${folderBase(scope, id)}/order`, { ids })
+const getSidebarFolderConversations = (scope, id, folderID, params) => http.get(`${folderBase(scope, id)}/${folderID}/conversations`, { params })
+
 export default {
+ getSidebarFolders, getSidebarFolderCounts, createSidebarFolder, updateSidebarFolder, deleteSidebarFolder, reorderSidebarFolders, getSidebarFolderConversations,
   login,
   deleteUser,
   importAgents,

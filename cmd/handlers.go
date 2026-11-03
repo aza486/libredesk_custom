@@ -57,6 +57,15 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.PUT("/api/v1/personal-inboxes/{id}/owners", auth(handleUpdatePersonalInboxOwners))
 	g.GET("/api/v1/personal-inboxes/{id}/conversations", perm(handleGetPersonalConversations, "conversations:read_team_all"))
 
+	// Shared sidebar folders; scope authorization is repeated inside the manager.
+	g.GET("/api/v1/sidebar-folders/{scope}/{scopeID}", auth(handleSidebarFolders))
+	g.POST("/api/v1/sidebar-folders/{scope}/{scopeID}", auth(handleSidebarFolders))
+	g.PUT("/api/v1/sidebar-folders/{scope}/{scopeID}/order", auth(handleSidebarFolders))
+	g.GET("/api/v1/sidebar-folders/{scope}/{scopeID}/counts", auth(handleSidebarFolders))
+	g.PUT("/api/v1/sidebar-folders/{scope}/{scopeID}/{id}", auth(handleSidebarFolders))
+	g.DELETE("/api/v1/sidebar-folders/{scope}/{scopeID}/{id}", auth(handleSidebarFolders))
+	g.GET("/api/v1/sidebar-folders/{scope}/{scopeID}/{id}/conversations", auth(handleSidebarFolders))
+
 	// Conversations.
 	g.GET("/api/v1/conversations/all", perm(handleGetAllConversations, "conversations:read_all"))
 	g.GET("/api/v1/conversations/unassigned", perm(handleGetUnassignedConversations, "conversations:read_unassigned"))

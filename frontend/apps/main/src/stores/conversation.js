@@ -315,6 +315,11 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function matchesAssignmentScope(conv) {
+    // Folder responses already use the full authorized server-side base list.
+    // In particular, an explicitly shared personal ticket can belong to assigned
+    // even when this employee is not an owner of that mailbox.
+    if (conversations.listType?.startsWith('folder:')) return null
+
     if (conv.custom_attributes?.access_mode === 'personal') {
       if (
         [
@@ -700,10 +705,11 @@ export const useConversationStore = defineStore('conversation', () => {
       resetConversations()
     }
     conversations.listType = listType
+    if (listType.startsWith('folder:')) conversations.status = ''
     conversations.inboxID = inboxID
-    if (teamID) conversations.teamID = teamID
-    if (viewID) conversations.viewID = viewID
-    if (conversations.status) {
+    conversations.teamID = teamID
+    conversations.viewID = viewID
+    if (conversations.status && !listType.startsWith('folder:')) {
       filters = filters.filter((f) => f.model !== 'conversation_statuses')
       filters.push({
         model: 'conversation_statuses',
@@ -763,6 +769,16 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function makeConversationListRequest(listType, teamID, viewID, filters, page, inboxID) {
+    if (listType.startsWith('folder:')) {
+      const [, scope, scopeID, folderID] = listType.split(':')
+      return api.getSidebarFolderConversations(scope, scopeID, folderID, {
+        page,
+        page_size: CONV_LIST_PAGE_SIZE,
+        order_by: `${sortFieldMap[conversations.sortField].model}.${sortFieldMap[conversations.sortField].field}`,
+        order: sortFieldMap[conversations.sortField].order
+      })
+    }
+
     filters = filters.length > 0 ? JSON.stringify(filters) : []
     switch (listType) {
       case CONVERSATION_LIST_TYPE.PERSONAL:
@@ -942,6 +958,12 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function processConversationListResponse(response) {
     const apiResponse = response.data.data
+    // Scope membership can change on any supported filter field. The server's
+    // first page replaces stale rows so moved tickets disappear immediately.
+    if (hasExclusiveScope() && apiResponse.page === 1) {
+      conversations.data = []
+      conversations.page = 1
+    }
     const newConversations = []
     for (const conv of apiResponse.results) {
       if (!mergeIntoList(conv.uuid, conv)) newConversations.push(conv)
@@ -1256,7 +1278,26 @@ export const useConversationStore = defineStore('conversation', () => {
     incrementMessageVersion()
   }
 
+  function hasExclusiveScope() {
+    return (
+      conversations.listType?.startsWith('folder:') ||
+      [
+        CONVERSATION_LIST_TYPE.ASSIGNED,
+        CONVERSATION_LIST_TYPE.ASSIGNED_HIGH,
+        CONVERSATION_LIST_TYPE.CUSTOMER,
+        CONVERSATION_LIST_TYPE.CUSTOMER_HIGH,
+        CONVERSATION_LIST_TYPE.TEAM_ALL,
+        CONVERSATION_LIST_TYPE.TEAM_HIGH,
+        CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED,
+        CONVERSATION_LIST_TYPE.PERSONAL,
+        CONVERSATION_LIST_TYPE.PERSONAL_HIGH
+      ].includes(conversations.listType)
+    )
+  }
+
   function canPushInsert(conv) {
+    if (hasExclusiveScope()) return false
+
     // Tag and custom filters are evaluated by the backend, including Spam.
     if (
       [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
@@ -1282,7 +1323,7 @@ export const useConversationStore = defineStore('conversation', () => {
         [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
           conversations.listType
         ) && conversations.listFilters.some((filter) => filter.model !== 'conversation_statuses')
-      if (hasServerOnlyFilters) {
+      if (hasServerOnlyFilters || hasExclusiveScope()) {
         refreshConversationListForRealtimeEvent()
         return
       }
@@ -1528,6 +1569,7 @@ export const useConversationStore = defineStore('conversation', () => {
     updatePriority,
     updateStatus,
     refreshConversationList,
+    refreshConversationListForRealtimeEvent,
     resetConversations,
     updateConversationLastMessage,
     fetchFirstPageConversations,

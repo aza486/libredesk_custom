@@ -118,6 +118,7 @@ import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '@main/stores/conversation'
 import { useUsersStore } from '@main/stores/users'
 import SidebarCountBadge from './SidebarCountBadge.vue'
+import SidebarFolders from './SidebarFolders.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { useIsMobile } from '@shared-ui/composables'
 import { useEmitter } from '@main/composables/useEmitter'
@@ -280,6 +281,7 @@ const setTeamInboxOpen = (teamID, open) => {
 const isTeamRouteActive = (teamID, status, priority = '') => {
   return (
     String(route.params.teamID) === String(teamID) &&
+    !route.query.folder &&
     route.query.status === status &&
     (route.query.priority || '') === priority
   )
@@ -314,6 +316,7 @@ const personalInboxItems = computed(() => [
 
 const isPersonalRouteActive = (inboxID, query) =>
   String(route.params.inboxID) === String(inboxID) &&
+  !route.query.folder &&
   ['status', 'priority', 'filters'].every((key) => (route.query[key] || '') === (query[key] || ''))
 
 const sidebarCounts = ref({})
@@ -363,7 +366,7 @@ const savePersonalInboxOwners = async () => {
 let sidebarCountInterval = null
 let loadingSidebarCounts = false
 const handleInboxRefresh = (event) => {
-  if (event?.model && ['inbox', 'inbox-list', 'personal-inbox'].includes(event.model)) {
+  if (event?.model && ['inbox', 'inbox-list', 'personal-inbox', 'sidebar-folder'].includes(event.model)) {
     loadSidebarCounts()
   }
 }
@@ -371,6 +374,7 @@ const handleInboxRefresh = (event) => {
 const loadSidebarCounts = async () => {
   if (loadingSidebarCounts) return
   loadingSidebarCounts = true
+  emitter.emit('sidebar-folders-refresh')
   try {
     const ownInboxesResponse = await api.getOwnPersonalInboxes()
     personalInboxes.value = ownInboxesResponse.data.data
@@ -781,6 +785,7 @@ onUnmounted(() => {
                           size="sm"
                           :isActive="
                             isActiveParent('/inboxes/assigned') &&
+                            !route.query.folder &&
                             route.query.status === 'Open' &&
                             route.query.priority === 'high'
                           "
@@ -803,6 +808,7 @@ onUnmounted(() => {
                           size="sm"
                           :isActive="
                             isActiveParent('/inboxes/assigned') &&
+                            !route.query.folder &&
                             route.query.status === 'Open' &&
                             !route.query.priority
                           "
@@ -831,6 +837,7 @@ onUnmounted(() => {
                           size="sm"
                           :isActive="
                             isActiveParent('/inboxes/assigned') &&
+                            !route.query.folder &&
                             route.query.status === item.status
                           "
                           @click="
@@ -842,6 +849,12 @@ onUnmounted(() => {
                           <span>{{ item.label }}</span>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
+                      <SidebarFolders
+                        v-if="userStore.userID && userStore.can('conversations:read_assigned')"
+                        scope="my_inbox"
+                        :scope-id="Number(userStore.userID)"
+                        scope-name="Mein Posteingang"
+                      />
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
@@ -945,6 +958,11 @@ onUnmounted(() => {
                                   />
                                 </SidebarMenuButton>
                               </SidebarMenuSubItem>
+                              <SidebarFolders
+                                scope="personal"
+                                :scope-id="Number(inbox.id)"
+                                :scope-name="inbox.name"
+                              />
                             </SidebarMenuSub>
                           </CollapsibleContent>
                         </Collapsible>
@@ -1080,6 +1098,11 @@ onUnmounted(() => {
                                     <span>{{ item.label }}</span>
                                   </SidebarMenuButton>
                                 </SidebarMenuSubItem>
+                                <SidebarFolders
+                                  scope="team"
+                                  :scope-id="Number(team.id)"
+                                  :scope-name="team.name"
+                                />
                               </SidebarMenuSub>
                             </CollapsibleContent>
                           </div>
@@ -1199,6 +1222,7 @@ onUnmounted(() => {
                           <span>Spam</span>
                         </SidebarMenuButton>
                       </SidebarMenuSubItem>
+                      <SidebarFolders scope="customer" :scope-id="0" scope-name="Kundentickets" />
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>

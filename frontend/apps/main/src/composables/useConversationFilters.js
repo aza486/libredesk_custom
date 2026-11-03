@@ -38,6 +38,12 @@ export function useConversationFilters () {
     }
 
     const conversationsListFilters = computed(() => ({
+        subject: {
+            label: t('globals.terms.subject'), type: FIELD_TYPE.TEXT, operators: FIELD_OPERATORS.TEXT
+        },
+        hours_since_created: {
+            label: 'Alter seit Erstellung (Stunden)', type: FIELD_TYPE.NUMBER, operators: FIELD_OPERATORS.NUMBER
+        },
         status_id: {
             label: t('globals.terms.status'),
             type: FIELD_TYPE.SELECT,

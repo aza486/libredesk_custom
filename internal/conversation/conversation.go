@@ -53,7 +53,7 @@ var (
 	efs                             embed.FS
 	errConversationNotFound         = errors.New("conversation not found")
 	ErrConversationAlreadyAssigned  = errors.New("conversation already assigned")
-	conversationsAllowedFields      = []string{"status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "last_interaction_at", "last_interaction_sender", "created_at", "waiting_since", "next_sla_deadline_at", "snoozed_until", "sla_policy_id"}
+	conversationsAllowedFields      = []string{"subject", "status_id", "priority_id", "assigned_team_id", "assigned_user_id", "inbox_id", "last_message_at", "last_interaction_at", "last_interaction_sender", "created_at", "waiting_since", "next_sla_deadline_at", "snoozed_until", "sla_policy_id"}
 	conversationStatusAllowedFields = []string{"id", "name"}
 	usersAllowedFields              = []string{"email", "external_user_id"}
 	inboxesAllowedFields            = []string{"channel"}
@@ -71,7 +71,8 @@ const (
 
 var conversationFilterRenderers = dbutil.FieldRenderers{
 	"conversations": {
-		"tags": renderTagFilter,
+		"tags":                renderTagFilter,
+		"hours_since_created": renderHoursSinceCreated,
 	},
 }
 
@@ -866,12 +867,16 @@ func (c *Manager) InsertMentions(conversationID, messageID, mentionedByUserID in
 }
 
 func (c *Manager) GetViewConversationsList(viewingUserID, userID int, teamIDs []int, listType []string, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
-	return c.GetConversations(viewingUserID, userID, teamIDs, listType, order, orderBy, filters, page, pageSize)
+	return c.getFolderAwareConversations(viewingUserID, userID, teamIDs, listType, order, orderBy, filters, page, pageSize, 0)
 }
 
 // GetConversations retrieves conversations list based on user ID, type, and optional filtering, ordering, and pagination.
 // viewingUserID is used to calculate per-agent unread counts.
 func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, listTypes []string, order, orderBy, filters string, page, pageSize int, inboxIDs ...int) ([]models.ConversationListItem, error) {
+	return c.getFolderAwareConversations(viewingUserID, userID, teamIDs, listTypes, order, orderBy, filters, page, pageSize, -1, inboxIDs...)
+}
+
+func (c *Manager) getFolderAwareConversations(viewingUserID, userID int, teamIDs []int, listTypes []string, order, orderBy, filters string, page, pageSize, folderID int, inboxIDs ...int) ([]models.ConversationListItem, error) {
 	var conversations = make([]models.ConversationListItem, 0)
 
 	user, err := c.userStore.GetAgentCachedOrLoad(viewingUserID)
@@ -883,8 +888,38 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 	isAdmin := user.HasAdminRole()
 	isCustomerSupport := slices.Contains(user.Roles, rmodels.RoleCustomerSupport)
 
+	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
+		ReadOnly:  true,
+		Isolation: sql.LevelRepeatableRead,
+	})
+	if err != nil {
+		c.lo.Error("error preparing get conversations query", "error", err)
+		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+
+	defer tx.Rollback()
+
+	// Definitions are loaded once per scoped request; no conversation is mutated.
+	var folders []SidebarFolder
+	if folderID != 0 {
+		scope, scopeID := sidebarListScope(listTypes, teamIDs, inboxIDs, userID)
+		if scope != "" {
+			if folderID > 0 {
+				if err = c.authorizeFolderScope(tx, viewingUserID, scope, scopeID); err != nil {
+					return nil, err
+				}
+			}
+			folders, err = loadSidebarFolders(tx, scope, scopeID)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	if folderID > 0 && !slices.ContainsFunc(folders, func(f SidebarFolder) bool { return f.ID == folderID }) {
+		return nil, envelope.NewError(envelope.NotFoundError, "Ordner nicht gefunden", nil)
+	}
 	// Make the query.
-	query, qArgs, err := c.makeConversationsListQuery(
+	query, qArgs, err := c.makeScopedConversationsListQuery(
 		viewingUserID,
 		userID,
 		teamIDs,
@@ -897,19 +932,11 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 		filters,
 		isAdmin,
 		isCustomerSupport,
+		folderID, folders, true,
 		inboxIDs...,
 	)
 	if err != nil {
 		c.lo.Error("error making conversations query", "error", err)
-		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
-
-	tx, err := c.db.BeginTxx(context.Background(), &sql.TxOptions{
-		ReadOnly: true,
-	})
-	defer tx.Rollback()
-	if err != nil {
-		c.lo.Error("error preparing get conversations query", "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
@@ -2564,6 +2591,10 @@ func (c *Manager) getConversationTags(uuid string) ([]string, error) {
 // viewingUserID is used as $1 for per-agent unread count calculation
 // $2 is includeMentions bool for conditional mentioned_message_uuid column
 func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin, isCustomerSupport bool, inboxIDs ...int) (string, []interface{}, error) {
+	return c.makeScopedConversationsListQuery(viewingUserID, userID, teamIDs, listTypes, baseQuery, order, orderBy, page, pageSize, filtersJSON, isAdmin, isCustomerSupport, 0, nil, true, inboxIDs...)
+}
+
+func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, teamIDs []int, listTypes []string, baseQuery, order, orderBy string, page, pageSize int, filtersJSON string, isAdmin, isCustomerSupport bool, folderID int, folders []SidebarFolder, paginate bool, inboxIDs ...int) (string, []interface{}, error) {
 	includeMentions := slices.Contains(listTypes, models.MentionedConversations)
 	qArgs := []any{viewingUserID, includeMentions}
 
@@ -2656,7 +2687,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
 		switch lt {
-		case models.PersonalConversations, models.PersonalHighPriorityConversations:
+		case "folder-personal", models.PersonalConversations, models.PersonalHighPriorityConversations:
 			if len(inboxIDs) != 1 || inboxIDs[0] <= 0 {
 				return "", nil, fmt.Errorf("personal inbox ID required")
 			}
@@ -2665,11 +2696,13 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			if lt == models.PersonalHighPriorityConversations {
 				condition += " AND conversation_priorities.name = 'High'"
 			}
-			if !personalSpamFilterActive() {
+			if lt != "folder-personal" && !personalSpamFilterActive() {
 				condition += " AND NOT EXISTS (SELECT 1 FROM conversation_tags ct WHERE ct.conversation_id = conversations.id AND ct.tag_id = 12)"
 			}
 			conditions = append(conditions, "("+condition+")")
-		case models.AssignedConversations, models.AssignedHighPriorityConversations:
+		case "folder-customer":
+			conditions = append(conditions, "("+sidebarScopeSQL("customer", 0)+" AND "+ticketAccessCondition+")")
+		case "folder-my_inbox", models.AssignedConversations, models.AssignedHighPriorityConversations:
 			priorityCondition := ""
 			if lt == models.AssignedHighPriorityConversations {
 				priorityCondition = "AND conversation_priorities.name = 'High'"
@@ -2748,7 +2781,7 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			for _, id := range teamIDs {
 				qArgs = append(qArgs, id)
 			}
-		case models.TeamAllConversations, models.TeamHighPriorityConversations:
+		case "folder-team", models.TeamAllConversations, models.TeamHighPriorityConversations:
 			placeholders := make([]string, len(teamIDs))
 			for i := range teamIDs {
 				placeholders[i] = fmt.Sprintf("$%d", len(qArgs)+i+1)
@@ -2906,8 +2939,13 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 			switch lt {
 			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations, models.CreatedConversations:
 				conditions[i] = "(COALESCE(conversations.custom_attributes->>'access_mode', 'public') <> 'personal' AND " + conditions[i] + ")"
-			case models.AssignedConversations, models.AssignedHighPriorityConversations:
+			case "folder-my_inbox", models.AssignedConversations, models.AssignedHighPriorityConversations:
 				conditions[i] = "(" + personalAccess + " AND NOT EXISTS (SELECT 1 FROM inboxes owned JOIN personal_inbox_owners pio ON pio.inbox_id=owned.id WHERE owned.id=conversations.inbox_id AND owned.access_mode='personal' AND pio.user_id=$1) AND " + conditions[i] + ")"
+			case "folder-team":
+				if len(teamIDs) != 1 || teamIDs[0] <= 0 {
+					return "", nil, fmt.Errorf("team required")
+				}
+				conditions[i] = "(" + sidebarScopeSQL("team", teamIDs[0]) + " AND " + personalAccess + " AND " + conditions[i] + ")"
 			default:
 				conditions[i] = "(" + personalAccess + " AND " + conditions[i] + ")"
 			}
@@ -2920,7 +2958,27 @@ func (c *Manager) makeConversationsListQuery(viewingUserID, userID int, teamIDs 
 		whereClause = "AND (" + strings.Join(conditions, " OR ") + ")"
 	}
 
+	if folderID != 0 && len(folders) > 0 {
+		clause, args, err := sidebarAssignmentClause(folders, folderID, qArgs, c.filterLocation())
+		if err != nil {
+			return "", nil, err
+		}
+		whereClause += " AND (" + clause + ")"
+		qArgs = append(qArgs, args...)
+	} else if folderID > 0 {
+		return "", nil, fmt.Errorf("folder not found")
+	}
 	baseQuery = fmt.Sprintf(baseQuery, whereClause)
+	if !paginate {
+		clause, values, err := dbutil.BuildFilterClause(filtersJSON, qArgs, conversationListAllowedFields, conversationFilterRenderers, c.filterLocation())
+		if err != nil {
+			return "", nil, err
+		}
+		if clause != "" {
+			baseQuery += " AND " + clause
+		}
+		return baseQuery, append(qArgs, values...), nil
+	}
 
 	return dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
 		Order:    order,

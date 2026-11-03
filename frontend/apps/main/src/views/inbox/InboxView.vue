@@ -9,8 +9,9 @@
 import { computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useIntervalFn, useDocumentVisibility } from '@vueuse/core'
+import { useUserStore } from '@main/stores/user'
 import { useConversationStore } from '../../stores/conversation'
-import { CONVERSATION_LIST_TYPE, CONVERSATION_DEFAULT_STATUSES } from '../../constants/conversation'
+import { CONVERSATION_LIST_TYPE } from '../../constants/conversation'
 import ConversationPlaceholder from '@/features/conversation/ConversationPlaceholder.vue'
 
 const route = useRoute()
@@ -24,6 +25,7 @@ const personalListType = computed(() =>
     ? CONVERSATION_LIST_TYPE.PERSONAL_HIGH
     : CONVERSATION_LIST_TYPE.PERSONAL
 )
+const folderID = computed(() => route.query.folder || '')
 const viewID = computed(() => route.params.viewID)
 
 const requestedListType = computed(() => {
@@ -35,6 +37,7 @@ const requestedListType = computed(() => {
 })
 
 const conversationStore = useConversationStore()
+const userStore = useUserStore()
 
 let lastFetchedKey = ''
 
@@ -51,6 +54,7 @@ const requestedFilters = computed(() => {
 })
 
 const storeHasCurrentList = () => {
+  if (folderID.value) return false
   const c = conversationStore.conversations
   if (!c.initialized) return false
 
@@ -90,13 +94,32 @@ const storeHasCurrentList = () => {
 const fetchForCurrentRoute = () => {
   if (!type.value && !teamID.value && !viewID.value && !inboxID.value) return
 
-  const key = `${inboxID.value || ''}|${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}|${requestedPriority.value}|${route.query.filters || ''}`
+  const key = `${inboxID.value || ''}|${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}|${requestedPriority.value}|${route.query.filters || ''}|${folderID.value}`
   if (key === lastFetchedKey) return
   lastFetchedKey = key
 
   // List already loaded: soft-refresh in place. A full fetch resets the list first and blanks it.
   if (storeHasCurrentList()) {
     conversationStore.refreshConversationList()
+    return
+  }
+
+  if (folderID.value) {
+    const scope = inboxID.value
+      ? 'personal'
+      : teamID.value
+        ? 'team'
+        : type.value === 'customer'
+          ? 'customer'
+          : type.value === 'assigned'
+            ? 'my_inbox'
+            : ''
+    if (!scope) return
+    conversationStore.setListStatus('', false)
+    conversationStore.fetchConversationsList(
+      true,
+      `folder:${scope}:${scope === 'my_inbox' ? userStore.userID : inboxID.value || teamID.value || 0}:${folderID.value}`
+    )
     return
   }
 
@@ -154,7 +177,7 @@ watch(visibility, (v) => {
 })
 
 watch(
-  [type, teamID, inboxID, viewID, requestedStatus, requestedPriority, requestedFilters],
+  [type, teamID, inboxID, viewID, folderID, requestedStatus, requestedPriority, requestedFilters],
   fetchForCurrentRoute
 )
 </script>
