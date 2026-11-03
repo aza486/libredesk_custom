@@ -1,130 +1,140 @@
 <template>
   <!-- Set fixed width only when not in fullscreen. -->
-  <div class="flex flex-col h-full" :class="{ 'max-h-[600px]': !isFullscreen }">
-    <!-- Message type toggle -->
+  <div class="flex min-h-0 min-w-0 flex-col h-full" :class="{ 'max-h-[600px]': !isFullscreen }">
     <div
-      class="flex justify-between items-center"
-      :class="{ 'mb-4': !isFullscreen, 'border-b border-border pb-4': isFullscreen }"
+      class="flex min-h-0 min-w-0 flex-1 flex-col"
+      :class="{ 'overflow-y-auto overscroll-contain': isFullscreen }"
     >
-      <Tabs v-model="messageType" class="rounded-md border">
-        <TabsList class="bg-muted p-1 rounded-md">
-          <TabsTrigger
-            value="reply"
-            class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
-            :class="{ 'bg-background text-foreground': messageType === 'reply' }"
-          >
-            {{ $t('globals.terms.reply') }}
-          </TabsTrigger>
-          <TabsTrigger
-            value="private_note"
-            class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
-            :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
-          >
-            {{ $t('globals.terms.privateNote') }}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <Button
-        class="text-muted-foreground max-md:h-11 max-md:w-11 max-md:p-0"
-        variant="ghost"
-        @click="toggleFullscreen"
-      >
-        <component :is="isFullscreen ? Minimize2 : Maximize2" />
-      </Button>
-    </div>
-
-    <!-- To, CC, and BCC fields -->
-    <div v-if="conversationStore.current.inbox_channel === 'email'">
+      <!-- Message type toggle -->
       <div
-        :class="['space-y-3', isFullscreen ? 'p-4 border-b border-border' : 'mb-4']"
-        v-if="messageType === 'reply'"
+        class="flex shrink-0 justify-between items-center"
+        :class="{ 'mb-4': !isFullscreen, 'border-b border-border pb-4': isFullscreen }"
       >
-        <div class="flex items-center space-x-2">
-          <label class="w-12 text-sm font-medium text-muted-foreground">TO:</label>
-          <Input
-            type="text"
-            :placeholder="t('replyBox.emailAddresess')"
-            v-model="to"
-            class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-            @blur="validateEmails"
-          />
+        <Tabs v-model="messageType" class="rounded-md border">
+          <TabsList class="bg-muted p-1 rounded-md" :class="{ 'h-auto': isFullscreen }">
+            <TabsTrigger
+              value="reply"
+              class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
+              :class="{ 'bg-background text-foreground': messageType === 'reply' }"
+            >
+              {{ $t('globals.terms.reply') }}
+            </TabsTrigger>
+            <TabsTrigger
+              value="private_note"
+              class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
+              :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
+            >
+              {{ $t('globals.terms.privateNote') }}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button
+          v-if="!hideFullscreenToggle"
+          :aria-label="isFullscreen ? t('replyBox.restoreEditor') : t('replyBox.expandedEditor')"
+          class="text-muted-foreground max-md:h-11 max-md:w-11 max-md:p-0"
+          variant="ghost"
+          @click="toggleFullscreen"
+        >
+          <component :is="isFullscreen ? Minimize2 : Maximize2" />
+        </Button>
+      </div>
+
+      <!-- To, CC, and BCC fields -->
+      <div v-if="conversationStore.current.inbox_channel === 'email'" class="shrink-0">
+        <div
+          :class="['space-y-3', isFullscreen ? 'p-4 border-b border-border' : 'mb-4']"
+          v-if="messageType === 'reply'"
+        >
+          <div class="flex items-center space-x-2">
+            <label class="w-12 shrink-0 text-sm font-medium text-muted-foreground">TO:</label>
+            <Input
+              type="text"
+              :placeholder="t('replyBox.emailAddresess')"
+              v-model="to"
+              class="min-w-0 flex-1 px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
+              @blur="validateEmails"
+            />
+          </div>
+          <div class="flex items-center space-x-2">
+            <label class="w-12 shrink-0 text-sm font-medium text-muted-foreground">CC:</label>
+            <Input
+              type="text"
+              :placeholder="t('replyBox.emailAddresess')"
+              v-model="cc"
+              class="min-w-0 flex-1 px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
+              @blur="validateEmails"
+            />
+            <Button
+              size="sm"
+              @click="toggleBcc"
+              class="text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            >
+              {{ showBcc ? $t('replyBox.removeBCC') : $t('replyBox.bcc') }}
+            </Button>
+          </div>
+          <div v-if="showBcc" class="flex items-center space-x-2">
+            <label class="w-12 shrink-0 text-sm font-medium text-muted-foreground">BCC:</label>
+            <Input
+              type="text"
+              :placeholder="t('replyBox.emailAddresess')"
+              v-model="bcc"
+              class="min-w-0 flex-1 px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
+              @blur="validateEmails"
+            />
+          </div>
         </div>
-        <div class="flex items-center space-x-2">
-          <label class="w-12 text-sm font-medium text-muted-foreground">CC:</label>
-          <Input
-            type="text"
-            :placeholder="t('replyBox.emailAddresess')"
-            v-model="cc"
-            class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-            @blur="validateEmails"
-          />
-          <Button
-            size="sm"
-            @click="toggleBcc"
-            class="text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80"
-          >
-            {{ showBcc ? $t('replyBox.removeBCC') : $t('replyBox.bcc') }}
-          </Button>
-        </div>
-        <div v-if="showBcc" class="flex items-center space-x-2">
-          <label class="w-12 text-sm font-medium text-muted-foreground">BCC:</label>
-          <Input
-            type="text"
-            :placeholder="t('replyBox.emailAddresess')"
-            v-model="bcc"
-            class="flex-grow px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
-            @blur="validateEmails"
-          />
+
+        <!-- email errors -->
+        <div
+          v-if="emailErrors.length > 0"
+          class="mb-4 break-words [overflow-wrap:anywhere] px-2 py-1 bg-destructive/10 border border-destructive text-destructive rounded-md"
+        >
+          <p v-for="error in emailErrors" :key="error" class="text-sm">{{ error }}</p>
         </div>
       </div>
 
-      <!-- email errors -->
-      <div
-        v-if="emailErrors.length > 0"
-        class="mb-4 px-2 py-1 bg-destructive/10 border border-destructive text-destructive rounded-md"
-      >
-        <p v-for="error in emailErrors" :key="error" class="text-sm">{{ error }}</p>
+      <!-- Main tiptap editor -->
+      <div class="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden" :class="{ '!min-h-32': isFullscreen }">
+        <Editor
+          ref="editorRef"
+          v-model:htmlContent="htmlContent"
+          v-model:textContent="textContent"
+          :message-type="messageType"
+          :placeholder="isCramped ? t('globals.terms.typeMessage') : t('editor.hint.full')"
+          :aiPrompts="aiPrompts"
+          :insertContent="insertContent"
+          :autoFocus="true"
+          :disabled="isDraftLoading"
+          :enableMentions="messageType === 'private_note'"
+          :enableInlineImages="conversationStore.current.inbox_channel === 'email'"
+          :getSuggestions="getSuggestions"
+          @aiPromptSelected="handleAiPromptSelected"
+          @send="handleSend"
+          @mentionsChanged="handleMentionsChanged"
+          @filesDropped="handleFilesDropped"
+        />
       </div>
-    </div>
 
-    <!-- Main tiptap editor -->
-    <div class="flex-grow flex flex-col overflow-hidden">
-      <Editor
-        ref="editorRef"
-        v-model:htmlContent="htmlContent"
-        v-model:textContent="textContent"
-        :message-type="messageType"
-        :placeholder="isCramped ? t('globals.terms.typeMessage') : t('editor.hint.full')"
-        :aiPrompts="aiPrompts"
-        :insertContent="insertContent"
-        :autoFocus="true"
-        :disabled="isDraftLoading"
-        :enableMentions="messageType === 'private_note'"
-        :enableInlineImages="conversationStore.current.inbox_channel === 'email'"
-        :getSuggestions="getSuggestions"
-        @aiPromptSelected="handleAiPromptSelected"
-        @send="handleSend"
-        @mentionsChanged="handleMentionsChanged"
-        @filesDropped="handleFilesDropped"
+      <!-- Macro preview -->
+      <MacroActionsPreview
+        v-if="conversationStore.getMacro(MACRO_CONTEXT.REPLY)?.actions?.length > 0"
+        :actions="conversationStore.getMacro(MACRO_CONTEXT.REPLY).actions"
+        :onRemove="(action) => conversationStore.removeMacroAction(action, MACRO_CONTEXT.REPLY)"
+        class="mt-2"
+        :class="{ 'shrink-0 max-h-24 overflow-auto': isFullscreen }"
       />
+
+      <!-- Attachments preview -->
+      <ReplyBoxAttachmentPreview
+        :attachments="uploadedFiles"
+        :uploadingFiles="uploadingFiles"
+        :onDelete="handleOnFileDelete"
+        v-if="uploadedFiles.length > 0 || uploadingFiles.length > 0"
+        class="mt-2"
+        :class="{ 'shrink-0 max-h-24 overflow-auto': isFullscreen }"
+      />
+
     </div>
-
-    <!-- Macro preview -->
-    <MacroActionsPreview
-      v-if="conversationStore.getMacro(MACRO_CONTEXT.REPLY)?.actions?.length > 0"
-      :actions="conversationStore.getMacro(MACRO_CONTEXT.REPLY).actions"
-      :onRemove="(action) => conversationStore.removeMacroAction(action, MACRO_CONTEXT.REPLY)"
-      class="mt-2"
-    />
-
-    <!-- Attachments preview -->
-    <ReplyBoxAttachmentPreview
-      :attachments="uploadedFiles"
-      :uploadingFiles="uploadingFiles"
-      :onDelete="handleOnFileDelete"
-      v-if="uploadedFiles.length > 0 || uploadingFiles.length > 0"
-      class="mt-2"
-    />
 
     <!-- Editor menu bar with send button -->
     <ReplyBoxMenuBar
@@ -224,6 +234,7 @@ const handleMentionsChanged = (newMentions) => {
 }
 
 const props = defineProps({
+  hideFullscreenToggle: Boolean,
   isFullscreen: {
     type: Boolean,
     default: false

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createApp, defineComponent, h, reactive, ref, nextTick } from 'vue'
 import ReplyBox from './ReplyBox.vue'
 
-const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null, cramped: null, user: null }))
+const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null, cramped: null, user: null, focus: null }))
 vi.mock('@main/api', () => ({ default: mocks.api }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => mocks.store }))
 vi.mock('@main/stores/user', () => ({ useUserStore: () => mocks.user }))
@@ -20,6 +20,10 @@ vi.mock('@main/composables/useEmitter', () => ({
 vi.mock('@main/composables/useIsComposerCramped', () => ({
   useIsComposerCramped: () => mocks.cramped
 }))
+vi.mock('@shared-ui/composables', async (importOriginal) => ({
+  ...await importOriginal(),
+  useIsMobile: () => mocks.cramped
+}))
 vi.mock('@main/composables/useVisualViewportHeight', () => ({ useVisualViewportHeight: () => {} }))
 vi.mock('@main/composables/useDraftManager', () => ({ useDraftManager: () => mocks.draft }))
 vi.mock('@main/composables/useFileUpload', () => ({ useFileUpload: () => mocks.files }))
@@ -28,13 +32,15 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key) => key }) }))
 vi.mock('./ReplyBoxContent.vue', () => ({
   default: defineComponent({
     inheritAttrs: false,
-    props: ['htmlContent', 'isSending'],
-    emits: ['send'],
+    props: ['htmlContent', 'isSending', 'hideFullscreenToggle', 'messageType'],
+    emits: ['send', 'toggleFullscreen', 'update:messageType'],
     setup(props, { emit, expose }) {
-      expose({ focus: () => {} })
+      expose({ focus: () => mocks.focus() })
       return () =>
         h('section', [
-          h('div', { 'data-editor': '' }, props.htmlContent),
+          h('div', { 'data-editor': '', 'data-message-type': props.messageType }, props.htmlContent),
+          h('button', { 'data-private': '', onClick: () => emit('update:messageType', 'private_note') }, 'Private note'),
+          !props.hideFullscreenToggle && h('button', { 'data-expand': '', onClick: () => emit('toggleFullscreen') }, 'Expand'),
           h(
             'button',
             { 'data-send': '', disabled: props.isSending, onClick: () => emit('send') },
@@ -109,7 +115,7 @@ const flush = async () => {
   }
 }
 function click(text) {
-  const button = [...root.querySelectorAll('button')].find((b) => b.textContent === text)
+  const button = [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === text)
   expect(button).toBeTruthy()
   button.click()
 }
@@ -117,6 +123,7 @@ function click(text) {
 beforeEach(async () => {
   mocks.user = reactive({ userID: 42, can: () => true })
   mocks.cramped = ref(false)
+  mocks.focus = vi.fn()
   const map = new Map()
   mocks.store = reactive({
     current: {
@@ -574,4 +581,196 @@ test('dialog shares an in-flight hydration GET and duplicate notes do not duplic
   await opening; await flush()
   expect(root.textContent).toContain(manualTitle)
   expect(root.querySelector('textarea').value).toBe('persisted')
+})
+
+
+test('maximizing and restoring preserve the prepared draft and composing from expanded history stays expanded', async () => {
+  root.querySelector('[data-expand]').click()
+  await flush()
+  expect(root.querySelector('[data-dialog]')).toBeTruthy()
+  expect(root.querySelector('[data-editor]').textContent).toBe('Existing employee answer')
+  await exposed.openReply({ content: 'Reply from expanded history' })
+  await flush()
+  expect(root.querySelector('[data-dialog]')).toBeTruthy()
+  expect(root.querySelector('[data-editor]').textContent).toBe('Reply from expanded history')
+  root.querySelector('[aria-label="replyBox.restoreEditor"]').click()
+  await flush()
+  expect(root.querySelector('[data-dialog]')).toBeNull()
+  expect(root.querySelector('[data-editor]').textContent).toBe('Reply from expanded history')
+  root.querySelector('[data-expand]').click()
+  await flush()
+  expect(root.querySelector('[data-editor]').textContent).toBe('Reply from expanded history')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+
+
+async function expand() {
+  root.querySelector('[data-expand]').click()
+  await flush()
+  return root.querySelector('[data-editor]')
+}
+function contextPanel() {
+  const panel = root.querySelector('[data-ai-context]')
+  expect(panel).toBeTruthy()
+  expect(panel.closest('[role="tabpanel"]').id).toMatch(/content-history$/)
+  // The expanded composer is the only modal; actions render as sections within it.
+  expect(root.querySelectorAll('[data-dialog]')).toHaveLength(1)
+  return panel
+}
+async function mobilePane(label) {
+  const tab = [...root.querySelectorAll('[role="tab"]')].find(el => el.textContent === label)
+  tab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+  tab.click()
+  await flush()
+}
+test('expanded adoption confirms replacement, activates public reply and keeps complete safe multiline text editable', async () => {
+  const editor = await expand()
+  root.querySelector('[data-private]').click()
+  await flush()
+  const multiline = { ...note, suggestion: 'Hallo,\n\nAbsatz zwei & mehr.\n<script>Text</script>' }
+  await exposed.openReply({ aiNote: multiline, mode: 'adopt' })
+  await flush()
+  contextPanel()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  click('KI-Antwort übernehmen')
+  await flush()
+  expect(mocks.draft.htmlContent.value).toBe('Hallo,<br><br>Absatz zwei &amp; mehr.<br>&lt;script&gt;Text&lt;/script&gt;')
+  expect(editor.dataset.messageType).toBe('reply')
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(mocks.focus).toHaveBeenCalled()
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+test('expanded adoption back navigation preserves the draft', async () => {
+  const editor = await expand()
+  await exposed.openReply({ aiNote: note, mode: 'adopt' })
+  await flush()
+  contextPanel()
+  click('Zurück zum Verlauf')
+  await flush()
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+test('expanded style uses the existing request, preserves mobile form state, supports undo and confirms adoption', async () => {
+  const editor = await expand()
+  mocks.api.adjustAIStyle = vi.fn()
+    .mockResolvedValueOnce({ data: { success: true, request_id: 'one', adapted_text: 'First adaptation' } })
+    .mockResolvedValueOnce({ data: { success: true, request_id: 'two', adapted_text: 'Second adaptation' } })
+  await exposed.openReply({ aiNote: note, mode: 'style' })
+  await flush()
+  contextPanel()
+  const input = root.querySelector('#ai-style-instructions')
+  input.value = 'Bitte freundlich in zwei Absätzen'
+  input.dispatchEvent(new Event('input'))
+  mocks.cramped.value = true
+  await flush()
+  await mobilePane('globals.terms.reply')
+  await mobilePane('replyBox.history')
+  expect(root.querySelector('#ai-style-instructions')).toBe(input)
+  expect(input.value).toBe('Bitte freundlich in zwei Absätzen')
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  click('Anpassen'); await flush()
+  expect(mocks.api.adjustAIStyle.mock.calls[0].slice(0, 2)).toEqual(['conversation', {
+    note_uuid: note.noteUUID, style: 'mine', instructions: input.value,
+    original_text: note.suggestion, current_text: note.suggestion
+  }])
+  click('Anpassen'); await flush()
+  click('Letzte Änderung rückgängig'); await flush()
+  expect(root.querySelector('[aria-label="Antwortvorschau"]').textContent.trim()).toBe('First adaptation')
+  click('Übernehmen'); await flush()
+  contextPanel()
+  expect(root.querySelector('[aria-label="Angepasster KI-Antwortvorschlag"]')).toBeTruthy()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  click('KI-Antwort übernehmen'); await flush()
+  expect(mocks.draft.htmlContent.value).toBe('First adaptation')
+  expect(mocks.draft.aiResponse.value.response_source).toBe('ai_adapted')
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  expect(editor.closest('[role="tabpanel"]').style.display).not.toBe('none')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+test('expanded feedback retains Unicode validation and mobile state and saves through the existing endpoint', async () => {
+  mockManual()
+  const editor = await expand()
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  contextPanel()
+  const input = root.querySelector('#ai-feedback-reason')
+  reasonInput('🙂'.repeat(2501)); await flush()
+  expect([...root.querySelectorAll('button')].find(b => b.textContent === 'Feedbackgrund speichern').disabled).toBe(true)
+  reasonInput('Bitte kürzer antworten'); await flush()
+  mocks.cramped.value = true; await flush()
+  await mobilePane('globals.terms.reply')
+  await mobilePane('replyBox.history')
+  expect(root.querySelector('#ai-feedback-reason')).toBe(input)
+  expect(input.value).toBe('Bitte kürzer antworten')
+  click('Feedbackgrund speichern'); await flush()
+  expect(mocks.api.saveManualReviewReason).toHaveBeenCalledWith('conversation', note.noteUUID, { feedback_reason: 'Bitte kürzer antworten' })
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+test('expanded own-answer reason stays left and only prepares the central public reply', async () => {
+  const editor = await expand()
+  root.querySelector('[data-private]').click(); await flush()
+  await exposed.openReply({ aiNote: note, mode: 'own' }); await flush()
+  contextPanel()
+  reasonInput('Andere Erklärung notwendig'); await flush()
+  click('Weiter zur Antwort'); await flush()
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  expect(editor.dataset.messageType).toBe('reply')
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(root.textContent).toContain('Eigene Antwort: optionales Feedback vorgemerkt')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+
+
+test('expanded style back navigation cancels pending work and keeps the prepared answer', async () => {
+  const editor = await expand()
+  let resolve
+  mocks.api.adjustAIStyle = vi.fn().mockReturnValue(new Promise(done => { resolve = done }))
+  await exposed.openReply({ aiNote: note, mode: 'style' }); await flush()
+  click('Anpassen'); await flush()
+  const signal = mocks.api.adjustAIStyle.mock.calls[0][2]
+  click('Zurück zum Verlauf'); await flush()
+  expect(signal.aborted).toBe(true)
+  resolve({ data: { success: true, request_id: 'late', adapted_text: 'Stale answer' } })
+  await flush()
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(root.querySelector('[data-editor]')).toBe(editor)
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+test('expanded manual feedback keeps failure state and returns to history on cancellation', async () => {
+  mockManual()
+  await expand()
+  await exposed.openReply({ manualReviewNote: manualNote }); await flush()
+  reasonInput('Keep this feedback'); await flush()
+  mocks.api.saveManualReviewReason.mockRejectedValueOnce(new Error('network'))
+  click('Feedbackgrund speichern'); await flush()
+  contextPanel()
+  expect(root.querySelector('#ai-feedback-reason').value).toBe('Keep this feedback')
+  expect(root.querySelector('[role="alert"]').textContent).toContain('konnte nicht gespeichert')
+  click('Abbrechen'); await flush()
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+test('changing conversations closes embedded actions and prevents stale style adoption', async () => {
+  await expand()
+  let resolve
+  mocks.api.adjustAIStyle = vi.fn().mockReturnValue(new Promise(done => { resolve = done }))
+  await exposed.openReply({ aiNote: note, mode: 'style' }); await flush()
+  click('Anpassen'); await flush()
+  mocks.store.current.uuid = 'other'; await flush()
+  expect(mocks.api.adjustAIStyle.mock.calls[0][2].aborted).toBe(true)
+  resolve({ data: { success: true, request_id: 'late', adapted_text: 'Stale answer' } })
+  await flush()
+  expect(root.querySelector('[data-ai-context]')).toBeNull()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
 })

@@ -23,7 +23,7 @@ async function mount(kind, changes = {}) {
    meta: { ai_analysis: { kind, version: 1, original_message_uuid: uuid, ...(kind === 'n8n_ai_analysis' ? { suggested_message: 'Proposal' } : {}) } }, ...changes }
  root = document.createElement('div'); document.body.append(root)
  const emit = vi.fn()
- app = createApp(MessageBubble, { message, direction: 'outgoing', onComposeReply: emit })
+ app = createApp(MessageBubble, { message, direction: changes.type || 'outgoing', onComposeReply: emit })
  app.component('router-link', defineComponent({ setup: (_, { slots }) => () => h('span', slots.default?.()) }))
  app.mount(root); await nextTick(); return emit
 }
@@ -62,4 +62,17 @@ test('widgets cannot expose annotation action', async () => {
   await mount('n8n_manual_review')
   state.store.current.inbox_channel = 'livechat'; await nextTick()
   expect(root.textContent).not.toContain('Feedback erstellen')
+})
+
+
+test.each([
+  ['customer', 'incoming', false, false],
+  ['employee', 'outgoing', false, true],
+  ['internal note', 'outgoing', true, true],
+  ['AI analysis', 'outgoing', true, true]
+])('%s keeps the original chat alignment', async (label, type, privateNote, rightAligned) => {
+  await mount(label === 'AI analysis' ? 'n8n_ai_analysis' : '', {
+    type, private: privateNote, sender_type: type === 'incoming' ? 'contact' : 'agent'
+  })
+  expect(root.querySelector('.group.flex-row').classList.contains('justify-end')).toBe(rightAligned)
 })

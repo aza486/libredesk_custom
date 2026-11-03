@@ -2,14 +2,7 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import api from '@main/api'
 import { createStyleHistory, styleTextLength } from '@main/utils/ai-style'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@shared-ui/components/ui/dialog'
+import AIActionPanel from './AIActionPanel.vue'
 import {
   Select,
   SelectTrigger,
@@ -22,6 +15,7 @@ import { Alert, AlertDescription } from '@shared-ui/components/ui/alert'
 import { Button } from '@shared-ui/components/ui/button'
 const props = defineProps({
   open: Boolean,
+  embedded: Boolean,
   note: { type: Object, default: null },
   conversationUUID: { type: String, default: '' }
 })
@@ -117,94 +111,88 @@ function adopt() {
 }
 </script>
 <template>
-  <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-      <DialogHeader>
-        <DialogTitle>Stil anpassen</DialogTitle>
-        <DialogDescription
-          >Formuliere den KI-Vorschlag um. Prüfe Inhalt und Angaben vor der
-          Übernahme.</DialogDescription
-        >
-      </DialogHeader>
-      <label for="ai-style-preset" class="text-sm font-medium">Stil</label>
-      <Select v-model="style" :disabled="busy">
-        <SelectTrigger id="ai-style-preset"><SelectValue /></SelectTrigger>
-        <SelectContent
-          ><SelectItem v-for="[value, label] in presets" :key="value" :value="value">{{
-            label
-          }}</SelectItem></SelectContent
-        >
-      </Select>
-      <label for="ai-style-instructions" class="text-sm font-medium"
-        >Zusätzliche Anweisungen (optional)</label
+  <AIActionPanel
+    :open="open"
+    :embedded="embedded"
+    title="Stil anpassen"
+    description="Formuliere den KI-Vorschlag um. Prüfe Inhalt und Angaben vor der Übernahme."
+    content-class="max-h-[90dvh] overflow-y-auto sm:max-w-2xl"
+    @update:open="emit('update:open', $event)"
+  >
+    <label for="ai-style-preset" class="text-sm font-medium">Stil</label>
+    <Select v-model="style" :disabled="busy">
+      <SelectTrigger id="ai-style-preset"><SelectValue /></SelectTrigger>
+      <SelectContent
+        ><SelectItem v-for="[value, label] in presets" :key="value" :value="value">{{
+          label
+        }}</SelectItem></SelectContent
       >
-      <Textarea
-        id="ai-style-instructions"
-        v-model="instructions"
-        :disabled="busy"
-        rows="3"
-        :aria-invalid="tooLong"
-        aria-describedby="ai-style-limit"
-        placeholder="Bitte in zwei Absätzen formulieren, freundlich aber professionell"
-      />
-      <p
-        id="ai-style-limit"
-        class="text-xs"
-        :class="tooLong ? 'text-destructive' : 'text-muted-foreground'"
+    </Select>
+    <label for="ai-style-instructions" class="text-sm font-medium"
+      >Zusätzliche Anweisungen (optional)</label
+    >
+    <Textarea
+      id="ai-style-instructions"
+      v-model="instructions"
+      :disabled="busy"
+      rows="3"
+      :aria-invalid="tooLong"
+      aria-describedby="ai-style-limit"
+      placeholder="Bitte in zwei Absätzen formulieren, freundlich aber professionell"
+    />
+    <p
+      id="ai-style-limit"
+      class="text-xs"
+      :class="tooLong ? 'text-destructive' : 'text-muted-foreground'"
+    >
+      {{ styleTextLength(instructions) }} / 1000 Zeichen
+    </p>
+    <Button :disabled="busy || tooLong" @click="adjust">{{
+      busy ? 'Wird angepasst …' : 'Anpassen'
+    }}</Button>
+    <div class="flex flex-wrap gap-2" aria-label="Vorschau auswählen">
+      <Button variant="outline" size="sm" :aria-pressed="originalView" @click="originalView = true"
+        >Original</Button
       >
-        {{ styleTextLength(instructions) }} / 1000 Zeichen
-      </p>
-      <Button :disabled="busy || tooLong" @click="adjust">{{
-        busy ? 'Wird angepasst …' : 'Anpassen'
-      }}</Button>
-      <div class="flex flex-wrap gap-2" aria-label="Vorschau auswählen">
-        <Button
-          variant="outline"
-          size="sm"
-          :aria-pressed="originalView"
-          @click="originalView = true"
-          >Original</Button
-        >
-        <Button
-          variant="outline"
-          size="sm"
-          :aria-pressed="!originalView"
-          @click="originalView = false"
-          >Angepasst</Button
-        >
-      </div>
-      <div
-        class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border bg-muted p-3 text-sm"
-        aria-label="Antwortvorschau"
-        aria-live="polite"
+      <Button
+        variant="outline"
+        size="sm"
+        :aria-pressed="!originalView"
+        @click="originalView = false"
+        >Angepasst</Button
       >
-        {{ visibleText }}
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="busy || history.versions.length < 2"
-          @click="undo"
-          >Letzte Änderung rückgängig</Button
-        >
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="busy || history.versions.length < 2"
-          @click="reset"
-          >Original wiederherstellen</Button
-        >
-      </div>
-      <Alert v-if="error" variant="destructive" role="alert"
-        ><AlertDescription>{{ error }}</AlertDescription></Alert
+    </div>
+    <div
+      class="max-h-64 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-md border bg-muted p-3 text-sm"
+      aria-label="Antwortvorschau"
+      aria-live="polite"
+    >
+      {{ visibleText }}
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        :disabled="busy || history.versions.length < 2"
+        @click="undo"
+        >Letzte Änderung rückgängig</Button
       >
-      <DialogFooter>
-        <Button variant="outline" @click="emit('update:open', false)">Verwerfen</Button>
-        <Button :disabled="busy || originalView || history.versions.length < 2" @click="adopt"
-          >Übernehmen</Button
-        >
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+      <Button
+        variant="ghost"
+        size="sm"
+        :disabled="busy || history.versions.length < 2"
+        @click="reset"
+        >Original wiederherstellen</Button
+      >
+    </div>
+    <Alert v-if="error" variant="destructive" role="alert"
+      ><AlertDescription>{{ error }}</AlertDescription></Alert
+    >
+    <template #footer>
+      <Button variant="outline" @click="emit('update:open', false)">Verwerfen</Button>
+      <Button :disabled="busy || originalView || history.versions.length < 2" @click="adopt"
+        >Übernehmen</Button
+      >
+    </template>
+  </AIActionPanel>
 </template>

@@ -1,24 +1,22 @@
 <template>
-  <AIStyleDialog :open="styleOpen" :note="styleNote" :conversation-u-u-i-d="currentConversationUUID || ''" @update:open="styleOpen = $event" @adopt="adoptStyledReply" />
-  <Dialog :open="aiModalOpen" @update:open="aiModalOpen = $event">
-    <DialogContent @close-auto-focus="restoreAiFocus">
-      <DialogHeader>
-        <DialogTitle>{{
-          isManualReason ? 'Feedback erstellen' : aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Eigene Antwort verfassen'
-        }}</DialogTitle>
-        <DialogDescription>
-          {{
-            isManualReason
-              ? 'Die tatsächlich gesendete Mitarbeiterantwort wird automatisch als Lernantwort übernommen. Hier ist keine weitere Antwort nötig. Ein leeres Feld entfernt den zusätzlichen Grund.'
-              : aiAction?.mode === 'adopt'
-              ? 'Der Vorschlag ersetzt den öffentlichen Antwortentwurf. Du kannst ihn vor dem Versand bearbeiten.'
-              : 'Schreibe deine Antwort anschließend im vorhandenen Editor. Feedback wird erst nach bestätigtem Versand gespeichert.'
-          }}
-        </DialogDescription>
-      </DialogHeader>
+  <Teleport :to="actionTarget || 'body'" :disabled="!actionTarget">
+    <AIStyleDialog :open="styleOpen" :embedded="isEditorFullscreen" :note="styleNote" :conversation-u-u-i-d="currentConversationUUID || ''" @update:open="styleOpen = $event" @adopt="adoptStyledReply" />
+    <AIActionPanel
+      :open="aiModalOpen"
+      :embedded="isEditorFullscreen"
+      :close-disabled="aiModalBusy"
+      :title="isManualReason ? 'Feedback erstellen' : aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Eigene Antwort verfassen'"
+      :description="isManualReason
+        ? 'Die tatsächlich gesendete Mitarbeiterantwort wird automatisch als Lernantwort übernommen. Hier ist keine weitere Antwort nötig. Ein leeres Feld entfernt den zusätzlichen Grund.'
+        : aiAction?.mode === 'adopt'
+        ? 'Der Vorschlag ersetzt den öffentlichen Antwortentwurf. Du kannst ihn vor dem Versand bearbeiten.'
+        : 'Schreibe deine Antwort anschließend im vorhandenen Editor. Feedback wird erst nach bestätigtem Versand gespeichert.'"
+      @update:open="aiModalOpen = $event"
+      @close-auto-focus="restoreAiFocus"
+    >
       <div
         v-if="!isManualReason"
-        class="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted p-3 text-sm"
+        class="max-h-56 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-md border bg-muted p-3 text-sm"
         :aria-label="aiAction?.adaptedText !== undefined ? 'Angepasster KI-Antwortvorschlag' : 'Ursprünglicher KI-Antwortvorschlag'"
       >
         {{ aiAction?.adaptedText ?? aiAction?.note.suggestion }}
@@ -46,7 +44,7 @@
         </p>
       </template>
       <p v-if="aiModalError" role="alert" class="text-sm text-destructive">{{ aiModalError }}</p>
-      <DialogFooter>
+      <template #footer>
         <Button variant="outline" :disabled="aiModalBusy" @click="aiModalOpen = false"
           >Abbrechen</Button
         >
@@ -55,9 +53,9 @@
           @click="continueAiReply"
           >{{ isManualReason ? (aiModalBusy ? (manualReadOnly ? 'Wird geladen …' : 'Wird gespeichert …') : 'Feedbackgrund speichern') : aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Weiter zur Antwort' }}</Button
         >
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+      </template>
+    </AIActionPanel>
+  </Teleport>
   <div
     v-if="feedbackRecord || manualAnnotation"
     class="mx-2 mt-2 rounded-md border p-3 text-sm"
@@ -135,45 +133,55 @@
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
-        class="bg-card text-card-foreground p-4 flex flex-col overflow-hidden"
-        :class="[
-          isCramped
-            ? 'top-0 left-0 translate-x-0 translate-y-0 w-full max-w-none h-[var(--visual-viewport-height,100dvh)] max-h-none rounded-none'
-            : 'max-w-[60%] h-[70%] max-h-[75%] rounded-lg',
-          { '!bg-private': messageType === 'private_note', 'ai-generating': isGenerating }
-        ]"
+        class="bg-card text-card-foreground p-0 gap-0 flex flex-col overflow-hidden top-0 left-0 translate-x-0 translate-y-0 w-full max-w-none h-[var(--visual-viewport-height,100dvh)] max-h-none rounded-none md:top-4 md:left-4 md:w-[calc(100%-2rem)] md:h-[calc(var(--visual-viewport-height,100dvh)-2rem)] md:rounded-lg lg:top-8 lg:left-8 lg:w-[calc(100%-4rem)] lg:h-[calc(var(--visual-viewport-height,100dvh)-4rem)]"
+        :class="{ 'ai-generating': isGenerating }"
+        :aria-describedby="undefined"
         @escapeKeyDown="isEditorFullscreen = false"
         :hide-close-button="true"
       >
-        <ReplyBoxContent
+        <DialogTitle class="sr-only">{{ t('replyBox.expandedEditor') }}</DialogTitle>
+        <ExpandedReplyLayout
+          ref="expandedLayoutRef"
           v-if="isEditorFullscreen"
-          ref="fullscreenContentRef"
-          :isFullscreen="true"
-          :aiPrompts="aiPrompts"
-          :isSending="isSending"
-          :isDraftLoading="isDraftLoading"
-          :uploadingFiles="uploadingFiles"
-          :uploadedFiles="mediaFiles"
-          v-model:htmlContent="htmlContent"
-          v-model:textContent="textContent"
-          v-model:to="to"
-          v-model:cc="cc"
-          v-model:bcc="bcc"
-          v-model:emailErrors="emailErrors"
-          v-model:messageType="messageType"
-          v-model:showBcc="showBcc"
-          v-model:mentions="mentions"
-          @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
-          @send="processSend"
-          @sendAndSetStatus="processSendAndSetStatus"
-          @fileUpload="handleFileUpload"
-          @fileDelete="handleFileDelete"
-          @filesDropped="uploadFiles"
-          @aiPromptSelected="handleAiPromptSelected"
-          :isGenerating="isGenerating"
-          @generateReply="handleGenerateReply"
-          class="h-full flex-grow"
-        />
+          :private-note="messageType === 'private_note'"
+          :context-active="styleOpen || aiModalOpen"
+          @context-target="actionTarget = $event"
+          @restore="isEditorFullscreen = false"
+          @history-target="emit('historyTarget', $event)"
+        >
+          <ReplyBoxContent
+            v-if="isEditorFullscreen"
+            ref="fullscreenContentRef"
+            :isFullscreen="true"
+            :hideFullscreenToggle="true"
+            :outgoingTemplates="outgoingTemplates"
+            v-model:selectedTemplateId="selectedTemplateId"
+            :aiPrompts="aiPrompts"
+            :isSending="isSending"
+            :isDraftLoading="isDraftLoading"
+            :uploadingFiles="uploadingFiles"
+            :uploadedFiles="mediaFiles"
+            v-model:htmlContent="htmlContent"
+            v-model:textContent="textContent"
+            v-model:to="to"
+            v-model:cc="cc"
+            v-model:bcc="bcc"
+            v-model:emailErrors="emailErrors"
+            v-model:messageType="messageType"
+            v-model:showBcc="showBcc"
+            v-model:mentions="mentions"
+            @toggleFullscreen="isEditorFullscreen = !isEditorFullscreen"
+            @send="processSend"
+            @sendAndSetStatus="processSendAndSetStatus"
+            @fileUpload="handleFileUpload"
+            @fileDelete="handleFileDelete"
+            @filesDropped="uploadFiles"
+            @aiPromptSelected="handleAiPromptSelected"
+            :isGenerating="isGenerating"
+            @generateReply="handleGenerateReply"
+            class="min-h-0 min-w-0 flex-1"
+          />
+        </ExpandedReplyLayout>
       </DialogContent>
     </Dialog>
 
@@ -244,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, toRaw, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, shallowRef, toRaw, nextTick, onMounted, onUnmounted } from 'vue'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 import { MACRO_CONTEXT } from '@main/constants/conversation'
@@ -269,10 +277,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter
 } from '@shared-ui/components/ui/dialog'
 import { Button } from '@shared-ui/components/ui/button'
 import { Pencil, Paperclip } from 'lucide-vue-next'
@@ -282,7 +287,9 @@ import { useEmitter } from '@main/composables/useEmitter'
 import { useFileUpload } from '@main/composables/useFileUpload'
 import { hasInlineImage, hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
 import AIStyleDialog from './AIStyleDialog.vue'
+import AIActionPanel from './AIActionPanel.vue'
 import { sourceAlreadyAnswered } from '@main/utils/ai-style'
+import ExpandedReplyLayout from './ExpandedReplyLayout.vue'
 import ReplyBoxContent from '@/features/conversation/ReplyBoxContent.vue'
 import { createAIFeedback } from '@main/utils/ai-feedback'
 import {
@@ -294,6 +301,7 @@ import {
 } from '@main/utils/ai-note'
 import { UserTypeAgent } from '@/constants/user'
 
+const emit = defineEmits(['historyTarget'])
 const { t } = useI18n()
 const conversationStore = useConversationStore()
 const notificationStore = useNotificationStore()
@@ -389,6 +397,20 @@ const manualReadOnly = ref(false)
 const aiReasonTooLong = computed(() => isManualReason.value ? manualReasonLength(aiReason.value) > 2500 : aiReasonBytes.value > 8000)
 const aiReasonBytes = computed(() => feedbackReasonBytes(aiReason.value))
 const fullscreenContentRef = ref(null)
+const expandedLayoutRef = ref(null)
+const actionTarget = shallowRef(null)
+watch([styleOpen, aiModalOpen, isEditorFullscreen], () => {
+  if (isEditorFullscreen.value && (styleOpen.value || aiModalOpen.value)) {
+    expandedLayoutRef.value?.showHistory()
+  }
+}, { flush: 'post' })
+watch(aiModalOpen, async (open, wasOpen) => {
+  if (open || !wasOpen || !isEditorFullscreen.value) return
+  const restoreFocus = !focusAfterModal
+  focusAfterModal = false
+  await nextTick()
+  if (restoreFocus) aiPreviousFocus?.focus?.()
+})
 let aiPreviousFocus = null
 let focusAfterModal = false
 let pollTimer = null
@@ -413,11 +435,13 @@ const feedbackStatus = computed(
 )
 const focusReply = async (uuid) => {
   messageType.value = 'reply'
-  isEditorFullscreen.value = isCramped.value
+  isEditorFullscreen.value ||= isCramped.value
   await nextTick()
   for (let count = 0; isDraftLoading.value && count < 150; count++)
     await new Promise((resolve) => setTimeout(resolve, 20))
   if (uuid !== currentConversationUUID.value || isDraftLoading.value) return false
+  await nextTick()
+  expandedLayoutRef.value?.showReply()
   await nextTick()
   ;(fullscreenContentRef.value || replyBoxContentRef.value)?.focus()
   return true

@@ -1,7 +1,7 @@
 <template>
   <div
     class="flex justify-between h-14 relative"
-    :class="{ 'items-end': isFullscreen, 'items-center': !isFullscreen }"
+    :class="{ 'items-end flex-wrap !h-auto min-h-14 gap-2': isFullscreen, 'items-center': !isFullscreen }"
   >
     <EmojiPicker
       ref="emojiPickerRef"
@@ -50,7 +50,7 @@
         <Sparkles v-else class="h-4 w-4" />
       </Toggle>
     </div>
-    <div class="flex items-center">
+    <div class="flex min-w-0 items-center" :class="{ 'flex-wrap justify-end gap-y-2': isFullscreen }">
       <DropdownMenu
         v-if="showTemplateSelector && outgoingTemplates.length > 0"
       >

@@ -103,14 +103,16 @@
 
     <!-- Messages & reply box -->
     <div class="flex flex-col flex-grow overflow-hidden">
-      <MessageList class="flex-1 overflow-y-auto" @compose-reply="handleComposeReply" />
-      <ReplyBox ref="replyBoxRef" />
+      <Teleport :to="fullscreenHistoryTarget || 'body'" :disabled="!fullscreenHistoryTarget">
+        <MessageList class="min-h-0 min-w-0 flex-1 overflow-hidden" @compose-reply="handleComposeReply" />
+      </Teleport>
+      <ReplyBox ref="replyBoxRef" @history-target="fullscreenHistoryTarget = $event" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { useConversationStore } from '@main/stores/conversation'
 import { useUserStore } from '@main/stores/user'
 import { Clock, MoreHorizontal, ChevronLeft, PanelRight } from 'lucide-vue-next'
@@ -143,6 +145,8 @@ const router = useRouter()
 const isMobile = useIsMobile()
 
 const replyBoxRef = ref(null)
+// Move the existing history without mounting another set of message listeners.
+const fullscreenHistoryTarget = shallowRef(null)
 
 const headerClass = computed(() => {
   const tags = conversationStore.current?.tags ?? []
