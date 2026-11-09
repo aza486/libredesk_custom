@@ -71,7 +71,7 @@ SELECT
     COALESCE(ARRAY(SELECT user_id FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id ORDER BY ca.created_at, ca.user_id), ARRAY[]::BIGINT[]) AS assigned_user_ids,
     conversations.assigned_team_id,
     (
-    SELECT CASE WHEN COUNT(*) > 9 THEN 10 ELSE COUNT(*) END
+    SELECT COUNT(*)
     FROM (
         SELECT 1 FROM conversation_messages
         WHERE conversation_id = conversations.id
@@ -81,7 +81,6 @@ SELECT
             '1970-01-01'::TIMESTAMPTZ
         )
         AND (meta IS NULL OR NOT COALESCE((meta->>'continuity_email')::boolean, false))
-        LIMIT 10
     ) t
     ) as unread_message_count,
     conversation_statuses.name as status,

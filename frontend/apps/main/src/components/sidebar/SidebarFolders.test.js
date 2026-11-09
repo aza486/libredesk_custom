@@ -149,3 +149,17 @@ test('my_inbox loads the employee area and navigates to the existing assigned ro
     query: { folder: '11', folderName: 'Alle Reklas' }
   })
 })
+
+test('keeps full folder counts after realtime refresh and allows the label to shrink', async () => {
+  mocks.api.getSidebarFolderCounts.mockResolvedValue({ data: { data: { 11: 1024 } } })
+  await mocks.handlers.get('sidebar-folders-refresh')()
+  await flush()
+  const edit = host.querySelector('[aria-label="Alle Reklas bearbeiten"]')
+  expect(edit.nextElementSibling.textContent).toBe('1024')
+  expect(edit.nextElementSibling.classList.contains('shrink-0')).toBe(true)
+  expect(edit.previousElementSibling.classList.contains('min-w-0')).toBe(true)
+  expect(edit.previousElementSibling.classList.contains('flex-1')).toBe(true)
+  expect(edit.previousElementSibling.querySelector('span').classList.contains('truncate')).toBe(
+    true
+  )
+})

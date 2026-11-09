@@ -3,13 +3,16 @@
     <PopoverTrigger as-child>
       <SidebarMenuButton size="default" class="relative">
         <Bell class="h-5 w-5" />
+        <span v-if="isMobile" class="min-w-0 truncate">{{
+          t('globals.terms.notification', 2)
+        }}</span>
         <span
           v-if="notificationStore.unreadCount > 0"
-          class="absolute top-0.5 left-6 md:left-auto md:right-0.5 inline-flex size-3.5 items-center justify-center rounded-full bg-destructive text-[9px] font-medium text-destructive-foreground"
+          data-notification-count
+          class="ml-auto md:ml-0 md:absolute md:top-0.5 md:right-0.5 inline-flex h-3.5 min-w-3.5 shrink-0 whitespace-nowrap px-0.5 tabular-nums items-center justify-center rounded-full bg-destructive text-[9px] font-medium text-destructive-foreground"
         >
-          {{ notificationStore.unreadCount > 99 ? '99' : notificationStore.unreadCount }}
+          {{ notificationStore.unreadCount }}
         </span>
-        <span v-if="isMobile">{{ t('globals.terms.notification', 2) }}</span>
       </SidebarMenuButton>
     </PopoverTrigger>
     <PopoverContent

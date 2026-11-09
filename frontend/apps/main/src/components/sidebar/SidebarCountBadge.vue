@@ -10,8 +10,8 @@ defineProps({
   <Badge
     v-if="count > 0"
     variant="outline"
-    class="ml-auto shrink-0 tabular-nums bg-background px-1.5 py-0 font-medium"
+    class="ml-auto shrink-0 whitespace-nowrap tabular-nums bg-background px-1.5 py-0 font-medium"
   >
-    {{ count > 9 ? '9+' : count }}
+    {{ count }}
   </Badge>
 </template>

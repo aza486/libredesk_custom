@@ -3,11 +3,12 @@
     <ContextMenuTrigger asChild>
       <router-link
         :to="conversationRoute"
-        class="conversation-card group relative block min-w-0 transition-colors duration-150 ease-in-out cursor-pointer"
+        class="conversation-card group relative block min-w-0 transition-colors duration-150 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         data-conversation-card
         :class="[
           {
-            'bg-accent': isCurrent,
+            'bg-primary/15 dark:bg-primary/20 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary':
+              isCurrent,
             'bg-primary/5 hover:bg-primary/10': isItemSelected && !isCurrent,
             'hover:bg-accent/40': !isCurrent && !isItemSelected
           }
@@ -87,21 +88,12 @@
                   </TooltipTrigger>
                   <TooltipContent>{{ conversation.inbox_name }}</TooltipContent>
                 </Tooltip>
-                <span
-                  v-if="conversation.last_message_at"
-                  data-conversation-time
-                  class="min-w-0 truncate text-[11px] font-normal tabular-nums text-muted-foreground"
-                  :title="relativeLastMessageTime"
-                  >{{ relativeLastMessageTime }}</span
-                >
                 <div
                   v-if="isUnread"
                   data-conversation-unread
-                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
+                  class="flex h-5 min-w-5 shrink-0 whitespace-nowrap px-1 tabular-nums items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground"
                 >
-                  {{
-                    conversation.unread_message_count > 9 ? '9+' : conversation.unread_message_count
-                  }}
+                  {{ conversation.unread_message_count }}
                 </div>
               </div>
             </div>
@@ -127,7 +119,14 @@
                   <span class="font-medium text-foreground">{{ $t('globals.terms.draft') }}:</span>
                   {{ draftPreview }}
                 </template>
-                <template v-else>{{ conversation.last_message }}</template>
+                <template v-else>
+                  <span
+                    v-if="lastMessageTime"
+                    data-conversation-time
+                    class="text-muted-foreground/80 tabular-nums"
+                    >{{ lastMessageTime }} · </span
+                  ><span>{{ conversation.last_message }}</span>
+                </template>
               </p>
             </div>
 
@@ -193,9 +192,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { getRelativeTime } from '@shared-ui/utils/datetime.js'
+import { formatFullTimestamp } from '@shared-ui/utils/datetime.js'
 import { Mail, MessageSquare, Reply, MailOpen, SquareCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
 import {
@@ -214,8 +213,6 @@ import { useAppSettingsStore } from '@main/stores/appSettings'
 import { useBulkActionPermissions } from '@/composables/useBulkActionPermissions'
 import { useI18n } from 'vue-i18n'
 
-let timer = null
-const now = ref(new Date())
 const route = useRoute()
 const conversationStore = useConversationStore()
 const appSettingsStore = useAppSettingsStore()
@@ -260,21 +257,7 @@ const conversationRoute = computed(() => {
   }
 })
 
-onMounted(() => {
-  timer = setInterval(() => {
-    now.value = new Date()
-  }, 60000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
-
-const relativeLastMessageTime = computed(() => {
-  return props.conversation.last_message_at
-    ? getRelativeTime(props.conversation.last_message_at, now.value)
-    : ''
-})
+const lastMessageTime = computed(() => formatFullTimestamp(props.conversation.last_message_at))
 
 const hasSlaDeadlines = computed(() => {
   const c = props.conversation

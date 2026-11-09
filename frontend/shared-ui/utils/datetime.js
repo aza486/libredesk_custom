@@ -1,6 +1,12 @@
-import { format, differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, differenceInYears } from 'date-fns'
+import {
+  differenceInMinutes,
+  differenceInHours,
+  differenceInDays,
+  differenceInMonths,
+  differenceInYears
+} from 'date-fns'
 
-export function getRelativeTime (timestamp, now = new Date()) {
+export function getRelativeTime(timestamp, now = new Date()) {
   try {
     const mins = differenceInMinutes(now, timestamp)
     const hours = differenceInHours(now, timestamp)
@@ -30,10 +36,20 @@ export const formatDuration = (seconds, showSeconds = true) => {
   return `${hours}h ${mins}m ${showSeconds ? `${secs}s` : ''}`
 }
 
-export const formatMessageTimestamp = (time) => {
-  return format(time, 'd MMM, hh:mm a')
-}
+// Intl uses the browser's local timezone; stored timestamps remain unchanged.
+const dateTimeFormatter = new Intl.DateTimeFormat('de-DE', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23'
+})
 
 export const formatFullTimestamp = (time) => {
-  return format(time, 'd MMM yyyy, hh:mm a')
+  if (time == null || time === '') return ''
+  const date = new Date(time)
+  return Number.isNaN(date.getTime()) ? '' : dateTimeFormatter.format(date)
 }
+
+export const formatMessageTimestamp = formatFullTimestamp

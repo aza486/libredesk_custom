@@ -796,7 +796,7 @@ onUnmounted(() => {
                             })
                           "
                         >
-                          <span>Hohe Priorität</span>
+                          <span class="min-w-0 truncate">Hohe Priorität</span>
 
                           <SidebarCountBadge :count="sidebarCounts.assigned_high || 0" />
                         </SidebarMenuButton>
@@ -818,7 +818,7 @@ onUnmounted(() => {
                             })
                           "
                         >
-                          <span>Offen</span>
+                          <span class="min-w-0 truncate">Offen</span>
 
                           <SidebarCountBadge :count="sidebarCounts.assigned || 0" />
                         </SidebarMenuButton>
@@ -951,7 +951,7 @@ onUnmounted(() => {
                                   :isActive="isPersonalRouteActive(inbox.id, item.query)"
                                   @click="navigateToPersonalInbox(inbox.id, item.query)"
                                 >
-                                  <span>{{ item.label }}</span>
+                                  <span class="min-w-0 truncate">{{ item.label }}</span>
                                   <SidebarCountBadge
                                     v-if="item.count"
                                     :count="sidebarCounts[`personal_${inbox.id}_${item.key}`] || 0"
@@ -1041,7 +1041,7 @@ onUnmounted(() => {
                                       })
                                     "
                                   >
-                                    <span>Hohe Priorität</span>
+                                    <span class="min-w-0 truncate">Hohe Priorität</span>
 
                                     <SidebarCountBadge
                                       :count="sidebarCounts[`team_high_${team.id}`] || 0"
@@ -1060,7 +1060,7 @@ onUnmounted(() => {
                                       })
                                     "
                                   >
-                                    <span>Offen</span>
+                                    <span class="min-w-0 truncate">Offen</span>
 
                                     <SidebarCountBadge
                                       :count="sidebarCounts[`team_${team.id}`] || 0"
@@ -1150,7 +1150,7 @@ onUnmounted(() => {
                             })
                           "
                         >
-                          <span>Hohe Priorität</span>
+                          <span class="min-w-0 truncate">Hohe Priorität</span>
 
                           <SidebarCountBadge :count="sidebarCounts.customer_high || 0" />
                         </SidebarMenuButton>
@@ -1172,7 +1172,7 @@ onUnmounted(() => {
                             })
                           "
                         >
-                          <span>Offen</span>
+                          <span class="min-w-0 truncate">Offen</span>
 
                           <SidebarCountBadge :count="sidebarCounts.customer || 0" />
                         </SidebarMenuButton>
@@ -1247,8 +1247,8 @@ onUnmounted(() => {
                 >
                   <CircleDashed />
 
-                  <div class="flex items-center justify-between w-full">
-                    <span>
+                  <div class="flex min-w-0 items-center justify-between gap-2 w-full">
+                    <span class="min-w-0 truncate">
                       {{ t('globals.terms.unassigned') }}
                     </span>
 
