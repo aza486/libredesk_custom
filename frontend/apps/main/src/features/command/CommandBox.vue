@@ -215,6 +215,8 @@
 </template>
 
 <script setup>
+import { conversationPriorityLabel } from '@/utils/conversation-priority'
+import { conversationStatusLabel } from '@/utils/conversation-status'
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useMagicKeys } from '@vueuse/core'
 import { CalendarIcon } from 'lucide-vue-next'
@@ -346,7 +348,13 @@ const getActionLabel = computed(() => (action) => {
     set_tags: t('actions.setTags'),
     remove_tags: t('actions.removeTags')
   }
-  return `${prefixes[action.type]}: ${action.display_value.length > 0 ? action.display_value.join(', ') : action.value.join(', ')}`
+  const values = action.display_value.length > 0 ? action.display_value : action.value
+  const labels = values.map((value) => {
+    if (action.type === 'set_status') return conversationStatusLabel(value, t)
+    if (action.type === 'set_priority') return conversationPriorityLabel(value, t)
+    return value
+  })
+  return `${prefixes[action.type]}: ${labels.join(', ')}`
 })
 
 const replyContent = computed(() => highlightedMacro.value?.message_content || '')

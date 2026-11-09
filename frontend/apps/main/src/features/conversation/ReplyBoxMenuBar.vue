@@ -109,7 +109,7 @@
             :key="status.value"
             @click="handleSendAndSetStatus(status.label)"
           >
-            {{ status.label }}
+            {{ status.displayLabel ?? status.label }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

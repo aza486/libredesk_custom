@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createApp, defineComponent, h, nextTick, reactive, ref } from 'vue'
 import { TooltipProvider } from '@shared-ui/components/ui/tooltip'
 import ConversationListItem from './ConversationListItem.vue'
+import { createI18n } from 'vue-i18n'
+import de from '../../../../../../../i18n/de-DE.json'
 
 const mocks = vi.hoisted(() => ({ store: null, route: null, settings: null }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => mocks.store }))
@@ -11,7 +13,6 @@ vi.mock('vue-router', () => ({ useRoute: () => mocks.route }))
 vi.mock('@/composables/useBulkActionPermissions', () => ({
   useBulkActionPermissions: () => ({ canBulkAct: ref(true) })
 }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key) => key }) }))
 
 let app, host, props
 beforeEach(() => {
@@ -61,7 +62,7 @@ beforeEach(() => {
   app = createApp({
     render: () => h(TooltipProvider, null, { default: () => h(ConversationListItem, props) })
   })
-  app.config.globalProperties.$t = (key) => key
+  app.use(createI18n({ legacy: false, locale: 'de-DE', messages: { 'de-DE': de } }))
   app.component(
     'router-link',
     defineComponent({
@@ -93,7 +94,7 @@ test('keeps routes, unread indication, full preview text and reply marker while 
   )
   expect(host.querySelector('[data-conversation-preview] > svg.lucide-reply')).not.toBeNull()
   const status = host.querySelector('[data-conversation-status]')
-  expect(status.textContent.trim()).toBe('Open')
+  expect(status.textContent.trim()).toBe('Offen')
   expect(status.classList.contains('whitespace-nowrap')).toBe(true)
   expect(status.closest('[data-conversation-tags]')).toBeNull()
   props.currentConversation = { uuid: 'ticket' }
@@ -116,7 +117,7 @@ test('preserves typing and draft precedence, title fallback and status colours',
   mocks.store.typingByUUID.ticket = true
   await nextTick()
   expect(host.querySelector('[data-conversation-preview]').textContent).toContain(
-    'globals.terms.typing'
+    'Schreibt …'
   )
   mocks.settings.settings['app.show_conversation_subject'] = false
   await nextTick()
@@ -132,7 +133,10 @@ test('preserves typing and draft precedence, title fallback and status colours',
   ]) {
     props.conversation.status = status
     await nextTick()
-    expect(host.querySelector('[data-conversation-status]').classList.contains(color)).toBe(true)
+    const badge = host.querySelector('[data-conversation-status]')
+    expect(badge.classList.contains(color)).toBe(true)
+    expect(badge.textContent.trim()).toBe(({ Open: 'Offen', Closed: 'Geschlossen', Snoozed: 'Schlummernd', Resolved: de['globals.terms.resolved'] })[status] || status)
+    expect(props.conversation.status).toBe(status)
   }
 })
 

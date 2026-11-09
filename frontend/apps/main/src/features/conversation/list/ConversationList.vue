@@ -17,7 +17,7 @@
           <Button variant="ghost" class="w-30">
             <div>
               <span class="mr-1">{{ conversationStore.conversations.total }}</span>
-              <span>{{ conversationStore.getListStatus }}</span>
+              <span>{{ conversationStatusLabel(conversationStore.getListStatus, t) }}</span>
             </div>
             <ChevronDown class="w-4 h-4 ml-2 opacity-50" />
           </Button>
@@ -28,7 +28,7 @@
             :key="status.value"
             @click="handleStatusChange(status)"
           >
-            {{ status.label }}
+            {{ status.displayLabel ?? status.label }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -139,6 +139,7 @@
 </template>
 
 <script setup>
+import { conversationStatusLabel } from '@/utils/conversation-status'
 import { computed, ref } from 'vue'
 import { useConversationListPosition } from '@/composables/useConversationListPosition'
 import { useRoute } from 'vue-router'

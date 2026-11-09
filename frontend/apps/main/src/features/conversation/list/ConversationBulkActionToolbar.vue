@@ -101,7 +101,7 @@
           :key="status.value"
           @click="bulkUpdateStatus(status.label)"
         >
-          {{ status.label }}
+          {{ status.displayLabel ?? status.label }}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

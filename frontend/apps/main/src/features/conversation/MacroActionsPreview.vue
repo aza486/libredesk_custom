@@ -38,6 +38,8 @@
 </template>
 
 <script setup>
+import { conversationPriorityLabel } from '@/utils/conversation-priority'
+import { conversationStatusLabel } from '@/utils/conversation-status'
 import { X, Users, User, MessageSquare, Tags, Flag } from 'lucide-vue-next'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/ui/tooltip'
 import { useI18n } from 'vue-i18n'
@@ -66,10 +68,12 @@ const getIcon = (type) =>
   })[type]
 
 const getDisplayValue = (action) => {
-  if (action.display_value?.length) {
-    return action.display_value.join(', ')
-  }
-  return action.value.join(', ')
+  const values = action.display_value?.length ? action.display_value : action.value
+  return values.map((value) => {
+    if (action.type === 'set_status') return conversationStatusLabel(value, t)
+    if (action.type === 'set_priority') return conversationPriorityLabel(value, t)
+    return value
+  }).join(', ')
 }
 
 const getTooltip = (action) => {

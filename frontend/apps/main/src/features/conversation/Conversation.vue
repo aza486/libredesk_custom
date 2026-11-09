@@ -61,7 +61,7 @@
             class="flex items-center space-x-1 cursor-pointer bg-primary px-3 py-3 md:px-2 md:py-1 rounded-md text-sm"
           >
             <span class="text-primary-foreground font-medium inline-block">
-              {{ conversationStore.current?.status }}
+              {{ conversationStatusLabel(conversationStore.current?.status, t) }}
             </span>
           </div>
         </DropdownMenuTrigger>
@@ -72,7 +72,7 @@
             :key="status.value"
             @click="handleUpdateStatus(status.label)"
           >
-            {{ status.label }}
+            {{ status.displayLabel ?? status.label }}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -112,6 +112,7 @@
 </template>
 
 <script setup>
+import { conversationStatusLabel } from '@/utils/conversation-status'
 import { computed, ref, shallowRef } from 'vue'
 import { useConversationStore } from '@main/stores/conversation'
 import { useUserStore } from '@main/stores/user'

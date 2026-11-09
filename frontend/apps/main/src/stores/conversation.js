@@ -11,6 +11,8 @@ import { subscribeToConversation, sendTypingIndicator, subscribeListReplace } fr
 import { playNotificationSound } from '@shared-ui/composables/useNotificationSound'
 import MessageCache from '../utils/conversation-message-cache'
 import { getI18n } from '../i18n'
+import { conversationStatusLabel } from '../utils/conversation-status'
+import { conversationPriorityLabel } from '../utils/conversation-priority'
 import {
   CONVERSATION_LIST_TYPE,
   CONVERSATION_DEFAULT_STATUSES,
@@ -46,17 +48,26 @@ export const useConversationStore = defineStore('conversation', () => {
   const selectedUUIDs = ref(new Set())
 
   const priorityOptions = computed(() => {
-    return priorities.value.map((p) => ({ label: p.name, value: p.id }))
+    return priorities.value.map((p) => ({
+      label: p.name,
+      value: p.id,
+      displayLabel: conversationPriorityLabel(p.name, getI18n()?.global?.t)
+    }))
   })
   const statusOptions = computed(() => {
-    return statuses.value.map((s) => ({ label: s.name, value: s.id }))
+    return statuses.value.map((s) => ({
+      label: s.name,
+      value: s.id,
+      displayLabel: conversationStatusLabel(s.name, getI18n()?.global?.t)
+    }))
   })
   const statusOptionsNoSnooze = computed(() =>
     statuses.value
       .filter((s) => s.name !== CONVERSATION_DEFAULT_STATUSES.SNOOZED)
       .map((s) => ({
         label: s.name,
-        value: s.id
+        value: s.id,
+        displayLabel: conversationStatusLabel(s.name, getI18n()?.global?.t)
       }))
   )
 

@@ -6,7 +6,7 @@
           <DropdownMenu v-if="conversation?.status">
             <DropdownMenuTrigger as-child>
               <Button class="max-w-full" size="sm">
-                <span class="truncate">{{ conversation.status }}</span>
+                <span class="truncate">{{ conversationStatusLabel(conversation.status, t) }}</span>
                 <ChevronDown class="ml-2 h-4 w-4 shrink-0" />
               </Button>
             </DropdownMenuTrigger>
@@ -15,13 +15,13 @@
                 v-for="status in conversationStore.statusOptions"
                 :key="status.value"
                 @click="updateStatus(status.label)"
-                >{{ status.label }}</DropdownMenuItem
+                >{{ status.displayLabel ?? status.label }}</DropdownMenuItem
               >
             </DropdownMenuContent>
           </DropdownMenu>
           <span v-if="conversation?.priority" class="flex min-w-0 items-center gap-2">
             <PriorityMarker :priority="conversation.priority" :size="16" />
-            <span class="truncate">{{ conversation.priority }}</span>
+            <span class="truncate">{{ conversationPriorityLabel(conversation.priority, t) }}</span>
           </span>
           <span
             class="flex min-w-0 items-center gap-2"
@@ -99,6 +99,8 @@
 </template>
 
 <script setup>
+import { conversationPriorityLabel } from '@/utils/conversation-priority'
+import { conversationStatusLabel } from '@/utils/conversation-status'
 import { computed, ref } from 'vue'
 import { ChevronDown, Mail, Minimize2, UserRound } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'

@@ -1551,5 +1551,17 @@
   "inbox.personalAnswered": "Answered",
   "inbox.personalSpam": "Spam",
   "conversation.personalInboxOwnerOnly": "Only the owner can open this personal mailbox.",
-  "conversation.personalOwnerVisibilityProtected": "The owner of a personal mailbox cannot be removed from visibility."
+  "conversation.personalOwnerVisibilityProtected": "The owner of a personal mailbox cannot be removed from visibility.",
+  "conversation.activity.assignedUser": "Assigned to {value} by {actor}",
+  "conversation.activity.assignedTeam": "Assigned to {value} team by {actor}",
+  "conversation.activity.selfAssigned": "{actor} self-assigned this conversation",
+  "conversation.activity.priorityChanged": "{actor} set priority to {value}",
+  "conversation.activity.statusChanged": "{actor} marked the conversation as {value}",
+  "conversation.activity.tagAdded": "{actor} added tag {value}",
+  "conversation.activity.tagRemoved": "{actor} removed tag {value}",
+  "conversation.activity.slaSet": "{actor} set {value} SLA policy",
+  "conversation.activity.participantJoined": "{actor} joined the conversation",
+  "globals.terms.low": "Low",
+  "globals.terms.medium": "Medium",
+  "globals.terms.high": "High"
 }

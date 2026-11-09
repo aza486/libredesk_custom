@@ -138,7 +138,7 @@
                 data-conversation-status
               >
                 <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
-                {{ conversation.status }}
+                {{ conversationStatusLabel(conversation.status, t) }}
               </span>
               <ConversationTagOverflow
                 v-if="conversation.tags?.length"
@@ -193,6 +193,7 @@
 </template>
 
 <script setup>
+import { conversationStatusLabel } from '@/utils/conversation-status'
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { formatFullTimestamp } from '@shared-ui/utils/datetime.js'

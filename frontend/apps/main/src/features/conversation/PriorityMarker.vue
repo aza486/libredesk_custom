@@ -10,11 +10,12 @@
         :aria-label="priorityLabel"
       />
     </TooltipTrigger>
-    <TooltipContent>{{ priorityName }}</TooltipContent>
+    <TooltipContent>{{ priorityDisplayName }}</TooltipContent>
   </Tooltip>
 </template>
 
 <script setup>
+import { conversationPriorityLabel } from '@/utils/conversation-priority'
 import { computed } from 'vue'
 import PriorityIcon from '@shared-ui/components/icons/PriorityIcon.vue'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@shared-ui/components/ui/tooltip'
@@ -35,5 +36,6 @@ const props = defineProps({
 const { t } = useI18n()
 const priorityName = computed(() => (props.priority || '').trim())
 const marker = computed(() => PRIORITY_MARKERS[priorityName.value.toLowerCase()] || UNKNOWN_MARKER)
-const priorityLabel = computed(() => `${t('globals.terms.priority', 1)}: ${priorityName.value}`)
+const priorityDisplayName = computed(() => conversationPriorityLabel(props.priority, t))
+const priorityLabel = computed(() => `${t('globals.terms.priority', 1)}: ${priorityDisplayName.value}`)
 </script>

@@ -35,7 +35,7 @@
           <div class="flex items-center justify-between w-full">
 
             <div class="flex items-center gap-2">
-              <span>{{ item.label }}</span>
+              <span>{{ item.displayLabel ?? item.label }}</span>
 
               <span
                 v-if="isCurrentUser(item)"
@@ -93,7 +93,7 @@
 
           <!-- Others -->
           <span v-else-if="selected.emoji" class="shrink-0">{{ selected.emoji }}</span>
-          <span class="truncate">{{ selected.label }}</span>
+          <span class="truncate">{{ selected.displayLabel ?? selected.label }}</span>
           <span
             v-if="isCurrentUser(selected)"
             class="text-muted-foreground text-xs shrink-0"

@@ -3,12 +3,7 @@ import dropdown from './dataTableDropdown.vue'
 import { format } from 'date-fns'
 import { CONVERSATION_DEFAULT_STATUSES_LIST } from '@/constants/conversation.js'
 
-const DEFAULT_STATUS_KEY = {
-  Open: 'globals.terms.open',
-  Snoozed: 'globals.terms.snoozed',
-  Resolved: 'globals.terms.resolved',
-  Closed: 'globals.terms.closed'
-}
+import { conversationStatusLabel } from '@/utils/conversation-status'
 
 export const createColumns = (t, { onEdit } = {}) => [
   {
@@ -19,7 +14,7 @@ export const createColumns = (t, { onEdit } = {}) => [
     cell: function ({ row }) {
       const name = row.getValue('name')
       const isDefault = CONVERSATION_DEFAULT_STATUSES_LIST.includes(name)
-      const label = isDefault ? t(DEFAULT_STATUS_KEY[name]) : name
+      const label = conversationStatusLabel(name, t)
       return h('div', { class: 'text-center' },
         onEdit && !isDefault
           ? h('span', {

@@ -29,7 +29,7 @@
               :value="JSON.stringify({ label: item.label, value: item.value })"
               @select="handleSelect"
             >
-              <slot name="item" :item="item">{{ item.label }}</slot>
+              <slot name="item" :item="item">{{ item.displayLabel ?? item.label }}</slot>
               <CheckIcon
                 :class="
                   cn('ml-auto h-4 w-4', String(value) === item.value ? 'opacity-100' : 'opacity-0')
@@ -96,7 +96,7 @@ const filteredItems = computed(() => {
   const term = searchTerm.value?.trim().toLowerCase()
   if (!term) return props.items
   return props.items.filter((item) =>
-    [item.label, item.calling_code]
+    [item.displayLabel, item.label, item.calling_code]
       .filter(Boolean)
       .some((field) => String(field).toLowerCase().includes(term))
   )
@@ -105,7 +105,7 @@ const filteredItems = computed(() => {
 const visibleItems = computed(() => filteredItems.value.slice(0, RENDER_CAP))
 
 const selectedItem = computed(() => props.items.find((i) => i.value === value.value))
-const selectedLabel = computed(() => selectedItem.value?.label || props.defaultLabel)
+const selectedLabel = computed(() => selectedItem.value?.displayLabel ?? (selectedItem.value?.label || props.defaultLabel))
 
 const handleSelect = (ev) => {
   if (typeof ev.detail.value === 'string') {
