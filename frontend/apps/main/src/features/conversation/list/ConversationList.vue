@@ -73,7 +73,7 @@
     </div>
 
     <!-- Content -->
-    <div class="flex-grow overflow-y-auto overscroll-contain">
+    <div ref="listContainer" class="flex-grow min-h-0 overflow-y-auto overscroll-contain" style="overflow-anchor: none" @scroll.passive="saveListPosition">
       <EmptyList
         v-if="showEmpty"
         key="empty"
@@ -92,34 +92,25 @@
         :icon="MessageCircleWarning"
       />
 
-      <TransitionGroup
-        enter-active-class="transition-all duration-300 ease-in-out"
-        enter-from-class="opacity-0 transform translate-y-4"
-        enter-to-class="opacity-100 transform translate-y-0"
-        leave-active-class="transition-all duration-300 ease-in-out"
-        leave-from-class="opacity-100 transform translate-y-0"
-        leave-to-class="opacity-0 transform translate-y-4"
+      <div
+        v-if="!hasErrored && !conversationStore.conversations.loading"
+        key="list"
+        class="divide-y divide-border"
+        :class="{ 'border-b border-border': hasConversations }"
       >
-        <div
-          v-if="!hasErrored && !conversationStore.conversations.loading"
-          key="list"
-          class="divide-y divide-border"
-          :class="{ 'border-b border-border': hasConversations }"
-        >
-          <ConversationListItem
-            v-for="conversation in conversationStore.conversationsList"
-            :key="conversation.uuid"
-            :conversation="conversation"
-            :currentConversation="conversationStore.current"
-            :contactFullName="conversationStore.getContactFullName(conversation.uuid)"
-            class="transition-colors duration-200"
-          />
-        </div>
+        <ConversationListItem
+          v-for="conversation in conversationStore.conversationsList"
+          :key="conversation.uuid"
+          :conversation="conversation"
+          :currentConversation="conversationStore.current"
+          :contactFullName="conversationStore.getContactFullName(conversation.uuid)"
+          class="transition-colors duration-200"
+        />
+      </div>
 
-        <div v-if="conversationStore.conversations.loading" key="loading">
-          <ConversationListItemSkeleton v-for="i in 12" :key="i" :index="i - 1" />
-        </div>
-      </TransitionGroup>
+      <div v-if="conversationStore.conversations.loading" key="loading">
+        <ConversationListItemSkeleton v-for="i in 12" :key="i" :index="i - 1" />
+      </div>
 
       <!-- Load More -->
       <div
@@ -148,7 +139,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useConversationListPosition } from '@/composables/useConversationListPosition'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Inbox, MessageCircleWarning, ChevronDown, Loader2 } from 'lucide-vue-next'
@@ -168,6 +160,8 @@ import ConversationListItem from '@/features/conversation/list/ConversationListI
 import ConversationListItemSkeleton from '@/features/conversation/list/ConversationListItemSkeleton.vue'
 
 const conversationStore = useConversationStore()
+const listContainer = ref(null)
+const { saveListPosition } = useConversationListPosition(listContainer, conversationStore)
 const { canBulkAct } = useBulkActionPermissions()
 const route = useRoute()
 const { t } = useI18n()

@@ -53,56 +53,12 @@ const requestedFilters = computed(() => {
   }
 })
 
-const storeHasCurrentList = () => {
-  if (folderID.value) return false
-  const c = conversationStore.conversations
-  if (!c.initialized) return false
-
-  if (viewID.value)
-    return c.listType === CONVERSATION_LIST_TYPE.VIEW && String(c.viewID) === String(viewID.value)
-
-  if (type.value) {
-    return c.listType === requestedListType.value && c.status === requestedStatus.value
-  }
-
-  if (inboxID.value) {
-    return (
-      c.listType === personalListType.value &&
-      String(c.inboxID) === String(inboxID.value) &&
-      c.status === requestedStatus.value &&
-      JSON.stringify(c.listFilters.filter((f) => f.model !== 'conversation_statuses')) ===
-        JSON.stringify(requestedFilters.value)
-    )
-  }
-
-  if (teamID.value) {
-    const teamListType =
-      route.query.priority === 'high'
-        ? CONVERSATION_LIST_TYPE.TEAM_HIGH
-        : CONVERSATION_LIST_TYPE.TEAM_ALL
-
-    return (
-      c.listType === teamListType &&
-      String(c.teamID) === String(teamID.value) &&
-      c.status === requestedStatus.value
-    )
-  }
-
-  return false
-}
-
 const fetchForCurrentRoute = () => {
   if (!type.value && !teamID.value && !viewID.value && !inboxID.value) return
 
   const key = `${inboxID.value || ''}|${type.value || ''}|${teamID.value || ''}|${viewID.value || ''}|${requestedStatus.value}|${requestedPriority.value}|${route.query.filters || ''}|${folderID.value}`
   if (key === lastFetchedKey) return
   lastFetchedKey = key
-
-  // List already loaded: soft-refresh in place. A full fetch resets the list first and blanks it.
-  if (storeHasCurrentList()) {
-    conversationStore.refreshConversationList()
-    return
-  }
 
   if (folderID.value) {
     const scope = inboxID.value

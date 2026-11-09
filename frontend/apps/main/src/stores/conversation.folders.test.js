@@ -46,7 +46,7 @@ test('a tag-only folder displays open and closed tickets and never appends a sta
   )
 })
 
-test('a server refresh removes tickets moved out of a folder and resets pagination to the refreshed first page', async () => {
+test('a server refresh removes moved tickets while retaining the loaded page range', async () => {
   const store = useConversationStore()
   mocks.api.getSidebarFolderConversations.mockResolvedValueOnce(
     response([{ uuid: 'moved', status: 'Open' }], 1, 26)
@@ -62,7 +62,7 @@ test('a server refresh removes tickets moved out of a folder and resets paginati
   )
   await store.fetchFirstPageConversations()
   expect(store.conversations.data.map((c) => c.uuid)).toEqual(['kept'])
-  expect(store.conversations.page).toBe(1)
+  expect(store.conversations.page).toBe(2)
   expect(store.conversations.total).toBe(1)
   expect(store.conversations.hasMore).toBe(false)
 })
@@ -121,4 +121,209 @@ test('assigned first-page refresh removes tickets claimed by a my_inbox folder',
   await store.fetchFirstPageConversations()
   expect(store.conversations.data).toEqual([])
   expect(store.conversations.total).toBe(0)
+})
+
+const tickets = (start, count) => Array.from({ length: count }, (_, index) => ({
+  uuid: `ticket-${start + index}`, status: 'Open', last_message_at: start + index
+}))
+
+async function loadPages(store, listType = 'folder:customer:0:11', pages = 4) {
+  for (let page = 1; page <= pages; page++) {
+    mocks.api.getSidebarFolderConversations.mockResolvedValueOnce(
+      response(tickets((page - 1) * 25, 25), page, Math.max(150, pages * 25 + 25))
+    )
+    if (page === 1) await store.fetchConversationsList(false, listType)
+    else await store.fetchNextConversations()
+  }
+}
+
+test('opening and switching tickets keeps all loaded pages without another list request', async () => {
+  const store = useConversationStore()
+  await loadPages(store)
+  mocks.api.getConversation = vi.fn(async (uuid) => ({ data: { data: { uuid } } }))
+  await store.fetchConversation('ticket-65')
+  await store.fetchConversation('ticket-66')
+  await store.fetchConversationsList(true, 'folder:customer:0:11')
+  expect(store.conversations.data).toHaveLength(100)
+  expect(store.conversations.page).toBe(4)
+  expect(store.conversations.hasMore).toBe(true)
+  expect(store.conversations.loading).toBe(false)
+  expect(mocks.api.getSidebarFolderConversations).toHaveBeenCalledTimes(4)
+})
+
+test('closing a folder ticket validates the loaded window and keeps pagination and unique rows', async () => {
+  const store = useConversationStore()
+  await loadPages(store)
+  const kept = tickets(0, 101).filter((ticket) => ticket.uuid !== 'ticket-65')
+  mocks.api.getSidebarFolderConversations.mockResolvedValueOnce({
+    data: { data: { results: kept, page: 1, total: 149, total_pages: 2 } }
+  })
+  await store.fetchFirstPageConversations()
+  expect(mocks.api.getSidebarFolderConversations).toHaveBeenLastCalledWith(
+    'customer', '0', '11', expect.objectContaining({ page: 1, page_size: 100 })
+  )
+  expect(store.conversations.data).toHaveLength(100)
+  expect(store.conversations.data.some((ticket) => ticket.uuid === 'ticket-65')).toBe(false)
+  expect(store.conversations.data.some((ticket) => ticket.uuid === 'ticket-90')).toBe(true)
+  expect(store.conversations.page).toBe(4)
+  expect(store.conversations.hasMore).toBe(true)
+  mocks.api.getSidebarFolderConversations.mockResolvedValueOnce(response(tickets(100, 25), 5, 149))
+  await store.fetchNextConversations()
+  expect(new Set(store.conversations.data.map((ticket) => ticket.uuid)).size)
+    .toBe(store.conversations.data.length)
+})
+
+test('returning to a folder restores its loaded snapshot before revalidating it', async () => {
+  const store = useConversationStore()
+  await loadPages(store)
+  const firstKey = store.listKey
+  store.listPositions.set(firstKey, { scrollTop: 6500, candidates: [] })
+  mocks.api.getSidebarFolderConversations.mockResolvedValueOnce(response([{ uuid: 'other' }]))
+  await store.fetchConversationsList(false, 'folder:team:7:12')
+  const secondKey = store.listKey
+  store.listPositions.set(secondKey, { scrollTop: 250, candidates: [] })
+  let finish
+  mocks.api.getSidebarFolderConversations.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+  const pending = store.fetchConversationsList(true, 'folder:customer:0:11')
+  expect(store.listKey).toBe(firstKey)
+  expect(store.conversations.data).toHaveLength(100)
+  expect(store.conversations.page).toBe(4)
+  expect(store.conversations.loading).toBe(false)
+  expect(store.listPositions.get(firstKey).scrollTop).toBe(6500)
+  expect(store.listPositions.get(secondKey).scrollTop).toBe(250)
+  finish({ data: { data: { results: tickets(0, 100), total: 150, total_pages: 2, page: 1 } } })
+  await pending
+})
+
+test('changing a search filter invalidates in-flight results even within the same list type', async () => {
+  const store = useConversationStore()
+  let finish
+  mocks.api.getAllConversations = vi.fn()
+    .mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    .mockResolvedValueOnce(response([{ uuid: 'new-result', status: 'Open' }]))
+  const filter = (value) => [{ model: 'conversations', field: 'subject', operator: 'contains', value }]
+  const old = store.fetchConversationsList(false, 'all', 0, filter('old'))
+  const oldKey = store.listKey
+  await store.fetchConversationsList(false, 'all', 0, filter('new'))
+  finish(response([{ uuid: 'old-result', status: 'Open' }]))
+  await old
+  expect(store.listKey).not.toBe(oldKey)
+  expect(store.conversationsList.map((ticket) => ticket.uuid)).toEqual(['new-result'])
+  expect(store.conversations.page).toBe(1)
+})
+
+test('an older refresh of the same list cannot overwrite a newer refresh', async () => {
+  const store = useConversationStore()
+  await loadPages(store, undefined, 1)
+  let finish
+  mocks.api.getSidebarFolderConversations
+    .mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    .mockResolvedValueOnce(response([{ uuid: 'latest' }]))
+  const old = store.fetchConversationsList(false, 'folder:customer:0:11', 0, [], 0, 1, 0, true)
+  await store.fetchConversationsList(false, 'folder:customer:0:11', 0, [], 0, 1, 0, true)
+  finish(response([{ uuid: 'stale' }]))
+  await old
+  expect(store.conversations.data.map((ticket) => ticket.uuid)).toEqual(['latest'])
+  expect(store.conversations.fetching).toBe(false)
+})
+
+test('a refresh waits for load more so that its newly loaded range is retained', async () => {
+  const store = useConversationStore()
+  await loadPages(store, undefined, 1)
+  let finish
+  mocks.api.getSidebarFolderConversations
+    .mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+    .mockResolvedValueOnce({ data: { data: { results: tickets(0, 50), page: 1, total: 150, total_pages: 3 } } })
+  const next = store.fetchNextConversations()
+  const refresh = store.fetchFirstPageConversations()
+  finish(response(tickets(25, 25), 2, 150))
+  await next
+  await refresh
+  expect(store.conversations.data).toHaveLength(50)
+  expect(store.conversations.page).toBe(2)
+  expect(mocks.api.getSidebarFolderConversations).toHaveBeenLastCalledWith(
+    'customer', '0', '11', expect.objectContaining({ page_size: 50 })
+  )
+})
+
+test('an explicit reset discards the saved position and loaded pages', async () => {
+  const store = useConversationStore()
+  await loadPages(store)
+  store.listPositions.set(store.listKey, { scrollTop: 6500 })
+  const revision = store.listRevision
+  store.resetConversations()
+  mocks.api.getSidebarFolderConversations.mockResolvedValueOnce(response(tickets(0, 25), 1, 150))
+  await store.fetchConversationsList(true, 'folder:customer:0:11')
+  expect(store.listPositions.has(store.listKey)).toBe(false)
+  expect(store.listRevision).toBe(revision + 1)
+  expect(store.conversations.page).toBe(1)
+  expect(store.conversations.data).toHaveLength(25)
+})
+
+test('large loaded windows respect the server page-size limit and are replaced atomically', async () => {
+  const store = useConversationStore()
+  await loadPages(store, undefined, 21)
+  let finish, started
+  const ready = new Promise((resolve) => { started = resolve })
+  mocks.api.getSidebarFolderConversations
+    .mockResolvedValueOnce({ data: { data: { results: tickets(1, 500), page: 1, total: 550, total_pages: 2 } } })
+    .mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; started() }))
+  const pending = store.fetchFirstPageConversations()
+  await ready
+  expect(store.conversations.data[0].uuid).toBe('ticket-0')
+  finish({ data: { data: { results: tickets(501, 49), page: 2, total: 550, total_pages: 2 } } })
+  await pending
+  expect(store.conversations.page).toBe(21)
+  expect(store.conversations.data).toHaveLength(525)
+  expect(store.conversations.data[0].uuid).toBe('ticket-1')
+  expect(mocks.api.getSidebarFolderConversations).toHaveBeenLastCalledWith(
+    'customer', '0', '11', expect.objectContaining({ page: 2, page_size: 500 })
+  )
+})
+
+test('incoming message updates reorder loaded rows without resetting pages or fetching the list', async () => {
+  const store = useConversationStore()
+  mocks.api.getAllConversations = vi.fn().mockResolvedValue(response(tickets(0, 25), 1, 150))
+  await store.fetchConversationsList(false, 'all')
+  for (let page = 2; page <= 4; page++) {
+    mocks.api.getAllConversations.mockResolvedValueOnce(response(tickets((page - 1) * 25, 25), page, 150))
+    await store.fetchNextConversations()
+  }
+  store.handleConvPush({ uuid: 'ticket-65', last_message_at: '2026-11-09T12:00:00Z', last_message: 'new' })
+  expect(store.conversationsList[0].uuid).toBe('ticket-65')
+  expect(store.conversations.page).toBe(4)
+  expect(store.conversations.data).toHaveLength(100)
+  expect(mocks.api.getAllConversations).toHaveBeenCalledTimes(4)
+})
+
+test('closing a ticket in an open list removes it while keeping the other loaded pages', async () => {
+  const store = useConversationStore()
+  mocks.api.getAllConversations = vi.fn().mockResolvedValue(response(tickets(0, 25), 1, 150))
+  await store.fetchConversationsList(false, 'all')
+  for (let page = 2; page <= 4; page++) {
+    mocks.api.getAllConversations.mockResolvedValueOnce(response(tickets((page - 1) * 25, 25), page, 150))
+    await store.fetchNextConversations()
+  }
+  store.mergeConversationUpdate({ uuid: 'ticket-65', status: 'Closed' })
+  expect(store.conversationsList.some((ticket) => ticket.uuid === 'ticket-65')).toBe(false)
+  expect(store.conversationsList.some((ticket) => ticket.uuid === 'ticket-90')).toBe(true)
+  expect(store.conversations.page).toBe(4)
+  expect(store.conversations.hasMore).toBe(true)
+  expect(mocks.api.getAllConversations).toHaveBeenCalledTimes(4)
+})
+
+test('a slow refresh cannot undo a newer incoming message or status update', async () => {
+  const store = useConversationStore()
+  mocks.api.getAllConversations = vi.fn().mockResolvedValue(response(tickets(0, 25), 1, 150))
+  await store.fetchConversationsList(false, 'all')
+  let finish
+  mocks.api.getAllConversations.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve }))
+  const pending = store.fetchFirstPageConversations()
+  store.handleConvPush({ uuid: 'ticket-15', last_message_at: '2026-11-09T12:00:00Z', last_message: 'new' })
+  store.mergeConversationUpdate({ uuid: 'ticket-16', status: 'Closed' })
+  finish(response(tickets(0, 25), 1, 150))
+  await pending
+  expect(store.conversationsList[0]).toMatchObject({ uuid: 'ticket-15', last_message: 'new' })
+  expect(store.conversationsList.some((ticket) => ticket.uuid === 'ticket-16')).toBe(false)
+  expect(mocks.api.getAllConversations).toHaveBeenCalledTimes(2)
 })

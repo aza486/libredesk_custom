@@ -175,6 +175,24 @@ export const useConversationStore = defineStore('conversation', () => {
     errorMessage: ''
   })
 
+  // Session-local list snapshots. Detail navigation never changes this identity.
+  const listKey = ref('')
+  const listRevision = ref(0)
+  const listPositions = new Map()
+  const listCache = new Map()
+  let listRequestSeq = 0
+  let activeListRequest
+  let bypassListCache = false
+  let listEventPatches = new Map()
+  let listEventInserts = new Set()
+
+  function retainListEvent(uuid, payload) {
+    if (!conversations.fetching) return
+    const patch = listEventPatches.get(uuid) || {}
+    deepMerge(patch, payload)
+    listEventPatches.set(uuid, patch)
+  }
+
   const conversation = reactive({
     data: null,
     loading: false,
@@ -651,7 +669,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function fetchNextConversations() {
     if (conversations.fetching || !conversations.hasMore) return
-    fetchConversationsList(
+    return fetchConversationsList(
       false,
       conversations.listType,
       conversations.teamID,
@@ -675,40 +693,39 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function fetchFirstPageConversations() {
-    await fetchConversationsList(
+    const seq = contextSeq
+    if (conversations.fetching && activeListRequest) await activeListRequest
+    if (seq !== contextSeq) return
+    return fetchConversationsList(
       false,
       conversations.listType,
       conversations.teamID,
       conversations.listFilters,
       conversations.viewID,
       1,
-      conversations.inboxID
+      conversations.inboxID,
+      true
     )
   }
 
-  async function fetchConversationsList(
+  function fetchConversationsList(...args) {
+    activeListRequest = loadConversationsList(...args)
+    return activeListRequest
+  }
+
+  async function loadConversationsList(
     showLoader = true,
     listType = null,
     teamID = 0,
     filters = [],
     viewID = 0,
     page = 0,
-    inboxID = 0
+    inboxID = 0,
+    refresh = false
   ) {
     if (!listType) return
-    if (
-      conversations.listType !== listType ||
-      conversations.teamID !== teamID ||
-      conversations.inboxID !== inboxID ||
-      conversations.viewID !== viewID
-    ) {
-      resetConversations()
-    }
-    conversations.listType = listType
+    filters = [...filters]
     if (listType.startsWith('folder:')) conversations.status = ''
-    conversations.inboxID = inboxID
-    conversations.teamID = teamID
-    conversations.viewID = viewID
     if (conversations.status && !listType.startsWith('folder:')) {
       filters = filters.filter((f) => f.model !== 'conversation_statuses')
       filters.push({
@@ -718,26 +735,92 @@ export const useConversationStore = defineStore('conversation', () => {
         value: conversations.status
       })
     }
+    const key = JSON.stringify([
+      userStore.userID, listType, String(teamID), String(inboxID), String(viewID),
+      conversations.status, conversations.sortField, filters
+    ])
+    const changed = key !== listKey.value
+    if (changed) {
+      if (listKey.value && conversations.initialized && !conversations.errorMessage) {
+        listCache.set(listKey.value, {
+          data: conversations.data, page: conversations.page,
+          hasMore: conversations.hasMore, total: conversations.total
+        })
+      }
+      resetConversations(false)
+      listKey.value = key
+      const cached = bypassListCache ? null : listCache.get(key)
+      if (cached) {
+        Object.assign(conversations, cached, { initialized: true })
+        refresh = true
+      }
+    } else if (page === 0 && conversations.fetching && !refresh) {
+      return activeListRequest
+    } else if (page === 0 && conversations.initialized && !conversations.errorMessage && !refresh) {
+      return
+    }
+    bypassListCache = false
+    conversations.listType = listType
+    conversations.inboxID = inboxID
+    conversations.teamID = teamID
+    conversations.viewID = viewID
     conversations.listFilters = filters
-    const guard = showLoader ? delayedLoading(conversations, 'loading') : null
+    // Keep mounted rows during updates; only an empty list needs skeletons.
+    conversations.loading = showLoader && !conversations.data.length
     conversations.fetching = true
     if (page === 0) page = conversations.page
     const seq = contextSeq
-    const isStale = () => seq !== contextSeq
+    listEventPatches = new Map()
+    listEventInserts = new Set()
+    const requestSeq = ++listRequestSeq
+    const isStale = () => seq !== contextSeq || requestSeq !== listRequestSeq
+    const loadedPages = conversations.page
     try {
       conversations.errorMessage = ''
-      const response = await makeConversationListRequest(
-        listType,
-        teamID,
-        viewID,
-        filters,
-        page,
-        inboxID
-      )
-      if (isStale()) return
-      processConversationListResponse(response)
+      if (refresh) {
+        // Validate the entire loaded window on the server, including custom /
+        // exclusive filters. One request up to the backend's 500-row limit;
+        // larger windows are assembled atomically before replacing any rows.
+        const pageSize = Math.min(loadedPages * CONV_LIST_PAGE_SIZE, 500)
+        const rows = []
+        let total = 0
+        for (let batch = 1; rows.length < loadedPages * CONV_LIST_PAGE_SIZE; batch++) {
+          const response = await makeConversationListRequest(
+            listType, teamID, viewID, filters, batch, inboxID, pageSize
+          )
+          if (isStale()) return
+          const result = response.data.data
+          rows.push(...result.results)
+          total = result.total
+          if (batch >= result.total_pages || !result.results.length) break
+        }
+        if (isStale()) return
+        // Events received after this request started are newer than its snapshot.
+        // Preserve newly inserted, locally eligible rows as well as field patches.
+        const returned = new Set(rows.map((row) => row.uuid))
+        for (const row of conversations.data) {
+          if (listEventInserts.has(row.uuid) && !returned.has(row.uuid)) rows.unshift(row)
+        }
+        conversations.data = []
+        processConversationListResponse({ data: { data: {
+          results: rows, page: loadedPages, total,
+          total_pages: Math.ceil(total / CONV_LIST_PAGE_SIZE)
+        } } })
+      } else {
+        const response = await makeConversationListRequest(
+          listType, teamID, viewID, filters, page, inboxID
+        )
+        if (isStale()) return
+        processConversationListResponse(response)
+      }
     } catch (error) {
       if (isStale()) return
+      if ([401, 403, 404].includes(error?.response?.status)) {
+        listCache.delete(key)
+        conversations.data = []
+        conversations.total = 0
+        conversations.hasMore = false
+      }
       if (
         [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
           listType
@@ -757,23 +840,20 @@ export const useConversationStore = defineStore('conversation', () => {
         conversations.total = 0
       }
     } finally {
-      if (guard) {
-        if (isStale()) guard.cancel()
-        else guard.release()
-      }
       if (!isStale()) {
+        conversations.loading = false
         conversations.initialized = true
         conversations.fetching = false
       }
     }
   }
 
-  async function makeConversationListRequest(listType, teamID, viewID, filters, page, inboxID) {
+  async function makeConversationListRequest(listType, teamID, viewID, filters, page, inboxID, pageSize = CONV_LIST_PAGE_SIZE) {
     if (listType.startsWith('folder:')) {
       const [, scope, scopeID, folderID] = listType.split(':')
       return api.getSidebarFolderConversations(scope, scopeID, folderID, {
         page,
-        page_size: CONV_LIST_PAGE_SIZE,
+        page_size: pageSize,
         order_by: `${sortFieldMap[conversations.sortField].model}.${sortFieldMap[conversations.sortField].field}`,
         order: sortFieldMap[conversations.sortField].order
       })
@@ -785,7 +865,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.PERSONAL_HIGH:
         return await api.getPersonalConversations(inboxID, {
           page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -799,7 +879,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.ASSIGNED_HIGH:
         return await api.getAssignedConversations({
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -811,7 +891,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.UNASSIGNED:
         return await api.getUnassignedConversations({
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -822,7 +902,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.ALL:
         return await api.getAllConversations({
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -833,7 +913,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.TEAM_UNASSIGNED:
         return await api.getTeamUnassignedConversations(teamID, {
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -845,7 +925,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.TEAM_HIGH:
         return await api.getTeamConversations(teamID, {
           page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -857,7 +937,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.VIEW:
         return await api.getViewConversations(viewID, {
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -867,7 +947,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.MENTIONED:
         return await api.getMentionedConversations({
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -879,7 +959,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.VISIBLE:
         return await api.getVisibleConversations({
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -891,7 +971,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.VISIBLE_INTERNAL:
         return await api.getVisibleInternalConversations({
           page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -904,7 +984,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.CUSTOMER_HIGH:
         return await api.getCustomerConversations({
           page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -917,7 +997,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.SERVICE_MAILS:
         return await api.getServiceMailConversations({
           page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -929,7 +1009,7 @@ export const useConversationStore = defineStore('conversation', () => {
       case CONVERSATION_LIST_TYPE.CREATED:
         return await api.getCreatedConversations({
           page: page,
-          page_size: CONV_LIST_PAGE_SIZE,
+          page_size: pageSize,
           order_by:
             sortFieldMap[conversations.sortField].model +
             '.' +
@@ -958,14 +1038,13 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function processConversationListResponse(response) {
     const apiResponse = response.data.data
-    // Scope membership can change on any supported filter field. The server's
-    // first page replaces stale rows so moved tickets disappear immediately.
-    if (hasExclusiveScope() && apiResponse.page === 1) {
-      conversations.data = []
-      conversations.page = 1
-    }
     const newConversations = []
+    const seen = new Set()
     for (const conv of apiResponse.results) {
+      if (seen.has(conv.uuid)) continue
+      seen.add(conv.uuid)
+      const newer = listEventPatches.get(conv.uuid)
+      if (newer) deepMerge(conv, newer)
       if (!mergeIntoList(conv.uuid, conv)) newConversations.push(conv)
     }
     conversations.page = Math.max(conversations.page, apiResponse.page)
@@ -1133,10 +1212,13 @@ export const useConversationStore = defineStore('conversation', () => {
   function updateConversationLastMessage(uuid, message) {
     const conv = conversations.data?.find((c) => c.uuid === uuid)
     if (!conv) return
-    conv.last_message =
-      message.text_content || message.content || getMediaPreview(message.attachments)
-    conv.last_message_at = message.created_at
-    conv.last_message_sender = message.sender_type
+    const update = {
+      last_message: message.text_content || message.content || getMediaPreview(message.attachments),
+      last_message_at: message.created_at,
+      last_message_sender: message.sender_type
+    }
+    retainListEvent(uuid, update)
+    Object.assign(conv, update)
   }
 
   async function updateConversationMessage(message) {
@@ -1313,6 +1395,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function handleConvPush(payload) {
     if (!payload || !payload.uuid) return
+    retainListEvent(payload.uuid, payload)
     const existing = mergeIntoList(payload.uuid, payload)
     if (existing) {
       if (conversation.data?.uuid === payload.uuid) {
@@ -1344,11 +1427,12 @@ export const useConversationStore = defineStore('conversation', () => {
     if (conversations.status !== '' && payload.status !== conversations.status) return
     if (!conversations.data) conversations.data = []
     conversations.data.unshift(payload)
+    if (conversations.fetching) listEventInserts.add(payload.uuid)
     conversations.total += 1
-    trimListToCurrentPage()
   }
 
   function mergeConversationUpdate(update) {
+    retainListEvent(update.uuid, update)
     if (conversation.data?.uuid === update.uuid) {
       deepMerge(conversation.data, update)
     }
@@ -1369,7 +1453,15 @@ export const useConversationStore = defineStore('conversation', () => {
     })
   }
 
-  function resetConversations() {
+  function resetConversations(clearPosition = true) {
+    if (clearPosition) {
+      bypassListCache = true
+      listCache.delete(listKey.value)
+      listPositions.delete(listKey.value)
+      listRevision.value++
+    }
+    conversations.loading = false
+    conversations.fetching = false
     conversations.data = []
     conversations.page = 1
     conversations.initialized = false
@@ -1534,6 +1626,9 @@ export const useConversationStore = defineStore('conversation', () => {
   return {
     macros,
     conversations,
+    listKey,
+    listRevision,
+    listPositions,
     conversation,
     messages,
     conversationsList,

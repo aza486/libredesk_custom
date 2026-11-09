@@ -5,6 +5,7 @@
         :to="conversationRoute"
         class="conversation-card group relative block min-w-0 transition-colors duration-150 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         data-conversation-card
+        :data-conversation-id="conversation.uuid"
         :class="[
           {
             'bg-primary/15 dark:bg-primary/20 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary':
