@@ -312,38 +312,29 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function isSpamConversation(conv) {
-    const tags = Array.isArray(conv?.tags) ? conv.tags : []
-    return tags.some((tag) => {
-      const isObj = typeof tag === 'object' && tag !== null
-      const id = isObj ? tag.id : tag
-      const name = isObj ? tag.name : tag
-      if (String(id) === '12') return true
-      return (
-        String(name ?? '')
-          .replace(/[^\p{L}\p{N}]/gu, '')
-          .toLowerCase() === 'spam'
-      )
-    })
+    return (Array.isArray(conv?.tags) ? conv.tags : []).some((tag) =>
+      typeof tag === 'object' && tag !== null
+        ? Number(tag.id) === 12 || tag.name === '🗑Spam'
+        : String(tag) === '12' || tag === '🗑Spam'
+    )
   }
 
-  function hasPersonalSpamFilter() {
-    return conversations.listFilters.some((filter) => {
-      if (filter.model !== 'conversations' || filter.field !== 'tags' || filter.operator !== 'contains') {
-        return false
-      }
-      const rawValue = filter.value
-      const values = Array.isArray(rawValue)
-        ? rawValue
-        : String(rawValue ?? '')
-          .replace(/\[|\]|"/g, '')
-          .split(',')
-          .map((part) => part.trim())
-          .filter(Boolean)
-      return values.some((value) => ['12', 12].includes(String(value)))
-    })
+  function hasSpamViewFilter() {
+    const filters = conversations.listFilters
+    if (!Array.isArray(filters) || filters.length !== 1) return false
+    const [filter] = filters
+    if (filter.model !== 'conversations' || filter.field !== 'tags' || filter.operator !== 'contains') return false
+    try {
+      const values = JSON.parse(filter.value)
+      return Array.isArray(values) && values.length === 1 && values[0] === 12
+    } catch {
+      return false
+    }
   }
 
   function matchesAssignmentScope(conv) {
+    const spamView = !conversations.listType?.startsWith('folder:') && hasSpamViewFilter()
+    if (isSpamConversation(conv) !== spamView) return false
     // Folder responses already use the full authorized server-side base list.
     // In particular, an explicitly shared personal ticket can belong to assigned
     // even when this employee is not an owner of that mailbox.
@@ -375,7 +366,7 @@ export const useConversationStore = defineStore('conversation', () => {
         ) {
           return false
         }
-        if (hasPersonalSpamFilter()) {
+        if (hasSpamViewFilter()) {
           return isSpamConversation(conv) &&
             (conversations.listType !== CONVERSATION_LIST_TYPE.PERSONAL_HIGH || conv.priority === 'High')
         }
@@ -1401,7 +1392,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function canPushInsert(conv) {
-    if (hasExclusiveScope()) return false
+    if (isSpamConversation(conv) || hasSpamViewFilter() || hasExclusiveScope()) return false
 
     // Tag and custom filters are evaluated by the backend, including Spam.
     if (
@@ -1429,7 +1420,7 @@ export const useConversationStore = defineStore('conversation', () => {
         [CONVERSATION_LIST_TYPE.PERSONAL, CONVERSATION_LIST_TYPE.PERSONAL_HIGH].includes(
           conversations.listType
         ) && conversations.listFilters.some((filter) => filter.model !== 'conversation_statuses')
-      if (hasServerOnlyFilters || hasExclusiveScope()) {
+      if (hasServerOnlyFilters || hasExclusiveScope() || Object.hasOwn(payload, 'tags')) {
         refreshConversationListForRealtimeEvent()
         return
       }
@@ -1459,7 +1450,15 @@ export const useConversationStore = defineStore('conversation', () => {
     if (conversation.data?.uuid === update.uuid) {
       deepMerge(conversation.data, update)
     }
-    mergeIntoList(update.uuid, update)
+    const existing = mergeIntoList(update.uuid, update)
+    if (Object.hasOwn(update, 'tags')) {
+      emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'inbox-list' })
+      if (existing && matchesAssignmentScope(existing) === false) {
+        conversations.data = conversations.data.filter((item) => item.uuid !== update.uuid)
+        conversations.total = Math.max(0, conversations.total - 1)
+      }
+      refreshConversationListForRealtimeEvent()
+    }
   }
 
   function mergeContactUpdate(update) {

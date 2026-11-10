@@ -327,3 +327,50 @@ test('a slow refresh cannot undo a newer incoming message or status update', asy
   expect(store.conversationsList.some((ticket) => ticket.uuid === 'ticket-16')).toBe(false)
   expect(mocks.api.getAllConversations).toHaveBeenCalledTimes(2)
 })
+
+test('Spam tag updates from another employee remove loaded rows and refresh totals without resetting pagination', async () => {
+  const store = useConversationStore()
+  mocks.api.getAllConversations = vi.fn().mockResolvedValue(response(tickets(0, 25), 1, 150))
+  await store.fetchConversationsList(false, 'all')
+  for (let page = 2; page <= 4; page++) {
+    mocks.api.getAllConversations.mockResolvedValueOnce(response(tickets((page - 1) * 25, 25), page, 150))
+    await store.fetchNextConversations()
+  }
+  mocks.api.getAllConversations.mockResolvedValue(response(tickets(0, 25), 1, 149))
+  store.mergeConversationUpdate({ uuid: 'ticket-65', tags: ['🗑Spam', 'Rekla'], status: 'Closed' })
+  expect(store.conversationsList.some((ticket) => ticket.uuid === 'ticket-65')).toBe(false)
+  expect(store.conversations.page).toBe(4)
+  expect(store.conversationsList.some((ticket) => ticket.uuid === 'ticket-90')).toBe(true)
+  expect(mocks.emit).toHaveBeenCalledWith(expect.any(String), { model: 'inbox-list' })
+})
+
+test('Spam wins over custom folders immediately on WebSocket updates', async () => {
+  const store = useConversationStore()
+  mocks.api.getSidebarFolderConversations.mockResolvedValue(response([{ uuid: 'rekla', status: 'Open', tags: ['Rekla'] }]))
+  await store.fetchConversationsList(false, 'folder:customer:0:11')
+  mocks.api.getSidebarFolderConversations.mockResolvedValue(response([]))
+  store.mergeConversationUpdate({ uuid: 'rekla', status: 'Closed', tags: ['Rekla', '🗑Spam'] })
+  expect(store.conversationsList).toEqual([])
+  expect(store.conversations.total).toBe(0)
+})
+
+test('an Open Spam push cannot enter a regular All list', async () => {
+  const store = useConversationStore()
+  mocks.api.getAllConversations = vi.fn().mockResolvedValue(response([]))
+  await store.fetchConversationsList(false, 'all')
+  store.handleConvPush({ uuid: 'spam', status: 'Open', tags: [{ id: 12, name: '🗑Spam' }] })
+  expect(store.conversationsList).toEqual([])
+})
+
+test('removing Spam leaves the customer Spam view immediately, including originally Closed tickets', async () => {
+  const store = useConversationStore()
+  store.conversations.status = ''
+  const filters = [{ model: 'conversations', field: 'tags', operator: 'contains', value: '[12]' }]
+  mocks.api.getCustomerConversations = vi.fn().mockResolvedValue(response([{ uuid: 'spam', status: 'Closed', tags: ['🗑Spam', 'Rekla'] }]))
+  await store.fetchConversationsList(false, 'customer', 0, filters)
+  expect(store.conversationsList).toHaveLength(1)
+  mocks.api.getCustomerConversations.mockResolvedValue(response([]))
+  store.mergeConversationUpdate({ uuid: 'spam', tags: ['Rekla'] })
+  expect(store.conversationsList).toEqual([])
+  expect(store.conversations.total).toBe(0)
+})

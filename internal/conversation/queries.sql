@@ -631,7 +631,10 @@ WHERE assigned_user_id = $1 AND status_id IN (SELECT id FROM conversation_status
 
 -- name: update-conversation-custom-attributes
 UPDATE conversations
-SET custom_attributes = $2,
+SET custom_attributes = ($2::jsonb - '_spam_previous_state') ||
+    CASE WHEN custom_attributes ? '_spam_previous_state'
+    THEN jsonb_build_object('_spam_previous_state', custom_attributes->'_spam_previous_state')
+    ELSE '{}'::jsonb END,
     updated_at = NOW()
 WHERE uuid = $1;
 

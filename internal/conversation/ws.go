@@ -80,6 +80,20 @@ func (m *Manager) BroadcastConversationUpdate(conversationUUID string, data map[
 	})
 }
 
+// A tag can move a ticket into a list that did not subscribe to it yet.
+// Notify all currently authorized connected agents, using the existing ACL.
+func (m *Manager) broadcastTagMembershipUpdate(uuid string, data map[string]any) {
+	data["uuid"] = uuid
+	userIDs := m.AuthorizedConnectedAgentIDs(uuid)
+	if len(userIDs) == 0 {
+		return
+	}
+	m.broadcastToUsers(userIDs, wsmodels.Message{
+		Type: wsmodels.MessageTypeConversationUpdate,
+		Data: data,
+	})
+}
+
 func (m *Manager) BroadcastContactUpdate(contactID int, data map[string]any) {
 	data["contact_id"] = contactID
 	var uuids []string

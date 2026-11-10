@@ -34,7 +34,6 @@ import (
 	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
-	tagmanager "github.com/abhinavxd/libredesk/internal/tag"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
@@ -990,13 +989,29 @@ func (c *Manager) populateListInboxOwners(conversations []models.ConversationLis
 
 // ReOpenConversation reopens a conversation if it's snoozed, resolved or closed.
 func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User) error {
+	tx, err := c.lockSpamConversation(conversationUUID)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	spam, err := conversationHasSpam(tx, conversationUUID)
+	if err != nil {
+		return err
+	}
+	if spam {
+		return nil
+	}
 	var conversationID int
-	if err := c.q.ReOpenConversation.QueryRow(conversationUUID).Scan(&conversationID); err != nil {
+	if err := tx.Stmtx(c.q.ReOpenConversation).QueryRow(conversationUUID).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
 		c.lo.Error("error reopening conversation", "uuid", conversationUUID, "error", err)
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
 	}
 
 	// Reopening revives any first response or resolution deadline the resolved status had nulled.
@@ -1496,8 +1511,20 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 		snoozeUntil = time.Now().Add(duration)
 	}
 
-	conversationBeforeChange, err := c.GetConversation(0, uuid, "")
+	tx, err := c.lockSpamConversation(uuid)
 	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	spam, err := conversationHasSpam(tx, uuid)
+	if err != nil {
+		return err
+	}
+	if spam && status != models.StatusClosed {
+		return envelope.NewError(envelope.InputError, "Remove the Spam tag before changing status.", nil)
+	}
+	var conversationBeforeChange models.Conversation
+	if err := tx.Stmtx(c.q.GetConversation).Get(&conversationBeforeChange, 0, uuid, ""); err != nil {
 		c.lo.Error("error fetching conversation before status change", "uuid", uuid, "error", err)
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -1510,9 +1537,19 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 	}
 
 	// Update the conversation status.
-	if _, err := c.q.UpdateConversationStatus.Exec(uuid, status, snoozeUntil); err != nil {
+	if _, err := tx.Stmtx(c.q.UpdateConversationStatus).Exec(uuid, status, snoozeUntil); err != nil {
 		c.lo.Error("error updating conversation status", "error", err)
 		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	if spam {
+		// Legacy Spam may still be Open. Closing it uses the same quiet path.
+		c.BroadcastConversationUpdate(uuid, map[string]any{"status": models.StatusClosed})
+		return nil
 	}
 
 	// Stamps a just-resolved resolution SLA immediately and recomputes the cached deadline.
@@ -1594,114 +1631,21 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 
 // SetConversationTags sets the tags associated with a conversation.
 func (c *Manager) SetConversationTags(uuid string, action string, tagNames []string, actor umodels.User) error {
-	c.lo.Info(
-		"SET TAGS DEBUG",
-		"action", action,
-		"tagNames", tagNames,
-	)
-	// Get current tags list.
-	prevTags, err := c.getConversationTags(uuid)
+	prevTags, newTags, statusChanged, err := c.mutateTagsWithSpam(uuid, action, tagNames, actor)
 	if err != nil {
-		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
-	if prevTags == nil {
-		prevTags = []string{}
-	}
-
-	if action == amodels.ActionAddTags {
-		for _, tagName := range tagNames {
-			if tagmanager.IsSystemTagName(tagName) && actor.ID != 41 {
-				return envelope.NewError(
-					envelope.InputError,
-					"System tags cannot be added manually.",
-					nil,
-				)
-			}
-		}
-	}
-
-	// Add specified tags, ignore existing ones.
-	if action == amodels.ActionAddTags {
-		if _, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
-			c.lo.Error("error adding conversation tags", "error", err)
-			return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-		}
-	}
-
-	if action == amodels.ActionSetTags {
-		for _, prevTag := range prevTags {
-			if tagmanager.IsSystemTagName(prevTag) && !slices.Contains(tagNames, prevTag) {
-				return envelope.NewError(
-					envelope.InputError,
-					"System tags cannot be removed.",
-					nil,
-				)
-			}
-		}
-	}
-
-	// Set specified tags and remove all other existing ones.
-	if action == amodels.ActionSetTags {
-		if _, err := c.q.SetConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
-			c.lo.Error("error setting conversation tags", "error", err)
-			return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-		}
-	}
-
-	if action == amodels.ActionRemoveTags {
-		for _, tagName := range tagNames {
-			if tagmanager.IsSystemTagName(tagName) {
-				return envelope.NewError(
-					envelope.InputError,
-					"System tags cannot be removed.",
-					nil,
-				)
-			}
-		}
-	}
-
-	// Delete specified tags, ignore all others.
-	if action == amodels.ActionRemoveTags {
-		if _, err := c.q.RemoveConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
-			c.lo.Error("error removing conversation tags", "error", err)
-			return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-		}
-	}
-
-	// Get updated tags list.
-	newTags, err := c.getConversationTags(uuid)
-	if err != nil {
-		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
-
-	c.lo.Info(
-		"ADDING TAGS",
-		"conversation_uuid", uuid,
-		"actor_id", actor.ID,
-		"tags", tagNames,
-	)
-
-	res, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames))
-	if err != nil {
-		c.lo.Error("error adding conversation tags", "error", err)
-		return envelope.NewError(
-			envelope.GeneralError,
-			c.i18n.T("globals.messages.somethingWentWrong"),
-			nil,
-		)
-	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		c.lo.Error("rows affected error", "error", err)
-	} else {
-		c.lo.Info("ADD TAGS RESULT", "rows", rows)
+		return err
 	}
 
 	// Fetch conversation for webhook.
 	conversation, err := c.GetConversation(0, uuid, "")
 	if err != nil {
 		c.lo.Error("error fetching conversation after tags change", "uuid", uuid, "error", err)
+	}
+
+	if statusChanged && conversation.ID != 0 {
+		if err := c.RecordStatusChange(conversation.Status.String, uuid, actor); err != nil {
+			c.lo.Error("error recording spam status activity", "uuid", uuid, "error", err)
+		}
 	}
 
 	// Trigger webhook for conversation tags changed.
@@ -1738,7 +1682,13 @@ func (c *Manager) SetConversationTags(uuid string, action string, tagNames []str
 		}
 	}
 
-	c.BroadcastConversationUpdate(uuid, map[string]any{"tags": newTags})
+	update := map[string]any{"tags": newTags}
+	if statusChanged {
+		update["status"] = conversation.Status.String
+		update["closed_at"] = conversation.ClosedAt
+		update["snoozed_until"] = conversation.SnoozedUntil
+	}
+	c.broadcastTagMembershipUpdate(uuid, update)
 
 	return nil
 }
@@ -1752,14 +1702,20 @@ func (c *Manager) AddSystemTags(uuid string, tagNames []string) error {
 		return nil
 	}
 
-	if _, err := c.q.AddConversationTags.Exec(uuid, pq.Array(tagNames)); err != nil {
-		c.lo.Error("error adding system conversation tags", "uuid", uuid, "error", err)
-		return envelope.NewError(
-			envelope.GeneralError,
-			c.i18n.T("globals.messages.somethingWentWrong"),
-			nil,
-		)
+	_, newTags, statusChanged, err := c.mutateTagsWithSpam(uuid, amodels.ActionAddTags, tagNames, umodels.User{ID: 41})
+	if err != nil {
+		return err
 	}
+	update := map[string]any{"tags": newTags}
+	if statusChanged {
+		conversation, err := c.GetConversation(0, uuid, "")
+		if err == nil {
+			update["status"] = conversation.Status.String
+			update["closed_at"] = conversation.ClosedAt
+			update["snoozed_until"] = conversation.SnoozedUntil
+		}
+	}
+	c.broadcastTagMembershipUpdate(uuid, update)
 
 	c.lo.Info("SYSTEM TAGS ADDED", "uuid", uuid)
 
@@ -2091,12 +2047,20 @@ func (m *Manager) ApplyAction(action amodels.RuleAction, conv models.Conversatio
 			return fmt.Errorf("sending private note: %w", err)
 		}
 	case amodels.ActionReply:
+		// Also guard queued/time-triggered reply actions using current tag state.
+		spam, err := conversationHasSpam(m.db, conv.UUID)
+		if err != nil {
+			return err
+		}
+		if spam {
+			return nil
+		}
 		// Automated replies always go to the contact only. CCs from the
 		// conversation history are deliberately not carried forward.
 		if conv.Contact.Email.String == "" {
 			return fmt.Errorf("auto-reply skipped: contact has no email for conversation: %s", conv.UUID)
 		}
-		_, err := m.QueueReply(
+		_, err = m.QueueReply(
 			[]mmodels.Media{},
 			conv.InboxID,
 			user.ID,
@@ -2356,6 +2320,14 @@ func (m *Manager) RemoveConversationAssignee(uuid, typ string, actor umodels.Use
 
 // SendCSATReply sends a CSAT reply message to a conversation. No-op if one was already sent or contact has no email.
 func (m *Manager) SendCSATReply(actorUserID int, conversation models.Conversation) error {
+	spam, err := conversationHasSpam(m.db, conversation.UUID)
+	if err != nil {
+		return err
+	}
+	if spam {
+		return nil
+	}
+
 	if conversation.Contact.Email.String == "" {
 		m.lo.Info("CSAT reply skipped: contact has no email for conversation: %s", "conversation_uuid", conversation.UUID)
 		return nil
@@ -2648,42 +2620,6 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 	)
 	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID)
 	personalAccess := authz.PersonalAccessSQL("conversations", viewingUserID, isAdmin)
-	personalSpamFilterActive := func() bool {
-		if filtersJSON == "" || filtersJSON == "[]" {
-			return false
-		}
-		var fs []struct {
-			Model    string `json:"model"`
-			Field    string `json:"field"`
-			Operator string `json:"operator"`
-			Value    any    `json:"value"`
-		}
-		if err := json.Unmarshal([]byte(filtersJSON), &fs); err != nil {
-			return false
-		}
-		for _, f := range fs {
-			if f.Model != "conversations" || f.Field != "tags" || f.Operator != "contains" {
-				continue
-			}
-			switch v := f.Value.(type) {
-			case string:
-				if strings.Contains(v, "12") {
-					return true
-				}
-			case []any:
-				for _, part := range v {
-					if fmt.Sprint(part) == "12" {
-						return true
-					}
-				}
-			case float64:
-				if v == 12 {
-					return true
-				}
-			}
-		}
-		return false
-	}
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
 		switch lt {
@@ -2696,9 +2632,7 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 			if lt == models.PersonalHighPriorityConversations {
 				condition += " AND conversation_priorities.name = 'High'"
 			}
-			if lt != "folder-personal" && !personalSpamFilterActive() {
-				condition += " AND NOT EXISTS (SELECT 1 FROM conversation_tags ct WHERE ct.conversation_id = conversations.id AND ct.tag_id = 12)"
-			}
+
 			conditions = append(conditions, "("+condition+")")
 		case "folder-customer":
 			conditions = append(conditions, "("+sidebarScopeSQL("customer", 0)+" AND "+ticketAccessCondition+")")
@@ -2958,14 +2892,24 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 		whereClause = "AND (" + strings.Join(conditions, " OR ") + ")"
 	}
 
-	if folderID != 0 && len(folders) > 0 {
+	// Spam wins before folder assignment, counts, filters and pagination.
+	spamView := folderID <= 0 && len(listTypes) == 1 &&
+		(listTypes[0] == models.CustomerConversations || listTypes[0] == models.PersonalConversations) &&
+		isSpamViewFilter(filtersJSON)
+	if spamView {
+		whereClause += " AND " + spamExistsSQL
+	} else {
+		whereClause += " AND NOT " + spamExistsSQL
+	}
+
+	if !spamView && folderID != 0 && len(folders) > 0 {
 		clause, args, err := sidebarAssignmentClause(folders, folderID, qArgs, c.filterLocation())
 		if err != nil {
 			return "", nil, err
 		}
 		whereClause += " AND (" + clause + ")"
 		qArgs = append(qArgs, args...)
-	} else if folderID > 0 {
+	} else if !spamView && folderID > 0 {
 		return "", nil, fmt.Errorf("folder not found")
 	}
 	baseQuery = fmt.Sprintf(baseQuery, whereClause)

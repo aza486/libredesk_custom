@@ -1597,6 +1597,15 @@ func (m *Manager) uploadThumbnailForMedia(media mmodels.Media, content []byte) e
 // for incoming messages. This allows other channels to insert messages first and then call this
 // function to trigger the necessary hooks.
 func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConversation bool) error {
+	// The message is already persisted. Spam never enters reply/reopen automations.
+	spam, err := conversationHasSpam(m.db, conversationUUID)
+	if err != nil {
+		return err
+	}
+	if spam {
+		return nil
+	}
+
 	// Start waiting since clock, cleared when agent replies.
 	now := time.Now()
 	m.UpdateConversationWaitingSince(conversationUUID, &now)
@@ -1633,6 +1642,14 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 	if err != nil {
 		m.lo.Error("error fetching conversation for incoming message hooks", "conversation_uuid", conversationUUID, "error", err)
 	} else {
+		// Re-check after reopening: a tag transition may have won the row lock.
+		spam, err := conversationHasSpam(m.db, conversationUUID)
+		if err != nil {
+			return err
+		}
+		if spam {
+			return nil
+		}
 		isServiceMail, serviceErr := m.IsServiceEmailAddress(conversation.Contact.Email.String)
 
 		if serviceErr != nil {
