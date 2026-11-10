@@ -3,12 +3,12 @@
     <ContextMenuTrigger asChild>
       <router-link
         :to="conversationRoute"
-        class="conversation-card group relative block min-w-0 transition-colors duration-150 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        class="conversation-card group relative block min-w-0 rounded-lg border border-border transition-colors duration-150 ease-in-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         data-conversation-card
         :data-conversation-id="conversation.uuid"
         :class="[
           {
-            'bg-primary/15 dark:bg-primary/20 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary':
+            'bg-primary/15 dark:bg-primary/20 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:border-l-2 before:border-primary ring-1 ring-inset ring-primary/60':
               isCurrent,
             'bg-primary/5 hover:bg-primary/10': isItemSelected && !isCurrent,
             'hover:bg-accent/40': !isCurrent && !isItemSelected
@@ -99,37 +99,13 @@
               </div>
             </div>
 
-            <div class="flex min-w-0 items-center gap-2" data-conversation-preview>
-              <Reply
-                v-if="
-                  !isTyping &&
-                  !(hasDraftForConversation && !isCurrent) &&
-                  conversation.last_message_sender === 'agent'
-                "
-                class="shrink-0 text-success"
-                :size="14"
-              />
-              <p
-                class="min-w-0 flex-1 truncate text-xs font-normal leading-4"
-                :class="isUnread ? 'text-foreground' : 'text-muted-foreground'"
-              >
-                <span v-if="isTyping" class="italic text-foreground">{{
-                  $t('globals.terms.typing')
-                }}</span>
-                <template v-else-if="hasDraftForConversation && !isCurrent">
-                  <span class="font-medium text-foreground">{{ $t('globals.terms.draft') }}:</span>
-                  {{ draftPreview }}
-                </template>
-                <template v-else>
-                  <span
-                    v-if="lastMessageTime"
-                    data-conversation-time
-                    class="text-muted-foreground/80 tabular-nums"
-                    >{{ lastMessageTime }} · </span
-                  ><span>{{ conversation.last_message }}</span>
-                </template>
-              </p>
-            </div>
+            <p
+              v-if="isTyping || (hasDraftForConversation && !isCurrent)"
+              class="text-xs text-muted-foreground"
+              data-conversation-editing
+            >
+              {{ isTyping ? t('globals.terms.typing') : t('globals.terms.draft') }}
+            </p>
 
             <div class="card-footer flex min-w-0 items-center">
               <span
@@ -146,6 +122,34 @@
                 separator
                 class="flex-1"
               />
+            </div>
+
+            <div
+              class="card-times grid min-w-0 grid-cols-2 border-t border-border pt-2 text-[11px] leading-4"
+              data-conversation-times
+            >
+              <div class="min-w-0 pr-2" data-customer-reply>
+                <div class="flex items-start gap-1 text-muted-foreground">
+                  <UserRound class="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                  <span class="min-w-0">{{ t('conversation.list.lastCustomerReply') }}</span>
+                </div>
+                <time
+                  :datetime="customerReplyTimestamp"
+                  class="block font-semibold tabular-nums"
+                  data-customer-reply-time
+                >{{ customerReplyTime || '—' }}</time>
+              </div>
+              <div class="min-w-0 border-l border-border pl-2" data-last-activity>
+                <div class="flex items-start gap-1 text-muted-foreground">
+                  <Activity class="mt-0.5 h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
+                  <span class="min-w-0">{{ t('conversation.list.lastActivity') }}</span>
+                </div>
+                <time
+                  :datetime="activityTimestamp"
+                  class="block font-semibold tabular-nums"
+                  data-activity-time
+                >{{ activityTime || '—' }}</time>
+              </div>
             </div>
 
             <div v-if="hasSlaDeadlines" class="flex min-w-0 flex-wrap items-center gap-1">
@@ -197,7 +201,7 @@ import { conversationStatusLabel } from '@/utils/conversation-status'
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { formatFullTimestamp } from '@shared-ui/utils/datetime.js'
-import { Mail, MessageSquare, Reply, MailOpen, SquareCheck } from 'lucide-vue-next'
+import { Mail, MessageSquare, UserRound, Activity, MailOpen, SquareCheck } from 'lucide-vue-next'
 import { Avatar, AvatarFallback, AvatarImage } from '@shared-ui/components/ui/avatar'
 import {
   ContextMenu,
@@ -259,7 +263,14 @@ const conversationRoute = computed(() => {
   }
 })
 
-const lastMessageTime = computed(() => formatFullTimestamp(props.conversation.last_message_at))
+const customerReplyTimestamp = computed(
+  () => props.conversation.last_customer_reply_at || props.conversation.created_at
+)
+const activityTimestamp = computed(
+  () => props.conversation.last_message_at || props.conversation.created_at
+)
+const customerReplyTime = computed(() => formatFullTimestamp(customerReplyTimestamp.value))
+const activityTime = computed(() => formatFullTimestamp(activityTimestamp.value))
 
 const hasSlaDeadlines = computed(() => {
   const c = props.conversation
@@ -271,17 +282,6 @@ const hasDraftForConversation = computed(() => {
 })
 
 const isTyping = computed(() => conversationStore.typingByUUID[props.conversation.uuid] === true)
-
-const draftPreview = computed(() => {
-  const draft = conversationStore.conversationDraftPreview(props.conversation.uuid)
-  if (!draft?.content && !draft?.meta?.attachments?.length) return ''
-  const text = (draft.content || '').replace(/<[^>]*>/g, '').trim()
-  if (text) return text.length > 120 ? text.slice(0, 120) + '...' : text
-  if (draft.meta?.attachments?.length)
-    return conversationStore.getMediaPreview(draft.meta.attachments)
-  if (/<img\b/i.test(draft.content || '')) return t('globals.terms.image', 1)
-  return ''
-})
 
 const showSubject = computed(
   () => appSettingsStore.settings['app.show_conversation_subject'] !== false
@@ -365,6 +365,15 @@ const handleSelect = () => {
 <style scoped>
 .conversation-card {
   container: conversation-card / inline-size;
+}
+
+/* Wrapping at the space keeps dates legible in the real, resizable list. */
+.card-times {
+  overflow-wrap: anywhere;
+}
+.card-times > div {
+  display: grid;
+  grid-template-rows: 1fr auto;
 }
 
 .card-heading-content {

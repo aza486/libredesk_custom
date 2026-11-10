@@ -81,7 +81,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test('keeps routes, unread indication, full preview text and reply marker while separating status from tags', async () => {
+test('keeps routes and unread indication while replacing previews with independent times', async () => {
   const card = host.querySelector('[data-conversation-card]')
   expect(JSON.parse(card.dataset.route)).toEqual({
     name: 'personal-inbox-conversation',
@@ -89,10 +89,8 @@ test('keeps routes, unread indication, full preview text and reply marker while 
     query: { status: 'Open', scrollTo: 'mention' }
   })
   expect(card.textContent).toContain('12')
-  expect(host.querySelector('[data-conversation-preview] p').textContent).toContain(
-    props.conversation.last_message
-  )
-  expect(host.querySelector('[data-conversation-preview] > svg.lucide-reply')).not.toBeNull()
+  expect(host.querySelector('[data-conversation-preview]')).toBeNull()
+  expect(card.textContent).not.toContain(props.conversation.last_message)
   const status = host.querySelector('[data-conversation-status]')
   expect(status.textContent.trim()).toBe('Offen')
   expect(status.classList.contains('whitespace-nowrap')).toBe(true)
@@ -109,14 +107,14 @@ test('keeps routes, unread indication, full preview text and reply marker while 
   expect(mocks.store.toggleSelect).toHaveBeenCalledWith('ticket', true)
 })
 
-test('preserves typing and draft precedence, title fallback and status colours', async () => {
+test('preserves compact typing and draft indicators, title fallback and status colours', async () => {
   mocks.store.draft = { content: '<p>Draft preview</p>' }
   await nextTick()
-  expect(host.querySelector('[data-conversation-preview]').textContent).toContain('Draft preview')
-  expect(host.querySelector('[data-conversation-preview] > svg.lucide-reply')).toBeNull()
+  expect(host.querySelector('[data-conversation-editing]').textContent).toContain(de['globals.terms.draft'])
+  expect(host.textContent).not.toContain('Draft preview')
   mocks.store.typingByUUID.ticket = true
   await nextTick()
-  expect(host.querySelector('[data-conversation-preview]').textContent).toContain(
+  expect(host.querySelector('[data-conversation-editing]').textContent).toContain(
     'Schreibt …'
   )
   mocks.settings.settings['app.show_conversation_subject'] = false
@@ -183,50 +181,49 @@ test('status is the first footer item with its own dot and no tag placeholder wh
   expect(host.querySelector('[data-tag-separator]')).toBeNull()
 })
 
-test('keeps title, contact, preview and footer in one content column and unread with metadata', () => {
+test('places customer reply left and activity right below badges, with responsive equal columns', () => {
   const content = host.querySelector('.card-content')
+  const times = content.querySelector('[data-conversation-times]')
   expect(content.querySelector('[data-conversation-title]')).not.toBeNull()
   expect(content.querySelector('.card-contact')).not.toBeNull()
-  expect(content.querySelector('[data-conversation-preview]').parentElement).toBe(content)
-  expect(content.querySelector('.card-footer').parentElement).toBe(content)
-  const metadata = content.querySelector('.card-metadata')
-  expect(metadata.querySelector('[data-conversation-unread]').textContent.trim()).toBe('12')
-  expect(metadata.querySelector('[data-conversation-time]')).toBeNull()
-  const time = content.querySelector('[data-conversation-preview] [data-conversation-time]')
-  expect(time).not.toBeNull()
-  expect(time.parentElement.classList.contains('truncate')).toBe(true)
-  expect(content.querySelector('[data-conversation-preview] [data-conversation-unread]')).toBeNull()
-  expect(content.querySelector('.card-avatar')).toBeNull()
+  expect(times.previousElementSibling.classList.contains('card-footer')).toBe(true)
+  expect(times.firstElementChild.matches('[data-customer-reply]')).toBe(true)
+  expect(times.lastElementChild.matches('[data-last-activity]')).toBe(true)
+  expect(times.firstElementChild.textContent).toContain('Letzte Kundenantwort')
+  expect(times.lastElementChild.textContent).toContain('Letzte Aktivität')
+  expect(times.classList.contains('grid-cols-2')).toBe(true)
+  expect(times.classList.contains('min-w-0')).toBe(true)
+  expect(times.classList.contains('border-t')).toBe(true)
+  expect(times.lastElementChild.classList.contains('border-l')).toBe(true)
+  expect(content.querySelector('.card-metadata [data-conversation-unread]')).not.toBeNull()
 })
 
-test('uses last_message_at before the snippet and updates it with the latest list data', async () => {
-  props.conversation.created_at = '2020-01-01T00:00:00Z'
-  // Local dates keep expectations independent of the machine's timezone.
+test('formats local German dates and updates each timestamp independently', async () => {
+  props.conversation.created_at = new Date(2026, 10, 7, 9, 15).toISOString()
   props.conversation.last_message_at = new Date(2026, 10, 9, 19, 11).toISOString()
   await nextTick()
-  const time = host.querySelector('[data-conversation-time]')
-  expect(time.textContent).toBe('09.11.2026, 19:11 · ')
-  expect(time.nextElementSibling.textContent).toBe(props.conversation.last_message)
-  expect(time.classList.contains('text-muted-foreground/80')).toBe(true)
-  props.conversation = {
-    ...props.conversation,
-    last_message_at: new Date(2027, 0, 1, 0, 9).toISOString(),
-    last_message: 'Newest message'
-  }
+  const customer = host.querySelector('[data-customer-reply-time]')
+  const activity = host.querySelector('[data-activity-time]')
+  expect(customer.textContent).toBe('07.11.2026, 09:15')
+  expect(activity.textContent).toBe('09.11.2026, 19:11')
+  props.conversation.last_message_at = new Date(2026, 10, 9, 20, 12).toISOString()
   await nextTick()
-  expect(time.parentElement.textContent).toBe('01.01.2027, 00:09 · Newest message')
+  expect(customer.textContent).toBe('07.11.2026, 09:15')
+  expect(activity.textContent).toBe('09.11.2026, 20:12')
+  props.conversation.last_customer_reply_at = props.conversation.last_message_at
+  await nextTick()
+  expect(customer.textContent).toBe(activity.textContent)
+  expect(customer.dateTime).toBe(props.conversation.last_customer_reply_at)
 })
 
-test.each([null, undefined, '', 'invalid'])(
-  'shows only the snippet when last_message_at is %s',
-  async (value) => {
+test.each([null, undefined, ''])(
+  'falls back to creation for missing customer or activity timestamp %s', async (value) => {
+    props.conversation.created_at = new Date(2026, 10, 7, 9, 15).toISOString()
+    props.conversation.last_customer_reply_at = value
     props.conversation.last_message_at = value
-    props.conversation.created_at = '2020-01-01T00:00:00Z'
     await nextTick()
-    expect(host.querySelector('[data-conversation-time]')).toBeNull()
-    expect(host.querySelector('[data-conversation-preview] p').textContent).toBe(
-      props.conversation.last_message
-    )
+    expect(host.querySelector('[data-customer-reply-time]').textContent).toBe('07.11.2026, 09:15')
+    expect(host.querySelector('[data-activity-time]').textContent).toBe('07.11.2026, 09:15')
   }
 )
 
@@ -250,7 +247,11 @@ test('keeps active styling across refreshes and folder navigation, and separates
   const expectActive = () => {
     expect(card.classList.contains('bg-primary/15')).toBe(true)
     expect(card.classList.contains('dark:bg-primary/20')).toBe(true)
-    expect(card.classList.contains('before:bg-primary')).toBe(true)
+    expect(card.classList.contains('before:border-primary')).toBe(true)
+    expect(card.classList.contains('before:border-l-2')).toBe(true)
+    expect(card.classList.contains('before:inset-0')).toBe(true)
+    expect(card.classList.contains('before:rounded-[inherit]')).toBe(true)
+    expect(card.classList.contains('overflow-hidden')).toBe(false)
     expect(card.classList.contains('hover:bg-accent/40')).toBe(false)
     expect(card.classList.contains('bg-primary/5')).toBe(false)
     expect(card.classList.contains('focus-visible:ring-2')).toBe(true)
@@ -274,5 +275,6 @@ test('keeps active styling across refreshes and folder navigation, and separates
   props.currentConversation = { uuid: 'other' }
   await nextTick()
   expect(card.classList.contains('bg-primary/15')).toBe(false)
+  expect(card.classList.contains('before:border-l-2')).toBe(false)
   expect(card.classList.contains('bg-primary/5')).toBe(true)
 })

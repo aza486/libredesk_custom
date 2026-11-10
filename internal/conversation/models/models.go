@@ -143,6 +143,7 @@ type ConversationListItem struct {
 	ResolvedAt            null.Time               `db:"resolved_at" json:"resolved_at"`
 	Subject               null.String             `db:"subject" json:"subject"`
 	LastMessage           null.String             `db:"last_message" json:"last_message"`
+	LastCustomerReplyAt   null.Time               `db:"last_customer_reply_at" json:"last_customer_reply_at"`
 	LastMessageAt         null.Time               `db:"last_message_at" json:"last_message_at"`
 	LastMessageSender     null.String             `db:"last_message_sender" json:"last_message_sender"`
 	LastInteraction       null.String             `db:"last_interaction" json:"last_interaction"`
@@ -208,6 +209,7 @@ type Conversation struct {
 	Tags                      null.JSON              `db:"tags" json:"tags"`
 	Meta                      json.RawMessage        `db:"meta" json:"meta"`
 	CustomAttributes          json.RawMessage        `db:"custom_attributes" json:"custom_attributes"`
+	LastCustomerReplyAt       null.Time              `db:"last_customer_reply_at" json:"last_customer_reply_at"`
 	LastMessageAt             null.Time              `db:"last_message_at" json:"last_message_at"`
 	LastMessage               null.String            `db:"last_message" json:"last_message"`
 	LastMessageSender         null.String            `db:"last_message_sender" json:"last_message_sender"`

@@ -95,7 +95,7 @@
       <div
         v-if="!hasErrored && !conversationStore.conversations.loading"
         key="list"
-        class="divide-y divide-border"
+        class="space-y-1.5 p-1.5"
         :class="{ 'border-b border-border': hasConversations }"
       >
         <ConversationListItem

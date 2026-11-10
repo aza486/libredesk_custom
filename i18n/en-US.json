@@ -1,4 +1,6 @@
 {
+  "conversation.list.lastCustomerReply": "Last customer reply",
+  "conversation.list.lastActivity": "Last activity",
   "_.code": "en-US",
   "_.name": "English (United States)",
   "account.avatarRemoved": "Avatar removed",

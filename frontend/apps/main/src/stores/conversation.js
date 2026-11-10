@@ -1223,10 +1223,22 @@ export const useConversationStore = defineStore('conversation', () => {
   function updateConversationLastMessage(uuid, message) {
     const conv = conversations.data?.find((c) => c.uuid === uuid)
     if (!conv) return
-    const update = {
-      last_message: message.text_content || message.content || getMediaPreview(message.attachments),
-      last_message_at: message.created_at,
-      last_message_sender: message.sender_type
+    const update = {}
+    const timestamp = Date.parse(message.created_at)
+    if (timestamp >= (Date.parse(conv.last_message_at) || 0)) {
+      Object.assign(update, {
+        last_message: message.text_content || message.content || getMediaPreview(message.attachments),
+        last_message_at: message.created_at,
+        last_message_sender: message.sender_type
+      })
+    }
+    if (
+      message.type === 'incoming' &&
+      message.sender_type === 'contact' &&
+      message.private === false &&
+      timestamp >= (Date.parse(conv.last_customer_reply_at) || 0)
+    ) {
+      update.last_customer_reply_at = message.created_at
     }
     retainListEvent(uuid, update)
     Object.assign(conv, update)

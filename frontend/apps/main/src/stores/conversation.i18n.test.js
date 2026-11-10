@@ -101,3 +101,26 @@ test('German priority options preserve saved names, IDs, sidebar high queries an
   expect(rows).toEqual(snapshot)
   expect(store.priorityOptions.map(({ label, value }) => ({ label, value }))).toEqual(rows.map((row) => ({ label: row.name, value: String(row.id) })))
 })
+
+test('customer timestamps survive employee and status updates without per-ticket API calls', () => {
+  const store = useConversationStore()
+  store.conversations.data = [{ uuid: 'times', status: 'Open', created_at: '2026-11-07T09:15:00Z',
+    last_customer_reply_at: '2026-11-07T09:15:00Z', last_message_at: '2026-11-07T09:15:00Z' }]
+  store.conversations.status = ''
+  const row = store.conversations.data[0]
+  const apiCalls = () => Object.values(mocks.api).filter(vi.isMockFunction).reduce((sum, fn) => sum + fn.mock.calls.length, 0)
+  const before = apiCalls()
+  store.updateConversationLastMessage('times', { type: 'outgoing', sender_type: 'agent', private: false, created_at: '2026-11-08T10:00:00Z', content: 'Employee' })
+  expect(row.last_customer_reply_at).toBe('2026-11-07T09:15:00Z')
+  expect(row.last_message_at).toBe('2026-11-08T10:00:00Z')
+  store.handleConvPush({ uuid: 'times', status: 'Closed', last_message_at: '2026-11-08T11:00:00Z', last_customer_reply_at: row.last_customer_reply_at })
+  expect(row.last_customer_reply_at).toBe('2026-11-07T09:15:00Z')
+  expect(row.last_message_at).toBe('2026-11-08T11:00:00Z')
+  store.updateConversationLastMessage('times', { type: 'incoming', sender_type: 'contact', private: false, created_at: '2026-11-09T12:00:00Z', content: 'Customer' })
+  expect(row.last_customer_reply_at).toBe('2026-11-09T12:00:00Z')
+  expect(row.last_message_at).toBe(row.last_customer_reply_at)
+  store.updateConversationLastMessage('times', { type: 'incoming', sender_type: 'contact', private: false, created_at: '2026-11-01T12:00:00Z', content: 'Delayed' })
+  expect(row.last_customer_reply_at).toBe('2026-11-09T12:00:00Z')
+  expect(row.last_message_at).toBe(row.last_customer_reply_at)
+  expect(apiCalls()).toBe(before)
+})
