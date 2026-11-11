@@ -374,3 +374,119 @@ test('removing Spam leaves the customer Spam view immediately, including origina
   expect(store.conversationsList).toEqual([])
   expect(store.conversations.total).toBe(0)
 })
+
+test('redistributed uses the authorized customer endpoint and server flags for active and snoozed work', async () => {
+  const store = useConversationStore()
+  store.setListStatus('', false)
+  mocks.api.getCustomerConversations = vi.fn().mockResolvedValue(
+    response([
+      { uuid: 'external', status: 'Open', customer_redistributed_active: true },
+      { uuid: 'sleeping', status: 'Snoozed', customer_redistributed_active: true }
+    ])
+  )
+  await store.fetchConversationsList(false, 'customer-redistributed')
+  expect(mocks.api.getCustomerConversations).toHaveBeenCalledWith(
+    expect.objectContaining({ routing: 'redistributed', page_size: 25 })
+  )
+  expect(store.conversationsList.map((c) => c.uuid)).toEqual(['external', 'sleeping'])
+  store.mergeConversationUpdate({
+    uuid: 'external',
+    status: 'Open',
+    customer_redistributed_active: false,
+    routing_changed: true
+  })
+  expect(store.conversationsList.map((c) => c.uuid)).toEqual(['sleeping'])
+  expect(store.conversations.total).toBe(1)
+})
+
+test('routing removes external tickets from four loaded customer pages while preserving positions', async () => {
+  const store = useConversationStore()
+  mocks.api.getCustomerConversations = vi.fn()
+  for (let page = 1; page <= 4; page++) {
+    mocks.api.getCustomerConversations.mockResolvedValueOnce(
+      response(tickets((page - 1) * 25, 25), page, 150)
+    )
+    await store.fetchConversationsList(false, 'customer', 0, [], 0, page)
+  }
+  const key = store.listKey
+  store.listPositions.set(key, { scrollTop: 2200, candidates: [] })
+  mocks.api.getCustomerConversations.mockResolvedValue(response(tickets(0, 25), 1, 149))
+  store.mergeConversationUpdate({
+    uuid: 'ticket-65',
+    customer_redistributed_active: true,
+    routing_changed: true
+  })
+  expect(store.conversationsList.some((c) => c.uuid === 'ticket-65')).toBe(false)
+  expect(store.conversationsList.some((c) => c.uuid === 'ticket-90')).toBe(true)
+  expect(store.conversations.page).toBe(4)
+  expect(store.listPositions.get(key).scrollTop).toBe(2200)
+  expect(mocks.emit).toHaveBeenCalledWith(expect.any(String), { model: 'inbox-list' })
+})
+
+test('Spam and completion override active redistributed lists immediately', async () => {
+  const store = useConversationStore()
+  store.setListStatus('', false)
+  mocks.api.getCustomerConversations = vi.fn().mockResolvedValue(
+    response([
+      { uuid: 'closed', status: 'Open', customer_redistributed_active: true },
+      { uuid: 'spam', status: 'Open', customer_redistributed_active: true }
+    ])
+  )
+  await store.fetchConversationsList(false, 'customer-redistributed')
+  store.mergeConversationUpdate({
+    uuid: 'closed',
+    status: 'Closed',
+    customer_redistributed_active: false
+  })
+  store.mergeConversationUpdate({
+    uuid: 'spam',
+    status: 'Closed',
+    customer_redistributed_active: true,
+    tags: ['🗑Spam']
+  })
+  expect(store.conversationsList).toEqual([])
+  expect(store.conversations.total).toBe(0)
+})
+
+test('routing changes trigger server evaluation of custom folders without resetting loaded pages', async () => {
+  const store = useConversationStore()
+  await loadPages(store)
+  const revision = store.listRevision
+  mocks.api.getSidebarFolderConversations.mockResolvedValue(response(tickets(0, 25)))
+  store.mergeConversationUpdate({
+    uuid: 'ticket-30',
+    customer_redistributed_active: true,
+    routing_changed: true
+  })
+  expect(store.conversations.page).toBe(4)
+  expect(store.listRevision).toBe(revision)
+  expect(mocks.emit).toHaveBeenCalledWith(expect.any(String), { model: 'inbox-list' })
+})
+
+test('redistributed unfiled uses server winner selection and preserves loaded pages and position during return', async () => {
+  const store = useConversationStore()
+  store.setListStatus('', false)
+  const rows = (start, count) => tickets(start, count).map((row) => ({ ...row, customer_redistributed_active: true }))
+  mocks.api.getCustomerConversations = vi.fn().mockResolvedValueOnce(response(rows(0, 25), 1, 60))
+  await store.fetchConversationsList(false, 'customer-redistributed-unfiled')
+  mocks.api.getCustomerConversations.mockResolvedValueOnce(response(rows(25, 25), 2, 60))
+  await store.fetchNextConversations()
+  expect(mocks.api.getCustomerConversations).toHaveBeenLastCalledWith(expect.objectContaining({ routing: 'redistributed', folder_mode: 'unfiled', page: 2 }))
+  store.listPositions.set(store.listKey, { scrollTop: 1700, candidates: [] })
+  mocks.api.getCustomerConversations.mockResolvedValue(response(rows(0, 25), 1, 59))
+  store.mergeConversationUpdate({ uuid: 'ticket-30', customer_redistributed_active: false, routing_changed: true })
+  expect(store.conversationsList.some((r) => r.uuid === 'ticket-30')).toBe(false)
+  expect(store.conversationsList.some((r) => r.uuid === 'ticket-45')).toBe(true)
+  expect(store.conversations.page).toBe(2)
+  expect(store.listPositions.get(store.listKey).scrollTop).toBe(1700)
+})
+
+test('redistributed custom folder requests reuse the existing scoped endpoint', async () => {
+  const store = useConversationStore()
+  mocks.api.getSidebarFolderConversations.mockResolvedValue(response([{ uuid: 'external', status: 'Snoozed', customer_redistributed_active: true }]))
+  await store.fetchConversationsList(false, 'folder:redistributed:0:11')
+  expect(mocks.api.getSidebarFolderConversations).toHaveBeenCalledWith('redistributed', '0', '11', expect.not.objectContaining({ filters: expect.anything() }))
+  expect(store.conversationsList).toHaveLength(1)
+  store.mergeConversationUpdate({ uuid: 'external', tags: ['🗑Spam'], status: 'Closed' })
+  expect(store.conversationsList).toEqual([])
+})

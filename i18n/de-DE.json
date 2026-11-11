@@ -1,4 +1,12 @@
 {
+  "conversation.routing.addFolder": "Ordner / Filter hinzufügen",
+  "conversation.routing.redistributed": "Umverteilt",
+  "conversation.routing.allRedistributed": "Alle umverteilten",
+  "conversation.routing.withoutFolder": "Ohne Ordner",
+  "conversation.routing.returnToSupport": "An Kundensupport zurückgeben",
+  "conversation.routing.returnSuccess": "Ticket an Kundensupport zurückgegeben.",
+  "conversation.routing.returnFailed": "Ticket konnte nicht zurückgegeben werden.",
+  "conversation.routing.returnUnavailable": "Nur extern bearbeitete Kundentickets ohne Spam-Markierung können zurückgegeben werden.",
   "conversation.list.lastCustomerReply": "Letzte Kundenantwort",
   "conversation.list.lastActivity": "Letzte Aktivität",
   "_.code": "de-DE",

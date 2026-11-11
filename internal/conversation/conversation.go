@@ -534,6 +534,13 @@ func (c *Manager) GetConversation(id int, uuid, refNum string) (models.Conversat
 		return models.Conversation{}, err
 	}
 	conversation.InboxOwnerUserIDs = ownerIDs
+	routes, err := loadCustomerRoutes(c.db, []string{conversation.UUID})
+	if err != nil {
+		return models.Conversation{}, err
+	}
+	route := routes[conversation.UUID]
+	conversation.CustomerTicket = route.Customer
+	conversation.CustomerRedistributed = route.Redistributed
 
 	// Strip name and extract plain email from "Name <email>"
 	if conversation.InboxMail != "" {
@@ -943,6 +950,9 @@ func (c *Manager) getFolderAwareConversations(viewingUserID, userID int, teamIDs
 		c.lo.Error("error fetching conversations", "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
+	if err := populateCustomerRoutes(tx, conversations); err != nil {
+		return conversations, err
+	}
 	if err := tx.Commit(); err != nil {
 		return conversations, err
 	}
@@ -1001,13 +1011,25 @@ func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User
 	if spam {
 		return nil
 	}
+	repaired, err := c.repairCustomerResponsibilityTx(tx, conversationUUID, actor.ID)
+	if err != nil {
+		return err
+	}
+	statusChanged := true
 	var conversationID int
 	if err := tx.Stmtx(c.q.ReOpenConversation).QueryRow(conversationUUID).Scan(&conversationID); err != nil {
 		if err == sql.ErrNoRows {
-			return nil
+			if !repaired {
+				return nil
+			}
+			statusChanged = false
+			if err = tx.Get(&conversationID, `SELECT id FROM conversations WHERE uuid=$1`, conversationUUID); err != nil {
+				return err
+			}
+		} else {
+			c.lo.Error("error reopening conversation", "uuid", conversationUUID, "error", err)
+			return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 		}
-		c.lo.Error("error reopening conversation", "uuid", conversationUUID, "error", err)
-		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -1020,9 +1042,16 @@ func (c *Manager) ReOpenConversation(conversationUUID string, actor umodels.User
 	}
 
 	c.BroadcastConversationUpdate(conversationUUID, map[string]any{"status": models.StatusOpen})
+	if repaired {
+		if current, e := c.GetConversation(0, conversationUUID, ""); e == nil {
+			c.broadcastTagMembershipUpdate(conversationUUID, map[string]any{"assigned_team_id": current.AssignedTeamID, "assigned_user_id": current.AssignedUserID, "assigned_user_ids": current.AssignedUserIDs, "custom_attributes": current.CustomAttributes, "routing_changed": true})
+		}
+	}
 
-	if err := c.RecordStatusChange(models.StatusOpen, conversationUUID, actor); err != nil {
-		return err
+	if statusChanged {
+		if err := c.RecordStatusChange(models.StatusOpen, conversationUUID, actor); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -1085,6 +1114,10 @@ func (c *Manager) SetConversationUserAssignees(uuid string, assigneeIDs []int, a
 			seen[id] = struct{}{}
 			unique = append(unique, id)
 		}
+	}
+
+	if handled, err := c.mutateCustomerAssignment(uuid, customerAssignment{kind: "users", users: unique}, actor); handled {
+		return err
 	}
 
 	tx, err := c.db.Beginx()
@@ -1202,6 +1235,9 @@ func (c *Manager) IsServiceEmailAddress(address string) (bool, error) {
 
 // ClaimUnassignedConversation atomically assigns a conversation only if still unassigned and still in expectedTeamID, else returns ErrConversationAlreadyAssigned.
 func (c *Manager) ClaimUnassignedConversation(uuid string, assigneeID, expectedTeamID int, actor umodels.User) error {
+	if handled, err := c.mutateCustomerAssignment(uuid, customerAssignment{kind: "users", users: []int{assigneeID}, expectedTeam: &expectedTeamID}, actor); handled {
+		return err
+	}
 	previousConversation, err := c.GetConversation(0, uuid, "")
 	if err != nil {
 		return err
@@ -1236,7 +1272,7 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 	attrs := map[string]any{}
 	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
 
-	if private, ok := attrs["private"].(bool); ok && private {
+	if private, ok := attrs["private"].(bool); ok && private && !conversation.CustomerTicket {
 
 		var visibleUsers []any
 
@@ -1324,6 +1360,9 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 
 // UpdateConversationTeamAssignee sets the assignee of a conversation to a specific team and sets the assigned user id to NULL.
 func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor umodels.User) error {
+	if handled, err := c.mutateCustomerAssignment(uuid, customerAssignment{kind: "team", team: teamID}, actor); handled {
+		return err
+	}
 	// Private tickets and personal-inbox tickets rely on visible_users for access,
 	// so every member of the assigned team is made permanently visible.
 	conversation, err := c.GetConversation(0, uuid, "")
@@ -1552,6 +1591,12 @@ func (c *Manager) UpdateConversationStatus(uuid string, statusID int, status, sn
 		return nil
 	}
 
+	return c.afterStatusChange(uuid, status, snoozeUntil, conversationBeforeChange, actor)
+}
+
+// Shared post-commit status effects for normal changes and atomic customer returns.
+func (c *Manager) afterStatusChange(uuid, status string, snoozeUntil time.Time, conversationBeforeChange models.Conversation, actor umodels.User) error {
+	oldStatus := conversationBeforeChange.Status.String
 	// Stamps a just-resolved resolution SLA immediately and recomputes the cached deadline.
 	if err := c.slaStore.EvaluateConversationSLA(conversationBeforeChange.ID); err != nil {
 		c.lo.Error("error evaluating SLA after status change", "uuid", uuid, "error", err)
@@ -2272,6 +2317,11 @@ func (m *Manager) resolveNotifyRecipients(entries []string, conv models.Conversa
 
 // RemoveConversationAssignee removes assigned user from a conversation.
 func (m *Manager) RemoveConversationAssignee(uuid, typ string, actor umodels.User) error {
+	if typ == models.AssigneeTypeTeam {
+		if handled, err := m.mutateCustomerAssignment(uuid, customerAssignment{kind: "team", team: 0}, actor); handled {
+			return err
+		}
+	}
 	prev, prevErr := m.GetConversationListItem(uuid)
 	if typ == models.AssigneeTypeUser {
 		if err := m.SetConversationUserAssignees(uuid, nil, actor); err != nil {
@@ -2388,6 +2438,9 @@ func (m *Manager) DeleteConversation(uuid string) error {
 
 // UpdateConversationCustomAttributes updates the custom attributes of a conversation.
 func (c *Manager) UpdateConversationCustomAttributes(uuid string, customAttributes map[string]any) error {
+	if handled, err := c.mutateCustomerAttributes(uuid, customAttributes); handled {
+		return err
+	}
 	jsonb, err := json.Marshal(customAttributes)
 	if err != nil {
 		c.lo.Error("error marshalling custom attributes", "error", err)
@@ -2407,6 +2460,10 @@ func (c *Manager) AddVisibleUser(
 	uuid string,
 	userID int,
 ) error {
+
+	if handled, err := c.mutateCustomerVisibility(uuid, userID, false); handled {
+		return err
+	}
 
 	conversation, err := c.GetConversation(0, uuid, "")
 	if err != nil {
@@ -2456,6 +2513,10 @@ func (c *Manager) RemoveVisibleUser(
 	uuid string,
 	userID int,
 ) error {
+
+	if handled, err := c.mutateCustomerVisibility(uuid, userID, true); handled {
+		return err
+	}
 
 	conversation, err := c.GetConversation(0, uuid, "")
 	if err != nil {
@@ -2615,10 +2676,11 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 				OR %t
 				OR %t
 				OR (conversations.custom_attributes->'visible_users') @> '[%d]'
+				OR (`+customerTagSQL+` AND EXISTS(SELECT 1 FROM conversation_assignees access_ca WHERE access_ca.conversation_id=conversations.id AND access_ca.user_id=%d))
 			)
 		)
 	)
-	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID)
+	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID, userID)
 	personalAccess := authz.PersonalAccessSQL("conversations", viewingUserID, isAdmin)
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
@@ -2634,6 +2696,11 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 			}
 
 			conditions = append(conditions, "("+condition+")")
+		case models.CustomerRedistributedConversations, models.CustomerRedistributedUnfiledConversations, "folder-redistributed":
+			if !isAdmin && !isCustomerSupport {
+				return "", nil, folderDenied()
+			}
+			conditions = append(conditions, "("+sidebarScopeSQL("redistributed", 0)+" AND "+ticketAccessCondition+")")
 		case "folder-customer":
 			conditions = append(conditions, "("+sidebarScopeSQL("customer", 0)+" AND "+ticketAccessCondition+")")
 		case "folder-my_inbox", models.AssignedConversations, models.AssignedHighPriorityConversations:
@@ -2902,7 +2969,11 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 		whereClause += " AND NOT " + spamExistsSQL
 	}
 
-	if !spamView && folderID != 0 && len(folders) > 0 {
+	if !spamView && len(listTypes) == 1 && (listTypes[0] == models.CustomerConversations || listTypes[0] == models.CustomerHighPriorityConversations || listTypes[0] == "folder-customer") {
+		whereClause += " AND NOT " + activeRedistributedSQL
+	}
+	aggregateRedistributed := len(listTypes) == 1 && listTypes[0] == models.CustomerRedistributedConversations
+	if !spamView && !aggregateRedistributed && folderID != 0 && len(folders) > 0 {
 		clause, args, err := sidebarAssignmentClause(folders, folderID, qArgs, c.filterLocation())
 		if err != nil {
 			return "", nil, err
@@ -3155,7 +3226,11 @@ func (c *Manager) GetConversationListItem(uuid string) (models.ConversationListI
 		}
 		item.InboxOwnerUserIDs = ownerIDs
 	}
-	return item, nil
+	items := []models.ConversationListItem{item}
+	if err := populateCustomerRoutes(c.db, items); err != nil {
+		return item, err
+	}
+	return items[0], nil
 }
 
 func (c *Manager) AuthorizedConnectedAgentIDs(conversationUUID string) []int {
@@ -3219,6 +3294,7 @@ func (c *Manager) FilterAuthorizedListUUIDs(agentID int, uuids []string) ([]stri
 		slices.Contains(user.Permissions, authzmodels.PermConversationsReadUnassigned),
 		user.HasAdminRole(),
 		slices.Contains(user.Roles, rmodels.RoleCustomerSupport),
+		customerTagName,
 	)
 	if err != nil {
 		c.lo.Error("error filtering authorized list uuids", "agent_id", agentID, "error", err)

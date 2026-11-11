@@ -182,6 +182,7 @@ SELECT
     conversations.next_sla_deadline_at,
     conversations.priority_id,
     conversations.assigned_user_id,
+    COALESCE(ARRAY(SELECT user_id FROM conversation_assignees ca WHERE ca.conversation_id = conversations.id ORDER BY ca.created_at, ca.user_id), ARRAY[]::BIGINT[]) AS assigned_user_ids,
     conversations.assigned_team_id,
     conversation_statuses.name as status,
     conversation_priorities.name as priority,
@@ -1100,6 +1101,7 @@ LIMIT 50;
 -- $9: has 'conversations:read_unassigned'
 -- $10: is admin
 -- $11: is customer support
+-- $12: protected customer tag name
 SELECT uuid::text
 FROM conversations
 WHERE uuid = ANY($1::uuid[])
@@ -1131,6 +1133,20 @@ WHERE uuid = ANY($1::uuid[])
                $10
             OR $11
             OR (custom_attributes->'visible_users') @> jsonb_build_array($2::int)
+            -- Explicit visibility can be removed independently of existing
+            -- assignment access. Match the normal assigned/team permission chain
+            -- only for the existing protected customer marker.
+            OR ($4 AND EXISTS (
+              SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id
+              WHERE ct.conversation_id=conversations.id AND t.name=$12
+            ) AND (
+              ($6 AND (assigned_user_id=$2 OR EXISTS (
+                SELECT 1 FROM conversation_assignees ca
+                WHERE ca.conversation_id=conversations.id AND ca.user_id=$2
+              )))
+              OR ($7 AND assigned_team_id=ANY($3::int[]))
+              OR ($8 AND assigned_team_id=ANY($3::int[]) AND assigned_user_id IS NULL)
+            ))
           )
         )
 

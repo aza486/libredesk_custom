@@ -13,6 +13,9 @@ import (
 	"github.com/volatiletech/null/v9"
 )
 
+const CustomerRedistributedConversations = "customer_redistributed"
+const CustomerRedistributedUnfiledConversations = "customer_redistributed_unfiled"
+
 var (
 	StatusOpen     = "Open"
 	StatusResolved = "Resolved"
@@ -123,6 +126,10 @@ type ChatMessage struct {
 
 // ConversationListItem represents a conversation in list views
 type ConversationListItem struct {
+	CustomerRedistributedActive bool `json:"customer_redistributed_active"`
+	CustomerTicket              bool `json:"customer_ticket"`
+	CustomerRedistributed       bool `json:"customer_redistributed"`
+
 	InboxID               int                     `db:"inbox_id" json:"inbox_id"`
 	InboxAccessMode       string                  `db:"inbox_access_mode" json:"inbox_access_mode"`
 	InboxOwnerUserID      null.Int                `db:"inbox_owner_user_id" json:"inbox_owner_user_id"`
@@ -177,6 +184,11 @@ type ConversationListContact struct {
 }
 
 type Conversation struct {
+	CanReturnToSupport bool `json:"can_return_to_support"`
+
+	CustomerTicket        bool `json:"customer_ticket"`
+	CustomerRedistributed bool `json:"customer_redistributed"`
+
 	InboxAccessMode           string                 `db:"inbox_access_mode" json:"inbox_access_mode"`
 	InboxOwnerUserID          null.Int               `db:"inbox_owner_user_id" json:"inbox_owner_user_id"`
 	InboxOwnerUserIDs         pq.Int64Array          `db:"inbox_owner_user_ids" json:"inbox_owner_user_ids"`

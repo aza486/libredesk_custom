@@ -308,6 +308,8 @@ const updateAssignee = (uuid, assignee_type, data) =>
   })
 const removeAssignee = (uuid, assignee_type) =>
   http.put(`/api/v1/conversations/${uuid}/assignee/${assignee_type}/remove`)
+const returnCustomerToSupport = (uuid) => http.put(`/api/v1/conversations/${uuid}/return-to-support`)
+
 const setUserAssignees = (uuid, assigneeIDs) =>
   http.put(`/api/v1/conversations/${uuid}/assignees/users`, {
     assignee_ids: assigneeIDs
@@ -916,6 +918,7 @@ export default {
   searchContacts,
   removeAssignee,
   setUserAssignees,
+  returnCustomerToSupport,
   getContacts,
   getContact,
   updateContact,

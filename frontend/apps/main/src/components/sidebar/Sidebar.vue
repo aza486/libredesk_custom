@@ -119,6 +119,7 @@ import { useConversationStore } from '@main/stores/conversation'
 import { useUsersStore } from '@main/stores/users'
 import SidebarCountBadge from './SidebarCountBadge.vue'
 import SidebarFolders from './SidebarFolders.vue'
+import RedistributedSection from './RedistributedSection.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { useIsMobile } from '@shared-ui/composables'
 import { useEmitter } from '@main/composables/useEmitter'
@@ -434,7 +435,8 @@ const loadSidebarCounts = async () => {
 
     // Kundentickets
     if (isCustomerSupport.value || isAdmin.value) {
-      const [customerResponse, highPriorityResponse] = await Promise.all([
+      const [redistributedResponse, customerResponse, highPriorityResponse] = await Promise.all([
+        api.getCustomerConversations({page: 1, page_size: 1, routing: 'redistributed'}),
         api.getCustomerConversations({
           page: 1,
           page_size: 1,
@@ -448,6 +450,7 @@ const loadSidebarCounts = async () => {
         })
       ])
 
+      sidebarCounts.value.customer_redistributed = redistributedResponse.data.data.total || 0
       sidebarCounts.value.customer = customerResponse.data.data.total || 0
 
       sidebarCounts.value.customer_high = highPriorityResponse.data.data.total || 0
@@ -1121,7 +1124,7 @@ onUnmounted(() => {
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger as-child>
-                    <SidebarMenuButton :isActive="isActiveParent('/inboxes/customer')">
+                    <SidebarMenuButton :isActive="(['customer', 'customer-high'].includes(route.params.type))">
                       <Accessibility />
 
                       <span class="truncate">Kundentickets</span>
@@ -1161,7 +1164,7 @@ onUnmounted(() => {
                         <SidebarMenuButton
                           size="sm"
                           :isActive="
-                            isActiveParent('/inboxes/customer') &&
+                            (['customer', 'customer-high'].includes(route.params.type)) &&
                             !route.path.startsWith('/inboxes/customer-high') &&
                             route.query.status === 'Open' &&
                             !route.query.filters
@@ -1190,7 +1193,7 @@ onUnmounted(() => {
                         <SidebarMenuButton
                           size="sm"
                           :isActive="
-                            isActiveParent('/inboxes/customer') &&
+                            (['customer', 'customer-high'].includes(route.params.type)) &&
                             !route.path.startsWith('/inboxes/customer-high') &&
                             route.query.status === item.status &&
                             !route.query.filters
@@ -1210,7 +1213,7 @@ onUnmounted(() => {
                         <SidebarMenuButton
                           size="sm"
                           :isActive="
-                            isActiveParent('/inboxes/customer') &&
+                            (['customer', 'customer-high'].includes(route.params.type)) &&
                             route.query.filters === spamFilter
                           "
                           @click="
@@ -1227,6 +1230,9 @@ onUnmounted(() => {
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
+
+              <RedistributedSection v-if="isCustomerSupport || isAdmin"
+                :count="sidebarCounts.customer_redistributed || 0" />
 
               <!-- Service-Mails -->
               <SidebarMenuItem v-if="isCustomerSupport || isAdmin">

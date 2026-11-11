@@ -39,6 +39,7 @@
           </CommandGroup>
         </CommandList>
       </Command>
+      <slot name="footer" :close="() => (open = false)" />
     </PopoverContent>
   </Popover>
 </template>

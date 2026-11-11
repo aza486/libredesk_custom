@@ -12,7 +12,7 @@
     <!-- Filters (hidden when bulk selecting) -->
     <div v-else class="p-2 flex justify-between items-center">
       <!-- Status dropdown-menu, hidden when a view is selected as views are pre-filtered -->
-      <DropdownMenu v-if="!route.params.viewID && !route.query.folder">
+      <DropdownMenu v-if="!route.params.viewID && !route.query.folder && !['customer-redistributed', 'customer-redistributed-unfiled'].includes(route.params.type)">
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" class="w-30">
             <div>

@@ -1,5 +1,7 @@
 package tag
 
+const SystemTagCustomerName = "🦽Kundenticket"
+
 const (
 	SystemTagInternal    = 8
 	SystemTagCustomer    = 9
@@ -16,7 +18,7 @@ var systemTagIDs = map[int]struct{}{
 
 var systemTagNames = map[string]struct{}{
 	"🏢Intern":              {},
-	"🦽Kundenticket":        {},
+	SystemTagCustomerName:  {},
 	"😎Mensch erforderlich": {},
 	"🧷Service-Mail":        {},
 }

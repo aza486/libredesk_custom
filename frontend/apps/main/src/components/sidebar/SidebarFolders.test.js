@@ -163,3 +163,28 @@ test('keeps full folder counts after realtime refresh and allows the label to sh
     true
   )
 })
+
+test('redistributed exposes unfiled counts and keeps custom folder navigation in its own scope', async () => {
+  props.scope = 'redistributed'
+  props.scopeId = 0
+  props.unfiledLabel = 'Ohne Ordner'
+  props.addLabel = 'Ordner / Filter hinzufügen'
+  mocks.route.params = { type: 'customer-redistributed' }
+  await flush()
+  mocks.api.getSidebarFolderCounts.mockResolvedValue({ data: { data: { '-1': 4, 11: 8 } } })
+  await mocks.handlers.get('sidebar-folders-refresh')()
+  await flush()
+  expect(mocks.api.getSidebarFolders).toHaveBeenLastCalledWith('redistributed', 0)
+  const buttons = () => [...host.querySelectorAll('button')]
+  const unfiled = buttons().find((b) => b.textContent.includes('Ohne Ordner'))
+  expect(unfiled.textContent).toContain('4')
+  unfiled.click()
+  expect(mocks.push).toHaveBeenLastCalledWith({ name: 'inbox', params: { type: 'customer-redistributed-unfiled' }, query: {} })
+  buttons().find((b) => b.textContent.includes('Alle Reklas')).click()
+  expect(mocks.push).toHaveBeenLastCalledWith({ name: 'inbox', params: { type: 'customer-redistributed' }, query: { folder: '11', folderName: 'Alle Reklas' } })
+  mocks.route.query = { folder: '11' }
+  mocks.api.getSidebarFolders.mockResolvedValue({ data: { data: [] } })
+  await mocks.handlers.get('sidebar-folders-refresh')()
+  await flush()
+  expect(mocks.push).toHaveBeenLastCalledWith({ name: 'inbox', params: { type: 'customer-redistributed' }, query: {} })
+})

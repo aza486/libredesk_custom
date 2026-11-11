@@ -13,6 +13,8 @@ export const CONVERSATION_LIST_TYPE = {
   VISIBLE: 'visible',
   VISIBLE_INTERNAL: 'visible-internal',
   CUSTOMER: 'customer',
+  CUSTOMER_REDISTRIBUTED: 'customer-redistributed',
+  CUSTOMER_REDISTRIBUTED_UNFILED: 'customer-redistributed-unfiled',
   CUSTOMER_HIGH: 'customer-high',
   SERVICE_MAILS: 'service-mails',
   CREATED: 'created'

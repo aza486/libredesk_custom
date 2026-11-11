@@ -1,4 +1,12 @@
 {
+  "conversation.routing.addFolder": "Add folder / filter",
+  "conversation.routing.redistributed": "Redistributed",
+  "conversation.routing.allRedistributed": "All redistributed",
+  "conversation.routing.withoutFolder": "Without folder",
+  "conversation.routing.returnToSupport": "Return to customer support",
+  "conversation.routing.returnSuccess": "Ticket returned to customer support.",
+  "conversation.routing.returnFailed": "Could not return ticket to customer support.",
+  "conversation.routing.returnUnavailable": "Only externally assigned customer tickets without Spam can be returned.",
   "conversation.list.lastCustomerReply": "Last customer reply",
   "conversation.list.lastActivity": "Last activity",
   "_.code": "en-US",

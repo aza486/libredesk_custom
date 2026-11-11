@@ -37,7 +37,12 @@
                 :placeholder="t('placeholders.selectTeam')"
                 @select="selectTeam"
                 type="team"
-              />
+              >
+                <template #footer="{ close }">
+                  <CustomerReturnAction :close="close"
+                    :before-return="() => assigneeSaveQueues.get(conversationStore.current?.uuid)" />
+                </template>
+              </SelectComboBox>
             </div>
 
             <div>
@@ -222,6 +227,7 @@ import ContactNotes from '@/features/contact/ContactNotes.vue'
 import PreviousConversations from '@/features/conversation/sidebar/PreviousConversations.vue'
 import ConversationSideBarPageVisits from '@/features/conversation/sidebar/ConversationSideBarPageVisits.vue'
 import AssignmentSaveState from './AssignmentSaveState.vue'
+import CustomerReturnAction from './CustomerReturnAction.vue'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { TAG_ACTION } from '@/constants/conversation'
@@ -396,6 +402,21 @@ watch(
   { immediate: true }
 )
 
+watch(() => conversationStore.current?.assigned_user_ids, (ids) => {
+  if (conversationStore.current?.customer_ticket && assigneeSaveState.value !== 'saving') {
+    selectedAssigneeIDs.value = normalizeUserIDs(ids || [])
+    savedAssigneeIDs.value = [...selectedAssigneeIDs.value]
+  }
+}, { deep: true })
+
+watch(() => conversationStore.current?.custom_attributes?.visible_users, (ids) => {
+  if (conversationStore.current?.customer_ticket && visibilitySaveState.value !== 'saving') {
+    selectedVisibleUserIDs.value = normalizeUserIDs(ids || [])
+    savedVisibleUserIDs.value = [...selectedVisibleUserIDs.value]
+    savedVisibleUserIDsByUUID.set(conversationStore.current.uuid, [...selectedVisibleUserIDs.value])
+  }
+}, { deep: true })
+
 const fetchTags = async () => {
   await tagStore.fetchTags()
   tags.value = tagStore.tags.map((item) => item.name)
@@ -426,9 +447,18 @@ const saveAssignees = (assigneeIDs) => {
       try {
         await api.setUserAssignees(uuid, ids)
         if (conversationStore.current?.uuid !== uuid) return
-        savedAssigneeIDs.value = [...ids]
-        conversationStore.current.assigned_user_ids = [...ids]
-        conversationStore.current.assigned_user_id = ids[0] || null
+        let actualIDs = ids
+        if (conversationStore.current.customer_ticket) {
+          const response = await api.getConversation(uuid)
+          if (conversationStore.current?.uuid !== uuid) return
+          Object.assign(conversationStore.current, response.data.data)
+          actualIDs = normalizeUserIDs(response.data.data.assigned_user_ids || [])
+        } else {
+          conversationStore.current.assigned_user_ids = [...ids]
+          conversationStore.current.assigned_user_id = ids[0] || null
+        }
+        savedAssigneeIDs.value = [...actualIDs]
+        if (version === assigneeChangeVersion) selectedAssigneeIDs.value = [...actualIDs]
         if (version === assigneeChangeVersion) assigneeSaveState.value = 'saved'
       } catch (error) {
         if (conversationStore.current?.uuid !== uuid || version !== assigneeChangeVersion) return
@@ -512,7 +542,7 @@ const isVisibilityManager = (userID) =>
 const lockedVisibleUserIDs = computed(() => [
   ...personalOwnerIDs.value,
   ...visibilityManagerIDs.value,
-  ...assignedUserIDs.value
+  ...(conversationStore.current?.customer_ticket ? [] : assignedUserIDs.value)
 ])
 
 const canManageVisibility = computed(

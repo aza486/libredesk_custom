@@ -140,7 +140,7 @@ func TestSharedPersonalInboxOwnerAccess(t *testing.T) {
 		t.Fatal("non-owner opened the personal inbox")
 	}
 	var allowed []string
-	if err := m.q.FilterAuthorizedListUUIDs.Select(&allowed, pq.Array([]string{uuid}), 102, pq.Array([]int{}), true, true, true, true, true, true, false, false); err != nil {
+	if err := m.q.FilterAuthorizedListUUIDs.Select(&allowed, pq.Array([]string{uuid}), 102, pq.Array([]int{}), true, true, true, true, true, true, false, false, customerTagName); err != nil {
 		t.Fatal(err)
 	}
 	if len(allowed) != 1 {
@@ -232,7 +232,7 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 			t.Errorf("visibility %d: %v", v.id, got)
 		}
 		var allowed []string
-		if err := m.q.FilterAuthorizedListUUIDs.Select(&allowed, pq.Array([]string{uuid}), v.id, pq.Array([]int{}), true, true, true, true, true, true, v.id == 104, v.id == 103); err != nil {
+		if err := m.q.FilterAuthorizedListUUIDs.Select(&allowed, pq.Array([]string{uuid}), v.id, pq.Array([]int{}), true, true, true, true, true, true, v.id == 104, v.id == 103, customerTagName); err != nil {
 			t.Fatal(err)
 		}
 		if (len(allowed) > 0) != v.want {

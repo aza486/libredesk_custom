@@ -141,7 +141,7 @@ const routes = [
         meta: { titleKey: 'globals.terms.search', hidePageHeader: true }
       },
       {
-        path: '/inboxes/:type(assigned|unassigned|all|visible|visible-internal|customer|customer-high|service-mails|created)?',
+        path: '/inboxes/:type(assigned|unassigned|all|visible|visible-internal|customer|customer-high|customer-redistributed|customer-redistributed-unfiled|service-mails|created)?',
         name: 'inboxes',
         redirect: '/inboxes/assigned?status=Open',
         component: InboxLayout,
@@ -160,6 +160,7 @@ const routes = [
                 if (route.params.type === 'all') return 'globals.messages.all'
                 if (route.params.type === 'visible') return 'conversation.visibleForMe'
                 if (route.params.type === 'visible-internal') return 'conversation.visibleForMe'
+                if (['customer-redistributed', 'customer-redistributed-unfiled'].includes(route.params.type)) return 'conversation.routing.redistributed'
                 if (route.params.type === 'customer' || route.params.type === 'customer-high')
                   return 'Kundentickets'
                 if (route.params.type === 'service-mails') return 'Service-Mails'
@@ -181,7 +182,8 @@ const routes = [
                     if (route.params.type === 'all') return 'globals.messages.all'
                     if (route.params.type === 'visible') return 'conversation.visibleForMe'
                     if (route.params.type === 'visible-internal') return 'conversation.visibleForMe'
-                    if (route.params.type === 'customer' || route.params.type === 'customer-high')
+                    if (['customer-redistributed', 'customer-redistributed-unfiled'].includes(route.params.type)) return 'conversation.routing.redistributed'
+                if (route.params.type === 'customer' || route.params.type === 'customer-high')
                       return 'Kundentickets'
                     if (route.params.type === 'service-mails') return 'Service-Mails'
                     if (route.params.type === 'created') return 'conversation.createdByMe'

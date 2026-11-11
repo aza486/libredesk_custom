@@ -11,6 +11,7 @@ import (
 	"time"
 
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/authz"
 	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/abhinavxd/libredesk/internal/automation/models"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
@@ -249,14 +250,36 @@ func handleGetCustomerConversations(r *fastglue.Request) error {
 	filters := string(r.RequestCtx.QueryArgs().Peek("filters"))
 	page, pageSize := getPagination(r)
 	highPriority := string(r.RequestCtx.QueryArgs().Peek("priority")) == "high"
-	conversations, err := app.conversation.GetCustomerConversationsList(user.ID, highPriority, order, orderBy, filters, page, pageSize)
+	var conversations []cmodels.ConversationListItem
+	if string(r.RequestCtx.QueryArgs().Peek("routing")) == "redistributed" {
+		listType := cmodels.CustomerRedistributedConversations
+		if string(r.RequestCtx.QueryArgs().Peek("folder_mode")) == "unfiled" {
+			listType = cmodels.CustomerRedistributedUnfiledConversations
+		}
+		conversations, err = app.conversation.GetConversations(user.ID, user.ID, nil, []string{listType}, order, orderBy, filters, page, pageSize)
+	} else {
+		conversations, err = app.conversation.GetCustomerConversationsList(user.ID, highPriority, order, orderBy, filters, page, pageSize)
+	}
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	total := 0
 	if len(conversations) > 0 {
 		total = conversations[0].Total
+	} else if page > 1 && string(r.RequestCtx.QueryArgs().Peek("routing")) == "redistributed" {
+		listType := cmodels.CustomerRedistributedConversations
+		if string(r.RequestCtx.QueryArgs().Peek("folder_mode")) == "unfiled" {
+			listType = cmodels.CustomerRedistributedUnfiledConversations
+		}
+		first, e := app.conversation.GetConversations(user.ID, user.ID, nil, []string{listType}, order, orderBy, filters, 1, 1)
+		if e != nil {
+			return sendErrorEnvelope(r, e)
+		}
+		if len(first) > 0 {
+			total = first[0].Total
+		}
 	}
+
 	return r.SendEnvelope(envelope.PageResults{Results: conversations, Total: total, PerPage: pageSize, TotalPages: (total + pageSize - 1) / pageSize, Page: page})
 }
 
@@ -617,6 +640,13 @@ func handleGetConversation(r *fastglue.Request) error {
 		}
 	}
 	conv.PreviousConversations = filterCurrentPreviousConv(visiblePrevious, conv.UUID)
+	allowedReturn, err := app.conversation.CustomerReturnAllowed(user.ID, *conv, func(current cmodels.Conversation, member bool) bool {
+		return canReturnCustomerToSupport(user, current, member)
+	})
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	conv.CanReturnToSupport = allowedReturn
 	return r.SendEnvelope(conv)
 }
 
@@ -800,6 +830,26 @@ func handleSetUserAssignees(r *fastglue.Request) error {
 		}
 	}
 	if err := app.conversation.SetConversationUserAssignees(uuid, req.AssigneeIDs, user); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	return r.SendEnvelope(true)
+}
+
+// handleReturnCustomerToSupport uses the same atomic routing service as assignment.
+func handleReturnCustomerToSupport(r *fastglue.Request) error {
+	app := r.Context.(*App)
+	auser := r.RequestCtx.UserValue("user").(amodels.User)
+	uuid := r.RequestCtx.UserValue("uuid").(string)
+	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if _, err = enforceConversationAccess(app, uuid, user); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if err = app.conversation.ReturnCustomerToSupport(uuid, user, func(locked cmodels.Conversation, teamMember bool) bool {
+		return canReturnCustomerToSupport(user, locked, teamMember)
+	}); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)
@@ -1068,7 +1118,7 @@ func handleRemoveVisibleUser(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if assigned {
+	if assigned && !conversation.CustomerTicket {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Assigned users must be unassigned before visibility can be removed", nil))
 	}
 
@@ -1139,7 +1189,7 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 	if err := json.Unmarshal(conversation.CustomAttributes, &currentAttrs); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if currentAttrs["access_mode"] == "personal" {
+	if currentAttrs["access_mode"] == "personal" || conversation.CustomerTicket {
 		protectedKeys = append(protectedKeys, "customer_visibility", "visibility_managers", "visible_users")
 	}
 	for _, key := range protectedKeys {
@@ -1182,7 +1232,7 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 		)
 	}
 
-	if currentAttrs["access_mode"] == "personal" {
+	if currentAttrs["access_mode"] == "personal" || conversation.CustomerTicket {
 		for _, key := range append(protectedKeys, "creator_id") {
 			attributes[key] = currentAttrs[key]
 		}
@@ -1489,4 +1539,33 @@ func validateCreateConversationRequest(req createConversationRequest, app *App) 
 	}
 
 	return nil
+}
+
+// Dedicated return authority does not grant arbitrary assignment/status writes.
+func canReturnCustomerToSupport(user umodels.User, conversation cmodels.Conversation, teamMember bool) bool {
+	if !user.Enabled || !slices.Contains(user.Permissions, "conversations:read") || !conversation.CustomerTicket || !conversation.CustomerRedistributed || !authz.CanReadConversation(user, conversation) {
+		return false
+	}
+	var names []string
+	if json.Unmarshal(conversation.Tags.JSON, &names) != nil || slices.Contains(names, "🗑Spam") {
+		return false
+	}
+	var attrs map[string]any
+	if json.Unmarshal(conversation.CustomAttributes, &attrs) != nil {
+		return false
+	}
+	if canManageConversationVisibility(attrs, user, &conversation) {
+		return true
+	}
+	allWrites := true
+	for _, permission := range []string{"conversations:update_team_assignee", "conversations:update_user_assignee", "conversations:update_status"} {
+		allWrites = allWrites && slices.Contains(user.Permissions, permission)
+	}
+	if allWrites {
+		return true
+	}
+	if slices.Contains(conversation.AssignedUserIDs, int64(user.ID)) || (conversation.AssignedUserID.Valid && conversation.AssignedUserID.Int == user.ID) {
+		return true
+	}
+	return teamMember && (slices.Contains(user.Permissions, "conversations:read_team_all") || (len(conversation.AssignedUserIDs) == 0 && !conversation.AssignedUserID.Valid && slices.Contains(user.Permissions, "conversations:read_team_inbox")))
 }

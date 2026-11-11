@@ -74,6 +74,9 @@ func (m *Manager) BroadcastMessageUpdate(conversationUUID, messageUUID string, d
 // BroadcastConversationUpdate broadcasts a partial conversation update to list subscribers.
 func (m *Manager) BroadcastConversationUpdate(conversationUUID string, data map[string]any) {
 	data["uuid"] = conversationUUID
+	if _, ok := data["status"]; ok {
+		m.addCustomerRouteUpdate(conversationUUID, data)
+	}
 	m.broadcastToConversationListSubs(conversationUUID, wsmodels.Message{
 		Type: wsmodels.MessageTypeConversationUpdate,
 		Data: data,
@@ -83,6 +86,7 @@ func (m *Manager) BroadcastConversationUpdate(conversationUUID string, data map[
 // A tag can move a ticket into a list that did not subscribe to it yet.
 // Notify all currently authorized connected agents, using the existing ACL.
 func (m *Manager) broadcastTagMembershipUpdate(uuid string, data map[string]any) {
+	m.addCustomerRouteUpdate(uuid, data)
 	data["uuid"] = uuid
 	userIDs := m.AuthorizedConnectedAgentIDs(uuid)
 	if len(userIDs) == 0 {
@@ -291,7 +295,7 @@ func (m *Manager) authorizedConversationSubscribers(uuid string) []*ws.Client {
 	if err != nil {
 		return nil
 	}
-	if !isPersonalConversation(conv.CustomAttributes) {
+	if !isPersonalConversation(conv.CustomAttributes) && !conv.CustomerTicket {
 		return clients
 	}
 	out := make([]*ws.Client, 0, len(clients))
@@ -302,4 +306,19 @@ func (m *Manager) authorizedConversationSubscribers(uuid string) []*ws.Client {
 		}
 	}
 	return out
+}
+
+func (m *Manager) addCustomerRouteUpdate(uuid string, data map[string]any) {
+	routes, err := loadCustomerRoutes(m.db, []string{uuid})
+	if err != nil {
+		m.lo.Error("loading customer route update", "error", err)
+		return
+	}
+	r := routes[uuid]
+	if !r.Customer {
+		return
+	}
+	data["customer_ticket"] = r.Customer
+	data["customer_redistributed"] = r.Redistributed
+	data["customer_redistributed_active"] = r.Active
 }

@@ -72,3 +72,17 @@ test('visible and visible-internal remain separate routes and cannot select my_i
     []
   )
 })
+
+test('redistributed folder routes bind their fixed global scope without a status filter', async () => {
+  mocks.route.params.type = 'customer-redistributed'
+  mount()
+  await flush()
+  expect(mocks.store.setListStatus).toHaveBeenLastCalledWith('', false)
+  expect(mocks.store.fetchConversationsList).toHaveBeenLastCalledWith(true, 'folder:redistributed:0:11')
+  mocks.route.query = {}
+  await flush()
+  expect(mocks.store.fetchConversationsList).toHaveBeenLastCalledWith(true, 'customer-redistributed', 0, [])
+  mocks.route.params.type = 'customer-redistributed-unfiled'
+  await flush()
+  expect(mocks.store.fetchConversationsList).toHaveBeenLastCalledWith(true, 'customer-redistributed-unfiled', 0, [])
+})

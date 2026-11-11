@@ -14,7 +14,9 @@ import { moveFolder } from './sidebarFolderOrder'
 const props = defineProps({
   scope: String,
   scopeId: { type: Number, default: 0 },
-  scopeName: String
+  scopeName: String,
+  unfiledLabel: String,
+  addLabel: {type:String,default:"Ordner / Filter hinzufügen"}
 })
 const route = useRoute()
 const router = useRouter()
@@ -65,20 +67,24 @@ async function load() {
 function isCurrentScope() {
   if (props.scope === 'personal') return Number(route.params.inboxID) === props.scopeId
   if (props.scope === 'team') return Number(route.params.teamID) === props.scopeId
+  if (props.scope === 'redistributed') return ['customer-redistributed', 'customer-redistributed-unfiled'].includes(route.params.type)
   if (props.scope === 'my_inbox') return route.params.type === 'assigned'
   return route.params.type === 'customer'
 }
 function navigate(folder) {
-  const query = folder ? { folder: String(folder.id), folderName: folder.name } : { status: 'Open' }
+  const query = folder ? { folder: String(folder.id), folderName: folder.name } : props.scope === 'redistributed' ? {} : { status: 'Open' }
   const params =
     props.scope === 'personal'
       ? { inboxID: props.scopeId }
       : props.scope === 'team'
         ? { teamID: props.scopeId }
-        : { type: props.scope === 'my_inbox' ? 'assigned' : 'customer' }
+        : { type: props.scope === 'redistributed' ? 'customer-redistributed' : props.scope === 'my_inbox' ? 'assigned' : 'customer' }
   const name =
     props.scope === 'personal' ? 'personal-inbox' : props.scope === 'team' ? 'team-inbox' : 'inbox'
   router.push({ name, params, query })
+}
+function showUnfiled() {
+ router.push({name:'inbox',params:{type:'customer-redistributed-unfiled'},query:{}})
 }
 function edit(folder = null) {
   selected.value = folder
@@ -126,6 +132,12 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <SidebarMenuSubItem v-if="scope === 'redistributed'">
+    <SidebarMenuButton size="sm" :is-active="route.params.type === 'customer-redistributed-unfiled'" @click="showUnfiled">
+      <span class="min-w-0 truncate">{{ unfiledLabel }}</span>
+      <Badge variant="outline" class="ml-auto shrink-0 tabular-nums bg-background px-1.5 py-0 font-medium">{{ counts[-1] || 0 }}</Badge>
+    </SidebarMenuButton>
+  </SidebarMenuSubItem>
   <SidebarMenuSubItem
     v-for="(folder, index) in folders"
     :key="folder.id"
@@ -169,7 +181,7 @@ onUnmounted(() => {
   </SidebarMenuSubItem>
   <SidebarMenuSubItem>
     <SidebarMenuButton size="sm" class="text-muted-foreground" @click="edit()"
-      ><Plus class="size-3.5" /><span>Ordner / Filter hinzufügen</span></SidebarMenuButton
+      ><Plus class="size-3.5" /><span>{{ addLabel }}</span></SidebarMenuButton
     >
     <p v-if="error" role="alert" class="px-2 text-xs text-destructive">{{ error }}</p>
   </SidebarMenuSubItem>

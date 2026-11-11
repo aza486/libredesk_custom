@@ -13,6 +13,10 @@
       <slot name="trigger" v-bind="slotProps" />
     </template>
 
+    <template v-if="$slots.footer" #footer="slotProps">
+      <slot name="footer" v-bind="slotProps" />
+    </template>
+
     <!-- Items -->
     <template #item="{ item }">
       <div class="flex items-center gap-2">

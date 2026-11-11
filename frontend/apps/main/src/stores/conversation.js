@@ -339,11 +339,18 @@ export const useConversationStore = defineStore('conversation', () => {
     // In particular, an explicitly shared personal ticket can belong to assigned
     // even when this employee is not an owner of that mailbox.
     if (conversations.listType?.startsWith('folder:')) return null
+    if ([CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED, CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED_UNFILED].includes(conversations.listType)) {
+      return conv.customer_redistributed_active === true
+    }
+    if (!spamView && [CONVERSATION_LIST_TYPE.CUSTOMER, CONVERSATION_LIST_TYPE.CUSTOMER_HIGH].includes(conversations.listType) && conv.customer_redistributed_active === true) return false
+
 
     if (conv.custom_attributes?.access_mode === 'personal') {
       if (
         [
-          CONVERSATION_LIST_TYPE.CUSTOMER,
+          CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED,
+        CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED_UNFILED,
+        CONVERSATION_LIST_TYPE.CUSTOMER,
           CONVERSATION_LIST_TYPE.CUSTOMER_HIGH,
           CONVERSATION_LIST_TYPE.SERVICE_MAILS,
           CONVERSATION_LIST_TYPE.UNASSIGNED,
@@ -862,6 +869,13 @@ export const useConversationStore = defineStore('conversation', () => {
     }
 
     filters = filters.length > 0 ? JSON.stringify(filters) : []
+    if ([CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED, CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED_UNFILED].includes(listType)) {
+      return api.getCustomerConversations({ page, page_size: pageSize, filters, routing: 'redistributed',
+        ...(listType === CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED_UNFILED && {folder_mode:'unfiled'}),
+        order_by: `${sortFieldMap[conversations.sortField].model}.${sortFieldMap[conversations.sortField].field}`,
+        order: sortFieldMap[conversations.sortField].order })
+    }
+
     switch (listType) {
       case CONVERSATION_LIST_TYPE.PERSONAL:
       case CONVERSATION_LIST_TYPE.PERSONAL_HIGH:
@@ -1159,7 +1173,9 @@ export const useConversationStore = defineStore('conversation', () => {
   async function updateAssignee(type, v) {
     try {
       await api.updateAssignee(conversation.data.uuid, type, v)
-      conversation.data[`assigned_${type}_id`] = v.assignee_id
+      if (conversation.data.customer_ticket) await silentRefetchConversation(conversation.data.uuid)
+      else conversation.data[`assigned_${type}_id`] = v.assignee_id
+      refreshConversationListForRealtimeEvent()
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
@@ -1171,7 +1187,9 @@ export const useConversationStore = defineStore('conversation', () => {
   async function removeAssignee(type) {
     try {
       await api.removeAssignee(conversation.data.uuid, type)
-      conversation.data[`assigned_${type}_id`] = null
+      if (conversation.data.customer_ticket) await silentRefetchConversation(conversation.data.uuid)
+      else conversation.data[`assigned_${type}_id`] = null
+      refreshConversationListForRealtimeEvent()
     } catch (error) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
@@ -1380,6 +1398,8 @@ export const useConversationStore = defineStore('conversation', () => {
       [
         CONVERSATION_LIST_TYPE.ASSIGNED,
         CONVERSATION_LIST_TYPE.ASSIGNED_HIGH,
+        CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED,
+        CONVERSATION_LIST_TYPE.CUSTOMER_REDISTRIBUTED_UNFILED,
         CONVERSATION_LIST_TYPE.CUSTOMER,
         CONVERSATION_LIST_TYPE.CUSTOMER_HIGH,
         CONVERSATION_LIST_TYPE.TEAM_ALL,
@@ -1449,9 +1469,13 @@ export const useConversationStore = defineStore('conversation', () => {
     retainListEvent(update.uuid, update)
     if (conversation.data?.uuid === update.uuid) {
       deepMerge(conversation.data, update)
+      if (update.routing_changed || Object.hasOwn(update, 'tags')) {
+        conversation.data.can_return_to_support = false
+        silentRefetchConversation(update.uuid)
+      }
     }
     const existing = mergeIntoList(update.uuid, update)
-    if (Object.hasOwn(update, 'tags')) {
+    if (Object.hasOwn(update, 'tags') || Object.hasOwn(update, 'customer_redistributed_active') || update.routing_changed) {
       emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'inbox-list' })
       if (existing && matchesAssignmentScope(existing) === false) {
         conversations.data = conversations.data.filter((item) => item.uuid !== update.uuid)

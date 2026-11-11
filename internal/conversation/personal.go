@@ -31,6 +31,10 @@ func isPersonalConversation(raw json.RawMessage) bool {
 // Shared by initial personal assignment and the existing multi-assignment service.
 // The caller owns the transaction and visibility updates.
 func replaceUserAssignees(tx *sqlx.Tx, conversationID int, ids []int, actorID int) error {
+	// ANY(NULL) is unknown and would retain every previous assignee.
+	if ids == nil {
+		ids = []int{}
+	}
 	if _, err := tx.Exec(`DELETE FROM conversation_assignees WHERE conversation_id=$1 AND NOT (user_id=ANY($2::bigint[]))`, conversationID, pq.Array(ids)); err != nil {
 		return err
 	}
