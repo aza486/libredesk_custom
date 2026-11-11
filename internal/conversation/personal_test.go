@@ -29,6 +29,10 @@ func (personalUsers) GetSystemUser() (umodels.User, error) {
 	return umodels.User{}, fmt.Errorf("no system actor in test")
 }
 
+func (u personalUsers) GetAgent(id int, _ string) (umodels.User, error) {
+	return u.GetAgentCachedOrLoad(id)
+}
+
 func (personalUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
 	u := umodels.User{ID: id, Enabled: true}
 	if id == 103 {
@@ -154,6 +158,8 @@ func TestSharedPersonalInboxOwnerAccess(t *testing.T) {
 		m.wsHub.SubscribeListReplace(client, []string{uuid})
 		clients = append(clients, client)
 	}
+	// Revoked subscriptions were removed; a newly shared viewer subscribes again.
+	m.wsHub.SubscribeListReplace(clients[1], []string{uuid})
 	if got := m.authorizedConversationSubscribers(uuid); len(got) != 3 {
 		t.Fatalf("authorized shared-inbox subscribers: %v", got)
 	}
@@ -298,6 +304,8 @@ func TestPersonalIncomingAndVisibility(t *testing.T) {
 	if !authz.CanReadConversation(umodels.User{ID: 102}, shared) {
 		t.Fatal("explicit sharing failed")
 	}
+	// Revoked subscriptions were removed; a newly shared viewer subscribes again.
+	m.wsHub.SubscribeListReplace(clients[1], []string{uuid})
 	if got := m.authorizedConversationSubscribers(uuid); len(got) != 3 {
 		t.Fatal("sharing did not authorize events")
 	}

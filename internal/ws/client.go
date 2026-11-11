@@ -148,7 +148,13 @@ func (c *Client) handleConversationSubscribe(data json.RawMessage) {
 
 	// Authz: silently reject if the agent can't read this conversation.
 	authorized, err := c.Hub.conversationStore.FilterAuthorizedListUUIDs(c.ID, []string{subscribeMsg.ConversationUUID})
-	if err != nil || len(authorized) == 0 {
+	if err != nil {
+		return
+	}
+	if len(authorized) == 0 {
+		c.Hub.UnsubscribeConversation(c, subscribeMsg.ConversationUUID)
+		payload, _ := json.Marshal(models.Message{Type: models.MessageTypeConversationUpdate, Data: map[string]any{"uuid": subscribeMsg.ConversationUUID, "access_revoked": true}})
+		c.SendMessage(payload, websocket.TextMessage)
 		return
 	}
 
@@ -157,10 +163,7 @@ func (c *Client) handleConversationSubscribe(data json.RawMessage) {
 
 // handleTyping handles typing indicator messages.
 //
-// Same trust assumption as handleConversationSubscribe: the sender is an
-// authenticated agent. A hostile agent could broadcast fake typing to any
-// conversation UUID (including widget clients), but typing is ephemeral and
-// cosmetic; adding per-frame authz isn't worth the DB cost today.
+// Typing also requires current read access; a past subscription is not authority.
 func (c *Client) handleTyping(data json.RawMessage) {
 	var typingMsg models.TypingMessage
 	if err := json.Unmarshal(data, &typingMsg); err != nil {
@@ -173,6 +176,10 @@ func (c *Client) handleTyping(data json.RawMessage) {
 		return
 	}
 
+	authorized, err := c.Hub.conversationStore.FilterAuthorizedListUUIDs(c.ID, []string{typingMsg.ConversationUUID})
+	if err != nil || len(authorized) == 0 {
+		return
+	}
 	c.Hub.BroadcastTypingToConversation(typingMsg.ConversationUUID, typingMsg)
 }
 

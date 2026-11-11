@@ -96,7 +96,7 @@ const panelSizes = useStorage('conversationDetailPanelSizes', [70, 30])
 const sheetSidebarOpen = ref(false)
 
 const showContent = computed(
-  () => conversationStore.current || conversationStore.conversation.loading
+  () => conversationStore.isConversationOpen
 )
 
 const isLoading = computed(
@@ -159,7 +159,7 @@ const fetchConversation = async (uuid) => {
     conversationStore.fetchConversation(uuid),
     conversationStore.fetchMessages(uuid)
   ])
-  await conversationStore.updateAssigneeLastSeen(uuid)
+  if (conversationStore.current?.uuid === uuid) await conversationStore.updateAssigneeLastSeen(uuid)
 }
 
 // Initial fetch

@@ -16,6 +16,9 @@ import (
 
 type myInboxUsers struct{ folderUsers }
 
+func (u myInboxUsers) GetAgent(id int, _ string) (umodels.User, error) {
+	return u.GetAgentCachedOrLoad(id)
+}
 func (myInboxUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
 	user, err := folderUsers{}.GetAgentCachedOrLoad(id)
 	user.Permissions = append(user.Permissions, "conversations:read_assigned")

@@ -207,6 +207,18 @@ func handleDeletePrivateNote(r *fastglue.Request) error {
 		"uuid", r.RequestCtx.UserValue("uuid"),
 	)
 
+	user, err := app.user.GetAgent(auser.ID, "")
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	message, err := app.conversation.GetMessage(uuid)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	if _, err = enforceConversationAccess(app, message.ConversationUUID, user); err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+
 	if err := app.conversation.DeletePrivateNote(
 		uuid,
 		auser.ID,

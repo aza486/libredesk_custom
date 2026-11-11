@@ -12,6 +12,7 @@ import (
 
 	"github.com/abhinavxd/libredesk/internal/attachment"
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
+	"github.com/abhinavxd/libredesk/internal/authz"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/image"
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
@@ -68,7 +69,7 @@ func handleMediaUpload(r *fastglue.Request) error {
 	// Only agents who manage the help center may upload publicly served media.
 	if mmodels.IsPublicModel(linkedModel) {
 		auser := r.RequestCtx.UserValue("user").(amodels.User)
-		agent, err := app.user.GetAgentCachedOrLoad(auser.ID)
+		agent, err := app.user.GetAgent(auser.ID, "")
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
@@ -195,12 +196,12 @@ func handleServeMedia(r *fastglue.Request) error {
 		if err := json.Unmarshal(conversation.CustomAttributes, &attrs); err != nil {
 			return sendErrorEnvelope(r, err)
 		}
-		if attrs["access_mode"] == "personal" {
+		if attrs["access_mode"] == "personal" || authz.IsCustomerConversation(conversation) {
 			auser, ok := r.RequestCtx.UserValue("user").(amodels.User)
 			if !ok {
 				return r.SendErrorEnvelope(http.StatusUnauthorized, app.i18n.T("auth.invalidOrExpiredSession"), nil, envelope.UnauthorizedError)
 			}
-			user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+			user, err := app.user.GetAgent(auser.ID, "")
 			if err != nil {
 				return sendErrorEnvelope(r, err)
 			}
@@ -208,7 +209,7 @@ func handleServeMedia(r *fastglue.Request) error {
 			if err != nil {
 				return sendErrorEnvelope(r, err)
 			}
-			if !allowed {
+			if !allowed || !user.Enabled || !slices.Contains(user.Permissions, "messages:read") {
 				return r.SendErrorEnvelope(http.StatusForbidden, app.i18n.T("status.deniedPermission"), nil, envelope.PermissionError)
 			}
 			r.RequestCtx.SetUserValue("personal_media", true)
@@ -233,7 +234,7 @@ func handleServeMedia(r *fastglue.Request) error {
 	}
 
 	// Session/API key authenticated - perform full permission check.
-	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

@@ -112,6 +112,24 @@ func (h *Hub) SubscribeOpenConv(client *Client, uuid string) {
 	h.convSubsOpen[uuid][client] = struct{}{}
 }
 
+// UnsubscribeConversation removes both subscription sources after access revocation.
+func (h *Hub) UnsubscribeConversation(client *Client, uuid string) {
+	h.subsMu.Lock()
+	defer h.subsMu.Unlock()
+	delete(h.convSubsList[uuid], client)
+	delete(h.clientListSubs[client], uuid)
+	if len(h.convSubsList[uuid]) == 0 {
+		delete(h.convSubsList, uuid)
+	}
+	delete(h.convSubsOpen[uuid], client)
+	if len(h.convSubsOpen[uuid]) == 0 {
+		delete(h.convSubsOpen, uuid)
+	}
+	if h.clientOpenSub[client] == uuid {
+		delete(h.clientOpenSub, client)
+	}
+}
+
 // ListSubscribers returns the union of list-source and open-source subscribers for a conversation.
 func (h *Hub) ListSubscribers(uuid string) []*Client {
 	h.subsMu.RLock()
@@ -235,8 +253,16 @@ func (h *Hub) BroadcastTypingToConversation(conversationUUID string, typingMsg m
 }
 
 func (h *Hub) BroadcastTypingToAllConversationClients(conversationUUID string, data []byte) {
+	if h.conversationStore == nil {
+		return
+	}
 	for _, c := range h.ListSubscribers(conversationUUID) {
-		c.SendMessage(data, websocket.TextMessage)
+		authorized, err := h.conversationStore.FilterAuthorizedListUUIDs(c.ID, []string{conversationUUID})
+		if err == nil && len(authorized) > 0 {
+			c.SendMessage(data, websocket.TextMessage)
+		} else if err == nil {
+			h.UnsubscribeConversation(c, conversationUUID)
+		}
 	}
 }
 

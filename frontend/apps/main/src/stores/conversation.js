@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, reactive, ref, watch, watchEffect, onScopeDispose } from 'vue'
 import { useRouter } from 'vue-router'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { TYPING_RECEIVE_TIMEOUT } from '@shared-ui/composables/useTypingIndicator.js'
@@ -23,6 +23,7 @@ import { useUserStore } from '@/stores/user'
 import { useNotificationStore } from '@/stores/notification'
 import { delayedLoading } from '@/utils/delayed-loading'
 import api from '../api'
+import { onConversationAccessDenied } from '../utils/conversation-access'
 
 export const useConversationStore = defineStore('conversation', () => {
   const CONV_LIST_PAGE_SIZE = 25
@@ -530,42 +531,120 @@ export const useConversationStore = defineStore('conversation', () => {
     }
   }
 
-  async function fetchConversation(uuid) {
-    const cached = conversationDataCache.get(uuid)
-    if (cached) {
-      conversation.data = cached
-      resetTypingState()
-      subscribeToConversation(uuid)
-      silentRefetchConversation(uuid)
-      return
+  const accessVersions = new Map()
+  const revokedUUIDs = new Set()
+  let accessSequence = 0
+  let detailRequest = 0
+  const accessVersion = (uuid) => accessVersions.get(uuid) || 0
+  const deniedRead = (error) => [403, 404].includes(error?.response?.status)
+
+  function revokeConversationAccess(uuid) {
+    if (!uuid) return
+    const alreadyRevoked = revokedUUIDs.has(uuid)
+    revokedUUIDs.add(uuid)
+    accessVersions.set(uuid, ++accessSequence)
+    conversationDataCache.delete(uuid)
+    messages.data.purgeConversation(uuid)
+    staleConversationUUIDs.delete(uuid)
+    selectedUUIDs.value.delete(uuid)
+    pendingNotificationUUIDs.delete(uuid)
+    selectedDraftType.value.delete(uuid)
+    notificationStore.removeConversationNotifications?.(uuid)
+    for (const key of drafts.value.keys()) {
+      if (key.startsWith(`${uuid}::`)) drafts.value.delete(key)
     }
+    // Drop only this row, retaining loaded pages and stored scroll positions.
+    const prune = (entry) => {
+      const before = entry.data?.length || 0
+      entry.data = entry.data?.filter((row) => row.uuid !== uuid) || []
+      if (entry.data.length < before) entry.total = Math.max(0, entry.total - 1)
+    }
+    prune(conversations)
+    for (const entry of listCache.values()) prune(entry)
+    listEventPatches.delete(uuid)
+    listEventInserts.delete(uuid)
+    delete typingByUUID[uuid]
+    clearTimeout(typingTimeoutsByUUID.get(uuid))
+    typingTimeoutsByUUID.delete(uuid)
+    if (conversation.data?.uuid === uuid || isViewingConversation(uuid)) {
+      conversation.data = null
+      currentTo.value = []
+      currentCC.value = []
+      currentBCC.value = []
+      resetTypingState()
+      conversation.loading = false
+      messages.loading = false
+      messages.fetching = false
+      conversation.errorMessage =
+        getI18n()?.global?.t('conversation.accessRevoked') ||
+        'Du hast keinen Zugriff mehr auf diese Konversation.'
+      if (!alreadyRevoked) {
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive', description: conversation.errorMessage
+        })
+      }
+      const route = router.currentRoute.value
+      if (route.params.uuid === uuid && route.path) {
+        const parentPath = route.path.replace(/\/conversation\/[^/]+\/?$/, '')
+        router.replace({ path: parentPath, query: route.query })
+      }
+    }
+    incrementMessageVersion()
+  }
+
+  const stopAccessListener = onConversationAccessDenied((uuid, directDetail) => {
+    if (directDetail) revokeConversationAccess(uuid)
+    else silentRefetchConversation(uuid)
+  })
+  onScopeDispose(stopAccessListener)
+
+  async function fetchConversation(uuid) {
+    const request = ++detailRequest
+    const version = accessVersion(uuid)
+    conversation.errorMessage = ''
+    const cached = revokedUUIDs.has(uuid) ? null : conversationDataCache.get(uuid)
+    if (cached) conversation.data = cached
     const guard = delayedLoading(conversation, 'loading')
     try {
       const resp = await api.getConversation(uuid)
+      if (version !== accessVersion(uuid) || request !== detailRequest) return
+      const restored = revokedUUIDs.delete(uuid)
+      notificationStore.restoreConversationNotifications?.(uuid)
       conversation.data = resp.data.data
       resetTypingState()
       subscribeToConversation(uuid)
       cacheConversationData(uuid, conversation.data)
+      if (restored) await fetchMessages(uuid)
     } catch (error) {
-      conversation.errorMessage = handleHTTPError(error).message
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-        variant: 'destructive',
-        description: conversation.errorMessage
-      })
+      if (version !== accessVersion(uuid)) return
+      if (deniedRead(error)) revokeConversationAccess(uuid)
+      else {
+        conversation.errorMessage = handleHTTPError(error).message
+        emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+          variant: 'destructive', description: conversation.errorMessage
+        })
+      }
     } finally {
       guard.release()
     }
   }
 
   async function silentRefetchConversation(uuid) {
+    const version = accessVersion(uuid)
     try {
       const resp = await api.getConversation(uuid)
+      if (version !== accessVersion(uuid)) return
+      const wasRevoked = revokedUUIDs.delete(uuid)
+      notificationStore.restoreConversationNotifications?.(uuid)
       if (conversation.data?.uuid === uuid) {
         deepMerge(conversation.data, resp.data.data)
         cacheConversationData(uuid, conversation.data)
       }
+      if (wasRevoked) refreshConversationListForRealtimeEvent()
     } catch (error) {
-      console.warn('silent conversation refetch failed', error)
+      if (version !== accessVersion(uuid)) return
+      if (deniedRead(error)) revokeConversationAccess(uuid)
+      else console.warn('silent conversation refetch failed', error)
     }
   }
 
@@ -574,12 +653,15 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function fetchMessages(uuid, fetchNextPage = false) {
+    if (revokedUUIDs.has(uuid)) return
+    const version = accessVersion(uuid)
     if (staleConversationUUIDs.has(uuid) && messages.data.hasConversation(uuid)) {
       try {
         const response = await api.getConversationMessages(uuid, {
           page: 1,
           page_size: MESSAGE_LIST_PAGE_SIZE
         })
+        if (version !== accessVersion(uuid)) return
         const newMessages = response.data?.data?.results || []
         let lastAdded = null
         for (const m of newMessages) {
@@ -592,6 +674,7 @@ export const useConversationStore = defineStore('conversation', () => {
         if (lastAdded) {
           incrementMessageVersion()
           setTimeout(() => {
+            if (version !== accessVersion(uuid)) return
             emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
               conversation_uuid: uuid,
               message: lastAdded
@@ -599,6 +682,11 @@ export const useConversationStore = defineStore('conversation', () => {
           }, 100)
         }
       } catch (error) {
+        if (version !== accessVersion(uuid)) return
+        if (deniedRead(error)) {
+          revokeConversationAccess(uuid)
+          return
+        }
         emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
           variant: 'destructive',
           description: handleHTTPError(error).message
@@ -619,11 +707,17 @@ export const useConversationStore = defineStore('conversation', () => {
         page,
         page_size: MESSAGE_LIST_PAGE_SIZE
       })
+      if (version !== accessVersion(uuid)) return
       const result = response.data?.data || {}
       markConversationAsRead(uuid)
       messages.data.addMessages(uuid, result.results || [], result.page, result.total_pages)
       incrementMessageVersion()
     } catch (error) {
+      if (version !== accessVersion(uuid)) return
+      if (deniedRead(error)) {
+        revokeConversationAccess(uuid)
+        return
+      }
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
         variant: 'destructive',
         description: handleHTTPError(error).message
@@ -639,8 +733,11 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function fetchMessage(conversationUUID, messageUUID) {
+    if (revokedUUIDs.has(conversationUUID)) return
+    const version = accessVersion(conversationUUID)
     try {
       const response = await api.getConversationMessage(conversationUUID, messageUUID)
+      if (version !== accessVersion(conversationUUID)) return
       if (response?.data?.data) {
         const newMsg = response.data.data
         messages.data.addMessage(conversationUUID, newMsg)
@@ -779,6 +876,7 @@ export const useConversationStore = defineStore('conversation', () => {
     conversations.fetching = true
     if (page === 0) page = conversations.page
     const seq = contextSeq
+    const accessSnapshot = accessSequence
     listEventPatches = new Map()
     listEventInserts = new Set()
     const requestSeq = ++listRequestSeq
@@ -814,13 +912,13 @@ export const useConversationStore = defineStore('conversation', () => {
         processConversationListResponse({ data: { data: {
           results: rows, page: loadedPages, total,
           total_pages: Math.ceil(total / CONV_LIST_PAGE_SIZE)
-        } } })
+        } } }, accessSnapshot)
       } else {
         const response = await makeConversationListRequest(
           listType, teamID, viewID, filters, page, inboxID
         )
         if (isStale()) return
-        processConversationListResponse(response)
+        processConversationListResponse(response, accessSnapshot)
       }
     } catch (error) {
       if (isStale()) return
@@ -1052,12 +1150,17 @@ export const useConversationStore = defineStore('conversation', () => {
     return existing
   }
 
-  function processConversationListResponse(response) {
+  function processConversationListResponse(response, accessSnapshot) {
     const apiResponse = response.data.data
     const newConversations = []
     const seen = new Set()
     for (const conv of apiResponse.results) {
       if (seen.has(conv.uuid)) continue
+      if (revokedUUIDs.has(conv.uuid)) {
+        if (accessVersion(conv.uuid) > accessSnapshot) continue
+        revokedUUIDs.delete(conv.uuid)
+        notificationStore.restoreConversationNotifications?.(conv.uuid)
+      }
       seen.add(conv.uuid)
       const newer = listEventPatches.get(conv.uuid)
       if (newer) deepMerge(conv, newer)
@@ -1199,6 +1302,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function updateAssigneeLastSeen(uuid) {
+    if (revokedUUIDs.has(uuid)) return
     if (!isViewingConversation(uuid)) return
     markConversationAsRead(uuid)
     api.updateAssigneeLastSeen(uuid).catch(() => { })
@@ -1254,6 +1358,8 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   async function updateConversationMessage(message) {
+    if (revokedUUIDs.has(message.conversation_uuid)) return
+    const version = accessVersion(message.conversation_uuid)
     if (conversation.data?.uuid !== message.conversation_uuid) {
       // Lazy invalidation: refresh the cache when the user next opens this convo, not on every WS event.
       if (messages.data.hasConversation(message.conversation_uuid)) {
@@ -1284,6 +1390,7 @@ export const useConversationStore = defineStore('conversation', () => {
         messages.data.addMessage(message.conversation_uuid, activityMessage)
         incrementMessageVersion()
         setTimeout(() => {
+          if (version !== accessVersion(message.conversation_uuid)) return
           emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
             conversation_uuid: message.conversation_uuid,
             message: activityMessage
@@ -1296,9 +1403,11 @@ export const useConversationStore = defineStore('conversation', () => {
       }
 
       const fetchedMessage = await fetchMessage(message.conversation_uuid, message.uuid)
+      if (version !== accessVersion(message.conversation_uuid)) return
       if (fetchedMessage) {
         updateConversationLastMessage(message.conversation_uuid, fetchedMessage)
         setTimeout(() => {
+          if (version !== accessVersion(message.conversation_uuid)) return
           emitter.emit(EMITTER_EVENTS.NEW_MESSAGE, {
             conversation_uuid: message.conversation_uuid,
             message: fetchedMessage
@@ -1386,6 +1495,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function mergeMessageUpdate(data) {
+    if (revokedUUIDs.has(data.conversation_uuid)) return
     const { conversation_uuid, uuid, ...fields } = data
     if (!messages.data.hasMessage(conversation_uuid, uuid)) return
     messages.data.updateMessage(conversation_uuid, uuid, fields)
@@ -1429,6 +1539,10 @@ export const useConversationStore = defineStore('conversation', () => {
 
   function handleConvPush(payload) {
     if (!payload || !payload.uuid) return
+    if (revokedUUIDs.has(payload.uuid)) {
+      silentRefetchConversation(payload.uuid)
+      return
+    }
     retainListEvent(payload.uuid, payload)
     const existing = mergeIntoList(payload.uuid, payload)
     if (existing) {
@@ -1466,6 +1580,14 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function mergeConversationUpdate(update) {
+    if (update.access_revoked) {
+      revokeConversationAccess(update.uuid)
+      return
+    }
+    if (revokedUUIDs.has(update.uuid)) {
+      silentRefetchConversation(update.uuid)
+      return
+    }
     retainListEvent(update.uuid, update)
     if (conversation.data?.uuid === update.uuid) {
       deepMerge(conversation.data, update)
@@ -1594,7 +1716,7 @@ export const useConversationStore = defineStore('conversation', () => {
       const newDrafts = new Map()
       if (resp.data?.data) {
         for (const draft of resp.data.data) {
-          newDrafts.set(draftMapKey(draft.conversation_uuid, draft.type), draft)
+          if (!revokedUUIDs.has(draft.conversation_uuid)) newDrafts.set(draftMapKey(draft.conversation_uuid, draft.type), draft)
         }
       }
       drafts.value = newDrafts
@@ -1613,6 +1735,7 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function setDraft(uuid, type, draft) {
+    if (revokedUUIDs.has(uuid)) return
     drafts.value.set(draftMapKey(uuid, type), draft)
     drafts.value = new Map(drafts.value)
   }
@@ -1689,6 +1812,7 @@ export const useConversationStore = defineStore('conversation', () => {
     isConversationInList,
     addPendingNotification,
     mergeConversationUpdate,
+    revokeConversationAccess,
     handleConvPush,
     mergeContactUpdate,
     addNewConversation,

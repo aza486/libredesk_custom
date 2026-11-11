@@ -85,25 +85,17 @@ func CanReadConversation(
 		return false
 	}
 
-	// Customer tickets use the same explicit visibility list. Every active
-	// Kundensupport member is added when such a ticket is created; assignees
-	// are added later by the assignment service.
-	if customerVisibility, ok := attrs["customer_visibility"].(bool); ok && customerVisibility {
-		if user.HasAdminRole() || slices.Contains(user.Roles, rmodels.RoleCustomerSupport) {
+	// Protected customer tickets have explicit access. Broad read_all and
+	// read_unassigned grants apply only to ordinary conversations.
+	if IsCustomerConversation(conversation) {
+		if user.HasAdminRole() || slices.Contains(user.Roles, rmodels.RoleCustomerSupport) ||
+			hasVisibleUser(attrs, user.ID) || CanManageCustomerVisibility(attrs, user.ID) {
 			return true
 		}
-
-		if hasVisibleUser(attrs, user.ID) {
-			return true
+		if !conversation.CustomerTicket {
+			return false
 		}
-
-		// Members of the assigned team may also read customer-visible tickets
-		// when they have the normal team-wide read permission.
-		return CanReadAssignment(
-			user,
-			conversation.AssignedUserID,
-			conversation.AssignedTeamID,
-		) || CanReadAdditionalAssignees(user, conversation.AssignedUserIDs)
+		return CanReadCustomerAssignment(user, conversation)
 	}
 
 	return CanReadAssignment(
@@ -111,6 +103,38 @@ func CanReadConversation(
 		conversation.AssignedUserID,
 		conversation.AssignedTeamID,
 	) || CanReadAdditionalAssignees(user, conversation.AssignedUserIDs)
+}
+
+// IsCustomerConversation also covers older explicit-visibility records. The
+// protected marker is projected by the conversation manager, never a client flag.
+func IsCustomerConversation(conversation cmodels.Conversation) bool {
+	var attrs map[string]any
+	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
+	return conversation.CustomerTicket || attrs["customer_visibility"] == true
+}
+
+// CanManageCustomerVisibility recognizes the existing durable Creator/manager
+// attributes. Role and private-inbox boundaries remain the caller's concern.
+func CanManageCustomerVisibility(attrs map[string]any, userID int) bool {
+	if creator, ok := attrs["creator_id"].(float64); ok && creator == float64(userID) {
+		return true
+	}
+	return hasVisibleUser(map[string]any{"visible_users": attrs["visibility_managers"]}, userID)
+}
+
+func CanReadCustomerAssignment(user umodels.User, conversation cmodels.Conversation) bool {
+	if !slices.Contains(user.Permissions, authzmodels.PermConversationsRead) {
+		return false
+	}
+	if CanReadAdditionalAssignees(user, conversation.AssignedUserIDs) ||
+		(conversation.AssignedUserID.Valid && conversation.AssignedUserID.Int == user.ID &&
+			slices.Contains(user.Permissions, authzmodels.PermConversationsReadAssigned)) {
+		return true
+	}
+	return conversation.AssignedTeamID.Valid && slices.Contains(user.Teams.IDs(), conversation.AssignedTeamID.Int) &&
+		(slices.Contains(user.Permissions, authzmodels.PermConversationsReadTeamAll) ||
+			(!conversation.AssignedUserID.Valid && len(conversation.AssignedUserIDs) == 0 &&
+				slices.Contains(user.Permissions, authzmodels.PermConversationsReadTeamInbox)))
 }
 
 func hasVisibleUser(attrs map[string]any, userID int) bool {

@@ -554,6 +554,13 @@ func (c *Manager) GetConversation(id int, uuid, refNum string) (models.Conversat
 	return conversation, nil
 }
 
+// GetContactConversationUUIDs returns identifiers for authorization before an export.
+func (c *Manager) GetContactConversationUUIDs(contactID int) ([]string, error) {
+	uuids := []string{}
+	err := c.q.GetConversationUUIDsByContact.Select(&uuids, contactID)
+	return uuids, err
+}
+
 // GetContactPreviousConversations retrieves previous conversations for a contact with a configurable limit.
 func (c *Manager) GetContactPreviousConversations(contactID int, limit int) ([]models.PreviousConversation, error) {
 	var conversations = make([]models.PreviousConversation, 0)
@@ -885,7 +892,7 @@ func (c *Manager) GetConversations(viewingUserID, userID int, teamIDs []int, lis
 func (c *Manager) getFolderAwareConversations(viewingUserID, userID int, teamIDs []int, listTypes []string, order, orderBy, filters string, page, pageSize, folderID int, inboxIDs ...int) ([]models.ConversationListItem, error) {
 	var conversations = make([]models.ConversationListItem, 0)
 
-	user, err := c.userStore.GetAgentCachedOrLoad(viewingUserID)
+	user, err := c.userStore.GetAgent(viewingUserID, "")
 	if err != nil {
 		c.lo.Error("error loading viewing user", "user_id", viewingUserID, "error", err)
 		return conversations, envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
@@ -2672,15 +2679,17 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 		OR (
 			COALESCE((conversations.custom_attributes->>'private')::boolean, false) = false
 			AND (
-				COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = false
+				(COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean, false) = false AND NOT (`+customerTagSQL+`))
 				OR %t
 				OR %t
 				OR (conversations.custom_attributes->'visible_users') @> '[%d]'
+				OR (conversations.custom_attributes->>'creator_id')::int = %d
+				OR (conversations.custom_attributes->'visibility_managers') @> '[%d]'
 				OR (`+customerTagSQL+` AND EXISTS(SELECT 1 FROM conversation_assignees access_ca WHERE access_ca.conversation_id=conversations.id AND access_ca.user_id=%d))
 			)
 		)
 	)
-	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID, userID)
+	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID, userID, userID, userID)
 	personalAccess := authz.PersonalAccessSQL("conversations", viewingUserID, isAdmin)
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
@@ -3252,7 +3261,7 @@ func (c *Manager) AuthorizedConnectedAgentIDs(conversationUUID string) []int {
 	out := make([]int, 0, len(connected))
 
 	for _, id := range connected {
-		agent, err := c.userStore.GetAgentCachedOrLoad(id)
+		agent, err := c.userStore.GetAgent(id, "")
 		if err != nil {
 			continue
 		}
@@ -3274,7 +3283,7 @@ func (c *Manager) FilterAuthorizedListUUIDs(agentID int, uuids []string) ([]stri
 	if len(uuids) == 0 {
 		return nil, nil
 	}
-	user, err := c.userStore.GetAgentCachedOrLoad(agentID)
+	user, err := c.userStore.GetAgent(agentID, "")
 	if err != nil {
 		return nil, err
 	}

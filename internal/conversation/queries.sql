@@ -727,6 +727,8 @@ media_unlink AS (
     UPDATE media SET model_id = 0
     FROM deleted d
     WHERE media.model_type = 'messages' AND media.model_id = d.id
+      -- Retain the parent ACL until GC; detached files lose their customer boundary.
+      AND NOT EXISTS(SELECT 1 FROM conversations c WHERE c.id=d.conversation_id AND (COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false) OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket')))
 ),
 preview AS (
     UPDATE conversations c
@@ -828,7 +830,7 @@ SELECT
 FROM conversation_messages m
 INNER JOIN conversations c ON c.id = m.conversation_id
 JOIN users u ON m.sender_id = u.id
-LEFT JOIN media ON media.model_type = 'messages' AND media.model_id = m.id
+LEFT JOIN media ON media.model_type = 'messages' AND media.model_id = m.id AND m.meta->>'deleted_at' IS NULL
 WHERE m.uuid = $1
 GROUP BY
     m.id, m.created_at, m.updated_at, m.status, m.type, m.content, m.uuid, m.private, m.sender_type, c.uuid,
@@ -872,7 +874,7 @@ SELECT
          'disposition', disposition
        ) ORDER BY filename
      ) FROM media
-     WHERE model_type = 'messages' AND model_id = m.id),
+     WHERE model_type = 'messages' AND model_id = m.id AND m.meta->>'deleted_at' IS NULL),
    '[]'::json) AS attachments
 FROM conversation_messages m
 JOIN users u ON m.sender_id = u.id
@@ -1128,10 +1130,12 @@ WHERE uuid = ANY($1::uuid[])
         -- Customer visibility is explicitly enabled:
         -- Admin, Kundensupport and explicitly visible users may read.
         (
-          COALESCE((custom_attributes->>'customer_visibility')::boolean, false) = true
+          (COALESCE((custom_attributes->>'customer_visibility')::boolean, false) = true OR EXISTS (SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=conversations.id AND t.name=$12))
           AND (
                $10
             OR $11
+            OR (custom_attributes->>'creator_id')::int=$2
+            OR (custom_attributes->'visibility_managers') @> jsonb_build_array($2::int)
             OR (custom_attributes->'visible_users') @> jsonb_build_array($2::int)
             -- Explicit visibility can be removed independently of existing
             -- assignment access. Match the normal assigned/team permission chain
@@ -1145,7 +1149,7 @@ WHERE uuid = ANY($1::uuid[])
                 WHERE ca.conversation_id=conversations.id AND ca.user_id=$2
               )))
               OR ($7 AND assigned_team_id=ANY($3::int[]))
-              OR ($8 AND assigned_team_id=ANY($3::int[]) AND assigned_user_id IS NULL)
+              OR ($8 AND assigned_team_id=ANY($3::int[]) AND assigned_user_id IS NULL AND NOT EXISTS (SELECT 1 FROM conversation_assignees ca WHERE ca.conversation_id=conversations.id))
             ))
           )
         )
@@ -1154,7 +1158,7 @@ WHERE uuid = ANY($1::uuid[])
 
         -- Legacy/assignment-based visibility.
         (
-          COALESCE((custom_attributes->>'customer_visibility')::boolean, false) = false
+          COALESCE((custom_attributes->>'customer_visibility')::boolean, false) = false AND NOT EXISTS (SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=conversations.id AND t.name=$12)
           AND $4
           AND (
                $5

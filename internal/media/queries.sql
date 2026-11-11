@@ -56,6 +56,7 @@ FROM media
 WHERE model_type = 'messages'
   AND (
     ((model_id IS NULL OR model_id = 0) AND created_at < NOW() - INTERVAL '7 days')
+    OR (model_id > 0 AND created_at < NOW() - INTERVAL '7 days' AND EXISTS(SELECT 1 FROM conversation_messages cm WHERE cm.id=media.model_id AND cm.meta->>'deleted_at' IS NOT NULL))
     OR (model_id > 0 AND created_at < NOW() - INTERVAL '24 hours' AND NOT EXISTS (SELECT 1 FROM conversation_messages cm WHERE cm.id = media.model_id))
   );
 
@@ -109,5 +110,9 @@ SELECT EXISTS (
  SELECT 1 FROM media m
  JOIN conversation_messages msg ON m.model_type='messages' AND msg.id=m.model_id
  JOIN conversations c ON c.id=msg.conversation_id
- WHERE m.uuid=$1 AND c.custom_attributes->>'access_mode'='personal'
+ WHERE m.uuid=$1 AND (
+ c.custom_attributes->>'access_mode'='personal'
+ OR COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false)
+ OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket')
+ )
 );

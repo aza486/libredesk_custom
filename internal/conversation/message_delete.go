@@ -8,7 +8,8 @@ import (
 	"github.com/abhinavxd/libredesk/internal/envelope"
 )
 
-// DeletePrivateMessage soft-deletes a private note, unlinks its media for GC, and returns the tombstone text. A senderID of 0 skips the author check.
+// DeletePrivateMessage soft-deletes a private note and returns its tombstone.
+// Customer media retain their parent ACL until GC. A senderID of 0 skips the author check.
 func (m *Manager) DeletePrivateMessage(conversationUUID, messageUUID string, senderID int) (string, error) {
 	m.lo.Info("deleting private note", "conversation_uuid", conversationUUID, "message_uuid", messageUUID)
 

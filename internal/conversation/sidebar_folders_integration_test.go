@@ -17,6 +17,9 @@ import (
 
 type folderUsers struct{ personalUsers }
 
+func (u folderUsers) GetAgent(id int, _ string) (umodels.User, error) {
+	return u.GetAgentCachedOrLoad(id)
+}
 func (folderUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
 	user, _ := personalUsers{}.GetAgentCachedOrLoad(id)
 	user.Permissions = []string{"conversations:read", "conversations:read_team_all"}

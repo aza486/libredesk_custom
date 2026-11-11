@@ -30,7 +30,7 @@ func TestLearningOriginalContextConversationAuthorization(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	app := &App{conversation: conv, authz: enforcer}
+	app := &App{conversation: conv, authz: enforcer, user: users}
 	var cid, other int
 	var original, outgoing, foreign string
 	db.Get(&cid, `INSERT INTO conversations(contact_id,inbox_id,status_id,assigned_user_id) VALUES(105,101,101,101) RETURNING id`)
@@ -39,6 +39,8 @@ func TestLearningOriginalContextConversationAuthorization(t *testing.T) {
 	db.Get(&outgoing, `INSERT INTO conversation_messages(conversation_id,type,status,sender_id,sender_type,content) VALUES($1,'outgoing','sent',101,'agent','Changed editor content') RETURNING uuid`, cid)
 	db.Get(&foreign, `INSERT INTO conversation_messages(conversation_id,type,status,sender_id,sender_type,content) VALUES($1,'outgoing','sent',101,'agent','Foreign content') RETURNING uuid`, other)
 	db.MustExec(`UPDATE conversation_messages SET text_content=content,content_type='html'`)
+	db.MustExec(`INSERT INTO roles(name,permissions) VALUES('Learning context test',ARRAY['conversations:read','conversations:read_assigned','ai_learning:manage']);
+ INSERT INTO user_roles(user_id,role_id) SELECT u.id,r.id FROM users u CROSS JOIN roles r WHERE u.id IN (101,102) AND r.name='Learning context test'`)
 	owner, e := users.GetAgentCachedOrLoad(101)
 	if e != nil {
 		t.Fatal(e)

@@ -240,7 +240,15 @@ func handleExportContact(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	data, err := app.user.ExportContactData(id, viewer)
+	uuids, err := app.conversation.GetContactConversationUUIDs(id)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	allowed, err := app.conversation.FilterAuthorizedListUUIDs(viewer.ID, uuids)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	data, err := app.user.ExportContactData(id, viewer, allowed)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

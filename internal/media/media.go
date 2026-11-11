@@ -478,7 +478,7 @@ func (m *Manager) detectContentType(sourceContentType string, content io.ReadSee
 	return detectedType, nil
 }
 
-// Personal attachments always pass through session authorization, including S3.
+// Personal and customer attachments always pass through current authorization, including S3.
 func (m *Manager) personalURL(name string) (string, bool) {
 	if m.queries.PersonalAccess == nil {
 		return "", false

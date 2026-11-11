@@ -12,6 +12,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const isLoading = ref(false)
   const hasMore = ref(true)
   const emitter = useEmitter()
+  const revokedConversations = new Set()
 
   const unreadNotifications = computed(() =>
     notifications.value.filter(n => !n.is_read)
@@ -26,7 +27,7 @@ export const useNotificationStore = defineStore('notification', () => {
     isLoading.value = true
     try {
       const response = await api.getNotifications({ limit, offset })
-      const data = response?.data?.data || []
+      const data = (response?.data?.data || []).filter((n) => !revokedConversations.has(n.conversation_uuid))
 
       if (append) {
         notifications.value = [...notifications.value, ...data]
@@ -96,6 +97,14 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  const removeConversationNotifications = (uuid) => {
+    revokedConversations.add(uuid)
+    const removed = notifications.value.filter((n) => n.conversation_uuid === uuid)
+    notifications.value = notifications.value.filter((n) => n.conversation_uuid !== uuid)
+    unreadCount.value = Math.max(0, unreadCount.value - removed.filter((n) => !n.is_read).length)
+    totalCount.value = Math.max(0, totalCount.value - removed.length)
+  }
+
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
@@ -150,6 +159,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   // Add a new notification (from WebSocket)
   const addNotification = (notification) => {
+    if (revokedConversations.has(notification.conversation_uuid)) return
     // Add to the beginning of the list
     notifications.value.unshift(notification)
     unreadCount.value += 1
@@ -163,6 +173,8 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   return {
+    removeConversationNotifications,
+    restoreConversationNotifications: (uuid) => revokedConversations.delete(uuid),
     notifications,
     unreadCount,
     totalCount,

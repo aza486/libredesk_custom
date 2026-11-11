@@ -8,6 +8,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/user/models"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
 
@@ -59,9 +60,16 @@ func (u *Manager) DeleteContact(id int) error {
 }
 
 // ExportContactData returns a contact's profile, non-private conversation messages, and CSAT responses as JSON.
-func (u *Manager) ExportContactData(id int, viewer models.User) ([]byte, error) {
+func (u *Manager) ExportContactData(id int, viewer models.User, authorizedUUIDs ...[]string) ([]byte, error) {
 	var data []byte
-	if err := u.q.ExportContactData.Get(&data, id, viewer.ID, viewer.HasAdminRole()); err != nil {
+	var allowed []string
+	if len(authorizedUUIDs) > 0 {
+		allowed = authorizedUUIDs[0]
+		if allowed == nil {
+			allowed = []string{}
+		}
+	}
+	if err := u.q.ExportContactData.Get(&data, id, viewer.ID, viewer.HasAdminRole(), pq.Array(allowed)); err != nil {
 		u.lo.Error("error exporting contact data", "contact_id", id, "error", err)
 		return nil, envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}

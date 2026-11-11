@@ -63,8 +63,8 @@ func authenticateUser(r *fastglue.Request, app *App) (models.User, error) {
 		return user, envelope.NewError(envelope.GeneralError, app.i18n.T("auth.invalidOrExpiredSession"), nil)
 	}
 
-	// Get agent user from cache or load it.
-	user, err = app.user.GetAgentCachedOrLoad(sessUser.ID)
+	// Authorization uses current roles, permissions and teams, not the display cache.
+	user, err = app.user.GetAgent(sessUser.ID, "")
 	if err != nil {
 		return user, err
 	}

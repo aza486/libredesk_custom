@@ -45,13 +45,8 @@ type routingUsers struct {
 }
 
 func (r routingUsers) GetAgent(id int, _ string) (umodels.User, error) {
-	var user umodels.User
-	err := r.db.Get(&user, `SELECT id,first_name,last_name,type,enabled,email FROM users WHERE id=$1`, id)
-	return user, err
-}
-func (r routingUsers) GetSystemUser() (umodels.User, error) { return r.GetAgent(103, "") }
-func (r routingUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
-	u, err := r.GetAgent(id, "")
+	var u umodels.User
+	err := r.db.Get(&u, `SELECT id,first_name,last_name,type,enabled,email FROM users WHERE id=$1`, id)
 	u.Permissions = []string{"conversations:read", "conversations:read_assigned", "conversations:read_team_all"}
 	if id == 103 {
 		u.Roles = []string{"Kundensupport"}
@@ -61,6 +56,8 @@ func (r routingUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
 	}
 	return u, err
 }
+func (r routingUsers) GetSystemUser() (umodels.User, error)              { return r.GetAgent(103, "") }
+func (r routingUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) { return r.GetAgent(id, "") }
 
 type routingSLA struct{ slaStore }
 

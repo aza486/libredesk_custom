@@ -507,6 +507,6 @@ SELECT jsonb_build_object(
         ) ORDER BY c.created_at), '[]'::jsonb)
         FROM conversations c
         LEFT JOIN conversation_statuses cs ON cs.id = c.status_id
-        WHERE c.contact_id = $1 AND (COALESCE(c.custom_attributes->>'access_mode', 'public') <> 'personal' OR $3 OR (c.custom_attributes->'visible_users') @> jsonb_build_array($2::int))
+        WHERE c.contact_id = $1 AND (($4::uuid[] IS NULL AND NOT (COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false) OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket'))) OR c.uuid=ANY($4::uuid[])) AND (COALESCE(c.custom_attributes->>'access_mode', 'public') <> 'personal' OR $3 OR (c.custom_attributes->'visible_users') @> jsonb_build_array($2::int))
     )
 );

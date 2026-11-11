@@ -8,7 +8,7 @@ FROM user_notifications n
 LEFT JOIN users u ON u.id = n.actor_id
 LEFT JOIN conversations c ON c.id = n.conversation_id
 LEFT JOIN conversation_messages m ON m.id = n.message_id
-WHERE n.user_id = $1
+WHERE n.user_id = $1 AND (($4::uuid[] IS NULL AND NOT (COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false) OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket'))) OR n.conversation_id IS NULL OR c.uuid=ANY($4::uuid[]))
  AND (
    COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
    OR (c.custom_attributes->'visible_users') @> jsonb_build_array($1::bigint)
@@ -23,7 +23,7 @@ SELECT
     COUNT(*) as total_count
 FROM user_notifications n
 LEFT JOIN conversations c ON c.id=n.conversation_id
-WHERE n.user_id = $1
+WHERE n.user_id = $1 AND (($2::uuid[] IS NULL AND NOT (COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false) OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket'))) OR n.conversation_id IS NULL OR c.uuid=ANY($2::uuid[]))
  AND (
    COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
    OR (c.custom_attributes->'visible_users') @> jsonb_build_array($1::bigint)
@@ -60,7 +60,7 @@ DELETE FROM user_notifications WHERE created_at < NOW() - INTERVAL '30 days';
 
 -- name: can-receive-conversation
 SELECT EXISTS (
- SELECT 1 FROM conversations c WHERE c.id=$2 AND (
+ SELECT 1 FROM conversations c WHERE c.id=$2 AND NOT (COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false) OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket')) AND (
    COALESCE(c.custom_attributes->>'access_mode','public') <> 'personal'
    OR (c.custom_attributes->'visible_users') @> jsonb_build_array($1::bigint)
    OR EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.name='Admin')

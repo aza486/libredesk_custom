@@ -1229,15 +1229,7 @@ func (m *Manager) GetConversationByMessageID(id int) (models.Conversation, error
 		m.lo.Error("error fetching message from DB", "error", err)
 		return conversation, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-	if err := m.db.QueryRow(`SELECT access_mode, owner_user_id FROM inboxes WHERE id=$1`, conversation.InboxID).Scan(&conversation.InboxAccessMode, &conversation.InboxOwnerUserID); err != nil {
-		return models.Conversation{}, err
-	}
-	ownerIDs, err := m.loadPersonalInboxOwnerIDs(conversation.InboxID)
-	if err != nil {
-		return models.Conversation{}, err
-	}
-	conversation.InboxOwnerUserIDs = ownerIDs
-	return conversation, nil
+	return m.GetConversation(0, conversation.UUID, "")
 }
 
 // generateMessagesQuery generates the SQL query for fetching messages in a conversation.

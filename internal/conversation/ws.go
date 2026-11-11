@@ -167,6 +167,8 @@ func (m *Manager) broadcastConvToAuthorized(conv, oldConv *cmodels.ConversationL
 	if conv == nil {
 		return
 	}
+	// Remove stale open/list subscriptions before any reassignment payload.
+	m.authorizedConversationSubscribers(conv.UUID)
 	userIDs := m.AuthorizedConnectedAgentIDs(conv.UUID)
 	if oldConv != nil {
 		seen := make(map[int]struct{}, len(userIDs))
@@ -295,14 +297,18 @@ func (m *Manager) authorizedConversationSubscribers(uuid string) []*ws.Client {
 	if err != nil {
 		return nil
 	}
-	if !isPersonalConversation(conv.CustomAttributes) && !conv.CustomerTicket {
+	if !isPersonalConversation(conv.CustomAttributes) && !authz.IsCustomerConversation(conv) {
 		return clients
 	}
 	out := make([]*ws.Client, 0, len(clients))
 	for _, client := range clients {
-		viewer, err := m.userStore.GetAgentCachedOrLoad(client.ID)
+		viewer, err := m.userStore.GetAgent(client.ID, "")
 		if err == nil && viewer.Enabled && authz.CanReadConversation(viewer, conv) {
 			out = append(out, client)
+		} else if err == nil {
+			m.wsHub.UnsubscribeConversation(client, uuid)
+			payload, _ := json.Marshal(wsmodels.Message{Type: wsmodels.MessageTypeConversationUpdate, Data: map[string]any{"uuid": uuid, "access_revoked": true}})
+			m.wsHub.PushToClients([]*ws.Client{client}, payload)
 		}
 	}
 	return out

@@ -13,6 +13,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/notification/models"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 	"github.com/zerodha/logf"
 )
@@ -21,6 +22,9 @@ import (
 var queriesFS embed.FS
 
 type UserNotificationManager struct {
+	db        *sqlx.DB
+	authorize func(int, []string) ([]string, error)
+
 	lo   *logf.Logger
 	i18n *i18n.I18n
 	q    queries
@@ -52,6 +56,7 @@ func NewUserNotificationManager(opts UserNotificationOpts) (*UserNotificationMan
 		return nil, err
 	}
 	return &UserNotificationManager{
+		db:   opts.DB,
 		q:    q,
 		lo:   opts.Lo,
 		i18n: opts.I18n,
@@ -60,8 +65,12 @@ func NewUserNotificationManager(opts UserNotificationOpts) (*UserNotificationMan
 
 // GetAll retrieves notifications for a user with pagination.
 func (m *UserNotificationManager) GetAll(userID, limit, offset int) ([]models.UserNotification, error) {
+	allowed, err := m.authorizedNotificationUUIDs(userID)
+	if err != nil {
+		return nil, err
+	}
 	var notifications = make([]models.UserNotification, 0)
-	if err := m.q.GetNotifications.Select(&notifications, userID, limit, offset); err != nil {
+	if err := m.q.GetNotifications.Select(&notifications, userID, limit, offset, pq.Array(allowed)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return notifications, nil
 		}
@@ -73,8 +82,12 @@ func (m *UserNotificationManager) GetAll(userID, limit, offset int) ([]models.Us
 
 // GetStats retrieves notification statistics for a user.
 func (m *UserNotificationManager) GetStats(userID int) (models.NotificationStats, error) {
+	allowed, err := m.authorizedNotificationUUIDs(userID)
+	if err != nil {
+		return models.NotificationStats{}, err
+	}
 	var stats models.NotificationStats
-	if err := m.q.GetNotificationStats.Get(&stats, userID); err != nil {
+	if err := m.q.GetNotificationStats.Get(&stats, userID, pq.Array(allowed)); err != nil {
 		m.lo.Error("error fetching notification stats", "user_id", userID, "error", err)
 		return stats, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -183,7 +196,36 @@ func (m *UserNotificationManager) RunNotificationCleaner(ctx context.Context) {
 }
 
 func (m *UserNotificationManager) CanReceiveConversation(userID, conversationID int) (bool, error) {
+	if m.authorize != nil {
+		var uuid string
+		if err := m.db.Get(&uuid, `SELECT uuid::text FROM conversations WHERE id=$1`, conversationID); err != nil {
+			return false, err
+		}
+		allowed, err := m.authorize(userID, []string{uuid})
+		return len(allowed) > 0, err
+	}
+
 	var allowed bool
 	err := m.q.CanReceiveConversation.Get(&allowed, userID, conversationID)
+	return allowed, err
+}
+
+// SetConversationAuthorizer wires the existing conversation ACL before workers
+// start. Notifications use that same policy, including delivery and pagination.
+func (m *UserNotificationManager) SetConversationAuthorizer(authorize func(int, []string) ([]string, error)) {
+	m.authorize = authorize
+}
+func (m *UserNotificationManager) authorizedNotificationUUIDs(userID int) ([]string, error) {
+	if m.authorize == nil {
+		return nil, nil
+	}
+	uuids := []string{}
+	if err := m.db.Select(&uuids, `SELECT DISTINCT c.uuid::text FROM user_notifications n JOIN conversations c ON c.id=n.conversation_id WHERE n.user_id=$1`, userID); err != nil {
+		return nil, err
+	}
+	allowed, err := m.authorize(userID, uuids)
+	if allowed == nil {
+		allowed = []string{}
+	}
 	return allowed, err
 }

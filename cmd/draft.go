@@ -84,7 +84,22 @@ func handleGetAllDrafts(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(drafts)
+	uuids := make([]string, 0, len(drafts))
+	for _, draft := range drafts {
+		uuids = append(uuids, draft.ConversationUUID)
+	}
+	allowed, err := app.conversation.FilterAuthorizedListUUIDs(user.ID, uuids)
+	if err != nil {
+		return sendErrorEnvelope(r, err)
+	}
+	set := uuidSet(allowed)
+	visible := drafts[:0]
+	for _, draft := range drafts {
+		if _, ok := set[draft.ConversationUUID]; ok {
+			visible = append(visible, draft)
+		}
+	}
+	return r.SendEnvelope(visible)
 }
 
 // handleDeleteConversationDraft deletes a draft for a conversation.

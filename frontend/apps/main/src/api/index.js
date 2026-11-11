@@ -1,10 +1,19 @@
 import axios from 'axios'
 import qs from 'qs'
+import { reportConversationAccessDenied } from '../utils/conversation-access'
 
 const http = axios.create({
   timeout: 10000,
   responseType: 'json'
 })
+
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    reportConversationAccessDenied(error)
+    return Promise.reject(error)
+  }
+)
 
 // LLM calls can take 30-40s+, well past the default request timeout.
 const AI_TIMEOUT = 120000

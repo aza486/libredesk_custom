@@ -1,4 +1,5 @@
 {
+  "conversation.accessRevoked": "You no longer have access to this conversation.",
   "conversation.routing.addFolder": "Add folder / filter",
   "conversation.routing.redistributed": "Redistributed",
   "conversation.routing.allRedistributed": "All redistributed",

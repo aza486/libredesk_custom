@@ -268,6 +268,7 @@ func main() {
 	)
 
 	wsHub.SetConversationStore(conversation)
+	userNotification.SetConversationAuthorizer(conversation.FilterAuthorizedListUUIDs)
 	automation.SetConversationStore(conversation)
 	systemUser, err := user.GetSystemUser()
 	if err != nil {

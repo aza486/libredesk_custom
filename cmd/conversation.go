@@ -1277,11 +1277,18 @@ func handleUpdateContactCustomAttributes(r *fastglue.Request) error {
 
 // enforceConversationAccess fetches the conversation and checks if the user has access to it.
 func enforceConversationAccess(app *App, uuid string, user umodels.User) (*cmodels.Conversation, error) {
+	currentUser, err := app.user.GetAgent(user.ID, "")
+	if err != nil {
+		return nil, err
+	}
+	if !currentUser.Enabled {
+		return nil, envelope.NewError(envelope.PermissionError, "Permission denied", nil)
+	}
 	conversation, err := app.conversation.GetConversation(0, uuid, "")
 	if err != nil {
 		return nil, err
 	}
-	allowed, err := app.authz.EnforceConversationAccess(user, conversation)
+	allowed, err := app.authz.EnforceConversationAccess(currentUser, conversation)
 	if err != nil {
 		return nil, err
 	}

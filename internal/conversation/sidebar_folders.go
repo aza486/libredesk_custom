@@ -39,7 +39,7 @@ func folderDenied() error {
 }
 
 func (c *Manager) authorizeFolderScope(q sqlx.Queryer, userID int, scope string, id int) error {
-	user, err := c.userStore.GetAgentCachedOrLoad(userID)
+	user, err := c.userStore.GetAgent(userID, "")
 	if err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (c *Manager) SidebarFolderCounts(userID int, scope string, scopeID int) (ma
 	if len(folders) == 0 && scope != "redistributed" {
 		return result, nil
 	}
-	user, err := c.userStore.GetAgentCachedOrLoad(userID)
+	user, err := c.userStore.GetAgent(userID, "")
 	if err != nil {
 		return nil, err
 	}
