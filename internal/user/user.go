@@ -77,6 +77,7 @@ type Opts struct {
 
 // queries contains prepared SQL queries.
 type queries struct {
+	UpdateWorkPhone               *sqlx.Stmt `query:"update-work-phone"`
 	GetUser                       *sqlx.Stmt `query:"get-user"`
 	GetNotes                      *sqlx.Stmt `query:"get-notes"`
 	GetNote                       *sqlx.Stmt `query:"get-note"`

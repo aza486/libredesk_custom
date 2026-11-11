@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/abhinavxd/libredesk/internal/migrations"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/go-i18n"
 
@@ -55,6 +56,10 @@ func NewDB(t *testing.T, name string) *sqlx.DB {
 	}
 	if _, err := db.Exec(string(schema)); err != nil {
 		t.Fatalf("applying schema.sql: %v", err)
+	}
+	// User manager queries require the additive business-phone column.
+	if err := migrations.V2_22_0(db, nil, nil); err != nil {
+		t.Fatal(err)
 	}
 	return db
 }

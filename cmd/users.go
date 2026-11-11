@@ -15,6 +15,7 @@ import (
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	tmpl "github.com/abhinavxd/libredesk/internal/template"
+	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/abhinavxd/libredesk/internal/user/models"
 	realip "github.com/ferluci/fast-realip"
 	"github.com/valyala/fasthttp"
@@ -26,6 +27,12 @@ const (
 	// Bounds the request body only; the stored file is capped by image.AvatarMaxDim regardless.
 	maxAvatarSizeMB = 10
 )
+
+// selfProfile includes the business phone only for the authenticated owner.
+type selfProfile struct {
+	models.User
+	WorkPhoneNumber null.String `json:"work_phone_number"`
+}
 
 type resetPasswordRequest struct {
 	Email string `json:"email"`
@@ -167,6 +174,14 @@ func handleUpdateCurrentAgent(r *fastglue.Request) error {
 	files, ok := form.File["files"]
 	newPassword := form.Value["new_password"]
 
+	// Validate before any profile side effects. Omitted field preserves the old value.
+	phone := form.Value["work_phone_number"]
+	if len(phone) > 0 {
+		if _, err := user.NormalizeWorkPhone(phone[0]); err != nil {
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("account.workPhone.invalid"), nil, envelope.InputError)
+		}
+	}
+
 	// Upload avatar?
 	if ok && len(files) > 0 {
 		agent, err := app.user.GetAgentCachedOrLoad(auser.ID)
@@ -202,13 +217,20 @@ func handleUpdateCurrentAgent(r *fastglue.Request) error {
 		app.user.InvalidateAgentCache(auser.ID)
 	}
 
+	if len(phone) > 0 {
+		// The target comes exclusively from authentication, never from form data.
+		if err := app.user.UpdateWorkPhone(auser.ID, phone[0]); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
+
 	// Fetch updated agent and return.
 	agent, err := app.user.GetAgentCachedOrLoad(auser.ID)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	return r.SendEnvelope(agent)
+	return r.SendEnvelope(selfProfile{User: agent, WorkPhoneNumber: agent.WorkPhoneNumber})
 }
 
 // handleCreateAgent creates a new agent.
@@ -382,7 +404,7 @@ func handleGetCurrentAgent(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	return r.SendEnvelope(u)
+	return r.SendEnvelope(selfProfile{User: u, WorkPhoneNumber: u.WorkPhoneNumber})
 }
 
 // handleDeleteCurrentAgentAvatar deletes the current agent's avatar.

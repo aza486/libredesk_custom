@@ -1,4 +1,8 @@
 {
+  "account.workPhone": "Geschäftliche Telefonnummer",
+  "account.workPhone.description": "Optional. Wird bei unterstützten E-Mail-Signaturen anstelle der allgemeinen Telefonnummer verwendet.",
+  "account.workPhone.invalid": "Bitte eine gültige Telefonnummer mit höchstens 64 Zeichen ohne HTML oder Steuerzeichen eingeben.",
+
     "admin.inbox.defaultSignature": "Standard-Signatur",
     "admin.inbox.defaultSignature.select": "Signatur auswählen",
     "admin.inbox.defaultSignature.none": "Keine Postfach-Standard-Signatur",

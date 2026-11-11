@@ -1,4 +1,8 @@
 {
+  "account.workPhone": "Business phone number",
+  "account.workPhone.description": "Optional. Used instead of the general phone number in supported email signatures.",
+  "account.workPhone.invalid": "Enter a valid phone number of up to 64 characters without HTML or control characters.",
+
     "admin.inbox.defaultSignature": "Default signature",
     "admin.inbox.defaultSignature.select": "Select signature",
     "admin.inbox.defaultSignature.none": "No inbox default signature",

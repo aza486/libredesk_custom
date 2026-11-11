@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net/mail"
 	"path/filepath"
 	"regexp"
@@ -323,6 +324,8 @@ func (m *Manager) BuildTemplateData(conversationUUID string, senderID int) (map[
 			"LastName":  sender.LastName,
 			"FullName":  sender.FullName(),
 			"Email":     sender.Email.String,
+			// Outgoing templates use text/template; this value is HTML text only.
+			"WorkPhone": html.EscapeString(sender.WorkPhoneNumber.String),
 		},
 		// Lets templates disclose AI-composed replies, e.g. {{ if .IsAIComposed }}Composed by AI{{ end }}.
 		"IsAIComposed": sender.Type == umodels.UserTypeAIAssistant,
@@ -334,6 +337,7 @@ func (m *Manager) BuildTemplateData(conversationUUID string, senderID int) (map[
 			"FirstName": "",
 			"LastName":  "",
 			"FullName":  "",
+			"WorkPhone": "",
 			"Email":     "",
 		}
 	}

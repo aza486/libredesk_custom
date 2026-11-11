@@ -41,6 +41,7 @@ SELECT
     u.last_login_at,
     u.phone_number_country_code,
     u.phone_number,
+    u.work_phone_number,
     u.country,
     u.api_key,
     u.api_key_last_used_at,
@@ -308,6 +309,7 @@ SELECT
     u.last_login_at,
     u.phone_number_country_code,
     u.phone_number,
+    u.work_phone_number,
     u.country,
     u.api_key,
     u.api_key_last_used_at,
@@ -366,6 +368,7 @@ SELECT
     u.last_login_at,
     u.phone_number_country_code,
     u.phone_number,
+    u.work_phone_number,
     u.country,
     u.external_user_id,
     u.custom_attributes,
@@ -510,3 +513,7 @@ SELECT jsonb_build_object(
         WHERE c.contact_id = $1 AND (($4::uuid[] IS NULL AND NOT (COALESCE((c.custom_attributes->>'customer_visibility')::boolean,false) OR EXISTS(SELECT 1 FROM conversation_tags ct JOIN tags t ON t.id=ct.tag_id WHERE ct.conversation_id=c.id AND t.name='🦽Kundenticket'))) OR c.uuid=ANY($4::uuid[])) AND (COALESCE(c.custom_attributes->>'access_mode', 'public') <> 'personal' OR $3 OR (c.custom_attributes->'visible_users') @> jsonb_build_array($2::int))
     )
 );
+
+-- name: update-work-phone
+UPDATE users SET work_phone_number = $2, updated_at = now()
+WHERE id = $1 AND type = 'agent' AND deleted_at IS NULL;

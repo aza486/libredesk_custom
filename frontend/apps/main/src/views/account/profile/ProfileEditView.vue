@@ -14,6 +14,23 @@
         @remove="removeAvatar"
       />
 
+      <div class="space-y-2 border-t pt-5">
+        <label for="work-phone" class="sub-title">{{ $t('account.workPhone') }}</label>
+        <Input
+          id="work-phone"
+          v-model="workPhone"
+          type="tel"
+          autocomplete="tel"
+          placeholder="0351 40424-0"
+          :maxlength="64"
+          :disabled="isSaving"
+          aria-describedby="work-phone-help"
+        />
+        <p id="work-phone-help" class="text-muted-foreground text-xs">
+          {{ $t('account.workPhone.description') }}
+        </p>
+      </div>
+
       <div class="space-y-4 border-t pt-5">
         <div class="space-y-1">
           <span class="sub-title">Passwort ändern</span>
@@ -39,7 +56,7 @@
         class="self-start"
         @click="saveUser"
         :isLoading="isSaving"
-        :disabled="!pendingFile && !newPassword"
+        :disabled="isSaving || (!pendingFile && !newPassword && !phoneChanged)"
       >
         {{ $t('globals.messages.saveChanges') }}
       </Button>
@@ -51,7 +68,7 @@
 import { useUserStore } from '../../../stores/user'
 import { Button } from '@shared-ui/components/ui/button'
 import { AvatarUpload } from '@shared-ui/components/ui/avatar'
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useEmitter } from '../../../composables/useEmitter'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { EMITTER_EVENTS } from '../../../constants/emitterEvents.js'
@@ -66,6 +83,14 @@ const userStore = useUserStore()
 const pendingFile = ref(null)
 const newPassword = ref('')
 const confirmPassword = ref('')
+const savedPhone = ref(userStore.user.work_phone_number || '')
+const workPhone = ref(savedPhone.value)
+const phoneChanged = computed(() => workPhone.value !== savedPhone.value)
+// The user store may finish loading after the profile has mounted.
+watch(() => userStore.user.work_phone_number, value => {
+  if (!phoneChanged.value) workPhone.value = value || ''
+  savedPhone.value = value || ''
+})
 
 const onCropped = (file) => {
   if (isSaving.value) return
@@ -74,6 +99,7 @@ const onCropped = (file) => {
 }
 
 const saveUser = async () => {
+  if (isSaving.value) return
   if (newPassword.value !== confirmPassword.value) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
@@ -82,7 +108,7 @@ const saveUser = async () => {
     return
   }
 
-  if (!pendingFile.value && !newPassword.value) return
+  if (!pendingFile.value && !newPassword.value && !phoneChanged.value) return
 
   const formData = new FormData()
 
@@ -93,9 +119,16 @@ const saveUser = async () => {
   if (newPassword.value) {
     formData.append('new_password', newPassword.value)
   }
+  if (phoneChanged.value) formData.append('work_phone_number', workPhone.value)
   try {
     isSaving.value = true
-    await api.updateCurrentUser(formData)
+    const response = await api.updateCurrentUser(formData)
+    const updatedUser = response?.data?.data
+    if (updatedUser) {
+      userStore.setCurrentUser(updatedUser)
+      savedPhone.value = updatedUser.work_phone_number || ''
+      workPhone.value = savedPhone.value
+    }
     pendingFile.value = null
     newPassword.value = ''
     confirmPassword.value = ''
