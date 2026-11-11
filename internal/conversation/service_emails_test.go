@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -24,9 +25,34 @@ func TestServiceEmailNormalization(t *testing.T) {
 	}
 }
 
-func TestServiceWorkflowRegistryQueryIntegration(t *testing.T) {
-	m := emailThreadFixture(t, "service_workflow_query")
-	raw, err := os.ReadFile("../../workflows/E-Mail Anonymisierung - Service Mail Guard.json")
+const serviceWorkflowRegistryQueryFixture = "testdata/service_workflow_registry_query.sql"
+
+func readServiceWorkflowRegistryQueryFixture(t *testing.T) string {
+	t.Helper()
+	raw, err := os.ReadFile(serviceWorkflowRegistryQueryFixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := strings.TrimSpace(string(raw))
+	if query == "" {
+		t.Fatal("empty service workflow registry query fixture")
+	}
+	return query
+}
+
+// Optional local drift check. The integration test below never needs an export.
+// An explicitly requested export must exist; only the absent default is optional.
+func TestServiceWorkflowRegistryQueryMatchesLocalExport(t *testing.T) {
+	query := readServiceWorkflowRegistryQueryFixture(t)
+	path := os.Getenv("LIBREDESK_SERVICE_WORKFLOW_EXPORT")
+	explicit := path != ""
+	if !explicit {
+		path = "../../workflows/E-Mail Anonymisierung - Service Mail Guard.json"
+	}
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) && !explicit {
+		t.Skip("optional local workflow export absent; SQL integration uses the required versioned fixture")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,18 +62,28 @@ func TestServiceWorkflowRegistryQueryIntegration(t *testing.T) {
 			Parameters struct{ Query string }
 		}
 	}
-	if err = json.Unmarshal(raw, &workflow); err != nil {
+	if err := json.Unmarshal(raw, &workflow); err != nil {
 		t.Fatal(err)
 	}
-	var query string
+	matches := 0
 	for _, node := range workflow.Nodes {
-		if node.Name == "Execute a SQL query2" {
-			query = node.Parameters.Query
+		if node.Name != "Execute a SQL query2" {
+			continue
+		}
+		matches++
+		if strings.TrimSpace(node.Parameters.Query) != query {
+			t.Fatalf("Execute a SQL query2 differs from %s; review the export and fixture together", serviceWorkflowRegistryQueryFixture)
 		}
 	}
-	if query == "" {
-		t.Fatal("missing registry query")
+	if matches != 1 {
+		t.Fatalf("expected exactly one Execute a SQL query2 node, got %d", matches)
 	}
+}
+
+func TestServiceWorkflowRegistryQueryIntegration(t *testing.T) {
+	query := readServiceWorkflowRegistryQueryFixture(t)
+	m := emailThreadFixture(t, "service_workflow_query")
+	var err error
 	var uuid, privateUUID string
 	if err = m.db.Get(&uuid, `INSERT INTO conversations(contact_id,inbox_id,status_id) VALUES(105,102,101) RETURNING uuid`); err != nil {
 		t.Fatal(err)
