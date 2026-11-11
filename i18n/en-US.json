@@ -1,4 +1,9 @@
 {
+    "admin.inbox.defaultSignature": "Default signature",
+    "admin.inbox.defaultSignature.select": "Select signature",
+    "admin.inbox.defaultSignature.none": "No inbox default signature",
+    "admin.inbox.defaultSignature.description": "This signature is selected automatically for new email replies through this inbox. Agents can change it in the reply editor at any time. Without an assignment, the existing default selection applies.",
+    "admin.inbox.defaultSignature.invalid": "Please select a valid shared outgoing email signature.",
   "conversation.accessRevoked": "You no longer have access to this conversation.",
   "conversation.routing.addFolder": "Add folder / filter",
   "conversation.routing.redistributed": "Redistributed",

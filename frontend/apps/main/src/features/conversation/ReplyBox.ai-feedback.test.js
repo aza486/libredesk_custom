@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({ api: {}, store: null, draft: null, files: null
 vi.mock('@main/api', () => ({ default: mocks.api }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => mocks.store }))
 vi.mock('@main/stores/user', () => ({ useUserStore: () => mocks.user }))
-vi.mock('@main/stores/inbox', () => ({ useInboxStore: () => ({ inboxes: [] }) }))
+vi.mock('@main/stores/inbox', () => ({ useInboxStore: () => ({ inboxes: [], fetchInboxes: vi.fn() }) }))
 vi.mock('@main/stores/notification', () => ({
   useNotificationStore: () => ({ markAssignmentAsReadForConversation: () => {} })
 }))
@@ -146,6 +146,7 @@ beforeEach(async () => {
     refreshCurrentConversation: vi.fn().mockResolvedValue({})
   })
   mocks.draft = {
+    outgoingSignature: ref(null), hasStoredDraft: ref(false),
     htmlContent: ref('Existing employee answer'),
     textContent: ref('Existing employee answer'),
     isLoading: ref(false),

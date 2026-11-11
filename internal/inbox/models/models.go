@@ -20,6 +20,7 @@ const (
 
 // Inbox represents a inbox record in DB.
 type Inbox struct {
+	DefaultSignatureID null.Int        `db:"default_signature_id" json:"default_signature_id"`
 	AccessMode         string          `db:"access_mode" json:"access_mode"`
 	OwnerUserID        null.Int        `db:"owner_user_id" json:"owner_user_id"`
 	OwnerUserIDs       pq.Int64Array   `db:"owner_user_ids" json:"owner_user_ids"`

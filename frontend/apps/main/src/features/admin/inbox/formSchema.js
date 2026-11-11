@@ -5,6 +5,7 @@ import { AUTH_TYPE_PASSWORD, AUTH_TYPE_OAUTH2 } from '@main/constants/auth.js'
 const FROM_NAME_TEMPLATE_VARS = ['.Agent.FirstName', '.Agent.LastName', '.Agent.FullName', '.Inbox.Name']
 
 export const createFormSchema = (t) => z.object({
+  default_signature_id: z.number().int().positive().nullable().default(null),
   access_mode: z.enum(['public', 'personal']).default('public'),
   owner_user_id: z.number().int().positive().nullable().optional(),
   owner_user_ids: z.array(z.number().int().positive()).default([]),

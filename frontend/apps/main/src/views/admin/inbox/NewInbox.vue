@@ -115,6 +115,10 @@ const goBack = () => {
 const submitForm = (values) => {
   const channelName = selectedChannel.value.toLowerCase()
   const payload = {
+    default_signature_id: values.default_signature_id ?? null,
+    access_mode: values.access_mode,
+    owner_user_id: values.owner_user_id,
+    owner_user_ids: values.owner_user_ids,
     name: values.name,
     from: values.from,
     from_name_template: values.from_name_template || '',

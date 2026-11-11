@@ -30,7 +30,7 @@ const isDraftEmpty = (draft) => {
   const hasInlineImage = /<img\b/i.test(content)
   const hasAttachments = draft?.meta?.attachments?.length > 0
   const hasMacroActions = draft?.meta?.macro_actions?.length > 0
-  return !hasText && !hasInlineImage && !hasAttachments && !hasMacroActions && !draft?.meta?.ai_feedback
+  return !hasText && !hasInlineImage && !hasAttachments && !hasMacroActions && !draft?.meta?.ai_feedback && draft?.meta?.outgoing_signature?.source !== 'manual'
 }
 
 const draftKey = (uuid, type) => `${uuid}::${type}`
@@ -39,6 +39,7 @@ const metaSignature = (meta) =>
   JSON.stringify({
     ai_feedback: meta?.ai_feedback || null,
     ai_response: meta?.ai_response || null,
+    outgoing_signature: meta?.outgoing_signature || null,
     macro_id: meta?.macro_id || 0,
     macro_actions: meta?.macro_actions || [],
     attachments: (meta?.attachments || []).map(a => a.uuid)
@@ -52,6 +53,8 @@ const sameDraft = (a, b) => {
 export function useDraftManager (conversationUUID, messageType, uploadedFiles = null) {
   const conversationStore = useConversationStore()
   const aiResponse = ref(null)
+  const outgoingSignature = ref(null)
+  const hasStoredDraft = ref(false)
   const htmlContent = ref('')
   const textContent = ref('')
   const isLoading = ref(false)
@@ -66,6 +69,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const buildDraft = (uuid = conversationUUID.value, type = messageType.value) => {
     const feedback = conversationStore.getDraft(uuid, 'reply')?.meta?.ai_feedback
     const meta = type === 'reply' && feedback ? { ai_feedback: feedback } : {}
+    if (type === 'reply' && outgoingSignature.value) meta.outgoing_signature = { ...outgoingSignature.value }
     if (type === 'reply' && aiResponse.value) meta.ai_response = aiResponse.value
     const macro = conversationStore.getMacro(MACRO_CONTEXT.REPLY)
     const macroActions = macro?.actions || []
@@ -86,6 +90,8 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   }
 
   const applyDraft = (draft) => {
+    hasStoredDraft.value = Boolean(draft)
+    outgoingSignature.value = draft?.meta?.outgoing_signature || null
     aiResponse.value = draft?.meta?.ai_response || null
     htmlContent.value = draft?.content || ''
     textContent.value = ''
@@ -94,12 +100,14 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     loadedMacroID.value = Number(draft?.meta?.macro_id) > 0 ? Number(draft.meta.macro_id) : 0
   }
 
-  const load = async (uuid, type) => {
+  let loadGeneration = 0
+  const load = async (uuid, type, generation) => {
     isLoading.value = true
     loadedKey.value = null
     // Prefetch may still be in flight on a fresh page load; reading the store now would apply an empty draft.
     const before = htmlContent.value
     await conversationStore.draftsReady
+    if (draftKey(uuid, type) !== currentKey() || generation !== loadGeneration) return
     // If the user typed while drafts were still loading, keep their input instead of clobbering it.
     if (htmlContent.value === before) {
       applyDraft(conversationStore.getDraft(uuid, type))
@@ -137,6 +145,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const watchSources = [
     htmlContent,
     aiResponse,
+    outgoingSignature,
     textContent,
     () => conversationStore.macros[MACRO_CONTEXT.REPLY]
   ]
@@ -150,19 +159,22 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     { deep: true }
   )
 
-  // Serialize switches: a rapid A->B->A must not interleave save and load.
-  let chain = Promise.resolve()
+  // Save the old editor before resetting it. A generation guard prevents late
+  // hydration from writing a different conversation, including rapid A -> B -> A.
   watch(
     [conversationUUID, messageType],
     ([uuid, type], oldVals) => {
       const [prevUuid, prevType] = oldVals || []
-      chain = chain.then(async () => {
-        if (prevUuid && loadedKey.value === draftKey(prevUuid, prevType)) save(prevUuid, prevType)
-        if (uuid) await load(uuid, type)
-        else applyDraft(null)
-      }).catch(() => {})
+      if (prevUuid && loadedKey.value === draftKey(prevUuid, prevType)) save(prevUuid, prevType)
+      const generation = ++loadGeneration
+      loadedKey.value = null
+      applyDraft(null)
+      if (uuid) load(uuid, type, generation).catch(() => {
+        if (generation === loadGeneration) isLoading.value = false
+      })
+      else isLoading.value = false
     },
-    { immediate: true }
+    { immediate: true, flush: 'sync' }
   )
 
   useEventListener(document, 'visibilitychange', () => {
@@ -174,6 +186,8 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   return {
     htmlContent,
     aiResponse,
+    outgoingSignature,
+    hasStoredDraft,
     textContent,
     isLoading,
     clearDraft,

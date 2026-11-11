@@ -1,4 +1,9 @@
 {
+    "admin.inbox.defaultSignature": "Standard-Signatur",
+    "admin.inbox.defaultSignature.select": "Signatur auswählen",
+    "admin.inbox.defaultSignature.none": "Keine Postfach-Standard-Signatur",
+    "admin.inbox.defaultSignature.description": "Diese Signatur wird bei neuen E-Mail-Antworten über dieses Postfach automatisch vorausgewählt. Mitarbeiter können sie im Antworteditor jederzeit ändern. Ohne Zuordnung gilt die bisherige Standardauswahl.",
+    "admin.inbox.defaultSignature.invalid": "Bitte eine gültige gemeinsame E-Mail-Signatur auswählen.",
   "conversation.accessRevoked": "Du hast keinen Zugriff mehr auf diese Konversation.",
   "conversation.routing.addFolder": "Ordner / Filter hinzufügen",
   "conversation.routing.redistributed": "Umverteilt",

@@ -357,7 +357,10 @@ func (m *Manager) Create(inbox imodels.Inbox) (imodels.Inbox, error) {
 		return imodels.Inbox{}, err
 	}
 	defer tx.Rollback()
-	if err := tx.Stmtx(m.queries.InsertInbox).Get(&createdInbox, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.Enabled, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
+	if err := m.validateDefaultSignature(tx, inbox); err != nil {
+		return imodels.Inbox{}, err
+	}
+	if err := tx.Stmtx(m.queries.InsertInbox).Get(&createdInbox, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.Enabled, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID, inbox.DefaultSignatureID); err != nil {
 		m.lo.Error("error creating inbox", "error", err)
 		return imodels.Inbox{}, envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
@@ -558,7 +561,10 @@ func (m *Manager) Update(id int, inbox imodels.Inbox) (imodels.Inbox, error) {
 		return imodels.Inbox{}, err
 	}
 	defer tx.Rollback()
-	if err := tx.Stmtx(m.queries.Update).Get(&updatedInbox, id, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Enabled, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID); err != nil {
+	if err := m.validateDefaultSignature(tx, inbox); err != nil {
+		return imodels.Inbox{}, err
+	}
+	if err := tx.Stmtx(m.queries.Update).Get(&updatedInbox, id, inbox.Channel, encryptedConfig, inbox.Name, inbox.From, inbox.CSATEnabled, inbox.PromptTagsOnReply, inbox.Enabled, inbox.Secret, inbox.LinkedEmailInboxID, inbox.FromNameTemplate, inbox.AccessMode, inbox.OwnerUserID, inbox.DefaultSignatureID); err != nil {
 		if accessErr := accessConstraintError(err); accessErr != nil {
 			return imodels.Inbox{}, accessErr
 		}

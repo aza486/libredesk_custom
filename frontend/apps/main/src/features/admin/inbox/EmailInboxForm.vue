@@ -64,6 +64,22 @@
       </FormItem>
     </FormField>
 
+    <FormField v-slot="{ componentField, handleChange }" name="default_signature_id">
+      <FormItem>
+        <FormLabel>{{ t('admin.inbox.defaultSignature') }}</FormLabel>
+        <FormControl>
+          <SelectComboBox
+            :model-value="String(componentField.modelValue || 'none')"
+            :items="signatureOptions"
+            :placeholder="t('admin.inbox.defaultSignature.select')"
+            @select="handleChange($event.value === 'none' ? null : Number($event.value))"
+          />
+        </FormControl>
+        <FormDescription>{{ t('admin.inbox.defaultSignature.description') }}</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
     <FormField v-if="showFormFields" v-slot="{ componentField }" name="from_name_template">
       <FormItem>
         <FormLabel>{{ $t('admin.inbox.fromNameTemplate') }}</FormLabel>
@@ -811,6 +827,7 @@
 
 <script setup>
 import { watch, computed, ref, onMounted } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { RadioGroup, RadioGroupItem } from '@shared-ui/components/ui/radio-group'
 import SelectComboBox from '@main/components/combobox/SelectCombobox.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
@@ -917,6 +934,24 @@ const showFormFields = computed(
     (props.initialValues?.imap && Object.keys(props.initialValues?.imap).length > 0)
 )
 
+const signatures = ref([])
+const signatureOptions = computed(() => [
+  { label: t('admin.inbox.defaultSignature.none'), value: 'none' },
+  ...signatures.value.map(signature => ({ label: signature.name, value: String(signature.id) }))
+])
+const loadSignatures = async () => {
+  try {
+    const response = await api.getInboxSignatures()
+    signatures.value = response?.data?.data || []
+  } catch (error) {
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      variant: 'destructive', description: handleHTTPError(error).message
+    })
+  }
+}
+onMounted(loadSignatures)
+useEventListener(window, 'focus', loadSignatures)
+
 const usersStore = useUsersStore()
 onMounted(() => usersStore.fetchUsers(true))
 const ownerOptions = computed(() =>
@@ -932,6 +967,7 @@ const ownerOptions = computed(() =>
 const form = useForm({
   validationSchema: computed(() => toTypedSchema(createFormSchema(t))),
   initialValues: {
+    default_signature_id: null,
     access_mode: 'public',
     owner_user_id: null,
     owner_user_ids: [],
@@ -1068,6 +1104,7 @@ const submitOAuthCredentials = async () => {
     isSubmittingOAuth.value = true
     const payload = {
       ...oauthCredentials.value,
+      default_signature_id: form.values.default_signature_id ?? null,
       flow_type: flowType.value,
       access_mode: form.values.access_mode,
       owner_user_ids: form.values.access_mode === 'personal' ? ownerUserIDs : [],

@@ -157,7 +157,7 @@
             :outgoingTemplates="outgoingTemplates"
             v-model:selectedTemplateId="selectedTemplateId"
             :aiPrompts="aiPrompts"
-            :isSending="isSending"
+            :isSending="isSending || isSignatureLoading"
             :isDraftLoading="isDraftLoading"
             :uploadingFiles="uploadingFiles"
             :uploadedFiles="mediaFiles"
@@ -222,7 +222,7 @@
         ref="replyBoxContentRef"
         :isFullscreen="false"
         :aiPrompts="aiPrompts"
-        :isSending="isSending"
+        :isSending="isSending || isSignatureLoading"
         :isDraftLoading="isDraftLoading"
         :uploadingFiles="uploadingFiles"
         :uploadedFiles="mediaFiles"
@@ -252,11 +252,13 @@
 </template>
 
 <script setup>
+import { useEventListener } from '@vueuse/core'
 import { ref, watch, computed, shallowRef, toRaw, nextTick, onMounted, onUnmounted } from 'vue'
 import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 import { MACRO_CONTEXT } from '@main/constants/conversation'
 import { useUserStore } from '@main/stores/user'
+import { useReplySignature } from '@main/composables/useReplySignature'
 import { useDraftManager } from '@main/composables/useDraftManager'
 import api from '@main/api'
 import { useI18n } from 'vue-i18n'
@@ -346,6 +348,8 @@ watch(
 // Setup draft management composable, keyed per conversation and message type.
 const {
   htmlContent,
+  outgoingSignature,
+  hasStoredDraft,
   aiResponse: draftAIResponse,
   textContent,
   isLoading: isDraftLoading,
@@ -371,7 +375,20 @@ const emailErrors = ref([])
 
 // Outgoing email templates available for this reply.
 const outgoingTemplates = ref([])
-const selectedTemplateId = ref(null)
+const signatureMetadataLoading = ref(true)
+const isSignatureLoading = computed(() => signatureMetadataLoading.value &&
+  messageType.value === 'reply' && conversationStore.current?.inbox_channel === 'email')
+const selectedTemplateId = useReplySignature({
+  conversation: computed(() => conversationStore.current),
+  inboxes: computed(() => inboxStore.inboxes),
+  templates: outgoingTemplates,
+  messageType,
+  isLoading: computed(() => isDraftLoading.value || isSignatureLoading.value),
+  selection: outgoingSignature,
+  hasStoredDraft,
+  htmlContent,
+  attachments: mediaFiles
+})
 
 const aiPromptStore = useAiPromptStore()
 const aiPrompts = computed(() => aiPromptStore.prompts)
@@ -816,7 +833,7 @@ const processSend = async (
   skipMissingTagsCheck = false,
   statusToSet = null
 ) => {
-  if (isSending.value) return
+  if (isSending.value || isSignatureLoading.value) return
   let hasMessageSendingErrored = false
   isEditorFullscreen.value = false
 
@@ -1025,6 +1042,7 @@ const processSend = async (
   // Clear state on success.
   if (!hasMessageSendingErrored) {
     clearDraft(convUUID, isPrivate ? 'private_note' : 'reply')
+    if (!isPrivate && convUUID === currentConversationUUID.value) refreshReplySignatures()
     if (convUUID === currentConversationUUID.value) {
       conversationStore.resetMacro(MACRO_CONTEXT.REPLY)
       clearMediaFiles()
@@ -1036,17 +1054,15 @@ const processSend = async (
   isSending.value = false
 }
 
+let templatesRequest = 0
 const loadOutgoingTemplates = async () => {
+  const request = ++templatesRequest
   try {
     const response = await api.getOutgoingTemplates()
+    if (request !== templatesRequest) return
     outgoingTemplates.value = response?.data?.data || []
-
-    const defaultTemplate = outgoingTemplates.value.find((template) => template.is_default)
-
-    selectedTemplateId.value = defaultTemplate?.id || outgoingTemplates.value[0]?.id || null
   } catch (error) {
-    outgoingTemplates.value = []
-    selectedTemplateId.value = null
+    if (request !== templatesRequest) return
 
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
@@ -1055,9 +1071,22 @@ const loadOutgoingTemplates = async () => {
   }
 }
 
+let signatureRefresh = 0
+const refreshReplySignatures = async () => {
+  if (!currentConversationUUID.value) return
+  const refresh = ++signatureRefresh
+  signatureMetadataLoading.value = true
+  try {
+    await Promise.all([loadOutgoingTemplates(), inboxStore.fetchInboxes(true)])
+  } finally {
+    if (refresh === signatureRefresh) signatureMetadataLoading.value = false
+  }
+}
+watch(currentConversationUUID, refreshReplySignatures, { immediate: true })
+useEventListener(window, 'focus', refreshReplySignatures)
+
 onMounted(() => {
   emitter.on(EMITTER_EVENTS.COPILOT_INSERT_REPLY, handleCopilotInsertReply)
-  loadOutgoingTemplates()
 })
 
 const processSendAndSetStatus = (status) => processSend(false, false, status)

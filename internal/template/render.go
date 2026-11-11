@@ -2,7 +2,10 @@ package template
 
 import (
 	"bytes"
+	"errors"
+
 	"fmt"
+	"github.com/abhinavxd/libredesk/internal/envelope"
 	"strings"
 	"text/template"
 
@@ -102,14 +105,21 @@ func (m *Manager) RenderEmailWithTemplateID(data any, content string, templateID
 	if templateID > 0 {
 		baseTmpl, err = m.Get(templateID)
 		if err != nil {
-			return "", fmt.Errorf("fetching outgoing email template %d: %w", templateID, err)
+			var env envelope.Error
+			if !errors.As(err, &env) || env.ErrorType != envelope.NotFoundError {
+				return "", fmt.Errorf("fetching outgoing email template %d: %w", templateID, err)
+			}
+			// A signature may be deleted after a draft was saved or a reply
+			// queued. Use the existing default rather than fail that reply.
+			templateID = 0
 		}
 
 		// Only outgoing email templates may be used as the email wrapper.
-		if baseTmpl.Type != TypeEmailOutgoing {
+		if templateID > 0 && baseTmpl.Type != TypeEmailOutgoing {
 			return "", fmt.Errorf("template %d is not an outgoing email template", templateID)
 		}
-	} else {
+	}
+	if templateID <= 0 {
 		baseTmpl, err = m.getDefaultOutgoingEmailTemplate()
 		if err != nil {
 			m.lo.Error("error fetching default outgoing email template", "error", err)

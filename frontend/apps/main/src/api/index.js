@@ -92,6 +92,7 @@ const updateTag = (id, data) => http.put(`/api/v1/tags/${id}`, data)
 const deleteTag = (id) => http.delete(`/api/v1/tags/${id}`)
 const getTemplate = (id) => http.get(`/api/v1/templates/${id}`)
 const getTemplates = (type) => http.get('/api/v1/templates', { params: { type: type } })
+const getInboxSignatures = () => http.get('/api/v1/inboxes/email-signatures')
 const getOutgoingTemplates = () => http.get('/api/v1/templates/outgoing')
 const createTemplate = (data) =>
   http.post('/api/v1/templates', data, {
@@ -833,6 +834,7 @@ export default {
   getTemplate,
   getTemplates,
   getOutgoingTemplates,
+  getInboxSignatures,
   createTemplate,
   updateTemplate,
   deleteTemplate,
