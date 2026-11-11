@@ -36,7 +36,11 @@ function showAll() {
         >
           <ArrowLeftRight />
           <span class="min-w-0 truncate">{{ t('conversation.routing.redistributed') }}</span>
-          <SidebarCountBadge :count="count" />
+          <span
+            v-if="!open && count > 0"
+            class="ml-2 size-2 shrink-0 rounded-full bg-success"
+            aria-hidden="true"
+          />
           <ChevronRight
             class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
           />
@@ -51,6 +55,7 @@ function showAll() {
               @click="showAll"
             >
               <span class="min-w-0 truncate">{{ t('conversation.routing.allRedistributed') }}</span>
+              <SidebarCountBadge v-if="open" :count="count" />
             </SidebarMenuButton>
           </SidebarMenuSubItem>
           <SidebarFolders

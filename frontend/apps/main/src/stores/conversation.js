@@ -1580,6 +1580,12 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   function mergeConversationUpdate(update) {
+    if (update.service_emails_changed) {
+      emitter.emit('service-emails-changed')
+      emitter.emit(EMITTER_EVENTS.REFRESH_LIST, { model: 'inbox-list' })
+      refreshConversationListForRealtimeEvent()
+      return
+    }
     if (update.access_revoked) {
       revokeConversationAccess(update.uuid)
       return

@@ -50,7 +50,7 @@ func (c *Manager) authorizeFolderScope(q sqlx.Queryer, userID int, scope string,
 		// Assignment-based inboxes differ per employee. Even administrators
 		// cannot manage another employee's logical inbox through this API.
 		allowed = id > 0 && id == userID && has("conversations:read_assigned")
-	case "customer", "redistributed":
+	case "customer", "redistributed", "service_mail":
 		allowed = id == 0 && has("conversations:read") && (user.HasAdminRole() || slices.Contains(user.Roles, "Kundensupport"))
 	case "team":
 		if id <= 0 || !has("conversations:read_team_all") {
@@ -199,6 +199,8 @@ func sidebarListScope(types []string, teams, inboxes []int, userID int) (string,
 	switch types[0] {
 	case models.AssignedConversations, models.AssignedHighPriorityConversations, "folder-my_inbox":
 		return "my_inbox", userID
+	case models.ServiceMailConversations, "folder-service_mail":
+		return "service_mail", 0
 	case models.CustomerRedistributedConversations, models.CustomerRedistributedUnfiledConversations, "folder-redistributed":
 		return "redistributed", 0
 	case models.CustomerConversations, models.CustomerHighPriorityConversations, "folder-customer":
@@ -226,6 +228,8 @@ func sidebarScopeSQL(scope string, id int) string {
 		return "TRUE"
 	case "redistributed":
 		return "(" + sidebarScopeSQL("customer", 0) + " AND " + activeRedistributedSQL + ")"
+	case "service_mail":
+		return `(` + public + ` AND COALESCE((conversations.custom_attributes->>'private')::boolean,false)=false AND EXISTS(SELECT 1 FROM conversation_tags ct WHERE ct.conversation_id=conversations.id AND ct.tag_id=14))`
 	case "customer":
 		return `(` + public + ` AND COALESCE((conversations.custom_attributes->>'private')::boolean,false)=false AND COALESCE((conversations.custom_attributes->>'customer_visibility')::boolean,false)=true AND NOT EXISTS(SELECT 1 FROM conversation_tags ct WHERE ct.conversation_id=conversations.id AND ct.tag_id=14))`
 	case "team":
@@ -263,7 +267,7 @@ func sidebarAssignmentClause(folders []SidebarFolder, folderID int, existing []a
 }
 
 func (c *Manager) GetSidebarFolderConversations(userID int, scope string, scopeID, folderID int, order, orderBy string, page, pageSize int) ([]models.ConversationListItem, error) {
-	if folderID <= 0 && !(scope == "redistributed" && folderID == -1) {
+	if folderID <= 0 && !((scope == "redistributed" || scope == "service_mail") && folderID == -1) {
 		return nil, folderInputError("Ungültiger Ordner")
 	}
 	if err := c.authorizeFolderScope(c.db, userID, scope, scopeID); err != nil {
@@ -295,7 +299,7 @@ func (c *Manager) SidebarFolderCounts(userID int, scope string, scopeID int) (ma
 		return nil, err
 	}
 	result := map[int]int{}
-	if len(folders) == 0 && scope != "redistributed" {
+	if len(folders) == 0 && scope != "redistributed" && scope != "service_mail" {
 		return result, nil
 	}
 	user, err := c.userStore.GetAgent(userID, "")
@@ -325,7 +329,7 @@ func (c *Manager) SidebarFolderCounts(userID int, scope string, scopeID int) (ma
 		cases = append(cases, fmt.Sprintf("WHEN (%s) IS TRUE THEN %d", clause, folder.ID))
 		result[folder.ID] = 0
 	}
-	if scope == "redistributed" {
+	if scope == "redistributed" || scope == "service_mail" {
 		cases = append(cases, "ELSE -1 END AS folder_id")
 		result[-1] = 0
 	} else {

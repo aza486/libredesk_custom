@@ -1591,5 +1591,22 @@
   "conversation.activity.participantJoined": "{actor} ist der Konversation beigetreten",
   "globals.terms.low": "Niedrig",
   "globals.terms.medium": "Mittel",
-  "globals.terms.high": "Hoch"
+  "globals.terms.high": "Hoch",
+  "serviceEmails.title": "Service-Mails",
+  "serviceEmails.description": "Diese Absender werden zentral als Service-Mails verwaltet. Änderungen gelten auch für die Admin-Verwaltung.",
+  "serviceEmails.email": "E-Mail-Adresse",
+  "serviceEmails.add": "Hinzufügen",
+  "serviceEmails.cancel": "Abbrechen",
+  "serviceEmails.remove": "Entfernen",
+  "serviceEmails.loading": "Adressen werden geladen …",
+  "serviceEmails.empty": "Noch keine Service-Mail-Adressen hinterlegt.",
+  "serviceEmails.removeAddress": "{address} entfernen",
+  "serviceEmails.confirmRemove": "Adresse {address} entfernen? Zukünftige Nachrichten können wieder automatisch verarbeitet werden. Vorhandene Nachrichten und Notizen bleiben erhalten.",
+  "serviceEmails.all": "Alle Service-Mails",
+  "serviceEmails.unfiled": "Ohne Ordner",
+  "serviceEmails.addFolder": "Ordner / Filter hinzufügen",
+  "serviceEmails.addAddress": "E-Mail-Adresse hinzufügen",
+  "serviceEmails.manage": "Adressen verwalten",
+  "serviceEmails.permission": "Service-Mail-Adressen verwalten",
+  "serviceEmails.help": "Hinterlege automatische Absender wie Rechnungs-, Monitoring- oder Systemdienste."
 }

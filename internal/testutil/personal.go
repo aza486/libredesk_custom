@@ -23,6 +23,7 @@ func NewPersonalDB(t *testing.T, name string) *sqlx.DB {
 		func(db *sqlx.DB) error { return migrations.V2_19_0(db, nil, nil) },
 		func(db *sqlx.DB) error { return migrations.V2_20_0(db, nil, nil) },
 		func(db *sqlx.DB) error { return migrations.V2_21_0(db, nil, nil) },
+		func(db *sqlx.DB) error { return migrations.V2_23_0(db, nil, nil) },
 	} {
 		if err := migrate(db); err != nil {
 			t.Fatal(err)

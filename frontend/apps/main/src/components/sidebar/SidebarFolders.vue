@@ -49,8 +49,8 @@ async function load() {
     // Deleted by another employee: return to the area's standard list.
     if (isCurrentScope() && route.query.folder) {
       const active = folders.value.find((f) => String(f.id) === route.query.folder)
-      if (!active) navigate()
-      else if (route.query.folderName !== active.name)
+      if (!active && !(props.scope === 'service_mail' && route.query.folder === '-1')) navigate()
+      else if (active && route.query.folderName !== active.name)
         router.replace({ query: { ...route.query, folderName: active.name } })
     }
   } catch (e) {
@@ -68,23 +68,25 @@ function isCurrentScope() {
   if (props.scope === 'personal') return Number(route.params.inboxID) === props.scopeId
   if (props.scope === 'team') return Number(route.params.teamID) === props.scopeId
   if (props.scope === 'redistributed') return ['customer-redistributed', 'customer-redistributed-unfiled'].includes(route.params.type)
+  if (props.scope === 'service_mail') return route.params.type === 'service-mails'
   if (props.scope === 'my_inbox') return route.params.type === 'assigned'
   return route.params.type === 'customer'
 }
 function navigate(folder) {
-  const query = folder ? { folder: String(folder.id), folderName: folder.name } : props.scope === 'redistributed' ? {} : { status: 'Open' }
+  const query = folder ? { folder: String(folder.id), folderName: folder.name } : ['redistributed', 'service_mail'].includes(props.scope) ? {} : { status: 'Open' }
   const params =
     props.scope === 'personal'
       ? { inboxID: props.scopeId }
       : props.scope === 'team'
         ? { teamID: props.scopeId }
-        : { type: props.scope === 'redistributed' ? 'customer-redistributed' : props.scope === 'my_inbox' ? 'assigned' : 'customer' }
+        : { type: props.scope === 'service_mail' ? 'service-mails' : props.scope === 'redistributed' ? 'customer-redistributed' : props.scope === 'my_inbox' ? 'assigned' : 'customer' }
   const name =
     props.scope === 'personal' ? 'personal-inbox' : props.scope === 'team' ? 'team-inbox' : 'inbox'
   router.push({ name, params, query })
 }
 function showUnfiled() {
- router.push({name:'inbox',params:{type:'customer-redistributed-unfiled'},query:{}})
+ if (props.scope === 'service_mail') router.push({name:'inbox',params:{type:'service-mails'},query:{folder:'-1',folderName:props.unfiledLabel}})
+ else router.push({name:'inbox',params:{type:'customer-redistributed-unfiled'},query:{}})
 }
 function edit(folder = null) {
   selected.value = folder
@@ -132,8 +134,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <SidebarMenuSubItem v-if="scope === 'redistributed'">
-    <SidebarMenuButton size="sm" :is-active="route.params.type === 'customer-redistributed-unfiled'" @click="showUnfiled">
+  <SidebarMenuSubItem v-if="['redistributed', 'service_mail'].includes(scope)">
+    <SidebarMenuButton size="sm" :is-active="scope === 'service_mail' ? isCurrentScope() && route.query.folder === '-1' : route.params.type === 'customer-redistributed-unfiled'" @click="showUnfiled">
       <span class="min-w-0 truncate">{{ unfiledLabel }}</span>
       <Badge variant="outline" class="ml-auto shrink-0 tabular-nums bg-background px-1.5 py-0 font-medium">{{ counts[-1] || 0 }}</Badge>
     </SidebarMenuButton>

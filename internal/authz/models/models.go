@@ -65,6 +65,7 @@ const (
 	PermSLAManage = "sla:manage"
 
 	// General Settings
+	PermServiceEmailsManage   = "service_emails:manage"
 	PermGeneralSettingsManage = "general_settings:manage"
 
 	// Notification Settings
@@ -101,6 +102,7 @@ const (
 )
 
 var validPermissions = map[string]struct{}{
+	PermServiceEmailsManage:             {},
 	PermAILearningManage:                {},
 	PermConversationsReadAll:            {},
 	PermConversationsReadUnassigned:     {},

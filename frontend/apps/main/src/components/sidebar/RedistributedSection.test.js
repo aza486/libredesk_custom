@@ -2,7 +2,7 @@
 import { beforeEach, afterEach, expect, test, vi } from 'vitest'
 import { createApp, h, nextTick, reactive } from 'vue'
 import RedistributedSection from './RedistributedSection.vue'
-const mocks = vi.hoisted(() => ({ push: vi.fn(), route: null }))
+const mocks = vi.hoisted(() => ({ push: vi.fn(), open: null, route: null }))
 vi.mock('vue-router', () => ({
   useRoute: () => mocks.route,
   useRouter: () => ({ push: mocks.push })
@@ -18,7 +18,7 @@ vi.mock('vue-i18n', () => ({
 }))
 vi.mock('@vueuse/core', async () => {
   const { ref } = await import('vue')
-  return { useStorage: (_, value) => ref(value) }
+  return { useStorage: (_, value) => (mocks.open = ref(value)) }
 })
 vi.mock('@shared-ui/components/ui/collapsible', async () => {
   const { h } = await import('vue')
@@ -69,11 +69,12 @@ afterEach(() => {
   app.unmount()
   document.documentElement.classList.remove('dark')
 })
-test('renders an independent main area with its total outside the exclusive folder subtree', async () => {
+test('shows the total once in the expanded all row and preserves navigation', async () => {
   const main = host.querySelector('section > li')
   expect(main).not.toBeNull()
   expect(main.firstElementChild.textContent).toContain('Umverteilt')
-  expect(main.firstElementChild.textContent).toContain('125')
+  expect(main.firstElementChild.querySelector('.tabular-nums')).toBeNull()
+  expect(main.querySelector('ul .tabular-nums').textContent).toBe('125')
   expect(main.querySelector('ul [data-scope="redistributed"]').dataset.scopeId).toBe('0')
   const all = [...main.querySelectorAll('button')].find((b) =>
     b.textContent.includes('Alle umverteilten')
@@ -86,7 +87,8 @@ test('renders an independent main area with its total outside the exclusive fold
   })
   props.count = 126
   await nextTick()
-  expect(main.firstElementChild.textContent).toContain('126')
+  expect(main.querySelector('ul .tabular-nums').textContent).toBe('126')
+  expect(main.querySelectorAll('.tabular-nums')).toHaveLength(1)
 })
 test('keeps shared theme tokens and navigation structure in light and dark mode', async () => {
   for (const dark of [false, true]) {
@@ -94,7 +96,37 @@ test('keeps shared theme tokens and navigation structure in light and dark mode'
     await nextTick()
     const badge = host.querySelector('.tabular-nums')
     expect(badge.classList.contains('bg-background')).toBe(true)
+    expect(badge.classList.contains('shrink-0')).toBe(true)
+    expect(host.querySelector('ul button span').classList.contains('truncate')).toBe(true)
+    mocks.open.value = false
+    await nextTick()
+    expect(host.querySelector('.bg-success')).not.toBeNull()
+    expect(host.querySelector('.tabular-nums')).toBeNull()
+    mocks.open.value = true
+    await nextTick()
     expect(host.querySelector('section > li ul')).not.toBeNull()
     expect(host.querySelector('[data-scope="redistributed"]')).not.toBeNull()
   }
+})
+
+test('collapsed uses the existing green dot for positive counts and no numerical badge', async () => {
+  mocks.open.value = false
+  await nextTick()
+  const header = host.querySelector('section > li').firstElementChild
+  expect(header.querySelector('.tabular-nums')).toBeNull()
+  expect(host.querySelector('.tabular-nums')).toBeNull()
+  const dot = header.querySelector('.bg-success')
+  expect(dot).not.toBeNull()
+  expect(dot.getAttribute('aria-hidden')).toBe('true')
+  expect(dot.classList.contains('shrink-0')).toBe(true)
+  expect(header.querySelector('svg.ml-auto')).not.toBeNull()
+  props.count = 0
+  await nextTick()
+  expect(header.querySelector('.bg-success')).toBeNull()
+  props.count = 193
+  mocks.open.value = true
+  await nextTick()
+  expect(header.querySelector('.bg-success')).toBeNull()
+  expect(host.querySelectorAll('.tabular-nums')).toHaveLength(1)
+  expect(host.querySelector('ul .tabular-nums').textContent).toBe('193')
 })

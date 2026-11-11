@@ -25,7 +25,7 @@ func handleSidebarFolders(r *fastglue.Request) error {
 	id := 0
 	if value, ok := r.RequestCtx.UserValue("id").(string); ok {
 		id, err = strconv.Atoi(value)
-		if err != nil || id <= 0 {
+		if err != nil || (id <= 0 && !(scope == "service_mail" && id == -1 && strings.HasSuffix(path, "/conversations"))) {
 			return invalid()
 		}
 	}

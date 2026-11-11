@@ -234,6 +234,12 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 			return
 		}
 	}
+	// Fresh classification also covers retries and pre-existing pending integration replies.
+	if inb.Channel() == inbox.ChannelEmail && (automaticAIMeta(message.Meta) || slices.Contains(m.automatedAIAgentIDs, message.SenderID)) {
+		if handleError(m.CheckAutomaticAIAllowed(message.ConversationUUID), "automatic AI publication blocked") {
+			return
+		}
+	}
 	// Send message
 	err = inb.Send(outbound)
 	if err != nil && err != livechat.ErrClientNotConnected {
@@ -595,6 +601,14 @@ func (m *Manager) SendPrivateNote(media []mmodels.Media, senderID int, conversat
 	return m.sendPrivateNote(media, senderID, conversationUUID, content, mentions, nil, true)
 }
 
+// SendIntegrationNote marks only trusted automatic integration requests.
+func (m *Manager) SendIntegrationNote(media []mmodels.Media, senderID int, uuid, content string, mentions []models.MentionInput, automatic bool) (models.Message, error) {
+	if !automatic {
+		return m.SendPrivateNote(media, senderID, uuid, content, mentions)
+	}
+	return m.sendPrivateNote(media, senderID, uuid, content, mentions, json.RawMessage(`{"automatic_email_ai":true}`), true)
+}
+
 func (m *Manager) sendPrivateNote(media []mmodels.Media, senderID int, conversationUUID, content string, mentions []models.MentionInput, meta json.RawMessage, renderTemplate bool) (models.Message, error) {
 	// Best-effort render template variables before saving.
 	if renderTemplate {
@@ -771,6 +785,12 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		return envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 	defer tx.Rollback()
+
+	if automaticAIMeta(message.Meta) {
+		if err := lockAutomaticAI(tx, message.ConversationUUID); err != nil {
+			return m.automaticAIPublicationError(err)
+		}
+	}
 
 	if err := tx.Stmtx(m.q.InsertMessage).Get(message, message.Type, message.Status, message.ConversationID, message.ConversationUUID, message.Content, message.TextContent, message.SenderID, message.SenderType,
 		message.Private, message.ContentType, message.SourceID, message.Meta); err != nil {
@@ -1429,7 +1449,7 @@ func (m *Manager) findOrCreateConversation(in models.IncomingMessage) (int, stri
 				"error", serviceErr,
 			)
 		} else if isServiceMail {
-			if err := m.AddSystemTags(conversationUUID, []string{"🧷Service-Mail"}); err != nil {
+			if err := m.syncServiceEmailTag(conversationUUID); err != nil {
 				m.lo.Error(
 					"failed to add service mail system tag",
 					"conversation_uuid", conversationUUID,
@@ -1655,7 +1675,7 @@ func (m *Manager) ProcessIncomingMessageHooks(conversationUUID string, isNewConv
 				"error", serviceErr,
 			)
 		} else if isServiceMail && !isPersonalConversation(conversation.CustomAttributes) {
-			if err := m.AddSystemTags(conversationUUID, []string{"🧷Service-Mail"}); err != nil {
+			if err := m.syncServiceEmailTag(conversationUUID); err != nil {
 				m.lo.Error(
 					"failed to add service mail system tag",
 					"conversation_uuid", conversationUUID,

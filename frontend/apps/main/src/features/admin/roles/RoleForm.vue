@@ -156,6 +156,7 @@ const permissions = ref([
   {
     name: t('globals.terms.admin'),
     permissions: [
+      { name: perms.SERVICE_EMAILS_MANAGE, label: t('serviceEmails.permission') },
       { name: perms.GENERAL_SETTINGS_MANAGE, label: t('admin.role.generalSettings.manage') },
       {
         name: perms.NOTIFICATION_SETTINGS_MANAGE,

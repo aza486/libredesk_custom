@@ -1010,9 +1010,15 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	_, err = enforceConversationAccess(app, uuid, user)
+	conv, err := enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
+	}
+
+	if conv.InboxChannel == "email" && allowedAIAnalysisCaller(fmt.Sprint(r.RequestCtx.UserValue("auth_method")), user.ID, app.aiNoteAgentIDs) {
+		if err := app.conversation.CheckAutomaticAIAllowed(uuid); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
 	}
 
 	if err := app.conversation.SetConversationTags(uuid, action, tagNames, user); err != nil {

@@ -109,6 +109,7 @@ type Manager struct {
 	closedMu                   sync.RWMutex
 	wg                         sync.WaitGroup
 	continuityConfig           ContinuityConfig
+	automatedAIAgentIDs        []int
 	subjectRefFormat           string
 	aiAgent                    AIAgentEngine
 }
@@ -219,6 +220,7 @@ type ContinuityConfig struct {
 
 // Opts holds the options for creating a new Manager.
 type Opts struct {
+	AutomatedAIAgentIDs      []int
 	DB                       *sqlx.DB
 	Lo                       *logf.Logger
 	OutgoingMessageQueueSize int
@@ -273,6 +275,7 @@ func New(
 	c := &Manager{
 		q:                          q,
 		wsHub:                      wsHub,
+		automatedAIAgentIDs:        opts.AutomatedAIAgentIDs,
 		i18n:                       i18n,
 		dispatcher:                 dispatcher,
 		inboxStore:                 inboxStore,
@@ -817,7 +820,7 @@ func (c *Manager) GetCustomerConversationsList(viewingUserID int, highPriority b
 }
 
 func (c *Manager) GetServiceMailConversationsList(viewingUserID int, order, orderBy, filters string, page, pageSize int) ([]models.ConversationListItem, error) {
-	return c.GetConversations(viewingUserID, viewingUserID, []int{}, []string{models.ServiceMailConversations}, order, orderBy, filters, page, pageSize)
+	return c.getFolderAwareConversations(viewingUserID, viewingUserID, nil, []string{models.ServiceMailConversations}, order, orderBy, filters, page, pageSize, 0)
 }
 
 func (c *Manager) GetCreatedConversationsList(
@@ -1215,28 +1218,6 @@ func (c *Manager) SetConversationUserAssignees(uuid string, assigneeIDs []int, a
 func (c *Manager) IsUserAssigned(uuid string, userID int) (bool, error) {
 	var exists bool
 	err := c.db.Get(&exists, `SELECT EXISTS(SELECT 1 FROM conversation_assignees ca JOIN conversations c ON c.id = ca.conversation_id WHERE c.uuid = $1 AND ca.user_id = $2)`, uuid, userID)
-	return exists, err
-}
-
-func (c *Manager) GetServiceEmailAddresses() ([]string, error) {
-	var addresses []string
-	err := c.db.Select(&addresses, `SELECT address FROM service_email_addresses ORDER BY address`)
-	return addresses, err
-}
-
-func (c *Manager) AddServiceEmailAddress(address string) error {
-	_, err := c.db.Exec(`INSERT INTO service_email_addresses (address) VALUES (LOWER($1)) ON CONFLICT (address) DO NOTHING`, address)
-	return err
-}
-
-func (c *Manager) RemoveServiceEmailAddress(address string) error {
-	_, err := c.db.Exec(`DELETE FROM service_email_addresses WHERE address = LOWER($1)`, address)
-	return err
-}
-
-func (c *Manager) IsServiceEmailAddress(address string) (bool, error) {
-	var exists bool
-	err := c.db.Get(&exists, `SELECT EXISTS(SELECT 1 FROM service_email_addresses WHERE address = LOWER($1))`, address)
 	return exists, err
 }
 
@@ -2907,7 +2888,7 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 				customerCondition = "(" + customerCondition + " AND conversation_priorities.name = 'High')"
 			}
 			conditions = append(conditions, customerCondition)
-		case models.ServiceMailConversations:
+		case models.ServiceMailConversations, "folder-service_mail":
 			conditions = append(conditions, fmt.Sprintf(`
 						(
 								EXISTS (
@@ -2946,8 +2927,11 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 			return "", nil, fmt.Errorf("unknown conversation type: %s", lt)
 		}
 		for i := conditionStart; i < len(conditions); i++ {
+			if lt == models.ServiceMailConversations || lt == "folder-service_mail" {
+				conditions[i] = "(" + sidebarScopeSQL("service_mail", 0) + " AND " + ticketAccessCondition + " AND " + conditions[i] + ")"
+			}
 			switch lt {
-			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, models.UnassignedConversations, models.TeamUnassignedConversations, models.CreatedConversations:
+			case models.CustomerConversations, models.CustomerHighPriorityConversations, models.ServiceMailConversations, "folder-service_mail", models.UnassignedConversations, models.TeamUnassignedConversations, models.CreatedConversations:
 				conditions[i] = "(COALESCE(conversations.custom_attributes->>'access_mode', 'public') <> 'personal' AND " + conditions[i] + ")"
 			case "folder-my_inbox", models.AssignedConversations, models.AssignedHighPriorityConversations:
 				conditions[i] = "(" + personalAccess + " AND NOT EXISTS (SELECT 1 FROM inboxes owned JOIN personal_inbox_owners pio ON pio.inbox_id=owned.id WHERE owned.id=conversations.inbox_id AND owned.access_mode='personal' AND pio.user_id=$1) AND " + conditions[i] + ")"

@@ -68,7 +68,6 @@ import {
   FilePlus,
   Sparkles,
   NotebookText,
-  Wrench,
   Bot,
   Lightbulb,
   BookOpen,
@@ -102,7 +101,6 @@ const navIconMap = {
   Contact,
   Sparkles,
   NotebookText,
-  Wrench,
   Bot,
   Lightbulb,
   BookOpen
@@ -119,6 +117,7 @@ import { useConversationStore } from '@main/stores/conversation'
 import { useUsersStore } from '@main/stores/users'
 import SidebarCountBadge from './SidebarCountBadge.vue'
 import SidebarFolders from './SidebarFolders.vue'
+import ServiceMailSection from './ServiceMailSection.vue'
 import RedistributedSection from './RedistributedSection.vue'
 import UserMultiSelect from '@main/components/combobox/UserMultiSelect.vue'
 import { useIsMobile } from '@shared-ui/composables'
@@ -435,7 +434,7 @@ const loadSidebarCounts = async () => {
 
     // Kundentickets
     if (isCustomerSupport.value || isAdmin.value) {
-      const [redistributedResponse, customerResponse, highPriorityResponse] = await Promise.all([
+      const [redistributedResponse, customerResponse, highPriorityResponse, serviceResponse] = await Promise.all([
         api.getCustomerConversations({page: 1, page_size: 1, routing: 'redistributed'}),
         api.getCustomerConversations({
           page: 1,
@@ -447,9 +446,11 @@ const loadSidebarCounts = async () => {
           page_size: 1,
           priority: 'high',
           filters: openFilter
-        })
+        }),
+        api.getServiceMailConversations({page: 1, page_size: 1})
       ])
 
+      sidebarCounts.value.service_mail = serviceResponse.data.data.total || 0
       sidebarCounts.value.customer_redistributed = redistributedResponse.data.data.total || 0
       sidebarCounts.value.customer = customerResponse.data.data.total || 0
 
@@ -1234,16 +1235,7 @@ onUnmounted(() => {
               <RedistributedSection v-if="isCustomerSupport || isAdmin"
                 :count="sidebarCounts.customer_redistributed || 0" />
 
-              <!-- Service-Mails -->
-              <SidebarMenuItem v-if="isCustomerSupport || isAdmin">
-                <SidebarMenuButton
-                  :isActive="isActiveParent('/inboxes/service-mails')"
-                  @click="navigateToInbox('service-mails')"
-                >
-                  <Wrench />
-                  <span>Service-Mails</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <ServiceMailSection v-if="isCustomerSupport || isAdmin" :count="sidebarCounts.service_mail || 0" />
 
               <!-- Nicht zugewiesen - Admin only -->
               <SidebarMenuItem v-if="isAdmin">

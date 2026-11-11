@@ -69,6 +69,8 @@ const fetchForCurrentRoute = () => {
           ? 'customer'
           : type.value === 'customer-redistributed'
             ? 'redistributed'
+          : type.value === 'service-mails'
+            ? 'service_mail'
           : type.value === 'assigned'
             ? 'my_inbox'
             : ''

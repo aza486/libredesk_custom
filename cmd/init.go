@@ -308,6 +308,7 @@ func initConversations(
 	}
 
 	c, err := conversation.New(hub, i18n, sla, status, priority, inboxStore, userStore, teamStore, mediaStore, settings, csat, automationEngine, template, webhook, dispatcher, conversation.Opts{
+		AutomatedAIAgentIDs:      ko.Ints("ai_analysis.allowed_agent_ids"),
 		DB:                       db,
 		Lo:                       initLogger("conversation_manager"),
 		OutgoingMessageQueueSize: ko.MustInt("message.outgoing_queue_size"),

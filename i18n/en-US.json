@@ -1583,5 +1583,22 @@
   "conversation.activity.participantJoined": "{actor} joined the conversation",
   "globals.terms.low": "Low",
   "globals.terms.medium": "Medium",
-  "globals.terms.high": "High"
+  "globals.terms.high": "High",
+  "serviceEmails.title": "Service emails",
+  "serviceEmails.description": "These senders are managed centrally as service emails. Changes also apply to administration.",
+  "serviceEmails.email": "Email address",
+  "serviceEmails.add": "Add",
+  "serviceEmails.cancel": "Cancel",
+  "serviceEmails.remove": "Remove",
+  "serviceEmails.loading": "Loading addresses …",
+  "serviceEmails.empty": "No service email addresses yet.",
+  "serviceEmails.removeAddress": "Remove {address}",
+  "serviceEmails.confirmRemove": "Remove {address}? Future messages may be processed automatically again. Existing messages and notes are kept.",
+  "serviceEmails.all": "All service emails",
+  "serviceEmails.unfiled": "Without folder",
+  "serviceEmails.addFolder": "Add folder / filter",
+  "serviceEmails.addAddress": "Add email address",
+  "serviceEmails.manage": "Manage addresses",
+  "serviceEmails.permission": "Manage service email addresses",
+  "serviceEmails.help": "Add automated senders such as billing, monitoring or system services."
 }

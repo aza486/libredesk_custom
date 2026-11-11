@@ -371,9 +371,15 @@ func handleSendMessage(r *fastglue.Request) error {
 		return r.SendEnvelope(message)
 	}
 
+	automaticAI := inbox.Channel == inboxmodels.ChannelEmail && allowedAIAnalysisCaller(fmt.Sprint(r.RequestCtx.UserValue("auth_method")), user.ID, app.aiNoteAgentIDs)
+	if automaticAI {
+		if err := app.conversation.CheckAutomaticAIAllowed(cuuid); err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
 	// Send private note.
 	if req.Private {
-		message, err := app.conversation.SendPrivateNote(media, user.ID, cuuid, req.Message, req.Mentions)
+		message, err := app.conversation.SendIntegrationNote(media, user.ID, cuuid, req.Message, req.Mentions, automaticAI)
 		if err != nil {
 			return sendErrorEnvelope(r, err)
 		}
@@ -383,6 +389,9 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	// Queue outgoing reply.
 	meta := map[string]any{}
+	if automaticAI {
+		meta["automatic_email_ai"] = true
+	}
 	if req.ReplyToMessageUUID != "" {
 		meta["reply_to_message_uuid"] = req.ReplyToMessageUUID
 	}

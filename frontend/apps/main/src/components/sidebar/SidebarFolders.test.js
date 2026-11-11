@@ -188,3 +188,22 @@ test('redistributed exposes unfiled counts and keeps custom folder navigation in
   await flush()
   expect(mocks.push).toHaveBeenLastCalledWith({ name: 'inbox', params: { type: 'customer-redistributed' }, query: {} })
 })
+
+
+test('service mails retain all, exclusive folders and an unfiled route in their own scope', async () => {
+  props.scope = 'service_mail'
+  props.scopeId = 0
+  props.unfiledLabel = 'Ohne Ordner'
+  mocks.route.params = { type: 'service-mails' }
+  mocks.route.query = { folder: '-1', folderName: 'Ohne Ordner' }
+  await flush()
+  await mocks.handlers.get('sidebar-folders-refresh')()
+  await flush()
+  expect(mocks.push).not.toHaveBeenCalled()
+  expect(mocks.api.getSidebarFolders).toHaveBeenLastCalledWith('service_mail', 0)
+  const buttons = [...host.querySelectorAll('button')]
+  buttons.find((b) => b.textContent.includes('Ohne Ordner')).click()
+  expect(mocks.push).toHaveBeenLastCalledWith({ name: 'inbox', params: { type: 'service-mails' }, query: { folder: '-1', folderName: 'Ohne Ordner' } })
+  buttons.find((b) => b.textContent.includes('Alle Reklas')).click()
+  expect(mocks.push).toHaveBeenLastCalledWith({ name: 'inbox', params: { type: 'service-mails' }, query: { folder: '11', folderName: 'Alle Reklas' } })
+})

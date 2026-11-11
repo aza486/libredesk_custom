@@ -198,6 +198,8 @@ internal_http_ip = ""
 # Dedicated inbound AI-analysis-note endpoint. Empty disables access.
 [ai_analysis]
 # IDs of dedicated integration agents with API keys and messages:write.
+# These accounts also identify automatic email-flow writes on /messages.
+# Service-mail checks run at insertion and immediately before transport/retry.
 # Do not use general employee accounts. Configuration changes require restart.
 allowed_agent_ids = []
 
