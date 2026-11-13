@@ -7,11 +7,15 @@ const toolUrl = `https://api.example.com/orders/${stamp}`
 const editedUrl = `https://api.example.com/orders/${stamp}/v2`
 const headerKey = 'X-Api-Key'
 const headerValue = `secret-${stamp}`
-const parameters = '{"type":"object","properties":{"order_id":{"type":"string"}},"required":["order_id"]}'
+const parameters =
+  '{"type":"object","properties":{"order_id":{"type":"string"}},"required":["order_id"]}'
 const newPath = '/admin/ai/tools/new'
 const listPath = '/admin/ai/tools'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 const pickOption = (field, optionText) => {
   cy.get(`select[name="${field}"]`).siblings('button[role="combobox"]').click()
@@ -98,7 +102,8 @@ describe('AI tool form', () => {
     cy.intercept('PUT', `**/api/v1/ai/tools/${toolId}`).as('updateTool')
 
     cy.visit(`${listPath}/${toolId}/edit`)
-    cy.get('input[name="url"]').should('have.value', toolUrl).clear().type(editedUrl)
+    cy.get('input[name="url"]').should('have.value', toolUrl).clear()
+    cy.get('input[name="url"]').type(editedUrl)
     pickOption('method', 'POST')
 
     cy.get('button[type="submit"]').click()

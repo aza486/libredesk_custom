@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       db:
         image: postgres:17-alpine
@@ -24,36 +27,46 @@ jobs:
           --health-timeout=5s
           --health-retries=5
       redis:
-        image: redis
+        image: redis:7-alpine
         ports:
           - 6379:6379
       mailhog:
-        image: mailhog/mailhog
+        image: mailhog/mailhog:v1.0.1
         ports:
           - 1025:1025
           - 8025:8025
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v7.0.0
         with:
-          go-version: "1.25.0"
+          go-version-file: "go.mod"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7.1.0
         with:
-          node-version: "20"
+          node-version-file: ".node-version"
 
       - name: Install pnpm
-        run: npm install -g pnpm@9.15.3
+        uses: pnpm/action-setup@v6.1.1
+        with:
+          package_json_file: frontend/package.json
 
-      - name: Install cypress deps
-        run: sudo apt-get update && sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libnss3 libxss1 libasound2t64 libxtst6 xauth xvfb
+      - name: Install Cypress system dependencies
+        # Cypress prerequisites for Ubuntu 24.04 (t64 GTK/ALSA packages).
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-0t64 libgbm-dev libnotify-dev libnss3 libxss1 libasound2t64 libxtst6 xauth xvfb
 
       - name: Build binary and frontend
         run: make build
+
+      - name: Verify Cypress binary and system libraries
+        working-directory: frontend
+        run: pnpm exec cypress verify
+
+      - name: Check dependency files stayed unchanged
+        run: git diff --exit-code -- go.mod go.sum frontend/package.json frontend/pnpm-lock.yaml
 
       - name: Configure app
         run: |
@@ -62,6 +75,10 @@ jobs:
           sed -i 's/address = "redis:6379"/address = "localhost:6379"/' config.toml
           # upload.fs.upload_path is not created by the app, so attachment uploads 500 without it
           mkdir -p uploads
+
+      - name: Check frontend lint
+        working-directory: frontend
+        run: pnpm lint
 
       - name: Run unit tests for frontend
         run: cd frontend && pnpm test:run
@@ -76,7 +93,11 @@ jobs:
           LIBREDESK_RATE_LIMIT__WIDGET__REQUESTS_PER_MINUTE: "100000"
           LIBREDESK_RATE_LIMIT__PUBLIC__REQUESTS_PER_MINUTE: "100000"
           CYPRESS_SYSTEM_PASSWORD: "StrongPass!123"
+          # Loopback provides the secure context needed by the widget JWT code.
+          CYPRESS_BASE_URL: "http://localhost:9000"
           CYPRESS_MAILHOG_URL: "http://localhost:8025"
+          CYPRESS_SMTP_HOST: "127.0.0.1"
+          CYPRESS_SMTP_PORT: "1025"
         run: |
           ./libredesk --install --idempotent-install --yes --config ./config.toml
           ./libredesk --upgrade --yes --config ./config.toml

@@ -277,6 +277,8 @@ const addAction = () => {
 }
 
 const emitUpdate = (index) => {
+  // This internal event deliberately preserves the existing Ref payload contract.
+  // eslint-disable-next-line vue/no-ref-as-operand -- Consumers receive a Ref, not its snapshot.
   emit('update-actions', actions, index)
 }
 </script>

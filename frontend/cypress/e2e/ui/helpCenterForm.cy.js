@@ -14,8 +14,17 @@ const articleExcerpt = `Excerpt ${stamp}`
 const listPath = '/admin/help-center'
 
 // Hover cannot be faked, but the row wrapper also reveals actions on focus-within.
-const openRowMenu = (label) =>
-  cy.contains('button.tree-node-title', label).closest('.tree-node').find('.hover-actions button').focus().click()
+const openRowMenu = (label) => {
+  cy.contains('button.tree-node-title', label)
+    .closest('.tree-node')
+    .find('.hover-actions button')
+    .focus()
+  return cy
+    .contains('button.tree-node-title', label)
+    .closest('.tree-node')
+    .find('.hover-actions button')
+    .click()
+}
 
 const sheet = () => cy.get('[role="dialog"]')
 
@@ -65,7 +74,8 @@ describe('Help center forms', () => {
     cy.intercept('PUT', `**/api/v1/help-centers/${helpCenterId}`).as('updateHelpCenter')
 
     cy.visit(`${listPath}/${helpCenterId}/customize`)
-    cy.get('input[name="page_title"]').should('have.value', pageTitle).clear().type(editedPageTitle)
+    cy.get('input[name="page_title"]').should('have.value', pageTitle).clear()
+    cy.get('input[name="page_title"]').type(editedPageTitle)
     cy.get('button[type="submit"]').click()
     cy.wait('@updateHelpCenter').its('response.statusCode').should('eq', 200)
 
@@ -86,7 +96,9 @@ describe('Help center forms', () => {
   })
 
   it('creates a collection', () => {
-    cy.intercept('POST', `**/api/v1/help-centers/${helpCenterId}/collections`).as('createCollection')
+    cy.intercept('POST', `**/api/v1/help-centers/${helpCenterId}/collections`).as(
+      'createCollection'
+    )
 
     cy.visit(`${listPath}/${helpCenterId}/tree`)
     cy.contains('button', 'New collection').click()
@@ -133,7 +145,9 @@ describe('Help center forms', () => {
   })
 
   it('rejects a collection submit with no name', () => {
-    cy.intercept('POST', `**/api/v1/help-centers/${helpCenterId}/collections`).as('createCollection')
+    cy.intercept('POST', `**/api/v1/help-centers/${helpCenterId}/collections`).as(
+      'createCollection'
+    )
 
     cy.visit(`${listPath}/${helpCenterId}/tree`)
     cy.contains('button', 'New collection').click()
@@ -153,7 +167,8 @@ describe('Help center forms', () => {
     cy.get('[role="menuitem"]').contains('New article').click()
 
     sheet().find('input[name="title"]').type(articleTitle)
-    cy.get('.tiptap.ProseMirror').click().type(articleBody)
+    cy.get('.tiptap.ProseMirror').click()
+    cy.get('.tiptap.ProseMirror').type(articleBody)
     sheet().find('textarea[name="excerpt"]').type(articleExcerpt)
     sheet().find('select[name="status"]').siblings('button[role="combobox"]').click()
     cy.contains('[role="option"]', 'Published').click()
@@ -204,7 +219,8 @@ describe('Help center forms', () => {
     openRowMenu(renamedCollection)
     cy.get('[role="menuitem"]').contains('New article').click()
 
-    cy.get('.tiptap.ProseMirror').click().type(articleBody)
+    cy.get('.tiptap.ProseMirror').click()
+    cy.get('.tiptap.ProseMirror').type(articleBody)
     sheet().contains('button', 'Create').click()
 
     cy.contains(/required/i).should('exist')
@@ -214,10 +230,9 @@ describe('Help center forms', () => {
 
   it('deletes the article, the collection and the site', () => {
     cy.intercept('DELETE', '**/api/v1/collections/*/articles/*').as('deleteArticle')
-    cy.intercept(
-      'DELETE',
-      `**/api/v1/help-centers/${helpCenterId}/collections/${collectionId}`
-    ).as('deleteCollection')
+    cy.intercept('DELETE', `**/api/v1/help-centers/${helpCenterId}/collections/${collectionId}`).as(
+      'deleteCollection'
+    )
     cy.intercept('DELETE', `**/api/v1/help-centers/${helpCenterId}`).as('deleteHelpCenter')
 
     cy.visit(`${listPath}/${helpCenterId}/tree`)

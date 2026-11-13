@@ -1,0 +1,31 @@
+packages:
+  - .
+
+# Only these dependencies may run their installation scripts.
+allowBuilds:
+  cypress: true
+  esbuild: true
+  '@parcel/watcher': true
+  vue-demi: true
+
+minimumReleaseAgeExclude:
+  - '@unovis/ts@1.8.1'
+  - '@unovis/vue@1.8.1'
+  - prettier@3.10.0
+  - sass@1.108.2
+  - vue-letter@0.2.3
+  - brace-expansion@1.1.22 || 2.1.8
+
+# Compatible patched branches for transitive advisories; no cross-major overrides.
+overrides:
+  'brace-expansion@1': 1.1.22
+  'brace-expansion@2': 2.1.8
+  'qs@6': 6.17.1
+  'tmp@0.2': 0.2.7
+  'markdown-it@14': 14.3.3
+  'linkify-it@5': 5.0.2
+  'systeminformation@5': 5.33.19
+  'nanoid@5': 5.1.16
+  'postcss-selector-parser@6': 6.1.6
+  'immutable@5': 5.1.10
+  'source-map-js@1': 1.2.2

@@ -1132,7 +1132,7 @@ const copyToClipboard = async (text) => {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('globals.messages.copied')
     })
-  } catch (error) {
+  } catch {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: t('globals.messages.somethingWentWrong')

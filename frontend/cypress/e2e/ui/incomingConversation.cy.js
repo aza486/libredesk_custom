@@ -18,6 +18,7 @@ describe('Incoming conversation', () => {
   const smtpPort = Number(Cypress.env('SMTP_PORT') || 1025)
 
   let conversationUuid
+  let foreignUuid
   let roleId
   let agentId
   let inboxId
@@ -27,8 +28,10 @@ describe('Incoming conversation', () => {
       agentEmail,
       () => {
         cy.visit('/')
-        cy.get('#email').clear().type(agentEmail)
-        cy.get('#password').clear().type(agentPassword, { log: false })
+        cy.get('#email').clear()
+        cy.get('#email').type(agentEmail)
+        cy.get('#password').clear()
+        cy.get('#password').type(agentPassword, { log: false })
         cy.contains('button', 'Sign in').click()
         cy.url().should('include', '/inboxes')
       },
@@ -42,7 +45,7 @@ describe('Incoming conversation', () => {
 
   const openConversation = () => {
     cy.intercept('GET', '**/messages?page=*').as('loadMessages')
-    cy.visit(`/inboxes/all/conversation/${conversationUuid}`)
+    cy.visit(`/inboxes/visible/conversation/${conversationUuid}`)
     cy.wait('@loadMessages')
   }
 
@@ -55,7 +58,6 @@ describe('Incoming conversation', () => {
       name: roleName,
       description: 'Agent role that may post messages on behalf of a contact',
       permissions: [
-        'conversations:read_all',
         'conversations:read_unassigned',
         'conversations:read_assigned',
         'conversations:read',
@@ -121,6 +123,24 @@ describe('Incoming conversation', () => {
       }).then((res) => {
         conversationUuid = res.body.data.uuid
         expect(conversationUuid, 'conversation uuid').to.be.a('string').and.not.be.empty
+        // A scoped employee sees this customer ticket through an explicit grant,
+        // not through read_all, an Admin route, or an unrelated team membership.
+        cy.api('PUT', `/api/v1/conversations/${conversationUuid}/add-visible-user`, {
+          user_id: agentId
+        })
+          .its('status')
+          .should('eq', 200)
+        cy.api('POST', '/api/v1/conversations', {
+          inbox_id: inboxId,
+          contact_email: `foreign.incoming.${stamp}@example.test`,
+          first_name: 'Foreign',
+          last_name: `Customer${stamp}`,
+          subject: `Foreign incoming ${stamp}`,
+          content: '<p>Foreign ticket content</p>',
+          initiator: 'contact'
+        }).then(({ body: foreign }) => {
+          foreignUuid = foreign.data.uuid
+        })
       })
     })
   })
@@ -142,10 +162,16 @@ describe('Incoming conversation', () => {
   })
 
   it('shows the new conversation in the open list', () => {
-    cy.intercept('GET', '**/conversations/all?*').as('loadList')
+    cy.intercept('GET', '**/conversations/visible?*').as('loadList')
 
-    cy.visit('/inboxes/all')
-    cy.wait('@loadList')
+    cy.visit('/inboxes/visible')
+    cy.wait('@loadList').then(({ response }) => {
+      expect(response.statusCode).to.eq(200)
+      expect(response.body.data.results.map((ticket) => ticket.uuid))
+        .to.include(conversationUuid)
+        .and.not.include(foreignUuid)
+    })
+    cy.location('pathname').should('eq', '/inboxes/visible')
     cy.contains(contactName).should('exist')
     cy.contains(subject).should('exist')
   })
@@ -154,7 +180,12 @@ describe('Incoming conversation', () => {
     cy.intercept('GET', '**/conversations/unassigned?*').as('loadUnassigned')
 
     cy.visit('/inboxes/unassigned')
-    cy.wait('@loadUnassigned')
+    cy.wait('@loadUnassigned').then(({ response }) => {
+      expect(response.statusCode).to.eq(200)
+      expect(response.body.data.results.map((ticket) => ticket.uuid))
+        .to.include(conversationUuid)
+        .and.not.include(foreignUuid)
+    })
     cy.contains(contactName).should('exist')
   })
 
@@ -177,7 +208,8 @@ describe('Incoming conversation', () => {
     cy.get('input[placeholder="Email addresses separated by comma"]')
       .first()
       .should('not.have.value', '')
-    cy.get('.tiptap.ProseMirror').first().click().type(replyBody)
+    cy.get('.tiptap.ProseMirror').first().click()
+    cy.get('.tiptap.ProseMirror').first().type(replyBody)
     cy.contains('button', /^Send$/).click() // exact: the split button next to it is "send and set status"
 
     cy.wait('@sendReply').its('response.statusCode').should('eq', 200)
@@ -205,5 +237,59 @@ describe('Incoming conversation', () => {
       .find('.message-bubble')
       .should('not.have.class', 'bg-secondary')
       .and('not.have.class', 'bg-private')
+  })
+  it('denies foreign UUIDs and keeps a scoped employee off Admin inbox routes', () => {
+    cy.api('GET', '/api/v1/agents/me').then(({ body }) => {
+      expect(body.data.roles).not.to.include('Admin')
+      expect(body.data.permissions).not.to.include('conversations:read_all')
+    })
+    cy.api('GET', `/api/v1/conversations/${conversationUuid}`).its('status').should('eq', 200)
+    for (const path of [
+      `/api/v1/conversations/${foreignUuid}`,
+      `/api/v1/conversations/${foreignUuid}/messages?page=1`,
+      '/api/v1/conversations/all?page=1'
+    ]) {
+      cy.api('GET', path, null, { failOnStatusCode: false }).then(({ status, body }) => {
+        expect(status).to.eq(403)
+        expect(body.error_type).to.eq('PermissionException')
+        expect(body.data).to.be.null
+        expect(JSON.stringify(body)).not.to.contain('Foreign ticket content')
+      })
+    }
+    cy.intercept('GET', '**/api/v1/agents/me').as('scopedProfile')
+    cy.visit('/inboxes/all')
+    cy.wait('@scopedProfile')
+    cy.location('pathname').should('eq', '/inboxes/assigned')
+    cy.contains(`Foreign incoming ${stamp}`).should('not.exist')
+  })
+
+  it('removes UUID and list access when the explicit visibility grant is revoked', () => {
+    cy.login()
+    cy.api('GET', `/api/v1/conversations/${conversationUuid}`).then(({ body }) => {
+      expect(body.data.assigned_user_ids || []).not.to.include(agentId)
+      expect(body.data.custom_attributes.visible_users).to.include(agentId)
+    })
+    cy.api('PUT', `/api/v1/conversations/${conversationUuid}/remove-visible-user`, {
+      user_id: agentId
+    })
+      .its('status')
+      .should('eq', 200)
+    loginAsAgent()
+    cy.api('GET', `/api/v1/conversations/${conversationUuid}`, null, {
+      failOnStatusCode: false
+    }).then(({ status, body }) => {
+      expect(status).to.eq(403)
+      expect(body.error_type).to.eq('PermissionException')
+      expect(body.data).to.be.null
+    })
+    cy.intercept('GET', '**/conversations/visible?*').as('revokedList')
+    cy.visit('/inboxes/visible')
+    cy.wait('@revokedList').then(({ response }) => {
+      expect(response.statusCode).to.eq(200)
+      expect(response.body.data.results.map((ticket) => ticket.uuid)).not.to.include(
+        conversationUuid
+      )
+    })
+    cy.contains(contactName).should('not.exist')
   })
 })

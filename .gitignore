@@ -15,6 +15,11 @@ frontend/package-lock.json
 uploads/*
 !uploads/.gitkeep
 config.test.toml
-docs
+docs/*
+!docs/DEPENDENCY_UPGRADE_REPORT.md
+!docs/POST_UPGRADE_STABILIZATION.md
+!docs/CYPRESS_REGRESSION_FIX_REPORT.md
 backups
 i18n-audit
+# Local pnpm content-addressable store.
+.pnpm-store/

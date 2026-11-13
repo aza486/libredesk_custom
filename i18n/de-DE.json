@@ -1608,5 +1608,18 @@
   "serviceEmails.addAddress": "E-Mail-Adresse hinzufügen",
   "serviceEmails.manage": "Adressen verwalten",
   "serviceEmails.permission": "Service-Mail-Adressen verwalten",
-  "serviceEmails.help": "Hinterlege automatische Absender wie Rechnungs-, Monitoring- oder Systemdienste."
+  "serviceEmails.help": "Hinterlege automatische Absender wie Rechnungs-, Monitoring- oder Systemdienste.",
+  "filter.operator.equals": "Ist gleich",
+  "filter.operator.notEquals": "Ist nicht gleich",
+  "filter.operator.set": "Ist gesetzt",
+  "filter.operator.notSet": "Ist nicht gesetzt",
+  "filter.operator.contains": "Enthält",
+  "filter.operator.notContains": "Enthält nicht",
+  "filter.operator.greaterThan": "Größer als",
+  "filter.operator.lessThan": "Kleiner als",
+  "filter.operator.between": "Zwischen",
+  "filter.operator.startsWith": "Beginnt mit",
+  "filter.hoursSinceCreated": "Alter seit Erstellung (Stunden)",
+  "conversation.sort.newestCustomerReply": "Letzte Kundenantwort",
+  "conversation.sort.oldestCustomerReply": "Älteste Kundenantwort"
 }

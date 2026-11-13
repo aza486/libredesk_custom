@@ -327,6 +327,8 @@ const {
 })
 
 const messageType = ref('reply')
+let messageTypeVersion = 0
+watch(messageType, () => { messageTypeVersion++ }, { flush: 'sync' })
 const currentConversationUUID = computed(() => conversationStore.current?.uuid || null)
 watch(
   currentConversationUUID,
@@ -337,9 +339,11 @@ watch(
       return
     }
     messageType.value = conversationStore.resolveDraftType(uuid)
+    const selectionVersion = messageTypeVersion
     // Prefetch may still be in flight on first load; re-resolve once drafts land.
     await conversationStore.draftsReady
-    if (uuid !== currentConversationUUID.value) return
+    // Preserve a mode explicitly selected while the initial prefetch was pending.
+    if (uuid !== currentConversationUUID.value || selectionVersion !== messageTypeVersion) return
     messageType.value = conversationStore.resolveDraftType(uuid)
   },
   { immediate: true }
@@ -887,7 +891,7 @@ const processSend = async (
       }
     }
   }
-  let tempUUID = null
+  let tempUUID
 
   // Add pending message to cache for instant display.
   if (hasContent) {

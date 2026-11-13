@@ -156,7 +156,7 @@ export const ResizableImage = Image.extend({
         wrapper.classList.remove('resizing')
         try {
           commitWidth(Math.round(img.offsetWidth))
-        } catch (err) {
+        } catch {
           // Node may have been removed/replaced mid-drag (autosave
           // re-render, paste over selection, etc.). Drop the commit.
         }

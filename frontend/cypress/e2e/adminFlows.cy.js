@@ -42,8 +42,10 @@ describe('Admin setup and outgoing conversation', () => {
     cy.get('input[name="imap.password"]').type('cypress')
 
     // smtp.host/port also exist in the hidden OAuth section, so target the visible ones.
-    cy.get('input[name="smtp.host"]:visible').clear().type(smtpHost)
-    cy.get('input[name="smtp.port"]:visible').clear().type(smtpPort)
+    cy.get('input[name="smtp.host"]:visible').clear()
+    cy.get('input[name="smtp.host"]:visible').type(smtpHost)
+    cy.get('input[name="smtp.port"]:visible').clear()
+    cy.get('input[name="smtp.port"]:visible').type(smtpPort)
     cy.get('input[name="smtp.username"]').type('cypress')
     cy.get('input[name="smtp.password"]').type('cypress')
     cy.selectOption('Login', 'None') // SMTP auth protocol -> None (MailHog needs none)
@@ -105,9 +107,9 @@ describe('Admin setup and outgoing conversation', () => {
     // Radix Select options render in a portal outside the dialog.
     cy.get('[role="option"]').contains(inboxName).click()
 
+    cy.get('[role="dialog"]').find('.tiptap.ProseMirror').click()
     cy.get('[role="dialog"]')
       .find('.tiptap.ProseMirror')
-      .click()
       .type('Hello, this is an automated outgoing conversation.')
     cy.get('[role="dialog"]').contains('button', 'Submit').click()
 
@@ -128,8 +130,11 @@ describe('Admin setup and outgoing conversation', () => {
     // Wait for the thread to load before replying: the recipient (To) is derived from the
     // latest message, so sending before it loads is rejected with "recipient required".
     cy.wait('@loadMessages')
-    cy.get('input[placeholder="Email addresses separated by comma"]').first().should('not.have.value', '')
-    cy.get('.tiptap.ProseMirror').first().click().type(replyBody)
+    cy.get('input[placeholder="Email addresses separated by comma"]')
+      .first()
+      .should('not.have.value', '')
+    cy.get('.tiptap.ProseMirror').first().click()
+    cy.get('.tiptap.ProseMirror').first().type(replyBody)
     cy.contains('button', /^Send$/).click() // exact: avoid the adjacent "Send and set status" split button
 
     cy.wait('@sendReply').its('response.statusCode').should('eq', 200)
@@ -147,6 +152,7 @@ describe('Admin setup and outgoing conversation', () => {
           if (attempt >= 15) {
             throw new Error(`Email to ${contactEmail} not found in MailHog`)
           }
+          // eslint-disable-next-line cypress/no-unnecessary-waiting -- Bounded MailHog delivery polling has no browser event to await.
           cy.wait(1000)
           findInMailHog(attempt + 1)
         })

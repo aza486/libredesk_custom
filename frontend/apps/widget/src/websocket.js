@@ -287,7 +287,7 @@ export class WidgetWebSocketClient {
   }
 
   // Silently refresh conversation list and current conversation to catch messages missed while WS was disconnected.
-  async syncMissedMessages() {
+  async syncMissedMessages(attempt = 0) {
     const now = Date.now()
     if (attempt === 0 && now - this.lastSyncAt < 2000) return
     this.lastSyncAt = now

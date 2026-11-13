@@ -13,7 +13,10 @@ const pickOption = (field, optionText) => {
   cy.get('[role="option"]').contains(optionText).click()
 }
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 describe('Team form', () => {
   let businessHoursId
@@ -57,7 +60,8 @@ describe('Team form', () => {
 
     cy.get('input[name="name"]').type(teamName)
     pickOption('conversation_assignment_type', 'Round robin')
-    cy.get('input[name="max_auto_assigned_conversations"]').clear().type('7')
+    cy.get('input[name="max_auto_assigned_conversations"]').clear()
+    cy.get('input[name="max_auto_assigned_conversations"]').type('7')
     pickOption('timezone', 'UTC (UTC+00:00)')
     pickOption('business_hours_id', businessHoursName)
 
@@ -89,7 +93,8 @@ describe('Team form', () => {
     cy.intercept('PUT', `**/api/v1/teams/${teamId}`).as('updateTeam')
 
     cy.visit(`${listPath}/${teamId}/edit`)
-    cy.get('input[name="name"]').should('have.value', teamName).clear().type(renamedTeam)
+    cy.get('input[name="name"]').should('have.value', teamName).clear()
+    cy.get('input[name="name"]').type(renamedTeam)
     cy.get('button[type="submit"]').click()
     cy.wait('@updateTeam').its('response.statusCode').should('eq', 200)
 

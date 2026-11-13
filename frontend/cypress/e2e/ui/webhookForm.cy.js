@@ -8,7 +8,10 @@ const updatedUrl = `https://cypress.test/hooks/${stamp}/v2`
 const newPath = '/admin/webhooks/new'
 const listPath = '/admin/webhooks'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 const checkEvent = (label) =>
   cy.contains('label', label).siblings('button[role="checkbox"]').click()
@@ -61,8 +64,10 @@ describe('Webhook form', () => {
     cy.intercept('PUT', `**/api/v1/webhooks/${webhookId}`).as('updateWebhook')
 
     cy.visit(`${listPath}/${webhookId}/edit`)
-    cy.get('input[name="name"]').should('have.value', webhookName).clear().type(renamedWebhook)
-    cy.get('input[name="url"]').clear().type(updatedUrl)
+    cy.get('input[name="name"]').should('have.value', webhookName).clear()
+    cy.get('input[name="name"]').type(renamedWebhook)
+    cy.get('input[name="url"]').clear()
+    cy.get('input[name="url"]').type(updatedUrl)
     checkEvent('Conversation assigned')
 
     cy.get('button[type="submit"]').click()

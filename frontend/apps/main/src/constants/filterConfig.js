@@ -32,13 +32,22 @@ export const OPERATOR = {
     STARTS_WITH: 'starts with'
 }
 
-// operatorLabel returns a clearer display label for operators whose meaning is ambiguous with
-// multiple values (contains = matches ANY of the values). Other operators display as-is.
-const OPERATOR_LABEL_KEYS = {
-    [OPERATOR.CONTAINS]: 'filter.containsAnyOf',
-    [OPERATOR.NOT_CONTAINS]: 'filter.containsNoneOf'
+// Labels are presentation-only; operators remain the persisted/API values.
+export const OPERATOR_LABEL_KEYS = {
+    [OPERATOR.EQUALS]: 'filter.operator.equals',
+    [OPERATOR.NOT_EQUALS]: 'filter.operator.notEquals',
+    [OPERATOR.SET]: 'filter.operator.set',
+    [OPERATOR.NOT_SET]: 'filter.operator.notSet',
+    [OPERATOR.CONTAINS]: 'filter.operator.contains',
+    [OPERATOR.NOT_CONTAINS]: 'filter.operator.notContains',
+    [OPERATOR.GREATER_THAN]: 'filter.operator.greaterThan',
+    [OPERATOR.LESS_THAN]: 'filter.operator.lessThan',
+    [OPERATOR.BETWEEN]: 'filter.operator.between',
+    [OPERATOR.STARTS_WITH]: 'filter.operator.startsWith'
 }
-export const operatorLabel = (op, t) => {
+export const operatorLabel = (op, t, multiValue = true) => {
+    if (multiValue && op === OPERATOR.CONTAINS) return t('filter.containsAnyOf')
+    if (multiValue && op === OPERATOR.NOT_CONTAINS) return t('filter.containsNoneOf')
     const key = OPERATOR_LABEL_KEYS[op]
     return key ? t(key) : op
 }

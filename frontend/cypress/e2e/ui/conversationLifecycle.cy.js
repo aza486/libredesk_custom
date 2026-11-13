@@ -35,7 +35,7 @@ describe('Conversation lifecycle', () => {
   }
 
   // The list column also renders a status dropdown; this one is the header badge.
-  const statusBadge = () => cy.get('div.bg-primary.rounded-md')
+  const statusBadge = () => cy.get('[data-testid="conversation-status"]')
 
   before(() => {
     cy.login()
@@ -125,15 +125,25 @@ describe('Conversation lifecycle', () => {
   })
 
   it('assigns the conversation to an agent', () => {
-    cy.intercept('PUT', `**/conversations/${conversationUuid}/assignee/user`).as('assignAgent')
+    cy.intercept('PUT', `**/conversations/${conversationUuid}/assignees/users`).as('assignAgent')
 
     openConversation()
     openActionsSection()
-    cy.contains('button[role="combobox"]', 'Select agent').click()
+    cy.contains('p', /^Zuweisungen$/)
+      .parent()
+      .within(() => {
+        cy.contains('button[role="combobox"]', 'Mitarbeiter hinzufügen').click()
+      })
     cy.get('[role="option"]').contains(agentName).click()
 
-    cy.wait('@assignAgent').its('response.statusCode').should('eq', 200)
-    cy.contains('button[role="combobox"]', agentName).should('exist')
+    cy.wait('@assignAgent').then(({ request, response }) => {
+      expect(response.statusCode).to.eq(200)
+      expect(request.body.assignee_ids).to.deep.eq([agentId])
+    })
+    cy.get(`button[aria-label="${agentName} entfernen"]`).should('be.visible')
+    cy.api('GET', `/api/v1/conversations/${conversationUuid}`)
+      .its('body.data.assigned_user_ids')
+      .should('deep.equal', [agentId])
   })
 
   it('assigns the conversation to a team', () => {
@@ -187,14 +197,40 @@ describe('Conversation lifecycle', () => {
   it('posts a private note that renders as a note, not a reply', () => {
     cy.intercept('POST', `**/conversations/${conversationUuid}/messages`).as('sendNote')
 
+    // Hold the real prefetch response until the user has explicitly chosen a note.
+    // Hydration must not silently turn that choice into a public reply.
+    let releaseDrafts
+    const draftsGate = new Cypress.Promise((resolve) => {
+      releaseDrafts = resolve
+    })
+    cy.intercept('GET', '**/api/v1/drafts', (request) => {
+      request.continue(() => draftsGate)
+    }).as('draftHydration')
     openConversation()
-    cy.contains('button', 'Private note').click()
-    cy.get('.tiptap.ProseMirror').first().click().type(noteBody)
+    cy.contains('[role="tab"]', 'Private note').click()
+    cy.contains('[role="tab"]', 'Private note').should('have.attr', 'aria-selected', 'true')
+    cy.then(() => {
+      releaseDrafts()
+    })
+    cy.wait('@draftHydration')
+    cy.contains('[role="tab"]', 'Private note').should('have.attr', 'aria-selected', 'true')
+    cy.get('.tiptap.ProseMirror').first().click()
+    cy.get('.tiptap.ProseMirror').first().type(noteBody)
     cy.contains('button', /^Send$/).click()
 
-    cy.wait('@sendNote').its('response.statusCode').should('eq', 200)
-    // Scoped to the thread: the list column shows the same text as the preview.
-    cy.get('[data-message-uuid]').contains(noteBody).closest('.bg-private').should('exist')
+    cy.wait('@sendNote').then(({ request, response }) => {
+      expect(request.body.private).to.eq(true)
+      expect(response.statusCode).to.eq(200)
+      expect(response.body.data.private).to.eq(true)
+      const uuid = response.body.data.uuid
+      cy.get(`[data-message-uuid="${uuid}"]`)
+        .should('contain.text', noteBody)
+        .find('[data-message-private="true"]')
+        .should('be.visible')
+      cy.api('GET', `/api/v1/conversations/${conversationUuid}/messages/${uuid}`)
+        .its('body.data.private')
+        .should('eq', true)
+    })
   })
 
   it('sends a reply that appears in the thread', () => {
@@ -205,31 +241,65 @@ describe('Conversation lifecycle', () => {
     cy.get('input[placeholder="Email addresses separated by comma"]')
       .first()
       .should('not.have.value', '')
-    cy.get('.tiptap.ProseMirror').first().click().type(replyBody)
+    cy.get('.tiptap.ProseMirror').first().click()
+    cy.get('.tiptap.ProseMirror').first().type(replyBody)
     cy.contains('button', /^Send$/).click() // exact: the split button next to it is "send and set status"
 
-    cy.wait('@sendReply').its('response.statusCode').should('eq', 200)
-    cy.get('[data-message-uuid]').contains(replyBody).closest('.bg-private').should('not.exist')
+    cy.wait('@sendReply').then(({ request, response }) => {
+      expect(request.body.private).to.eq(false)
+      expect(response.statusCode).to.eq(200)
+      expect(response.body.data.private).to.eq(false)
+      cy.get(`[data-message-uuid="${response.body.data.uuid}"]`)
+        .should('contain.text', replyBody)
+        .find('[data-message-private="false"]')
+        .should('be.visible')
+    })
   })
 
   it('resolves the conversation and it moves out of the open list', () => {
     cy.intercept('PUT', `**/conversations/${conversationUuid}/status`).as('setStatus')
-    cy.intercept('GET', '**/conversations/all?*').as('loadList')
+    cy.intercept('GET', '**/conversations/all?*', (request) => {
+      const filters = JSON.parse(request.query.filters || '[]')
+      const status = filters.find((filter) => filter.model === 'conversation_statuses')?.value
+      if (status === 'Open') request.alias = 'openList'
+      if (status === 'Resolved') request.alias = 'resolvedList'
+    })
 
     openConversation()
     statusBadge().click()
-    cy.contains('[role="menuitem"]', 'Resolved').click()
+    cy.get('[role="menuitem"][data-status="Resolved"]').click()
     cy.wait('@setStatus').its('response.statusCode').should('eq', 200)
-    statusBadge().should('contain.text', 'Resolved')
+    statusBadge().should('have.attr', 'data-status', 'Resolved').and('contain.text', 'Resolved')
+    cy.api('GET', `/api/v1/conversations/${conversationUuid}`)
+      .its('body.data.status')
+      .should('eq', 'Resolved')
 
     // Wait for the list to actually load, else "not.exist" passes on an empty list.
     cy.visit('/inboxes/all')
-    cy.wait('@loadList')
+    cy.get('[data-testid="conversation-list-status"]').click()
+    cy.get('[role="menuitem"][data-status="Open"]').click()
+    cy.wait('@openList').then(({ response }) => {
+      expect(response.statusCode).to.eq(200)
+      expect(response.body.data.results.map((ticket) => ticket.uuid)).not.to.include(
+        conversationUuid
+      )
+    })
+    cy.get('[data-testid="conversation-list-status"]').should('have.attr', 'data-status', 'Open')
     cy.contains(contactName).should('not.exist')
 
-    cy.contains('button', /\d+\s*Open/).click()
-    cy.contains('[role="menuitem"]', 'Resolved').click()
-    cy.wait('@loadList')
+    cy.get('[data-testid="conversation-list-status"]').click()
+    cy.get('[role="menuitem"][data-status="Resolved"]').click()
+    cy.wait('@resolvedList').then(({ response }) => {
+      expect(response.statusCode).to.eq(200)
+      const ticket = response.body.data.results.find((ticket) => ticket.uuid === conversationUuid)
+      expect(ticket, 'persisted resolved ticket in the resolved list').to.exist
+      expect(ticket.status).to.eq('Resolved')
+    })
+    cy.get('[data-testid="conversation-list-status"]').should(
+      'have.attr',
+      'data-status',
+      'Resolved'
+    )
     cy.contains(contactName).should('exist')
   })
 })

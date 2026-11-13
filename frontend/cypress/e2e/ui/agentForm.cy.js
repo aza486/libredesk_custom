@@ -10,11 +10,15 @@ const roleName = 'Agent'
 const newPath = '/admin/teams/agents/new'
 const listPath = '/admin/teams/agents'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 // Typing narrows the SelectTag combobox list, which is capped at 200 entries.
 const pickTag = (placeholder, optionText) => {
-  cy.get(`input[placeholder="${placeholder}"]`).click().type(optionText)
+  cy.get(`input[placeholder="${placeholder}"]`).click()
+  cy.get(`input[placeholder="${placeholder}"]`).type(optionText)
   cy.get('[role="option"]').contains(optionText).click()
 }
 
@@ -86,7 +90,8 @@ describe('Agent form', () => {
     cy.intercept('PUT', `**/api/v1/agents/${agentId}`).as('updateAgent')
 
     cy.visit(`${listPath}/${agentId}/edit`)
-    cy.get('input[name="last_name"]').should('have.value', lastName).clear().type(renamedLastName)
+    cy.get('input[name="last_name"]').should('have.value', lastName).clear()
+    cy.get('input[name="last_name"]').type(renamedLastName)
     cy.get('select[name="availability_status"]').siblings('button[role="combobox"]').click()
     cy.get('[role="option"]').contains('Away').click()
 

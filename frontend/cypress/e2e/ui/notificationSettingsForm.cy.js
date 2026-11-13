@@ -38,17 +38,25 @@ describe('Notification settings form', () => {
     )
 
   const getSettings = () =>
-    cy.api('GET', '/api/v1/settings/notifications/email').then(({ body }) =>
-      Object.fromEntries(
-        Object.entries(body.data).map(([key, value]) => [key.replace(prefix, ''), value])
+    cy
+      .api('GET', '/api/v1/settings/notifications/email')
+      .then(({ body }) =>
+        Object.fromEntries(
+          Object.entries(body.data).map(([key, value]) => [key.replace(prefix, ''), value])
+        )
       )
-    )
 
   before(() => {
     cy.login()
     getSettings().then((current) => {
       original = Object.fromEntries(settingKeys.map((key) => [key, current[key]]))
-      put({ ...original, host: seedHost, username: seedUsername, email_address: seedEmail, password: `seed-${stamp}` })
+      put({
+        ...original,
+        host: seedHost,
+        username: seedUsername,
+        email_address: seedEmail,
+        password: `seed-${stamp}`
+      })
     })
   })
 
@@ -90,7 +98,8 @@ describe('Notification settings form', () => {
     cy.intercept('PUT', '**/api/v1/settings/notifications/email').as('saveNotification')
 
     cy.visit(path)
-    cy.get('input[name="host"]').should('have.value', seedHost).clear().type(changedHost)
+    cy.get('input[name="host"]').should('have.value', seedHost).clear()
+    cy.get('input[name="host"]').type(changedHost)
     cy.get('button[type="submit"]').click()
 
     cy.wait('@saveNotification').its('response.statusCode').should('eq', 200)
@@ -130,7 +139,8 @@ describe('Notification settings form', () => {
     cy.intercept('PUT', '**/api/v1/settings/notifications/email').as('saveNotification')
 
     cy.visit(path)
-    cy.get('input[name="port"]').should('not.have.value', '').clear().type('70000')
+    cy.get('input[name="port"]').should('not.have.value', '').clear()
+    cy.get('input[name="port"]').type('70000')
     cy.get('button[type="submit"]').click()
 
     cy.contains('p.text-destructive', '65535').should('exist')
@@ -141,7 +151,8 @@ describe('Notification settings form', () => {
     cy.intercept('PUT', '**/api/v1/settings/notifications/email').as('saveNotification')
 
     cy.visit(path)
-    cy.get('input[name="idle_timeout"]').should('not.have.value', '').clear().type('forever')
+    cy.get('input[name="idle_timeout"]').should('not.have.value', '').clear()
+    cy.get('input[name="idle_timeout"]').type('forever')
     cy.get('button[type="submit"]').click()
 
     cy.contains('p.text-destructive', 'Invalid duration format').should('exist')

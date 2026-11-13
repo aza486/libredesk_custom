@@ -2,6 +2,9 @@ name: Go
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -26,15 +29,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7.0.0
         with:
-          go-version: "1.25.0"
+          go-version-file: "go.mod"
 
       - name: Install dependencies
-        run: go get -v ./...
+        run: go mod download && go mod verify
+
+      - name: Check module consistency
+        run: go mod tidy -diff
+
+      - name: Run vet
+        run: go vet ./...
 
       - name: Run tests
-        run: make test
+        run: go test -count=1 ./...

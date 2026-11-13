@@ -394,7 +394,7 @@ const handleAiPromptSelected = (key) => {
 // Watch and update macro view based on message type this filters our macros.
 watch(
   messageType,
-  (newType, oldType) => {
+  (newType) => {
     if (newType === 'reply') {
       macroStore.setCurrentView('replying')
     } else if (newType === 'private_note') {

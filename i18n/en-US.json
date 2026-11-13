@@ -1600,5 +1600,18 @@
   "serviceEmails.addAddress": "Add email address",
   "serviceEmails.manage": "Manage addresses",
   "serviceEmails.permission": "Manage service email addresses",
-  "serviceEmails.help": "Add automated senders such as billing, monitoring or system services."
+  "serviceEmails.help": "Add automated senders such as billing, monitoring or system services.",
+  "filter.operator.equals": "equals",
+  "filter.operator.notEquals": "not equals",
+  "filter.operator.set": "set",
+  "filter.operator.notSet": "not set",
+  "filter.operator.contains": "contains",
+  "filter.operator.notContains": "not contains",
+  "filter.operator.greaterThan": "greater than",
+  "filter.operator.lessThan": "less than",
+  "filter.operator.between": "between",
+  "filter.operator.startsWith": "starts with",
+  "filter.hoursSinceCreated": "Age since creation (hours)",
+  "conversation.sort.newestCustomerReply": "Latest customer reply",
+  "conversation.sort.oldestCustomerReply": "Oldest customer reply"
 }

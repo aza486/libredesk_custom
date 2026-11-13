@@ -8,7 +8,10 @@ const messageBody = `Canned reply from the macro form spec ${stamp}`
 const newPath = '/admin/conversations/macros/new'
 const listPath = '/admin/conversations/macros'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 describe('Macro form', () => {
   let macroId
@@ -35,7 +38,8 @@ describe('Macro form', () => {
     cy.visit(newPath)
 
     cy.get('input[name="name"]').type(macroName)
-    cy.get('.tiptap.ProseMirror').click().type(messageBody)
+    cy.get('.tiptap.ProseMirror').click()
+    cy.get('.tiptap.ProseMirror').type(messageBody)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@createMacro').then(({ response }) => {
@@ -62,7 +66,8 @@ describe('Macro form', () => {
     cy.intercept('PUT', `**/api/v1/macros/${macroId}`).as('updateMacro')
 
     cy.visit(`${listPath}/${macroId}/edit`)
-    cy.get('input[name="name"]').should('have.value', macroName).clear().type(renamedMacro)
+    cy.get('input[name="name"]').should('have.value', macroName).clear()
+    cy.get('input[name="name"]').type(renamedMacro)
 
     cy.get('select[name="visibility"]').siblings('button[role="combobox"]').click()
     cy.get('[role="option"]').contains('Team').click()
@@ -75,7 +80,10 @@ describe('Macro form', () => {
     cy.visit(`${listPath}/${macroId}/edit`)
     cy.get('input[name="name"]').should('have.value', renamedMacro)
     cy.get('select[name="visibility"]').should('have.value', 'team')
-    cy.contains('label', 'Team').parent().find('button[role="combobox"]').should('contain.text', teamName)
+    cy.contains('label', 'Team')
+      .parent()
+      .find('button[role="combobox"]')
+      .should('contain.text', teamName)
   })
 
   it('rejects a submit with no name', () => {

@@ -14,7 +14,7 @@
       <!-- Status dropdown-menu, hidden when a view is selected as views are pre-filtered -->
       <DropdownMenu v-if="!route.params.viewID && !route.query.folder && !['customer-redistributed', 'customer-redistributed-unfiled'].includes(route.params.type)">
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" class="w-30">
+          <Button variant="ghost" class="w-30" data-testid="conversation-list-status" :data-status="conversationStore.getListStatus">
             <div>
               <span class="mr-1">{{ conversationStore.conversations.total }}</span>
               <span>{{ conversationStatusLabel(conversationStore.getListStatus, t) }}</span>
@@ -26,6 +26,7 @@
           <DropdownMenuItem
             v-for="status in conversationStore.statusOptions"
             :key="status.value"
+            :data-status="status.label"
             @click="handleStatusChange(status)"
           >
             {{ status.displayLabel ?? status.label }}
@@ -52,6 +53,12 @@
           </DropdownMenuItem>
           <DropdownMenuItem @click="handleSortChange('newest')">
             {{ $t('conversation.sort.newestActivity') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('newest_customer_reply')">
+            {{ $t('conversation.sort.newestCustomerReply') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem @click="handleSortChange('oldest_customer_reply')">
+            {{ $t('conversation.sort.oldestCustomerReply') }}
           </DropdownMenuItem>
           <DropdownMenuItem @click="handleSortChange('started_first')">
             {{ $t('conversation.sort.startedFirst') }}

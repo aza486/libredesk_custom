@@ -23,68 +23,65 @@ export default defineConfig(({ mode, command }) => {
   const tailwindConfig = require('./tailwind.config.cjs')
   const scopedContent = [
     `./apps/${isWidget ? 'widget' : 'main'}/src/**/*.{js,ts,vue}`,
-    './shared-ui/**/*.{js,ts,vue}',
+    './shared-ui/**/*.{js,ts,vue}'
   ]
 
   return {
     base: isWidget && command === 'build' ? '/widget/' : '/',
     css: {
-      preprocessorOptions: {
-        scss: {
-          api: 'modern',
-        },
-      },
       postcss: {
-        plugins: [tailwind({ ...tailwindConfig, content: scopedContent }), autoprefixer()],
-      },
+        plugins: [tailwind({ ...tailwindConfig, content: scopedContent }), autoprefixer()]
+      }
     },
     root: path.resolve(__dirname, appPath),
     publicDir: path.resolve(__dirname, 'public'),
     // Separate cache per app to avoid stale/conflicting caches.
     cacheDir: path.resolve(__dirname, `node_modules/.vite-${isWidget ? 'widget' : 'main'}`),
     server: {
-      cors: { origin: "*" },
+      cors: { origin: '*' },
       // Allow access to parent dir so shared-ui imports work in dev, plus the
       // public stylesheet the article editor shares with the rendered page.
       fs: {
-        allow: [path.resolve(__dirname), path.resolve(__dirname, '../static/public/static')],
+        allow: [path.resolve(__dirname), path.resolve(__dirname, '../static/public/static')]
       },
-        allowedHosts: ['etching-catalyze-declared.ngrok-free.dev'],
-        port: isWidget ? widgetPort : mainPort,
+      allowedHosts: ['etching-catalyze-declared.ngrok-free.dev'],
+      port: isWidget ? widgetPort : mainPort,
       proxy: {
         '/api': {
           target: apiTarget,
-          changeOrigin: true,
+          changeOrigin: true
         },
         '/widget.js': {
           target: apiTarget,
-          changeOrigin: true,
+          changeOrigin: true
         },
         '/static': {
           target: apiTarget,
-          changeOrigin: true,
+          changeOrigin: true
         },
         '/logout': {
           target: apiTarget,
-          changeOrigin: true,
+          changeOrigin: true
         },
         '/uploads': {
           target: apiTarget,
-          changeOrigin: true,
+          changeOrigin: true
         },
         '/ws': {
           target: wsTarget,
           ws: true,
-          changeOrigin: true,
+          changeOrigin: true
         },
         '/widget/ws': {
           target: wsTarget,
           ws: true,
-          changeOrigin: true,
+          changeOrigin: true
         }
-      },
+      }
     },
     build: {
+      // Preserve the browser support of the previous Vite 6 build.
+      target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
       outDir: isWidget
         ? path.resolve(__dirname, 'dist/widget')
         : path.resolve(__dirname, 'dist/main'),
@@ -94,15 +91,15 @@ export default defineConfig(({ mode, command }) => {
         output: {
           manualChunks: {
             'vue-vendor': ['vue', 'vue-router', 'pinia'],
-            'radix': ['radix-vue', 'reka-ui'],
-            'icons': ['lucide-vue-next', '@radix-icons/vue'],
-            'utils': ['@vueuse/core', 'clsx', 'tailwind-merge', 'class-variance-authority'],
-            'forms': ['vee-validate', '@vee-validate/zod', 'zod'],
-            'misc': ['axios', 'date-fns', 'mitt', 'qs', 'vue-i18n'],
+            radix: ['radix-vue', 'reka-ui'],
+            icons: ['lucide-vue-next', '@radix-icons/vue'],
+            utils: ['@vueuse/core', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+            forms: ['vee-validate', '@vee-validate/zod', 'zod'],
+            misc: ['axios', 'date-fns', 'mitt', 'qs', 'vue-i18n'],
             // Main-app-only chunks - widget doesn't use these libraries.
             ...(!isWidget && {
-              'charts': ['@unovis/ts', '@unovis/vue'],
-              'editor': [
+              charts: ['@unovis/ts', '@unovis/vue'],
+              editor: [
                 '@tiptap/vue-3',
                 '@tiptap/starter-kit',
                 '@tiptap/extension-image',
@@ -111,19 +108,24 @@ export default defineConfig(({ mode, command }) => {
                 '@tiptap/extension-table',
                 '@tiptap/extension-table-cell',
                 '@tiptap/extension-table-header',
-                '@tiptap/extension-table-row',
+                '@tiptap/extension-table-row'
               ],
-              'codemirror': ['codemirror', '@codemirror/lang-html', '@codemirror/lang-javascript', '@codemirror/theme-one-dark'],
-              'table': ['@tanstack/vue-table'],
-            }),
-          },
-        },
-      },
+              codemirror: [
+                'codemirror',
+                '@codemirror/lang-html',
+                '@codemirror/lang-javascript',
+                '@codemirror/theme-one-dark'
+              ],
+              table: ['@tanstack/vue-table']
+            })
+          }
+        }
+      }
     },
     plugins: [vue()],
     // `root` is the app dir, which would hide the tests living in the other app and in shared-ui.
     test: {
-      dir: path.resolve(__dirname),
+      dir: path.resolve(__dirname)
     },
     resolve: {
       alias: {
@@ -131,8 +133,8 @@ export default defineConfig(({ mode, command }) => {
         '@main': path.resolve(__dirname, 'apps/main/src'),
         '@widget': path.resolve(__dirname, 'apps/widget/src'),
         '@shared-ui': path.resolve(__dirname, 'shared-ui'),
-        '@public-static': path.resolve(__dirname, '../static/public/static'),
-      },
-    },
+        '@public-static': path.resolve(__dirname, '../static/public/static')
+      }
+    }
   }
 })

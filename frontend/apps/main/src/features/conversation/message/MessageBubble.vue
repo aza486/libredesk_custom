@@ -81,6 +81,7 @@
 
         <div
           class="flex flex-col justify-end message-bubble"
+          :data-message-private="isPrivateMessage ? 'true' : 'false'"
           :class="bubbleClasses"
         >
           <div v-if="isDeleted" class="text-sm italic text-muted-foreground">

@@ -109,7 +109,7 @@ import { handleHTTPError } from '@shared-ui/utils/http.js'
 import { useEmitter } from '@/composables/useEmitter'
 import { EMITTER_EVENTS } from '@/constants/emitterEvents.js'
 
-const { t } = useI18n()
+useI18n()
 const emitter = useEmitter()
 
 const props = defineProps({

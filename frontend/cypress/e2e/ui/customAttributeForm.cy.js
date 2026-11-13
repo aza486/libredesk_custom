@@ -19,7 +19,10 @@ const openEditDialog = () => {
   cy.get('[role="dialog"]').should('be.visible')
 }
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 // A radix Select renders a hidden native select next to its trigger, options go in a portal.
 const pickOption = (field, optionText) => {
@@ -68,7 +71,8 @@ describe('Custom attribute form', () => {
     cy.intercept('PUT', '**/api/v1/custom-attributes/*').as('updateAttribute')
 
     openEditDialog()
-    cy.get('input[name="description"]').clear().type('Edited by the spec')
+    cy.get('input[name="description"]').clear()
+    cy.get('input[name="description"]').type('Edited by the spec')
     cy.get('button[type="submit"]').click()
     cy.wait('@updateAttribute').its('response.statusCode').should('eq', 200)
 

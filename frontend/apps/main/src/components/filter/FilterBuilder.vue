@@ -45,7 +45,7 @@
             <SelectContent>
               <SelectGroup>
                 <SelectItem v-for="op in getFieldOperators(modelFilter)" :key="op" :value="op">
-                  {{ op }}
+                  {{ operatorLabel(op, t, getFieldType(modelFilter) === FIELD_TYPE.MULTI_SELECT) }}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
@@ -143,7 +143,7 @@ import { Plus } from 'lucide-vue-next'
 import { Button } from '@shared-ui/components/ui/button'
 import { Input } from '@shared-ui/components/ui/input'
 import { useI18n } from 'vue-i18n'
-import { FIELD_TYPE, OPERATOR } from '@/constants/filterConfig'
+import { FIELD_TYPE, OPERATOR, operatorLabel } from '@/constants/filterConfig'
 import CloseButton from '@/components/button/CloseButton.vue'
 import SelectComboBox from '@/components/combobox/SelectCombobox.vue'
 import SelectTag from '@shared-ui/components/ui/select/SelectTag.vue'

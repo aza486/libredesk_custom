@@ -2647,6 +2647,8 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 	// visible users (including every assignee).
 	// This condition is applied to assignment-based lists so neither ticket
 	// kind can leak into Assigned/Unassigned/Team views.
+	// Visibility belongs to the authenticated viewer. userID is an assignment
+	// filter and is zero for lists such as Unassigned.
 	ticketAccessCondition := fmt.Sprintf(`
 	(
 		(
@@ -2670,7 +2672,7 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 			)
 		)
 	)
-	`, isAdmin, userID, userID, isAdmin, isCustomerSupport, userID, userID, userID, userID)
+	`, isAdmin, viewingUserID, viewingUserID, isAdmin, isCustomerSupport, viewingUserID, viewingUserID, viewingUserID, viewingUserID)
 	personalAccess := authz.PersonalAccessSQL("conversations", viewingUserID, isAdmin)
 	for _, lt := range listTypes {
 		conditionStart := len(conditions)
@@ -2988,12 +2990,24 @@ func (c *Manager) makeScopedConversationsListQuery(viewingUserID, userID int, te
 		return baseQuery, append(qArgs, values...), nil
 	}
 
+	// Derived sort fields do not change the filter allowlist or stored folder contracts.
+	var orderFields dbutil.AllowedFields
+	secondaryOrderBy := ""
+	if orderBy == "customer_reply.last_customer_reply_at" {
+		orderFields = dbutil.AllowedFields{
+			"customer_reply": {"last_customer_reply_at"},
+			"conversations":  {"id"},
+		}
+		secondaryOrderBy = "conversations.id"
+	}
 	return dbutil.BuildPaginatedQuery(baseQuery, qArgs, dbutil.PaginationOptions{
-		Order:    order,
-		OrderBy:  orderBy,
-		Page:     page,
-		PageSize: pageSize,
-		Location: c.filterLocation(),
+		Order:            order,
+		OrderBy:          orderBy,
+		SecondaryOrderBy: secondaryOrderBy,
+		OrderFields:      orderFields,
+		Page:             page,
+		PageSize:         pageSize,
+		Location:         c.filterLocation(),
 	}, filtersJSON, conversationListAllowedFields, conversationFilterRenderers)
 }
 

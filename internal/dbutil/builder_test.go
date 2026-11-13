@@ -244,3 +244,22 @@ func TestDateFilterInvalidTimezoneFallsBackToUTC(t *testing.T) {
 		}
 	}
 }
+
+func TestPaginatedSecondaryOrderIsAllowlisted(t *testing.T) {
+	fields := AllowedFields{"conversations": {"created_at", "id"}}
+	for _, secondary := range []string{"conversations.id", "conversations.secret", "conversations.id DESC; DROP TABLE users"} {
+		query, _, err := BuildPaginatedQuery("SELECT * FROM conversations WHERE true", nil, PaginationOptions{Page: 2, PageSize: 10, OrderBy: "conversations.created_at", SecondaryOrderBy: secondary, Order: "asc"}, "[]", fields, nil)
+		if secondary != "conversations.id" {
+			if err == nil {
+				t.Fatalf("unallowlisted secondary accepted: %s", secondary)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(query, "ORDER BY conversations.created_at ASC NULLS LAST, conversations.id ASC NULLS LAST LIMIT") {
+			t.Fatalf("incorrect secondary order: %s", query)
+		}
+	}
+}

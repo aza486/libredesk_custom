@@ -7,7 +7,10 @@ const updatedDescription = 'Role edited by the role form spec'
 const newPath = '/admin/teams/roles/new'
 const listPath = '/admin/teams/roles'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 const permission = (label) => cy.contains('label', label).siblings('button[role="checkbox"]')
 
@@ -66,8 +69,10 @@ describe('Role form', () => {
     cy.intercept('PUT', `**/api/v1/roles/${roleId}`).as('updateRole')
 
     cy.visit(`${listPath}/${roleId}/edit`)
-    cy.get('input[name="name"]').should('have.value', roleName).clear().type(renamedRole)
-    cy.get('input[name="description"]').clear().type(updatedDescription)
+    cy.get('input[name="name"]').should('have.value', roleName).clear()
+    cy.get('input[name="name"]').type(renamedRole)
+    cy.get('input[name="description"]').clear()
+    cy.get('input[name="description"]').type(updatedDescription)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@updateRole').its('response.statusCode').should('eq', 200)
@@ -97,7 +102,8 @@ describe('Role form', () => {
     cy.intercept('PUT', `**/api/v1/roles/${roleId}`).as('updateRole')
 
     cy.visit(`${listPath}/${roleId}/edit`)
-    cy.get('input[name="name"]').should('have.value', renamedRole).clear().type(finalRole)
+    cy.get('input[name="name"]').should('have.value', renamedRole).clear()
+    cy.get('input[name="name"]').type(finalRole)
     togglePermission('Manage macros')
 
     cy.get('button[type="submit"]').click()
@@ -119,6 +125,9 @@ describe('Role form', () => {
       .parent()
       .contains(/required/i)
       .scrollIntoView()
+    cy.contains('label', 'Description')
+      .parent()
+      .contains(/required/i)
       .should('be.visible')
     cy.get('@createRole.all').should('have.length', 0)
     cy.location('pathname').should('eq', newPath)

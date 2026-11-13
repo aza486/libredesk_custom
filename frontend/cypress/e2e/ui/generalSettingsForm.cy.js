@@ -58,10 +58,8 @@ describe('General settings form', () => {
     cy.intercept('PUT', '**/api/v1/settings/general').as('saveGeneral')
 
     cy.visit(path)
-    cy.get('input[name="site_name"]')
-      .should('have.value', original['app.site_name'])
-      .clear()
-      .type(siteName)
+    cy.get('input[name="site_name"]').should('have.value', original['app.site_name']).clear()
+    cy.get('input[name="site_name"]').type(siteName)
     cy.get('button[type="submit"]').click()
 
     cy.wait('@saveGeneral').its('response.statusCode').should('eq', 200)
@@ -95,10 +93,8 @@ describe('General settings form', () => {
     cy.intercept('PUT', '**/api/v1/settings/general').as('saveGeneral')
 
     cy.visit(path)
-    cy.get('input[name="root_url"]')
-      .should('not.have.value', '')
-      .clear()
-      .type('definitely not a url')
+    cy.get('input[name="root_url"]').should('not.have.value', '').clear()
+    cy.get('input[name="root_url"]').type('definitely not a url')
     cy.get('button[type="submit"]').click()
 
     cy.contains('Root URL should be a valid URL').should('exist')

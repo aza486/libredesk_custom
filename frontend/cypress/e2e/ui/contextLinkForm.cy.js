@@ -11,7 +11,10 @@ const maskedSecret = '••••••••••'
 const newPath = '/admin/context-links/new'
 const listPath = '/admin/context-links'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 describe('Context link form', () => {
   let linkId
@@ -29,7 +32,8 @@ describe('Context link form', () => {
     cy.get('input[name="name"]').type(linkName)
     cy.get('input[name="url_template"]').type(urlTemplate)
     cy.get('input[name="secret"]').type(secret)
-    cy.get('input[name="token_expiry_seconds"]').clear().type('900')
+    cy.get('input[name="token_expiry_seconds"]').clear()
+    cy.get('input[name="token_expiry_seconds"]').type('900')
 
     cy.get('button[type="submit"]').click()
     cy.wait('@createLink').then(({ response }) => {
@@ -59,8 +63,10 @@ describe('Context link form', () => {
     cy.intercept('PUT', `**/api/v1/context-links/${linkId}`).as('updateLink')
 
     cy.visit(`${listPath}/${linkId}/edit`)
-    cy.get('input[name="name"]').should('have.value', linkName).clear().type(renamedLink)
-    cy.get('input[name="url_template"]').clear().type(updatedUrlTemplate)
+    cy.get('input[name="name"]').should('have.value', linkName).clear()
+    cy.get('input[name="name"]').type(renamedLink)
+    cy.get('input[name="url_template"]').clear()
+    cy.get('input[name="url_template"]').type(updatedUrlTemplate)
     cy.get('button[role="checkbox"]').click()
 
     cy.get('button[type="submit"]').click()

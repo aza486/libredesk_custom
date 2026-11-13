@@ -50,7 +50,8 @@ describe('Automation form', () => {
     cy.contains('button', 'Add action').click()
     actionRows().should('have.length', 1)
     pickOption('Select action', 'Add private note')
-    cy.get('.tiptap.ProseMirror').click().type(noteBody)
+    cy.get('.tiptap.ProseMirror').click()
+    cy.get('.tiptap.ProseMirror').type(noteBody)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@createRule').then(({ response }) => {
@@ -102,7 +103,8 @@ describe('Automation form', () => {
     cy.intercept('PUT', `**/api/v1/automations/rules/${ruleId}`).as('updateRule')
 
     openRule(ruleId)
-    cy.get('input[name="name"]').should('have.value', ruleName).clear().type(renamedRule)
+    cy.get('input[name="name"]').should('have.value', ruleName).clear()
+    cy.get('input[name="name"]').type(renamedRule)
     cy.get('button[type="submit"]').click()
     cy.wait('@updateRule').its('response.statusCode').should('eq', 200)
 

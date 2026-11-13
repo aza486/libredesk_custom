@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: "30 1 * * *"
   workflow_dispatch:
-  
+
 permissions:
   contents: read
   issues: write
@@ -13,7 +13,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11.0.0
         with:
           days-before-stale: 150
           stale-issue-label: "stale"

@@ -86,6 +86,7 @@ import { useSharedViewStore } from './stores/sharedView'
 import { useTagStore } from './stores/tag'
 import { useCustomAttributeStore } from './stores/customAttributes'
 import { useIdleDetection } from './composables/useIdleDetection'
+import { useAllInboxRouteGuard } from './composables/useAllInboxRouteGuard'
 import { useNotificationStore } from './stores/notification'
 import { initAudioContext } from '@shared-ui/composables/useNotificationSound'
 import PageHeader from './components/layout/PageHeader.vue'
@@ -173,18 +174,7 @@ onMounted(() => {
   initStores()
 })
 
-watch(
-  () => route.fullPath,
-  () => {
-    if (
-      route.path.startsWith('/inboxes/all') &&
-      !userStore.roles.includes('Admin')
-    ) {
-      router.replace('/inboxes/assigned')
-    }
-  },
-  { immediate: true }
-)
+useAllInboxRouteGuard(userStore, route, router)
 
 // Initialize data stores
 const initStores = async () => {

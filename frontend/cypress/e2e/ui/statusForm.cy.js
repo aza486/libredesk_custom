@@ -8,7 +8,10 @@ const statusName = `CyStatus ${stamp}`
 const renamedStatus = `CyStatus ${stamp} v2`
 const listPath = '/admin/conversations/statuses'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 const openNewDialog = () => cy.contains('button', 'New status').click()
 
@@ -58,7 +61,8 @@ describe('Status form', () => {
 
     cy.visit(listPath)
     openEditDialog(statusName)
-    cy.get('input[name="name"]').clear().type(renamedStatus)
+    cy.get('input[name="name"]').clear()
+    cy.get('input[name="name"]').type(renamedStatus)
     pickCategory('Resolved')
 
     cy.get('button[type="submit"]').click()

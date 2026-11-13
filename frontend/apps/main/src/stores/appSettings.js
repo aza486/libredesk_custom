@@ -12,7 +12,7 @@ export const useAppSettingsStore = defineStore('settings', {
                 const response = await api.getSettings(key)
                 this.settings = response?.data?.data || {}
                 return this.settings
-            } catch (error) {
+            } catch {
                 // Pass
             }
         },
@@ -21,7 +21,7 @@ export const useAppSettingsStore = defineStore('settings', {
                 const response = await api.getConfig()
                 this.public_config = response?.data?.data || {}
                 return this.public_config
-            } catch (error) {
+            } catch {
                 // Pass
             }
         },

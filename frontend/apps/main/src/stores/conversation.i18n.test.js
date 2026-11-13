@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/* eslint-env node */
 import de from '../../../../../i18n/de-DE.json'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -123,4 +122,35 @@ test('customer timestamps survive employee and status updates without per-ticket
   expect(row.last_customer_reply_at).toBe('2026-11-09T12:00:00Z')
   expect(row.last_message_at).toBe(row.last_customer_reply_at)
   expect(apiCalls()).toBe(before)
+})
+
+
+test.each([
+  ['newest_customer_reply', 'desc', 'Letzte Kundenantwort', [3, 2, 1, 5, 4]],
+  ['oldest_customer_reply', 'asc', 'Älteste Kundenantwort', [1, 2, 3, 4, 5]]
+])('customer reply sort %s uses the shared server contract and stable realtime ordering', async (sort, order, label, expected) => {
+  const instance = initI18n({ legacy: false, locale: 'de-DE', messages: { 'de-DE': de } })
+  mocks.api.getAssignedConversations = vi.fn().mockResolvedValue({ data: { data: { results: [], total: 0, page: 1, total_pages: 0 } } })
+  const store = useConversationStore()
+  store.conversations.sortField = sort
+  expect(store.getListSortField).toBe(label)
+  await store.fetchConversationsList(false, 'assigned')
+  expect(mocks.api.getAssignedConversations.mock.calls[0][0]).toMatchObject({ order_by: 'customer_reply.last_customer_reply_at', order })
+  store.conversations.status = ''
+  store.conversations.data = [
+    { id: 4, assigned_user_id: 1, uuid: 'empty', last_customer_reply_at: null, created_at: '2026-11-12T12:00:00Z' },
+    { id: 2, assigned_user_id: 1, uuid: 'b', last_customer_reply_at: '2026-11-12T09:00:00Z' },
+    { id: 1, assigned_user_id: 1, uuid: 'a', last_customer_reply_at: '2026-11-12T08:00:00Z', last_message_at: '2026-11-12T10:00:00Z' },
+    { id: 3, assigned_user_id: 1, uuid: 'tie', last_customer_reply_at: '2026-11-12T10:00:00+01:00' },
+    { id: 5, assigned_user_id: 1, uuid: 'empty2', last_customer_reply_at: null }
+  ]
+  expect(store.conversationsList.map(c => c.id)).toEqual(expected)
+  for (const privateNote of [false, true]) {
+    store.updateConversationLastMessage('a', { type: 'outgoing', sender_type: 'agent', private: privateNote, created_at: '2026-11-12T13:00:00Z' })
+    expect(store.conversationsList.map(c => c.id)).toEqual(expected)
+  }
+  instance.global.setLocaleMessage('en-US', { 'conversation.sort.newestCustomerReply': 'Latest customer reply', 'conversation.sort.oldestCustomerReply': 'Oldest customer reply' })
+  instance.global.locale.value = 'en-US'
+  expect(store.getListSortField).toBe(order === 'asc' ? 'Oldest customer reply' : 'Latest customer reply')
+  expect(store.conversations.sortField).toBe(sort)
 })

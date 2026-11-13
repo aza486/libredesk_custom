@@ -5,9 +5,12 @@ on:
     paths:
       # Only trigger a Crowdin update when the source localization file is
       # updated.
-      - 'i18n/en-US.json'
+      - "i18n/en-US.json"
     # Only watches for changes happening on "main" branch.
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   crowdin:
@@ -16,23 +19,23 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Crowdin push
-        uses: crowdin/github-action@v2
+        uses: crowdin/github-action@v3.6.0
         with:
           # Send source (english) strings to Crowdin.
           upload_sources: true
           # See: https://crowdin.github.io/crowdin-cli/commands
           # /crowdin-upload#options
-          upload_sources_args: '--preserve-hierarchy --delete-obsolete'
+          upload_sources_args: "--preserve-hierarchy --delete-obsolete"
           # Don't upload or download translations.
           upload_translations: false
           download_translations: false
           # Source language file.
-          source: 'i18n/en-US.json'
+          source: "i18n/en-US.json"
           # Translations files.
-          translation: 'i18n/%locale%.json'
+          translation: "i18n/%locale%.json"
         env:
           # Crowdin.com > Project > Tools > API > Project ID.
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}

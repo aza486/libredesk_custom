@@ -7,7 +7,10 @@ const holidayName = `Cypress Holiday ${stamp}`
 const newPath = '/admin/business-hours/new'
 const listPath = '/admin/business-hours'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 // A weekday row holds its checkbox label plus the open and close time inputs.
 const dayRow = (day) => cy.get(`label[for="${day}"]`).parent().parent()
@@ -41,9 +44,7 @@ describe('Business hours form', () => {
     cy.contains('button', 'New holiday').click()
     cy.get('#holiday_name').type(holidayName)
     cy.contains('button', 'Pick a date').click()
-    cy.get('[data-radix-vue-calendar-cell-trigger]:not([data-outside-view])')
-      .contains('15')
-      .click()
+    cy.get('[data-radix-vue-calendar-cell-trigger]:not([data-outside-view])').contains('15').click()
     cy.get('[role="dialog"]').contains('button', 'Add').click()
     cy.contains('td', holidayName).should('exist')
 
@@ -91,7 +92,8 @@ describe('Business hours form', () => {
     cy.intercept('PUT', `**/api/v1/business-hours/${hoursId}`).as('updateHours')
 
     cy.visit(`${listPath}/${hoursId}/edit`)
-    cy.get('input[name="name"]').should('have.value', hoursName).clear().type(renamedHours)
+    cy.get('input[name="name"]').should('have.value', hoursName).clear()
+    cy.get('input[name="name"]').type(renamedHours)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@updateHours').its('response.statusCode').should('eq', 200)
@@ -116,7 +118,8 @@ describe('Business hours form', () => {
 
   it('keeps an edited name when a weekday time is changed too', () => {
     cy.visit(`${listPath}/${hoursId}/edit`)
-    cy.get('input[name="name"]').should('have.value', renamedHours).clear().type(`${renamedHours} v2`)
+    cy.get('input[name="name"]').should('have.value', renamedHours).clear()
+    cy.get('input[name="name"]').type(`${renamedHours} v2`)
     dayRow('Wednesday').find('input[type="time"]').eq(1).clear().type('19:30')
 
     cy.get('input[name="name"]').should('have.value', `${renamedHours} v2`)

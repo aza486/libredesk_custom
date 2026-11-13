@@ -118,6 +118,12 @@ export const useConversationStore = defineStore('conversation', () => {
 
   // TODO: Move to constants.
   const sortFieldMap = {
+    newest_customer_reply: {
+      model: 'customer_reply', field: 'last_customer_reply_at', order: 'desc'
+    },
+    oldest_customer_reply: {
+      model: 'customer_reply', field: 'last_customer_reply_at', order: 'asc'
+    },
     oldest: {
       model: 'conversations',
       field: 'last_message_at',
@@ -156,6 +162,8 @@ export const useConversationStore = defineStore('conversation', () => {
   }
 
   const sortFieldI18nKeys = {
+    newest_customer_reply: 'conversation.sort.newestCustomerReply',
+    oldest_customer_reply: 'conversation.sort.oldestCustomerReply',
     oldest: 'conversation.sort.oldestActivity',
     newest: 'conversation.sort.newestActivity',
     started_first: 'conversation.sort.startedFirst',
@@ -421,13 +429,17 @@ export const useConversationStore = defineStore('conversation', () => {
 
     return [...filteredConversations].sort((a, b) => {
       const field = sortFieldMap[conversations.sortField]?.field
-      if (!a[field] && !b[field]) return 0
+      const customerReplySort = field === 'last_customer_reply_at'
+      const direction = sortFieldMap[conversations.sortField]?.order === 'asc' ? 1 : -1
+      const tieBreak = () => customerReplySort ? direction * (a.id - b.id) : 0
+      if (!a[field] && !b[field]) return tieBreak()
       if (!a[field]) return 1 // null goes last
       if (!b[field]) return -1
       const order = sortFieldMap[conversations.sortField]?.order
-      return order === 'asc'
+      const difference = order === 'asc'
         ? new Date(a[field]) - new Date(b[field])
         : new Date(b[field]) - new Date(a[field])
+      return difference || tieBreak()
     })
   })
 

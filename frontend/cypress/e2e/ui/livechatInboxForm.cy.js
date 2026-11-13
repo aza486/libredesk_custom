@@ -16,7 +16,10 @@ const maskedSecret = '••••••••••'
 const newPath = '/admin/inboxes/new'
 const listPath = '/admin/inboxes'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 // Tab panels stay in the DOM and are only hidden, so a field is reachable when its tab is open.
 const openTab = (label) => cy.get('[role="tab"]').contains(label).click()
@@ -44,20 +47,23 @@ describe('Live chat inbox form', () => {
     cy.get('input[name="config.website_url"]').type(websiteUrl)
 
     openTab('Appearance')
-    cy.get('input[name="config.launcher.spacing.side"]').clear().type('35')
-    cy.get('input[name="config.launcher.spacing.bottom"]').clear().type('45')
-    cy.get('select[name="config.launcher.position"]')
-      .siblings('button[role="combobox"]')
-      .click()
+    cy.get('input[name="config.launcher.spacing.side"]').clear()
+    cy.get('input[name="config.launcher.spacing.side"]').type('35')
+    cy.get('input[name="config.launcher.spacing.bottom"]').clear()
+    cy.get('input[name="config.launcher.spacing.bottom"]').type('45')
+    cy.get('select[name="config.launcher.position"]').siblings('button[role="combobox"]').click()
     cy.get('[role="option"]').contains('Left').click()
 
     openTab('Messages')
-    cy.get('textarea[name="config.greeting_message"]').clear().type(greeting)
-    cy.get('textarea[name="config.chat_introduction"]').clear().type(chatIntroduction)
+    cy.get('textarea[name="config.greeting_message"]').clear()
+    cy.get('textarea[name="config.greeting_message"]').type(greeting)
+    cy.get('textarea[name="config.chat_introduction"]').clear()
+    cy.get('textarea[name="config.chat_introduction"]').type(chatIntroduction)
 
     openTab('Security')
     cy.get('input[name="secret"]').type(secret)
-    cy.get('input[name="config.session_duration"]').clear().type('4h')
+    cy.get('input[name="config.session_duration"]').clear()
+    cy.get('input[name="config.session_duration"]').type('4h')
     cy.get('textarea[name="config.trusted_domains"]').type(trustedDomain)
 
     cy.get('button[type="submit"]').click()
@@ -100,10 +106,12 @@ describe('Live chat inbox form', () => {
     cy.intercept('PUT', `**/api/v1/inboxes/${inboxId}`).as('updateInbox')
 
     cy.visit(`${listPath}/${inboxId}/edit`)
-    cy.get('input[name="name"]').should('have.value', inboxName).clear().type(renamedInbox)
+    cy.get('input[name="name"]').should('have.value', inboxName).clear()
+    cy.get('input[name="name"]').type(renamedInbox)
 
     openTab('Messages')
-    cy.get('textarea[name="config.greeting_message"]').clear().type(`${greeting} v2`)
+    cy.get('textarea[name="config.greeting_message"]').clear()
+    cy.get('textarea[name="config.greeting_message"]').type(`${greeting} v2`)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@updateInbox').its('response.statusCode').should('eq', 200)
@@ -156,9 +164,11 @@ describe('Live chat inbox form', () => {
     cy.wait('@updateInbox').its('response.statusCode').should('eq', 200)
 
     cy.visit(`${listPath}/${inboxId}/edit`)
-    cy.get('input[name="config.brand_name"]').clear().type(editedBrandName)
+    cy.get('input[name="config.brand_name"]').clear()
+    cy.get('input[name="config.brand_name"]').type(editedBrandName)
     openTab('Appearance')
-    cy.get('input[placeholder="Title"]').clear().type(editedHomeAppTitle)
+    cy.get('input[placeholder="Title"]').clear()
+    cy.get('input[placeholder="Title"]').type(editedHomeAppTitle)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@updateInbox').its('response.statusCode').should('eq', 200)

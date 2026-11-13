@@ -126,7 +126,7 @@ const fieldOperators = computed(() => fieldConfig.value?.operators || [])
 const fieldType = computed(() => fieldConfig.value?.type || '')
 
 // "contains any of" only applies to multi-value fields; single-value text stays "contains"
-const opLabel = (op) => (fieldType.value === FIELD_TYPE.MULTI_SELECT ? operatorLabel(op, t) : op)
+const opLabel = (op) => operatorLabel(op, t, fieldType.value === FIELD_TYPE.MULTI_SELECT)
 
 const isEmptyValue = (v) =>
   v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)

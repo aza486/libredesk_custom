@@ -1,3 +1,5 @@
+version: 2
+
 env:
   - GO111MODULE=on
   - CGO_ENABLED=0
@@ -6,7 +8,8 @@ env:
 
 before:
   hooks:
-    - go mod tidy
+    - go mod download
+    - go mod verify
     - make frontend-build
 
 builds:
@@ -35,7 +38,7 @@ builds:
       post: make stuff BIN={{ .Path }}
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: 'libredesk_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if eq .Arch "arm" }}v{{ .Arm }}{{ end }}'
     files:
       - config.sample.toml

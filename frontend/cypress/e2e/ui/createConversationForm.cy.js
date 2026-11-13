@@ -31,10 +31,39 @@ describe('Create conversation dialog', () => {
     cy.get('[role="option"]').contains(optionText).click()
   }
 
-  const typeBody = (text) =>
-    cy.get('[role="dialog"]').find('.tiptap.ProseMirror').click().type(text)
+  const typeBody = (text) => {
+    cy.get('[role="dialog"]').find('.tiptap.ProseMirror').click()
+    return cy.get('[role="dialog"]').find('.tiptap.ProseMirror').type(text)
+  }
 
   const submit = () => cy.get('[role="dialog"]').find('button[type="submit"]').click()
+
+  const expectUnchangedConversationCount = () =>
+    cy
+      .get('@conversationTotalBefore')
+      .then((total) =>
+        cy
+          .api('GET', '/api/v1/conversations/all?page=1&page_size=1')
+          .its('body.data.total')
+          .should('eq', total)
+      )
+
+  // External contact fields are optional in the shared internal/external UI schema.
+  // The actual endpoint must reject invalid external input without creating a ticket.
+  const expectServerRejection = (message, field, value) => {
+    cy.wait('@createConversation').then(({ request, response }) => {
+      expect(request.body[field]).to.eq(value)
+      expect(request.body.content).to.include(body)
+      expect(response.statusCode).to.eq(400)
+      expect(response.body.error_type).to.eq('InputException')
+      expect(response.body.message).to.include(message)
+      expect(response.body.data).to.be.null
+    })
+    cy.get('@createConversation.all').should('have.length', 1)
+    cy.contains('[data-sonner-toast]', message).should('be.visible')
+    cy.get('[role="dialog"]').should('be.visible')
+    expectUnchangedConversationCount()
+  }
 
   before(() => {
     cy.login()
@@ -91,6 +120,9 @@ describe('Create conversation dialog', () => {
   beforeEach(() => {
     cy.viewport(1440, 900) // desktop layout: the sidebar "New conversation" button is visible
     cy.login()
+    cy.api('GET', '/api/v1/conversations/all?page=1&page_size=1')
+      .its('body.data.total')
+      .as('conversationTotalBefore')
     cy.intercept('POST', '**/api/v1/conversations').as('createConversation')
   })
 
@@ -117,13 +149,16 @@ describe('Create conversation dialog', () => {
     submit()
 
     cy.get('[role="dialog"]').within(() => {
-      cy.contains('Invalid email address').should('exist')
+      cy.get('input[type="email"]')
+        .should('have.value', '')
+        .and('not.have.attr', 'aria-invalid', 'true')
       cy.contains('Subject cannot be empty').should('exist')
       cy.contains('Message cannot be empty').should('exist')
-      cy.contains(/required/i).should('exist')
+      cy.contains('button[role="combobox"]', 'Select inbox').should('exist')
     })
     cy.get('@createConversation.all').should('have.length', 0)
     cy.get('[role="dialog"]').should('be.visible')
+    expectUnchangedConversationCount()
   })
 
   it('rejects a malformed contact email', () => {
@@ -138,8 +173,36 @@ describe('Create conversation dialog', () => {
     typeBody(body)
     submit()
 
-    cy.get('[role="dialog"]').contains('Invalid email address').should('exist')
+    expectServerRejection('Invalid email address', 'contact_email', 'not-an-email')
+  })
+
+  it('rejects an external submit with no email at the server boundary', () => {
+    openDialog()
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('input[name="first_name"]').type('New')
+      cy.get('input[name="subject"]').type(subject)
+    })
+    pickFromPortal('Select inbox', inboxName)
+    typeBody(body)
+    submit()
+    expectServerRejection('contact_email', 'contact_email', '')
+  })
+
+  it('keeps external contact fields optional in internal mode and requires a recipient', () => {
+    openDialog()
+    cy.get('[role="dialog"]').contains('button', 'Internes Ticket').click()
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('input[type="email"]').should('not.exist')
+      cy.get('input[name="first_name"]').should('not.exist')
+      cy.contains('button[role="combobox"]', 'Select inbox').should('not.exist')
+      cy.get('input[name="subject"]').type(subject)
+    })
+    typeBody(body)
+    submit()
+    cy.contains('[data-sonner-toast]', 'Bitte Mitarbeiter oder Team auswählen').should('be.visible')
     cy.get('@createConversation.all').should('have.length', 0)
+    cy.get('[role="dialog"]').should('be.visible')
+    expectUnchangedConversationCount()
   })
 
   it('rejects a submit with no first name', () => {
@@ -153,8 +216,7 @@ describe('Create conversation dialog', () => {
     typeBody(body)
     submit()
 
-    cy.get('[role="dialog"]').contains(/required/i).should('exist')
-    cy.get('@createConversation.all').should('have.length', 0)
+    expectServerRejection('first_name', 'first_name', '')
   })
 
   it('rejects a submit with no subject', () => {
@@ -183,8 +245,7 @@ describe('Create conversation dialog', () => {
     typeBody(body)
     submit()
 
-    cy.get('[role="dialog"]').contains(/required/i).should('exist')
-    cy.get('@createConversation.all').should('have.length', 0)
+    expectServerRejection('inbox_id', 'inbox_id', 0)
   })
 
   it('rejects a submit with an empty message body', () => {
@@ -209,12 +270,12 @@ describe('Create conversation dialog', () => {
       cy.get('input[type="email"]').type(newEmail)
       cy.get('input[name="subject"]').type(subject)
       cy.get('button[type="submit"]').click()
-      cy.contains(/required/i).should('exist')
+      cy.contains('Message cannot be empty').should('exist')
     })
     cy.get('@createConversation.all').should('have.length', 0)
 
     // The dialog is v-if'd, so closing it destroys the form and its state.
-    cy.get('[role="dialog"] > button.absolute.right-4.top-4').click()
+    cy.get('[role="dialog"]').contains('button', 'Close').click()
     cy.get('[role="dialog"]').should('not.exist')
 
     cy.contains('New conversation').click()

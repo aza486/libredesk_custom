@@ -33,8 +33,10 @@ Cypress.Commands.add('login', () => {
     'system-agent',
     () => {
       cy.visit('/')
-      cy.get('#email').clear().type(email)
-      cy.get('#password').clear().type(password, { log: false })
+      cy.get('#email').clear()
+      cy.get('#email').type(email)
+      cy.get('#password').clear()
+      cy.get('#password').type(password, { log: false })
       cy.contains('button', 'Sign in').click()
       cy.url().should('include', '/inboxes')
     },

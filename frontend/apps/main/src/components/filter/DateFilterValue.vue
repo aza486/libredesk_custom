@@ -19,6 +19,7 @@
         <RangeCalendar
           :model-value="dateRange"
           :number-of-months="2"
+          :locale="locale"
           @update:model-value="handleRangePick"
         />
       </PopoverContent>
@@ -41,6 +42,7 @@
       <PopoverContent class="w-auto p-0">
         <Calendar
           :model-value="toCalendarDate(modelValue)"
+          :locale="locale"
           @update:model-value="handlePick"
         />
       </PopoverContent>
@@ -52,7 +54,6 @@
 import { ref, computed } from 'vue'
 import { Calendar as CalendarIcon } from 'lucide-vue-next'
 import { parseDate } from '@internationalized/date'
-import { format } from 'date-fns'
 import { useI18n } from 'vue-i18n'
 import { cn } from '@shared-ui/lib/utils.js'
 import { Button } from '@shared-ui/components/ui/button'
@@ -60,7 +61,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@shared-ui/components/u
 import { Calendar } from '@shared-ui/components/ui/calendar'
 import { RangeCalendar } from '@shared-ui/components/ui/range-calendar'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const modelValue = defineModel({ type: String, default: '' })
 
 defineProps({
@@ -81,7 +82,7 @@ const toCalendarDate = (v) => {
 
 const formatDisplay = (v) => {
   try {
-    return format(new Date(v), 'MMM dd, yyyy')
+    return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(`${v}T00:00:00`))
   } catch {
     return v
   }

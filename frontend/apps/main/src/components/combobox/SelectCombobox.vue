@@ -176,7 +176,7 @@ const isCurrentUser = (item) => {
   )
 }
 
-const emit = defineEmits(['update:modelValue', 'select'])
+defineEmits(['update:modelValue', 'select'])
 const toggleFavorite = (userId) => {
 
   const id = String(userId)

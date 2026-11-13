@@ -49,7 +49,7 @@ async function initApp () {
 
   try {
     await settingsStore.fetchSettings('general')
-  } catch (error) {
+  } catch {
     // Pass
   }
 

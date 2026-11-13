@@ -29,7 +29,7 @@ func TestConversationListTimestamps(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !item.LastCustomerReplyAt.Valid || !item.LastCustomerReplyAt.Time.Equal(customer) {
+		if item.LastCustomerReplyAt.Valid != !customer.IsZero() || (!customer.IsZero() && !item.LastCustomerReplyAt.Time.Equal(customer)) {
 			t.Fatalf("customer = %v, want %v", item.LastCustomerReplyAt, customer)
 		}
 		if !activity.IsZero() && !item.LastMessageAt.Time.Equal(activity) {
@@ -39,14 +39,14 @@ func TestConversationListTimestamps(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(rows) != 1 || !rows[0].LastCustomerReplyAt.Time.Equal(customer) {
+		if len(rows) != 1 || rows[0].LastCustomerReplyAt.Valid != !customer.IsZero() || (!customer.IsZero() && !rows[0].LastCustomerReplyAt.Time.Equal(customer)) {
 			t.Fatalf("list customer time differs: %+v", rows)
 		}
 		detail, err := m.GetConversation(0, uuid, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !detail.LastCustomerReplyAt.Time.Equal(customer) {
+		if detail.LastCustomerReplyAt.Valid != !customer.IsZero() || (!customer.IsZero() && !detail.LastCustomerReplyAt.Time.Equal(customer)) {
 			t.Fatalf("detail customer time = %v", detail.LastCustomerReplyAt)
 		}
 		payload, err := json.Marshal(convToBroadcast(&item))
@@ -57,11 +57,11 @@ func TestConversationListTimestamps(t *testing.T) {
 		if err := json.Unmarshal(payload, &event); err != nil {
 			t.Fatal(err)
 		}
-		if event["last_customer_reply_at"] != customer.Format(time.RFC3339) {
+		if (!customer.IsZero() && event["last_customer_reply_at"] != customer.Format(time.RFC3339)) || (customer.IsZero() && event["last_customer_reply_at"] != nil) {
 			t.Fatalf("WS customer time = %v", event["last_customer_reply_at"])
 		}
 	}
-	check(created, time.Time{})
+	check(time.Time{}, time.Time{})
 	insert := func(kind, sender string, private bool, hour int) time.Time {
 		t.Helper()
 		at := created.Add(time.Duration(hour) * time.Hour)

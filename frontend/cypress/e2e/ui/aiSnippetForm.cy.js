@@ -7,7 +7,10 @@ const snippetContent = `Refunds are processed within ${stamp} days.`
 const editedContent = `Refunds are processed within ${stamp} hours.`
 const listPath = '/admin/ai/snippets'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 const openCreateDialog = () => {
   cy.visit(listPath)
@@ -55,15 +58,19 @@ describe('AI snippet form', () => {
 
     cy.get('input[name="title"]').should('have.value', snippetTitle)
     cy.get('textarea[name="content"]').should('have.value', snippetContent)
-    cy.get('[role="dialog"]').find('button[role="switch"]').should('have.attr', 'data-state', 'checked')
+    cy.get('[role="dialog"]')
+      .find('button[role="switch"]')
+      .should('have.attr', 'data-state', 'checked')
   })
 
   it('persists a changed title and content', () => {
     cy.intercept('PUT', `**/api/v1/ai/snippets/${snippetId}`).as('updateSnippet')
 
     openEditDialog(snippetTitle)
-    cy.get('input[name="title"]').clear().type(renamedSnippet)
-    cy.get('textarea[name="content"]').clear().type(editedContent)
+    cy.get('input[name="title"]').clear()
+    cy.get('input[name="title"]').type(renamedSnippet)
+    cy.get('textarea[name="content"]').clear()
+    cy.get('textarea[name="content"]').type(editedContent)
     cy.get('[role="dialog"]').find('button[type="submit"]').click()
     cy.wait('@updateSnippet').its('response.statusCode').should('eq', 200)
 

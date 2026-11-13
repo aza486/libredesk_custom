@@ -28,10 +28,14 @@ func (myInboxUsers) GetAgentCachedOrLoad(id int) (umodels.User, error) {
 func TestMyInboxFoldersIntegration(t *testing.T) {
 	db := testutil.NewPersonalDB(t, "my_inbox_folders")
 	lo := logf.New(logf.Opts{})
-	m := &Manager{db: db, lo: &lo, i18n: testutil.NewI18n(t), userStore: myInboxUsers{}, settingsStore: personalSettings{}}
-	if err := dbutil.ScanSQLFile("queries.sql", &m.q, db, efs); err != nil {
-		t.Fatal(err)
+	newManager := func(users userStore) *Manager {
+		manager := &Manager{db: db, lo: &lo, i18n: testutil.NewI18n(t), userStore: users, settingsStore: personalSettings{}}
+		if err := dbutil.ScanSQLFile("queries.sql", &manager.q, db, efs); err != nil {
+			t.Fatal(err)
+		}
+		return manager
 	}
+	m := newManager(myInboxUsers{})
 	db.MustExec(`INSERT INTO teams(id,name,conversation_assignment_type) VALUES(101,'Team','Manual');
  INSERT INTO team_members(team_id,user_id) VALUES(101,101);
  INSERT INTO personal_inbox_owners(inbox_id,user_id) VALUES(101,101) ON CONFLICT DO NOTHING;
@@ -143,7 +147,7 @@ func TestMyInboxFoldersIntegration(t *testing.T) {
 	}
 	// Definitions survive a new manager/session, and remain specific to this
 	// employee's assignment-based inbox rather than being globally shared.
-	another := *m
+	another := newManager(myInboxUsers{})
 	reloaded, err := another.ListSidebarFolders(101, "my_inbox", 101)
 	if err != nil || len(reloaded) != 2 || reloaded[0].ID != all.ID {
 		t.Fatal("reload lost order")
@@ -171,8 +175,7 @@ func TestMyInboxFoldersIntegration(t *testing.T) {
 	if err != nil || len(empty) != 0 {
 		t.Fatal("employee inboxes shared different assignments")
 	}
-	noPermission := *m
-	noPermission.userStore = folderUsers{}
+	noPermission := newManager(folderUsers{})
 	if _, err = noPermission.ListSidebarFolders(101, "my_inbox", 101); err == nil {
 		t.Fatal("missing read_assigned permission ignored")
 	}

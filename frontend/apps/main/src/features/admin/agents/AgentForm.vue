@@ -387,7 +387,7 @@ onMounted(async () => {
     const [teamsResp, rolesResp] = await Promise.allSettled([api.getTeamsCompact(), api.getRoles()])
     if (teamsResp.status === 'fulfilled') teams.value = teamsResp.value.data.data
     if (rolesResp.status === 'fulfilled') roles.value = rolesResp.value.data.data
-  } catch (err) {
+  } catch {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: t('globals.messages.somethingWentWrong')
@@ -453,7 +453,7 @@ const generateAPIKey = async () => {
         description: t('agent.apiKeyGenerated')
       })
     }
-  } catch (error) {
+  } catch {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: t('globals.messages.somethingWentWrong')
@@ -478,7 +478,7 @@ const revokeAPIKey = async () => {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       description: t('agent.apiKeyRevoked')
     })
-  } catch (error) {
+  } catch {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
       description: t('globals.messages.somethingWentWrong')

@@ -160,7 +160,7 @@ export function useBusinessHours () {
     const now = new Date()
     const within = isWithinBusinessHours(businessHours, now, utcOffset)
 
-    let status = null
+    let status
     if (within) {
       status = withinHoursMessage
     } else {

@@ -61,16 +61,7 @@ SELECT
     conversations.subject,
     conversations.last_message,
     conversations.last_message_at,
-    COALESCE((
-        SELECT msg.created_at
-        FROM conversation_messages msg
-        WHERE msg.conversation_id = conversations.id
-          AND msg.type = 'incoming'
-          AND msg.sender_type = 'contact'
-          AND msg.private = false
-        ORDER BY msg.created_at DESC
-        LIMIT 1
-    ), conversations.created_at) AS last_customer_reply_at,
+    customer_reply.last_customer_reply_at,
     conversations.last_message_sender,
     conversations.last_interaction,
     conversations.last_interaction_at,
@@ -119,6 +110,16 @@ SELECT
         LIMIT 1
     ) ELSE NULL END as mentioned_message_uuid
     FROM conversations
+    LEFT JOIN LATERAL (
+        SELECT msg.created_at AS last_customer_reply_at
+        FROM conversation_messages msg
+        WHERE msg.conversation_id = conversations.id
+          AND msg.type = 'incoming'
+          AND msg.sender_type = 'contact'
+          AND msg.private = false
+        ORDER BY msg.created_at DESC
+        LIMIT 1
+    ) customer_reply ON true
     JOIN users ON contact_id = users.id
     JOIN inboxes ON inbox_id = inboxes.id  
     LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
@@ -165,16 +166,7 @@ SELECT
     conversations.subject,
     conversations.last_message,
     conversations.last_message_at,
-    COALESCE((
-        SELECT msg.created_at
-        FROM conversation_messages msg
-        WHERE msg.conversation_id = conversations.id
-          AND msg.type = 'incoming'
-          AND msg.sender_type = 'contact'
-          AND msg.private = false
-        ORDER BY msg.created_at DESC
-        LIMIT 1
-    ), conversations.created_at) AS last_customer_reply_at,
+    customer_reply.last_customer_reply_at,
     conversations.last_message_sender,
     conversations.last_interaction,
     conversations.last_interaction_at,
@@ -198,6 +190,16 @@ SELECT
     nxt_resp_event.deadline_at AS next_response_deadline_at,
     nxt_resp_event.met_at as next_response_met_at
 FROM conversations
+LEFT JOIN LATERAL (
+    SELECT msg.created_at AS last_customer_reply_at
+    FROM conversation_messages msg
+    WHERE msg.conversation_id = conversations.id
+      AND msg.type = 'incoming'
+      AND msg.sender_type = 'contact'
+      AND msg.private = false
+    ORDER BY msg.created_at DESC
+    LIMIT 1
+) customer_reply ON true
 JOIN users ON contact_id = users.id
 JOIN inboxes ON inbox_id = inboxes.id
 LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
@@ -253,7 +255,7 @@ SELECT
    c.meta,
    sla.name as sla_policy_name,
    c.last_message_at,
-    COALESCE((
+    (
         SELECT msg.created_at
         FROM conversation_messages msg
         WHERE msg.conversation_id = c.id
@@ -262,7 +264,7 @@ SELECT
           AND msg.private = false
         ORDER BY msg.created_at DESC
         LIMIT 1
-    ), c.created_at) AS last_customer_reply_at,
+    ) AS last_customer_reply_at,
    c.last_message_sender,
    c.last_message,
    c.last_interaction,

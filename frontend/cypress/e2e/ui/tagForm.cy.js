@@ -5,7 +5,10 @@ const tagName = `Cypress Tag ${stamp}`
 const renamedTag = `Cypress Tag ${stamp} edited`
 const listPath = '/admin/conversations/tags'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 const openNewDialog = () => cy.contains('button', 'New tag').click()
 
@@ -48,7 +51,8 @@ describe('Tag form', () => {
 
     cy.visit(listPath)
     openEditDialog(tagName)
-    cy.get('input[name="name"]').clear().type(renamedTag)
+    cy.get('input[name="name"]').clear()
+    cy.get('input[name="name"]').type(renamedTag)
 
     cy.get('button[type="submit"]').click()
     cy.wait('@updateTag').its('response.statusCode').should('eq', 200)

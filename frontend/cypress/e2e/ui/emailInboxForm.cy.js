@@ -10,7 +10,10 @@ const maskedSecret = '••••••••••'
 const newPath = '/admin/inboxes/new'
 const listPath = '/admin/inboxes'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 // The hidden OAuth section repeats imap/smtp field names first, so the manual copy is last.
 const field = (name) => cy.get(`input[name="${name}"]`).last()
@@ -113,7 +116,12 @@ describe('Email inbox form', () => {
     cy.get('button[type="submit"]').click()
 
     // Submitting scrolls to the bottom of a long form, so bring the first error back into view.
-    cy.contains(/required/i).first().scrollIntoView().should('be.visible')
+    cy.contains(/required/i)
+      .first()
+      .scrollIntoView()
+    cy.contains(/required/i)
+      .first()
+      .should('be.visible')
     cy.get('@createInbox.all').should('have.length', 0)
     cy.location('pathname').should('eq', newPath)
   })

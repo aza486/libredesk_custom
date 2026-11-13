@@ -55,7 +55,7 @@
       </Tooltip>
 
       <DropdownMenu>
-        <DropdownMenuTrigger>
+        <DropdownMenuTrigger data-testid="conversation-status" :data-status="conversationStore.current?.status">
           <div
             v-if="conversationStore.current?.status"
             class="flex items-center space-x-1 cursor-pointer bg-primary px-3 py-3 md:px-2 md:py-1 rounded-md text-sm"
@@ -70,6 +70,7 @@
           <DropdownMenuItem
             v-for="status in conversationStore.statusOptions"
             :key="status.value"
+            :data-status="status.label"
             @click="handleUpdateStatus(status.label)"
           >
             {{ status.displayLabel ?? status.label }}

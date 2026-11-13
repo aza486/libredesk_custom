@@ -6,7 +6,10 @@ const renamedPolicy = `Cypress SLA ${stamp} edited`
 const newPath = '/admin/sla/new'
 const listPath = '/admin/sla'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 describe('SLA form', () => {
   let policyId
@@ -54,8 +57,10 @@ describe('SLA form', () => {
     cy.intercept('PUT', `**/api/v1/sla/${policyId}`).as('updateSla')
 
     cy.visit(`${listPath}/${policyId}/edit`)
-    cy.get('input[name="name"]').should('have.value', policyName).clear().type(renamedPolicy)
-    cy.get('input[name="resolution_time"]').clear().type('12h')
+    cy.get('input[name="name"]').should('have.value', policyName).clear()
+    cy.get('input[name="name"]').type(renamedPolicy)
+    cy.get('input[name="resolution_time"]').clear()
+    cy.get('input[name="resolution_time"]').type('12h')
     cy.get('button[type="submit"]').click()
     cy.wait('@updateSla').its('response.statusCode').should('eq', 200)
 

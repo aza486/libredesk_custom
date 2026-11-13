@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { describe, test, expect, beforeEach, vi } from 'vitest'
 
-const chatStore = { addMessageToConversation: vi.fn(), currentConversation: null }
+const chatStore = {
+  addMessageToConversation: vi.fn(),
+  fetchConversations: vi.fn(),
+  loadConversation: vi.fn(),
+  currentConversation: null
+}
 const widgetStore = {
   setConnectionFailed: vi.fn(),
   setConnecting: vi.fn(),
@@ -12,7 +17,9 @@ const widgetStore = {
 
 vi.mock('./store/chat.js', () => ({ useChatStore: () => chatStore }))
 vi.mock('./store/widget.js', () => ({ useWidgetStore: () => widgetStore }))
-vi.mock('@shared-ui/composables/useNotificationSound.js', () => ({ playNotificationSound: vi.fn() }))
+vi.mock('@shared-ui/composables/useNotificationSound.js', () => ({
+  playNotificationSound: vi.fn()
+}))
 
 const sockets = []
 
@@ -58,6 +65,9 @@ describe('Widget websocket client', () => {
     vi.clearAllMocks()
     vi.stubGlobal('WebSocket', FakeSocket)
     vi.useFakeTimers()
+    chatStore.currentConversation = null
+    chatStore.fetchConversations.mockReset().mockResolvedValue(true)
+    chatStore.loadConversation.mockReset().mockResolvedValue(true)
     WidgetWebSocketClient = (await import('./websocket.js')).WidgetWebSocketClient
   })
 
@@ -126,5 +136,23 @@ describe('Widget websocket client', () => {
     first.emit('open')
 
     expect(widgetStore.setConnectionFailed).not.toHaveBeenCalled()
+  })
+
+  test('synchronizes after a reconnect and throttles only new sync requests', async () => {
+    const client = new WidgetWebSocketClient()
+    chatStore.currentConversation = { uuid: 'convo-1' }
+    await client.syncMissedMessages()
+    await client.syncMissedMessages()
+    expect(chatStore.fetchConversations).toHaveBeenCalledTimes(1)
+    expect(chatStore.loadConversation).toHaveBeenCalledWith('convo-1', true, true)
+  })
+
+  test('retries a failed sync within the throttle window and stops after the retry limit', async () => {
+    const client = new WidgetWebSocketClient()
+    chatStore.fetchConversations.mockResolvedValue(false)
+    await client.syncMissedMessages()
+    await vi.advanceTimersByTimeAsync(303000)
+    expect(chatStore.fetchConversations).toHaveBeenCalledTimes(101)
+    expect(chatStore.loadConversation).not.toHaveBeenCalled()
   })
 })

@@ -7,14 +7,19 @@ const templateBody = `Cypress template body ${stamp}`
 const updatedBody = `Cypress template body ${stamp} edited`
 const listPath = '/admin/templates'
 
-const filterList = (text) => cy.get('input[placeholder="Search"]').clear().type(text)
+const filterList = (text) => {
+  cy.get('input[placeholder="Search"]').clear()
+  return cy.get('input[placeholder="Search"]').type(text)
+}
 
 // CodeMirror ignores synthetic key events, so text is written into its line element instead.
 const typeBody = (text) => {
   cy.get('.cm-content').click()
-  cy.get('.cm-content .cm-line').first().then(($line) => {
-    $line[0].textContent = text
-  })
+  cy.get('.cm-content .cm-line')
+    .first()
+    .then(($line) => {
+      $line[0].textContent = text
+    })
   cy.get('.cm-content').should('have.text', text)
 }
 
@@ -61,7 +66,8 @@ describe('Template form', () => {
     cy.intercept('PUT', `**/api/v1/templates/${templateId}`).as('updateTemplate')
 
     cy.visit(`${listPath}/${templateId}/edit`)
-    cy.get('input[name="name"]').should('have.value', templateName).clear().type(renamedTemplate)
+    cy.get('input[name="name"]').should('have.value', templateName).clear()
+    cy.get('input[name="name"]').type(renamedTemplate)
     typeBody(updatedBody)
 
     cy.get('button[type="submit"]').click()

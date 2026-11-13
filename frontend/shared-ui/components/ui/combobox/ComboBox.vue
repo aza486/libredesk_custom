@@ -119,7 +119,7 @@ const handleSelect = (ev) => {
       }
 
       emit('select', selected)
-    } catch (e) {
+    } catch {
       console.error('Invalid selection value')
     }
   }

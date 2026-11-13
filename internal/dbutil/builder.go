@@ -45,7 +45,11 @@ type PaginationOptions struct {
 	Page     int
 	PageSize int
 	OrderBy  string
-	Order    string
+	// SecondaryOrderBy is an optional allowlisted tie breaker in the same direction.
+	SecondaryOrderBy string
+	// OrderFields optionally supplies a separate sort allowlist; filter validation is unchanged.
+	OrderFields AllowedFields
+	Order       string
 	// Location is the IANA timezone date-only filters are resolved in; empty falls back to UTC.
 	Location string
 }
@@ -125,23 +129,34 @@ func BuildPaginatedQuery(baseQuery string, existingArgs []any, opts PaginationOp
 		args = append(args, filterArgs...)
 	}
 
-	if opts.OrderBy != "" {
-		parts := strings.Split(opts.OrderBy, ".")
+	orderFields := opts.OrderFields
+	if orderFields == nil {
+		orderFields = allowedFields
+	}
+	for index, orderBy := range []string{opts.OrderBy, opts.SecondaryOrderBy} {
+		if orderBy == "" {
+			continue
+		}
+		parts := strings.Split(orderBy, ".")
 		if len(parts) != 2 {
-			return "", nil, fmt.Errorf("invalid OrderBy format: %s", opts.OrderBy)
+			return "", nil, fmt.Errorf("invalid OrderBy format: %s", orderBy)
 		}
 		model, field := parts[0], parts[1]
 
-		modelFields, ok := allowedFields[model]
+		modelFields, ok := orderFields[model]
 		if !ok || !slices.Contains(modelFields, field) {
-			return "", nil, fmt.Errorf("invalid OrderBy field: %s", opts.OrderBy)
+			return "", nil, fmt.Errorf("invalid OrderBy field: %s", orderBy)
 		}
 
 		order := strings.ToUpper(opts.Order)
 		if order != "" && order != ASC && order != DESC {
 			return "", nil, fmt.Errorf("invalid order direction: %s", opts.Order)
 		}
-		query += fmt.Sprintf(" ORDER BY %s.%s %s NULLS LAST", model, field, order)
+		separator := " ORDER BY "
+		if index == 1 && opts.OrderBy != "" {
+			separator = ", "
+		}
+		query += fmt.Sprintf("%s%s.%s %s NULLS LAST", separator, model, field, order)
 	}
 
 	offset := (opts.Page - 1) * opts.PageSize
