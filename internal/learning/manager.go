@@ -39,10 +39,10 @@ var projection = `SELECT jsonb_build_object('id',r.id,'record_type','candidate',
  'corrected_categories',r.learning_data->'corrected_categories'),
  'quality_status',r.quality_status,'approved',r.approved,'active',r.active,
  'publish_state',COALESCE(v.publication,r.learning_data->>'publish_state','unpublished'),
- 'decision',COALESCE(v.decision,'pending'),'revision',COALESCE(v.revision,0),
+ 'decision',CASE WHEN r.source_type='case_example' THEN COALESCE(r.learning_data->>'case_status','staged') ELSE COALESCE(v.decision,'pending') END,'revision',CASE WHEN r.source_type='case_example' THEN COALESCE((r.learning_data->>'case_revision')::bigint,0) ELSE COALESCE(v.revision,0) END,
  'feedback_reason',COALESCE(r.feedback_reason,f.feedback_reason),'rationale',r.learning_data->>'rationale',
  'provenance',jsonb_build_object('feedback_id',r.feedback_id,'source_id',r.source_id,'derived_from',r.learning_data->>'derived_from',
- 'original_message_uuid',f.mail_event_message_uuid,'outgoing_message_uuid',f.outgoing_message_uuid,'proposal_version',r.learning_data->'proposal_version','review_required',r.learning_data->'review_required','verification_status',r.learning_data->>'verification_status','factual_use_approved',r.learning_data->'factual_use_approved','publication_attempts',v.attempts),
+ 'original_message_uuid',f.mail_event_message_uuid,'outgoing_message_uuid',f.outgoing_message_uuid,'proposal_version',r.learning_data->'proposal_version','review_required',r.learning_data->'review_required','verification_status',r.learning_data->>'verification_status','factual_use_approved',r.learning_data->'factual_use_approved','publication_attempts',v.attempts,'case_source_agent_id',CASE WHEN r.source_type='case_example' THEN f.agent_id END,'case_response_source',CASE WHEN r.source_type='case_example' THEN f.feedback_data->>'response_source' END,'case_version',r.learning_data->'case_version','case_source_status',CASE WHEN r.source_type='case_example' THEN f.feedback_data->'learning_case_v11'->>'status' END),
  'created_at',r.created_at,'block_reason',COALESCE(v.last_error,r.learning_data->>'publish_block_reason',r.learning_data->>'review_reason'))
  FROM public.rag_items r LEFT JOIN learning_reviews v ON v.item_id=r.id LEFT JOIN public.ai_feedback f ON f.id=r.feedback_id `
 
@@ -94,7 +94,7 @@ func (m *Manager) List(ctx context.Context, f Filter) (Page, error) {
 	if f.Status != "" && !contains([]string{"pending", "approved", "rejected", "disabled", "unpublished", "publishing", "published", "failed", "blocked", "skipped", "prepared", "processing", "new"}, f.Status) {
 		return out, ErrInput
 	}
-	if f.Page < 1 || f.Page > 10000 || (!contains(Types, f.Type) && f.Type != "manual" && f.Type != "") {
+	if f.Page < 1 || f.Page > 10000 || (!contains(Types, f.Type) && f.Type != "manual" && f.Type != "case_example" && f.Type != "") {
 		return out, ErrInput
 	}
 	if f.Tab == "skipped" && m.View != nil {
@@ -124,10 +124,10 @@ func (m *Manager) List(ctx context.Context, f Filter) (Page, error) {
 		}
 		return out, rows.Err()
 	}
-	if f.Tab != "pending" && f.Tab != "history" {
+	if f.Tab != "pending" && f.Tab != "history" && f.Tab != "cases" {
 		return out, ErrInput
 	}
-	rows, err := m.DB.QueryContext(ctx, projection+` WHERE ($1='' OR r.source_type=$1) AND ($2='' OR r.quality_status=$2 OR v.decision=$2 OR v.publication=$2 OR r.learning_data->>'publish_state'=$2 OR f.learning_status=$2) AND CASE WHEN $3='pending' THEN (COALESCE(v.decision,'pending')='pending' AND NOT r.active AND r.learning_data->>'proposal_version'='2' AND r.learning_data->>'review_required'='true' AND r.source_type='employee_fact') ELSE NOT (COALESCE(v.decision,'pending')='pending' AND NOT r.active AND COALESCE(r.learning_data->>'proposal_version','')='2' AND COALESCE(r.learning_data->>'review_required','')='true' AND r.source_type='employee_fact') END ORDER BY r.created_at DESC,r.id LIMIT 26 OFFSET $4`, f.Type, f.Status, f.Tab, (f.Page-1)*25)
+	rows, err := m.DB.QueryContext(ctx, projection+` WHERE ($1='' OR r.source_type=$1) AND ($2='' OR r.quality_status=$2 OR v.decision=$2 OR v.publication=$2 OR r.learning_data->>'publish_state'=$2 OR f.learning_status=$2) AND CASE WHEN $3='cases' THEN r.source_type='case_example' WHEN $3='pending' THEN (COALESCE(v.decision,'pending')='pending' AND NOT r.active AND r.learning_data->>'proposal_version'='2' AND r.learning_data->>'review_required'='true' AND r.source_type='employee_fact') ELSE NOT (COALESCE(v.decision,'pending')='pending' AND NOT r.active AND COALESCE(r.learning_data->>'proposal_version','')='2' AND COALESCE(r.learning_data->>'review_required','')='true' AND r.source_type='employee_fact') END ORDER BY r.created_at DESC,r.id LIMIT 26 OFFSET $4`, f.Type, f.Status, f.Tab, (f.Page-1)*25)
 	if err != nil {
 		return out, err
 	}
@@ -258,6 +258,9 @@ func (m *Manager) Mutate(ctx context.Context, id, actor string, req Mutation) (s
 	}
 	if err = json.Unmarshal(raw, &row); err != nil {
 		return "", err
+	}
+	if row.Type == "case_example" {
+		return "", ErrConflict
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO learning_reviews(item_id,revision,original) VALUES($1::uuid,0,$2::jsonb) ON CONFLICT DO NOTHING`, id, string(raw))
 	if err != nil {

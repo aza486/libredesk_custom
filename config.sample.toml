@@ -184,6 +184,11 @@ requests_per_minute = 100
 enabled = true
 requests_per_minute = 300
 
+# Authenticated speech input, using the shared Redis rate limiter.
+[rate_limit.transcription]
+enabled = true
+requests_per_minute = 10
+
 # Optional trusted AI feedback receiver. Disabled when all four values are empty.
 # Requires a synchronous, transactional receiver; HTTPS is the default.
 # See docs/ai-feedback.md for the narrowly scoped internal HTTP exception.
@@ -221,6 +226,10 @@ internal_http_ip = ""
 # SQL installation is explicit; this does not use the Libredesk database.
 [ai_learning]
 database_dsn = ""
+# Separate technical case publisher. Install SQL005 and SQL006 before enabling.
+# No review approvals are created by this worker.
+case_publisher_enabled = false
+case_publisher_database_dsn = "" # Dedicated restricted pg-n8n publisher role; required when enabled.
 embedding_endpoint = "" # HTTPS /v1/embeddings (OpenAI-compatible)
 embedding_token = "" # Full Authorization header value, e.g. Bearer ...
 # Legacy keys below are ignored by Libredesk review/publishing (local validation only).
@@ -229,3 +238,12 @@ anonymizer_endpoint = ""
 anonymizer_token = ""
 anonymizer_internal_http_endpoint = ""
 anonymizer_internal_http_ip = ""
+
+# Opt-in speech input. Use an approved transcription gateway; never reuse completion credentials implicitly.
+# POST multipart file (webm/ogg/mp4), returns {"text":"..."}. No conversation data is sent.
+# The gateway must enforce a 120-second audio duration limit and disable audio retention/logging.
+[ai_transcription]
+endpoint = ""
+token = "" # Authorization: Bearer <token>
+internal_http_endpoint = ""
+internal_http_ip = ""

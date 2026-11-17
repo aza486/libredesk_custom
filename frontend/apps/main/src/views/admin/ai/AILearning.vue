@@ -42,7 +42,7 @@
                 {{ item.content.rule || item.content.human_answer }}
               </p>
               <Button variant="outline" :disabled="busy" @click="review.open(item)">{{
-                tab === 'pending' ? 'Vorschlag prüfen' : 'Ansehen'
+                tab === 'pending' ? 'Vorschlag prüfen' : tab === 'cases' ? 'Fall prüfen' : 'Ansehen'
               }}</Button>
             </article>
           </div>
@@ -59,14 +59,17 @@
         <Dialog :open="!!selected" @update:open="closeDialog">
           <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Lernvorschlag prüfen</DialogTitle>
-              <DialogDescription
-                >Prüfe die vorgeschlagene allgemeine Erkenntnis anhand des Kontexts. Deine
-                Entscheidung gilt für diesen gespeicherten Vorschlag.</DialogDescription
-              >
+              <DialogTitle>{{
+                isCase ? 'Fallbeispiel prüfen' : 'Lernvorschlag prüfen'
+              }}</DialogTitle>
+              <DialogDescription>{{
+                isCase
+                  ? 'Prüfe den historischen Lösungsfall. Eine Freigabe bestätigt die Qualität des Beispiels und begründet keine aktuelle Zusage oder Unternehmensregel.'
+                  : 'Prüfe die vorgeschlagene allgemeine Erkenntnis anhand des Kontexts. Deine Entscheidung gilt für diesen gespeicherten Vorschlag.'
+              }}</DialogDescription>
             </DialogHeader>
             <template v-if="selected">
-              <section class="space-y-2">
+              <section v-if="!isCase" class="space-y-2">
                 <h3 class="font-semibold">Was hat die KI erkannt?</h3>
                 <p class="whitespace-pre-wrap break-words text-sm">
                   {{
@@ -76,11 +79,20 @@
                 </p>
               </section>
               <section class="space-y-2 rounded-md border p-3">
-                <h3 class="font-semibold">Was möchte die KI lernen?</h3>
+                <h3 class="font-semibold">
+                  {{ isCase ? 'Verallgemeinerter Lösungsfall' : 'Was möchte die KI lernen?' }}
+                </h3>
                 <p class="text-sm text-muted-foreground">
                   {{ typeLabel(selected.content.source_type) }} ·
                   {{ categoryLabel(selected.content.category) }}
                 </p>
+                <template v-if="isCase">
+                  <p class="font-medium text-sm">Verallgemeinerte Kundenfrage</p>
+                  <p class="whitespace-pre-wrap break-words">
+                    {{ selected.content.customer_question }}
+                  </p>
+                  <p class="font-medium text-sm">Historische Mitarbeiterlösung</p>
+                </template>
                 <p class="whitespace-pre-wrap break-words">
                   {{ selected.content.rule || selected.content.human_answer }}
                 </p>
@@ -99,7 +111,7 @@
                   </template>
                 </dl>
               </section>
-              <section class="space-y-2">
+              <section v-if="!isCase" class="space-y-2">
                 <h3 class="font-semibold">Warum muss das geprüft werden?</h3>
                 <p class="whitespace-pre-wrap break-words text-sm">
                   {{
@@ -160,7 +172,70 @@
               </details>
               <p v-if="error" role="alert" class="text-destructive">{{ error }}</p>
               <div
-                v-if="selected.review_ready && selected.decision === 'pending' && !selected.active"
+                v-if="isCase && !['blocked', 'rejected', 'disabled'].includes(selected.decision)"
+                class="space-y-4"
+              >
+                <fieldset
+                  v-if="
+                    selected.decision === 'staged' &&
+                    selected.provenance?.case_source_status === 'staged'
+                  "
+                  :disabled="busy"
+                  class="space-y-3"
+                >
+                  <legend class="mb-2 font-medium">Qualität ausdrücklich bestätigen</legend>
+                  <label class="flex items-start gap-2"
+                    ><input v-model="caseChecks.privacy" type="checkbox" />Datenschutz geprüft:
+                    keine personenbezogenen oder vertraulichen Angaben.</label
+                  >
+                  <label class="flex items-start gap-2"
+                    ><input v-model="caseChecks.generalization" type="checkbox" />Verallgemeinerung
+                    geprüft: keine individuellen Aktionen oder Zusagen als aktuelle Tatsachen oder
+                    Firmenregeln.</label
+                  >
+                  <label class="flex items-start gap-2"
+                    ><input v-model="caseChecks.quality" type="checkbox" />Lösungsqualität anhand
+                    der tatsächlich gesendeten Mitarbeiterantwort geprüft.</label
+                  >
+                </fieldset>
+                <div class="flex flex-wrap gap-2">
+                  <Button
+                    v-if="
+                      selected.decision === 'staged' &&
+                      selected.provenance?.case_source_status === 'staged'
+                    "
+                    :disabled="
+                      busy ||
+                      !caseChecks.privacy ||
+                      !caseChecks.generalization ||
+                      !caseChecks.quality
+                    "
+                    @click="performCase('approve')"
+                    >Fall freigeben</Button
+                  >
+                  <Button
+                    v-if="['staged', 'approved'].includes(selected.decision)"
+                    variant="outline"
+                    :disabled="busy"
+                    @click="performCase('reject')"
+                    >Fall ablehnen</Button
+                  >
+                  <Button variant="outline" :disabled="busy" @click="performCase('block')"
+                    >Fall sperren</Button
+                  >
+                </div>
+                <p class="text-sm text-muted-foreground">
+                  Die Qualitätsfreigabe aktiviert noch keine Suche. Die technische Veröffentlichung
+                  erfolgt später separat.
+                </p>
+              </div>
+              <div
+                v-else-if="
+                  !isCase &&
+                  selected.review_ready &&
+                  selected.decision === 'pending' &&
+                  !selected.active
+                "
                 class="flex gap-2"
               >
                 <Button
@@ -186,13 +261,15 @@
     <template #help
       ><p>
         Sichere Stil- und Kategoriekorrekturen werden automatisch verarbeitet. Neue allgemeine
-        Fakten benötigen deine Prüfung. Lernen veröffentlicht erst nach erfolgreicher
-        Datenschutzprüfung und gültigem Suchvektor.
+        Fakten benötigen deine Prüfung. Fallbeispiele benötigen drei ausdrückliche
+        Qualitätsbestätigungen und eine separate Veröffentlichung. Lernen veröffentlicht Fakten erst
+        nach erfolgreicher Datenschutzprüfung und gültigem Suchvektor.
       </p></template
     >
   </AdminSplitLayout>
 </template>
 <script setup>
+import { computed } from 'vue'
 import AdminSplitLayout from '@main/layouts/admin/AdminSplitLayout.vue'
 import LoadingOverlay from '@main/components/layout/LoadingOverlay.vue'
 import { Button } from '@shared-ui/components/ui/button'
@@ -216,11 +293,13 @@ import {
 import { useEmitter } from '@main/composables/useEmitter'
 import { EMITTER_EVENTS } from '@main/constants/emitterEvents'
 const review = useLearningReview(useUserStore())
-const { tab, page, items, hasMore, loading, busy, error, selected } = review
+const { tab, page, items, hasMore, loading, busy, error, selected, caseChecks } = review
+const isCase = computed(() => selected.value?.content?.source_type === 'case_example')
 const emitter = useEmitter()
 const tabs = [
   { id: 'pending', label: 'Zur Prüfung' },
-  { id: 'history', label: 'Verlauf' }
+  { id: 'history', label: 'Verlauf' },
+  { id: 'cases', label: 'Fallbeispiele' }
 ]
 const sourceLabel = (value) =>
   ({ human_answer: 'Versendete Mitarbeiterantwort', feedback_reason: 'Feedbackgrund' })[value] ||
@@ -240,6 +319,17 @@ const perform = async (action) => {
         action === 'learn'
           ? 'Entscheidung gespeichert. Veröffentlichung folgt nach erfolgreicher technischer Prüfung.'
           : 'Vorschlag verworfen.'
+    })
+}
+const performCase = async (action) => {
+  if (await review.actCase(action))
+    emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
+      description:
+        action === 'approve'
+          ? 'Fallqualität bestätigt. Die Veröffentlichung erfolgt später separat.'
+          : action === 'reject'
+            ? 'Fall abgelehnt.'
+            : 'Fall gesperrt.'
     })
 }
 </script>

@@ -1,6 +1,7 @@
 // Presentation only: database codes and the review/publisher contract stay unchanged.
 export const typeLabels = {
   employee_fact: 'Unternehmensfakt',
+  case_example: 'Historischer Lösungsfall',
   factual_review: 'Faktenprüfung erforderlich',
   response_example: 'Antwortbeispiel',
   classification_example: 'Kategorie-Korrektur',
@@ -21,6 +22,8 @@ export const categoryLabels = {
 }
 export const statusLabels = {
   pending: 'Prüfung ausstehend',
+  staged: 'Fall zur Qualitätsprüfung vorbereitet',
+  published: 'Fall qualitätsgeprüft und veröffentlicht',
   skipped: 'Übersprungen',
   prepared: 'Aufbereitet',
   approved: 'Freigegeben',
@@ -101,9 +104,23 @@ export function statusSummary(item) {
       publication: 'Nicht anwendbar',
       activation: 'Nicht anwendbar'
     }
+  if (
+    item.content?.source_type === 'case_example' &&
+    item.provenance?.case_source_status === 'blocked'
+  )
+    return {
+      review: statusLabel('blocked'),
+      quality: statusLabel(item.quality_status),
+      publication: publicationLabel('blocked'),
+      activation: 'Für Fall-RAG gesperrt'
+    }
   return {
     review:
-      item.review_exists === false ? 'Noch keine manuelle Prüfung' : statusLabel(item.decision),
+      item.content?.source_type === 'case_example'
+        ? statusLabel(item.decision)
+        : item.review_exists === false
+          ? 'Noch keine manuelle Prüfung'
+          : statusLabel(item.decision),
     quality: statusLabel(item.quality_status),
     publication: publicationLabel(item.publish_state),
     activation:

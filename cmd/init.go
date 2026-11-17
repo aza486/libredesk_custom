@@ -1233,6 +1233,7 @@ func initRateLimit(redisClient *redis.Client) *ratelimit.Limiter {
 		{"auth", 30},
 		{"public", 100},
 		{"media", 300},
+		{"transcription", 10},
 	}
 
 	for _, d := range defaults {

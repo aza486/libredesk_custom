@@ -156,11 +156,13 @@
           @keydown.enter.exact.prevent="send"
         />
       </div>
+      <VoiceInput v-model="input" :context-key="conversationStore.current?.uuid || ''" @busy="voiceBusy = $event" />
     </form>
   </div>
 </template>
 
 <script setup>
+import VoiceInput from '@main/components/voice/VoiceInput.vue'
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { Button } from '@shared-ui/components/ui/button'
 import {
@@ -206,6 +208,7 @@ const messages = computed(() =>
     .map((m) => ({ ...m, isUser: m.role === 'user' }))
 )
 const input = ref('')
+const voiceBusy = ref(false)
 // Thinking state is per conversation so an in-flight send for one conversation does not show or
 // block the panel after the agent switches to another.
 const thinkingByUUID = ref({})
@@ -290,7 +293,7 @@ const scrollToBottom = async () => {
 
 const send = async (preset) => {
   const text = (typeof preset === 'string' ? preset : input.value).trim()
-  if (!text || isThinking.value) return
+  if (!text || isThinking.value || voiceBusy.value) return
 
   const uuid = conversationStore.current?.uuid || ''
   if (!uuid) return

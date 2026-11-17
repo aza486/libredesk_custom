@@ -3,6 +3,7 @@ package main
 import (
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/abhinavxd/libredesk/internal/ai"
 	aimodels "github.com/abhinavxd/libredesk/internal/ai/models"
@@ -11,6 +12,7 @@ import (
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
@@ -29,6 +31,8 @@ type aiCompletionReq struct {
 type generateReplyReq struct {
 	ConversationUUID string `json:"conversation_uuid"`
 	Instruction      string `json:"instruction"`
+	Mode             string `json:"mode,omitempty"`
+	DraftHTML        string `json:"draft_html,omitempty"`
 }
 
 type copilotReq struct {
@@ -265,14 +269,43 @@ func handleDeleteAISnippet(r *fastglue.Request) error {
 	return r.SendEnvelope(true)
 }
 
+func validGenerateReply(req generateReplyReq) bool {
+	valid := func(s string, max int) bool {
+		return utf8.ValidString(s) && !strings.ContainsRune(s, 0) && utf8.RuneCountInString(s) <= max
+	}
+	instructionLimit := 8000
+	if req.Mode == "" {
+		instructionLimit = len(req.Instruction)
+	} // Keep legacy draft instructions compatible.
+	if !valid(req.Instruction, instructionLimit) || !valid(req.DraftHTML, 64000) {
+		return false
+	}
+	switch req.Mode {
+	case "":
+		return req.DraftHTML == ""
+	case "generate":
+		return req.DraftHTML == "" && req.ConversationUUID != ""
+	case "edit":
+		return req.ConversationUUID != "" && strings.TrimSpace(req.Instruction) != "" && strings.TrimSpace(stringutil.HTML2TextMarkdownLinks(req.DraftHTML)) != ""
+	default:
+		return false
+	}
+}
+
 // handleAIGenerateReply drafts a reply to a conversation using the agentic loop.
 func handleAIGenerateReply(r *fastglue.Request) error {
 	var (
 		app = r.Context.(*App)
 		req generateReplyReq
 	)
+	if !utf8.Valid(r.RequestCtx.PostBody()) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid reply request", nil, envelope.InputError)
+	}
 	if err := r.Decode(&req, "json"); err != nil {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, app.i18n.T("errors.parsingRequest"), nil))
+	}
+	if !validGenerateReply(req) {
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, "Invalid reply request", nil, envelope.InputError)
 	}
 	auser := r.RequestCtx.UserValue("user").(amodels.User)
 	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
@@ -288,14 +321,22 @@ func handleAIGenerateReply(r *fastglue.Request) error {
 		}
 		transcript = conversationTranscript(app, req.ConversationUUID)
 	}
-	resp, err := app.ai.GenerateReply(r.RequestCtx, transcript, req.Instruction, ai.ToolContext{}, generateReplyTools(app, user, conv))
+	if req.Mode != "" && strings.TrimSpace(transcript) == "" {
+		return r.SendErrorEnvelope(503, "Conversation context unavailable", nil, envelope.GeneralError)
+	}
+	var resp string
+	if req.Mode == "edit" {
+		resp, err = app.ai.EditReply(r.RequestCtx, transcript, req.Instruction, stringutil.HTML2TextMarkdownLinks(req.DraftHTML), ai.ToolContext{}, generateReplyTools(app, user, conv))
+	} else {
+		resp, err = app.ai.GenerateReply(r.RequestCtx, transcript, req.Instruction, ai.ToolContext{}, generateReplyTools(app, user, conv))
+	}
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	if strings.TrimSpace(resp) == "" {
 		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("ai.emptyResponse"), nil))
 	}
-	return r.SendEnvelope(stringutil.Markdown2HTML(resp))
+	return r.SendEnvelope(bluemonday.UGCPolicy().Sanitize(stringutil.Markdown2HTML(resp)))
 }
 
 // handleAISummarizeConversation summarizes a conversation and posts the summary as the requesting agent's private note.

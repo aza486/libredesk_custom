@@ -33,11 +33,12 @@ vi.mock('./ReplyBoxContent.vue', () => ({
   default: defineComponent({
     inheritAttrs: false,
     props: ['htmlContent', 'isSending', 'hideFullscreenToggle', 'messageType'],
-    emits: ['send', 'toggleFullscreen', 'update:messageType'],
+    emits: ['send', 'toggleFullscreen', 'update:messageType', 'generateReply'],
     setup(props, { emit, expose }) {
       expose({ focus: () => mocks.focus() })
       return () =>
         h('section', [
+          h('button', { 'data-generate': '', onClick: () => emit('generateReply') }, 'Generate'),
           h('div', { 'data-editor': '', 'data-message-type': props.messageType }, props.htmlContent),
           h('button', { 'data-private': '', onClick: () => emit('update:messageType', 'private_note') }, 'Private note'),
           !props.hideFullscreenToggle && h('button', { 'data-expand': '', onClick: () => emit('toggleFullscreen') }, 'Expand'),
@@ -774,4 +775,24 @@ test('changing conversations closes embedded actions and prevents stale style ad
   await flush()
   expect(root.querySelector('[data-ai-context]')).toBeNull()
   expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+})
+
+test('generator opens in expanded context and adoption preserves private mode, recipients, signature and attachments', async () => {
+  mocks.api.aiGenerateReply = vi.fn().mockResolvedValue({ data: { data: '<p>Generated draft</p>' } })
+  mocks.draft.outgoingSignature.value = { mode: 'manual', template_id: 17 }
+  mocks.files.mediaFiles.value = [{ uuid: 'attachment', name: 'keep.txt' }]
+  await expand()
+  root.querySelector('[data-private]').click(); await flush()
+  root.querySelector('[data-generate]').click(); await flush()
+  contextPanel()
+  expect(root.textContent).toContain('aiGenerate.title')
+  click('aiGenerate.create'); await flush()
+  expect(mocks.draft.htmlContent.value).toBe('Existing employee answer')
+  click('aiGenerate.adopt'); await flush()
+  expect(mocks.draft.htmlContent.value).toBe('<p>Generated draft</p>')
+  expect(root.querySelector('[data-editor]').dataset.messageType).toBe('private_note')
+  expect(mocks.draft.outgoingSignature.value).toEqual({ mode: 'manual', template_id: 17 })
+  expect(mocks.files.mediaFiles.value).toEqual([{ uuid: 'attachment', name: 'keep.txt' }])
+  expect(mocks.store.currentTo).toEqual(['contact@example.com'])
+  expect(mocks.api.sendMessage).not.toHaveBeenCalled()
 })

@@ -24,7 +24,7 @@ func (m *Manager) PublishOne(ctx context.Context) (resultErr error) {
 	var id string
 	var raw, checkRaw []byte
 	var revision int64
-	err = tx.QueryRowContext(ctx, `SELECT r.id::text,to_jsonb(r)-'embedding',v.checks,v.revision FROM rag_items r JOIN learning_reviews v ON v.item_id=r.id WHERE v.decision='approved' AND (v.publication IN ('unpublished','failed') OR (v.publication='publishing' AND v.started_at<now()-interval '2 minutes')) AND v.retry_at<=now() AND NOT r.active ORDER BY v.updated_at FOR UPDATE OF r,v SKIP LOCKED LIMIT 1`).Scan(&id, &raw, &checkRaw, &revision)
+	err = tx.QueryRowContext(ctx, `SELECT r.id::text,to_jsonb(r)-'embedding',v.checks,v.revision FROM rag_items r JOIN learning_reviews v ON v.item_id=r.id WHERE r.source_type <> 'case_example' AND v.decision='approved' AND (v.publication IN ('unpublished','failed') OR (v.publication='publishing' AND v.started_at<now()-interval '2 minutes')) AND v.retry_at<=now() AND NOT r.active ORDER BY v.updated_at FOR UPDATE OF r,v SKIP LOCKED LIMIT 1`).Scan(&id, &raw, &checkRaw, &revision)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}

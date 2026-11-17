@@ -30,7 +30,7 @@ func learningDependencyFailure(service string, status int, err error) error {
 // Never log err.Error(), pq.Message/Detail/Hint, HTTP bodies, DSNs or input values.
 func learningFailureFields(stage string, err error) []any {
 	switch stage {
-	case "database_open", "database_connect", "embedding_config", "anonymizer_config", "review_config", "review_request", "review_validation", "publish":
+	case "case_config", "case_database", "database_open", "database_connect", "embedding_config", "anonymizer_config", "review_config", "review_request", "review_validation", "publish":
 	default:
 		stage = "internal"
 	}

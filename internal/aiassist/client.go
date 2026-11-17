@@ -1,4 +1,4 @@
-// Package aiassist provides isolated text-only and provenance webhook clients.
+// Package aiassist provides isolated AI and provenance webhook clients.
 package aiassist
 
 import (

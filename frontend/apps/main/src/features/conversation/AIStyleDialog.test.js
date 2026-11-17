@@ -61,6 +61,7 @@ async function mount() {
     render: () =>
       h(AIStyleDialog, { ...props, 'onUpdate:open': (v) => (props.open = v), onAdopt: adopted })
   })
+  app.config.globalProperties.$t = (key) => key
   app.mount(root)
   props.open = true
   await flush()

@@ -5,7 +5,8 @@ import { useLearningReview } from './useLearningReview'
 const api = vi.hoisted(() => ({
   getLearningItems: vi.fn(),
   getLearningItem: vi.fn(),
-  reviewLearningItem: vi.fn()
+  reviewLearningItem: vi.fn(),
+  reviewLearningCase: vi.fn()
 }))
 vi.mock('@main/api', () => ({ default: api }))
 let app, root, review, user
@@ -31,6 +32,7 @@ beforeEach(async () => {
   api.getLearningItems.mockResolvedValue(response({ items: [item()], has_more: false }))
   api.getLearningItem.mockResolvedValue(response(item()))
   api.reviewLearningItem.mockResolvedValue(response({ id: 'candidate' }))
+  api.reviewLearningCase.mockResolvedValue(response({ id: 'case', revision: 1 }))
   user = reactive({ userID: 42, hasAdminRole: true, can: () => false })
   root = document.createElement('div')
   document.body.append(root)
@@ -133,4 +135,73 @@ test('pagination and filters are server-side and old list/detail responses canno
   resolve(response(item()))
   await opening
   expect(review.selected.value).toBeNull()
+})
+
+const caseItem = () => ({
+  ...item(),
+  id: 'case',
+  revision: 0,
+  review_ready: false,
+  decision: 'staged',
+  content: { source_type: 'case_example' },
+  provenance: { case_source_status: 'staged' }
+})
+test('case approval requires three fresh explicit checks and uses its separate API', async () => {
+  api.getLearningItem.mockResolvedValue(response(caseItem()))
+  await review.open(caseItem())
+  expect(review.caseChecks.value).toEqual({ privacy: false, generalization: false, quality: false })
+  await review.actCase('approve')
+  review.caseChecks.value.privacy = true
+  review.caseChecks.value.quality = true
+  await review.actCase('approve')
+  expect(api.reviewLearningCase).not.toHaveBeenCalled()
+  review.caseChecks.value.generalization = true
+  await review.act('learn')
+  expect(api.reviewLearningItem).not.toHaveBeenCalled()
+  await review.actCase('approve')
+  expect(api.reviewLearningCase).toHaveBeenCalledWith('case', {
+    action: 'approve',
+    revision: 0,
+    checks: { privacy: true, generalization: true, quality: true }
+  })
+  expect(review.caseChecks.value.privacy).toBe(false)
+})
+test('case checks reset on selection changes and blocked origins cannot be approved', async () => {
+  api.getLearningItem.mockResolvedValue(response(caseItem()))
+  await review.open(caseItem())
+  review.caseChecks.value = { privacy: true, generalization: true, quality: true }
+  await review.open(caseItem())
+  expect(review.caseChecks.value.quality).toBe(false)
+  api.getLearningItem.mockResolvedValue(
+    response({ ...caseItem(), provenance: { case_source_status: 'blocked' } })
+  )
+  await review.open(caseItem())
+  review.caseChecks.value = { privacy: true, generalization: true, quality: true }
+  await review.actCase('approve')
+  expect(api.reviewLearningCase).not.toHaveBeenCalled()
+  await review.actCase('block')
+  expect(api.reviewLearningCase).toHaveBeenCalledWith(
+    'case',
+    expect.objectContaining({ action: 'block' })
+  )
+})
+test('case API is unavailable to ordinary staff or fact selections', async () => {
+  await review.open(item())
+  await review.actCase('block')
+  api.getLearningItem.mockResolvedValue(response(caseItem()))
+  await review.open(caseItem())
+  user.hasAdminRole = false
+  await review.actCase('block')
+  expect(api.reviewLearningCase).not.toHaveBeenCalled()
+})
+test('case conflict leaves selection unapproved and duplicate clicks cannot create decisions', async () => {
+  api.getLearningItem.mockResolvedValue(response(caseItem()))
+  await review.open(caseItem())
+  api.reviewLearningCase.mockRejectedValue({ response: { status: 409 } })
+  const saving = review.actCase('reject')
+  await review.actCase('reject')
+  await saving
+  expect(api.reviewLearningCase).toHaveBeenCalledTimes(1)
+  expect(review.error.value).toContain('geändert')
+  expect(review.selected.value.decision).toBe('staged')
 })

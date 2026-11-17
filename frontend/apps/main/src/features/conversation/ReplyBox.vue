@@ -1,5 +1,9 @@
 <template>
   <Teleport :to="actionTarget || 'body'" :disabled="!actionTarget">
+    <AIGenerateDialog :open="generateOpen" :embedded="isEditorFullscreen"
+      :conversation-u-u-i-d="currentConversationUUID || ''" :draft-h-t-m-l="htmlContent"
+      :draft-text="textContent" :editor-mode="messageType"
+      @update:open="generateOpen = $event" @adopt="adoptGeneratedReply" />
     <AIStyleDialog :open="styleOpen" :embedded="isEditorFullscreen" :note="styleNote" :conversation-u-u-i-d="currentConversationUUID || ''" @update:open="styleOpen = $event" @adopt="adoptStyledReply" />
     <AIActionPanel
       :open="aiModalOpen"
@@ -35,6 +39,9 @@
           :placeholder="isManualReason ? 'Kurze Antwort und Entschuldigung' : undefined"
           aria-describedby="ai-feedback-limit"
         />
+        <VoiceInput v-model="aiReason" :active="aiModalOpen" :context-key="currentConversationUUID || ''"
+          :disabled="aiModalBusy || (isManualReason && manualReadOnly)"
+          :max-bytes="isManualReason ? Infinity : 8000" :max-chars="isManualReason ? 2500 : Infinity" @busy="feedbackVoiceBusy = $event" />
         <p
           id="ai-feedback-limit"
           class="text-xs"
@@ -49,7 +56,7 @@
           >Abbrechen</Button
         >
         <Button
-          :disabled="aiModalBusy || aiReasonTooLong || (isManualReason && manualReadOnly) || isSending"
+          :disabled="feedbackVoiceBusy || aiModalBusy || aiReasonTooLong || (isManualReason && manualReadOnly) || isSending"
           @click="continueAiReply"
           >{{ isManualReason ? (aiModalBusy ? (manualReadOnly ? 'Wird geladen …' : 'Wird gespeichert …') : 'Feedbackgrund speichern') : aiAction?.mode === 'adopt' ? 'KI-Antwort übernehmen' : 'Weiter zur Antwort' }}</Button
         >
@@ -136,7 +143,7 @@
         class="bg-card text-card-foreground p-0 gap-0 flex flex-col overflow-hidden top-0 left-0 translate-x-0 translate-y-0 w-full max-w-none h-[var(--visual-viewport-height,100dvh)] max-h-none rounded-none md:top-4 md:left-4 md:w-[calc(100%-2rem)] md:h-[calc(var(--visual-viewport-height,100dvh)-2rem)] md:rounded-lg lg:top-8 lg:left-8 lg:w-[calc(100%-4rem)] lg:h-[calc(var(--visual-viewport-height,100dvh)-4rem)]"
         :class="{ 'ai-generating': isGenerating }"
         :aria-describedby="undefined"
-        @escapeKeyDown="isEditorFullscreen = false"
+        @escapeKeyDown="handleEditorEscape"
         :hide-close-button="true"
       >
         <DialogTitle class="sr-only">{{ t('replyBox.expandedEditor') }}</DialogTitle>
@@ -144,7 +151,7 @@
           ref="expandedLayoutRef"
           v-if="isEditorFullscreen"
           :private-note="messageType === 'private_note'"
-          :context-active="styleOpen || aiModalOpen"
+          :context-active="styleOpen || aiModalOpen || generateOpen"
           @context-target="actionTarget = $event"
           @restore="isEditorFullscreen = false"
           @history-target="emit('historyTarget', $event)"
@@ -289,6 +296,8 @@ import { useEmitter } from '@main/composables/useEmitter'
 import { useFileUpload } from '@main/composables/useFileUpload'
 import { hasInlineImage, hasPendingInlineUpload } from '@main/composables/useInlineImageUpload'
 import AIStyleDialog from './AIStyleDialog.vue'
+import AIGenerateDialog from './AIGenerateDialog.vue'
+import VoiceInput from '@main/components/voice/VoiceInput.vue'
 import AIActionPanel from './AIActionPanel.vue'
 import { sourceAlreadyAnswered } from '@main/utils/ai-style'
 import ExpandedReplyLayout from './ExpandedReplyLayout.vue'
@@ -408,6 +417,8 @@ const feedback = createAIFeedback({
   userID: () => userStore.userID
 })
 const feedbackRecord = computed(() => feedback.records[currentConversationUUID.value])
+const generateOpen = ref(false)
+const feedbackVoiceBusy = ref(false)
 const aiModalOpen = ref(false)
 const aiAction = ref(null)
 const aiReason = ref('')
@@ -420,8 +431,8 @@ const aiReasonBytes = computed(() => feedbackReasonBytes(aiReason.value))
 const fullscreenContentRef = ref(null)
 const expandedLayoutRef = ref(null)
 const actionTarget = shallowRef(null)
-watch([styleOpen, aiModalOpen, isEditorFullscreen], () => {
-  if (isEditorFullscreen.value && (styleOpen.value || aiModalOpen.value)) {
+watch([styleOpen, aiModalOpen, generateOpen, isEditorFullscreen], () => {
+  if (isEditorFullscreen.value && (styleOpen.value || aiModalOpen.value || generateOpen.value)) {
     expandedLayoutRef.value?.showHistory()
   }
 }, { flush: 'post' })
@@ -730,6 +741,7 @@ watch(
   async (uuid) => {
     stopPolling()
     aiModalOpen.value = false
+    generateOpen.value = false
     styleOpen.value = false
     styleNote.value = null
     aiReason.value = ''
@@ -770,6 +782,7 @@ watch(
     stopPolling()
     feedback.reset()
     aiModalOpen.value = false
+    generateOpen.value = false
     styleOpen.value = false
     styleNote.value = null
     aiReason.value = ''
@@ -804,10 +817,22 @@ const runAiGeneration = async (requestFn) => {
 const handleAiPromptSelected = (key) =>
   runAiGeneration(() => api.aiCompletion({ prompt_key: key, content: htmlContent.value }))
 
-const handleGenerateReply = () =>
-  runAiGeneration((uuid) =>
-    api.aiGenerateReply({ conversation_uuid: uuid, instruction: textContent.value })
-  )
+const handleGenerateReply = () => { generateOpen.value = true }
+const adoptGeneratedReply = ({ html, uuid, resultHTML, editorMode }) => {
+  // Dialog has checked the snapshot; only the current editor's content is changed.
+  if (uuid !== currentConversationUUID.value || editorMode !== messageType.value || html !== htmlContent.value) return
+  htmlContent.value = resultHTML
+}
+const handleEditorEscape = (event) => {
+  if (generateOpen.value || styleOpen.value || aiModalOpen.value) {
+    event.preventDefault()
+    if (generateOpen.value) generateOpen.value = false
+    else if (styleOpen.value) styleOpen.value = false
+    else if (!aiModalBusy.value) aiModalOpen.value = false
+    return
+  }
+  isEditorFullscreen.value = false
+}
 
 // Copilot's "Insert into reply" replaces the draft with its answer (already HTML from the panel),
 // forcing reply mode so a private note in progress does not silently receive customer-facing text.

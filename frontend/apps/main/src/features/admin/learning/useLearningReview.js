@@ -12,6 +12,14 @@ export function useLearningReview(user) {
     busy = ref(false),
     error = ref('')
   const selected = ref(null)
+  const caseChecks = ref({ privacy: false, generalization: false, quality: false })
+  watch(
+    selected,
+    () => {
+      caseChecks.value = { privacy: false, generalization: false, quality: false }
+    },
+    { flush: 'sync' }
+  )
   let generation = 0,
     selectionGeneration = 0
   const allowed = () => user.hasAdminRole || user.can('ai_learning:manage')
@@ -87,6 +95,49 @@ export function useLearningReview(user) {
       busy.value = false
     }
   }
+  const actCase = async (action) => {
+    if (
+      !allowed() ||
+      busy.value ||
+      !selected.value ||
+      selected.value.content?.source_type !== 'case_example' ||
+      !['approve', 'reject', 'block'].includes(action)
+    )
+      return
+    if (
+      action === 'approve' &&
+      (selected.value.decision !== 'staged' ||
+        selected.value.provenance?.case_source_status !== 'staged' ||
+        !caseChecks.value.privacy ||
+        !caseChecks.value.generalization ||
+        !caseChecks.value.quality)
+    )
+      return
+    busy.value = true
+    error.value = ''
+    const token = selectionGeneration
+    try {
+      const result = await api.reviewLearningCase(selected.value.id, {
+        action,
+        revision: selected.value.revision,
+        checks: { ...caseChecks.value }
+      })
+      if (token !== selectionGeneration) return
+      selected.value = null
+      await refresh()
+      return result.data.data.id
+    } catch (e) {
+      if (token === selectionGeneration)
+        error.value =
+          e.response?.status === 409
+            ? 'Der Fall wurde geändert oder die Aktion ist nicht zulässig. Bitte neu öffnen.'
+            : e.response?.status === 400
+              ? 'Der Fall hat die Datenschutz- oder Qualitätsprüfung nicht bestanden. Bitte prüfen oder sperren.'
+              : 'Fallentscheidung nicht gespeichert. Bitte Verbindung prüfen.'
+    } finally {
+      busy.value = false
+    }
+  }
   watch([tab, type, status], () => {
     page.value = 1
   })
@@ -113,6 +164,8 @@ export function useLearningReview(user) {
     busy,
     error,
     selected,
+    caseChecks,
+    actCase,
     refresh,
     open,
     act,

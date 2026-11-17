@@ -39,6 +39,7 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/ai/learning", auth(handleLearning))
 	g.GET("/api/v1/ai/learning/{id}", auth(handleLearning))
 	g.POST("/api/v1/ai/learning/{id}/review", auth(handleLearning))
+	g.POST("/api/v1/ai/learning/{id}/case-review", auth(handleLearningCaseReview))
 
 	// Settings.
 	g.GET("/api/v1/settings/general", auth(handleGetGeneralSettings))
@@ -310,7 +311,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.DELETE("/api/v1/ai/snippets/{id}", perm(handleDeleteAISnippet, "ai:manage"))
 
 	// AI assistant: reply drafting + copilot chat.
-	g.POST("/api/v1/ai/generate-reply", auth(handleAIGenerateReply))
+	g.POST("/api/v1/ai/transcribe", perm(rateLimit(handleAITranscribe, "transcription"), "messages:write"))
+	g.GET("/api/v1/ai/transcribe/config", auth(handleAITranscriptionConfig))
+	g.POST("/api/v1/ai/generate-reply", perm(handleAIGenerateReply, "messages:write"))
 	g.POST("/api/v1/ai/summarize", perm(handleAISummarizeConversation, "messages:write"))
 	g.POST("/api/v1/ai/suggest-tags", auth(handleAISuggestTags))
 	g.POST("/api/v1/ai/copilot", auth(handleAICopilot))

@@ -575,6 +575,7 @@ const getAIAssistantStats = (id, range) =>
 const getLearningItems = (params) => http.get('/api/v1/ai/learning', { params })
 const getLearningItem = (id) => http.get(`/api/v1/ai/learning/${id}`)
 const reviewLearningItem = (id, body) => http.post(`/api/v1/ai/learning/${id}/review`, body)
+const reviewLearningCase = (id, body) => http.post(`/api/v1/ai/learning/${id}/case-review`, body)
 const getAISnippets = () => http.get('/api/v1/ai/snippets')
 const createAISnippet = (data) => http.post('/api/v1/ai/snippets', data)
 const importAISnippetFromURL = (data) =>
@@ -588,8 +589,15 @@ const approveAIFaqSuggestion = (id, data) =>
 const rejectAIFaqSuggestion = (id) => http.post(`/api/v1/ai/faq-suggestions/${id}/reject`)
 const getAIFaqLearning = () => http.get('/api/v1/ai/faq-learning')
 const updateAIFaqLearning = (data) => http.put('/api/v1/ai/faq-learning', data)
-const aiGenerateReply = (data) =>
-  http.post('/api/v1/ai/generate-reply', data, { timeout: AI_TIMEOUT })
+const voiceInputConfig = (signal) => http.get('/api/v1/ai/transcribe/config', { signal })
+const transcribeAudio = (audio, signal) =>
+  http.post('/api/v1/ai/transcribe', audio, {
+    signal,
+    timeout: 50000,
+    headers: { 'Content-Type': audio.type }
+  })
+const aiGenerateReply = (data, signal) =>
+  http.post('/api/v1/ai/generate-reply', data, { timeout: AI_TIMEOUT, signal })
 const aiSummarizeConversation = (data) =>
   http.post('/api/v1/ai/summarize', data, { timeout: AI_TIMEOUT })
 const aiSuggestTags = (data) => http.post('/api/v1/ai/suggest-tags', data, { timeout: AI_TIMEOUT })
@@ -886,6 +894,7 @@ export default {
   getLearningItems,
   getLearningItem,
   reviewLearningItem,
+  reviewLearningCase,
   createAISnippet,
   importAISnippetFromURL,
   updateAISnippet,
@@ -919,6 +928,8 @@ export default {
   getAIFaqLearning,
   updateAIFaqLearning,
   aiGenerateReply,
+  voiceInputConfig,
+  transcribeAudio,
   aiSummarizeConversation,
   aiSuggestTags,
   aiCopilot,

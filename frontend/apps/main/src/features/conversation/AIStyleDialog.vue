@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import api from '@main/api'
 import { createStyleHistory, styleTextLength } from '@main/utils/ai-style'
 import AIActionPanel from './AIActionPanel.vue'
+import VoiceInput from '@main/components/voice/VoiceInput.vue'
 import {
   Select,
   SelectTrigger,
@@ -57,10 +58,11 @@ watch(
   { immediate: true }
 )
 onBeforeUnmount(cancel)
+const voiceBusy = ref(false)
 const tooLong = computed(() => styleTextLength(instructions.value) > 1000)
 const visibleText = computed(() => (originalView.value ? history.original : history.current))
 async function adjust() {
-  if (busy.value || tooLong.value || !props.note) return
+  if (busy.value || voiceBusy.value || tooLong.value || !props.note) return
   const run = ++generation
   controller = new AbortController()
   busy.value = true
@@ -140,6 +142,7 @@ function adopt() {
       aria-describedby="ai-style-limit"
       placeholder="Bitte in zwei Absätzen formulieren, freundlich aber professionell"
     />
+    <VoiceInput v-model="instructions" :active="open" :context-key="conversationUUID" :disabled="busy" :max-chars="1000" @busy="voiceBusy = $event" />
     <p
       id="ai-style-limit"
       class="text-xs"
@@ -147,7 +150,7 @@ function adopt() {
     >
       {{ styleTextLength(instructions) }} / 1000 Zeichen
     </p>
-    <Button :disabled="busy || tooLong" @click="adjust">{{
+    <Button :disabled="busy || voiceBusy || tooLong" @click="adjust">{{
       busy ? 'Wird angepasst …' : 'Anpassen'
     }}</Button>
     <div class="flex flex-wrap gap-2" aria-label="Vorschau auswählen">

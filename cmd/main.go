@@ -101,6 +101,7 @@ type App struct {
 	aiNoteAgentIDs   []int
 	aiFeedback       *aifeedback.Client
 	aiStyle          *aiassist.Client
+	aiTranscription  *aiassist.Client
 	ctx              context.Context
 	fs               stuffbin.FileSystem
 	consts           atomic.Value
@@ -314,6 +315,7 @@ func main() {
 		return client
 	}
 	styleClient := newAIClient("ai_style")
+	transcriptionClient := newAIClient("ai_transcription")
 	provenanceClient := newAIClient("ai_provenance")
 	if feedbackClient != nil {
 		go conversation.RunManualResolutionFeedback(ctx, feedbackClient)
@@ -325,6 +327,7 @@ func main() {
 		learning:         initLearning(ctx, lo),
 		aiFeedback:       feedbackClient,
 		aiStyle:          styleClient,
+		aiTranscription:  transcriptionClient,
 		aiNoteAgentIDs:   ko.Ints("ai_analysis.allowed_agent_ids"),
 		ctx:              ctx,
 		lo:               lo,

@@ -117,3 +117,38 @@ test('system audit messages are translated while actual reviewer text remains un
   )
   expect(reasonLabel('Quelle im Firmenhandbuch geprüft.')).toBe('Quelle im Firmenhandbuch geprüft.')
 })
+
+test('case quality status is separate from fact approval', () => {
+  const item = {
+    record_type: 'candidate',
+    content: { source_type: 'case_example' },
+    review_exists: false,
+    decision: 'staged',
+    quality_status: 'pending',
+    publish_state: 'unpublished',
+    active: false
+  }
+  expect(typeLabel('case_example')).toBe('Historischer Lösungsfall')
+  expect(statusSummary(item).review).toBe('Fall zur Qualitätsprüfung vorbereitet')
+  expect(statusSummary({ ...item, decision: 'published' }).review).toBe(
+    'Fall qualitätsgeprüft und veröffentlicht'
+  )
+})
+
+test('a blocked case origin immediately overrides a still published technical status', () => {
+  expect(
+    statusSummary({
+      content: { source_type: 'case_example' },
+      provenance: { case_source_status: 'blocked' },
+      decision: 'published',
+      quality_status: 'approved',
+      publish_state: 'published',
+      active: true
+    })
+  ).toEqual({
+    review: 'Blockiert',
+    quality: 'Freigegeben',
+    publication: 'Veröffentlichung blockiert',
+    activation: 'Für Fall-RAG gesperrt'
+  })
+})

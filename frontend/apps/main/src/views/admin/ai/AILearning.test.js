@@ -4,7 +4,12 @@ import { createApp, defineComponent, h, nextTick } from 'vue'
 import AILearning from './AILearning.vue'
 const mocks = vi.hoisted(() => ({
   emit: vi.fn(),
-  api: { getLearningItems: vi.fn(), getLearningItem: vi.fn(), reviewLearningItem: vi.fn() }
+  api: {
+    getLearningItems: vi.fn(),
+    getLearningItem: vi.fn(),
+    reviewLearningItem: vi.fn(),
+    reviewLearningCase: vi.fn()
+  }
 }))
 vi.mock('@main/composables/useEmitter', () => ({ useEmitter: () => ({ emit: mocks.emit }) }))
 vi.mock('@main/api', () => ({ default: mocks.api }))
@@ -89,6 +94,7 @@ beforeEach(async () => {
   mocks.api.getLearningItems.mockResolvedValue(response({ items: [fixture()], has_more: false }))
   mocks.api.getLearningItem.mockResolvedValue(response(fixture()))
   mocks.api.reviewLearningItem.mockResolvedValue(response({ id: 'candidate' }))
+  mocks.api.reviewLearningCase.mockResolvedValue(response({ id: 'case', revision: 1 }))
   root = document.createElement('div')
   document.body.append(root)
   app = createApp(AILearning)
@@ -173,3 +179,71 @@ test('history and incomplete legacy candidates expose no manual forms or learn b
   expect([...root.querySelectorAll('button')].some((b) => b.textContent === 'Lernen')).toBe(false)
   expect(root.querySelector('textarea, input, select')).toBeNull()
 })
+
+const caseFixture = () => ({
+  ...fixture(),
+  id: 'case',
+  review_ready: false,
+  review_exists: false,
+  decision: 'staged',
+  revision: 0,
+  feedback_reason: '',
+  provenance: { case_source_status: 'staged' },
+  content: {
+    source_type: 'case_example',
+    customer_question: 'Wie lässt sich ein beschädigter Artikel reklamieren?',
+    human_answer:
+      'Im historischen Fall wurde ein Ersatz angeboten. Daraus folgt keine aktuelle Zusage.'
+  }
+})
+test('case dialog presents historical content and requires three unchecked confirmations', async () => {
+  mocks.api.getLearningItems.mockResolvedValue(
+    response({ items: [caseFixture()], has_more: false })
+  )
+  mocks.api.getLearningItem.mockResolvedValue(response(caseFixture()))
+  click('Fallbeispiele')
+  await flush()
+  click('Fall prüfen')
+  await flush()
+  expect(root.textContent).toContain('keine aktuelle Zusage oder Unternehmensregel')
+  expect(root.textContent).toContain('Verallgemeinerte Kundenfrage')
+  expect(root.textContent).toContain('Historische Mitarbeiterlösung')
+  expect(root.textContent).toContain('Kein zusätzlicher Feedbackgrund.')
+  const checks = [...root.querySelectorAll('input[type="checkbox"]')]
+  expect(checks).toHaveLength(3)
+  expect(checks.every((c) => !c.checked)).toBe(true)
+  const approve = [...root.querySelectorAll('button')].find(
+    (b) => b.textContent === 'Fall freigeben'
+  )
+  expect(approve.disabled).toBe(true)
+  for (const check of checks) {
+    check.checked = true
+    check.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+  await flush()
+  expect(approve.disabled).toBe(false)
+  approve.click()
+  await flush()
+  expect(mocks.api.reviewLearningCase).toHaveBeenCalledWith('case', {
+    action: 'approve',
+    revision: 0,
+    checks: { privacy: true, generalization: true, quality: true }
+  })
+  expect(mocks.api.reviewLearningItem).not.toHaveBeenCalled()
+  expect(mocks.emit.mock.lastCall[1].description).toContain('später separat')
+})
+test.each(['Fall ablehnen', 'Fall sperren'])(
+  'unsafe cases can be handled through %s without approval checks',
+  async (button) => {
+    mocks.api.getLearningItem.mockResolvedValue(response(caseFixture()))
+    click('Vorschlag prüfen')
+    await flush()
+    click(button)
+    await flush()
+    expect(mocks.api.reviewLearningCase).toHaveBeenCalledWith('case', {
+      action: button === 'Fall ablehnen' ? 'reject' : 'block',
+      revision: 0,
+      checks: { privacy: false, generalization: false, quality: false }
+    })
+  }
+)

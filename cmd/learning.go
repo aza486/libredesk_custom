@@ -26,6 +26,9 @@ import (
 func initLearning(ctx context.Context, lo *logf.Logger) *learning.Manager {
 	dsn := ko.String("ai_learning.database_dsn")
 	if dsn == "" {
+		if ko.Bool("ai_learning.case_publisher_enabled") {
+			logLearningFatal(lo, "case_config", learning.ErrUnavailable)
+		}
 		return nil
 	}
 	db, err := sqlx.Open("postgres", dsn)
@@ -46,24 +49,11 @@ func initLearning(ctx context.Context, lo *logf.Logger) *learning.Manager {
 		if e != nil {
 			logLearningFatal(lo, "embedding_config", e)
 		}
-		m.Embed = func(ctx context.Context, text string) ([]float64, error) {
-			var result struct {
-				Data []struct {
-					Embedding []float64 `json:"embedding"`
-				} `json:"data"`
-			}
-			status, err := client.Call(ctx, "Authorization", "", map[string]any{"model": "text-embedding-3-small", "dimensions": 1536, "input": text}, &result)
-			if err != nil {
-				return nil, learningDependencyFailure("embedding", status, err)
-			}
-			if len(result.Data) != 1 {
-				return nil, &learning.DependencyError{Service: "embedding", Kind: "invalid_response"}
-			}
-			return result.Data[0].Embedding, nil
-		}
+		m.Embed = newLearningEmbedder(client)
 	}
 	// Prepared proposals are validated locally; no display/review/publish spaCy calls.
 
+	initLearningCasePublisher(ctx, lo, m.Embed)
 	go m.Run(ctx)
 	return m
 }
@@ -71,7 +61,9 @@ func logLearningFatal(lo *logf.Logger, stage string, err error) {
 	reportLearningFailure(lo, stage, err)
 	panic("invalid or unavailable ai_learning configuration; credentials withheld")
 }
-func handleLearning(r *fastglue.Request) error {
+func handleLearning(r *fastglue.Request) error           { return handleLearningRequest(r, false) }
+func handleLearningCaseReview(r *fastglue.Request) error { return handleLearningRequest(r, true) }
+func handleLearningRequest(r *fastglue.Request, caseReview bool) error {
 	r.RequestCtx.Response.Header.Set("Cache-Control", "no-store")
 	app := r.Context.(*App)
 	caller, ok := r.RequestCtx.UserValue("user").(amodels.User)
@@ -110,6 +102,14 @@ func handleLearning(r *fastglue.Request) error {
 		}
 		result, e := view.List(ctx, learning.Filter{Tab: string(args.Peek("tab")), Type: string(args.Peek("type")), Status: string(args.Peek("status")), Page: page})
 		return learningResult(r, result, e)
+	}
+	if caseReview {
+		var req learning.CaseDecision
+		if err = decodeLearningCaseDecision(r.RequestCtx.PostBody(), &req); err != nil {
+			return learningResult(r, nil, err)
+		}
+		revision, e := view.ReviewCase(ctx, id, strconv.Itoa(user.ID), req)
+		return learningResult(r, map[string]any{"id": id, "revision": revision}, e)
 	}
 	var req learning.Decision
 	if err = decodeLearningDecision(r.RequestCtx.PostBody(), &req); err != nil {
@@ -172,11 +172,31 @@ func decodeLearningDecision(body []byte, req *learning.Decision) error {
 	return nil
 }
 
+func decodeLearningCaseDecision(body []byte, req *learning.CaseDecision) error {
+	if !utf8.Valid(body) || len(body) > 1024 || !bytes.HasPrefix(bytes.TrimSpace(body), []byte("{")) {
+		return learning.ErrInput
+	}
+	var wire struct {
+		Action   string              `json:"action"`
+		Revision *int64              `json:"revision"`
+		Checks   learning.CaseChecks `json:"checks"`
+	}
+	d := json.NewDecoder(bytes.NewReader(body))
+	d.DisallowUnknownFields()
+	if d.Decode(&wire) != nil || d.Decode(new(any)) != io.EOF || wire.Revision == nil || *wire.Revision < 0 {
+		return learning.ErrInput
+	}
+	*req = learning.CaseDecision{Action: wire.Action, Revision: *wire.Revision, Checks: wire.Checks}
+	return nil
+}
+
 func learningView(app *App, user umodels.User) func(context.Context, *learning.Item) error {
 	return func(_ context.Context, item *learning.Item) error {
 		var refs struct {
-			Original string `json:"original_message_uuid"`
-			Outgoing string `json:"outgoing_message_uuid"`
+			Original       string `json:"original_message_uuid"`
+			Outgoing       string `json:"outgoing_message_uuid"`
+			AgentID        string `json:"case_source_agent_id"`
+			ResponseSource string `json:"case_response_source"`
 		}
 		if json.Unmarshal(item.Provenance, &refs) != nil {
 			return learning.ErrForbidden
@@ -201,6 +221,12 @@ func learningView(app *App, user umodels.User) func(context.Context, *learning.I
 		if e != nil || outgoing.Private || outgoing.Type != "outgoing" || outgoing.SenderType != "agent" || outgoing.Status != "sent" || outgoing.ConversationUUID != original.ConversationUUID {
 			return learning.ErrForbidden
 		}
+		if item.Content.Type == "case_example" {
+			agentID, err := strconv.Atoi(refs.AgentID)
+			if err != nil || agentID <= 0 || outgoing.SenderID != agentID || refs.ResponseSource != "human" || item.SentAnswer == "" {
+				return learning.ErrForbidden
+			}
+		}
 		var originalMeta, outgoingMeta map[string]json.RawMessage
 		if json.Unmarshal(original.Meta, &originalMeta) != nil || json.Unmarshal(outgoing.Meta, &outgoingMeta) != nil {
 			return learning.ErrForbidden
@@ -210,6 +236,20 @@ func learningView(app *App, user umodels.User) func(context.Context, *learning.I
 		}
 		if _, deleted := outgoingMeta["deleted_at"]; deleted {
 			return learning.ErrForbidden
+		}
+		if item.Content.Type == "case_example" {
+			if raw, exists := outgoingMeta["ai_response"]; exists {
+				var provenance responseProvenance
+				if json.Unmarshal(raw, &provenance) != nil || provenance.Source != "human" || provenance.SourceUUID != refs.Original {
+					return learning.ErrForbidden
+				}
+			}
+			if raw, exists := outgoingMeta["response_source"]; exists {
+				var source string
+				if json.Unmarshal(raw, &source) != nil || source != "human" {
+					return learning.ErrForbidden
+				}
+			}
 		}
 		for _, key := range []string{"reply_to_message_uuid", "ai_feedback_original_message_uuid"} {
 			if raw, exists := outgoingMeta[key]; exists {
