@@ -108,6 +108,7 @@ describe('Create conversation dialog', () => {
       cy.api('POST', '/api/v1/conversations', {
         inbox_id: inboxID,
         contact_email: existingEmail,
+        external_user_id: `createconv-contact-${stamp}`,
         first_name: existingFirstName,
         last_name: existingLastName,
         subject: `Seed conversation ${stamp}`,
@@ -204,6 +205,39 @@ describe('Create conversation dialog', () => {
     cy.get('[role="dialog"]').should('be.visible')
     expectUnchangedConversationCount()
   })
+
+  for (const recipient of ['team', 'agent']) {
+    it(`lets the server resolve internal inbox/contact for ${recipient} assignment`, () => {
+      cy.intercept('POST', '**/api/v1/conversations', {
+        statusCode: 400,
+        body: { message: 'Internal ticket inbox is not configured', error_type: 'InputException' }
+      }).as('internalCreate')
+
+      openDialog()
+      cy.get('[role="dialog"]').find('input[type="email"]').type(existingEmail)
+      cy.get('[role="dialog"]').find('[role="option"]').contains(existingEmail).click()
+      pickFromPortal('Select inbox', inboxName)
+      cy.get('[role="dialog"]').contains('button', 'Internes Ticket').click()
+      if (recipient === 'team') pickFromPortal('Select team', teamName)
+      else pickFromPortal('Mitarbeiter hinzufügen', agentName)
+      cy.get('[role="dialog"]').find('input[name="subject"]').click()
+      cy.get('[role="dialog"]').find('input[name="subject"]').type(subject)
+      typeBody(body)
+      submit()
+
+      cy.wait('@internalCreate').then(({ request }) => {
+        for (const field of ['inbox_id', 'contact_email', 'first_name', 'last_name', 'external_user_id']) {
+          expect(request.body).not.to.have.property(field)
+        }
+        expect(request.body.custom_attributes).to.deep.eq({ private: true, internal: true })
+        expect(request.body.subject).to.eq(`[INTERN] ${subject}`)
+        expect(request.body[recipient === 'team' ? 'team_id' : 'agent_id']).to.be.a('number').and.be.greaterThan(0)
+      })
+      cy.contains('[data-sonner-toast]', 'Internal ticket inbox is not configured').should('be.visible')
+      cy.get('[role="dialog"]').should('be.visible')
+      expectUnchangedConversationCount()
+    })
+  }
 
   it('rejects a submit with no first name', () => {
     openDialog()

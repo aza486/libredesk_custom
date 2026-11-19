@@ -150,6 +150,15 @@ enabled = false
 allowed_cidrs = []
 
 [conversation]
+# Optional: internal tickets use exactly this existing, enabled public email inbox.
+# Copy its UUID from GET /api/v1/inboxes. Empty disables internal creation only;
+# installation and ordinary/personal tickets do not require this setting.
+# Reconfigure after recreating the inbox; there is no numeric-ID fallback.
+internal_inbox_uuid = ""
+# Contact/recipient for internal tickets without a directly assigned agent.
+# Set this explicitly to the intended team-ticket email recipient. With an agent,
+# the server uses that active agent's stored email and name, as before.
+internal_contact_email = ""
 # How often to check for conversations to unsnooze
 unsnooze_interval = "5m"
 # How long to keep drafts before deleting them from the database. (e.g. "360h", "48h")

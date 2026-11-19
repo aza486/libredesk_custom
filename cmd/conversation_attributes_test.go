@@ -81,6 +81,10 @@ func systemAttributesHTTPFixture(t *testing.T, name string) (*App, *sqlx.DB) {
 	}
 	enforcer, _ := authz.NewEnforcer(&lo, lang)
 	app := &App{ctx: context.Background(), user: users, inbox: inboxes, team: teams, media: files, tmpl: tmpl, customAttribute: attrs, webhook: hooks, conversation: conv, authz: enforcer, i18n: lang, lo: &lo}
+	if err := db.Get(&app.internalConversation.InboxUUID, `SELECT uuid FROM inboxes WHERE id=102`); err != nil {
+		t.Fatal(err)
+	}
+	app.internalConversation.ContactEmail = "contact@example.com"
 	db.MustExec(`INSERT INTO roles(name,permissions) VALUES
  ('Security creator',ARRAY['conversations:write','conversations:read','conversations:read_all','conversations:update_user_assignee','conversations:update_team_assignee','messages:read']),
  ('Security observer',ARRAY['conversations:read','conversations:read_all','conversations:read_unassigned','messages:read']),

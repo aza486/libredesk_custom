@@ -16,6 +16,7 @@ uploads/*
 !uploads/.gitkeep
 config.test.toml
 docs/*
+!docs/INTERNAL_TICKETS.md
 backups
 i18n-audit
 # Local pnpm content-addressable store.

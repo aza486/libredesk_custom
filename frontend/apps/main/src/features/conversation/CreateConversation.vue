@@ -554,40 +554,24 @@ const createConversation = form.handleSubmit(async (values) => {
         return
       }
 
-    values.inbox_id = 3
+      // The server resolves the configured inbox and the recipient. Do not send
+      // external-mode contact state or installation-specific database IDs.
+      delete values.inbox_id
+      delete values.contact_email
+      delete values.first_name
+      delete values.last_name
+      delete values.external_user_id
 
-    if (values.agent_id) {
-
-      const agent = uStore.options.find(
-        a => String(a.value) === String(values.agent_id)
-      )
-
-      if (!agent) {
-        throw new Error('Agent nicht gefunden')
+      values.subject = `[INTERN] ${values.subject}`
+      values.custom_attributes = {
+        private: true,
+        internal: true
       }
-
-      values.contact_email = agent.email
-      values.first_name = agent.first_name
-      values.last_name = agent.last_name
-
-    } else {
-
-      values.contact_email = 'ticket@foto-co.de'
-      values.first_name = 'Internal'
-      values.last_name = 'Ticket'
-
-    }
-
-    values.subject = `[INTERN] ${values.subject}`
-    values.custom_attributes = {
-    private: true,
-    internal: true
-    }
     }
     
     // Array of attachment ids.
     values.attachments = mediaFiles.value.map((file) => file.id)
-    if (selectedContact.value?.external_user_id) {
+    if (conversationMode.value === 'external' && selectedContact.value?.external_user_id) {
       values.external_user_id = selectedContact.value.external_user_id
     }
     // Form data is a snapshot from search; never let it overwrite the stored contact.

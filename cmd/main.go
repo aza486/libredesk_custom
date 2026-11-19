@@ -144,6 +144,8 @@ type App struct {
 	importer         *importer.Importer
 	wsHub            *ws.Hub
 
+	internalConversation internalConversationConfig
+
 	// Global state that stores data on an available app update.
 	update *AppUpdate
 	// Flag to indicate if app restart is required for settings to take effect.
@@ -324,6 +326,10 @@ func main() {
 		go conversation.RunAIProvenance(ctx, provenanceClient)
 	}
 	var app = &App{
+		internalConversation: internalConversationConfig{
+			InboxUUID:    ko.String("conversation.internal_inbox_uuid"),
+			ContactEmail: ko.String("conversation.internal_contact_email"),
+		},
 		learning:         initLearning(ctx, lo),
 		aiFeedback:       feedbackClient,
 		aiStyle:          styleClient,

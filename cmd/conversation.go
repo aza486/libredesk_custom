@@ -1327,7 +1327,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
-	if err := validateCreateConversationRequest(req, app, auser.ID); err != nil {
+	if err := validateCreateConversationRequest(&req, app, auser.ID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -1458,9 +1458,15 @@ func handleCreateConversation(r *fastglue.Request) error {
 	return r.SendEnvelope(conversation)
 }
 
-func validateCreateConversationRequest(req createConversationRequest, app *App, actorID int) error {
-	if err := validateCreateSystemAttributes(req); err != nil {
+func validateCreateConversationRequest(req *createConversationRequest, app *App, actorID int) error {
+	if err := validateCreateSystemAttributes(*req); err != nil {
 		return err
+	}
+	internal, _ := req.CustomAttributes["internal"].(bool)
+	if internal {
+		if err := prepareInternalConversation(req, app, actorID); err != nil {
+			return err
+		}
 	}
 	if req.InboxID <= 0 {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`inbox_id`"), nil)
@@ -1493,8 +1499,9 @@ func validateCreateConversationRequest(req createConversationRequest, app *App, 
 		return envelope.NewError(envelope.InputError, app.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	if private, _ := req.CustomAttributes["private"].(bool); private {
-		if err := validatePrivateConversationCreate(req, app, actorID, inbox.AccessMode); err != nil {
+	// Internal creation has already passed the same private/assignment checks.
+	if private, _ := req.CustomAttributes["private"].(bool); private && !internal {
+		if err := validatePrivateConversationCreate(*req, app, actorID, inbox.AccessMode); err != nil {
 			return err
 		}
 	}
