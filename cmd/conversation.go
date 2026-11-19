@@ -14,6 +14,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/authz"
 	authzModels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/abhinavxd/libredesk/internal/automation/models"
+	"github.com/abhinavxd/libredesk/internal/conversation"
 	cmodels "github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
@@ -1177,7 +1178,10 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 	)
 	if err := r.Decode(&attributes, ""); err != nil {
 		app.lo.Error("error unmarshalling custom attributes JSON", "error", err)
-		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("errors.parsingRequest"), nil, envelope.InputError)
+		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("errors.parsingRequest"), nil, envelope.InputError)
+	}
+	if attributes == nil {
+		return sendErrorEnvelope(r, envelope.NewError(envelope.InputError, "Expected an attribute object", nil))
 	}
 
 	// Enforce conversation access.
@@ -1185,62 +1189,14 @@ func handleUpdateConversationCustomAttributes(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	conversation, err := enforceConversationAccess(app, uuid, user)
+	_, err = enforceConversationAccess(app, uuid, user)
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
-	protectedKeys := []string{"access_mode", "owner_user_id"}
-	var currentAttrs map[string]any
-	if err := json.Unmarshal(conversation.CustomAttributes, &currentAttrs); err != nil {
-		return sendErrorEnvelope(r, err)
-	}
-	if currentAttrs["access_mode"] == "personal" || conversation.CustomerTicket {
-		protectedKeys = append(protectedKeys, "customer_visibility", "visibility_managers", "visible_users")
-	}
-	for _, key := range protectedKeys {
-		if _, ok := attributes[key]; ok {
+	for key := range attributes {
+		if conversation.IsSystemAttribute(key) {
 			return sendErrorEnvelope(r, envelope.NewError(envelope.PermissionError, key+" is read only; use the visibility endpoints", nil))
-		}
-	}
-
-	// Systemfelder dürfen niemals geändert werden
-	if _, ok := attributes["creator_id"]; ok {
-		return sendErrorEnvelope(
-			r,
-			envelope.NewError(
-				envelope.PermissionError,
-				"creator_id is read only",
-				nil,
-			),
-		)
-	}
-
-	if _, ok := attributes["private"]; ok {
-		return sendErrorEnvelope(
-			r,
-			envelope.NewError(
-				envelope.PermissionError,
-				"private is read only",
-				nil,
-			),
-		)
-	}
-
-	if _, ok := attributes["internal"]; ok {
-		return sendErrorEnvelope(
-			r,
-			envelope.NewError(
-				envelope.PermissionError,
-				"internal is read only",
-				nil,
-			),
-		)
-	}
-
-	if currentAttrs["access_mode"] == "personal" || conversation.CustomerTicket {
-		for _, key := range append(protectedKeys, "creator_id") {
-			attributes[key] = currentAttrs[key]
 		}
 	}
 
@@ -1371,7 +1327,7 @@ func handleCreateConversation(r *fastglue.Request) error {
 
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
-	if err := validateCreateConversationRequest(req, app); err != nil {
+	if err := validateCreateConversationRequest(req, app, auser.ID); err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 
@@ -1502,7 +1458,10 @@ func handleCreateConversation(r *fastglue.Request) error {
 	return r.SendEnvelope(conversation)
 }
 
-func validateCreateConversationRequest(req createConversationRequest, app *App) error {
+func validateCreateConversationRequest(req createConversationRequest, app *App, actorID int) error {
+	if err := validateCreateSystemAttributes(req); err != nil {
+		return err
+	}
 	if req.InboxID <= 0 {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`inbox_id`"), nil)
 	}
@@ -1534,7 +1493,14 @@ func validateCreateConversationRequest(req createConversationRequest, app *App) 
 		return envelope.NewError(envelope.InputError, app.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 
-	// Validate custom attribute keys. Skip unknown keys.
+	if private, _ := req.CustomAttributes["private"].(bool); private {
+		if err := validatePrivateConversationCreate(req, app, actorID, inbox.AccessMode); err != nil {
+			return err
+		}
+	}
+
+	// System flags were validated above and never depend on attribute definitions.
+	// Retain the existing filtering behavior for ordinary custom attributes.
 	if len(req.CustomAttributes) > 0 {
 		attrs, err := app.customAttribute.GetAll("conversation")
 		if err != nil {
@@ -1545,7 +1511,7 @@ func validateCreateConversationRequest(req createConversationRequest, app *App) 
 			validKeys[a.Key] = struct{}{}
 		}
 		for key := range req.CustomAttributes {
-			if _, ok := validKeys[key]; !ok {
+			if _, ok := validKeys[key]; !ok && !conversation.IsSystemAttribute(key) {
 				delete(req.CustomAttributes, key)
 			}
 		}

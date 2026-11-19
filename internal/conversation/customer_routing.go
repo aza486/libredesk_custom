@@ -326,42 +326,35 @@ func (c *Manager) ReturnCustomerToSupport(uuid string, actor umodels.User, autho
 	return err
 }
 
-// Customer visibility mutations use the assignment/Spam lock, preventing a
-// concurrent forwarding from restoring a removed user or losing new members.
-func (c *Manager) mutateCustomerVisibility(uuid string, userID int, remove bool) (bool, error) {
+// Visibility mutations share the assignment/Spam lock for every ticket type.
+// Read the current attributes under that lock so ordinary saves cannot be lost.
+func (c *Manager) mutateConversationVisibility(uuid string, userIDs []int, remove bool) error {
 	tx, err := c.lockSpamConversation(uuid)
 	if err != nil {
-		return true, err
+		return err
 	}
 	defer tx.Rollback()
-	var customer bool
-	if err = tx.Get(&customer, `SELECT `+customerTagSQL+` FROM conversations WHERE uuid=$1`, uuid); err != nil {
-		return true, err
-	}
-	if !customer {
-		return false, nil
-	}
 	var conversation models.Conversation
 	if err = tx.Stmtx(c.q.GetConversation).Get(&conversation, 0, uuid, ""); err != nil {
-		return true, err
-	}
-	if remove {
-		if err = c.ValidateVisibleUserRemoval(&conversation, userID); err != nil {
-			return true, err
-		}
+		return err
 	}
 	attrs := map[string]any{}
 	if err = json.Unmarshal(conversation.CustomAttributes, &attrs); err != nil {
-		return true, err
-	}
-	if remove && attrs["creator_id"] == float64(userID) {
-		return true, nil
+		return err
 	}
 	visible, _ := attrs["visible_users"].([]any)
-	if remove {
-		visible = slices.DeleteFunc(visible, func(v any) bool { return v == float64(userID) || v == userID })
-	} else if !slices.ContainsFunc(visible, func(v any) bool { return v == float64(userID) || v == userID }) {
-		visible = append(visible, userID)
+	for _, userID := range userIDs {
+		if remove {
+			if err = c.ValidateVisibleUserRemoval(&conversation, userID); err != nil {
+				return err
+			}
+			if attrs["creator_id"] == float64(userID) {
+				continue
+			}
+			visible = slices.DeleteFunc(visible, func(v any) bool { return v == float64(userID) || v == userID })
+		} else if !slices.ContainsFunc(visible, func(v any) bool { return v == float64(userID) || v == userID }) {
+			visible = append(visible, userID)
+		}
 	}
 	if visible == nil {
 		visible = []any{}
@@ -369,16 +362,16 @@ func (c *Manager) mutateCustomerVisibility(uuid string, userID int, remove bool)
 	attrs["visible_users"] = visible
 	raw, err := json.Marshal(attrs)
 	if err != nil {
-		return true, err
+		return err
 	}
 	if _, err = tx.Exec(`UPDATE conversations SET custom_attributes=$2,updated_at=NOW() WHERE id=$1`, conversation.ID, raw); err != nil {
-		return true, err
+		return err
 	}
 	if err = tx.Commit(); err != nil {
-		return true, err
+		return err
 	}
 	c.BroadcastConversationUpdate(uuid, map[string]any{"custom_attributes": attrs})
-	return true, nil
+	return nil
 }
 
 // Incoming reopen keeps every valid external context. If the sole remaining
@@ -404,35 +397,35 @@ func (c *Manager) repairCustomerResponsibilityTx(tx *sqlx.Tx, uuid string, actor
 	return err == nil, err
 }
 
-// General attribute saves must not restore a stale visibility list after a
-// forwarding/removal or change the existing Creator/manager authority. Explicit
-// visibility endpoints remain the only way to change those customer fields.
-func (c *Manager) mutateCustomerAttributes(uuid string, attributes map[string]any) (bool, error) {
+// General attribute saves preserve the latest system values for every ticket
+// type under the same row lock as visibility, assignment and Spam mutations.
+func (c *Manager) updateConversationAttributes(uuid string, attributes map[string]any) error {
 	tx, err := c.lockSpamConversation(uuid)
 	if err != nil {
-		return true, err
+		return err
 	}
 	defer tx.Rollback()
-	var customer bool
-	if err = tx.Get(&customer, `SELECT `+customerTagSQL+` FROM conversations WHERE uuid=$1`, uuid); err != nil {
-		return true, err
-	}
-	if !customer {
-		return false, nil
-	}
 	var raw []byte
 	if err = tx.Get(&raw, `SELECT custom_attributes FROM conversations WHERE uuid=$1`, uuid); err != nil {
-		return true, err
+		return err
 	}
-	current := map[string]any{}
+	current := map[string]json.RawMessage{}
 	if err = json.Unmarshal(raw, &current); err != nil {
-		return true, err
+		return err
 	}
-	next := map[string]any{}
-	for key, value := range attributes {
-		next[key] = value
+	// Keep stored JSON values verbatim, including integer precision and nulls.
+	raw, err = json.Marshal(attributes)
+	if err != nil {
+		return err
 	}
-	for _, key := range []string{"visible_users", "visibility_managers", "customer_visibility", "creator_id", "private", "internal", "access_mode", "owner_user_id", "_spam_previous_state"} {
+	next := map[string]json.RawMessage{}
+	if err = json.Unmarshal(raw, &next); err != nil {
+		return err
+	}
+	if next == nil {
+		next = map[string]json.RawMessage{}
+	}
+	for _, key := range systemAttributeKeys {
 		if value, ok := current[key]; ok {
 			next[key] = value
 		} else {
@@ -441,16 +434,16 @@ func (c *Manager) mutateCustomerAttributes(uuid string, attributes map[string]an
 	}
 	raw, err = json.Marshal(next)
 	if err != nil {
-		return true, err
+		return err
 	}
 	if _, err = tx.Stmtx(c.q.UpdateConversationCustomAttributes).Exec(uuid, raw); err != nil {
-		return true, err
+		return err
 	}
 	if err = tx.Commit(); err != nil {
-		return true, err
+		return err
 	}
 	c.BroadcastConversationUpdate(uuid, map[string]any{"custom_attributes": next})
-	return true, nil
+	return nil
 }
 
 // The application supplies its existing Creator/manager policy. The current

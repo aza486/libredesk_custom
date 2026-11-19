@@ -408,6 +408,9 @@ func (c *Manager) CreateConversation(contactID, inboxID int, lastMessage string,
 	if err := tx.QueryRowx(`SELECT access_mode, owner_user_id FROM inboxes WHERE id=$1 FOR UPDATE`, inboxID).Scan(&accessMode, &ownerID); err != nil {
 		return 0, "", err
 	}
+	if private, _ := customAttributes["private"].(bool); private && accessMode == "personal" {
+		return 0, "", envelope.NewError(envelope.InputError, "Private tickets require a public inbox", nil)
+	}
 	var personalOwnerIDs []int64
 	if accessMode == "personal" {
 		if err := tx.Select(&personalOwnerIDs, `SELECT user_id FROM personal_inbox_owners WHERE inbox_id=$1 ORDER BY created_at,user_id`, inboxID); err != nil {
@@ -1262,41 +1265,8 @@ func (c *Manager) afterUserAssignedHooks(uuid string, assigneeID int, actor umod
 
 	if private, ok := attrs["private"].(bool); ok && private && !conversation.CustomerTicket {
 
-		var visibleUsers []any
-
-		if existing, ok := attrs["visible_users"].([]any); ok {
-			visibleUsers = existing
-		}
-
-		found := false
-
-		for _, uid := range visibleUsers {
-			switch v := uid.(type) {
-			case float64:
-				if int(v) == assigneeID {
-					found = true
-				}
-			case int:
-				if v == assigneeID {
-					found = true
-				}
-			}
-			if found {
-				break
-			}
-		}
-
-		if !found {
-			visibleUsers = append(visibleUsers, assigneeID)
-			attrs["visible_users"] = visibleUsers
-
-			c.lo.Info(
-				"PRIVATE VISIBILITY ADD",
-				"conversation", uuid,
-				"new_user", assigneeID,
-			)
-
-			_ = c.UpdateConversationCustomAttributes(uuid, attrs)
+		if err := c.AddVisibleUser(uuid, assigneeID); err != nil {
+			return err
 		}
 	}
 
@@ -1366,31 +1336,12 @@ func (c *Manager) UpdateConversationTeamAssignee(uuid string, teamID int, actor 
 			if err != nil {
 				c.lo.Error("error fetching team members for visibility", "uuid", uuid, "team_id", teamID, "error", err)
 			} else {
-				visibleUsers, _ := attrs["visible_users"].([]any)
-				known := make(map[int]bool, len(visibleUsers))
-				for _, uid := range visibleUsers {
-					switch v := uid.(type) {
-					case float64:
-						known[int(v)] = true
-					case int:
-						known[v] = true
-					}
-				}
-
-				changed := false
+				memberIDs := make([]int, 0, len(members))
 				for _, member := range members {
-					if known[member.ID] {
-						continue
-					}
-					visibleUsers = append(visibleUsers, member.ID)
-					known[member.ID] = true
-					changed = true
-					c.lo.Info("PRIVATE TEAM VISIBILITY ADD", "user_id", member.ID, "team_id", teamID)
+					memberIDs = append(memberIDs, member.ID)
 				}
-
-				if changed {
-					attrs["visible_users"] = visibleUsers
-					if err := c.UpdateConversationCustomAttributes(uuid, attrs); err != nil {
+				if len(memberIDs) > 0 {
+					if err := c.mutateConversationVisibility(uuid, memberIDs, false); err != nil {
 						c.lo.Error("error adding team members to visible users", "uuid", uuid, "team_id", teamID, "error", err)
 					}
 				}
@@ -2426,21 +2377,7 @@ func (m *Manager) DeleteConversation(uuid string) error {
 
 // UpdateConversationCustomAttributes updates the custom attributes of a conversation.
 func (c *Manager) UpdateConversationCustomAttributes(uuid string, customAttributes map[string]any) error {
-	if handled, err := c.mutateCustomerAttributes(uuid, customAttributes); handled {
-		return err
-	}
-	jsonb, err := json.Marshal(customAttributes)
-	if err != nil {
-		c.lo.Error("error marshalling custom attributes", "error", err)
-		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
-	if _, err := c.q.UpdateConversationCustomAttributes.Exec(uuid, jsonb); err != nil {
-		c.lo.Error("error updating conversation custom attributes", "error", err)
-		return envelope.NewError(envelope.GeneralError, c.i18n.T("globals.messages.somethingWentWrong"), nil)
-	}
-	// Broadcast the custom attributes update.
-	c.BroadcastConversationUpdate(uuid, map[string]any{"custom_attributes": customAttributes})
-	return nil
+	return c.updateConversationAttributes(uuid, customAttributes)
 }
 
 // AddVisibleUser adds a user to the list of visible users in a conversation's custom attributes.
@@ -2449,51 +2386,7 @@ func (c *Manager) AddVisibleUser(
 	userID int,
 ) error {
 
-	if handled, err := c.mutateCustomerVisibility(uuid, userID, false); handled {
-		return err
-	}
-
-	conversation, err := c.GetConversation(0, uuid, "")
-	if err != nil {
-		return err
-	}
-
-	attrs := map[string]any{}
-	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
-
-	visibleUsers := []any{}
-
-	if existing, ok := attrs["visible_users"].([]any); ok {
-		visibleUsers = existing
-
-		for _, uid := range visibleUsers {
-
-			switch v := uid.(type) {
-
-			case float64:
-				if int(v) == userID {
-					return nil
-				}
-
-			case int:
-				if v == userID {
-					return nil
-				}
-			}
-		}
-	}
-
-	visibleUsers = append(
-		visibleUsers,
-		userID,
-	)
-
-	attrs["visible_users"] = visibleUsers
-
-	return c.UpdateConversationCustomAttributes(
-		uuid,
-		attrs,
-	)
+	return c.mutateConversationVisibility(uuid, []int{userID}, false)
 }
 
 // RemoveVisibleUser removes a user from the list of visible users in a conversation's custom attributes.
@@ -2502,66 +2395,7 @@ func (c *Manager) RemoveVisibleUser(
 	userID int,
 ) error {
 
-	if handled, err := c.mutateCustomerVisibility(uuid, userID, true); handled {
-		return err
-	}
-
-	conversation, err := c.GetConversation(0, uuid, "")
-	if err != nil {
-		return err
-	}
-
-	if err := c.ValidateVisibleUserRemoval(&conversation, userID); err != nil {
-		return err
-	}
-
-	attrs := map[string]any{}
-	_ = json.Unmarshal(conversation.CustomAttributes, &attrs)
-
-	creatorID := 0
-
-	if creator, ok := attrs["creator_id"].(float64); ok {
-		creatorID = int(creator)
-	}
-
-	// Creator darf niemals entfernt werden
-	if creatorID == userID {
-		return nil
-	}
-
-	visibleUsers := []any{}
-
-	if existing, ok := attrs["visible_users"].([]any); ok {
-
-		for _, uid := range existing {
-
-			keep := true
-
-			switch v := uid.(type) {
-
-			case float64:
-				if int(v) == userID {
-					keep = false
-				}
-
-			case int:
-				if v == userID {
-					keep = false
-				}
-			}
-
-			if keep {
-				visibleUsers = append(visibleUsers, uid)
-			}
-		}
-	}
-
-	attrs["visible_users"] = visibleUsers
-
-	return c.UpdateConversationCustomAttributes(
-		uuid,
-		attrs,
-	)
+	return c.mutateConversationVisibility(uuid, []int{userID}, true)
 }
 
 // addConversationParticipant adds a user as participant to a conversation.

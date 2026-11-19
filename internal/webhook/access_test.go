@@ -16,11 +16,11 @@ func TestInboxAccessOnEveryWebhook(t *testing.T) {
 	m := &Manager{db: db, lo: &lo, deliveryQueue: make(chan DeliveryTask, 20)}
 	for _, inboxID := range []int{101, 102} {
 		var uuid string
-		attrs := `{}`
+		attrs := `{"private":true,"internal":true,"creator_id":101,"visible_users":[101],"visibility_managers":[101],"customer_visibility":false,"_spam_previous_state":{"status_id":101}}`
 		wantMode := `"public"`
 		wantOwner := "null"
 		if inboxID == 101 {
-			attrs = `{"access_mode":"personal","owner_user_id":101}`
+			attrs = `{"access_mode":"personal","owner_user_id":101,"visible_users":[101],"visibility_managers":[101],"customer_visibility":false}`
 			wantMode = `"personal"`
 			wantOwner = "101"
 		}
@@ -34,7 +34,7 @@ func TestInboxAccessOnEveryWebhook(t *testing.T) {
 		for _, event := range []models.WebhookEvent{models.EventConversationCreated, models.EventConversationAssigned, models.EventConversationUnassigned, models.EventConversationStatusChanged, models.EventConversationTagsChanged, models.EventMessageCreated, models.EventMessageUpdated} {
 			var payload any = map[string]any{"conversation_uuid": uuid, "unchanged": 123}
 			if event == models.EventConversationCreated {
-				payload = cmodels.Conversation{UUID: uuid, InboxID: inboxID}
+				payload = cmodels.Conversation{UUID: uuid, InboxID: inboxID, CustomAttributes: json.RawMessage(attrs)}
 			}
 			if event == models.EventMessageCreated || event == models.EventMessageUpdated {
 				payload = cmodels.Message{ConversationUUID: uuid, UUID: "message-uuid", Content: "unchanged"}
