@@ -238,7 +238,7 @@ func handleSendMessage(r *fastglue.Request) error {
 		req   = messageReq{}
 	)
 
-	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

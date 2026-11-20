@@ -53,7 +53,7 @@ func handleCreateAIAnalysisNote(r *fastglue.Request) error {
 	if !ok || !allowedAIAnalysisCaller(method, caller.ID, app.aiNoteAgentIDs) {
 		return r.SendErrorEnvelope(fasthttp.StatusForbidden, "AI analysis integration account required", nil, envelope.PermissionError)
 	}
-	user, err := app.user.GetAgentCachedOrLoad(caller.ID)
+	user, err := app.user.GetAgent(caller.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}

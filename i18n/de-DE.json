@@ -272,6 +272,7 @@
   "admin.role.conversations.updatePriority": "Priorität der Konversation ändern",
   "admin.role.conversations.updateStatus": "Status der Konversation ändern",
   "admin.role.conversations.updateTags": "Konversations-Tags hinzufügen oder entfernen",
+  "admin.role.conversations.addSystemTags": "API-Integrationen: Systemklassifizierung hinzufügen",
   "admin.role.conversations.updateTeamAssignee": "Konversationen Teams zuweisen",
   "admin.role.conversations.updateUserAssignee": "Konversationen Benutzern zuweisen",
   "admin.role.conversations.write": "Konversation erstellen",

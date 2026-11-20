@@ -34,6 +34,7 @@ import (
 	rmodels "github.com/abhinavxd/libredesk/internal/role/models"
 	slaModels "github.com/abhinavxd/libredesk/internal/sla/models"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
+	tagmanager "github.com/abhinavxd/libredesk/internal/tag"
 	tmodels "github.com/abhinavxd/libredesk/internal/team/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	umodels "github.com/abhinavxd/libredesk/internal/user/models"
@@ -1615,7 +1616,21 @@ func (c *Manager) afterStatusChange(uuid, status string, snoozeUntil time.Time, 
 
 // SetConversationTags sets the tags associated with a conversation.
 func (c *Manager) SetConversationTags(uuid string, action string, tagNames []string, actor umodels.User) error {
-	prevTags, newTags, statusChanged, err := c.mutateTagsWithSpam(uuid, action, tagNames, actor)
+	return c.setConversationTags(uuid, action, tagNames, actor, ordinaryTagAuthority)
+}
+
+// SetIntegrationConversationTags is called only after API-key authentication.
+// The explicit role grant permits classification additions only; no implicit
+// Admin grant, removals, definition changes or conversation-access bypass.
+func (c *Manager) SetIntegrationConversationTags(uuid string, action string, tagNames []string, actor umodels.User) error {
+	if actor.ID <= 0 || !actor.Enabled || actor.Type != umodels.UserTypeAgent || !slices.Contains(actor.Permissions, authzmodels.PermConversationsAddSystemTags) {
+		return envelope.NewError(envelope.PermissionError, "Explicit integration permission required.", nil)
+	}
+	return c.setConversationTags(uuid, action, tagNames, actor, classificationTagAuthority)
+}
+
+func (c *Manager) setConversationTags(uuid string, action string, tagNames []string, actor umodels.User, authority tagAuthority) error {
+	prevTags, newTags, statusChanged, err := c.mutateAuthorizedTagsWithSpam(uuid, action, tagNames, authority)
 	if err != nil {
 		return err
 	}
@@ -1686,7 +1701,12 @@ func (c *Manager) AddSystemTags(uuid string, tagNames []string) error {
 		return nil
 	}
 
-	_, newTags, statusChanged, err := c.mutateTagsWithSpam(uuid, amodels.ActionAddTags, tagNames, umodels.User{ID: 41})
+	for _, name := range tagNames {
+		if !tagmanager.IsClassificationTag(0, name) {
+			return envelope.NewError(envelope.InputError, "Expected a system classification tag.", nil)
+		}
+	}
+	_, newTags, statusChanged, err := c.mutateAuthorizedTagsWithSpam(uuid, amodels.ActionAddTags, tagNames, classificationTagAuthority)
 	if err != nil {
 		return err
 	}

@@ -499,6 +499,7 @@
   "admin.role.conversations.updatePriority": "Change conversation priority",
   "admin.role.conversations.updateStatus": "Change conversation status",
   "admin.role.conversations.updateTags": "Add or remove conversation tags",
+  "admin.role.conversations.addSystemTags": "API integrations: add system classification tags",
   "admin.role.conversations.updateTeamAssignee": "Assign conversations to teams",
   "admin.role.conversations.updateUserAssignee": "Assign conversations to users",
   "admin.role.conversations.write": "Create conversation",

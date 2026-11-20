@@ -1007,7 +1007,7 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("errors.parsingRequest"), nil, envelope.InputError)
 	}
 
-	user, err := app.user.GetAgentCachedOrLoad(auser.ID)
+	user, err := app.user.GetAgent(auser.ID, "")
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
@@ -1022,7 +1022,12 @@ func handleUpdateConversationtags(r *fastglue.Request) error {
 		}
 	}
 
-	if err := app.conversation.SetConversationTags(uuid, action, tagNames, user); err != nil {
+	if r.RequestCtx.UserValue("auth_method") == authMethodAPIKey && slices.Contains(user.Permissions, authzModels.PermConversationsAddSystemTags) {
+		err = app.conversation.SetIntegrationConversationTags(uuid, action, tagNames, user)
+	} else {
+		err = app.conversation.SetConversationTags(uuid, action, tagNames, user)
+	}
+	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
 	return r.SendEnvelope(true)

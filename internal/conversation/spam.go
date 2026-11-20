@@ -59,29 +59,69 @@ func (c *Manager) lockSpamConversation(uuid string) (*sqlx.Tx, error) {
 }
 
 func (c *Manager) mutateTagsWithSpam(uuid, action string, names []string, actor umodels.User) ([]string, []string, bool, error) {
+	return c.mutateAuthorizedTagsWithSpam(uuid, action, names, ordinaryTagAuthority)
+}
+
+// Authority is private to this package and is never decoded from a request or
+// inferred from a user's numeric identity, administrator role or API key.
+type tagAuthority uint8
+
+const (
+	ordinaryTagAuthority tagAuthority = iota
+	classificationTagAuthority
+)
+
+func (c *Manager) mutateAuthorizedTagsWithSpam(uuid, action string, names []string, authority tagAuthority) ([]string, []string, bool, error) {
 	tx, err := c.lockSpamConversation(uuid)
 	if err != nil {
 		return nil, nil, false, err
 	}
 	defer tx.Rollback()
+	// Keep definitions stable while resolving names and checking membership by
+	// ID as well as name. Other conversation tag mutations can still proceed.
+	if _, err = tx.Exec(`LOCK TABLE tags IN SHARE MODE`); err != nil {
+		return nil, nil, false, err
+	}
 	prev := []string{}
 	if err = tx.Stmtx(c.q.GetConversationTags).Select(&prev, uuid); err != nil {
 		return nil, nil, false, err
 	}
-	// Retain existing protection for unrelated system tags.
+	var definitions []struct {
+		ID   int
+		Name string
+	}
+	if err = tx.Select(&definitions, `SELECT id,name FROM tags WHERE name=ANY($1) OR id IN
+ (SELECT ct.tag_id FROM conversation_tags ct JOIN conversations c ON c.id=ct.conversation_id WHERE c.uuid=$2)`, pq.Array(names), uuid); err != nil {
+		return nil, nil, false, err
+	}
 	for _, name := range names {
-		if action == amodels.ActionAddTags && tagmanager.IsSystemTagName(name) && actor.ID != 41 {
+		if !tagmanager.IsClassificationTag(0, name) {
+			continue
+		}
+		if action == amodels.ActionAddTags && authority != classificationTagAuthority {
 			return nil, nil, false, envelope.NewError(envelope.InputError, "System tags cannot be added manually.", nil)
 		}
-		if action == amodels.ActionRemoveTags && tagmanager.IsSystemTagName(name) {
+		if action == amodels.ActionRemoveTags {
 			return nil, nil, false, envelope.NewError(envelope.InputError, "System tags cannot be removed.", nil)
 		}
+		found := false
+		for _, definition := range definitions {
+			found = found || definition.Name == name
+		}
+		if !found {
+			return nil, nil, false, envelope.NewError(envelope.InputError, "System tag definition is missing or its name is not canonical.", nil)
+		}
 	}
-	if action == amodels.ActionSetTags {
-		for _, name := range prev {
-			if tagmanager.IsSystemTagName(name) && !slices.Contains(names, name) {
-				return nil, nil, false, envelope.NewError(envelope.InputError, "System tags cannot be removed.", nil)
-			}
+	for _, definition := range definitions {
+		if !tagmanager.IsClassificationTag(definition.ID, definition.Name) {
+			continue
+		}
+		was, requested := slices.Contains(prev, definition.Name), slices.Contains(names, definition.Name)
+		if (action == amodels.ActionRemoveTags && requested) || (action == amodels.ActionSetTags && was && !requested) {
+			return nil, nil, false, envelope.NewError(envelope.InputError, "System tags cannot be removed.", nil)
+		}
+		if requested && authority != classificationTagAuthority && (action == amodels.ActionAddTags || (action == amodels.ActionSetTags && !was)) {
+			return nil, nil, false, envelope.NewError(envelope.InputError, "System tags require an explicitly authorized integration.", nil)
 		}
 	}
 	wasSpam, err := conversationHasSpam(tx, uuid)

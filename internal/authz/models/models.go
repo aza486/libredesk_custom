@@ -13,10 +13,12 @@ const (
 	PermConversationsUpdatePriority     = "conversations:update_priority"
 	PermConversationsUpdateStatus       = "conversations:update_status"
 	PermConversationsUpdateTags         = "conversations:update_tags"
-	PermConversationWrite               = "conversations:write"
-	PermMessagesRead                    = "messages:read"
-	PermMessagesWrite                   = "messages:write"
-	PermMessagesWriteAsContact          = "messages:write_as_contact"
+	// Explicit API-only classification grant; never implied by Admin or API keys.
+	PermConversationsAddSystemTags = "conversations:add_system_tags"
+	PermConversationWrite          = "conversations:write"
+	PermMessagesRead               = "messages:read"
+	PermMessagesWrite              = "messages:write"
+	PermMessagesWriteAsContact     = "messages:write_as_contact"
 
 	// View
 	PermViewManage        = "view:manage"
@@ -115,6 +117,7 @@ var validPermissions = map[string]struct{}{
 	PermConversationsUpdatePriority:     {},
 	PermConversationsUpdateStatus:       {},
 	PermConversationsUpdateTags:         {},
+	PermConversationsAddSystemTags:      {},
 	PermConversationWrite:               {},
 	PermMessagesRead:                    {},
 	PermMessagesWrite:                   {},

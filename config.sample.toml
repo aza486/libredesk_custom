@@ -215,6 +215,9 @@ internal_http_ip = ""
 # These accounts also identify automatic email-flow writes on /messages.
 # Service-mail checks run at insertion and immediately before transport/retry.
 # Do not use general employee accounts. Configuration changes require restart.
+# This allowlist grants no system-tag privileges. An integration that adds
+# classification tags also needs the explicitly assigned role permission
+# conversations:add_system_tags (API-key requests only; no implicit Admin grant).
 allowed_agent_ids = []
 
 # Optional text-only style webhook. No browser credentials. Restart after changes.
