@@ -15,7 +15,7 @@ frontend/package-lock.json
 uploads/*
 !uploads/.gitkeep
 config.test.toml
-/doc/
+/docs/
 docs/*
 !docs/INTERNAL_TICKETS.md
 backups

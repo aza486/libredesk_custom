@@ -15,6 +15,7 @@ const (
 var DefaultRoles = []string{
 	RoleAdmin,
 	RoleAgent,
+	RoleCustomerSupport,
 }
 
 type Role struct {

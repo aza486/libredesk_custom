@@ -22,6 +22,7 @@ var (
 
 // Manager handles role-related operations.
 type Manager struct {
+	db   *sqlx.DB
 	q    queries
 	lo   *logf.Logger
 	i18n *i18n.I18n
@@ -52,6 +53,7 @@ func New(opts Opts) (*Manager, error) {
 	}
 
 	return &Manager{
+		db:   opts.DB,
 		q:    q,
 		lo:   opts.Lo,
 		i18n: opts.I18n,
@@ -83,25 +85,42 @@ func (u *Manager) Get(id int) (models.Role, error) {
 
 // Delete deletes a role by ID.
 func (u *Manager) Delete(id int) error {
-	// Disallow deletion of default roles.
-	role, err := u.Get(id)
+	tx, err := u.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return err
+	}
+	var role models.Role
+	err = tx.Stmtx(u.q.Get).Get(&role, id)
+	if err == sql.ErrNoRows {
+		return envelope.NewError(envelope.NotFoundError, u.i18n.T("validation.notFoundRole"), nil)
+	}
 	if err != nil {
 		return err
 	}
 	for _, r := range models.DefaultRoles {
 		if role.Name == r {
+			if r == models.RoleCustomerSupport {
+				return envelope.NewError(envelope.InputError, "Kundensupport is a protected technical role and cannot be deleted", nil)
+			}
 			return envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
 		}
 	}
-	if _, err := u.q.Delete.Exec(id); err != nil {
+	if _, err := tx.Stmtx(u.q.Delete).Exec(id); err != nil {
 		u.lo.Error("error deleting role", "error", err)
 		return envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
-	return nil
+	return tx.Commit()
 }
 
 // Create creates a new role.
 func (u *Manager) Create(r models.Role) (models.Role, error) {
+	if r.Name == models.RoleCustomerSupport {
+		return models.Role{}, envelope.NewError(envelope.InputError, "Kundensupport is a reserved technical role; use installation/upgrade initialization", nil)
+	}
 	validPermissions, err := u.filterValidPermissions(r.Permissions)
 	if err != nil {
 		return models.Role{}, err
@@ -130,18 +149,40 @@ func (u *Manager) Update(id int, r models.Role) (models.Role, error) {
 		return models.Role{}, envelope.NewError(envelope.InputError, u.i18n.Ts("globals.messages.empty", "name", u.i18n.P("globals.terms.permission")), nil)
 	}
 	// Disallow updating `Admin` role, as the main System login requires it.
-	role, err := u.Get(id)
+	tx, err := u.db.Beginx()
 	if err != nil {
+		return models.Role{}, err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`LOCK TABLE roles IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return models.Role{}, err
+	}
+	var role models.Role
+	if err = tx.Stmtx(u.q.Get).Get(&role, id); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Role{}, envelope.NewError(envelope.NotFoundError, u.i18n.T("validation.notFoundRole"), nil)
+		}
 		return models.Role{}, err
 	}
 	if role.Name == models.RoleAdmin {
 		return models.Role{}, envelope.NewError(envelope.InputError, u.i18n.T("admin.role.cannotModifyAdminRole"), nil)
 	}
 
+	if role.Name == models.RoleCustomerSupport || r.Name == models.RoleCustomerSupport {
+		if role.Name != r.Name {
+			return models.Role{}, envelope.NewError(envelope.InputError, "Kundensupport is a protected technical role and cannot be renamed or replaced", nil)
+		}
+		if err := validateCustomerSupportPermissions(validPermissions); err != nil {
+			return models.Role{}, envelope.NewError(envelope.InputError, err.Error(), nil)
+		}
+	}
 	var result models.Role
-	if err := u.q.Update.Get(&result, id, r.Name, r.Description, pq.Array(validPermissions)); err != nil {
+	if err := tx.Stmtx(u.q.Update).Get(&result, id, r.Name, r.Description, pq.Array(validPermissions)); err != nil {
 		u.lo.Error("error updating role", "error", err)
 		return models.Role{}, envelope.NewError(envelope.GeneralError, u.i18n.T("globals.messages.somethingWentWrong"), nil)
+	}
+	if err := tx.Commit(); err != nil {
+		return models.Role{}, err
 	}
 	return result, nil
 }

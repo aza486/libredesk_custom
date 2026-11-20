@@ -189,10 +189,10 @@ func main() {
 		if ko.Bool("install") || ko.Bool("upgrade") || ko.Bool("set-system-user-password") {
 			log.Fatal("--check-system-tags cannot be combined with database-changing commands")
 		}
-		if err := tag.CheckSystemTags(ctx, db); err != nil {
-			log.Fatalf("system tag preflight failed: %v", err)
+		if err := checkSystemData(ctx, db); err != nil {
+			log.Fatalf("system data preflight failed: %v", err)
 		}
-		log.Println("system tag preflight successful: all five canonical identities are present")
+		log.Println("system data preflight successful: canonical tags and Kundensupport role are valid")
 		return
 	}
 
@@ -225,8 +225,8 @@ func main() {
 
 	checkPendingUpgrade(db)
 
-	if err := tag.EnsureSystemTags(ctx, db); err != nil {
-		log.Fatalf("system tag initialization failed: %v", err)
+	if err := ensureSystemData(ctx, db); err != nil {
+		log.Fatalf("system data initialization failed: %v", err)
 	}
 
 	// Load app settings from DB into the Koanf instance.

@@ -156,6 +156,9 @@ func (c *Manager) mutateCustomerAssignment(uuid string, change customerAssignmen
 	if err = tx.Select(&supportIDs, `SELECT id FROM teams WHERE name='Kundensupport' ORDER BY id`); err != nil {
 		return true, err
 	}
+	if len(supportIDs) > 1 {
+		return true, envelope.NewError(envelope.InputError, "Ambiguous Kundensupport team: customer assignment was not changed", nil)
+	}
 	support := 0
 	if len(supportIDs) == 1 {
 		support = supportIDs[0]
