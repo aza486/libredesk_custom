@@ -10,6 +10,7 @@ import (
 
 	"github.com/abhinavxd/libredesk/internal/colorlog"
 	"github.com/abhinavxd/libredesk/internal/dbutil"
+	"github.com/abhinavxd/libredesk/internal/tag"
 	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/stuffbin"
@@ -46,7 +47,7 @@ func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem, idempoten
 	if idempotentInstall {
 		if schemaInstalled {
 			log.Println("skipping installation as schema is already installed")
-			os.Exit(0)
+			return tag.EnsureSystemTags(ctx, db)
 		}
 	} else {
 		log.Println("installing database schema...")
@@ -64,7 +65,7 @@ func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem, idempoten
 	if err := user.CreateSystemUser(ctx, password, db); err != nil {
 		log.Fatalf("error creating system user: %v", err)
 	}
-	return nil
+	return tag.EnsureSystemTags(ctx, db)
 }
 
 // setSystemUserPass prompts for pass and sets system user password.

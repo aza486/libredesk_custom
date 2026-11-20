@@ -185,8 +185,21 @@ func main() {
 
 	db := initDB()
 
+	if ko.Bool("check-system-tags") {
+		if ko.Bool("install") || ko.Bool("upgrade") || ko.Bool("set-system-user-password") {
+			log.Fatal("--check-system-tags cannot be combined with database-changing commands")
+		}
+		if err := tag.CheckSystemTags(ctx, db); err != nil {
+			log.Fatalf("system tag preflight failed: %v", err)
+		}
+		log.Println("system tag preflight successful: all five canonical identities are present")
+		return
+	}
+
 	if ko.Bool("install") {
-		install(ctx, db, fs, ko.Bool("idempotent-install"), !ko.Bool("yes"))
+		if err := install(ctx, db, fs, ko.Bool("idempotent-install"), !ko.Bool("yes")); err != nil {
+			log.Fatalf("installation failed: %v", err)
+		}
 		os.Exit(0)
 	}
 
@@ -211,6 +224,10 @@ func main() {
 	}
 
 	checkPendingUpgrade(db)
+
+	if err := tag.EnsureSystemTags(ctx, db); err != nil {
+		log.Fatalf("system tag initialization failed: %v", err)
+	}
 
 	// Load app settings from DB into the Koanf instance.
 	settings := initSettings(db)

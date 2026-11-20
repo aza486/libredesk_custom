@@ -5,12 +5,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/migrations"
+	"github.com/abhinavxd/libredesk/internal/tag"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/stuffbin"
@@ -87,6 +89,9 @@ func upgrade(db *sqlx.DB, fs stuffbin.FileSystem, prompt bool) {
 
 	// No migrations to run.
 	if len(toRun) == 0 {
+		if err := tag.EnsureSystemTags(context.Background(), db); err != nil {
+			log.Fatalf("system tag initialization failed: %v", err)
+		}
 		log.Printf("no upgrades to run. Database is up to date.")
 		return
 	}
@@ -108,6 +113,9 @@ func upgrade(db *sqlx.DB, fs stuffbin.FileSystem, prompt bool) {
 		}
 	}
 
+	if err := tag.EnsureSystemTags(context.Background(), db); err != nil {
+		log.Fatalf("system tag initialization failed: %v", err)
+	}
 	log.Printf("upgrade complete")
 }
 

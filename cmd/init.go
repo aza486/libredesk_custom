@@ -141,6 +141,7 @@ func initFlags() {
 	f.Bool("idempotent-install", false, "run idempotent installation, i.e., skip installion if schema is already installed useful for the first time setup")
 	f.Bool("yes", false, "skip confirmation prompt")
 	f.Bool("upgrade", false, "upgrade the database schema")
+	f.Bool("check-system-tags", false, "read-only validation of canonical system tag IDs and names; exits without starting the server")
 	f.Bool("set-system-user-password", false, "set password for the system user")
 	f.String("static-dir", "", "path to a directory with custom static files and templates to override the defaults")
 
