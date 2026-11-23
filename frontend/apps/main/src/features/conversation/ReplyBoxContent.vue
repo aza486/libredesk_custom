@@ -17,7 +17,7 @@
               class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
               :class="{ 'bg-background text-foreground': messageType === 'reply' }"
             >
-              {{ $t('globals.terms.reply') }}
+              {{ isStoredInternal ? t('conversation.internalMessage') : t('globals.terms.reply') }}
             </TabsTrigger>
             <TabsTrigger
               value="private_note"
@@ -40,7 +40,7 @@
       </div>
 
       <!-- To, CC, and BCC fields -->
-      <div v-if="conversationStore.current.inbox_channel === 'email'" class="shrink-0">
+      <div v-if="conversationStore.current.inbox_channel === 'email' && !isStoredInternal" class="shrink-0">
         <div
           :class="['space-y-3', isFullscreen ? 'p-4 border-b border-border' : 'mb-4']"
           v-if="messageType === 'reply'"
@@ -146,10 +146,11 @@
       :handleSend="handleSend"
       :handleSendAndSetStatus="handleSendAndSetStatus"
       :isGenerating="isGenerating"
-      :showGenerateReply="messageType !== 'private_note'"
+      :showGenerateReply="messageType !== 'private_note' && !isStoredInternal"
       :outgoingTemplates="props.outgoingTemplates"
       v-model:selectedTemplateId="selectedTemplateId"
-      :showTemplateSelector="messageType === 'reply'"
+      :showTemplateSelector="messageType === 'reply' && !isStoredInternal"
+      :storeInternally="isStoredInternal && messageType === 'reply'"
       @emojiSelect="handleEmojiSelect"
       @generateReply="$emit('generateReply')"
     />
@@ -177,6 +178,7 @@ import { validateEmail } from '@shared-ui/utils/string'
 import { useMacroStore } from '@main/stores/macro'
 import { useUsersStore } from '@main/stores/users'
 
+const isStoredInternal = computed(() => conversationStore.current?.contact_id === 0 && conversationStore.current?.custom_attributes?.internal === true)
 const messageType = defineModel('messageType', { default: 'reply' })
 const to = defineModel('to', { default: '' })
 const cc = defineModel('cc', { default: '' })

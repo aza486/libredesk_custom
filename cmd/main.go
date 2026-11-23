@@ -101,7 +101,7 @@ type App struct {
 	aiNoteAgentIDs   []int
 	aiFeedback       *aifeedback.Client
 	aiStyle          *aiassist.Client
-	aiTranscription  *aiassist.Client
+	aiTranscription  *aiassist.Transcription
 	ctx              context.Context
 	fs               stuffbin.FileSystem
 	consts           atomic.Value
@@ -189,10 +189,10 @@ func main() {
 		if ko.Bool("install") || ko.Bool("upgrade") || ko.Bool("set-system-user-password") {
 			log.Fatal("--check-system-tags cannot be combined with database-changing commands")
 		}
-		if err := checkSystemData(ctx, db); err != nil {
+		if err := checkInstalledDatabase(ctx, db); err != nil {
 			log.Fatalf("system data preflight failed: %v", err)
 		}
-		log.Println("system data preflight successful: canonical tags and Kundensupport role are valid")
+		log.Println("installation preflight successful: schema, migration history, system account, tags and Kundensupport role are valid")
 		return
 	}
 
@@ -208,25 +208,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Check if schema is installed.
-	installed, err := checkSchema(db)
-	if err != nil {
-		log.Fatalf("error checking db schema: %v", err)
-	}
-	if !installed {
-		log.Println("database tables are missing. Use the `--install` flag to set up the database schema.")
-		os.Exit(0)
-	}
-
 	if ko.Bool("upgrade") {
-		upgrade(db, fs, !ko.Bool("yes"))
-		os.Exit(0)
+		if err := upgrade(db, fs, !ko.Bool("yes")); err != nil {
+			log.Fatalf("upgrade failed: %v", err)
+		}
+		return
 	}
-
-	checkPendingUpgrade(db)
-
-	if err := ensureSystemData(ctx, db); err != nil {
-		log.Fatalf("system data initialization failed: %v", err)
+	if err := prepareApplicationDatabase(ctx, db); err != nil {
+		log.Fatalf("database initialization failed: %v", err)
 	}
 
 	// Load app settings from DB into the Koanf instance.
@@ -274,9 +263,9 @@ func main() {
 		webhook                     = initWebhook(db, i18n, ssrfControl)
 		user                        = initUser(i18n, db)
 		wsHub                       = initWS(user)
-		notifier                    = initNotifier()
+		notifier                    = initNotifier(settings, inbox)
 		userNotification            = initUserNotification(db, i18n)
-		notifDispatcher             = initNotifDispatcher(userNotification, notifier, wsHub, ko.Bool("notification.email.enabled"))
+		notifDispatcher             = initNotifDispatcher(userNotification, notifier, wsHub, true)
 		automation                  = initAutomationEngine(db, i18n)
 		ai                          = initAI(ctx, db, i18n, ssrfControl)
 		sla                         = initSLA(db, team, settings, businessHours, template, user, i18n, notifDispatcher)
@@ -334,7 +323,10 @@ func main() {
 		return client
 	}
 	styleClient := newAIClient("ai_style")
-	transcriptionClient := newAIClient("ai_transcription")
+	transcriptionClient, err := aiassist.NewTranscription(transcriptionConfig(ko, ssrfControl))
+	if err != nil {
+		log.Fatal(err)
+	}
 	provenanceClient := newAIClient("ai_provenance")
 	if feedbackClient != nil {
 		go conversation.RunManualResolutionFeedback(ctx, feedbackClient)

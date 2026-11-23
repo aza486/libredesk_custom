@@ -48,6 +48,7 @@ var (
 	MessageIncoming = "incoming"
 	MessageOutgoing = "outgoing"
 	MessageActivity = "activity"
+	MessageInternal = "internal"
 
 	SenderTypeAgent   = "agent"
 	SenderTypeContact = "contact"
@@ -55,6 +56,7 @@ var (
 	MentionTypeAgent = "agent"
 	MentionTypeTeam  = "team"
 
+	MessageStatusStored   = "stored"
 	MessageStatusPending  = "pending"
 	MessageStatusSent     = "sent"
 	MessageStatusFailed   = "failed"
@@ -468,6 +470,7 @@ func (m *Message) StripCSATUUID() {
 
 // OutboundMessage contains fields needed for sending messages via inboxes.
 type OutboundMessage struct {
+	Headers map[string][]string
 	// Core message identifiers
 	UUID             string
 	ConversationUUID string

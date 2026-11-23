@@ -15,6 +15,8 @@ const (
 
 // Message represents a message to be sent as a notification.
 type Message struct {
+	// Optional notifications respect the live enabled setting; account/verification mail does not.
+	Optional bool
 	// Email addresses of the recipients
 	RecipientEmails []string
 	// Subject of the message

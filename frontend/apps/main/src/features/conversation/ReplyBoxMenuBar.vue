@@ -91,7 +91,7 @@
         :isLoading="isSending"
         v-if="showSendButton"
       >
-        {{ $t('globals.messages.send') }}
+        {{ storeInternally ? $t('conversation.storeInternal') : $t('globals.messages.send') }}
       </Button>
       <DropdownMenu v-if="showSendButton">
         <DropdownMenuTrigger as-child>
@@ -158,6 +158,7 @@ const selectedTemplateName = computed(() => {
 
 // Using defineProps for props that don't need two-way binding
 const props = defineProps({
+  storeInternally: { type: Boolean, default: false },
   isFullscreen: Boolean,
   isSending: Boolean,
   isGenerating: Boolean,

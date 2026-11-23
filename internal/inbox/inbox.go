@@ -880,3 +880,10 @@ func (m *Manager) decryptInboxSecret(inbox *imodels.Inbox) {
 		inbox.Secret = null.StringFrom(decrypted)
 	}
 }
+
+// GetRoutingRecords reads only mailbox identity and eligibility, never credentials.
+func (m *Manager) GetRoutingRecords() ([]imodels.Inbox, error) {
+	rows := make([]imodels.Inbox, 0)
+	err := m.db.Select(&rows, `SELECT id,uuid,name,channel,enabled,access_mode,COALESCE("from",'') AS "from" FROM inboxes WHERE deleted_at IS NULL ORDER BY name,id`)
+	return rows, err
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/abhinavxd/libredesk/internal/aiassist"
@@ -31,11 +32,11 @@ func handleAITranscribe(r *fastglue.Request) error {
 	}
 	r.RequestCtx.Response.Header.Set("Cache-Control", "no-store")
 	data := r.RequestCtx.PostBody()
-	if len(data) > aiassist.MaxAudioBytes {
+	if len(data) > app.aiTranscription.MaxAudioBytes() {
 		return r.SendErrorEnvelope(413, "Audio too large", nil, envelope.InputError)
 	}
 	typ := string(r.RequestCtx.Request.Header.ContentType())
-	if aiassist.AudioExtension(data, typ) == "" {
+	if !app.aiTranscription.ValidAudio(data, typ) {
 		return r.SendErrorEnvelope(400, "Invalid audio", nil, envelope.InputError)
 	}
 	if app.aiTranscription == nil {
@@ -45,7 +46,18 @@ func handleAITranscribe(r *fastglue.Request) error {
 	defer cancel()
 	text, status, err := app.aiTranscription.Transcribe(ctx, data, typ)
 	if err != nil {
-		return r.SendErrorEnvelope(status, "Transcription failed", nil, envelope.GeneralError)
+		message := "Transcription failed. Please try again."
+		switch {
+		case status == 413:
+			message = "Audio too large"
+		case status == 504:
+			message = "Transcription timed out. Please try again."
+		case status == 503:
+			message = "Transcription temporarily unavailable. Please try again later."
+		case errors.Is(err, aiassist.ErrInvalidResponse):
+			message = "No usable transcript received. Please record again."
+		}
+		return r.SendErrorEnvelope(status, message, nil, envelope.GeneralError)
 	}
 	return r.SendEnvelope(map[string]string{"text": text})
 }

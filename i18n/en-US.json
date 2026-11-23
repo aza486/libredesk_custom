@@ -1,4 +1,7 @@
 {
+  "conversation.internalMessage": "Internal message",
+  "conversation.internalStored": "Stored internally – no email delivery",
+  "conversation.storeInternal": "Store internally",
   "account.workPhone": "Business phone number",
   "account.workPhone.description": "Optional. Used instead of the general phone number in supported email signatures.",
   "account.workPhone.invalid": "Enter a valid phone number of up to 64 characters without HTML or control characters.",
@@ -1645,5 +1648,13 @@
   "aiGenerate.adopt": "Adopt suggestion",
   "aiGenerate.failed": "The reply could not be generated. Please try again.",
   "aiGenerate.limit": "Instructions must be at most 8,000 characters; drafts at most 64,000 HTML characters.",
-  "aiGenerate.changed": "The draft or reply mode has changed. Create a new suggestion before adopting."
+  "aiGenerate.changed": "The draft or reply mode has changed. Create a new suggestion before adopting.",
+  "admin.notification.sharedInbox": "Shared system email inbox",
+  "admin.notification.chooseInbox": "Select a public email inbox",
+  "admin.notification.legacySMTP": "Dedicated SMTP only (no internal inbox)",
+  "admin.notification.sharedInboxHelp": "Used for system notifications, internal ticket creation and outgoing internal email. Changes apply immediately.",
+  "admin.notification.teamRecipient": "Recipient for internal team tickets",
+  "admin.notification.teamRecipientHelp": "Required only for team tickets without an employee. Use a separate recipient, not the sending mailbox. Employee tickets use the employee’s stored email.",
+  "admin.notification.savedLive": "Email settings saved. Changes are effective immediately.",
+  "admin.notification.legacyTransition": "Until you save, the existing SMTP and TOML settings remain active. Saving activates the displayed shared mailbox and preserves the previous SMTP settings."
 }

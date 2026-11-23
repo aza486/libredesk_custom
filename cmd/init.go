@@ -39,7 +39,6 @@ import (
 	fs "github.com/abhinavxd/libredesk/internal/media/stores/localfs"
 	"github.com/abhinavxd/libredesk/internal/media/stores/s3"
 	notifier "github.com/abhinavxd/libredesk/internal/notification"
-	emailnotifier "github.com/abhinavxd/libredesk/internal/notification/providers/email"
 	"github.com/abhinavxd/libredesk/internal/oidc"
 	"github.com/abhinavxd/libredesk/internal/ratelimit"
 	"github.com/abhinavxd/libredesk/internal/report"
@@ -141,7 +140,7 @@ func initFlags() {
 	f.Bool("idempotent-install", false, "run idempotent installation, i.e., skip installion if schema is already installed useful for the first time setup")
 	f.Bool("yes", false, "skip confirmation prompt")
 	f.Bool("upgrade", false, "upgrade the database schema")
-	f.Bool("check-system-tags", false, "read-only validation of canonical system tags and Kundensupport role; exits without starting the server")
+	f.Bool("check-system-tags", false, "read-only validation of installation, migration history, system account, canonical tags and Kundensupport role; exits without starting the server")
 	f.Bool("set-system-user-password", false, "set password for the system user")
 	f.String("static-dir", "", "path to a directory with custom static files and templates to override the defaults")
 
@@ -189,7 +188,7 @@ func initFS(staticDir string) stuffbin.FileSystem {
 			// Running in local/dev mode, use the local filesystem.
 			// Only include frontend dirs if they exist (frontend build is optional in dev).
 			colorlog.Red("binary unstuff failed, using local filesystem for static files")
-			files := []string{"i18n", "static"}
+			files := []string{"i18n", "static", "schema.sql"}
 			for _, d := range []string{"frontend/dist/main", "frontend/dist/widget"} {
 				if _, err := os.Stat(d); err == nil {
 					files = append(files, d)
@@ -674,25 +673,9 @@ func initAutoAssigner(teamManager *team.Manager, userManager *user.Manager, conv
 }
 
 // initNotifier initializes the notifier service with available providers.
-func initNotifier() *notifier.Service {
-	smtpCfg := imodels.SMTPConfig{}
-	if err := ko.UnmarshalWithConf("notification.email", &smtpCfg, koanf.UnmarshalConf{Tag: "json"}); err != nil {
-		log.Fatalf("error unmarshalling email notification provider config: %v", err)
-	}
-
-	emailNotifier, err := emailnotifier.New([]imodels.SMTPConfig{smtpCfg}, emailnotifier.Opts{
-		Lo:        initLogger("email-notifier"),
-		FromEmail: ko.String("notification.email.email_address"),
-	})
-	if err != nil {
-		log.Fatalf("error initializing email notifier: %v", err)
-	}
-
-	notifierProviders := map[string]notifier.Notifier{
-		emailNotifier.Name(): emailNotifier,
-	}
-
-	return notifier.NewService(notifierProviders, ko.MustInt("notification.concurrency"), ko.MustInt("notification.queue_size"), initLogger("notifier"))
+func initNotifier(settings *setting.Manager, inboxes *inbox.Manager) *notifier.Service {
+	provider := &notificationEmailProvider{settings: settings, inboxes: inboxes, lo: initLogger("email-notifier")}
+	return notifier.NewService(map[string]notifier.Notifier{notifier.ProviderEmail: provider}, ko.MustInt("notification.concurrency"), ko.MustInt("notification.queue_size"), initLogger("notifier"))
 }
 
 // initEmailInbox loads inbox config from DB and initializes the email inbox.

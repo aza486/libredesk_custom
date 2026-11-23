@@ -22,6 +22,7 @@ var (
 
 // Manager handles setting-related operations.
 type Manager struct {
+	db              *sqlx.DB
 	q               queries
 	lo              *logf.Logger
 	encryptionKey   string
@@ -57,6 +58,7 @@ func New(opts Opts) (*Manager, error) {
 	}
 
 	return &Manager{
+		db:              opts.DB,
 		q:               q,
 		lo:              opts.Lo,
 		encryptionKey:   opts.EncryptionKey,
@@ -314,4 +316,81 @@ func (m *Manager) decryptIfNeeded(key, value string) (string, error) {
 	}
 
 	return decrypted, nil
+}
+
+// UpdateEmailNotification atomically validates and stores one complete configuration.
+// New keys use the existing settings table; omitted routing keys retain the current
+// explicit choice, including an explicitly empty value. No historical migration.
+func (m *Manager) UpdateEmailNotification(req models.EmailNotification, validate func(*models.EmailNotification) error, provided ...map[string]json.RawMessage) error {
+	tx, err := m.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return err
+	}
+	var raw types.JSONText
+	if err = tx.Stmtx(m.q.GetByPrefix).Get(&raw, "notification.email%"); err != nil {
+		return err
+	}
+	raw, err = m.decryptSettings(raw)
+	if err != nil {
+		return err
+	}
+	var cur models.EmailNotification
+	if err = json.Unmarshal(raw, &cur); err != nil {
+		return err
+	}
+	if len(provided) > 0 {
+		// HTTP updates may omit hidden legacy SMTP fields. Merge under the same
+		// lock so selecting an inbox never erases the previous relay settings.
+		var current, incoming map[string]json.RawMessage
+		if err = json.Unmarshal(raw, &current); err != nil {
+			return err
+		}
+		encoded, marshalErr := json.Marshal(req)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		if err = json.Unmarshal(encoded, &incoming); err != nil {
+			return err
+		}
+		for key, value := range current {
+			if _, sent := provided[0][key]; !sent {
+				incoming[key] = value
+			}
+		}
+		encoded, marshalErr = json.Marshal(incoming)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		if err = json.Unmarshal(encoded, &req); err != nil {
+			return err
+		}
+	}
+	if req.Password == "" {
+		req.Password = cur.Password
+	}
+	if req.InboxUUID == nil {
+		req.InboxUUID = cur.InboxUUID
+	}
+	if req.TeamContactEmail == nil {
+		req.TeamContactEmail = cur.TeamContactEmail
+	}
+	if err = validate(&req); err != nil {
+		return err
+	}
+	raw, err = json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	raw, err = m.encryptSettings(raw)
+	if err != nil {
+		return err
+	}
+	if _, err = tx.Exec(`INSERT INTO settings(key,value) SELECT key,value FROM jsonb_each($1::jsonb) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value,updated_at=NOW()`, raw); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

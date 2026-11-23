@@ -124,7 +124,7 @@ func (c *Manager) MutateSidebarFolder(userID int, scope string, scopeID, id int,
 		}
 		// Ask PostgreSQL to type-check without reading or changing any rows.
 		// The common compiler binds every value and allowlists every field.
-		if _, err = tx.Exec(`EXPLAIN SELECT conversations.id FROM conversations JOIN users ON users.id=conversations.contact_id JOIN inboxes ON inboxes.id=conversations.inbox_id LEFT JOIN conversation_statuses ON conversation_statuses.id=conversations.status_id WHERE `+clause, values...); err != nil {
+		if _, err = tx.Exec(`EXPLAIN SELECT conversations.id FROM conversations LEFT JOIN users ON users.id=conversations.contact_id JOIN inboxes ON inboxes.id=conversations.inbox_id LEFT JOIN conversation_statuses ON conversation_statuses.id=conversations.status_id WHERE `+clause, values...); err != nil {
 			return nil, folderInputError("Filterwerte oder Operatoren passen nicht zum ausgewählten Feld")
 		}
 	}
@@ -314,7 +314,7 @@ func (c *Manager) SidebarFolderCounts(userID int, scope string, scopeID int) (ma
 		inboxes = []int{scopeID}
 	}
 	// Compile scope/access first to reserve its parameter numbers.
-	base := `SELECT conversations.id FROM conversations JOIN users ON users.id=conversations.contact_id JOIN inboxes ON inboxes.id=conversations.inbox_id LEFT JOIN conversation_statuses ON conversation_statuses.id=conversations.status_id LEFT JOIN conversation_priorities ON conversation_priorities.id=conversations.priority_id WHERE $1::bigint>0 AND ($2::boolean OR NOT $2::boolean) %s`
+	base := `SELECT conversations.id FROM conversations LEFT JOIN users ON users.id=conversations.contact_id JOIN inboxes ON inboxes.id=conversations.inbox_id LEFT JOIN conversation_statuses ON conversation_statuses.id=conversations.status_id LEFT JOIN conversation_priorities ON conversation_priorities.id=conversations.priority_id WHERE $1::bigint>0 AND ($2::boolean OR NOT $2::boolean) %s`
 	query, args, err := c.makeScopedConversationsListQuery(userID, userID, teams, []string{"folder-" + scope}, base, "", "", 1, 1, "[]", user.HasAdminRole(), slices.Contains(user.Roles, "Kundensupport"), 0, nil, false, inboxes...)
 	if err != nil {
 		return nil, err

@@ -178,6 +178,9 @@
               <Button size="sm" variant="outline" @click="emit('composeReply', { manualReviewNote, mode: 'manual' })">Feedback erstellen</Button>
             </div>
 
+            <div v-if="message.type === 'internal'" class="text-xs text-muted-foreground" data-testid="stored-internal-message">
+              {{ message.status === 'pending' ? t('conversation.storeInternal') + '…' : t('conversation.internalStored') }}
+            </div>
             <!-- Spinner for Pending Messages (outgoing only) -->
             <Spinner v-if="isOutgoing && message.status === 'pending'" size="sm" />
 
@@ -349,7 +352,7 @@ const props = defineProps({
   message: Object,
   direction: {
     type: String,
-    validator: (v) => ['incoming', 'outgoing'].includes(v)
+    validator: (v) => ['incoming', 'outgoing', 'internal'].includes(v)
   },
   groupWithPrev: {
     type: Boolean,
@@ -384,7 +387,7 @@ const aiAssistantRoute = computed(() => {
   return id ? { name: 'edit-ai-assistant', params: { id } } : { name: 'ai-assistants' }
 })
 
-const isOutgoing = computed(() => props.direction === 'outgoing')
+const isOutgoing = computed(() => ['outgoing', 'internal'].includes(props.direction))
 
 const getFullName = computed(() => {
   const author = props.message.author ?? {}

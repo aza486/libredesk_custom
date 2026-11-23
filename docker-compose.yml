@@ -10,6 +10,9 @@ services:
       # If the password is set during first docker-compose up, the system user password will be set to this value.
       # You can always set system user password later by running `docker exec -it libredesk_app ./libredesk --set-system-user-password`.
       LIBREDESK_SYSTEM_USER_PASSWORD: ${LIBREDESK_SYSTEM_USER_PASSWORD:-}
+      # Optional transcription overrides; empty provider preserves the TOML setting.
+      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Internal HTTP clients require IP pinning; these IPs are outside the dynamic pool.
       LIBREDESK_AI_FEEDBACK__INTERNAL_HTTP_IP: 172.30.240.5
       LIBREDESK_AI_STYLE__INTERNAL_HTTP_IP: 172.30.240.5

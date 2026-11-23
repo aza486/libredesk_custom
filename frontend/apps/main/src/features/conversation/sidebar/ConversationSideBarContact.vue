@@ -33,11 +33,11 @@
         :to="{ name: 'contact-detail', params: { id: conversation.contact_id } }"
         class="flex items-center gap-2 hover:underline cursor-pointer"
       >
-        {{ conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name }}
+        {{ conversation?.contact_id ? conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name : t('conversation.internalMessage') }}
         <ExternalLink size="16" class="text-muted-foreground flex-shrink-0" />
       </router-link>
       <span v-else>
-        {{ conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name }}
+        {{ conversation?.contact_id ? conversation?.contact?.first_name + ' ' + conversation?.contact?.last_name : t('conversation.internalMessage') }}
       </span>
     </div>
     <div class="flex gap-2 items-center">

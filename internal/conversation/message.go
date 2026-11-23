@@ -148,6 +148,9 @@ func (m *Manager) MessageSenderWorker(ctx context.Context) {
 // sendOutgoingMessage sends an outgoing message.
 func (m *Manager) sendOutgoingMessage(message models.Message) {
 	defer m.outgoingProcessingMessages.Delete(message.ID)
+	if message.Type != models.MessageOutgoing || message.Private {
+		return
+	}
 
 	// Helper function to handle errors
 	handleError := func(err error, errorMsg string) bool {
@@ -669,6 +672,34 @@ func (m *Manager) CreateContactMessage(media []mmodels.Media, contactID int, con
 	return message, nil
 }
 
+// StoreInternalMessage persists a non-private history entry, not an email.
+// The persisted conversation decides eligibility; HTTP metadata cannot opt in.
+func (m *Manager) StoreInternalMessage(media []mmodels.Media, senderID int, uuid, content string, echoIDs ...string) (models.Message, error) {
+	conv, err := m.GetConversation(0, uuid, "")
+	if err != nil {
+		return models.Message{}, err
+	}
+	var attrs map[string]any
+	if err := json.Unmarshal(conv.CustomAttributes, &attrs); err != nil {
+		return models.Message{}, err
+	}
+	if conv.ContactID != 0 || attrs["internal"] != true || attrs["private"] != true {
+		return models.Message{}, envelope.NewError(envelope.InputError, "Stored internal messages require a contactless private internal ticket", nil)
+	}
+	meta := map[string]string{}
+	if len(echoIDs) > 0 && echoIDs[0] != "" {
+		meta["echo_id"] = echoIDs[0]
+	}
+	rawMeta, _ := json.Marshal(meta)
+	message := models.Message{ConversationUUID: uuid, SenderID: senderID, Meta: rawMeta,
+		Type: models.MessageInternal, Status: models.MessageStatusStored,
+		SenderType: models.SenderTypeAgent, Content: content, ContentType: models.ContentTypeHTML, Media: media}
+	if err := m.InsertMessage(&message); err != nil {
+		return models.Message{}, err
+	}
+	return message, nil
+}
+
 // QueueReply queues a reply message in a conversation.
 func (m *Manager) QueueReply(media []mmodels.Media, inboxID, senderID, contactID int, conversationUUID, content string, to, cc, bcc []string, metaMap map[string]interface{}) (models.Message, error) {
 	var (
@@ -685,6 +716,15 @@ func (m *Manager) QueueReply(media []mmodels.Media, inboxID, senderID, contactID
 		return models.Message{}, envelope.NewError(envelope.InputError, m.i18n.T("status.disabledInbox"), nil)
 	}
 
+	// A contactless internal conversation cannot be converted into an email by
+	// supplying recipients to the normal API or an automation action.
+	var hasContact bool
+	if err := m.db.Get(&hasContact, `SELECT contact_id IS NOT NULL FROM conversations WHERE uuid=$1`, conversationUUID); err != nil {
+		return message, err
+	}
+	if !hasContact {
+		return message, envelope.NewError(envelope.InputError, "This internal ticket has no email recipient", nil)
+	}
 	var sourceID string
 	switch inboxRecord.Channel {
 	case inbox.ChannelEmail:
@@ -755,6 +795,11 @@ func (m *Manager) QueueReply(media []mmodels.Media, inboxID, senderID, contactID
 
 // InsertMessage inserts a message and attaches the media to the message.
 func (m *Manager) InsertMessage(message *models.Message) error {
+	return m.insertMessage(message, false)
+}
+
+// spamDetection is an internal capability, never derived from message metadata.
+func (m *Manager) insertMessage(message *models.Message, spamDetection bool) error {
 	if message.Private {
 		message.Status = models.MessageStatusSent
 	}
@@ -785,6 +830,12 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 		return envelope.NewError(envelope.GeneralError, m.i18n.T("globals.messages.somethingWentWrong"), nil)
 	}
 	defer tx.Rollback()
+
+	if spamDetection {
+		if err := lockSpamDetectionNote(tx, message); err != nil {
+			return err
+		}
+	}
 
 	if automaticAIMeta(message.Meta) {
 		if err := lockAutomaticAI(tx, message.ConversationUUID); err != nil {
@@ -849,7 +900,9 @@ func (m *Manager) InsertMessage(message *models.Message) error {
 	}
 
 	// Trigger webhook for new message created.
-	m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, message)
+	if message.Type != models.MessageInternal && !spamDetection {
+		m.webhookStore.TriggerEvent(wmodels.EventMessageCreated, message)
+	}
 
 	return nil
 }

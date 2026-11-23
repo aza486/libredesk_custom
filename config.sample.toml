@@ -150,14 +150,16 @@ enabled = false
 allowed_cidrs = []
 
 [conversation]
+# Legacy fallback until a mailbox is explicitly saved under /admin/notification.
+# Admin selection takes priority immediately, including an explicitly empty selection.
 # Optional: internal tickets use exactly this existing, enabled public email inbox.
 # Copy its UUID from GET /api/v1/inboxes. Empty disables internal creation only;
 # installation and ordinary/personal tickets do not require this setting.
 # Reconfigure after recreating the inbox; there is no numeric-ID fallback.
 internal_inbox_uuid = ""
-# Contact/recipient for internal tickets without a directly assigned agent.
-# Set this explicitly to the intended team-ticket email recipient. With an agent,
-# the server uses that active agent's stored email and name, as before.
+# Deprecated compatibility recipient for legacy unassigned internal email API requests.
+# Never used for team-only tickets; employees use their own stored email.
+# Team-only messages are stored internally without an email recipient.
 internal_contact_email = ""
 # How often to check for conversations to unsnooze
 unsnooze_interval = "5m"
@@ -251,10 +253,15 @@ anonymizer_token = ""
 anonymizer_internal_http_endpoint = ""
 anonymizer_internal_http_ip = ""
 
-# Opt-in speech input. Use an approved transcription gateway; never reuse completion credentials implicitly.
+# Opt-in speech input via a local Whisper gateway or the direct OpenAI API.
 # POST multipart file (webm/ogg/mp4), returns {"text":"..."}. No conversation data is sent.
-# The gateway must enforce a 120-second audio duration limit and disable audio retention/logging.
+# The Whisper gateway must enforce a 120-second audio duration limit and disable audio retention/logging.
 [ai_transcription]
+provider = "whisper" # Global: whisper | openai. No automatic fallback.
+# ENV: LIBREDESK_AI_TRANSCRIPTION__PROVIDER (or TRANSCRIPTION_PROVIDER).
+# OpenAI uses only server-side OPENAI_API_KEY; never put the key in TOML.
+# OpenAI: HTTPS /v1/audio/transcriptions, gpt-transcribe, JSON, languages[]=de.
+# The following gateway settings are used only by whisper and can stay configured.
 endpoint = ""
 token = "" # Authorization: Bearer <token>
 internal_http_endpoint = ""

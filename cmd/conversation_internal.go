@@ -1,12 +1,9 @@
 package main
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
-	"github.com/abhinavxd/libredesk/internal/inbox"
-	"github.com/google/uuid"
 )
 
 // Optional deployment configuration. Resolve only when internal creation is used,
@@ -17,27 +14,13 @@ type internalConversationConfig struct {
 }
 
 func prepareInternalConversation(req *createConversationRequest, app *App, actorID int) error {
-	configuredUUID := strings.TrimSpace(app.internalConversation.InboxUUID)
-	if configuredUUID == "" {
-		return envelope.NewError(envelope.InputError, "Internal ticket inbox is not configured; set conversation.internal_inbox_uuid", nil)
-	}
-	id, err := uuid.Parse(configuredUUID)
+	configuredUUID, legacyContact, err := internalEmailConfiguration(app)
 	if err != nil {
-		return envelope.NewError(envelope.InputError, "conversation.internal_inbox_uuid must be a valid inbox UUID", nil)
-	}
-	record, err := app.inbox.GetDBRecord(id.String())
-	if err != nil {
-		var apiErr envelope.Error
-		if errors.As(err, &apiErr) && apiErr.ErrorType == envelope.InputError {
-			return envelope.NewError(envelope.InputError, "The configured internal ticket inbox does not exist or was deleted", nil)
-		}
 		return err
 	}
-	if !record.Enabled {
-		return envelope.NewError(envelope.InputError, "The configured internal ticket inbox is disabled", nil)
-	}
-	if record.Channel != inbox.ChannelEmail || record.AccessMode != "public" {
-		return envelope.NewError(envelope.InputError, "The configured internal ticket inbox must be a public email inbox", nil)
+	record, err := resolveNotificationInbox(app.inbox, configuredUUID, false)
+	if err != nil {
+		return err
 	}
 	// Existing API clients may still send the actual ID. Reject contradictory
 	// routing; the UI omits the field and never needs to know deployment IDs.
@@ -49,10 +32,9 @@ func prepareInternalConversation(req *createConversationRequest, app *App, actor
 		return err
 	}
 
-	// Preserve the established email-message/recipient contract. Internal tickets
-	// still use a contact, but its identity cannot come from stale client fields.
-	req.Email = strings.ToLower(strings.TrimSpace(app.internalConversation.ContactEmail))
-	req.FirstName, req.LastName = "Internal", "Ticket"
+	// Team-only tickets have no external contact or recipient. The creator is
+	// the message author, never a synthetic contact.
+	req.Email, req.FirstName, req.LastName = "", "", ""
 	if req.AssignedAgentID > 0 {
 		agent, err := app.user.GetAgent(req.AssignedAgentID, "")
 		if err != nil {
@@ -60,8 +42,15 @@ func prepareInternalConversation(req *createConversationRequest, app *App, actor
 		}
 		req.Email = strings.ToLower(strings.TrimSpace(agent.Email.String))
 		req.FirstName, req.LastName = agent.FirstName, agent.LastName
-	} else if req.Email == "" {
-		return envelope.NewError(envelope.InputError, "Internal tickets without an assigned agent require conversation.internal_contact_email", nil)
+	}
+	// Preserve the legacy explicit recipient for unassigned internal email
+	// requests. A team-only assignment never consumes this setting.
+	if req.AssignedAgentID == 0 && req.AssignedTeamID == 0 {
+		req.Email = strings.ToLower(strings.TrimSpace(legacyContact))
+		req.FirstName, req.LastName = "Internal", "Ticket"
+	}
+	if mailboxAddress(req.Email) != "" && mailboxAddress(req.Email) == mailboxAddress(record.From) {
+		return notificationInput("The internal ticket recipient matches the sending inbox; use a different employee address")
 	}
 	// In particular, a contact selected earlier in external mode cannot replace
 	// the intended internal recipient via its external ID or overwrite its data.

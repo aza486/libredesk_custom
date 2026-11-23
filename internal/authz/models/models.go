@@ -18,7 +18,9 @@ const (
 	PermConversationWrite          = "conversations:write"
 	PermMessagesRead               = "messages:read"
 	PermMessagesWrite              = "messages:write"
-	PermMessagesWriteAsContact     = "messages:write_as_contact"
+	// Explicit API-only grant for stored spam detection notes; never implied by Admin.
+	PermMessagesWriteSpamDetectionNote = "messages:write_spam_detection_note"
+	PermMessagesWriteAsContact         = "messages:write_as_contact"
 
 	// View
 	PermViewManage        = "view:manage"
@@ -121,6 +123,7 @@ var validPermissions = map[string]struct{}{
 	PermConversationWrite:               {},
 	PermMessagesRead:                    {},
 	PermMessagesWrite:                   {},
+	PermMessagesWriteSpamDetectionNote:  {},
 	PermMessagesWriteAsContact:          {},
 	PermViewManage:                      {},
 	PermSharedViewsManage:               {},

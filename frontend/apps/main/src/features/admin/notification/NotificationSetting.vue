@@ -3,7 +3,7 @@
     <template #content>
       <div :class="{ 'opacity-50 transition-opacity duration-300': isLoading }">
         <Spinner v-if="isLoading" />
-        <NotificationsForm :initial-values="initialValues" :submit-form="submitForm" />
+        <NotificationsForm :initial-values="initialValues" :inbox-options="inboxOptions" :legacy-configuration="usesLegacyConfiguration" :submit-form="submitForm" />
       </div>
     </template>
 
@@ -27,6 +27,8 @@ import { Spinner } from '@shared-ui/components/ui/spinner'
 import { useAppSettingsStore } from '@main/stores/appSettings'
 
 const initialValues = ref({})
+const inboxOptions = ref([])
+const usesLegacyConfiguration = ref(false)
 const { t } = useI18n()
 const isLoading = ref(false)
 const emitter = useEmitter()
@@ -40,12 +42,16 @@ const getNotificationSettings = async () => {
   try {
     isLoading.value = true
     const resp = await api.getEmailNotificationSettings()
+    const data = resp.data.data
+    usesLegacyConfiguration.value = data['notification.email.inbox_uuid'] == null
+    inboxOptions.value = data['notification.email.inbox_options'] || []
     initialValues.value = Object.fromEntries(
-      Object.entries(resp.data.data).map(([key, value]) => [
+      Object.entries(data).filter(([key]) => key !== "notification.email.team_contact_email" && !key.endsWith("inbox_options") && !key.includes("effective_")).map(([key, value]) => [
         key.replace('notification.email.', ''),
         value
       ])
     )
+    initialValues.value.inbox_uuid = data['notification.email.inbox_uuid'] ?? data['notification.email.effective_inbox_uuid'] ?? ''
   } catch (error) {
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
       variant: 'destructive',
@@ -68,7 +74,7 @@ const submitForm = async (values) => {
     )
     await api.updateEmailNotificationSettings(updatedValues)
     emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
-      description: t('admin.notification.restartApp')
+      description: t('admin.notification.savedLive')
     })
     await getNotificationSettings()
     appSettingsStore.fetchSettings()

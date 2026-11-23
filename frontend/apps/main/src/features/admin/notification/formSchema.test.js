@@ -188,3 +188,22 @@ describe('Notification Form Schema', () => {
         expect(() => schema.parse({})).toThrow()
     })
 })
+
+describe('Shared system mailbox', () => {
+    const inbox_uuid = 'd5040e82-ab91-40b5-9aac-31f80cb17aa2'
+    test('allows an existing inbox without duplicate SMTP credentials', () => {
+        expect(schema.parse({ inbox_uuid, enabled: true, team_contact_email: 'team@example.test' }).inbox_uuid).toBe(inbox_uuid)
+    })
+    test('allows employee-only use without a team recipient', () => {
+        expect(() => schema.parse({ inbox_uuid, team_contact_email: '' })).not.toThrow()
+    })
+    test('rejects malformed mailbox UUIDs', () => {
+        expect(() => schema.parse({ inbox_uuid: '3' })).toThrow()
+    })
+    test('validates the separate team recipient', () => {
+        expect(() => schema.parse({ inbox_uuid, team_contact_email: 'broken' })).toThrow()
+    })
+    test('retains legacy SMTP settings when no inbox is selected', () => {
+        expect(schema.parse({ ...validForm, inbox_uuid: '' }).host).toBe(validForm.host)
+    })
+})

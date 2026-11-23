@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({ store: null, can: true }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => state.store }))
 vi.mock('@main/stores/user', () => ({ useUserStore: () => ({ userID: 42, can: () => state.store.allowed }) }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }))
-vi.mock('vue-letter', () => ({ Letter: defineComponent({ setup: () => () => h('div') }) }))
+vi.mock('vue-letter', () => ({ Letter: defineComponent({ props: ['html'], setup: props => () => h('div', { innerHTML: props.html }) }) }))
 vi.mock('./attachment/BubbleAttachmentPreview.vue', () => ({ default: { render: () => null } }))
 vi.mock('./CSATResponseDisplay.vue', () => ({ default: { render: () => null } }))
 vi.mock('@shared-ui/components/ui/tooltip', () => {
@@ -69,6 +69,7 @@ test.each([
   ['customer', 'incoming', false, false],
   ['employee', 'outgoing', false, true],
   ['internal note', 'outgoing', true, true],
+  ['stored internal', 'internal', false, true],
   ['AI analysis', 'outgoing', true, true]
 ])('%s keeps the original chat alignment', async (label, type, privateNote, rightAligned) => {
   await mount(label === 'AI analysis' ? 'n8n_ai_analysis' : '', {
@@ -76,3 +77,11 @@ test.each([
   })
   expect(root.querySelector('.group.flex-row').classList.contains('justify-end')).toBe(rightAligned)
 })
+
+ test('stored internal message has an explicit no-delivery label and no sent or retry controls', async () => {
+   await mount('', { type: 'internal', private: false, status: 'stored', meta: {}, content: 'Original team message' })
+   expect(root.textContent).toContain('Original team message')
+   expect(root.querySelector('[data-testid="stored-internal-message"]').textContent).toContain('conversation.internalStored')
+   expect(root.querySelector('.lucide-check-check')).toBeNull()
+   expect(root.querySelector('.lucide-rotate-cw')).toBeNull()
+ })

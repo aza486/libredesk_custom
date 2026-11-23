@@ -109,3 +109,10 @@ func (e *Email) prepareAttachments(attachments []attachment.Attachment) []smtppo
 	}
 	return files
 }
+
+// Close releases pools owned by this sender after an on-demand legacy delivery.
+func (e *Email) Close() {
+	for _, pool := range e.smtpPools {
+		pool.Close()
+	}
+}

@@ -1,9 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 DROP TYPE IF EXISTS "channels" CASCADE; CREATE TYPE "channels" AS ENUM ('email', 'livechat');
-DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM ('incoming','outgoing','activity');
+DROP TYPE IF EXISTS "message_type" CASCADE; CREATE TYPE "message_type" AS ENUM ('incoming','outgoing','activity','internal');
 DROP TYPE IF EXISTS "message_sender_type" CASCADE; CREATE TYPE "message_sender_type" AS ENUM ('agent','contact');
-DROP TYPE IF EXISTS "message_status" CASCADE; CREATE TYPE "message_status" AS ENUM ('received','sent','failed','pending');
+DROP TYPE IF EXISTS "message_status" CASCADE; CREATE TYPE "message_status" AS ENUM ('received','sent','failed','pending','stored');
 DROP TYPE IF EXISTS "content_type" CASCADE; CREATE TYPE "content_type" AS ENUM ('text','html');
 DROP TYPE IF EXISTS "conversation_assignment_type" CASCADE; CREATE TYPE "conversation_assignment_type" AS ENUM ('Round robin','Manual');
 DROP TYPE IF EXISTS "template_type" CASCADE; CREATE TYPE "template_type" AS ENUM ('email_outgoing', 'email_notification');
@@ -253,7 +253,7 @@ CREATE TABLE conversations (
 	reference_number TEXT DEFAULT generate_reference_number('') NOT NULL UNIQUE,
 
 	-- Cascade deletes when contact is deleted.
-    contact_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE NOT NULL,
+    contact_id BIGINT REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
 
 	-- Set to NULL when assigned user or team is deleted.
     assigned_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -271,6 +271,8 @@ CREATE TABLE conversations (
 
 	meta JSONB DEFAULT '{}'::jsonb NOT NULL,
 	custom_attributes JSONB DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT conversations_contact_required CHECK (contact_id IS NOT NULL OR
+        (custom_attributes @> '{"internal":true,"private":true}'::jsonb)),
 	contact_last_seen_at TIMESTAMPTZ DEFAULT NOW(),
     first_reply_at TIMESTAMPTZ NULL,
     last_reply_at TIMESTAMPTZ NULL,

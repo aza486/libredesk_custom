@@ -179,7 +179,7 @@ func checkAutomaticAIAllowed(q sqlx.Queryer, uuid string) error {
 	}
 	err := sqlx.Get(q, &state, `SELECT COALESCE(users.email,'') AS email,
  EXISTS(SELECT 1 FROM service_email_addresses s WHERE LOWER(BTRIM(s.address,`+serviceEmailWhitespaceSQL+`))=LOWER(BTRIM(users.email,`+serviceEmailWhitespaceSQL+`))) AS service,
- `+spamExistsSQL+` AS spam FROM conversations JOIN users ON users.id=conversations.contact_id WHERE conversations.uuid=$1`, uuid)
+ `+spamExistsSQL+` AS spam FROM conversations LEFT JOIN users ON users.id=conversations.contact_id WHERE conversations.uuid=$1`, uuid)
 	if err != nil {
 		return fmt.Errorf("automatic AI classification unavailable: %w", err)
 	}

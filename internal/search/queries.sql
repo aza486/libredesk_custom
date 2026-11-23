@@ -4,7 +4,7 @@ SELECT
     conversations.uuid,
     conversations.reference_number,
     conversations.subject,
-    users.email AS contact_email,
+    COALESCE(users.email,'') AS contact_email,
     cs.name AS status
 FROM
     conversations
@@ -36,7 +36,7 @@ FROM (
         c.reference_number AS conversation_reference_number,
         c.uuid AS conversation_uuid,
         c.subject AS conversation_subject,
-        u.email AS contact_email,
+        COALESCE(u.email,'') AS contact_email,
         LEFT(m.text_content, 200) AS text_content,
         cs.name AS conversation_status
     FROM

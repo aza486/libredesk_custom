@@ -7,10 +7,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/migrations"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/koanf/v2"
@@ -21,7 +19,8 @@ import (
 // migFunc represents a migration function for a particular version.
 // fn (generally) executes database migrations and additionally
 // takes the filesystem and config objects in case there are additional bits
-// of logic to be performed before executing upgrades. fn is idempotent.
+// of logic to be performed before executing upgrades. Some historical functions
+// commit data changes in multiple steps; completed versions must never replay.
 type migFunc struct {
 	version string
 	fn      func(*sqlx.DB, stuffbin.FileSystem, *koanf.Koanf) error
@@ -63,124 +62,67 @@ var migList = []migFunc{
 	{"v2.21.0", migrations.V2_21_0},
 	{"v2.22.0", migrations.V2_22_0},
 	{"v2.23.0", migrations.V2_23_0},
+	{"v2.24.0", migrations.V2_24_0},
 }
 
 // upgrade upgrades the database to the current version by running SQL migration files
 // for all version from the last known version to the current one.
-func upgrade(db *sqlx.DB, fs stuffbin.FileSystem, prompt bool) {
+func upgrade(db *sqlx.DB, fs stuffbin.FileSystem, prompt bool) error {
 	if prompt {
 		var ok string
-		fmt.Printf("** IMPORTANT: Take a backup of the database before upgrading.\n")
-		fmt.Print("continue (y/n)?  ")
+		fmt.Print("Take a backup before upgrading. Continue (y/n)? ")
 		if _, err := fmt.Scanf("%s", &ok); err != nil {
-			log.Fatalf("error reading value from terminal: %v", err)
+			return err
 		}
 		if !strings.EqualFold(ok, "y") {
-			fmt.Println("upgrade cancelled")
-			return
+			return fmt.Errorf("upgrade cancelled")
 		}
 	}
-
-	_, toRun, err := getPendingMigrations(db)
-	if err != nil {
-		log.Fatalf("error checking migrations: %v", err)
-	}
-
-	// No migrations to run.
-	if len(toRun) == 0 {
-		if err := ensureSystemData(context.Background(), db); err != nil {
-			log.Fatalf("system data initialization failed: %v", err)
+	return withInstallationLock(context.Background(), db, func() error {
+		installed, err := checkSchema(db)
+		if err != nil {
+			return err
 		}
-		log.Printf("no upgrades to run. Database is up to date.")
-		return
-	}
-
-	// Execute migrations in succession.
-	for _, m := range toRun {
-		log.Printf("running migration %s", m.version)
-		if err := m.fn(db, fs, ko); err != nil {
-			log.Fatalf("error running migration %s: %v", m.version, err)
+		if !installed {
+			return fmt.Errorf("database is empty; run --install --idempotent-install first")
 		}
-
-		// Record the migration version in the settings table. There was no
-		// settings table until v0.7.0, so ignore the no-table errors.
-		if err := recordMigrationVersion(m.version, db); err != nil {
-			if dbutil.IsTableNotExistError(err) {
-				continue
-			}
-			log.Fatalf("error recording migration version %s: %v", m.version, err)
+		if err := runPendingMigrations(context.Background(), db, fs); err != nil {
+			return err
 		}
-	}
-
-	if err := ensureSystemData(context.Background(), db); err != nil {
-		log.Fatalf("system data initialization failed: %v", err)
-	}
-	log.Printf("upgrade complete")
+		return completeInstallation(context.Background(), db, true, "")
+	})
 }
 
 // getPendingMigrations gets the pending migrations by comparing the last
 // recorded migration in the DB against all migrations listed in `migrations`.
 func getPendingMigrations(db *sqlx.DB) (string, []migFunc, error) {
-	lastVer, err := getLastMigrationVersion(db)
+	for i, m := range migList {
+		if !semver.IsValid(m.version) || m.fn == nil || (i > 0 && semver.Compare(migList[i-1].version, m.version) >= 0) {
+			return "", nil, fmt.Errorf("invalid migration registry at entry %d", i+1)
+		}
+	}
+	last, err := getLastMigrationVersion(db)
 	if err != nil {
 		return "", nil, err
 	}
-
-	// Iterate through the migration versions and get everything above the last
-	// upgraded semver.
-	var toRun []migFunc
-	for i, m := range migList {
-		if semver.Compare(m.version, lastVer) > 0 {
-			toRun = migList[i:]
-			break
-		}
+	if err := checkMigrationFootprints(db, last); err != nil {
+		return "", nil, err
 	}
-
-	return lastVer, toRun, nil
-}
-
-// getLastMigrationVersion returns the last migration semver recorded in the DB.
-// If there isn't any, `v0.0.0` is returned.
-func getLastMigrationVersion(db *sqlx.DB) (string, error) {
-	var v string
-	if err := db.Get(&v, `
-		SELECT COALESCE(
-			(SELECT value->>-1 FROM settings WHERE key='migrations'),
-		'v0.0.0')`); err != nil {
-		if dbutil.IsTableNotExistError(err) {
-			return "v0.0.0", nil
-		}
-		return v, err
+	start := 0
+	if last != "v0.0.0" {
+		start = migrationIndex(last) + 1
 	}
-	return v, nil
+	return last, migList[start:], nil
 }
 
-// recordMigrationVersion inserts the given version (of DB migration) into the
-// `migrations` array in the settings table.
-func recordMigrationVersion(ver string, db *sqlx.DB) error {
-	_, err := db.Exec(fmt.Sprintf(`INSERT INTO settings (key, value)
-	VALUES('migrations', '["%s"]'::JSONB)
-	ON CONFLICT (key) DO UPDATE SET value = settings.value || EXCLUDED.value`, ver))
-	return err
-}
-
-// checkPendingUpgrade checks if the current database schema matches the expected binary version.
-func checkPendingUpgrade(db *sqlx.DB) {
-	lastVer, toRun, err := getPendingMigrations(db)
+// pendingUpgradeError also validates the entire history, not only its tail.
+func pendingUpgradeError(db *sqlx.DB) error {
+	last, pending, err := getPendingMigrations(db)
 	if err != nil {
-		log.Fatalf("error checking migrations: %v", err)
+		return err
 	}
-
-	// No migrations to run.
-	if len(toRun) == 0 {
-		return
+	if len(pending) == 0 {
+		return nil
 	}
-
-	var vers []string
-	for _, m := range toRun {
-		vers = append(vers, m.version)
-	}
-
-	log.Fatalf(`there are %d pending database upgrade(s): %v. The last upgrade was %s. Backup the database and run libredesk --upgrade`,
-		len(toRun), vers, lastVer)
+	return fmt.Errorf("%d pending database migrations after %s; back up and run --upgrade (or --install --idempotent-install)", len(pending), last)
 }

@@ -12,6 +12,25 @@
       </FormItem>
     </FormField>
 
+    <FormField name="inbox_uuid" v-slot="{ componentField }">
+      <FormItem>
+        <FormLabel>{{ $t('admin.notification.sharedInbox') }}</FormLabel>
+        <FormControl>
+          <Select :model-value="componentField.modelValue || '__legacy__'" @update:model-value="value => smtpForm.setFieldValue('inbox_uuid', value === '__legacy__' ? '' : value)">
+            <SelectTrigger data-testid="notification-inbox"><SelectValue :placeholder="t('admin.notification.chooseInbox')" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__legacy__">{{ $t('admin.notification.legacySMTP') }}</SelectItem>
+              <SelectItem v-for="option in inboxOptions" :key="option.uuid" :value="option.uuid">{{ option.name }} — {{ option.email }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormControl>
+        <FormDescription>{{ $t('admin.notification.sharedInboxHelp') }}</FormDescription>
+        <FormDescription v-if="legacyConfiguration">{{ $t('admin.notification.legacyTransition') }}</FormDescription>
+        <FormMessage />
+      </FormItem>
+    </FormField>
+
+    <div v-if="!smtpForm.values.inbox_uuid" class="space-y-6">
     <div class="grid gap-6 md:grid-cols-2">
       <FormField v-slot="{ componentField }" name="host">
         <FormItem>
@@ -194,6 +213,7 @@
       </FormItem>
     </FormField>
 
+    </div>
     <Button type="submit" :isLoading="isLoading"> {{ submitLabel }} </Button>
   </form>
 </template>
@@ -229,6 +249,8 @@ import { useI18n } from 'vue-i18n'
 const isLoading = ref(false)
 const { t } = useI18n()
 const props = defineProps({
+  inboxOptions: { type: Array, default: () => [] },
+  legacyConfiguration: { type: Boolean, default: false },
   initialValues: {
     type: Object,
     required: false

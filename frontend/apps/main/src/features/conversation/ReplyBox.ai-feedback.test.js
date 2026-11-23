@@ -144,6 +144,7 @@ beforeEach(async () => {
     removeDraft: (uuid, type) => map.delete(`${uuid}:${type}`),
     addPendingMessage: vi.fn(() => 'echo-1'),
     removePendingMessage: vi.fn(),
+    replacePendingMessage: vi.fn(),
     refreshCurrentConversation: vi.fn().mockResolvedValue({})
   })
   mocks.draft = {
@@ -795,4 +796,21 @@ test('generator opens in expanded context and adoption preserves private mode, r
   expect(mocks.files.mediaFiles.value).toEqual([{ uuid: 'attachment', name: 'keep.txt' }])
   expect(mocks.store.currentTo).toEqual(['contact@example.com'])
   expect(mocks.api.sendMessage).not.toHaveBeenCalled()
+})
+
+test('contactless internal reply stores once, drops stale email recipients and reconciles immediately', async () => {
+  mocks.store.current.contact_id = 0
+  mocks.store.current.custom_attributes = { internal: true, private: true }
+  mocks.store.current.contact.email = null
+  // currentTo intentionally still contains an old draft address.
+  mocks.api.sendMessage.mockResolvedValue({ data: { data: { uuid: outgoingUUID, type: 'internal', status: 'stored' } } })
+  await flush()
+  const send = root.querySelector('[data-send]')
+  send.click(); send.click(); await flush()
+  expect(mocks.api.sendMessage).toHaveBeenCalledTimes(1)
+  expect(mocks.api.sendMessage.mock.calls[0][1]).toMatchObject({
+    message: 'Existing employee answer', private: false, to: [], cc: [], bcc: [], template_id: null
+  })
+  expect(mocks.store.replacePendingMessage).toHaveBeenCalledWith('conversation', 'echo-1', expect.objectContaining({ status: 'stored', type: 'internal' }))
+  expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
 })

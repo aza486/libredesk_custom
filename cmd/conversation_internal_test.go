@@ -33,9 +33,9 @@ func TestInternalConversationConfiguredInboxHTTP(t *testing.T) {
 		firstName string
 	}{
 		{"agent", 0, 102, 0, "other@example.com", "Other"},
-		{"team", 0, 0, 201, "team-tickets@example.com", "Internal"},
+		{"team", 0, 0, 201, "", ""},
 		{"team and agent", 0, 102, 201, "other@example.com", "Other"},
-		{"existing client with actual ID", 3087, 0, 201, "team-tickets@example.com", "Internal"},
+		{"existing client with actual ID", 3087, 0, 201, "", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var input map[string]any
@@ -68,14 +68,22 @@ func TestInternalConversationConfiguredInboxHTTP(t *testing.T) {
 			if attrs["private"] != true || attrs["internal"] != true || attrs["creator_id"] != float64(101) || attrs["access_mode"] != nil || attrs["owner_user_id"] != nil {
 				t.Fatalf("security initialization changed: %s", conv.CustomAttributes)
 			}
-			var to []byte
-			if err := db.Get(&to, `SELECT m.meta->'to' FROM conversation_messages m JOIN conversations c ON c.id=m.conversation_id WHERE c.uuid=$1 AND m.type='outgoing'`, conv.UUID); err != nil {
-				t.Fatal(err)
+			if tc.agent == 0 {
+				var count int
+				if err := db.Get(&count, `SELECT count(*) FROM conversation_messages m WHERE m.conversation_id=$1 AND m.type='internal' AND m.status='stored' AND NOT m.private AND m.content='<p>Internal message</p>' AND NOT (m.meta ? 'to')`, conv.ID); err != nil || count != 1 || conv.ContactID != 0 {
+					t.Fatalf("team-only message must be stored without a contact: %d %v", count, err)
+				}
+			} else {
+				var to []byte
+				if err := db.Get(&to, `SELECT m.meta->'to' FROM conversation_messages m WHERE m.conversation_id=$1 AND m.type='outgoing'`, conv.ID); err != nil {
+					t.Fatal(err)
+				}
+				var recipients []string
+				if err := json.Unmarshal(to, &recipients); err != nil || len(recipients) != 1 || recipients[0] != tc.email {
+					t.Fatalf("email recipient contract changed: %s %v", to, err)
+				}
 			}
-			var recipients []string
-			if err := json.Unmarshal(to, &recipients); err != nil || len(recipients) != 1 || recipients[0] != tc.email {
-				t.Fatalf("email recipient contract changed: %s %v", to, err)
-			}
+
 			for id, want := range map[int]int{101: 200, 102: 200, 103: 403, 104: 200} {
 				systemAttributesRequest(t, app, id, "GET", conv.UUID, "", perm(handleGetConversation, "conversations:read"), want)
 			}
@@ -103,8 +111,8 @@ func TestInternalConversationConfigurationRejectsHTTP(t *testing.T) {
 		{name: "personal inbox", config: "personal", status: 400, message: "public email inbox"},
 		{name: "conflicting ID 3", inbox: 3, sql: `INSERT INTO inboxes(id,name,channel) VALUES(3,'Unrelated','email')`, status: 400, message: "configured inbox"},
 		{name: "negative inbox ID", inbox: -1, status: 400, message: "configured inbox"},
-		{name: "missing team contact", config: "no contact", team: 201, status: 400, message: "conversation.internal_contact_email"},
-		{name: "invalid team contact", config: "invalid contact", team: 201, status: 400, message: "email"},
+		{name: "missing team contact is unnecessary", config: "no contact", team: 201, status: 200},
+		{name: "unused invalid legacy contact", config: "invalid contact", team: 201, status: 200},
 		{name: "no create permission", actor: 102, agent: 102, status: 403},
 		{name: "no agent assignment permission", agent: 102, sql: `UPDATE roles SET permissions=array_remove(permissions,'conversations:update_user_assignee') WHERE name='Security creator'`, status: 403},
 		{name: "no team assignment permission", team: 201, sql: `UPDATE roles SET permissions=array_remove(permissions,'conversations:update_team_assignee') WHERE name='Security creator'`, status: 403},
@@ -141,6 +149,13 @@ func TestInternalConversationConfigurationRejectsHTTP(t *testing.T) {
 			raw := systemAttributesRequest(t, app, actor, "POST", "", internalCreateBody(tc.inbox, tc.agent, tc.team), perm(handleCreateConversation, "conversations:write"), tc.status)
 			if tc.message != "" && !strings.Contains(strings.ToLower(string(raw)), strings.ToLower(tc.message)) {
 				t.Fatalf("missing setup error %q: %s", tc.message, raw)
+			}
+			if tc.status == 200 {
+				var count int
+				if err := db.Get(&count, `SELECT count(*) FROM conversations c JOIN conversation_messages m ON m.conversation_id=c.id WHERE c.contact_id IS NULL AND m.type='internal' AND m.status='stored'`); err != nil || count != 1 {
+					t.Fatalf("legacy contact must be ignored for team-only: %d %v", count, err)
+				}
+				return
 			}
 			for _, table := range []string{"conversations", "conversation_messages"} {
 				var count int

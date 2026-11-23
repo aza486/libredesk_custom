@@ -204,6 +204,10 @@ func (e *Email) Send(m models.OutboundMessage) error {
 		e.lo.Debug("conversation uuid header set", "conversation_uuid", m.ConversationUUID)
 	}
 
+	// Trusted transport headers preserve verification mail's Reply-To guard.
+	for key, values := range m.Headers {
+		email.Headers[key] = values
+	}
 	// Set email content
 	switch m.ContentType {
 	case "plain":

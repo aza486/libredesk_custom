@@ -21,6 +21,7 @@ import (
 )
 
 type messageReq struct {
+	Purpose                       string                 `json:"purpose"`
 	ReplyToMessageUUID            string                 `json:"reply_to_message_uuid"`
 	AIResponse                    *responseProvenance    `json:"ai_response,omitempty"`
 	AIFeedbackOriginalMessageUUID string                 `json:"ai_feedback_original_message_uuid"`
@@ -183,7 +184,7 @@ func handleRetryMessage(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
-	if msg.SenderType != cmodels.SenderTypeAgent || msg.Status != cmodels.MessageStatusFailed || msg.SenderID != user.ID || msg.ConversationUUID != cuuid {
+	if msg.Type != cmodels.MessageOutgoing || msg.Private || msg.SenderType != cmodels.SenderTypeAgent || msg.Status != cmodels.MessageStatusFailed || msg.SenderID != user.ID || msg.ConversationUUID != cuuid {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.badRequest"), nil, envelope.InputError)
 	}
 
@@ -265,6 +266,44 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	if req.SenderType != umodels.UserTypeAgent && req.SenderType != umodels.UserTypeContact {
 		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.InputError)
+	}
+
+	// A purpose is an explicit request for a narrowly authorized stored-only path.
+	// Validate before any alternative message path or reply-source normalization.
+	if req.Purpose != "" {
+		if r.RequestCtx.UserValue("auth_method") != authMethodAPIKey {
+			return r.SendErrorEnvelope(403, "Security notes require API-key authentication", nil, envelope.PermissionError)
+		}
+		if req.Purpose != conversation.SpamDetectionPurpose {
+			return r.SendErrorEnvelope(403, "Unsupported security note purpose", nil, envelope.PermissionError)
+		}
+		if !req.Private || req.SenderType != umodels.UserTypeAgent || len(req.To)+len(req.CC)+len(req.BCC)+len(req.Attachments)+len(req.Mentions) != 0 || req.AIResponse != nil || req.AIFeedbackOriginalMessageUUID != "" || req.ReplyToMessageUUID != "" || req.TemplateID != 0 {
+			return r.SendErrorEnvelope(400, "Spam detection requires a private agent note without delivery, attachment, mention or AI response fields", nil, envelope.InputError)
+		}
+		message, err := app.conversation.SendSpamDetectionNote(user, cuuid, req.Message)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		return r.SendEnvelope(message)
+	}
+
+	// The database identity, not a request flag, selects stored-only history.
+	if conv.ContactID == 0 {
+		if req.SenderType != umodels.UserTypeAgent || len(req.To)+len(req.CC)+len(req.BCC) != 0 || req.AIResponse != nil || req.AIFeedbackOriginalMessageUUID != "" || req.ReplyToMessageUUID != "" || req.TemplateID != 0 {
+			return sendErrorEnvelope(r, notificationInput("This internal ticket stores messages without email recipients or delivery metadata"))
+		}
+		if !req.Private {
+			media, err := getUnassociatedMedia(app, req.Attachments)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			message, err := app.conversation.StoreInternalMessage(media, user.ID, cuuid, req.Message, req.EchoID)
+			if err != nil {
+				return sendErrorEnvelope(r, err)
+			}
+			markAssignmentNotificationRead(app, conv, user)
+			return r.SendEnvelope(message)
+		}
 	}
 
 	// Contacts cannot send private messages

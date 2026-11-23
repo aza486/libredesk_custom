@@ -1350,21 +1350,24 @@ func handleCreateConversation(r *fastglue.Request) error {
 		ExternalUserID:   null.NewString(req.ExternalUserID, req.ExternalUserID != ""),
 		CustomAttributes: json.RawMessage(`{}`),
 	}
-	canWriteContacts, err := app.authz.Enforce(user, "contacts", "write")
-	if err != nil {
-		app.lo.Error("error checking permission", "error", err)
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
-	}
-	policy := umodels.ContactReuse
-	if canWriteContacts && !req.ReuseContact {
-		policy = umodels.ContactSync
-	}
-	if err := app.user.ResolveContact(&contact, policy); err != nil {
-		return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
-	}
-	// A contact matched by external ID keeps its stored email as the recipient.
-	if policy == umodels.ContactReuse && contact.Email.String != "" {
-		to = []string{contact.Email.String}
+	teamOnly := req.internalTeamOnly()
+	if !teamOnly {
+		canWriteContacts, err := app.authz.Enforce(user, "contacts", "write")
+		if err != nil {
+			app.lo.Error("error checking permission", "error", err)
+			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+		}
+		policy := umodels.ContactReuse
+		if canWriteContacts && !req.ReuseContact {
+			policy = umodels.ContactSync
+		}
+		if err := app.user.ResolveContact(&contact, policy); err != nil {
+			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.somethingWentWrong"), nil))
+		}
+		// A contact matched by external ID keeps its stored email as the recipient.
+		if policy == umodels.ContactReuse && contact.Email.String != "" {
+			to = []string{contact.Email.String}
+		}
 	}
 
 	// Private ticket metadata
@@ -1424,41 +1427,58 @@ func handleCreateConversation(r *fastglue.Request) error {
 
 	// Assign team first, it clears any assigned agent.
 	if req.AssignedTeamID > 0 {
-		app.conversation.UpdateConversationTeamAssignee(conversationUUID, req.AssignedTeamID, user)
+		if err := app.conversation.UpdateConversationTeamAssignee(conversationUUID, req.AssignedTeamID, user); err != nil {
+			_ = app.conversation.DeleteConversation(conversationUUID)
+			return sendErrorEnvelope(r, err)
+		}
 	}
 	if req.AssignedAgentID > 0 {
-		app.conversation.UpdateConversationUserAssignee(conversationUUID, req.AssignedAgentID, user)
+		if err := app.conversation.UpdateConversationUserAssignee(conversationUUID, req.AssignedAgentID, user); err != nil {
+			_ = app.conversation.DeleteConversation(conversationUUID)
+			return sendErrorEnvelope(r, err)
+		}
 	}
 
-	// Send initial message based on the initiator of conversation.
-	switch req.Initiator {
-	case umodels.UserTypeAgent:
-		// Queue reply.
-		if _, err := app.conversation.QueueReply(media, req.InboxID, auser.ID /**sender_id**/, contact.ID, conversationUUID, req.Content, to, nil /**cc**/, nil /**bcc**/, map[string]any{} /**meta**/); err != nil {
-			// Delete the conversation if msg queue fails.
-			if err := app.conversation.DeleteConversation(conversationUUID); err != nil {
-				app.lo.Error("error deleting conversation", "error", err)
-			}
-			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.errorSendingMessage"), nil))
+	// A team assignment is not an email recipient. Persist a normal internal
+	// message without queueing transport or publishing email-message webhooks.
+	if teamOnly {
+		if _, err := app.conversation.StoreInternalMessage(media, auser.ID, conversationUUID, req.Content); err != nil {
+			_ = app.conversation.DeleteConversation(conversationUUID)
+			return sendErrorEnvelope(r, err)
 		}
-		// Trigger webhook for agent-initiated conversation, for contact intitiated the incoming message hooks handle it.
 		if c, err := app.conversation.GetConversation(0, conversationUUID, ""); err == nil {
 			app.webhook.TriggerEvent(wmodels.EventConversationCreated, c)
 		}
-	case umodels.UserTypeContact:
-		// Create contact message.
-		if _, err := app.conversation.CreateContactMessage(media, contact.ID, conversationUUID, req.Content, cmodels.ContentTypeHTML, true); err != nil {
-			// Delete the conversation if message creation fails.
-			if err := app.conversation.DeleteConversation(conversationUUID); err != nil {
-				app.lo.Error("error deleting conversation", "error", err)
+	} else {
+		// Send initial message based on the initiator of conversation.
+		switch req.Initiator {
+		case umodels.UserTypeAgent:
+			// Queue reply.
+			if _, err := app.conversation.QueueReply(media, req.InboxID, auser.ID /**sender_id**/, contact.ID, conversationUUID, req.Content, to, nil /**cc**/, nil /**bcc**/, map[string]any{} /**meta**/); err != nil {
+				// Delete the conversation if msg queue fails.
+				if err := app.conversation.DeleteConversation(conversationUUID); err != nil {
+					app.lo.Error("error deleting conversation", "error", err)
+				}
+				return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.errorSendingMessage"), nil))
 			}
-			return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.errorSendingMessage"), nil))
+			// Trigger webhook for agent-initiated conversation, for contact intitiated the incoming message hooks handle it.
+			if c, err := app.conversation.GetConversation(0, conversationUUID, ""); err == nil {
+				app.webhook.TriggerEvent(wmodels.EventConversationCreated, c)
+			}
+		case umodels.UserTypeContact:
+			// Create contact message.
+			if _, err := app.conversation.CreateContactMessage(media, contact.ID, conversationUUID, req.Content, cmodels.ContentTypeHTML, true); err != nil {
+				// Delete the conversation if message creation fails.
+				if err := app.conversation.DeleteConversation(conversationUUID); err != nil {
+					app.lo.Error("error deleting conversation", "error", err)
+				}
+				return sendErrorEnvelope(r, envelope.NewError(envelope.GeneralError, app.i18n.T("globals.messages.errorSendingMessage"), nil))
+			}
+		default:
+			// Guard anyway.
+			return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.InputError)
 		}
-	default:
-		// Guard anyway.
-		return r.SendErrorEnvelope(fasthttp.StatusBadRequest, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.InputError)
 	}
-
 	conversation, _ := app.conversation.GetConversation(conversationID, "", "")
 	return r.SendEnvelope(conversation)
 }
@@ -1479,14 +1499,19 @@ func validateCreateConversationRequest(req *createConversationRequest, app *App,
 	if req.Content == "" {
 		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`content`"), nil)
 	}
-	if req.Email == "" {
-		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`contact_email`"), nil)
+	if !req.internalTeamOnly() {
+		if req.Email == "" {
+			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`contact_email`"), nil)
+		}
+		if req.FirstName == "" {
+			return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`first_name`"), nil)
+		}
+		if !stringutil.ValidEmail(req.Email) {
+			return envelope.NewError(envelope.InputError, app.i18n.T("validation.invalidEmail"), nil)
+		}
 	}
-	if req.FirstName == "" {
-		return envelope.NewError(envelope.InputError, app.i18n.Ts("globals.messages.required", "name", "`first_name`"), nil)
-	}
-	if !stringutil.ValidEmail(req.Email) {
-		return envelope.NewError(envelope.InputError, app.i18n.T("validation.invalidEmail"), nil)
+	if req.internalTeamOnly() && req.Initiator != umodels.UserTypeAgent {
+		return notificationInput("Internal team messages must be authored by the creating agent")
 	}
 	if req.Initiator != umodels.UserTypeContact && req.Initiator != umodels.UserTypeAgent {
 		return envelope.NewError(envelope.InputError, app.i18n.T("globals.messages.somethingWentWrong"), nil)
@@ -1559,4 +1584,11 @@ func canReturnCustomerToSupport(user umodels.User, conversation cmodels.Conversa
 		return true
 	}
 	return teamMember && (slices.Contains(user.Permissions, "conversations:read_team_all") || (len(conversation.AssignedUserIDs) == 0 && !conversation.AssignedUserID.Valid && slices.Contains(user.Permissions, "conversations:read_team_inbox")))
+}
+
+// Derived only from validated system attributes and assignments, never a
+// client-selectable message type or transport bypass.
+func (req createConversationRequest) internalTeamOnly() bool {
+	internal, _ := req.CustomAttributes["internal"].(bool)
+	return internal && req.AssignedAgentID == 0 && req.AssignedTeamID > 0
 }

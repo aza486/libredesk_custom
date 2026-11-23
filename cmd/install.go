@@ -3,84 +3,54 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/abhinavxd/libredesk/internal/colorlog"
-	"github.com/abhinavxd/libredesk/internal/dbutil"
 	"github.com/abhinavxd/libredesk/internal/user"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/stuffbin"
 )
 
-// Install checks if the schema is already installed, prompts for confirmation, and installs the schema if needed.
-// idempotent install skips the installation if the database schema is already installed.
+// install initializes only a genuinely empty database. Repetition completes the
+// registered upgrade/bootstrap chain and never replaces an existing schema.
 func install(ctx context.Context, db *sqlx.DB, fs stuffbin.FileSystem, idempotentInstall, prompt bool) error {
-	schemaInstalled, err := checkSchema(db)
-	if err != nil {
-		log.Fatalf("error checking existing db schema: %v", err)
-	}
-
-	// Make sure the system user password is strong enough.
-	password := os.Getenv("LIBREDESK_SYSTEM_USER_PASSWORD")
-	if password != "" && !user.IsStrongPassword(password) && !schemaInstalled {
-		log.Fatalf("system user password is not strong, %s", user.PasswordHint)
-	}
-
-	if !idempotentInstall {
-		log.Println("running first time setup...")
-		colorlog.Red(fmt.Sprintf("WARNING: This will wipe your entire database - '%s'", ko.String("db.database")))
-	}
-
-	if prompt {
-		log.Print("Continue (y/n)? ")
-		var ok string
-		fmt.Scanf("%s", &ok)
-		if !strings.EqualFold(ok, "y") {
-			log.Fatalf("installation cancelled")
+	return withInstallationLock(ctx, db, func() error {
+		installed, err := checkSchema(db)
+		if err != nil {
+			return err
 		}
-	}
-
-	if idempotentInstall {
-		if schemaInstalled {
-			log.Println("skipping installation as schema is already installed")
-			return ensureSystemData(ctx, db)
+		if installed && !idempotentInstall {
+			return fmt.Errorf("database already contains an installation; refusing destructive --install; use --install --idempotent-install or --upgrade")
 		}
-	} else {
-		log.Println("installing database schema...")
-		time.Sleep(5 * time.Second)
-	}
-
-	// Install schema.
-	if err := installSchema(db, fs); err != nil {
-		log.Fatalf("error installing schema: %v", err)
-	}
-
-	log.Println("database schema installed successfully")
-
-	// Create system user.
-	if err := user.CreateSystemUser(ctx, password, db); err != nil {
-		log.Fatalf("error creating system user: %v", err)
-	}
-	return ensureSystemData(ctx, db)
+		password := os.Getenv("LIBREDESK_SYSTEM_USER_PASSWORD")
+		if !installed {
+			if password != "" && !user.IsStrongPassword(password) {
+				return fmt.Errorf("invalid initial system password: %s", user.PasswordHint)
+			}
+			if prompt {
+				var ok string
+				fmt.Print("Install in this empty database (y/n)? ")
+				if _, err := fmt.Scanf("%s", &ok); err != nil {
+					return err
+				}
+				if !strings.EqualFold(ok, "y") {
+					return fmt.Errorf("installation cancelled")
+				}
+			}
+			if err := installSchema(db, fs); err != nil {
+				return fmt.Errorf("installing base schema (transaction rolled back): %w", err)
+			}
+		}
+		if err := runPendingMigrations(ctx, db, fs); err != nil {
+			return err
+		}
+		return completeInstallation(ctx, db, true, password)
+	})
 }
 
 // setSystemUserPass prompts for pass and sets system user password.
 func setSystemUserPass(ctx context.Context, db *sqlx.DB) {
 	user.ChangeSystemUserPassword(ctx, db)
-}
-
-// checkSchema verifies if the DB schema is already installed by querying a table.
-func checkSchema(db *sqlx.DB) (bool, error) {
-	if _, err := db.Exec(`SELECT * FROM settings LIMIT 1`); err != nil {
-		if dbutil.IsTableNotExistError(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
 }
 
 // installSchema reads the schema file and installs it in the database.
@@ -89,6 +59,13 @@ func installSchema(db *sqlx.DB, fs stuffbin.FileSystem) error {
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(string(q))
-	return err
+	tx, err := db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(string(q)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

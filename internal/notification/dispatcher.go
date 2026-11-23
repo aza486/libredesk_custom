@@ -141,6 +141,7 @@ func (d *Dispatcher) sendToRecipient(recipientID int, n Notification) *models.Us
 // sendEmail sends an email notification through the outbound service.
 func (d *Dispatcher) sendEmail(recipientID int, email, subject, content string, nType models.NotificationType) {
 	if err := d.outbound.Send(Message{
+		Optional:        true,
 		RecipientEmails: []string{email},
 		Subject:         subject,
 		Content:         content,

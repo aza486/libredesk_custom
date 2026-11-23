@@ -1440,11 +1440,12 @@ export const useConversationStore = defineStore('conversation', () => {
     author,
     attachments = [],
     textContent = '',
-    meta = {}
+    meta = {},
+    storedInternal = false
   ) {
     const pendingMessage = {
       uuid: `pending-${Date.now()}`,
-      type: 'outgoing',
+      type: storedInternal ? 'internal' : 'outgoing',
       status: 'pending',
       content,
       text_content: textContent,

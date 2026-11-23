@@ -1,4 +1,7 @@
 {
+  "conversation.internalMessage": "Interne Nachricht",
+  "conversation.internalStored": "Intern gespeichert – keine E-Mail-Zustellung",
+  "conversation.storeInternal": "Intern speichern",
   "account.workPhone": "Geschäftliche Telefonnummer",
   "account.workPhone.description": "Optional. Wird bei unterstützten E-Mail-Signaturen anstelle der allgemeinen Telefonnummer verwendet.",
   "account.workPhone.invalid": "Bitte eine gültige Telefonnummer mit höchstens 64 Zeichen ohne HTML oder Steuerzeichen eingeben.",
@@ -1653,5 +1656,13 @@
   "aiGenerate.adopt": "Vorschlag übernehmen",
   "aiGenerate.failed": "Die Antwort konnte nicht erstellt werden. Bitte erneut versuchen.",
   "aiGenerate.limit": "Anweisungen dürfen höchstens 8.000 Zeichen und Entwürfe höchstens 64.000 HTML-Zeichen enthalten.",
-  "aiGenerate.changed": "Der Entwurf oder Antwortmodus wurde geändert. Bitte vor der Übernahme einen neuen Vorschlag erstellen."
+  "aiGenerate.changed": "Der Entwurf oder Antwortmodus wurde geändert. Bitte vor der Übernahme einen neuen Vorschlag erstellen.",
+  "admin.notification.sharedInbox": "Gemeinsames System-E-Mail-Postfach",
+  "admin.notification.chooseInbox": "Öffentliches E-Mail-Postfach auswählen",
+  "admin.notification.legacySMTP": "Nur eigener SMTP-Versand (kein internes Postfach)",
+  "admin.notification.sharedInboxHelp": "Für Systembenachrichtigungen, interne Ticketerstellung und ausgehenden internen E-Mail-Verkehr. Änderungen gelten sofort.",
+  "admin.notification.teamRecipient": "Empfänger für interne Teamtickets",
+  "admin.notification.teamRecipientHelp": "Nur für Teamtickets ohne Mitarbeiter erforderlich. Separate Empfängeradresse verwenden, nicht das Versandpostfach. Mitarbeitertickets verwenden die gespeicherte Mitarbeiteradresse.",
+  "admin.notification.savedLive": "E-Mail-Einstellungen gespeichert. Änderungen sind sofort wirksam.",
+  "admin.notification.legacyTransition": "Bis zum Speichern gelten die bisherigen SMTP- und TOML-Einstellungen. Speichern aktiviert das angezeigte gemeinsame Postfach; bisherige SMTP-Werte bleiben erhalten."
 }

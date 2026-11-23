@@ -315,6 +315,7 @@ import { UserTypeAgent } from '@/constants/user'
 const emit = defineEmits(['historyTarget'])
 const { t } = useI18n()
 const conversationStore = useConversationStore()
+const isStoredInternal = computed(() => conversationStore.current?.contact_id === 0 && conversationStore.current?.custom_attributes?.internal === true)
 const notificationStore = useNotificationStore()
 const inboxStore = useInboxStore()
 const emitter = useEmitter()
@@ -888,7 +889,7 @@ const processSend = async (
     return
   }
 
-  if (!isPrivate && conversationStore.current.inbox_channel === 'email') {
+  if (!isPrivate && conversationStore.current.inbox_channel === 'email' && !isStoredInternal.value) {
     // Require at least one recipient in `to`.
     if (!to.value.trim()) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -935,21 +936,21 @@ const processSend = async (
       type: 'agent'
     }
     const parsedTo =
-      !isPrivate && to.value
+      !isPrivate && !isStoredInternal.value && to.value
         ? to.value
             .split(',')
             .map((e) => e.trim())
             .filter(Boolean)
         : []
     const parsedCC =
-      !isPrivate && cc.value
+      !isPrivate && !isStoredInternal.value && cc.value
         ? cc.value
             .split(',')
             .map((e) => e.trim())
             .filter(Boolean)
         : []
     const parsedBCC =
-      !isPrivate && bcc.value
+      !isPrivate && !isStoredInternal.value && bcc.value
         ? bcc.value
             .split(',')
             .map((e) => e.trim())
@@ -967,7 +968,8 @@ const processSend = async (
       author,
       mediaFiles.value,
       textContent.value,
-      meta
+      meta,
+      !isPrivate && isStoredInternal.value
     )
 
     let feedbackOriginalUUID = null
@@ -1005,7 +1007,7 @@ const processSend = async (
         bcc: parsedBCC,
         to: parsedTo,
         echo_id: isPrivate ? '' : tempUUID,
-        template_id: isPrivate ? null : savedTemplateID,
+        template_id: isPrivate || isStoredInternal.value ? null : savedTemplateID,
         ...(savedProvenance && (savedProvenance.response_source !== 'human' || feedbackOriginalUUID) ? { ai_response: savedProvenance } : {}),
         ...(feedbackOriginalUUID ? { ai_feedback_original_message_uuid: feedbackOriginalUUID } : {})
       })
@@ -1030,7 +1032,7 @@ const processSend = async (
       }
 
       // Private notes are sent immediately so replace immediately.
-      if (isPrivate && response?.data?.data) {
+      if ((isPrivate || isStoredInternal.value) && response?.data?.data) {
         conversationStore.replacePendingMessage(convUUID, tempUUID, response.data.data)
       }
 

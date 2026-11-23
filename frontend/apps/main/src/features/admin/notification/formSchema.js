@@ -2,6 +2,8 @@ import * as z from 'zod';
 import { isGoDuration } from '@shared-ui/utils/string';
 
 export const createFormSchema = (t) => z.object({
+    inbox_uuid: z.literal('').optional(),
+    team_contact_email: z.string().email().or(z.literal('')).optional(),
     enabled: z.boolean().default(false),
     username: z.string().nonempty({
         message: t('globals.messages.required')
@@ -54,4 +56,8 @@ export const createFormSchema = (t) => z.object({
     hello_hostname: z.string().optional(),
     tls_type: z.enum(['none', 'starttls', 'tls']),
     tls_skip_verify: z.boolean().optional(),
-});
+}).or(z.object({
+    inbox_uuid: z.string().uuid(),
+    team_contact_email: z.string().email().or(z.literal('')).optional(),
+    enabled: z.boolean().default(false)
+}).passthrough());

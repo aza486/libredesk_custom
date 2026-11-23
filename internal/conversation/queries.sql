@@ -17,7 +17,7 @@ reference_number AS (
 INSERT INTO conversations
 (contact_id, status_id, inbox_id, last_message, last_message_at, subject, reference_number, meta, custom_attributes)
 SELECT
-   $1,
+   NULLIF($1, 0),
    (SELECT id FROM status_id),
    $3,
    $4,
@@ -43,10 +43,10 @@ SELECT
     conversations.uuid,
     conversations.reference_number,
     conversations.waiting_since,
-    users.created_at as "contact.created_at",
-    users.updated_at as "contact.updated_at",
-    users.first_name as "contact.first_name",
-    users.last_name as "contact.last_name",
+    COALESCE(users.created_at, 'epoch'::timestamptz) as "contact.created_at",
+    COALESCE(users.updated_at, 'epoch'::timestamptz) as "contact.updated_at",
+    COALESCE(users.first_name, '') as "contact.first_name",
+    COALESCE(users.last_name, '') as "contact.last_name",
     users.email as "contact.email",
     users.avatar_url as "contact.avatar_url",
     inboxes.channel as inbox_channel,
@@ -120,7 +120,7 @@ SELECT
         ORDER BY msg.created_at DESC
         LIMIT 1
     ) customer_reply ON true
-    JOIN users ON contact_id = users.id
+    LEFT JOIN users ON contact_id = users.id
     JOIN inboxes ON inbox_id = inboxes.id  
     LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
     LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
@@ -148,10 +148,10 @@ SELECT
     conversations.uuid,
     conversations.reference_number,
     conversations.waiting_since,
-    users.created_at as "contact.created_at",
-    users.updated_at as "contact.updated_at",
-    users.first_name as "contact.first_name",
-    users.last_name as "contact.last_name",
+    COALESCE(users.created_at, 'epoch'::timestamptz) as "contact.created_at",
+    COALESCE(users.updated_at, 'epoch'::timestamptz) as "contact.updated_at",
+    COALESCE(users.first_name, '') as "contact.first_name",
+    COALESCE(users.last_name, '') as "contact.last_name",
     users.email as "contact.email",
     users.avatar_url as "contact.avatar_url",
     inboxes.channel as inbox_channel,
@@ -200,7 +200,7 @@ LEFT JOIN LATERAL (
     ORDER BY msg.created_at DESC
     LIMIT 1
 ) customer_reply ON true
-JOIN users ON contact_id = users.id
+LEFT JOIN users ON contact_id = users.id
 JOIN inboxes ON inbox_id = inboxes.id
 LEFT JOIN conversation_statuses ON status_id = conversation_statuses.id
 LEFT JOIN conversation_priorities ON priority_id = conversation_priorities.id
@@ -249,7 +249,7 @@ SELECT
    COALESCE(ARRAY(SELECT user_id FROM conversation_assignees ca WHERE ca.conversation_id = c.id ORDER BY ca.created_at, ca.user_id), ARRAY[]::BIGINT[]) AS assigned_user_ids,
    c.assigned_team_id,
    c.subject,
-   c.contact_id,
+   COALESCE(c.contact_id, 0) AS contact_id,
    c.sla_policy_id,
    c.next_sla_deadline_at,
    c.meta,
@@ -278,20 +278,20 @@ SELECT
        WHERE ct.conversation_id = c.id),
        '[]'::json
    )) AS tags,
-   ct.id as "contact.id",
-   ct.created_at as "contact.created_at",
-   ct.updated_at as "contact.updated_at",
-   ct.first_name as "contact.first_name",
-   ct.last_name as "contact.last_name", 
+   COALESCE(ct.id, 0) as "contact.id",
+   COALESCE(ct.created_at, 'epoch'::timestamptz) as "contact.created_at",
+   COALESCE(ct.updated_at, 'epoch'::timestamptz) as "contact.updated_at",
+   COALESCE(ct.first_name, '') as "contact.first_name",
+   COALESCE(ct.last_name, '') as "contact.last_name",
    ct.email as "contact.email",
-   ct.type as "contact.type",
-   ct.availability_status as "contact.availability_status",
+   COALESCE(ct.type::text, '') as "contact.type",
+   COALESCE(ct.availability_status::text, '') as "contact.availability_status",
    ct.avatar_url as "contact.avatar_url",
    ct.phone_number as "contact.phone_number",
    ct.phone_number_country_code as "contact.phone_number_country_code",
    ct.country as "contact.country",
-   ct.custom_attributes as "contact.custom_attributes",
-   ct.enabled as "contact.enabled",
+   COALESCE(ct.custom_attributes, '{}'::jsonb) as "contact.custom_attributes",
+   COALESCE(ct.enabled, false) as "contact.enabled",
    ct.last_active_at as "contact.last_active_at",
    ct.last_login_at as "contact.last_login_at",
    ct.external_user_id as "contact.external_user_id",
@@ -305,7 +305,7 @@ SELECT
    csat.feedback as csat_feedback,
    csat.response_timestamp as csat_responded_at
 FROM conversations c
-JOIN users ct ON c.contact_id = ct.id
+LEFT JOIN users ct ON c.contact_id = ct.id
 JOIN inboxes inb ON c.inbox_id = inb.id
 LEFT JOIN LATERAL (
     SELECT rating, feedback, response_timestamp
