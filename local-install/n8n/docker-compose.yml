@@ -1,0 +1,74 @@
+# Installation copy only. Run on a new isolated host/daemon, not on Raptor.
+name: n8n
+services:
+  pg-n8n:
+    image: pgvector/pgvector:0.8.6-pg16-trixie@sha256:c8483555ce48101872f888c1df8a895ff689d6c7c7a5f7ac266475f9dfe89e0b
+    container_name: pg-n8n
+    restart: unless-stopped
+    ports:
+    - 5434:5432
+    environment:
+      TZ: Europe/Berlin
+      PGTZ: Europe/Berlin
+      POSTGRES_USER: ${N8N_POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${N8N_POSTGRES_PASSWORD:?Set N8N_POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${N8N_POSTGRES_DB:-n8n}
+    volumes:
+    - pg_data:/var/lib/postgresql/data
+    networks:
+    - n8n_network
+    - libredesk_network
+  n8n:
+    image: n8nio/n8n:2.25.7
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+    - 5678:5678
+    environment:
+      TZ: Europe/Berlin
+      NODE_EXTRA_CA_CERTS: /certs/custom.crt
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      N8N_PORT: 5678
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Set N8N_ENCRYPTION_KEY in .env}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678/}
+      N8N_PROXY_HOPS: ${N8N_PROXY_HOPS:-0}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Europe/Berlin}
+    volumes:
+    - n8n_new:/home/node/.n8n
+    - type: bind
+      source: ${N8N_CA_FILE:-./certs/picturesoftRoot.crt}
+      target: /certs/custom.crt
+      read_only: true
+      bind:
+        create_host_path: false
+    networks:
+      n8n_network: null
+      libredesk_network: null
+      integrations:
+        ipv4_address: 172.30.240.5
+  anonymizer:
+    build: ./anonymizer
+    container_name: anonymizer
+    restart: unless-stopped
+    ports:
+    - 8001:8001
+    networks:
+      n8n_network: null
+      libredesk_network: null
+      integrations:
+        ipv4_address: 172.30.240.7
+networks:
+  n8n_network: null
+  libredesk_network:
+    external: true
+    name: libredesk-custom_libredesk
+  integrations:
+    external: true
+    name: libredesk_integrations
+volumes:
+  n8n_new:
+    external: true
+  pg_data:
+    external: true

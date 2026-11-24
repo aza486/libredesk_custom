@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "postgres_major": 16,
+  "vector_version": "0.8.6",
+  "objects": {
+    "core": {
+      "tables": [
+        "cases",
+        "mail_events",
+        "ai_feedback",
+        "rag_items",
+        "company_knowledge",
+        "agent_style_profiles",
+        "learning_embedding_stage",
+        "libredesk_sent_receipts_v2",
+        "learning_reviews",
+        "learning_review_audit",
+        "learning_manual_origins",
+        "learning_derived_origins",
+        "learning_case_audit_v11"
+      ],
+      "views": [
+        "rag_category_learning_view",
+        "rag_final_style_view",
+        "rag_verified_fact_view",
+        "rag_case_example_view",
+        "learning_case_publisher_candidates_v11"
+      ],
+      "functions": [
+        "commit_ai_feedback",
+        "record_libredesk_sent_v2",
+        "finish_libredesk_sent_v2",
+        "learning_case_envelope_valid_v11",
+        "learning_case_feedback_guard_v11",
+        "learning_case_human_source_valid_v11",
+        "learning_case_publish_v11",
+        "learning_case_review_separation_v11",
+        "learning_case_review_v11",
+        "learning_case_stage_v11",
+        "learning_case_write_guard_v11",
+        "learning_review_activation_guard",
+        "learning_review_audit_guard",
+        "learning_review_original_guard"
+      ]
+    },
+    "knowledge": {
+      "tables": [
+        "kd_sources",
+        "kd_candidates",
+        "kd_audit"
+      ],
+      "views": [],
+      "functions": []
+    }
+  },
+  "sha256": {
+    "learning/001_review.sql": "962e5eebfdaeae19d1d5b924d6f4a32239dbf9916641e61b20150b75e4536c86",
+    "learning/002_style_view.sql": "f47822dce3c55083b1ef6e769bf46d16a026e4bb69aba6db11899fa0ac99b071",
+    "learning/003_permissions.sql": "f69615234460b6110093f853eac6c297145937eb7086f6cf1e47be7d5e643a15",
+    "learning/004_v10_permissions.sql": "e06ac193088cee79d1ff3b81e675d7927a45620f6bbc98a1d342b6871f9bd398",
+    "learning/005_case_v11.sql": "e33862abeb9ab28eb6795682a22feb74705d5eb0dbc5ba7562579876e770784b",
+    "learning/006_case_publisher_v11.sql": "c243b9e187792327109ab3330225938c7d25413f1af1d6efae56fe64fe3cf788",
+    "learning/007_case_stage_category_fix_v11.sql": "57c40cac891bbf7d7dec0871e7b731ed6111c760946a9df36baf818586d53c0b",
+    "sql/000_extensions.sql": "0f9de1680304c18f1fdc3b948213fe0b38405600bd7ae850b81fcda1e37c16ce",
+    "sql/010_base.sql": "83fe28e4636ddc981f92424ab1ba84f6a4c0cd111f74706fdf6fcc3fe1585946",
+    "sql/020_functions.sql": "e4dc89825e3d9f8739f3415c685710161daecdc27d0d287f973873eeb3d64c39",
+    "sql/030_views.sql": "5a947a974f43b2cefd72cff45cdff4946ad74ebb0c0cbaaca752c0861467e9fe",
+    "sql/optional_knowledge.sql": "b2bd4855d797535701b11d21941bae27dfce52e96afe3bcb49423992fe9f2bad"
+  }
+}

@@ -1,0 +1,330 @@
+{
+  "columns": {
+    "kd_audit.id": {
+      "type": "bigint",
+      "default": "nextval('kd_audit_id_seq'::regclass)",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "kd_audit.note": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 5
+    },
+    "kd_sources.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "kd_audit.action": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "kd_candidates.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "kd_sources.title": {
+      "type": "text",
+      "default": "''::text",
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "kd_audit.revision": {
+      "type": "integer",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "kd_audit.snapshot": {
+      "type": "jsonb",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    },
+    "kd_sources.status": {
+      "type": "text",
+      "default": "'queued'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    },
+    "kd_audit.created_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 7
+    },
+    "kd_candidates.topic": {
+      "type": "text",
+      "default": "''::text",
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "kd_sources.attempts": {
+      "type": "integer",
+      "default": "0",
+      "identity": "",
+      "not_null": true,
+      "position": 7
+    },
+    "kd_candidates.answer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 7
+    },
+    "kd_candidates.status": {
+      "type": "text",
+      "default": "'pending'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 13
+    },
+    "kd_audit.candidate_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "kd_sources.created_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 10
+    },
+    "kd_sources.last_error": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 9
+    },
+    "kd_candidates.category": {
+      "type": "text",
+      "default": "'firmenfragen'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "kd_candidates.question": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    },
+    "kd_candidates.revision": {
+      "type": "integer",
+      "default": "1",
+      "identity": "",
+      "not_null": true,
+      "position": 15
+    },
+    "kd_sources.lease_until": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 8
+    },
+    "kd_sources.source_text": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "kd_sources.source_type": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "kd_candidates.source_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "kd_sources.content_hash": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "kd_sources.processed_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 11
+    },
+    "kd_candidates.created_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 21
+    },
+    "kd_candidates.risk_level": {
+      "type": "text",
+      "default": "'medium'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 12
+    },
+    "kd_candidates.explanation": {
+      "type": "text",
+      "default": "''::text",
+      "identity": "",
+      "not_null": true,
+      "position": 11
+    },
+    "kd_candidates.fingerprint": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 23
+    },
+    "kd_candidates.limitations": {
+      "type": "text",
+      "default": "''::text",
+      "identity": "",
+      "not_null": true,
+      "position": 9
+    },
+    "kd_candidates.reviewed_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 19
+    },
+    "kd_candidates.published_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 22
+    },
+    "kd_candidates.publish_state": {
+      "type": "text",
+      "default": "'idle'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 14
+    },
+    "kd_candidates.review_reason": {
+      "type": "text",
+      "default": "''::text",
+      "identity": "",
+      "not_null": true,
+      "position": 10
+    },
+    "kd_candidates.reviewer_note": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 20
+    },
+    "kd_candidates.evidence_quote": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 8
+    },
+    "kd_candidates.knowledge_type": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "kd_candidates.publish_attempts": {
+      "type": "integer",
+      "default": "0",
+      "identity": "",
+      "not_null": true,
+      "position": 16
+    },
+    "kd_candidates.last_publish_error": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 18
+    },
+    "kd_candidates.publish_lease_until": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 17
+    }
+  },
+  "indexes": {
+    "kd_audit.kd_audit_pkey": "CREATE UNIQUE INDEX kd_audit_pkey ON public.kd_audit USING btree (id)",
+    "kd_sources.kd_sources_pkey": "CREATE UNIQUE INDEX kd_sources_pkey ON public.kd_sources USING btree (id)",
+    "kd_sources.kd_sources_queue_idx": "CREATE INDEX kd_sources_queue_idx ON public.kd_sources USING btree (status, created_at)",
+    "kd_candidates.kd_candidates_pkey": "CREATE UNIQUE INDEX kd_candidates_pkey ON public.kd_candidates USING btree (id)",
+    "kd_candidates.kd_candidates_pub_idx": "CREATE INDEX kd_candidates_pub_idx ON public.kd_candidates USING btree (publish_state, created_at)",
+    "kd_candidates.kd_candidates_review_idx": "CREATE INDEX kd_candidates_review_idx ON public.kd_candidates USING btree (status, created_at)",
+    "kd_sources.kd_sources_content_hash_key": "CREATE UNIQUE INDEX kd_sources_content_hash_key ON public.kd_sources USING btree (content_hash)",
+    "kd_candidates.kd_candidates_source_id_fingerprint_key": "CREATE UNIQUE INDEX kd_candidates_source_id_fingerprint_key ON public.kd_candidates USING btree (source_id, fingerprint)"
+  },
+  "triggers": {},
+  "sequences": {
+    "kd_audit_id_seq": {
+      "max": 9223372036854775807,
+      "min": 1,
+      "cache": 1,
+      "cycle": false,
+      "start": 1,
+      "increment": 1
+    }
+  },
+  "constraints": {
+    "kd_audit.kd_audit_pkey": "PRIMARY KEY (id)",
+    "kd_sources.kd_sources_pkey": "PRIMARY KEY (id)",
+    "kd_candidates.kd_candidates_pkey": "PRIMARY KEY (id)",
+    "kd_sources.kd_sources_status_check": "CHECK ((status = ANY (ARRAY['queued'::text, 'processing'::text, 'done'::text, 'failed'::text])))",
+    "kd_audit.kd_audit_candidate_id_fkey": "FOREIGN KEY (candidate_id) REFERENCES kd_candidates(id)",
+    "kd_sources.kd_sources_content_hash_key": "UNIQUE (content_hash)",
+    "kd_sources.kd_sources_source_text_check": "CHECK (((length(source_text) >= 20) AND (length(source_text) <= 20000)))",
+    "kd_sources.kd_sources_source_type_check": "CHECK ((source_type = ANY (ARRAY['email'::text, 'blog'::text, 'website'::text, 'employee'::text, 'other'::text])))",
+    "kd_candidates.kd_candidates_answer_check": "CHECK (((length(answer) >= 10) AND (length(answer) <= 3000)))",
+    "kd_candidates.kd_candidates_status_check": "CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'published'::text, 'revoked'::text])))",
+    "kd_candidates.kd_candidates_question_check": "CHECK (((length(question) >= 10) AND (length(question) <= 500)))",
+    "kd_candidates.kd_candidates_source_id_fkey": "FOREIGN KEY (source_id) REFERENCES kd_sources(id) ON DELETE RESTRICT",
+    "kd_candidates.kd_candidates_risk_level_check": "CHECK ((risk_level = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))",
+    "kd_candidates.kd_candidates_publish_state_check": "CHECK ((publish_state = ANY (ARRAY['idle'::text, 'queued'::text, 'publishing'::text, 'published'::text, 'failed'::text, 'revoked'::text])))",
+    "kd_candidates.kd_candidates_knowledge_type_check": "CHECK ((knowledge_type = ANY (ARRAY['fact'::text, 'process'::text, 'faq'::text])))",
+    "kd_candidates.kd_candidates_source_id_fingerprint_key": "UNIQUE (source_id, fingerprint)"
+  }
+}

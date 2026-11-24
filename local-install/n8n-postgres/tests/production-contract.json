@@ -1,0 +1,1294 @@
+{
+  "views": {
+    "rag_final_style_view": {
+      "options": null,
+      "definition": " SELECT id,\n    embedding,\n    retrieval_text AS text,\n    jsonb_build_object('rag_item_id', (id)::text, 'source_type', source_type, 'example_role', 'style_only', 'factual_authority', false, 'target_agent', 'final_answer', 'question', customer_question, 'human_answer', human_answer, 'category', category) AS metadata\n   FROM rag_items\n  WHERE ((source_type = ANY (ARRAY['response_example'::text, 'style_rule'::text])) AND (quality_status = 'approved'::text) AND (approved = true) AND (active = true) AND (embedding IS NOT NULL) AND ((learning_data ->> 'target_agent'::text) = 'final_answer'::text) AND ((learning_data ->> 'example_role'::text) = 'style_only'::text) AND ((learning_data ->> 'factual_authority'::text) = 'false'::text) AND (NULLIF(btrim(retrieval_text), ''::text) IS NOT NULL) AND (NULLIF(btrim(human_answer), ''::text) IS NOT NULL));"
+    },
+    "rag_case_example_view": {
+      "options": null,
+      "definition": " SELECT r.id,\n    r.embedding,\n    r.retrieval_text AS text,\n    jsonb_build_object('rag_item_id', (r.id)::text, 'feedback_id', (r.feedback_id)::text, 'source_type', 'case_example', 'case_version', 11, 'case_revision', (r.learning_data -> 'case_revision'::text), 'origin_digest', (r.learning_data ->> 'origin_digest'::text), 'target_agent', 'case_retrieval', 'example_role', 'historical_resolution', 'factual_authority', false, 'factual_use_approved', false, 'verification_status', 'not_applicable', 'question', r.customer_question, 'human_answer', r.human_answer, 'feedback_reason', r.feedback_reason, 'confirmed_categories', (r.learning_data -> 'confirmed_categories'::text)) AS metadata\n   FROM (rag_items r\n     JOIN ai_feedback f ON ((f.id = r.feedback_id)))\n  WHERE ((r.source_type = 'case_example'::text) AND (r.active = true) AND (r.approved = true) AND (r.quality_status = 'approved'::text) AND (r.embedding IS NOT NULL) AND (vector_dims(r.embedding) = 1536) AND (vector_norm(r.embedding) > (0)::double precision) AND (r.learning_data @> '{\"case_status\": \"published\", \"case_version\": 11, \"example_role\": \"historical_resolution\", \"target_agent\": \"case_retrieval\", \"publish_state\": \"published\", \"privacy_checked\": true, \"quality_checked\": true, \"factual_authority\": false, \"factual_use_approved\": false, \"generalization_checked\": true}'::jsonb) AND ((length(btrim(r.retrieval_text)) >= 12) AND (length(btrim(r.retrieval_text)) <= 900)) AND (length(btrim(r.customer_question)) > 0) AND (length(btrim(r.human_answer)) > 0) AND learning_case_human_source_valid_v11(f.*) AND (((f.feedback_data -> 'learning_case_v11'::text) ->> 'status'::text) = 'staged'::text) AND (md5(((f.feedback_data -> 'learning_case_v11'::text))::text) = (r.learning_data ->> 'origin_digest'::text)));"
+    },
+    "rag_verified_fact_view": {
+      "options": null,
+      "definition": " SELECT id,\n    embedding,\n    retrieval_text AS text,\n    jsonb_build_object('rag_item_id', (id)::text, 'source_type', source_type, 'fact_statement', (learning_data ->> 'fact_statement'::text), 'evidence', (learning_data ->> 'evidence_quote'::text), 'limitations', (learning_data ->> 'limitations'::text), 'verification_status', 'human_verified', 'factual_use_approved', true) AS metadata\n   FROM rag_items\n  WHERE ((source_type = 'employee_fact'::text) AND (approved = true) AND (active = true) AND (quality_status = 'approved'::text) AND (embedding IS NOT NULL) AND ((learning_data ->> 'verification_status'::text) = 'human_verified'::text) AND ((learning_data ->> 'factual_use_approved'::text) = 'true'::text));"
+    },
+    "rag_category_learning_view": {
+      "options": null,
+      "definition": " SELECT id,\n    embedding,\n    retrieval_text AS text,\n    jsonb_build_object('rag_item_id', (id)::text, 'source_type', source_type, 'question', customer_question, 'historical_category', category, 'original_categories', COALESCE((learning_data -> 'original_categories'::text), '[]'::jsonb), 'corrected_categories',\n        CASE\n            WHEN (source_type = 'classification_example'::text) THEN COALESCE((learning_data -> 'corrected_categories'::text), '[]'::jsonb)\n            ELSE '[]'::jsonb\n        END, 'correction_reason',\n        CASE\n            WHEN (source_type = 'classification_example'::text) THEN COALESCE((learning_data ->> 'rationale'::text), ''::text)\n            ELSE ''::text\n        END, 'correction_origin',\n        CASE\n            WHEN (source_type = 'classification_example'::text) THEN COALESCE((learning_data ->> 'category_correction_origin'::text), 'explicit_reason'::text)\n            ELSE 'not_confirmed'::text\n        END, 'employee_answer',\n        CASE\n            WHEN (source_type = 'response_example'::text) THEN \"left\"(COALESCE(human_answer, ''::text), 350)\n            ELSE ''::text\n        END, 'evidence_level',\n        CASE\n            WHEN (source_type = 'classification_example'::text) THEN 'explicit_employee_correction'::text\n            ELSE 'historical_ai_label_unverified'::text\n        END) AS metadata\n   FROM rag_items r\n  WHERE ((approved = true) AND (active = true) AND (quality_status = 'approved'::text) AND (embedding IS NOT NULL) AND ((length(btrim(COALESCE(retrieval_text, ''::text))) >= 12) AND (length(btrim(COALESCE(retrieval_text, ''::text))) <= 900)) AND (((source_type = 'classification_example'::text) AND ((learning_data ->> 'target_agent'::text) = 'classifier'::text) AND (jsonb_typeof((learning_data -> 'corrected_categories'::text)) = 'array'::text) AND (jsonb_array_length((learning_data -> 'corrected_categories'::text)) > 0)) OR ((source_type = 'response_example'::text) AND ((learning_data ->> 'target_agent'::text) = 'final_answer'::text) AND ((learning_data ->> 'example_role'::text) = 'style_only'::text) AND (category = ANY (ARRAY['bestellstatus'::text, 'bestellung'::text, 'versandstatus'::text, 'rechnung'::text, 'produktfragen'::text, 'firmenfragen'::text, 'reklamation'::text, 'spam'::text, 'human_needed'::text])))));"
+    },
+    "learning_case_publisher_candidates_v11": {
+      "options": [
+        "security_barrier=true"
+      ],
+      "definition": " SELECT id,\n    ((learning_data ->> 'case_revision'::text))::bigint AS revision,\n    topic,\n    customer_question,\n    human_answer,\n    feedback_reason,\n    retrieval_text,\n    updated_at\n   FROM rag_items r\n  WHERE ((source_type = 'case_example'::text) AND (quality_status = 'approved'::text) AND (active = false) AND (approved = false) AND (embedding IS NULL) AND (learning_data @> '{\"case_status\": \"approved\", \"case_version\": 11, \"example_role\": \"historical_resolution\", \"target_agent\": \"case_retrieval\", \"publish_state\": \"unpublished\", \"privacy_checked\": true, \"quality_checked\": true, \"pipeline_version\": 11, \"factual_authority\": false, \"factual_use_approved\": false, \"generalization_checked\": true, \"requires_quality_review\": true}'::jsonb) AND (EXISTS ( SELECT 1\n           FROM ai_feedback f\n          WHERE ((f.id = r.feedback_id) AND (((f.feedback_data -> 'learning_case_v11'::text) ->> 'status'::text) = 'staged'::text) AND (md5(((f.feedback_data -> 'learning_case_v11'::text))::text) = (r.learning_data ->> 'origin_digest'::text))))));"
+    }
+  },
+  "columns": {
+    "cases.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "cases.status": {
+      "type": "text",
+      "default": "'open'::text",
+      "identity": "",
+      "not_null": false,
+      "position": 8
+    },
+    "rag_items.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "cases.subject": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 15
+    },
+    "cases.summary": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 11
+    },
+    "ai_feedback.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "cases.category": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 9
+    },
+    "cases.mail_type": {
+      "type": "text",
+      "default": "'customer'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 16
+    },
+    "mail_events.plz": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 34
+    },
+    "rag_items.scope": {
+      "type": "text",
+      "default": "'global'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "rag_items.topic": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 7
+    },
+    "cases.confidence": {
+      "type": "double precision",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 10
+    },
+    "cases.created_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": false,
+      "position": 12
+    },
+    "cases.inbox_mail": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 7
+    },
+    "cases.updated_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": false,
+      "position": 13
+    },
+    "rag_items.active": {
+      "type": "boolean",
+      "default": "true",
+      "identity": "",
+      "not_null": true,
+      "position": 16
+    },
+    "mail_events.firma": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 31
+    },
+    "mail_events.stadt": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 35
+    },
+    "mail_events.status": {
+      "type": "text",
+      "default": "'new'::text",
+      "identity": "",
+      "not_null": false,
+      "position": 12
+    },
+    "rag_items.agent_id": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "rag_items.approved": {
+      "type": "boolean",
+      "default": "false",
+      "identity": "",
+      "not_null": true,
+      "position": 15
+    },
+    "rag_items.category": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "cases.customer_name": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 6
+    },
+    "mail_events.is_form": {
+      "type": "boolean",
+      "default": "false",
+      "identity": "",
+      "not_null": true,
+      "position": 30
+    },
+    "mail_events.sent_at": {
+      "type": "timestamp without time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 16
+    },
+    "mail_events.strasse": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 32
+    },
+    "mail_events.subject": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 7
+    },
+    "rag_items.ai_answer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 9
+    },
+    "rag_items.embedding": {
+      "type": "vector(1536)",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 13
+    },
+    "rag_items.source_id": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 17
+    },
+    "ai_feedback.agent_id": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "cases.customer_email": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 5
+    },
+    "company_knowledge.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "mail_events.agent_id": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 41
+    },
+    "mail_events.raw_text": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 8
+    },
+    "rag_items.created_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 18
+    },
+    "rag_items.updated_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 19
+    },
+    "cases.conversation_id": {
+      "type": "bigint",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 3
+    },
+    "cases.last_message_at": {
+      "type": "timestamp without time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 14
+    },
+    "learning_reviews.note": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 7
+    },
+    "mail_events.direction": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 5
+    },
+    "mail_events.mail_type": {
+      "type": "text",
+      "default": "'customer'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 44
+    },
+    "mail_events.order_ids": {
+      "type": "text[]",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 21
+    },
+    "rag_items.feedback_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 20
+    },
+    "rag_items.source_type": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "rag_items.subcategory": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 6
+    },
+    "ai_feedback.created_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 8
+    },
+    "ai_feedback.updated_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 9
+    },
+    "cases.reference_number": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "learning_reviews.lease": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 11
+    },
+    "mail_events.can_answer": {
+      "type": "boolean",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 26
+    },
+    "mail_events.categories": {
+      "type": "text[]",
+      "default": "'{}'::text[]",
+      "identity": "",
+      "not_null": false,
+      "position": 25
+    },
+    "mail_events.clean_text": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 9
+    },
+    "mail_events.confidence": {
+      "type": "real",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 23
+    },
+    "mail_events.created_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": false,
+      "position": 17
+    },
+    "mail_events.hausnummer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 33
+    },
+    "mail_events.message_id": {
+      "type": "bigint",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "rag_items.human_answer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 10
+    },
+    "cases.conversation_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "learning_reviews.checks": {
+      "type": "jsonb",
+      "default": "'{}'::jsonb",
+      "identity": "",
+      "not_null": true,
+      "position": 8
+    },
+    "mail_events.needs_human": {
+      "type": "boolean",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 27
+    },
+    "mail_events.received_at": {
+      "type": "timestamp without time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 14
+    },
+    "rag_items.learning_data": {
+      "type": "jsonb",
+      "default": "'{}'::jsonb",
+      "identity": "",
+      "not_null": true,
+      "position": 21
+    },
+    "ai_feedback.human_answer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 5
+    },
+    "company_knowledge.active": {
+      "type": "boolean",
+      "default": "true",
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    },
+    "company_knowledge.answer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "learning_review_audit.id": {
+      "type": "bigint",
+      "default": null,
+      "identity": "a",
+      "not_null": true,
+      "position": 1
+    },
+    "learning_reviews.item_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "mail_events.form_message": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 39
+    },
+    "mail_events.form_sent_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 38
+    },
+    "mail_events.message_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "mail_events.sender_email": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 6
+    },
+    "mail_events.sent_message": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 11
+    },
+    "rag_items.quality_status": {
+      "type": "text",
+      "default": "'pending'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 14
+    },
+    "rag_items.retrieval_text": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 12
+    },
+    "ai_feedback.feedback_data": {
+      "type": "jsonb",
+      "default": "'{}'::jsonb",
+      "identity": "",
+      "not_null": true,
+      "position": 11
+    },
+    "ai_feedback.feedback_type": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 6
+    },
+    "learning_reviews.attempts": {
+      "type": "integer",
+      "default": "0",
+      "identity": "",
+      "not_null": true,
+      "position": 9
+    },
+    "learning_reviews.decision": {
+      "type": "text",
+      "default": "'pending'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "learning_reviews.original": {
+      "type": "jsonb",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "learning_reviews.retry_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 10
+    },
+    "learning_reviews.reviewer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 6
+    },
+    "learning_reviews.revision": {
+      "type": "bigint",
+      "default": "1",
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "mail_events.fallback_used": {
+      "type": "boolean",
+      "default": "false",
+      "identity": "",
+      "not_null": true,
+      "position": 28
+    },
+    "mail_events.faq_candidate": {
+      "type": "boolean",
+      "default": "false",
+      "identity": "",
+      "not_null": false,
+      "position": 42
+    },
+    "mail_events.form_category": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 37
+    },
+    "mail_events.subject_clean": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 24
+    },
+    "mail_events.telefonnummer": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 36
+    },
+    "rag_items.feedback_reason": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 11
+    },
+    "ai_feedback.quality_status": {
+      "type": "text",
+      "default": "'pending'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 7
+    },
+    "company_knowledge.category": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "company_knowledge.question": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "mail_events.recommendation": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 29
+    },
+    "ai_feedback.feedback_reason": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "ai_feedback.learning_status": {
+      "type": "text",
+      "default": "'new'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 12
+    },
+    "company_knowledge.embedding": {
+      "type": "vector(1536)",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "learning_embedding_stage.id": {
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "learning_review_audit.actor": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "learning_reviews.last_error": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 13
+    },
+    "learning_reviews.started_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 12
+    },
+    "learning_reviews.updated_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 14
+    },
+    "mail_events.attuned_message": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 43
+    },
+    "mail_events.conversation_id": {
+      "type": "bigint",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 2
+    },
+    "mail_events.customer_number": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 40
+    },
+    "mail_events.product_queries": {
+      "type": "text[]",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 22
+    },
+    "mail_events.response_source": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 45
+    },
+    "mail_events.sender_lastname": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 20
+    },
+    "rag_items.customer_question": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 8
+    },
+    "company_knowledge.created_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": false,
+      "position": 7
+    },
+    "company_knowledge.updated_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": false,
+      "position": 8
+    },
+    "learning_review_audit.action": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "learning_review_audit.reason": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    },
+    "learning_reviews.publication": {
+      "type": "text",
+      "default": "'unpublished'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "mail_events.processing_stage": {
+      "type": "text",
+      "default": "'received'::text",
+      "identity": "",
+      "not_null": false,
+      "position": 13
+    },
+    "mail_events.sender_firstname": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 19
+    },
+    "agent_style_profiles.agent_id": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "learning_case_audit_v11.actor": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 4
+    },
+    "learning_review_audit.item_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "mail_events.conversation_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "mail_events.sender_salutation": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 18
+    },
+    "mail_events.status_updated_at": {
+      "type": "timestamp without time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 15
+    },
+    "mail_events.suggested_message": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 10
+    },
+    "agent_style_profiles.beispiele": {
+      "type": "jsonb",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 8
+    },
+    "learning_case_audit_v11.action": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "learning_review_audit.revision": {
+      "type": "bigint",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "learning_review_audit.snapshot": {
+      "type": "jsonb",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 7
+    },
+    "agent_style_profiles.direktheit": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 5
+    },
+    "agent_style_profiles.updated_at": {
+      "type": "timestamp without time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": false,
+      "position": 10
+    },
+    "learning_case_audit_v11.item_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "learning_manual_origins.item_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "agent_style_profiles.grussformel": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 6
+    },
+    "agent_style_profiles.sample_size": {
+      "type": "integer",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 9
+    },
+    "learning_case_audit_v11.db_actor": {
+      "type": "name",
+      "default": "SESSION_USER",
+      "identity": "",
+      "not_null": true,
+      "position": 5
+    },
+    "learning_case_audit_v11.revision": {
+      "type": "bigint",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "learning_derived_origins.item_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "learning_embedding_stage.content": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 2
+    },
+    "learning_review_audit.created_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 8
+    },
+    "ai_feedback.learning_processed_at": {
+      "type": "timestamp without time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 13
+    },
+    "ai_feedback.outgoing_message_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 10
+    },
+    "learning_embedding_stage.metadata": {
+      "type": "jsonb",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 3
+    },
+    "agent_style_profiles.emoji_nutzung": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 3
+    },
+    "agent_style_profiles.foermlichkeit": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "learning_case_audit_v11.created_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    },
+    "learning_embedding_stage.embedding": {
+      "type": "vector(1536)",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "libredesk_sent_receipts_v2.sent_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 7
+    },
+    "agent_style_profiles.verabschiedung": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 7
+    },
+    "ai_feedback.mail_event_message_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "learning_manual_origins.feedback_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "learning_manual_origins.source_type": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "libredesk_sent_receipts_v2.agent_id": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 5
+    },
+    "libredesk_sent_receipts_v2.received_at": {
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "identity": "",
+      "not_null": true,
+      "position": 10
+    },
+    "learning_derived_origins.parent_item_id": {
+      "type": "uuid",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "libredesk_sent_receipts_v2.finalized_at": {
+      "type": "timestamp with time zone",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 11
+    },
+    "libredesk_sent_receipts_v2.payload_hash": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 8
+    },
+    "agent_style_profiles.durchschnittslaenge": {
+      "type": "integer",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 2
+    },
+    "libredesk_sent_receipts_v2.resolve_state": {
+      "type": "text",
+      "default": "'pending'::text",
+      "identity": "",
+      "not_null": true,
+      "position": 9
+    },
+    "libredesk_sent_receipts_v2.response_source": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": false,
+      "position": 4
+    },
+    "libredesk_sent_receipts_v2.conversation_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 3
+    },
+    "libredesk_sent_receipts_v2.source_message_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 2
+    },
+    "libredesk_sent_receipts_v2.outgoing_message_uuid": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 1
+    },
+    "libredesk_sent_receipts_v2.expected_incoming_version": {
+      "type": "text",
+      "default": null,
+      "identity": "",
+      "not_null": true,
+      "position": 6
+    }
+  },
+  "indexes": {
+    "cases.cases_pkey": "CREATE UNIQUE INDEX cases_pkey ON public.cases USING btree (id)",
+    "rag_items.rag_items_pkey": "CREATE UNIQUE INDEX rag_items_pkey ON public.rag_items USING btree (id)",
+    "ai_feedback.ai_feedback_pkey": "CREATE UNIQUE INDEX ai_feedback_pkey ON public.ai_feedback USING btree (id)",
+    "mail_events.mail_events_pkey": "CREATE UNIQUE INDEX mail_events_pkey ON public.mail_events USING btree (message_uuid)",
+    "rag_items.rag_items_scope_idx": "CREATE INDEX rag_items_scope_idx ON public.rag_items USING btree (scope)",
+    "rag_items.rag_items_agent_id_idx": "CREATE INDEX rag_items_agent_id_idx ON public.rag_items USING btree (agent_id)",
+    "rag_items.rag_items_category_idx": "CREATE INDEX rag_items_category_idx ON public.rag_items USING btree (category)",
+    "rag_items.rag_items_feedback_idx": "CREATE INDEX rag_items_feedback_idx ON public.rag_items USING btree (feedback_id)",
+    "ai_feedback.ai_feedback_agent_idx": "CREATE INDEX ai_feedback_agent_idx ON public.ai_feedback USING btree (agent_id)",
+    "cases.cases_conversation_uuid_key": "CREATE UNIQUE INDEX cases_conversation_uuid_key ON public.cases USING btree (conversation_uuid)",
+    "cases.idx_cases_conversation_uuid": "CREATE INDEX idx_cases_conversation_uuid ON public.cases USING btree (conversation_uuid)",
+    "rag_items.rag_items_embedding_idx": "CREATE INDEX rag_items_embedding_idx ON public.rag_items USING hnsw (embedding vector_cosine_ops)",
+    "mail_events.idx_mail_events_status": "CREATE INDEX idx_mail_events_status ON public.mail_events USING btree (status)",
+    "rag_items.rag_items_source_type_idx": "CREATE INDEX rag_items_source_type_idx ON public.rag_items USING btree (source_type)",
+    "rag_items.rag_case_feedback_v11_uidx": "CREATE UNIQUE INDEX rag_case_feedback_v11_uidx ON public.rag_items USING btree (feedback_id) WHERE (source_type = 'case_example'::text)",
+    "ai_feedback.ai_feedback_created_at_idx": "CREATE INDEX ai_feedback_created_at_idx ON public.ai_feedback USING btree (created_at)",
+    "ai_feedback.ai_feedback_mail_event_idx": "CREATE INDEX ai_feedback_mail_event_idx ON public.ai_feedback USING btree (mail_event_message_uuid)",
+    "learning_reviews.learning_reviews_pkey": "CREATE UNIQUE INDEX learning_reviews_pkey ON public.learning_reviews USING btree (item_id)",
+    "rag_items.rag_items_quality_status_idx": "CREATE INDEX rag_items_quality_status_idx ON public.rag_items USING btree (quality_status)",
+    "rag_items.rag_items_active_approved_idx": "CREATE INDEX rag_items_active_approved_idx ON public.rag_items USING btree (active, approved)",
+    "company_knowledge.company_knowledge_pkey": "CREATE UNIQUE INDEX company_knowledge_pkey ON public.company_knowledge USING btree (id)",
+    "ai_feedback.ai_feedback_quality_status_idx": "CREATE INDEX ai_feedback_quality_status_idx ON public.ai_feedback USING btree (quality_status)",
+    "ai_feedback.ai_feedback_learning_status_idx": "CREATE INDEX ai_feedback_learning_status_idx ON public.ai_feedback USING btree (learning_status, created_at)",
+    "mail_events.idx_mail_events_conversation_uuid": "CREATE INDEX idx_mail_events_conversation_uuid ON public.mail_events USING btree (conversation_uuid)",
+    "agent_style_profiles.agent_style_profiles_pkey": "CREATE UNIQUE INDEX agent_style_profiles_pkey ON public.agent_style_profiles USING btree (agent_id)",
+    "learning_review_audit.learning_review_audit_pkey": "CREATE UNIQUE INDEX learning_review_audit_pkey ON public.learning_review_audit USING btree (id)",
+    "company_knowledge.company_knowledge_embedding_idx": "CREATE INDEX company_knowledge_embedding_idx ON public.company_knowledge USING hnsw (embedding vector_cosine_ops)",
+    "ai_feedback.ai_feedback_outgoing_message_uuid_uidx": "CREATE UNIQUE INDEX ai_feedback_outgoing_message_uuid_uidx ON public.ai_feedback USING btree (outgoing_message_uuid) WHERE (outgoing_message_uuid IS NOT NULL)",
+    "learning_case_audit_v11.learning_case_audit_v11_pkey": "CREATE UNIQUE INDEX learning_case_audit_v11_pkey ON public.learning_case_audit_v11 USING btree (item_id, revision)",
+    "learning_manual_origins.learning_manual_origins_pkey": "CREATE UNIQUE INDEX learning_manual_origins_pkey ON public.learning_manual_origins USING btree (feedback_id, source_type)",
+    "learning_derived_origins.learning_derived_origins_pkey": "CREATE UNIQUE INDEX learning_derived_origins_pkey ON public.learning_derived_origins USING btree (parent_item_id)",
+    "learning_embedding_stage.learning_embedding_stage_pkey": "CREATE UNIQUE INDEX learning_embedding_stage_pkey ON public.learning_embedding_stage USING btree (id)",
+    "libredesk_sent_receipts_v2.idx_ld_sent_v2_source_order": "CREATE INDEX idx_ld_sent_v2_source_order ON public.libredesk_sent_receipts_v2 USING btree (source_message_uuid, sent_at DESC, outgoing_message_uuid DESC)",
+    "libredesk_sent_receipts_v2.libredesk_sent_receipts_v2_pkey": "CREATE UNIQUE INDEX libredesk_sent_receipts_v2_pkey ON public.libredesk_sent_receipts_v2 USING btree (outgoing_message_uuid)",
+    "learning_embedding_stage.learning_embedding_stage_rag_item_idx": "CREATE INDEX learning_embedding_stage_rag_item_idx ON public.learning_embedding_stage USING btree (((metadata ->> 'rag_item_id'::text)))",
+    "learning_review_audit.learning_review_audit_item_id_revision_key": "CREATE UNIQUE INDEX learning_review_audit_item_id_revision_key ON public.learning_review_audit USING btree (item_id, revision)"
+  },
+  "triggers": {
+    "rag_items.learning_case_write_guard_v11": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_case_write_guard_v11 BEFORE INSERT OR DELETE OR UPDATE ON public.rag_items FOR EACH ROW EXECUTE FUNCTION learning_case_write_guard_v11()"
+    },
+    "rag_items.learning_review_activation_guard": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_review_activation_guard BEFORE UPDATE ON public.rag_items FOR EACH ROW EXECUTE FUNCTION learning_review_activation_guard()"
+    },
+    "ai_feedback.learning_case_feedback_guard_v11": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_case_feedback_guard_v11 BEFORE INSERT OR UPDATE OF feedback_data, agent_id, outgoing_message_uuid, mail_event_message_uuid, human_answer, feedback_type ON public.ai_feedback FOR EACH ROW EXECUTE FUNCTION learning_case_feedback_guard_v11()"
+    },
+    "learning_reviews.learning_review_original_guard": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_review_original_guard BEFORE UPDATE ON public.learning_reviews FOR EACH ROW EXECUTE FUNCTION learning_review_original_guard()"
+    },
+    "learning_review_audit.learning_review_audit_guard": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_review_audit_guard BEFORE DELETE OR UPDATE ON public.learning_review_audit FOR EACH ROW EXECUTE FUNCTION learning_review_audit_guard()"
+    },
+    "learning_reviews.learning_case_review_separation_v11": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_case_review_separation_v11 BEFORE INSERT OR UPDATE ON public.learning_reviews FOR EACH ROW EXECUTE FUNCTION learning_case_review_separation_v11()"
+    },
+    "learning_case_audit_v11.learning_case_audit_guard_v11": {
+      "enabled": "O",
+      "definition": "CREATE TRIGGER learning_case_audit_guard_v11 BEFORE INSERT OR DELETE OR UPDATE ON public.learning_case_audit_v11 FOR EACH ROW EXECUTE FUNCTION learning_case_write_guard_v11()"
+    }
+  },
+  "functions": {
+    "learning_review_audit_guard()": "CREATE OR REPLACE FUNCTION public.learning_review_audit_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN RAISE EXCEPTION 'review audit is append only'; END $function$\n",
+    "learning_case_write_guard_v11()": "CREATE OR REPLACE FUNCTION public.learning_case_write_guard_v11()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nBEGIN\n IF TG_TABLE_NAME='rag_items' THEN\n  IF TG_OP='INSERT' THEN\n   IF NEW.source_type IS DISTINCT FROM 'case_example' THEN RETURN NEW; END IF;\n  ELSIF TG_OP='DELETE' THEN\n   IF OLD.source_type IS DISTINCT FROM 'case_example' THEN RETURN OLD; END IF;\n   RAISE EXCEPTION 'case provenance must be retained';\n  ELSE\n   IF OLD.source_type IS DISTINCT FROM 'case_example' AND NEW.source_type IS DISTINCT FROM 'case_example' THEN RETURN NEW; END IF;\n   IF OLD.source_type IS DISTINCT FROM NEW.source_type OR\n    (to_jsonb(NEW)-ARRAY['embedding','active','approved','quality_status','learning_data','updated_at']) IS DISTINCT FROM\n    (to_jsonb(OLD)-ARRAY['embedding','active','approved','quality_status','learning_data','updated_at']) THEN\n    RAISE EXCEPTION 'case content and origin immutable';\n   END IF;\n  END IF;\n ELSE\n  IF TG_OP IN ('UPDATE','DELETE') THEN RAISE EXCEPTION 'case audit is append only'; END IF;\n END IF;\n IF current_user IS DISTINCT FROM pg_get_userbyid((SELECT proowner FROM pg_proc\n   WHERE oid='public.learning_case_stage_v11(uuid)'::regprocedure)) THEN\n  RAISE EXCEPTION 'case write requires controlled v11 function';\n END IF;\n IF TG_OP='DELETE' THEN RETURN OLD; END IF;\n RETURN NEW;\nEND $function$\n",
+    "learning_review_original_guard()": "CREATE OR REPLACE FUNCTION public.learning_review_original_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.original IS DISTINCT FROM OLD.original THEN RAISE EXCEPTION 'original review snapshot immutable'; END IF;\n RETURN NEW;\nEND $function$\n",
+    "learning_case_feedback_guard_v11()": "CREATE OR REPLACE FUNCTION public.learning_case_feedback_guard_v11()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'pg_temp'\nAS $function$\nDECLARE c jsonb;\nBEGIN\n c := NEW.feedback_data->'learning_case_v11';\n IF TG_OP='UPDATE' AND OLD.feedback_data ? 'learning_case_v11' THEN\n  IF NEW.agent_id IS DISTINCT FROM OLD.agent_id OR NEW.outgoing_message_uuid IS DISTINCT FROM OLD.outgoing_message_uuid\n   OR NEW.mail_event_message_uuid IS DISTINCT FROM OLD.mail_event_message_uuid OR NEW.human_answer IS DISTINCT FROM OLD.human_answer\n   OR NEW.feedback_type IS DISTINCT FROM OLD.feedback_type\n   OR NEW.feedback_data->'response_source' IS DISTINCT FROM OLD.feedback_data->'response_source' THEN\n   RAISE EXCEPTION 'canonical case source immutable';\n  END IF;\n  IF c IS NOT DISTINCT FROM OLD.feedback_data->'learning_case_v11' THEN RETURN NEW; END IF;\n  IF c IS NULL OR c->>'status' IS DISTINCT FROM 'blocked' THEN\n   RAISE EXCEPTION 'canonical case immutable except blocking';\n  END IF;\n END IF;\n IF c IS NOT NULL AND public.learning_case_envelope_valid_v11(c) IS DISTINCT FROM true THEN\n  RAISE EXCEPTION 'invalid learning_case_v11 envelope';\n END IF;\n RETURN NEW;\nEND $function$\n",
+    "learning_review_activation_guard()": "CREATE OR REPLACE FUNCTION public.learning_review_activation_guard()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'pg_temp'\nAS $function$\nDECLARE v public.learning_reviews; managed boolean;\nBEGIN\n SELECT * INTO v FROM public.learning_reviews WHERE item_id=NEW.id;\n managed := FOUND;\n IF managed AND current_setting('libredesk.review_writer',true) IS DISTINCT FROM 'true' THEN\n   RAISE EXCEPTION 'managed learning content requires review transaction';\n END IF;\n IF NEW.active THEN\n  IF NEW.approved IS DISTINCT FROM true OR NEW.quality_status IS DISTINCT FROM 'approved' OR NEW.embedding IS NULL\n    OR public.vector_dims(NEW.embedding) <> 1536 THEN RAISE EXCEPTION 'invalid learning publication'; END IF;\n  IF NEW.source_type='employee_fact' AND\n    (NEW.learning_data->>'verification_status' IS DISTINCT FROM 'human_verified'\n     OR NEW.learning_data->>'factual_use_approved' IS DISTINCT FROM 'true') THEN\n    RAISE EXCEPTION 'human verification required';\n  END IF;\n  IF managed AND (v.decision <> 'approved' OR v.publication NOT IN ('publishing','published') OR NEW.learning_data->>'approval_method' IS DISTINCT FROM 'human_review_v1') THEN\n    RAISE EXCEPTION 'review decision required';\n  END IF;\n  IF managed AND OLD.active AND (NEW.retrieval_text IS DISTINCT FROM OLD.retrieval_text\n      OR NEW.human_answer IS DISTINCT FROM OLD.human_answer OR NEW.learning_data IS DISTINCT FROM OLD.learning_data) THEN\n    RAISE EXCEPTION 'published content immutable';\n  END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+    "learning_case_review_separation_v11()": "CREATE OR REPLACE FUNCTION public.learning_case_review_separation_v11()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nBEGIN\n IF EXISTS(SELECT FROM public.rag_items WHERE id=NEW.item_id AND source_type='case_example') THEN\n  RAISE EXCEPTION 'case examples require separate quality review';\n END IF;\n RETURN NEW;\nEND $function$\n",
+    "learning_case_stage_v11(p_feedback uuid)": "CREATE OR REPLACE FUNCTION public.learning_case_stage_v11(p_feedback uuid)\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'pg_temp'\nAS $function$\nDECLARE\n  c jsonb;\n  i uuid;\n  ft text;\n  f public.ai_feedback;\nBEGIN\n  SELECT * INTO f\n  FROM public.ai_feedback\n  WHERE id = p_feedback\n  FOR UPDATE;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'feedback not found';\n  END IF;\n\n  c := f.feedback_data->'learning_case_v11';\n  ft := f.feedback_type;\n\n  IF public.learning_case_envelope_valid_v11(c) IS DISTINCT FROM true\n     OR c->>'status' IS DISTINCT FROM 'staged'\n     OR ft IS DISTINCT FROM c->>'feedback_type'\n     OR NOT public.learning_case_human_source_valid_v11(f)\n  THEN\n    RAISE EXCEPTION 'case is not staged';\n  END IF;\n\n  SELECT id INTO i\n  FROM public.rag_items\n  WHERE feedback_id = p_feedback\n    AND source_type = 'case_example';\n\n  IF FOUND THEN\n    RETURN i;\n  END IF;\n\n  i := gen_random_uuid();\n\n  INSERT INTO public.rag_items (\n    id, source_type, scope, source_id, feedback_id,\n    category, topic, customer_question, human_answer,\n    feedback_reason, retrieval_text, embedding,\n    approved, active, quality_status, learning_data\n  )\n  VALUES (\n    i,\n    'case_example',\n    'global',\n    p_feedback::text,\n    p_feedback,\n\n    COALESCE(\n      NULLIF(btrim(c->'corrected_categories'->>0), ''),\n      NULLIF(btrim(c->'original_categories'->>0), ''),\n      'anderes'\n    ),\n\n    'Historischer Lösungsfall',\n    c->>'customer_question',\n    c->>'human_answer',\n    c->>'feedback_reason',\n    left(c->>'customer_question', 900),\n    NULL,\n    false,\n    false,\n    'pending',\n\n    jsonb_build_object(\n      'pipeline_version', 11,\n      'case_version', 11,\n      'case_revision', 0,\n      'case_status', 'staged',\n      'publish_state', 'unpublished',\n      'target_agent', 'case_retrieval',\n      'example_role', 'historical_resolution',\n      'factual_authority', false,\n      'factual_use_approved', false,\n      'verification_status', 'not_applicable',\n      'requires_quality_review', true,\n      'privacy_checked', false,\n      'quality_checked', false,\n      'generalization_checked', false,\n      'has_explicit_feedback', c->'has_explicit_feedback',\n      'feedback_type', ft,\n      'original_categories', c->'original_categories',\n      'corrected_categories', c->'corrected_categories',\n      'confirmed_categories', '[]'::jsonb,\n      'origin_digest', md5(c::text)\n    )\n  );\n\n  INSERT INTO public.learning_case_audit_v11 (\n    item_id, revision, action, actor\n  )\n  VALUES (i, 0, 'stage', session_user);\n\n  RETURN i;\nEND\n$function$\n",
+    "learning_case_envelope_valid_v11(c jsonb)": "CREATE OR REPLACE FUNCTION public.learning_case_envelope_valid_v11(c jsonb)\n RETURNS boolean\n LANGUAGE plpgsql\n IMMUTABLE\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\nDECLARE k text;\nBEGIN\n IF jsonb_typeof(c) IS DISTINCT FROM 'object' OR c->'version' IS DISTINCT FROM '11'::jsonb THEN RETURN false; END IF;\n IF c->>'status' IN ('blocked','insufficient') THEN\n  FOR k IN SELECT jsonb_object_keys(c) LOOP\n   IF k NOT IN ('version','status','reason_code') THEN RETURN false; END IF;\n  END LOOP;\n  RETURN COALESCE(NOT c ? 'reason_code' OR c->>'reason_code' IN ('privacy','security','no_resolution','no_explicit_feedback','insufficient_context'),false);\n END IF;\n IF c->>'status' IS DISTINCT FROM 'staged'\n  OR c->'has_human_resolution' IS DISTINCT FROM 'true'::jsonb\n  OR jsonb_typeof(c->'has_explicit_feedback') IS DISTINCT FROM 'boolean'\n  OR c->'requires_quality_review' IS DISTINCT FROM 'true'::jsonb\n  OR jsonb_typeof(c->'feedback_type') IS DISTINCT FROM 'string'\n  OR c->>'feedback_type' NOT IN ('response_feedback','manual_resolution','category_correction','general_feedback')\n  OR NOT c ? 'feedback_type' THEN RETURN false; END IF;\n IF length(btrim(c->>'customer_question')) < 12 THEN RETURN false; END IF;\n FOR k IN SELECT jsonb_object_keys(c) LOOP\n  IF k NOT IN ('version','status','customer_question','human_answer','feedback_reason','feedback_type',\n   'original_categories','corrected_categories','has_human_resolution','has_explicit_feedback','requires_quality_review') THEN RETURN false; END IF;\n END LOOP;\n FOREACH k IN ARRAY ARRAY['customer_question','human_answer','feedback_reason'] LOOP\n  IF jsonb_typeof(c->k) IS DISTINCT FROM 'string' OR length(c->>k) > 6000\n   OR (k <> 'feedback_reason' AND length(btrim(c->>k))=0) THEN RETURN false; END IF;\n END LOOP;\n FOREACH k IN ARRAY ARRAY['original_categories','corrected_categories'] LOOP\n  IF jsonb_typeof(c->k) IS DISTINCT FROM 'array' THEN RETURN false; END IF;\n  IF jsonb_array_length(c->k)>20 OR EXISTS(SELECT FROM jsonb_array_elements(c->k) x\n   WHERE jsonb_typeof(x) <> 'string' OR (x#>>'{}') !~ '^[A-Za-z][A-Za-z0-9_-]{0,63}$') THEN RETURN false; END IF;\n END LOOP;\n RETURN true;\nEND $function$\n",
+    "learning_case_human_source_valid_v11(f ai_feedback)": "CREATE OR REPLACE FUNCTION public.learning_case_human_source_valid_v11(f ai_feedback)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\n SET search_path TO 'pg_catalog', 'public'\nAS $function$\n SELECT COALESCE(f.feedback_data->>'response_source'='human'\n  AND f.agent_id ~ '^[1-9][0-9]*$'\n  AND f.outgoing_message_uuid ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'\n  AND f.mail_event_message_uuid ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'\n  AND length(btrim(f.human_answer))>0 AND octet_length(f.human_answer)<=1048576,false)\n$function$\n",
+    "finish_libredesk_sent_v2(p_outgoing_message_uuid text, p_outcome text)": "CREATE OR REPLACE FUNCTION public.finish_libredesk_sent_v2(p_outgoing_message_uuid text, p_outcome text)\n RETURNS TABLE(finalized boolean, outgoing_message_uuid text, outcome text)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n  v_state text;\nBEGIN\n  IF p_outcome NOT IN ('resolved','superseded','invalid_completion') OR p_outcome IS NULL THEN\n    RETURN QUERY SELECT false,p_outgoing_message_uuid,'invalid_resolve_outcome'::text;\n    RETURN;\n  END IF;\n  SELECT r.resolve_state INTO v_state\n    FROM public.libredesk_sent_receipts_v2 AS r\n    WHERE r.outgoing_message_uuid=p_outgoing_message_uuid FOR UPDATE;\n  IF NOT FOUND THEN\n    RETURN QUERY SELECT false,p_outgoing_message_uuid,'receipt_not_found'::text;\n    RETURN;\n  END IF;\n  IF v_state='pending' THEN\n    UPDATE public.libredesk_sent_receipts_v2 AS r\n    SET resolve_state=p_outcome,finalized_at=now()\n    WHERE r.outgoing_message_uuid=p_outgoing_message_uuid;\n    RETURN QUERY SELECT true,p_outgoing_message_uuid,p_outcome;\n  ELSIF v_state=p_outcome THEN\n    RETURN QUERY SELECT true,p_outgoing_message_uuid,v_state;\n  ELSE\n    RETURN QUERY SELECT false,p_outgoing_message_uuid,'terminal_outcome_conflict'::text;\n  END IF;\nEND;\n$function$\n",
+    "learning_case_publish_v11(p_id uuid, p_revision bigint, p_embedding vector)": "CREATE OR REPLACE FUNCTION public.learning_case_publish_v11(p_id uuid, p_revision bigint, p_embedding vector)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'pg_temp'\nAS $function$\nDECLARE r public.rag_items; rev bigint;\nBEGIN\n SELECT * INTO r FROM public.rag_items WHERE id=p_id AND source_type='case_example' FOR UPDATE;\n IF NOT FOUND THEN RAISE EXCEPTION 'case not found'; END IF;\n rev := (r.learning_data->>'case_revision')::bigint;\n IF rev IS DISTINCT FROM p_revision OR r.learning_data->>'case_status' IS DISTINCT FROM 'approved'\n  OR r.learning_data->>'privacy_checked' IS DISTINCT FROM 'true' OR r.learning_data->>'quality_checked' IS DISTINCT FROM 'true'\n  OR r.learning_data->>'generalization_checked' IS DISTINCT FROM 'true'\n  OR p_embedding IS NULL OR public.vector_dims(p_embedding)<>1536 OR public.vector_norm(p_embedding)=0 THEN\n  RAISE EXCEPTION 'case publication requires current review and valid vector';\n END IF;\n PERFORM 1 FROM public.ai_feedback f WHERE id=r.feedback_id AND public.learning_case_human_source_valid_v11(f) AND feedback_data->'learning_case_v11'->>'status'='staged'\n  AND md5((feedback_data->'learning_case_v11')::text)=r.learning_data->>'origin_digest' FOR SHARE;\n IF NOT FOUND THEN RAISE EXCEPTION 'case origin unavailable or blocked'; END IF;\n UPDATE public.rag_items SET embedding=p_embedding,approved=true,active=true,quality_status='approved',updated_at=now(),\n  learning_data=learning_data||jsonb_build_object('case_status','published','case_revision',rev+1,'publish_state','published',\n   'embedding_model','text-embedding-3-small','published_at',now()) WHERE id=p_id;\n INSERT INTO public.learning_case_audit_v11(item_id,revision,action,actor) VALUES(p_id,rev+1,'publish',session_user);\n RETURN rev+1;\nEND $function$\n",
+    "learning_case_review_v11(p_id uuid, p_revision bigint, p_decision text, p_actor text, p_privacy boolean, p_quality boolean, p_generalization boolean, p_categories jsonb)": "CREATE OR REPLACE FUNCTION public.learning_case_review_v11(p_id uuid, p_revision bigint, p_decision text, p_actor text, p_privacy boolean DEFAULT false, p_quality boolean DEFAULT false, p_generalization boolean DEFAULT false, p_categories jsonb DEFAULT '[]'::jsonb)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'pg_temp'\nAS $function$\nDECLARE r public.rag_items; rev bigint;\nBEGIN\n SELECT * INTO r FROM public.rag_items WHERE id=p_id AND source_type='case_example' FOR UPDATE;\n IF NOT FOUND THEN RAISE EXCEPTION 'case not found'; END IF;\n rev := (r.learning_data->>'case_revision')::bigint;\n IF rev IS DISTINCT FROM p_revision OR p_decision IS NULL OR p_decision NOT IN ('approved','rejected','blocked','disabled')\n  OR length(btrim(p_actor)) NOT BETWEEN 1 AND 100 OR p_actor IS NULL THEN RAISE EXCEPTION USING ERRCODE='40001', MESSAGE='invalid case decision or revision'; END IF;\n IF p_decision='approved' THEN\n  IF r.learning_data->>'case_status' IS DISTINCT FROM 'staged' OR p_privacy IS DISTINCT FROM true\n   OR p_quality IS DISTINCT FROM true OR p_generalization IS DISTINCT FROM true THEN RAISE EXCEPTION USING ERRCODE='40001', MESSAGE='case quality review required'; END IF;\n  PERFORM 1 FROM public.ai_feedback f WHERE f.id=r.feedback_id\n   AND public.learning_case_human_source_valid_v11(f)\n   AND f.feedback_data->'learning_case_v11'->>'status'='staged'\n   AND md5((f.feedback_data->'learning_case_v11')::text)=r.learning_data->>'origin_digest' FOR SHARE;\n  IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='40001', MESSAGE='case origin unavailable or blocked'; END IF;\n  IF jsonb_typeof(p_categories) IS DISTINCT FROM 'array' THEN RAISE EXCEPTION 'invalid confirmed categories'; END IF;\n  IF EXISTS(SELECT FROM jsonb_array_elements(p_categories) x WHERE jsonb_typeof(x)<>'string'\n   OR (x#>>'{}') !~ '^[A-Za-z][A-Za-z0-9_-]{0,63}$') OR jsonb_array_length(p_categories)>20 THEN RAISE EXCEPTION 'invalid confirmed categories'; END IF;\n END IF;\n UPDATE public.rag_items SET active=false,approved=false,embedding=NULL,quality_status=CASE WHEN p_decision='approved' THEN 'approved' ELSE p_decision END,\n  updated_at=now(),learning_data=learning_data||jsonb_build_object('case_status',p_decision,'case_revision',rev+1,\n  'publish_state',CASE WHEN p_decision='approved' THEN 'unpublished' ELSE 'blocked' END,\n  'privacy_checked',p_decision='approved','quality_checked',p_decision='approved','generalization_checked',p_decision='approved',\n  'confirmed_categories',CASE WHEN p_decision='approved' THEN p_categories ELSE '[]'::jsonb END,'reviewer',p_actor,'reviewed_at',now()) WHERE id=p_id;\n INSERT INTO public.learning_case_audit_v11(item_id,revision,action,actor) VALUES(p_id,rev+1,p_decision,p_actor);\n RETURN rev+1;\nEND $function$\n",
+    "commit_ai_feedback(p_id uuid, p_message_uuid text, p_conversation_uuid text, p_outgoing_uuid text, p_agent_id text, p_human_answer text, p_feedback_reason text, p_sent_at timestamp with time zone)": "CREATE OR REPLACE FUNCTION public.commit_ai_feedback(p_id uuid, p_message_uuid text, p_conversation_uuid text, p_outgoing_uuid text, p_agent_id text, p_human_answer text, p_feedback_reason text, p_sent_at timestamp with time zone)\n RETURNS TABLE(id text, committed boolean, result text)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    v_event mail_events%ROWTYPE;\n    v_existing ai_feedback%ROWTYPE;\n    v_reason TEXT := NULLIF(BTRIM(p_feedback_reason), '');\n    v_sent_at TIMESTAMP := p_sent_at AT TIME ZONE 'UTC';\nBEGIN\n    IF p_id IS NULL\n       OR NULLIF(BTRIM(p_message_uuid), '') IS NULL\n       OR NULLIF(BTRIM(p_conversation_uuid), '') IS NULL\n       OR NULLIF(BTRIM(p_outgoing_uuid), '') IS NULL\n       OR NULLIF(BTRIM(p_agent_id), '') IS NULL\n       OR NULLIF(BTRIM(p_human_answer), '') IS NULL\n       OR p_sent_at IS NULL\n       OR LENGTH(COALESCE(p_feedback_reason, '')) > 8000\n    THEN\n        RETURN QUERY SELECT p_id::TEXT, FALSE, 'invalid_input'::TEXT;\n        RETURN;\n    END IF;\n\n    SELECT *\n    INTO v_event\n    FROM mail_events m\n    WHERE m.message_uuid = p_message_uuid\n      AND m.conversation_uuid = p_conversation_uuid\n      AND NULLIF(BTRIM(m.suggested_message), '') IS NOT NULL\n    FOR UPDATE;\n\n    IF NOT FOUND THEN\n        RETURN QUERY SELECT p_id::TEXT, FALSE, 'mail_event_not_found'::TEXT;\n        RETURN;\n    END IF;\n\n    SELECT *\n    INTO v_existing\n    FROM ai_feedback f\n    WHERE f.id = p_id\n       OR f.outgoing_message_uuid = p_outgoing_uuid\n    LIMIT 1;\n\n    IF FOUND THEN\n        IF v_existing.id = p_id\n           AND v_existing.mail_event_message_uuid = p_message_uuid\n           AND v_existing.outgoing_message_uuid = p_outgoing_uuid\n           AND v_existing.agent_id = p_agent_id\n           AND v_existing.human_answer = p_human_answer\n           AND v_existing.feedback_reason IS NOT DISTINCT FROM v_reason\n        THEN\n            RETURN QUERY SELECT p_id::TEXT, TRUE, 'already_committed'::TEXT;\n        ELSE\n            RETURN QUERY SELECT p_id::TEXT, FALSE, 'conflict'::TEXT;\n        END IF;\n        RETURN;\n    END IF;\n\n    INSERT INTO ai_feedback (\n        id,\n        mail_event_message_uuid,\n        outgoing_message_uuid,\n        agent_id,\n        human_answer,\n        feedback_reason,\n        feedback_type,\n        quality_status\n    )\n    VALUES (\n        p_id,\n        p_message_uuid,\n        p_outgoing_uuid,\n        p_agent_id,\n        p_human_answer,\n        v_reason,\n        NULL,\n        'pending'\n    );\n\n    UPDATE mail_events\n    SET\n        sent_message = CASE\n            WHEN sent_at IS NULL OR sent_at <= v_sent_at\n            THEN p_human_answer\n            ELSE sent_message\n        END,\n        response_source = CASE\n            WHEN sent_at IS NULL OR sent_at <= v_sent_at\n            THEN 'human'\n            ELSE response_source\n        END,\n        agent_id = CASE\n            WHEN sent_at IS NULL OR sent_at <= v_sent_at\n            THEN p_agent_id\n            ELSE agent_id\n        END,\n        sent_at = GREATEST(\n            COALESCE(sent_at, v_sent_at),\n            v_sent_at\n        ),\n        status_updated_at = NOW()\n    WHERE message_uuid = p_message_uuid;\n\n    RETURN QUERY SELECT p_id::TEXT, TRUE, 'created'::TEXT;\nEND;\n$function$\n",
+    "record_libredesk_sent_v2(p_conversation_uuid text, p_source_message_uuid text, p_outgoing_message_uuid text, p_response_source text, p_sent_message text, p_sent_at timestamp with time zone, p_agent_id text, p_expected_incoming_version text)": "CREATE OR REPLACE FUNCTION public.record_libredesk_sent_v2(p_conversation_uuid text, p_source_message_uuid text, p_outgoing_message_uuid text, p_response_source text, p_sent_message text, p_sent_at timestamp with time zone, p_agent_id text, p_expected_incoming_version text)\n RETURNS TABLE(committed boolean, outgoing_message_uuid text, needs_resolve boolean, outcome text, conversation_uuid text, expected_incoming_version text)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n  v_hash text;\n  v_ins_count integer;\n  v_existing_hash text;\n  v_state text;\n  v_latest_uuid text;\nBEGIN\n  IF nullif(trim(p_conversation_uuid),'') IS NULL\n    OR nullif(trim(p_source_message_uuid),'') IS NULL\n    OR nullif(trim(p_outgoing_message_uuid),'') IS NULL\n    OR p_source_message_uuid = p_outgoing_message_uuid\n    OR (p_response_source IS NOT NULL AND p_response_source NOT IN ('ai','ai_adapted','human'))\n    OR p_sent_message IS NULL -- empty-string is allowed for attachments\n    OR p_sent_at IS NULL\n    OR p_expected_incoming_version IS NULL\n    OR p_expected_incoming_version !~ '^[1-9][0-9]{0,18}$'\n  THEN\n    RETURN QUERY SELECT false,p_outgoing_message_uuid,false,'invalid_payload'::text,p_conversation_uuid,p_expected_incoming_version;\n    RETURN;\n  END IF;\n\n  -- Source row lock serializes multiple outgoing replies to this incoming email.\n  PERFORM 1 FROM public.mail_events AS m\n  WHERE m.message_uuid=p_source_message_uuid\n    AND m.conversation_uuid=p_conversation_uuid\n    AND m.direction='inbound'\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RETURN QUERY SELECT false,p_outgoing_message_uuid,false,'source_not_found'::text,p_conversation_uuid,p_expected_incoming_version;\n    RETURN;\n  END IF;\n\n  v_hash:=md5(jsonb_build_object(\n    'conversation_uuid',p_conversation_uuid,\n    'source_message_uuid',p_source_message_uuid,\n    'outgoing_message_uuid',p_outgoing_message_uuid,\n    'response_source',p_response_source,\n    'sent_message',p_sent_message,\n    'sent_at',to_char(p_sent_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),\n    'agent_id',p_agent_id,\n    'expected_incoming_version',p_expected_incoming_version\n  )::text);\n\n  INSERT INTO public.libredesk_sent_receipts_v2 AS r\n    (outgoing_message_uuid,source_message_uuid,conversation_uuid,response_source,\n     agent_id,expected_incoming_version,sent_at,payload_hash)\n  VALUES(p_outgoing_message_uuid,p_source_message_uuid,p_conversation_uuid,p_response_source,\n     p_agent_id,p_expected_incoming_version,p_sent_at,v_hash)\n  ON CONFLICT ON CONSTRAINT libredesk_sent_receipts_v2_pkey DO NOTHING;\n  GET DIAGNOSTICS v_ins_count=ROW_COUNT;\n\n  IF v_ins_count=0 THEN\n    SELECT r.payload_hash,r.resolve_state INTO v_existing_hash,v_state\n    FROM public.libredesk_sent_receipts_v2 AS r\n    WHERE r.outgoing_message_uuid=p_outgoing_message_uuid;\n    IF v_existing_hash IS DISTINCT FROM v_hash THEN\n      RETURN QUERY SELECT false,p_outgoing_message_uuid,false,'duplicate_payload_mismatch'::text,p_conversation_uuid,p_expected_incoming_version;\n      RETURN;\n    END IF;\n  ELSE\n    v_state:='pending';\n  END IF;\n\n  -- Update the latest outbound response per original inbound mail only.\n  SELECT r.outgoing_message_uuid INTO v_latest_uuid\n  FROM public.libredesk_sent_receipts_v2 AS r\n  WHERE r.source_message_uuid=p_source_message_uuid\n  ORDER BY r.sent_at DESC,r.outgoing_message_uuid DESC LIMIT 1;\n  IF v_latest_uuid=p_outgoing_message_uuid AND v_ins_count=1 THEN\n    UPDATE public.mail_events AS m SET\n      sent_message=p_sent_message,\n      sent_at=p_sent_at AT TIME ZONE 'UTC',\n      status='sent',\n      processing_stage='complete',\n      status_updated_at=now() AT TIME ZONE 'UTC',\n      response_source=p_response_source,\n      agent_id=COALESCE(p_agent_id,m.agent_id)\n    WHERE m.message_uuid=p_source_message_uuid\n      AND m.conversation_uuid=p_conversation_uuid;\n    -- Do not change faq_candidate: this is Learning/Review-owned state.\n  END IF;\n\n  RETURN QUERY SELECT true,p_outgoing_message_uuid,(v_state='pending'),\n    (CASE WHEN v_ins_count=0 THEN 'duplicate_accepted' ELSE 'recorded' END)::text,\n    p_conversation_uuid,p_expected_incoming_version;\nEND;\n$function$\n"
+  },
+  "sequences": {
+    "learning_review_audit_id_seq": {
+      "max": 9223372036854775807,
+      "min": 1,
+      "cache": 1,
+      "cycle": false,
+      "start": 1,
+      "increment": 1
+    }
+  },
+  "extensions": {
+    "vector": "0.8.6",
+    "plpgsql": "1.0",
+    "pgcrypto": "1.3"
+  },
+  "constraints": {
+    "cases.cases_pkey": "PRIMARY KEY (id)",
+    "rag_items.rag_items_pkey": "PRIMARY KEY (id)",
+    "cases.cases_mail_type_check": "CHECK ((mail_type = ANY (ARRAY['customer'::text, 'private_mail'::text])))",
+    "ai_feedback.ai_feedback_pkey": "PRIMARY KEY (id)",
+    "mail_events.mail_events_pkey": "PRIMARY KEY (message_uuid)",
+    "rag_items.rag_case_contract_v11": "CHECK (((source_type IS DISTINCT FROM 'case_example'::text) OR (((feedback_id IS NOT NULL) AND (source_id = (feedback_id)::text) AND (scope = 'global'::text) AND (ai_answer IS NULL) AND ((length(btrim(customer_question)) >= 12) AND (length(btrim(customer_question)) <= 6000)) AND ((length(btrim(human_answer)) >= 1) AND (length(btrim(human_answer)) <= 6000)) AND ((length(btrim(feedback_reason)) >= 0) AND (length(btrim(feedback_reason)) <= 6000)) AND ((length(btrim(retrieval_text)) >= 12) AND (length(btrim(retrieval_text)) <= 900)) AND (learning_data @> '{\"case_version\": 11, \"example_role\": \"historical_resolution\", \"target_agent\": \"case_retrieval\", \"pipeline_version\": 11, \"factual_authority\": false, \"verification_status\": \"not_applicable\", \"factual_use_approved\": false, \"requires_quality_review\": true}'::jsonb) AND ((learning_data ->> 'case_status'::text) = ANY (ARRAY['staged'::text, 'approved'::text, 'published'::text, 'rejected'::text, 'blocked'::text, 'disabled'::text])) AND (((learning_data ->> 'case_revision'::text))::bigint >= 0) AND ((NOT active) OR (approved AND (quality_status = 'approved'::text) AND (embedding IS NOT NULL) AND (learning_data @> '{\"case_status\": \"published\", \"privacy_checked\": true, \"quality_checked\": true, \"generalization_checked\": true}'::jsonb)))) IS TRUE)))",
+    "rag_items.rag_items_feedback_fk": "FOREIGN KEY (feedback_id) REFERENCES ai_feedback(id) ON DELETE SET NULL",
+    "cases.cases_conversation_uuid_key": "UNIQUE (conversation_uuid)",
+    "ai_feedback.ai_feedback_mail_event_fk": "FOREIGN KEY (mail_event_message_uuid) REFERENCES mail_events(message_uuid) ON DELETE RESTRICT",
+    "learning_reviews.learning_reviews_pkey": "PRIMARY KEY (item_id)",
+    "mail_events.mail_events_mail_type_check": "CHECK ((mail_type = ANY (ARRAY['customer'::text, 'private_mail'::text])))",
+    "company_knowledge.company_knowledge_pkey": "PRIMARY KEY (id)",
+    "ai_feedback.ai_feedback_data_object_check": "CHECK ((jsonb_typeof(feedback_data) = 'object'::text))",
+    "ai_feedback.ai_feedback_quality_status_check": "CHECK ((quality_status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))",
+    "ai_feedback.ai_feedback_learning_status_check": "CHECK ((learning_status = ANY (ARRAY['new'::text, 'processing'::text, 'prepared'::text, 'published'::text, 'skipped'::text, 'failed'::text])))",
+    "mail_events.mail_events_response_source_check": "CHECK (((response_source IS NULL) OR (response_source = ANY (ARRAY['ai'::text, 'ai_adapted'::text, 'human'::text]))))",
+    "agent_style_profiles.agent_style_profiles_pkey": "PRIMARY KEY (agent_id)",
+    "learning_reviews.learning_reviews_item_id_fkey": "FOREIGN KEY (item_id) REFERENCES rag_items(id)",
+    "learning_review_audit.learning_review_audit_pkey": "PRIMARY KEY (id)",
+    "learning_reviews.learning_reviews_decision_check": "CHECK ((decision = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'disabled'::text])))",
+    "learning_reviews.learning_reviews_publication_check": "CHECK ((publication = ANY (ARRAY['unpublished'::text, 'publishing'::text, 'published'::text, 'failed'::text])))",
+    "learning_case_audit_v11.learning_case_audit_v11_pkey": "PRIMARY KEY (item_id, revision)",
+    "learning_manual_origins.learning_manual_origins_pkey": "PRIMARY KEY (feedback_id, source_type)",
+    "learning_derived_origins.learning_derived_origins_pkey": "PRIMARY KEY (parent_item_id)",
+    "learning_embedding_stage.learning_embedding_stage_pkey": "PRIMARY KEY (id)",
+    "learning_review_audit.learning_review_audit_item_id_fkey": "FOREIGN KEY (item_id) REFERENCES learning_reviews(item_id)",
+    "libredesk_sent_receipts_v2.libredesk_sent_receipts_v2_pkey": "PRIMARY KEY (outgoing_message_uuid)",
+    "learning_case_audit_v11.learning_case_audit_v11_actor_check": "CHECK (((length(actor) >= 1) AND (length(actor) <= 100)))",
+    "learning_case_audit_v11.learning_case_audit_v11_action_check": "CHECK ((action = ANY (ARRAY['stage'::text, 'approved'::text, 'rejected'::text, 'blocked'::text, 'disabled'::text, 'publish'::text])))",
+    "learning_case_audit_v11.learning_case_audit_v11_item_id_fkey": "FOREIGN KEY (item_id) REFERENCES rag_items(id)",
+    "learning_manual_origins.learning_manual_origins_item_id_fkey": "FOREIGN KEY (item_id) REFERENCES rag_items(id)",
+    "learning_case_audit_v11.learning_case_audit_v11_revision_check": "CHECK ((revision >= 0))",
+    "learning_derived_origins.learning_derived_origins_item_id_fkey": "FOREIGN KEY (item_id) REFERENCES rag_items(id)",
+    "learning_manual_origins.learning_manual_origins_feedback_id_fkey": "FOREIGN KEY (feedback_id) REFERENCES ai_feedback(id)",
+    "learning_review_audit.learning_review_audit_item_id_revision_key": "UNIQUE (item_id, revision)",
+    "learning_derived_origins.learning_derived_origins_parent_item_id_fkey": "FOREIGN KEY (parent_item_id) REFERENCES rag_items(id)",
+    "libredesk_sent_receipts_v2.libredesk_sent_receipts_v2_resolve_state_check": "CHECK ((resolve_state = ANY (ARRAY['pending'::text, 'resolved'::text, 'superseded'::text, 'invalid_completion'::text])))",
+    "libredesk_sent_receipts_v2.libredesk_sent_receipts_v2_response_source_check": "CHECK ((response_source = ANY (ARRAY['ai'::text, 'ai_adapted'::text, 'human'::text])))"
+  }
+}
