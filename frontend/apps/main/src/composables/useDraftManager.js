@@ -30,13 +30,14 @@ const isDraftEmpty = (draft) => {
   const hasInlineImage = /<img\b/i.test(content)
   const hasAttachments = draft?.meta?.attachments?.length > 0
   const hasMacroActions = draft?.meta?.macro_actions?.length > 0
-  return !hasText && !hasInlineImage && !hasAttachments && !hasMacroActions && !draft?.meta?.ai_feedback && draft?.meta?.outgoing_signature?.source !== 'manual'
+  return !hasText && !hasInlineImage && !hasAttachments && !hasMacroActions && !draft?.meta?.ai_feedback && draft?.meta?.outgoing_signature?.source !== 'manual' && !draft?.meta?.reply_recipients
 }
 
 const draftKey = (uuid, type) => `${uuid}::${type}`
 
 const metaSignature = (meta) =>
   JSON.stringify({
+    reply_recipients: meta?.reply_recipients || null,
     ai_feedback: meta?.ai_feedback || null,
     ai_response: meta?.ai_response || null,
     outgoing_signature: meta?.outgoing_signature || null,
@@ -54,6 +55,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const conversationStore = useConversationStore()
   const aiResponse = ref(null)
   const outgoingSignature = ref(null)
+  const replyRecipients = ref(null)
   const hasStoredDraft = ref(false)
   const htmlContent = ref('')
   const textContent = ref('')
@@ -69,6 +71,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
   const buildDraft = (uuid = conversationUUID.value, type = messageType.value) => {
     const feedback = conversationStore.getDraft(uuid, 'reply')?.meta?.ai_feedback
     const meta = type === 'reply' && feedback ? { ai_feedback: feedback } : {}
+    if (type === 'reply' && replyRecipients.value) meta.reply_recipients = JSON.parse(JSON.stringify(replyRecipients.value))
     if (type === 'reply' && outgoingSignature.value) meta.outgoing_signature = { ...outgoingSignature.value }
     if (type === 'reply' && aiResponse.value) meta.ai_response = aiResponse.value
     const macro = conversationStore.getMacro(MACRO_CONTEXT.REPLY)
@@ -89,8 +92,18 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     return { content: htmlContent.value, meta }
   }
 
-  const applyDraft = (draft) => {
+  const applyDraft = (draft, recipientOverride) => {
     hasStoredDraft.value = Boolean(draft)
+    replyRecipients.value = recipientOverride || draft?.meta?.reply_recipients || null
+    // Preserve recipient-bearing drafts from clients using the existing meta fields.
+    if (!replyRecipients.value && ['to', 'cc', 'bcc'].some(key => Array.isArray(draft?.meta?.[key]))) {
+      const legacyRecipients = { edited: {} }
+      for (const key of ['to', 'cc', 'bcc']) {
+        legacyRecipients[key] = Array.isArray(draft.meta[key]) ? draft.meta[key].join(', ') : ''
+        legacyRecipients.edited[key] = Array.isArray(draft.meta[key])
+      }
+      replyRecipients.value = legacyRecipients
+    }
     outgoingSignature.value = draft?.meta?.outgoing_signature || null
     aiResponse.value = draft?.meta?.ai_response || null
     htmlContent.value = draft?.content || ''
@@ -106,11 +119,13 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     loadedKey.value = null
     // Prefetch may still be in flight on a fresh page load; reading the store now would apply an empty draft.
     const before = htmlContent.value
+    const beforeRecipients = replyRecipients.value
     await conversationStore.draftsReady
     if (draftKey(uuid, type) !== currentKey() || generation !== loadGeneration) return
     // If the user typed while drafts were still loading, keep their input instead of clobbering it.
     if (htmlContent.value === before) {
-      applyDraft(conversationStore.getDraft(uuid, type))
+      const editedRecipients = replyRecipients.value !== beforeRecipients ? replyRecipients.value : null
+      applyDraft(conversationStore.getDraft(uuid, type), editedRecipients)
     }
     loadedKey.value = draftKey(uuid, type)
     isLoading.value = false
@@ -146,6 +161,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     htmlContent,
     aiResponse,
     outgoingSignature,
+    replyRecipients,
     textContent,
     () => conversationStore.macros[MACRO_CONTEXT.REPLY]
   ]
@@ -187,6 +203,7 @@ export function useDraftManager (conversationUUID, messageType, uploadedFiles = 
     htmlContent,
     aiResponse,
     outgoingSignature,
+    replyRecipients,
     hasStoredDraft,
     textContent,
     isLoading,

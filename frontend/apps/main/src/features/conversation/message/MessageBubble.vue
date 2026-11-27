@@ -194,6 +194,9 @@
               </button>
             </div>
 
+            <p v-if="isOutgoing && message.meta?.recipient_review_required" role="status" class="mt-2 text-sm text-muted-foreground">
+              Empfänger bitte im Antworteditor prüfen und erneut senden. Dieser Auftrag wurde nicht versendet.
+            </p>
             <!-- Status Icons (outgoing only) -->
             <div v-if="isOutgoing" class="flex items-center space-x-2 mt-2 self-end">
               <Lock :size="12" v-if="isPrivateMessage" class="text-muted-foreground" />
@@ -450,7 +453,7 @@ const canDeleteNote = computed(
 const showCheckCheck = computed(
   () => isOutgoing.value && props.message.status === 'sent' && !isPrivateMessage.value
 )
-const showRetry = computed(() => isOutgoing.value && props.message.status === 'failed' && props.message.sender_id === userStore.userID)
+const showRetry = computed(() => isOutgoing.value && props.message.status === 'failed' && !props.message.meta?.recipient_review_required && props.message.sender_id === userStore.userID)
 
 const canDeletePrivateNote = computed(() =>
   props.message.private &&

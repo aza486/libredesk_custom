@@ -95,6 +95,12 @@ const getTemplates = (type) => http.get('/api/v1/templates', { params: { type: t
 const getInboxSignatures = () => http.get('/api/v1/inboxes/email-signatures')
 const messageTemplateParams = (conversationUUID) => ({ conversation_uuid: conversationUUID || undefined })
 const listMessageTemplates = (conversationUUID) => http.get('/api/v1/message-templates', { params: messageTemplateParams(conversationUUID) })
+const uploadMessageTemplateAttachment = (file, conversationUUID, options = {}) => {
+ const data = new FormData(); data.append('files',file)
+ return http.post('/api/v1/message-template-attachments',data,{...options, headers:{'Content-Type':'multipart/form-data'}, params:messageTemplateParams(conversationUUID)})
+}
+const discardMessageTemplateAttachment = (uuid, conversationUUID) => http.delete(`/api/v1/message-template-attachments/${uuid}`,{params:messageTemplateParams(conversationUUID)})
+const applyMessageTemplate = (uuid,data,conversationUUID) => http.post(`/api/v1/message-templates/${uuid}/apply`,data,{params:messageTemplateParams(conversationUUID),timeout:45000})
 const getMessageTemplate = (uuid, conversationUUID) => http.get(`/api/v1/message-templates/${uuid}`, { params: messageTemplateParams(conversationUUID) })
 const createMessageTemplate = (data, conversationUUID) => http.post('/api/v1/message-templates', data, { params: messageTemplateParams(conversationUUID) })
 const updateMessageTemplate = (uuid, data, conversationUUID) => http.put(`/api/v1/message-templates/${uuid}`, data, { params: messageTemplateParams(conversationUUID) })
@@ -732,6 +738,7 @@ const reorderSidebarFolders = (scope, id, ids) => http.put(`${folderBase(scope, 
 const getSidebarFolderConversations = (scope, id, folderID, params) => http.get(`${folderBase(scope, id)}/${folderID}/conversations`, { params })
 
 export default {
+ uploadMessageTemplateAttachment, discardMessageTemplateAttachment, applyMessageTemplate,
  listMessageTemplates, getMessageTemplate, createMessageTemplate, updateMessageTemplate, deleteMessageTemplate,
  getSidebarFolders, getSidebarFolderCounts, createSidebarFolder, updateSidebarFolder, deleteSidebarFolder, reorderSidebarFolders, getSidebarFolderConversations,
   login,

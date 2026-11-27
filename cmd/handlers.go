@@ -265,6 +265,9 @@ func initHandlers(g *fastglue.Fastglue, hub *ws.Hub) {
 	g.GET("/api/v1/reports/overview/messages", perm(handleOverviewMessageVolume, "reports:manage"))
 	g.GET("/api/v1/reports/overview/tags", perm(handleOverviewTagDistribution, "reports:manage"))
 
+	g.POST("/api/v1/message-template-attachments", perm(handleTemplateAttachmentUpload, "messages:write"))
+	g.DELETE("/api/v1/message-template-attachments/{file_uuid}", perm(handleDiscardTemplateAttachment, "messages:write"))
+	g.POST("/api/v1/message-templates/{uuid}/apply", perm(handleApplyMessageTemplate, "messages:write"))
 	// Message snippets use the authenticated employee, independent of signature templates.
 	g.GET("/api/v1/message-templates", perm(handleListMessageTemplates, "messages:write"))
 	g.GET("/api/v1/message-templates/{uuid}", perm(handleGetMessageTemplate, "messages:write"))

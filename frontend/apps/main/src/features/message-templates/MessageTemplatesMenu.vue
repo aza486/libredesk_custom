@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useEventListener } from '@vueuse/core'
-import { ChevronDown, PanelsTopLeft, Settings2 } from 'lucide-vue-next'
+import { ChevronDown, PanelsTopLeft, Settings2, Paperclip } from 'lucide-vue-next'
 import { Button } from '@shared-ui/components/ui/button'
 import { Input } from '@shared-ui/components/ui/input'
 import {
@@ -16,10 +16,20 @@ import { useUserStore } from '@main/stores/user'
 import api from '@main/api'
 import { useMessageTemplates, templateError } from './useMessageTemplates'
 import MessageTemplatesManager from './MessageTemplatesManager.vue'
-const props = defineProps({ conversationUUID: String, isFullscreen: Boolean, disabled: Boolean })
+const props = defineProps({
+  conversationUUID: String,
+  isFullscreen: Boolean,
+  disabled: Boolean,
+  attachments: { type: Array, default: () => [] },
+  htmlContent: String,
+  draftType: String,
+  applyTemplate: Function
+})
 const emit = defineEmits(['insert', 'captureSelection'])
 const user = useUserStore()
-const identity = computed(() => JSON.stringify([user.userID, user.roles, user.permissions, user.teams, user.user?.enabled]))
+const identity = computed(() =>
+  JSON.stringify([user.userID, user.roles, user.permissions, user.teams, user.user?.enabled])
+)
 const context = () => props.conversationUUID
 const { templates, canSupport, loading, error, load, clear } = useMessageTemplates(
   context,
@@ -85,18 +95,51 @@ const select = async (item) => {
   if (props.disabled || inserting.value) return
   const originalIdentity = identity.value
   const originalContext = context()
+  const draftSnapshot = JSON.stringify([
+    props.htmlContent,
+    props.draftType,
+    props.attachments.map((file) => file.id)
+  ])
   inserting.value = true
   try {
     const { data } = await api.getMessageTemplate(item.uuid, originalContext)
     if (originalIdentity !== identity.value || originalContext !== context() || props.disabled)
       return
-    focusEditor.value = true
-    open.value = false
-    await nextTick()
-    emit('insert', data.data.content)
+    if (data.data.attachments?.length) {
+      const response = await api.applyMessageTemplate(
+        item.uuid,
+        {
+          draft_type: props.draftType,
+          revision: data.data.revision,
+          attachment_ids: props.attachments.map((file) => file.id)
+        },
+        originalContext
+      )
+      if (
+        originalIdentity !== identity.value ||
+        originalContext !== context() ||
+        props.disabled ||
+        draftSnapshot !==
+          JSON.stringify([
+            props.htmlContent,
+            props.draftType,
+            props.attachments.map((file) => file.id)
+          ])
+      )
+        throw new Error('Entwurf geändert. Bitte die Vorlage erneut auswählen.')
+      if (!props.applyTemplate?.(response.data.data))
+        throw new Error('Die Vorlage konnte nicht vollständig übernommen werden.')
+      focusEditor.value = true
+      open.value = false
+    } else {
+      focusEditor.value = true
+      open.value = false
+      await nextTick()
+      emit('insert', data.data.content)
+    }
   } catch (err) {
     clear()
-    error.value = templateError(err)
+    error.value = err.response ? templateError(err) : err.message || templateError(err)
   } finally {
     inserting.value = false
   }
@@ -171,7 +214,13 @@ const edit = async () => {
               :title="item.name"
               @select.prevent="select(item)"
             >
-              <span class="truncate">{{ item.name }}</span>
+              <span class="truncate flex-1">{{ item.name }}</span>
+              <span
+                v-if="item.attachment_count"
+                class="ml-2 flex items-center gap-1 text-xs text-muted-foreground shrink-0"
+                :aria-label="`${item.attachment_count} Anhänge`"
+                ><Paperclip class="size-3" />{{ item.attachment_count }}</span
+              >
             </DropdownMenuItem>
             <p v-if="!group.items.length" class="px-2 pb-2 text-xs text-muted-foreground">
               {{ search ? 'Keine Treffer' : 'Noch keine Vorlagen' }}

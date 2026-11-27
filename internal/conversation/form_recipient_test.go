@@ -2,11 +2,13 @@ package conversation
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/abhinavxd/libredesk/internal/conversation/models"
 	"github.com/abhinavxd/libredesk/internal/template"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/volatiletech/null/v9"
 )
 
@@ -35,6 +37,20 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 		t.Fatal(err)
 	}
 	m.db.MustExec(`UPDATE templates SET is_default=false WHERE type='email_outgoing'; INSERT INTO templates(name,type,is_default,body) VALUES('form test','email_outgoing',true,'{{ template "content" . }}')`)
+	loadPending := func(uuid string) models.Message {
+		t.Helper()
+		var pending []models.Message
+		if err := m.q.GetOutgoingPendingMessages.Select(&pending, pq.Array([]int{})); err != nil {
+			t.Fatal(err)
+		}
+		for _, message := range pending {
+			if message.UUID == uuid {
+				return message
+			}
+		}
+		t.Fatalf("pending message %s not found", uuid)
+		return models.Message{}
+	}
 	makeForm := func(name string) models.Message {
 		in := importMail(t, m, threadMail(name+"@example.test", ""))
 		// Two forms deliberately share the unchanged technical contact.
@@ -47,6 +63,26 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 	insert := func(in models.Message, email string) {
 		m.db.MustExec(`INSERT INTO mail_events VALUES($1,$2,true,'inbound',$3)`, in.ConversationUUID, in.UUID, email)
 	}
+	checkManual := func(in models.Message) {
+		t.Helper()
+		to := []string{"corrected@example.com", "alternative@example.com"}
+		cc := []string{"cc@example.com"}
+		bcc := []string{"bcc@example.com"}
+		reply, e := m.QueueReply(nil, 102, 101, 105, in.ConversationUUID, "manual", to, cc, bcc, nil)
+		if e != nil {
+			t.Fatalf("manual recipients blocked: %v", e)
+		}
+		count := len(transport.sent)
+		reply = loadPending(reply.UUID)
+		m.sendOutgoingMessage(reply)
+		if len(transport.sent) != count+1 {
+			t.Fatal("manual send blocked")
+		}
+		sent := transport.sent[count]
+		if !slices.Equal(sent.To, to) || !slices.Equal(sent.CC, cc) || !slices.Equal(sent.BCC, bcc) {
+			t.Fatalf("recipients changed: %+v", sent)
+		}
+	}
 	checkBlocked := func(in models.Message) {
 		t.Helper()
 		got, e := m.ResolveReplyRecipient(in.ConversationUUID)
@@ -56,6 +92,7 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 		if _, e = m.QueueReply(nil, 102, 101, 105, in.ConversationUUID, "test", []string{"bestellung@pixelfotoexpress.de"}, nil, nil, nil); e == nil {
 			t.Fatal("queue accepted unsafe form")
 		}
+		checkManual(in)
 	}
 	// Delay, cross-conversation records, wrong message UUID and outbound rows never allow fallback.
 	checkBlocked(first)
@@ -73,31 +110,30 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 			t.Fatal(got, e)
 		}
 		for _, ai := range []bool{false, true} {
-			reply, e := m.QueueReply(nil, 102, 101, 105, tc.in.ConversationUUID, "test", []string{"bestellung@pixelfotoexpress.de"}, []string{"leak@example.com"}, []string{"hidden@example.com"}, map[string]any{"automatic_email_ai": ai})
+			reply, e := m.QueueReply(nil, 102, 101, 105, tc.in.ConversationUUID, "test", []string{"chosen@example.com", "another@example.com"}, []string{"leak@example.com"}, []string{"hidden@example.com"}, map[string]any{"automatic_email_ai": ai})
 			if e != nil {
 				t.Fatal(e)
 			}
 			var meta struct{ To, CC, BCC []string }
-			if e = json.Unmarshal(reply.Meta, &meta); e != nil || len(meta.To) != 1 || meta.To[0] != tc.email || len(meta.CC)+len(meta.BCC) != 0 {
+			if e = json.Unmarshal(reply.Meta, &meta); e != nil || len(meta.To) != 2 || meta.To[0] != "chosen@example.com" || len(meta.CC) != 1 || len(meta.BCC) != 1 {
 				t.Fatal(string(reply.Meta), e)
 			}
-			// Simulate a job queued by the old implementation.
-			reply.To = []string{"bestellung@pixelfotoexpress.de"}
-			reply.CC = []string{"leak@example.com"}
-			reply.BCC = []string{"hidden@example.com"}
-			reply.Meta = json.RawMessage(`{"to":["bestellung@pixelfotoexpress.de"],"cc":["leak@example.com"],"bcc":["hidden@example.com"]}`)
+			// Queued employee addresses remain authoritative even if pg-n8n changes.
+			m.db.MustExec(`UPDATE mail_events SET sender_email='changed-after-queue@example.com' WHERE message_uuid=$1 AND direction='inbound'`, tc.in.UUID)
+			reply = loadPending(reply.UUID)
 			m.sendOutgoingMessage(reply)
 			if len(transport.sent) == 0 {
 				t.Fatal("transport never called")
 			}
 			sent := transport.sent[len(transport.sent)-1]
-			if len(sent.To) != 1 || sent.To[0] != tc.email || len(sent.CC)+len(sent.BCC) != 0 {
+			if len(sent.To) != 2 || sent.To[0] != "chosen@example.com" || len(sent.CC) != 1 || len(sent.BCC) != 1 {
 				t.Fatalf("unsafe send: %+v", sent)
 			}
 			saved, e := m.GetMessage(reply.UUID)
-			if e != nil || json.Unmarshal(saved.Meta, &meta) != nil || meta.To[0] != tc.email {
+			if e != nil || json.Unmarshal(saved.Meta, &meta) != nil || meta.To[0] != "chosen@example.com" {
 				t.Fatal("recipient not persisted", e)
 			}
+			m.db.MustExec(`UPDATE mail_events SET sender_email=$1 WHERE message_uuid=$2 AND direction='inbound'`, tc.email, tc.in.UUID)
 		}
 	}
 	// Customer follow-up threads via existing references without changing shared contact.
@@ -123,7 +159,7 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 	m.db.MustExec(`INSERT INTO mail_events VALUES($1,$2,true,'inbound','another@example.com')`, first.ConversationUUID, first.UUID)
 	checkBlocked(first)
 	m.db.MustExec(`DELETE FROM mail_events WHERE sender_email='another@example.com'`)
-	// Unreachable pg-n8n blocks legacy jobs too, while normal emails remain independent.
+	// Unreachable pg-n8n only affects the suggestion; manual sends still work.
 	offline, err := sqlx.Open("postgres", "postgres://test:test@127.0.0.1:1/test?sslmode=disable&connect_timeout=1")
 	if err != nil {
 		t.Fatal(err)
@@ -131,10 +167,49 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 	defer offline.Close()
 	m.formRecipients.DB = offline
 	checkBlocked(first)
+	// An old technical-only job must be flagged without readdressing or SMTP.
+	legacy, err := m.QueueReply(nil, 102, 101, 105, first.ConversationUUID, "old", []string{"manual@example.com"}, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.db.MustExec(`UPDATE conversation_messages SET meta='{"to":["bestellung@pixelfotoexpress.de"]}' WHERE uuid=$1`, legacy.UUID)
+	legacy = loadPending(legacy.UUID)
 	before := len(transport.sent)
-	m.sendOutgoingMessage(models.Message{ID: 999, UUID: first.UUID, InboxID: 102, ConversationUUID: first.ConversationUUID, Type: models.MessageOutgoing, Meta: json.RawMessage(`{"to":["bestellung@pixelfotoexpress.de"]}`)})
+	m.sendOutgoingMessage(legacy)
 	if len(transport.sent) != before {
-		t.Fatal("sent while pg-n8n unavailable")
+		t.Fatal("legacy technical default was sent")
+	}
+	saved, err := m.GetMessage(legacy.UUID)
+	var review struct {
+		Required bool     `json:"recipient_review_required"`
+		To       []string `json:"to"`
+	}
+	if err != nil || json.Unmarshal(saved.Meta, &review) != nil || !review.Required || saved.Status != models.MessageStatusFailed || !slices.Equal(review.To, legacy.To) {
+		t.Fatal("missing recipient review", saved, err)
+	}
+	// Explicit employee confirmation is bound to the complete recipient decision.
+	meta := map[string]any{RecipientConfirmationKey: ConfirmReplyRecipients(101, legacy.To, nil, nil)}
+	explicit, err := m.QueueReply(nil, 102, 101, 105, first.ConversationUUID, "intentional", legacy.To, nil, nil, meta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	explicit = loadPending(explicit.UUID)
+	m.sendOutgoingMessage(explicit)
+	if len(transport.sent) != before+1 || !slices.Equal(transport.sent[before].To, legacy.To) {
+		t.Fatal("confirmed decision changed")
+	}
+	if _, err = m.QueueReply(nil, 102, 101, 105, first.ConversationUUID, "forged", legacy.To, []string{"changed@example.com"}, nil, meta); err == nil {
+		t.Fatal("confirmation reused for other recipients")
+	}
+	for _, bad := range []string{"broken", "a@example.com,b@example.com", "a@example.com\r\nBcc:b@example.com"} {
+		if _, err = m.QueueReply(nil, 102, 101, 105, first.ConversationUUID, "bad", []string{bad}, nil, nil, nil); err == nil {
+			t.Fatal("invalid address accepted")
+		}
+	}
+	var shared string
+	m.db.Get(&shared, `SELECT email FROM users WHERE id=105`)
+	if shared != "bestellung@pixelfotoexpress.de" {
+		t.Fatal("shared contact changed")
 	}
 	m.db.MustExec(`UPDATE users SET email='contact@example.com' WHERE id=105`)
 	normal := importMail(t, m, threadMail("normal@example.test", ""))
@@ -150,6 +225,7 @@ func TestFormRecipientResolutionAndTransport(t *testing.T) {
 	if json.Unmarshal(normalReply.Meta, &normalMeta) != nil || len(normalMeta.To) != 1 || normalMeta.To[0] != "normal@example.com" || len(normalMeta.CC) != 1 || normalMeta.CC[0] != "cc@example.com" || len(normalMeta.BCC) != 1 || normalMeta.BCC[0] != "bcc@example.com" {
 		t.Fatal(string(normalReply.Meta))
 	}
+	before = len(transport.sent)
 	// Notes never consult the external database or enter SMTP.
 	note, err := m.SendPrivateNote(nil, 101, first.ConversationUUID, "private note", nil)
 	if err != nil {

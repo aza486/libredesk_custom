@@ -35,6 +35,10 @@
             :conversationUUID="conversationStore.current?.uuid"
             :is-fullscreen="isFullscreen"
             :disabled="isDraftLoading || isSending"
+            :attachments="uploadedFiles"
+            :html-content="htmlContent"
+            :draft-type="messageType"
+            :apply-template="applyTemplate"
             @capture-selection="editorRef?.captureTemplateSelection()"
             @insert="editorRef?.insertTemplate($event)"
           />
@@ -62,6 +66,7 @@
               type="text"
               :placeholder="t('replyBox.emailAddresess')"
               v-model="to"
+              @input="emit('recipientEdited', 'to')"
               class="min-w-0 flex-1 px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
               @blur="validateEmails"
             />
@@ -72,6 +77,7 @@
               type="text"
               :placeholder="t('replyBox.emailAddresess')"
               v-model="cc"
+              @input="emit('recipientEdited', 'cc')"
               class="min-w-0 flex-1 px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
               @blur="validateEmails"
             />
@@ -89,6 +95,7 @@
               type="text"
               :placeholder="t('replyBox.emailAddresess')"
               v-model="bcc"
+              @input="emit('recipientEdited', 'bcc')"
               class="min-w-0 flex-1 px-3 py-2 text-sm border rounded-md focus:ring-2 focus:ring-ring"
               @blur="validateEmails"
             />
@@ -286,9 +293,11 @@ const props = defineProps({
 
 const emit = defineEmits([
   'toggleFullscreen',
+  'recipientEdited',
   'send',
   'sendAndSetStatus',
   'fileUpload',
+  'templateAttachments',
   'inlineImageUpload',
   'fileDelete',
   'filesDropped',
@@ -302,6 +311,19 @@ const emitter = useEmitter()
 const { t } = useI18n()
 const insertContent = ref(null)
 const editorRef = ref(null)
+const applyTemplate = (result) => {
+  if (props.isDraftLoading || props.isSending || !editorRef.value) return false
+  const before = htmlContent.value
+  try {
+    if (result.content && !editorRef.value.insertTemplate(result.content)) return false
+    emit('templateAttachments', result.attachments)
+    editorRef.value.focus()
+    return true
+  } catch {
+    htmlContent.value = before
+    return false
+  }
+}
 
 const toggleBcc = async () => {
   showBcc.value = !showBcc.value
@@ -309,6 +331,7 @@ const toggleBcc = async () => {
   // If hiding BCC field, clear the content and validate email bcc so it doesn't show errors.
   if (!showBcc.value) {
     bcc.value = ''
+    emit('recipientEdited', 'bcc')
     await nextTick()
     validateEmails()
   }

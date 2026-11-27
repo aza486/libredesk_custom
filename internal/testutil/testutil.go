@@ -48,7 +48,23 @@ func NewDB(t *testing.T, name string) *sqlx.DB {
 	if err != nil {
 		t.Fatalf("connecting to test database: %v", err)
 	}
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() {
+		db.Close()
+		// Opt-in for constrained, already existing test environments. Default
+		// behavior retains databases for inspection, as before.
+		if os.Getenv("LIBREDESK_TEST_DB_CLEANUP") != "1" {
+			return
+		}
+		cleanup, err := sqlx.Connect("postgres", dsn)
+		if err != nil {
+			t.Errorf("connecting for test database cleanup: %v", err)
+			return
+		}
+		defer cleanup.Close()
+		if _, err = cleanup.Exec(fmt.Sprintf(`DROP DATABASE IF EXISTS %s WITH (FORCE)`, dbName)); err != nil {
+			t.Errorf("removing test database: %v", err)
+		}
+	})
 
 	schema, err := os.ReadFile(filepath.Join(repoRoot(t), "schema.sql"))
 	if err != nil {

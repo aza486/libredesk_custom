@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/abhinavxd/libredesk/internal/attachment"
 	imodels "github.com/abhinavxd/libredesk/internal/inbox/models"
 	"github.com/knadh/smtppool"
 )
@@ -34,8 +35,10 @@ func TestSMTPConfiguredTransport(t *testing.T) {
 		name, mode                   string
 		implicit, startTLS, skipCert bool
 		wantError                    string
+		rejectData                   bool
 	}{
-		{name: "explicit plaintext", mode: "none"},
+		{name: "explicit plaintext without SIZE", mode: "none"},
+		{name: "server rejects message size", mode: "none", rejectData: true, wantError: "552"},
 		{name: "STARTTLS required", mode: "starttls", wantError: "STARTTLS extension not found"},
 		{name: "default requires STARTTLS", wantError: "STARTTLS extension not found"},
 		{name: "STARTTLS supported", mode: "starttls", startTLS: true, skipCert: true},
@@ -84,6 +87,10 @@ func TestSMTPConfiguredTransport(t *testing.T) {
 						if err != nil {
 							return
 						}
+						if tc.rejectData {
+							p.PrintfLine("552 Message size exceeds fixed maximum message size")
+							return
+						}
 						delivered <- string(body)
 						p.PrintfLine("250 Accepted")
 					case line == "QUIT":
@@ -100,7 +107,7 @@ func TestSMTPConfiguredTransport(t *testing.T) {
 				t.Fatal(err)
 			}
 			pool := pools[0]
-			err = pool.Send(smtppool.Email{From: "sender@example.test", To: []string{"recipient@example.test"}, Subject: "transport regression", Text: []byte("transport regression body")})
+			err = pool.Send(smtppool.Email{From: "sender@example.test", To: []string{"recipient@example.test"}, Subject: "transport regression", Text: []byte("transport regression body"), Attachments: []smtppool.Attachment{{Filename: "template-attachment.pdf", Header: attachment.MakeHeader("application/pdf", "", "template-attachment.pdf", "base64", "attachment"), Content: []byte("%PDF-template")}}})
 			pool.Close()
 			if tc.wantError != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.wantError) {
@@ -108,7 +115,7 @@ func TestSMTPConfiguredTransport(t *testing.T) {
 				}
 				select {
 				case <-delivered:
-					t.Fatal("message sent despite failed TLS requirement")
+					t.Fatal("message accepted despite transport failure")
 				default:
 				}
 			} else {
@@ -117,7 +124,7 @@ func TestSMTPConfiguredTransport(t *testing.T) {
 				}
 				select {
 				case body := <-delivered:
-					if !strings.Contains(body, "transport regression body") {
+					if !strings.Contains(body, "transport regression body") || !strings.Contains(body, "template-attachment.pdf") || !strings.Contains(body, "JVBERi10ZW1wbGF0ZQ==") {
 						t.Fatal("SMTP body lost")
 					}
 				case <-time.After(time.Second):

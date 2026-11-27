@@ -137,8 +137,8 @@
   </AlertDialog>
 
   <div class="text-foreground bg-background">
-    <p v-if="messageType !== 'private_note' && formRecipient?.managed" role="status" class="px-3 py-2 text-sm" :class="{ 'text-destructive': formRecipient.blocked }">
-      {{ formRecipient.blocked ? 'Formular-Empfänger noch nicht sicher ermittelbar. Versand gesperrt; die Prüfung wird automatisch wiederholt.' : 'Formularantwort an ' + formRecipient.email + '. Weitere Empfänger sind für diese Antwort gesperrt.' }}
+    <p v-if="messageType !== 'private_note' && formRecipient?.managed" role="status" class="px-3 py-2 text-sm text-muted-foreground">
+      {{ formRecipient.blocked ? 'Keine verlässliche Formularadresse verfügbar. Bitte die Empfänger selbst eintragen oder prüfen.' : 'Formularadresse als Vorschlag übernommen. Alle Empfänger können bearbeitet werden.' }}
     </p>
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
@@ -177,6 +177,7 @@
             v-model:cc="cc"
             v-model:bcc="bcc"
             v-model:emailErrors="emailErrors"
+            @recipientEdited="markRecipientEdited"
             v-model:messageType="messageType"
             v-model:showBcc="showBcc"
             v-model:mentions="mentions"
@@ -184,6 +185,7 @@
             @send="processSend"
             @sendAndSetStatus="processSendAndSetStatus"
             @fileUpload="handleFileUpload"
+        @templateAttachments="setMediaFiles($event)"
             @fileDelete="handleFileDelete"
             @filesDropped="uploadFiles"
             @aiPromptSelected="handleAiPromptSelected"
@@ -244,6 +246,7 @@
         v-model:cc="cc"
         v-model:bcc="bcc"
         v-model:emailErrors="emailErrors"
+            @recipientEdited="markRecipientEdited"
         v-model:messageType="messageType"
         v-model:showBcc="showBcc"
         v-model:mentions="mentions"
@@ -251,6 +254,7 @@
         @send="processSend"
         @sendAndSetStatus="processSendAndSetStatus"
         @fileUpload="handleFileUpload"
+        @templateAttachments="setMediaFiles($event)"
         @fileDelete="handleFileDelete"
         @filesDropped="uploadFiles"
         @aiPromptSelected="handleAiPromptSelected"
@@ -367,6 +371,7 @@ watch(
 const {
   htmlContent,
   outgoingSignature,
+  replyRecipients,
   hasStoredDraft,
   aiResponse: draftAIResponse,
   textContent,
@@ -388,12 +393,14 @@ const isGenerating = ref(false)
 const to = ref('')
 const cc = ref('')
 const bcc = ref('')
-const formRecipient = useFormRecipient(
+const { state: formRecipient, reset: resetFormRecipients, markEdited: markRecipientEdited } = useFormRecipient(
   computed(() => conversationStore.current), [to, cc, bcc],
-  async (uuid) => (await api.getConversation(uuid)).data.data.reply_recipient
+  async (uuid) => (await api.getConversation(uuid)).data.data.reply_recipient,
+  { draft: replyRecipients }
 )
 
 const showBcc = ref(false)
+watch(bcc, value => { if (value) showBcc.value = true })
 const emailErrors = ref([])
 
 // Outgoing email templates available for this reply.
@@ -899,10 +906,6 @@ const processSend = async (
   }
 
   if (!isPrivate && conversationStore.current.inbox_channel === 'email' && !isStoredInternal.value) {
-    if (formRecipient.value?.managed && formRecipient.value.blocked) {
-      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { variant: 'destructive', description: 'Formular-Empfänger noch nicht sicher ermittelbar. Bitte später erneut versuchen.' })
-      return
-    }
     // Require at least one recipient in `to`.
     if (!to.value.trim()) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -1019,6 +1022,7 @@ const processSend = async (
         cc: parsedCC,
         bcc: parsedBCC,
         to: parsedTo,
+        ...(!isPrivate && !isStoredInternal.value ? { recipients_confirmed: true } : {}),
         echo_id: isPrivate ? '' : tempUUID,
         template_id: isPrivate || isStoredInternal.value ? null : savedTemplateID,
         ...(savedProvenance && (savedProvenance.response_source !== 'human' || feedbackOriginalUUID) ? { ai_response: savedProvenance } : {}),
@@ -1086,6 +1090,7 @@ const processSend = async (
   // Clear state on success.
   if (!hasMessageSendingErrored) {
     clearDraft(convUUID, isPrivate ? 'private_note' : 'reply')
+    if (!isPrivate && convUUID === currentConversationUUID.value) resetFormRecipients()
     if (!isPrivate && convUUID === currentConversationUUID.value) refreshReplySignatures()
     if (convUUID === currentConversationUUID.value) {
       conversationStore.resetMacro(MACRO_CONTEXT.REPLY)
@@ -1180,7 +1185,7 @@ watch(
 watch(
   () => conversationStore.currentCC,
   (newVal) => {
-    cc.value = newVal?.join(', ') || ''
+    if (!formRecipient.value?.managed) cc.value = newVal?.join(', ') || ''
   },
   { deep: true, immediate: true }
 )
@@ -1188,7 +1193,7 @@ watch(
 watch(
   () => conversationStore.currentTo,
   (newVal) => {
-    to.value = newVal?.join(', ') || ''
+    if (!formRecipient.value?.managed) to.value = newVal?.join(', ') || ''
   },
   { immediate: true }
 )
@@ -1197,7 +1202,7 @@ watch(
   () => conversationStore.currentBCC,
   (newVal) => {
     const newBcc = newVal?.join(', ') || ''
-    bcc.value = newBcc
+    if (!formRecipient.value?.managed) bcc.value = newBcc
     // Only show BCC field if it has content
     if (newBcc.length > 0) {
       showBcc.value = true

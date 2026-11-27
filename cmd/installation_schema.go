@@ -68,7 +68,7 @@ func checkRuntimeSchema(ctx context.Context, db *sqlx.DB) error {
  embeddings help_centers article_collections help_articles help_article_feedback help_search_queries ai_tools
  ai_assistants ai_assistant_tools ai_agent_events copilot_messages ai_faq_suggestions custom_attribute_definitions contact_notes
  activity_logs webhooks context_links user_notifications conversation_mail_versions manual_resolution_feedback manual_review_annotations
- sidebar_folders message_templates`)
+ sidebar_folders message_templates message_template_attachments media_blob_references media_storage_deletions`)
 	if err := checkTables(ctx, db, tables); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func checkRuntimeSchema(ctx context.Context, db *sqlx.DB) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("incomplete runtime schema: missing columns: %s; restore/review the schema instead of replaying completed migrations", strings.Join(missing, ", "))
 	}
-	triggers := strings.Fields(`inboxes.validate_inbox_access inboxes.sync_personal_inbox_primary_owner inboxes.inbox_signature_type
+	triggers := strings.Fields(`message_templates.validate_message_template_content message_template_attachments.validate_message_template_content inboxes.validate_inbox_access inboxes.sync_personal_inbox_primary_owner inboxes.inbox_signature_type
  personal_inbox_owners.validate_personal_inbox_owner personal_inbox_owners.protect_personal_inbox_owner
  users.protect_personal_inbox_owner templates.protect_inbox_signature_type
  conversation_messages.libredesk_mail_input_clock conversation_messages.libredesk_manual_resolution_feedback

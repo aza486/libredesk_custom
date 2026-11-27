@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/abhinavxd/libredesk/internal/attachment"
 	amodels "github.com/abhinavxd/libredesk/internal/auth/models"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
 )
 
-const maxMetaSize = 32 * 1024 // 32KB
+const maxMetaSize = attachment.MaxDraftMetadataBytes // 32KB
 
 type draftReq struct {
 	Type    string          `json:"type"`

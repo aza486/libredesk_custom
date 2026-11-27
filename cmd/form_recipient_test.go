@@ -91,3 +91,53 @@ func TestFormRecipientDetailAuthorization(t *testing.T) {
 		t.Fatalf("visibility leaked: %d %s", ctx.Response.StatusCode(), ctx.Response.Body())
 	}
 }
+
+// Confirmation comes from the authenticated employee send, never request metadata
+// or an integration key; no sender worker or real mail transport is started.
+func TestFormRecipientEmployeeConfirmationHTTP(t *testing.T) {
+	f := newNotificationHTTP(t, "form_confirmation_http")
+	var uuid string
+	if err := f.db.Get(&uuid, `INSERT INTO conversations(contact_id,inbox_id,status_id,subject) VALUES(105,102,101,'Formular') RETURNING uuid`); err != nil {
+		t.Fatal(err)
+	}
+	send := func(method string) *fasthttp.RequestCtx {
+		ctx := &fasthttp.RequestCtx{}
+		ctx.SetUserValue("user", amodels.User{ID: 101})
+		ctx.SetUserValue("cuuid", uuid)
+		ctx.SetUserValue("auth_method", method)
+		ctx.Request.Header.SetContentType("application/json")
+		ctx.Request.SetBodyString(`{"sender_type":"agent","message":"Manual answer","to":["chosen@example.com","second@example.com"],"cc":["cc@example.com"],"bcc":["hidden@example.com"],"recipients_confirmed":true}`)
+		if err := handleSendMessage(&fastglue.Request{RequestCtx: ctx, Context: f.app}); err != nil {
+			t.Fatal(err)
+		}
+		return ctx
+	}
+	ctx := send(authMethodSession)
+	if ctx.Response.StatusCode() != 200 {
+		t.Fatalf("employee send: %d %s", ctx.Response.StatusCode(), ctx.Response.Body())
+	}
+	var result struct {
+		Data struct {
+			Meta struct {
+				Confirmation conversation.RecipientConfirmation `json:"recipient_confirmation"`
+				To, CC, BCC  []string
+			}
+		}
+	}
+	if err := json.Unmarshal(ctx.Response.Body(), &result); err != nil {
+		t.Fatal(err)
+	}
+	c := result.Data.Meta.Confirmation
+	if c.ActorID != 101 || len(c.To) != 2 || c.To[0] != "chosen@example.com" || len(c.CC) != 1 || len(c.BCC) != 1 {
+		t.Fatalf("confirmation not bound to employee recipients: %+v", c)
+	}
+	ctx = send(authMethodAPIKey)
+	if ctx.Response.StatusCode() != 403 {
+		t.Fatalf("integration key forged employee confirmation: %d %s", ctx.Response.StatusCode(), ctx.Response.Body())
+	}
+	var count int
+	f.db.Get(&count, `SELECT count(*) FROM conversation_messages WHERE conversation_id=(SELECT id FROM conversations WHERE uuid=$1) AND type='outgoing'`, uuid)
+	if count != 1 {
+		t.Fatal("rejected confirmation queued a message")
+	}
+}

@@ -77,7 +77,7 @@ func TestInstallationLifecycle(t *testing.T) {
 	db.Get(&history, `SELECT value FROM settings WHERE key='migrations'`)
 	var versions []string
 	json.Unmarshal(history, &versions)
-	if len(versions) != len(migList) || versions[len(versions)-1] != "v2.25.0" {
+	if len(versions) != len(migList) || versions[len(versions)-1] != "v2.26.0" {
 		t.Fatal("install did not run full registered chain")
 	}
 	before := installationSnapshot(t, db)
@@ -195,7 +195,7 @@ func TestMigrationHistoryValidation(t *testing.T) {
 	}
 	// Older releases may have recorded only a contiguous suffix. Keep valid
 	// legacy histories without inventing records for earlier migrations.
-	db.MustExec(`UPDATE settings SET value='["v2.23.0","v2.24.0","v2.25.0"]' WHERE key='migrations'`)
+	db.MustExec(`UPDATE settings SET value='["v2.23.0","v2.24.0","v2.25.0","v2.26.0"]' WHERE key='migrations'`)
 	before := installationSnapshot(t, db)
 	installForTest(t, db, fs)
 	if after := installationSnapshot(t, db); after != before {
@@ -384,12 +384,13 @@ func TestInstallationUnversionedUsedBaseline(t *testing.T) {
 func TestInstallationPendingV224Upgrade(t *testing.T) {
 	db, fs := installationFixture(t, "install_pending_v224")
 	installForTest(t, db, fs)
-	db.MustExec(`UPDATE settings SET value=value-(jsonb_array_length(value)-1)-(jsonb_array_length(value)-2) WHERE key='migrations';
+	db.MustExec(`UPDATE settings SET value=value-(jsonb_array_length(value)-1)-(jsonb_array_length(value)-2)-(jsonb_array_length(value)-3) WHERE key='migrations';
+ DROP TABLE media_blob_references,message_template_attachments,media_storage_deletions;
  DROP TABLE message_templates;
  ALTER TABLE conversations DROP CONSTRAINT conversations_contact_required;
  ALTER TABLE conversations ALTER COLUMN contact_id SET NOT NULL`)
 	_, pending, err := getPendingMigrations(db)
-	if err != nil || len(pending) != 2 || pending[0].version != "v2.24.0" || pending[1].version != "v2.25.0" {
+	if err != nil || len(pending) != 3 || pending[0].version != "v2.24.0" || pending[1].version != "v2.25.0" || pending[2].version != "v2.26.0" {
 		t.Fatal("legitimate pending upgrade rejected", err)
 	}
 	if err := prepareApplicationDatabase(t.Context(), db); err == nil {

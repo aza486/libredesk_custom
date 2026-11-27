@@ -32,12 +32,13 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key) => key }) }))
 vi.mock('./ReplyBoxContent.vue', () => ({
   default: defineComponent({
     inheritAttrs: false,
-    props: ['htmlContent', 'isSending', 'hideFullscreenToggle', 'messageType'],
-    emits: ['send', 'toggleFullscreen', 'update:messageType', 'generateReply'],
+    props: ['htmlContent', 'isSending', 'hideFullscreenToggle', 'messageType', 'to', 'cc', 'bcc'],
+    emits: ['send', 'toggleFullscreen', 'update:messageType', 'generateReply', 'update:to', 'update:cc', 'update:bcc', 'recipientEdited'],
     setup(props, { emit, expose }) {
       expose({ focus: () => mocks.focus() })
       return () =>
         h('section', [
+          ...['to', 'cc', 'bcc'].map(key => h('input', { [`data-recipient-${key}`]: '', value: props[key], onInput: e => { emit(`update:${key}`, e.target.value); emit('recipientEdited', key) } })),
           h('button', { 'data-generate': '', onClick: () => emit('generateReply') }, 'Generate'),
           h('div', { 'data-editor': '', 'data-message-type': props.messageType }, props.htmlContent),
           h('button', { 'data-private': '', onClick: () => emit('update:messageType', 'private_note') }, 'Private note'),
@@ -813,4 +814,32 @@ test('contactless internal reply stores once, drops stale email recipients and r
   })
   expect(mocks.store.replacePendingMessage).toHaveBeenCalledWith('conversation', 'echo-1', expect.objectContaining({ status: 'stored', type: 'internal' }))
   expect(mocks.api.saveAIFeedback).not.toHaveBeenCalled()
+})
+
+
+test('form edits survive normal/fullscreen remounts and background defaults, and are sent as chosen', async () => {
+  mocks.store.current.reply_recipient = { managed: true, email: 'form@example.com' }
+  await flush()
+  const edit = (key, value) => {
+    const input = root.querySelector(`[data-recipient-${key}]`)
+    input.value = value; input.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+  expect(root.querySelector('[data-recipient-to]').value).toBe('form@example.com')
+  edit('to', 'corrected@example.com, other@example.com')
+  edit('cc', 'cc@example.com'); edit('bcc', 'hidden@example.com')
+  root.querySelector('[data-expand]').click(); await flush()
+  expect(root.querySelector('[data-recipient-to]').value).toBe('corrected@example.com, other@example.com')
+  mocks.store.currentTo = ['bestellung@pixelfotoexpress.de']
+  mocks.store.currentCC = ['unchecked@example.com']
+  mocks.store.currentBCC = ['unchecked-bcc@example.com']
+  mocks.store.current.reply_recipient = { managed: true, blocked: true, email: '' }
+  await flush()
+  root.querySelector('[aria-label="replyBox.restoreEditor"]').click()
+  await flush()
+  expect(root.querySelector('[data-dialog]')).toBeNull()
+  expect(root.querySelector('[data-recipient-bcc]').value).toBe('hidden@example.com')
+  root.querySelector('[data-send]').click(); await flush()
+  expect(mocks.api.sendMessage).toHaveBeenCalledWith('conversation', expect.objectContaining({
+    to: ['corrected@example.com', 'other@example.com'], cc: ['cc@example.com'], bcc: ['hidden@example.com'], recipients_confirmed: true
+  }))
 })

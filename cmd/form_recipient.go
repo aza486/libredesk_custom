@@ -21,7 +21,7 @@ func initFormRecipients() *conversation.FormRecipients {
 		db.SetMaxOpenConns(2)
 		db.SetMaxIdleConns(2)
 		db.SetConnMaxLifetime(5 * time.Minute)
-		// Lazy connection: an unavailable integration blocks forms, not startup/ordinary mail.
+		// Lazy connection: an unavailable integration only affects suggestions, not sending or startup.
 		config.DB = db
 	}
 	return config

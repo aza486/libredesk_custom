@@ -65,6 +65,7 @@ func handleGetMessageTemplate(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	templateFileURLs(result.Attachments, a.ConversationUUID)
 	return r.SendEnvelope(result)
 }
 func handleCreateMessageTemplate(r *fastglue.Request) error {
@@ -80,6 +81,7 @@ func handleCreateMessageTemplate(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	templateFileURLs(result.Attachments, a.ConversationUUID)
 	return r.SendEnvelope(result)
 }
 func handleUpdateMessageTemplate(r *fastglue.Request) error {
@@ -95,6 +97,7 @@ func handleUpdateMessageTemplate(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	templateFileURLs(result.Attachments, a.ConversationUUID)
 	return r.SendEnvelope(result)
 }
 func handleDeleteMessageTemplate(r *fastglue.Request) error {

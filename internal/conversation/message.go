@@ -186,37 +186,19 @@ func (m *Manager) sendOutgoingMessage(message models.Message) {
 			}
 		}
 	}
-	// Re-resolve immediately before transport, including old pending jobs/retries.
+	// Legacy technical-only defaults need a human decision, never readdressing.
 	if inb.Channel() == inbox.ChannelEmail {
-		resolved, err := m.ResolveReplyRecipient(message.ConversationUUID)
-		if handleError(err, "form recipient unavailable") {
-			return
-		}
-		if resolved.Managed {
+		if err := m.checkFormRecipientDecision(message.ConversationUUID, message.SenderID, message.To, message.CC, message.BCC, message.Meta); err != nil {
+			if _, storeErr := m.db.Exec(`UPDATE conversation_messages SET meta=meta || '{"recipient_review_required":true}'::jsonb WHERE uuid=$1`, message.UUID); handleError(storeErr, "storing recipient review") {
+				return
+			}
 			var meta map[string]any
-			err = json.Unmarshal(message.Meta, &meta)
-			if handleError(err, "invalid outgoing metadata") {
-				return
+			if json.Unmarshal(message.Meta, &meta) == nil && meta != nil {
+				meta["recipient_review_required"] = true
+				m.BroadcastMessageUpdate(message.ConversationUUID, message.UUID, map[string]any{"meta": meta})
 			}
-			if meta == nil {
-				meta = map[string]any{}
-			}
-			meta["to"] = []string{resolved.Email}
-			delete(meta, "cc")
-			delete(meta, "bcc")
-			raw, err := json.Marshal(meta)
-			if handleError(err, "invalid form metadata") {
-				return
-			}
-			recipients, _ := json.Marshal([]string{resolved.Email})
-			_, err = m.db.Exec(`UPDATE conversation_messages SET meta=(meta - 'cc' - 'bcc') || jsonb_build_object('to',$1::jsonb) WHERE uuid=$2 AND conversation_id=(SELECT id FROM conversations WHERE uuid=$3)`, string(recipients), message.UUID, message.ConversationUUID)
-			if handleError(err, "storing form recipient") {
-				return
-			}
-			message.Meta = raw
-			message.To = []string{resolved.Email}
-			message.CC = nil
-			message.BCC = nil
+			handleError(err, "recipient review required")
+			return
 		}
 	}
 	// Render content in template
@@ -761,23 +743,20 @@ func (m *Manager) QueueReply(media []mmodels.Media, inboxID, senderID, contactID
 	var sourceID string
 	switch inboxRecord.Channel {
 	case inbox.ChannelEmail:
-		resolved, err := m.ResolveReplyRecipient(conversationUUID)
-		if err != nil {
-			return message, err
-		}
 		if metaMap == nil {
 			metaMap = map[string]interface{}{}
-		}
-		if resolved.Managed {
-			to, cc, bcc = []string{resolved.Email}, nil, nil
-			delete(metaMap, "to")
-			delete(metaMap, "cc")
-			delete(metaMap, "bcc")
 		}
 		// Add `to`, `cc`, and `bcc` recipients to meta map.
 		to = stringutil.RemoveEmpty(to)
 		cc = stringutil.RemoveEmpty(cc)
 		bcc = stringutil.RemoveEmpty(bcc)
+		if err := validateReplyRecipients(to, cc, bcc); err != nil {
+			return message, err
+		}
+		// Arguments are authoritative, including intentionally empty CC/BCC.
+		delete(metaMap, "to")
+		delete(metaMap, "cc")
+		delete(metaMap, "bcc")
 		if len(to) > 0 {
 			metaMap["to"] = to
 		}
@@ -787,8 +766,9 @@ func (m *Manager) QueueReply(media []mmodels.Media, inboxID, senderID, contactID
 		if len(bcc) > 0 {
 			metaMap["bcc"] = bcc
 		}
-		if len(to) == 0 {
-			return message, envelope.NewError(envelope.GeneralError, m.i18n.Ts("globals.messages.empty", "name", "`to`"), nil)
+		decision, _ := json.Marshal(metaMap)
+		if err := m.checkFormRecipientDecision(conversationUUID, senderID, to, cc, bcc, decision); err != nil {
+			return message, err
 		}
 		sourceID, err = stringutil.GenerateEmailMessageID(conversationUUID, inboxRecord.From)
 		if err != nil {

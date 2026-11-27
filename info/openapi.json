@@ -4709,6 +4709,11 @@
             },
             "description": "BCC recipients"
           },
+          "recipients_confirmed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Explicit employee confirmation of the supplied TO/CC/BCC recipients. Requires an authenticated employee session. Does not bypass validation or send guards."
+          },
           "sender_type": {
             "type": "string",
             "enum": [

@@ -13,6 +13,7 @@ const to = ref('customer@example.test')
 const cc = ref('cc@example.test')
 const bcc = ref('bcc@example.test')
 const signature = ref(72)
+const files = ref([])
 const signatures = [{ id: 72, name: 'Bestehende Signatur' }]
 const store = useConversationStore()
 store.conversation.data = {
@@ -46,6 +47,7 @@ user.setCurrentUser({
     <output data-test="draft">{{ html }}</output>
     <output data-test="mode">{{ mode }}</output>
     <output data-test="recipients">{{ [to, cc, bcc].join('|') }}</output>
+    <output data-test="attachments">{{ files.map((file) => file.filename).join('|') }}</output>
     <output data-test="signature">{{ signature }}</output>
     <div
       v-if="!fullscreen"
@@ -64,6 +66,9 @@ user.setCurrentUser({
         :ai-prompts="[]"
         :is-sending="false"
         :uploading-files="[]"
+        :uploaded-files="files"
+        @template-attachments="files = $event"
+        @file-delete="files = files.filter((file) => file.uuid !== $event)"
         @toggle-fullscreen="fullscreen = true"
       />
     </div>
@@ -88,6 +93,9 @@ user.setCurrentUser({
           :ai-prompts="[]"
           :is-sending="false"
           :uploading-files="[]"
+          :uploaded-files="files"
+          @template-attachments="files = $event"
+          @file-delete="files = files.filter((file) => file.uuid !== $event)"
           @toggle-fullscreen="fullscreen = false"
         />
       </DialogContent>

@@ -15,7 +15,9 @@ import (
 	"github.com/abhinavxd/libredesk/internal/authz"
 	"github.com/abhinavxd/libredesk/internal/envelope"
 	"github.com/abhinavxd/libredesk/internal/image"
+	"github.com/abhinavxd/libredesk/internal/media"
 	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
+	"github.com/abhinavxd/libredesk/internal/messagetemplate"
 	"github.com/abhinavxd/libredesk/internal/stringutil"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
@@ -66,6 +68,9 @@ func handleMediaUpload(r *fastglue.Request) error {
 		linkedModel = model[0]
 	}
 
+	if linkedModel == mmodels.ModelMessageTemplates {
+		return r.SendErrorEnvelope(400, "Vorlagenanhänge verwenden den geschützten Vorlagen-Upload.", nil, envelope.InputError)
+	}
 	// Only agents who manage the help center may upload publicly served media.
 	if mmodels.IsPublicModel(linkedModel) {
 		auser := r.RequestCtx.UserValue("user").(amodels.User)
@@ -187,6 +192,49 @@ func handleServeMedia(r *fastglue.Request) error {
 		return sendErrorEnvelope(r, err)
 	}
 
+	if media.Model.String == mmodels.ModelMessageTemplates || isTemplateReference(media) {
+		actor, ok := r.RequestCtx.UserValue("user").(amodels.User)
+		if !ok {
+			return r.SendErrorEnvelope(401, "Anmeldung erforderlich.", nil, envelope.UnauthorizedError)
+		}
+		a, err := messageTemplateAccess(r)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		if media.Model.String == mmodels.ModelMessageTemplates {
+			err = app.messageTemplates.AuthorizeFile(a, media.UUID)
+		} else {
+			var conversationUUID string
+			if media.ModelID.Int > 0 {
+				var cErr error
+				conv, cErr := app.conversation.GetConversationByMessageID(media.ModelID.Int)
+				err = cErr
+				conversationUUID = conv.UUID
+			} else {
+				conversationUUID, err = app.messageTemplates.DraftFileOwner(messagetemplate.Access{UserID: actor.ID}, media.ID)
+			}
+			if err == nil {
+				_, err = enforceConversationAccess(app, conversationUUID, umodelsForTemplate(actor.ID))
+			}
+		}
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		agent, err := app.user.GetAgent(actor.ID, "")
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+		permission := "messages:write"
+		if media.ModelID.Int > 0 {
+			permission = "messages:read"
+		}
+		if !agent.Enabled || !slices.Contains(agent.Permissions, permission) {
+			return r.SendErrorEnvelope(403, "Keine Berechtigung für diesen Anhang.", nil, envelope.PermissionError)
+		}
+		r.RequestCtx.SetUserValue("personal_media", true)
+		return serveMediaFile(r, app, uuid, &media)
+	}
+
 	if media.Model.String == mmodels.ModelMessages && media.ModelID.Int > 0 {
 		conversation, err := app.conversation.GetConversationByMessageID(media.ModelID.Int)
 		if err != nil {
@@ -277,6 +325,14 @@ func serveMediaFile(r *fastglue.Request, app *App, uuid string, media *mmodels.M
 		media = &m
 	}
 
+	storageUUID := uuid
+	if isTemplateReference(*media) {
+		var err error
+		storageUUID, err = app.media.StorageUUID(media.UUID)
+		if err != nil {
+			return sendErrorEnvelope(r, err)
+		}
+	}
 	forceDownload := string(r.RequestCtx.QueryArgs().Peek("download")) == "1"
 
 	consts := app.consts.Load().(*constants)
@@ -303,9 +359,10 @@ func serveMediaFile(r *fastglue.Request, app *App, uuid string, media *mmodels.M
 		r.RequestCtx.Response.Header.Set("Cache-Control", fmt.Sprintf("%s, max-age=%d, immutable", cacheVisibility(media.Private), int(mediaCacheTTL.Seconds())))
 
 		if r.RequestCtx.UserValue("personal_media") == true {
+			r.RequestCtx.Response.Header.Set("Content-Security-Policy", "sandbox")
 			r.RequestCtx.Response.Header.Set("Cache-Control", "private, no-store")
 		}
-		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), uuid))
+		fasthttp.ServeFile(r.RequestCtx, filepath.Join(ko.String("upload.fs.upload_path"), storageUUID))
 	case "s3":
 		if r.RequestCtx.UserValue("personal_media") == true {
 			blob, err := app.media.GetBlob(uuid)
@@ -340,13 +397,16 @@ func bytesToMegabytes(bytes int64) float64 {
 }
 
 // getUnassociatedMedia fetches media by IDs, skipping any already associated with a model.
-func getUnassociatedMedia(app *App, ids []int) ([]mmodels.Media, error) {
+func getUnassociatedMedia(app *App, ids []int, userID int, conversationUUID string) ([]mmodels.Media, error) {
 	all, err := app.media.GetMany(ids)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]mmodels.Media, 0, len(all))
 	for _, m := range all {
+		if err := app.media.CheckDraftReference(m, userID, conversationUUID); err != nil {
+			return nil, err
+		}
 		if m.ModelID.Int > 0 {
 			app.lo.Warn("attachment already associated with another model, skipping", "media_id", m.ID, "model", m.Model.String, "model_id", m.ModelID.Int)
 			continue
@@ -371,3 +431,5 @@ func cacheVisibility(private bool) string {
 	}
 	return "public"
 }
+
+func isTemplateReference(m mmodels.Media) bool { return media.TemplateSource(m) != "" }

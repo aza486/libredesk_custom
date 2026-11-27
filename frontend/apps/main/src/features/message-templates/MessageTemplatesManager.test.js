@@ -107,7 +107,7 @@ test('creates, saves sanitized response, confirms delete and sends revision', as
     .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
   await flush()
   expect(api.createMessageTemplate).toHaveBeenCalledWith(
-    { name: item.name, content: item.content, scope: 'personal', revision: 0 },
+    { name: item.name, content: item.content, scope: 'personal', revision: 0, attachment_ids: [] },
     'conversation'
   )
   expect(document.body.textContent).toContain('Vorlage gespeichert.')

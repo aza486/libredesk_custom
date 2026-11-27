@@ -59,6 +59,7 @@ type SignedURLStore interface {
 }
 
 type Manager struct {
+	db      *sqlx.DB
 	store   Store
 	lo      *logf.Logger
 	i18n    *i18n.I18n
@@ -83,6 +84,7 @@ func New(opt Opts) (*Manager, error) {
 	}
 	return &Manager{
 		store:   opt.Store,
+		db:      opt.DB,
 		lo:      opt.Lo,
 		i18n:    opt.I18n,
 		rootURL: opt.RootURL,
@@ -256,7 +258,16 @@ func (m *Manager) GetDraftInlineMedia(uuid string, conversationID int) (models.M
 
 // GetBlob retrieves the raw binary content of a media file by its name.
 func (m *Manager) GetBlob(name string) ([]byte, error) {
-	return m.store.GetBlob(name)
+	prefix := ""
+	if strings.HasPrefix(name, image.ThumbPrefix) {
+		prefix = image.ThumbPrefix
+		name = strings.TrimPrefix(name, image.ThumbPrefix)
+	}
+	storageUUID, err := m.StorageUUID(name)
+	if err != nil {
+		return nil, err
+	}
+	return m.store.GetBlob(prefix + storageUUID)
 }
 
 // GetURL returns the URL for accessing a media file by its name.
@@ -297,6 +308,9 @@ func (m *Manager) GetSignedURL(name string) string {
 
 // GetThumbnailURL returns the URL for an image thumbnail.
 func (m *Manager) GetThumbnailURL(uuid string) string {
+	if record, err := m.Get(0, uuid); err == nil && (record.Model.String == models.ModelMessageTemplates || TemplateSource(record) != "") {
+		return m.GetURL(uuid, record.ContentType, record.Filename)
+	}
 	if url, personal := m.personalURL(image.ThumbPrefix + uuid); personal {
 		return url
 	}
@@ -330,6 +344,22 @@ func (m *Manager) LinkMessageMediaTx(tx *sqlx.Tx, messageID int, media []models.
 	for _, med := range media {
 		ids = append(ids, med.ID)
 	}
+	var protected []models.Media
+	if err := tx.Select(&protected, `SELECT * FROM media WHERE (id=ANY($1::int[]) OR uuid=ANY($2::uuid[])) AND (model_type='message_templates' OR meta ? 'template_source_uuid') FOR UPDATE`, pq.Array(ids), pq.Array(inlineUUIDs)); err != nil {
+		return err
+	}
+	for _, file := range protected {
+		if file.Model.String == models.ModelMessageTemplates {
+			return envelope.NewError(envelope.PermissionError, "Vorlagendateien müssen zuerst übernommen werden.", nil)
+		}
+		var allowed bool
+		if err := tx.Get(&allowed, `SELECT EXISTS(SELECT 1 FROM media_blob_references ref JOIN conversation_messages msg ON msg.id=$2 WHERE ref.media_id=$1 AND ref.user_id=msg.sender_id AND ref.conversation_id=msg.conversation_id)`, file.ID, messageID); err != nil {
+			return err
+		}
+		if !allowed {
+			return envelope.NewError(envelope.PermissionError, "Der Anhang gehört zu einem anderen Entwurf.", nil)
+		}
+	}
 	if _, err := tx.Stmtx(m.queries.LinkMessageMedia).Exec(messageID, pq.Array(ids), pq.Array(inlineUUIDs)); err != nil {
 		m.lo.Error("error linking media to message", "message_id", messageID, "error", err)
 		return fmt.Errorf("linking media to message:%d: %w", messageID, err)
@@ -349,6 +379,11 @@ func (m *Manager) GetByModel(modelID int, model string) ([]models.Media, error) 
 
 // Delete deletes a media file from both the storage backend and the database.
 func (m *Manager) Delete(name string) error {
+	if !strings.HasPrefix(name, image.ThumbPrefix) {
+		if record, err := m.Get(0, name); err == nil && (record.Model.String == models.ModelMessageTemplates || TemplateSource(record) != "") {
+			return m.deleteTemplateMedia(record)
+		}
+	}
 	if err := m.store.Delete(name); err != nil {
 		m.lo.Error("error deleting media from store", "error", err)
 		// If the file does not exist, ignore the error.
@@ -391,6 +426,7 @@ func (m *Manager) DeleteUnlinkedMedia(ctx context.Context) {
 
 // deleteUnlinked runs all unlinked-media sweeps.
 func (m *Manager) deleteUnlinked() {
+	defer m.sweepTemplateMedia()
 	for _, stmt := range []*sqlx.Stmt{m.queries.GetUnlinkedMessageMedia, m.queries.GetUnlinkedHelpArticleMedia} {
 		if err := m.deleteUnlinkedRows(stmt); err != nil {
 			m.lo.Error("error deleting unlinked media", "error", err)

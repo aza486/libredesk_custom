@@ -7,6 +7,8 @@ import (
 	"net/textproto"
 )
 
+const MaxDraftMetadataBytes = 32 * 1024
+
 const (
 	DispositionInline     = "inline"
 	DispositionAttachment = "attachment"

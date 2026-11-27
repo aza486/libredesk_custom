@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/abhinavxd/libredesk/internal/envelope"
+	mmodels "github.com/abhinavxd/libredesk/internal/media/models"
 	uuidutil "github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/microcosm-cc/bluemonday"
@@ -32,23 +33,26 @@ type Access struct {
 	ConversationUUID string
 }
 type Template struct {
-	ID        int       `db:"id" json:"id"`
-	UUID      string    `db:"uuid" json:"uuid"`
-	Name      string    `db:"name" json:"name"`
-	Content   string    `db:"content" json:"content,omitempty"`
-	Scope     string    `db:"scope" json:"scope"`
-	OwnerID   null.Int  `db:"owner_id" json:"owner_id"`
-	CreatedBy null.Int  `db:"created_by" json:"created_by"`
-	UpdatedBy null.Int  `db:"updated_by" json:"updated_by"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
-	Revision  int64     `db:"revision" json:"revision"`
+	ID              int             `db:"id" json:"id"`
+	UUID            string          `db:"uuid" json:"uuid"`
+	Name            string          `db:"name" json:"name"`
+	Content         string          `db:"content" json:"content,omitempty"`
+	Scope           string          `db:"scope" json:"scope"`
+	OwnerID         null.Int        `db:"owner_id" json:"owner_id"`
+	CreatedBy       null.Int        `db:"created_by" json:"created_by"`
+	UpdatedBy       null.Int        `db:"updated_by" json:"updated_by"`
+	CreatedAt       time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time       `db:"updated_at" json:"updated_at"`
+	Revision        int64           `db:"revision" json:"revision"`
+	AttachmentCount int             `db:"attachment_count" json:"attachment_count"`
+	Attachments     []mmodels.Media `db:"-" json:"attachments,omitempty"`
 }
 type Input struct {
-	Name     string `json:"name"`
-	Content  string `json:"content"`
-	Scope    string `json:"scope"`
-	Revision int64  `json:"revision"`
+	Name          string `json:"name"`
+	Content       string `json:"content"`
+	Scope         string `json:"scope"`
+	Revision      int64  `json:"revision"`
+	AttachmentIDs []int  `json:"attachment_ids"`
 }
 type List struct {
 	Templates  []Template `json:"templates"`
@@ -88,8 +92,11 @@ func Validate(in Input) (Input, error) {
 	}
 	text := html.UnescapeString(plain.Sanitize(in.Content))
 	text = strings.TrimFunc(text, func(r rune) bool { return unicode.IsSpace(r) || unicode.Is(unicode.Cf, r) })
+	if text == "" && len(in.AttachmentIDs) == 0 {
+		return in, envelope.NewError(envelope.InputError, "Die Vorlage benötigt Text oder mindestens einen Anhang.", nil)
+	}
 	if text == "" {
-		return in, envelope.NewError(envelope.InputError, "Die Vorlage benötigt einen Textinhalt.", nil)
+		in.Content = ""
 	}
 	return in, nil
 }
@@ -108,7 +115,7 @@ func (m *Manager) List(a Access) (List, error) {
 	if err := m.db.Get(&result.CanSupport, `SELECT `+supportSQL, a.UserID, a.ConversationUUID); err != nil {
 		return result, err
 	}
-	err := m.db.Select(&result.Templates, `SELECT id,uuid,name,scope,owner_id,created_by,updated_by,created_at,updated_at,revision FROM message_templates WHERE `+visibleSQL+` ORDER BY lower(name),id`, a.UserID, a.ConversationUUID)
+	err := m.db.Select(&result.Templates, `SELECT id,uuid,name,scope,owner_id,created_by,updated_by,created_at,updated_at,revision,(SELECT count(*) FROM message_template_attachments ta WHERE ta.template_id=message_templates.id) AS attachment_count FROM message_templates WHERE `+visibleSQL+` ORDER BY lower(name),id`, a.UserID, a.ConversationUUID)
 	return result, err
 }
 func (m *Manager) Get(a Access, uuid string) (Template, error) {
@@ -120,6 +127,10 @@ func (m *Manager) Get(a Access, uuid string) (Template, error) {
 	if err == sql.ErrNoRows {
 		err = notFound()
 	}
+	if err == nil {
+		t.Attachments, err = m.Attachments(a, t)
+		t.AttachmentCount = len(t.Attachments)
+	}
 	return t, err
 }
 func (m *Manager) Create(a Access, in Input) (Template, error) {
@@ -128,30 +139,63 @@ func (m *Manager) Create(a Access, in Input) (Template, error) {
 	if err != nil {
 		return t, err
 	}
-	err = m.db.Get(&t, `INSERT INTO message_templates(name,content,scope,owner_id,created_by,updated_by) SELECT $3,$4,$5,CASE WHEN $5='personal' THEN $1::bigint ELSE NULL END,$1,$1 WHERE `+actorSQL+` AND ($5='personal' OR (`+supportSQL+`)) RETURNING *`, a.UserID, a.ConversationUUID, in.Name, in.Content, in.Scope)
-	if err == sql.ErrNoRows {
-		err = envelope.NewError(envelope.PermissionError, "Keine Berechtigung für diesen Vorlagenbereich.", nil)
-	}
-	return t, err
-}
-func (m *Manager) Update(a Access, uuid string, in Input) (Template, error) {
-	var t Template
-	in, err := Validate(in)
+	tx, err := m.db.Beginx()
 	if err != nil {
 		return t, err
 	}
+	defer tx.Rollback()
+	err = tx.Get(&t, `INSERT INTO message_templates(name,content,scope,owner_id,created_by,updated_by) SELECT $3,$4,$5,CASE WHEN $5='personal' THEN $1::bigint ELSE NULL END,$1,$1 WHERE `+actorSQL+` AND ($5='personal' OR (`+supportSQL+`)) RETURNING *`, a.UserID, a.ConversationUUID, in.Name, in.Content, in.Scope)
+	if err == sql.ErrNoRows {
+		err = envelope.NewError(envelope.PermissionError, "Keine Berechtigung für diesen Vorlagenbereich.", nil)
+	}
+	if err != nil {
+		return t, err
+	}
+	if err = syncAttachments(tx, a, t.ID, in.AttachmentIDs); err != nil {
+		return t, err
+	}
+	if err = tx.Commit(); err != nil {
+		return t, err
+	}
+	return m.Get(a, t.UUID)
+}
+func (m *Manager) Update(a Access, uuid string, in Input) (Template, error) {
+	var t Template
 	old, err := m.Get(a, uuid)
+	if err != nil {
+		return t, err
+	}
+	if in.AttachmentIDs == nil {
+		for _, f := range old.Attachments {
+			in.AttachmentIDs = append(in.AttachmentIDs, f.ID)
+		}
+	}
+	in, err = Validate(in)
 	if err != nil {
 		return t, err
 	}
 	if old.Scope != in.Scope {
 		return t, envelope.NewError(envelope.InputError, "Der Geltungsbereich einer Vorlage kann nicht geändert werden.", nil)
 	}
-	err = m.db.Get(&t, `UPDATE message_templates SET name=$4,content=$5,updated_by=$1,updated_at=clock_timestamp(),revision=revision+1 WHERE uuid=$3::uuid AND revision=$6 AND `+visibleSQL+` RETURNING *`, a.UserID, a.ConversationUUID, uuid, in.Name, in.Content, in.Revision)
+	tx, err := m.db.Beginx()
+	if err != nil {
+		return t, err
+	}
+	defer tx.Rollback()
+	err = tx.Get(&t, `UPDATE message_templates SET name=$4,content=$5,updated_by=$1,updated_at=clock_timestamp(),revision=revision+1 WHERE uuid=$3::uuid AND revision=$6 AND `+visibleSQL+` RETURNING *`, a.UserID, a.ConversationUUID, uuid, in.Name, in.Content, in.Revision)
 	if err == sql.ErrNoRows {
 		err = m.conflict(a, uuid)
 	}
-	return t, err
+	if err != nil {
+		return t, err
+	}
+	if err = syncAttachments(tx, a, t.ID, in.AttachmentIDs); err != nil {
+		return t, err
+	}
+	if err = tx.Commit(); err != nil {
+		return t, err
+	}
+	return m.Get(a, t.UUID)
 }
 func (m *Manager) Delete(a Access, uuid string, revision int64) error {
 	if _, err := uuidutil.Parse(uuid); err != nil {

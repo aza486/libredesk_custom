@@ -181,4 +181,127 @@ describe('Nachrichtenvorlagen im Antworteditor', () => {
     menu().should('not.exist')
     cy.get('.tiptap').should('have.text', 'Bestehender Entwurf')
   })
+  for (const scenario of [
+    { name: 'normal reply', fullscreen: false, mode: 'reply' },
+    { name: 'fullscreen reply', fullscreen: true, mode: 'reply' },
+    { name: 'fullscreen private note', fullscreen: true, mode: 'private_note' }
+  ]) {
+    it(`adopts PDF files in ${scenario.name}, deduplicates them and preserves the draft`, () => {
+      const originals = ['Preisliste.pdf', 'Bestätigung.pdf'].map((filename, i) => ({
+        id: 10 + i,
+        uuid: `source-${i}`,
+        filename,
+        content_type: 'application/pdf',
+        size: 100,
+        url: `/uploads/source-${i}`
+      }))
+      const copies = originals.map((file, i) => ({
+        ...file,
+        id: 20 + i,
+        uuid: `draft-copy-${i}`,
+        url: `/uploads/draft-copy-${i}`
+      }))
+      const item = { ...template, attachment_count: 2, attachments: originals }
+      mount([item])
+      if (scenario.fullscreen) cy.get('[aria-label="Vergrößerter Antworteditor"]').click()
+      if (scenario.mode === 'private_note') cy.contains('[role=tab]', 'Private Notiz').click()
+      cy.intercept('GET', '**/api/v1/message-templates/test-template?*', { data: item })
+      cy.intercept('POST', '**/api/v1/message-templates/test-template/apply?*', (req) => {
+        expect(req.body.draft_type).to.equal(scenario.mode)
+        expect(req.body).not.to.have.property('content')
+        req.reply({ data: { content: item.content, attachments: copies } })
+      }).as('apply')
+      openMenu()
+      cy.wait('@list')
+      cy.get('[aria-label="2 Anhänge"]').should('be.visible')
+      cy.contains('[role=menuitem]', 'Gelangensbestätigung').click()
+      cy.wait('@apply')
+      cy.get('[data-test=attachments]').should('have.text', 'Preisliste.pdf|Bestätigung.pdf')
+      cy.get('.tiptap:visible').should('contain.text', 'Bestehender Entwurf')
+      openMenu()
+      cy.wait('@list')
+      cy.contains('[role=menuitem]', 'Gelangensbestätigung').click()
+      cy.wait('@apply')
+      cy.get('[data-test=attachments]').should('have.text', 'Preisliste.pdf|Bestätigung.pdf')
+      cy.get('[title="Remove attachment"]:visible').first().click()
+      cy.get('[data-test=attachments]').should('have.text', 'Bestätigung.pdf')
+      cy.get('[data-test=signature]').should('have.text', '72')
+      cy.get('[data-test=mode]').should('have.text', scenario.mode)
+    })
+  }
+  it('leaves text and attachments untouched if server adoption fails', () => {
+    const item = {
+      ...template,
+      attachment_count: 1,
+      attachments: [{ id: 10, uuid: 'source', filename: 'Preisliste.pdf' }]
+    }
+    mount([item])
+    cy.intercept('GET', '**/api/v1/message-templates/test-template?*', { data: item })
+    cy.intercept('POST', '**/api/v1/message-templates/test-template/apply?*', {
+      statusCode: 400,
+      body: { message: 'Ein Vorlagenanhang ist nicht verfügbar' }
+    }).as('apply')
+    openMenu()
+    cy.wait('@list')
+    cy.contains('[role=menuitem]', 'Gelangensbestätigung').click()
+    cy.wait('@apply')
+    cy.contains('[role=alert]', 'Ein Vorlagenanhang ist nicht verfügbar').should('be.visible')
+    cy.get('.tiptap').should('have.text', 'Bestehender Entwurf')
+    cy.get('[data-test=attachments]').should('have.text', '')
+  })
+  it('uploads and saves an attachment-only template with progress and conflict recovery', () => {
+    mount()
+    const uploaded = {
+      id: 10,
+      uuid: 'uploaded',
+      filename: 'Bestätigung.pdf',
+      content_type: 'application/pdf',
+      size: 16,
+      url: '/uploads/uploaded'
+    }
+    cy.intercept('POST', '**/api/v1/message-template-attachments?*', {
+      delay: 500,
+      body: { data: uploaded }
+    }).as('upload')
+    cy.intercept('POST', '**/api/v1/message-templates?*', {
+      statusCode: 409,
+      body: { message: 'Zwischenzeitlich geändert' }
+    }).as('save')
+    openMenu()
+    cy.wait('@list')
+    cy.contains('[role=menuitem]', 'Vorlagen bearbeiten').click()
+    cy.contains('button', 'Neue Vorlage').click()
+    cy.get('#message-template-name').type('Nur PDF')
+    cy.get('input[type=file]')
+      .last()
+      .selectFile(
+        {
+          contents: Cypress.Buffer.from('%PDF-test'),
+          fileName: 'Bestätigung.pdf',
+          mimeType: 'application/pdf'
+        },
+        { force: true }
+      )
+    cy.get('progress').should('exist')
+    cy.contains('button', 'Speichern').should('be.disabled')
+    cy.wait('@upload')
+    cy.contains('button', 'Speichern').click()
+    cy.wait('@save')
+    cy.contains('[role=alert]', 'Zwischenzeitlich geändert').should('be.visible')
+    cy.get('[aria-label="Vorlagenanhänge"]').should('contain.text', 'Bestätigung.pdf')
+    cy.intercept('POST', '**/api/v1/message-templates?*', (req) => {
+      expect(req.body.attachment_ids).to.deep.equal([10])
+      req.reply({
+        data: {
+          ...template,
+          name: 'Nur PDF',
+          content: '',
+          attachments: [uploaded],
+          attachment_count: 1
+        }
+      })
+    })
+    cy.contains('button', 'Speichern').click()
+    cy.contains('Vorlage gespeichert.').should('be.visible')
+  })
 })

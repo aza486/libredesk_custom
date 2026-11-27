@@ -106,7 +106,7 @@ WHERE m.uuid = $1
   AND (COALESCE(m.model_id, 0) = 0 OR cm.conversation_id = $2);
 
 -- name: personal-access
-SELECT EXISTS (
+SELECT EXISTS(SELECT 1 FROM media WHERE uuid=$1 AND (model_type='message_templates' OR meta ? 'template_source_uuid')) OR EXISTS (
  SELECT 1 FROM media m
  JOIN conversation_messages msg ON m.model_type='messages' AND msg.id=m.model_id
  JOIN conversations c ON c.id=msg.conversation_id

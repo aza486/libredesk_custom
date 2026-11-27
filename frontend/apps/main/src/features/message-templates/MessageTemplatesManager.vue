@@ -21,6 +21,7 @@ import {
 import api from '@main/api'
 import { useMessageTemplates, templateError } from './useMessageTemplates'
 import MessageTemplateEditor from './MessageTemplateEditor.vue'
+import TemplateAttachments from './TemplateAttachments.vue'
 const props = defineProps({ open: Boolean, conversationUUID: String, identity: String })
 const emit = defineEmits(['update:open', 'changed'])
 const { templates, canSupport, loading, error, accessDenied, load, clear } = useMessageTemplates(
@@ -32,6 +33,9 @@ const search = ref('')
 const selected = ref(null)
 const name = ref('')
 const content = ref('')
+const attachments = ref([])
+const attachmentEditor = ref(null)
+const uploading = ref(false)
 const baseline = ref('')
 const saving = ref(false)
 const fetching = ref(false)
@@ -40,9 +44,10 @@ const confirm = ref(null)
 const formOpen = ref(false)
 let pending = null
 let generation = 0
-const snapshot = () => JSON.stringify([name.value, content.value])
+const snapshot = () =>
+  JSON.stringify([name.value, content.value, attachments.value.map((file) => file.uuid)])
 const dirty = computed(() => formOpen.value && snapshot() !== baseline.value)
-const busy = computed(() => saving.value || fetching.value)
+const busy = computed(() => saving.value || fetching.value || uploading.value)
 const list = computed(() =>
   templates.value
     .filter(
@@ -53,6 +58,8 @@ const list = computed(() =>
     .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }))
 )
 const reset = (item = null, creating = false) => {
+  attachmentEditor.value?.resetUploads()
+  attachments.value = item?.attachments || []
   selected.value = item
   name.value = item?.name || ''
   content.value = item?.content || ''
@@ -108,13 +115,15 @@ const save = async () => {
     name: name.value,
     content: content.value,
     scope: scope.value,
-    revision: selected.value?.revision || 0
+    revision: selected.value?.revision || 0,
+    attachment_ids: attachments.value.map((file) => file.id)
   }
   try {
     const response = selected.value
       ? await api.updateMessageTemplate(selected.value.uuid, input, props.conversationUUID)
       : await api.createMessageTemplate(input, props.conversationUUID)
     if (request !== generation) return
+    attachmentEditor.value?.markSaved(response.data.data.attachments)
     reset(response.data.data)
     message.value = 'Vorlage gespeichert.'
     emit('changed')
@@ -335,6 +344,13 @@ onBeforeUnmount(() => {
               Platzhalter wie [Name] bleiben bearbeitbarer Text.
             </p>
             <MessageTemplateEditor v-model="content" :disabled="busy" class="flex-1 min-h-60" />
+            <TemplateAttachments
+              ref="attachmentEditor"
+              v-model="attachments"
+              :conversationUUID="conversationUUID"
+              :disabled="saving || fetching"
+              @busy="uploading = $event"
+            />
             <div class="flex flex-wrap gap-2 shrink-0">
               <Button type="submit" :disabled="busy || !name.trim()" :is-loading="saving"
                 >Speichern</Button

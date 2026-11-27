@@ -21,6 +21,7 @@ import (
 )
 
 type messageReq struct {
+	RecipientsConfirmed           bool                   `json:"recipients_confirmed"`
 	Purpose                       string                 `json:"purpose"`
 	ReplyToMessageUUID            string                 `json:"reply_to_message_uuid"`
 	AIResponse                    *responseProvenance    `json:"ai_response,omitempty"`
@@ -293,7 +294,7 @@ func handleSendMessage(r *fastglue.Request) error {
 			return sendErrorEnvelope(r, notificationInput("This internal ticket stores messages without email recipients or delivery metadata"))
 		}
 		if !req.Private {
-			media, err := getUnassociatedMedia(app, req.Attachments)
+			media, err := getUnassociatedMedia(app, req.Attachments, user.ID, cuuid)
 			if err != nil {
 				return sendErrorEnvelope(r, err)
 			}
@@ -392,7 +393,7 @@ func handleSendMessage(r *fastglue.Request) error {
 		}
 	}
 	// Get media for all attachments, skip any already associated with a model.
-	media, err := getUnassociatedMedia(app, req.Attachments)
+	media, err := getUnassociatedMedia(app, req.Attachments, user.ID, cuuid)
 	if err != nil {
 		return r.SendErrorEnvelope(fasthttp.StatusInternalServerError, app.i18n.T("globals.messages.somethingWentWrong"), nil, envelope.GeneralError)
 	}
@@ -428,6 +429,13 @@ func handleSendMessage(r *fastglue.Request) error {
 
 	// Queue outgoing reply.
 	meta := map[string]any{}
+	if req.RecipientsConfirmed {
+		if r.RequestCtx.UserValue("auth_method") != authMethodSession {
+			return r.SendErrorEnvelope(403, "Recipient confirmation requires an employee session", nil, envelope.PermissionError)
+		}
+		meta[conversation.RecipientConfirmationKey] = conversation.ConfirmReplyRecipients(user.ID, req.To, req.CC, req.BCC)
+	}
+
 	if automaticAI {
 		meta["automatic_email_ai"] = true
 	}

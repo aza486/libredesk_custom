@@ -270,7 +270,7 @@ internal_http_ip = ""
 # Form replies: dedicated SELECT-only pg-n8n account, independent of Learning.
 # Setup and permissions: FORM_REPLY_RECIPIENTS.md
 # ENV: LIBREDESK_FORM_RECIPIENTS__DATABASE_DSN
-# An empty DSN blocks replies from technical_senders until configured.
+# An empty DSN disables the form suggestion; manual recipient decisions still work.
 [form_recipients]
 database_dsn = ""
 technical_senders = ["bestellung@pixelfotoexpress.de"]
