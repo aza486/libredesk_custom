@@ -85,6 +85,7 @@ var conversationListAllowedFields = dbutil.AllowedFields{
 
 // Manager handles the operations related to conversations
 type Manager struct {
+	formRecipients             *FormRecipients
 	q                          queries
 	inboxStore                 inboxStore
 	userStore                  userStore
@@ -221,6 +222,7 @@ type ContinuityConfig struct {
 
 // Opts holds the options for creating a new Manager.
 type Opts struct {
+	FormRecipients           *FormRecipients
 	AutomatedAIAgentIDs      []int
 	DB                       *sqlx.DB
 	Lo                       *logf.Logger
@@ -275,6 +277,7 @@ func New(
 
 	c := &Manager{
 		q:                          q,
+		formRecipients:             opts.FormRecipients,
 		wsHub:                      wsHub,
 		automatedAIAgentIDs:        opts.AutomatedAIAgentIDs,
 		i18n:                       i18n,

@@ -647,6 +647,10 @@ func handleGetConversation(r *fastglue.Request) error {
 	if err != nil {
 		return sendErrorEnvelope(r, err)
 	}
+	if conv.InboxChannel == "email" {
+		recipient, _ := app.conversation.ResolveReplyRecipient(uuid)
+		conv.ReplyRecipient = &recipient
+	}
 	conv.CanReturnToSupport = allowedReturn
 	return r.SendEnvelope(conv)
 }

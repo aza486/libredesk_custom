@@ -156,3 +156,11 @@ describe('computeRecipientsFromMessage', () => {
         })
     })
 })
+
+test('uses only the server form recipient, or none when blocked', () => {
+    const message = { type: 'incoming', meta: { from: ['bestellung@pixelfotoexpress.de'], cc: ['leak@example.com'], to: ['inbox@example.com'] } }
+    expect(computeRecipientsFromMessage(message, 'bestellung@pixelfotoexpress.de', 'inbox@example.com', '', { managed: true, email: 'kunde@example.com' }))
+        .toEqual({ to: ['kunde@example.com'], cc: [], bcc: [] })
+    expect(computeRecipientsFromMessage(message, 'bestellung@pixelfotoexpress.de', 'inbox@example.com', '', { managed: true, blocked: true }))
+        .toEqual({ to: [], cc: [], bcc: [] })
+})

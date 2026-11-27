@@ -6,7 +6,10 @@ export function stripConvUUID (email) {
     return email.replace(/\+conv-[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[a-f0-9]{4}-[a-f0-9]{12}@/i, '@')
 }
 
-export function computeRecipientsFromMessage (message, contactEmail, inboxEmail, inboxReplyTo = '') {
+export function computeRecipientsFromMessage (message, contactEmail, inboxEmail, inboxReplyTo = '', formRecipient = null) {
+    if (formRecipient?.managed) {
+        return { to: formRecipient.blocked ? [] : [formRecipient.email], cc: [], bcc: [] }
+    }
     const meta = message?.meta || {}
     const isIncoming = message.type === 'incoming'
 

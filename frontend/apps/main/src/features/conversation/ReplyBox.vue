@@ -137,6 +137,9 @@
   </AlertDialog>
 
   <div class="text-foreground bg-background">
+    <p v-if="messageType !== 'private_note' && formRecipient?.managed" role="status" class="px-3 py-2 text-sm" :class="{ 'text-destructive': formRecipient.blocked }">
+      {{ formRecipient.blocked ? 'Formular-Empfänger noch nicht sicher ermittelbar. Versand gesperrt; die Prüfung wird automatisch wiederholt.' : 'Formularantwort an ' + formRecipient.email + '. Weitere Empfänger sind für diese Antwort gesperrt.' }}
+    </p>
     <!-- Fullscreen editor -->
     <Dialog :open="isEditorFullscreen" @update:open="isEditorFullscreen = false">
       <DialogContent
@@ -266,6 +269,7 @@ import { EMITTER_EVENTS } from '@main/constants/emitterEvents.js'
 import { MACRO_CONTEXT } from '@main/constants/conversation'
 import { useUserStore } from '@main/stores/user'
 import { useReplySignature } from '@main/composables/useReplySignature'
+import { useFormRecipient } from '@main/composables/useFormRecipient'
 import { useDraftManager } from '@main/composables/useDraftManager'
 import api from '@main/api'
 import { useI18n } from 'vue-i18n'
@@ -384,6 +388,11 @@ const isGenerating = ref(false)
 const to = ref('')
 const cc = ref('')
 const bcc = ref('')
+const formRecipient = useFormRecipient(
+  computed(() => conversationStore.current), [to, cc, bcc],
+  async (uuid) => (await api.getConversation(uuid)).data.data.reply_recipient
+)
+
 const showBcc = ref(false)
 const emailErrors = ref([])
 
@@ -890,6 +899,10 @@ const processSend = async (
   }
 
   if (!isPrivate && conversationStore.current.inbox_channel === 'email' && !isStoredInternal.value) {
+    if (formRecipient.value?.managed && formRecipient.value.blocked) {
+      emitter.emit(EMITTER_EVENTS.SHOW_TOAST, { variant: 'destructive', description: 'Formular-Empfänger noch nicht sicher ermittelbar. Bitte später erneut versuchen.' })
+      return
+    }
     // Require at least one recipient in `to`.
     if (!to.value.trim()) {
       emitter.emit(EMITTER_EVENTS.SHOW_TOAST, {
@@ -900,7 +913,7 @@ const processSend = async (
     }
 
     // Warn if the contact's email is not in any recipient field.
-    if (!skipContactEmailCheck) {
+    if (!skipContactEmailCheck && !formRecipient.value?.managed) {
       const contactEmail = conversationStore.current.contact?.email?.toLowerCase()
       if (contactEmail) {
         const allRecipients = [to.value, cc.value, bcc.value].join(',').toLowerCase()

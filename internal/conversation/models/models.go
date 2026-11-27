@@ -185,8 +185,15 @@ type ConversationListContact struct {
 	AvatarURL null.String `db:"avatar_url" json:"avatar_url"`
 }
 
+type ReplyRecipient struct {
+	Managed bool   `json:"managed"`
+	Blocked bool   `json:"blocked"`
+	Email   string `json:"email"`
+}
+
 type Conversation struct {
-	CanReturnToSupport bool `json:"can_return_to_support"`
+	ReplyRecipient     *ReplyRecipient `json:"reply_recipient,omitempty" db:"-"`
+	CanReturnToSupport bool            `json:"can_return_to_support"`
 
 	CustomerTicket        bool `json:"customer_ticket"`
 	CustomerRedistributed bool `json:"customer_redistributed"`
