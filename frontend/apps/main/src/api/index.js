@@ -93,6 +93,13 @@ const deleteTag = (id) => http.delete(`/api/v1/tags/${id}`)
 const getTemplate = (id) => http.get(`/api/v1/templates/${id}`)
 const getTemplates = (type) => http.get('/api/v1/templates', { params: { type: type } })
 const getInboxSignatures = () => http.get('/api/v1/inboxes/email-signatures')
+const messageTemplateParams = (conversationUUID) => ({ conversation_uuid: conversationUUID || undefined })
+const listMessageTemplates = (conversationUUID) => http.get('/api/v1/message-templates', { params: messageTemplateParams(conversationUUID) })
+const getMessageTemplate = (uuid, conversationUUID) => http.get(`/api/v1/message-templates/${uuid}`, { params: messageTemplateParams(conversationUUID) })
+const createMessageTemplate = (data, conversationUUID) => http.post('/api/v1/message-templates', data, { params: messageTemplateParams(conversationUUID) })
+const updateMessageTemplate = (uuid, data, conversationUUID) => http.put(`/api/v1/message-templates/${uuid}`, data, { params: messageTemplateParams(conversationUUID) })
+const deleteMessageTemplate = (uuid, revision, conversationUUID) => http.delete(`/api/v1/message-templates/${uuid}`, { params: { ...messageTemplateParams(conversationUUID), revision } })
+
 const getOutgoingTemplates = () => http.get('/api/v1/templates/outgoing')
 const createTemplate = (data) =>
   http.post('/api/v1/templates', data, {
@@ -725,6 +732,7 @@ const reorderSidebarFolders = (scope, id, ids) => http.put(`${folderBase(scope, 
 const getSidebarFolderConversations = (scope, id, folderID, params) => http.get(`${folderBase(scope, id)}/${folderID}/conversations`, { params })
 
 export default {
+ listMessageTemplates, getMessageTemplate, createMessageTemplate, updateMessageTemplate, deleteMessageTemplate,
  getSidebarFolders, getSidebarFolderCounts, createSidebarFolder, updateSidebarFolder, deleteSidebarFolder, reorderSidebarFolders, getSidebarFolderConversations,
   login,
   deleteUser,

@@ -163,6 +163,7 @@ func checkMigrationFootprints(db *sqlx.DB, last string) error {
 		{"v2.16.0", "manual_review_annotations", ""},
 		{"v2.18.0", "sidebar_folders", ""},
 		{"v2.22.0", "users", "work_phone_number"},
+		{"v2.25.0", "message_templates", ""},
 	} {
 		if migrationIndex(last) >= migrationIndex(f.version) {
 			continue

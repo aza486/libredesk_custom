@@ -57,7 +57,8 @@ const (
 	PermContextLinksManage = "context_links:manage"
 
 	// Templates
-	PermTemplatesManage = "templates:manage"
+	PermTemplatesManage         = "templates:manage"
+	PermMessageTemplatesSupport = "message_templates:customer_support"
 
 	// Reports
 	PermReportsManage = "reports:manage"
@@ -136,6 +137,7 @@ var validPermissions = map[string]struct{}{
 	PermInboxesManage:                   {},
 	PermRolesManage:                     {},
 	PermTemplatesManage:                 {},
+	PermMessageTemplatesSupport:         {},
 	PermReportsManage:                   {},
 	PermBusinessHoursManage:             {},
 	PermSLAManage:                       {},

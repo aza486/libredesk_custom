@@ -10,24 +10,35 @@
         class="flex shrink-0 justify-between items-center"
         :class="{ 'mb-4': !isFullscreen, 'border-b border-border pb-4': isFullscreen }"
       >
-        <Tabs v-model="messageType" class="rounded-md border">
-          <TabsList class="bg-muted p-1 rounded-md" :class="{ 'h-auto': isFullscreen }">
-            <TabsTrigger
-              value="reply"
-              class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
-              :class="{ 'bg-background text-foreground': messageType === 'reply' }"
-            >
-              {{ isStoredInternal ? t('conversation.internalMessage') : t('globals.terms.reply') }}
-            </TabsTrigger>
-            <TabsTrigger
-              value="private_note"
-              class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
-              :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
-            >
-              {{ $t('globals.terms.privateNote') }}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div class="flex items-center min-w-0 flex-wrap gap-y-1">
+          <Tabs v-model="messageType" class="rounded-md border">
+            <TabsList class="bg-muted p-1 rounded-md" :class="{ 'h-auto': isFullscreen }">
+              <TabsTrigger
+                value="reply"
+                class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
+                :class="{ 'bg-background text-foreground': messageType === 'reply' }"
+              >
+                {{
+                  isStoredInternal ? t('conversation.internalMessage') : t('globals.terms.reply')
+                }}
+              </TabsTrigger>
+              <TabsTrigger
+                value="private_note"
+                class="px-3 py-1 max-md:py-2.5 rounded-md transition-colors duration-200"
+                :class="{ 'bg-background text-foreground': messageType === 'private_note' }"
+              >
+                {{ $t('globals.terms.privateNote') }}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <MessageTemplatesMenu
+            :conversationUUID="conversationStore.current?.uuid"
+            :is-fullscreen="isFullscreen"
+            :disabled="isDraftLoading || isSending"
+            @capture-selection="editorRef?.captureTemplateSelection()"
+            @insert="editorRef?.insertTemplate($event)"
+          />
+        </div>
         <Button
           v-if="!hideFullscreenToggle"
           :aria-label="isFullscreen ? t('replyBox.restoreEditor') : t('replyBox.expandedEditor')"
@@ -133,7 +144,6 @@
         class="mt-2"
         :class="{ 'shrink-0 max-h-24 overflow-auto': isFullscreen }"
       />
-
     </div>
 
     <!-- Editor menu bar with send button -->
@@ -173,6 +183,7 @@ import { useEmitter } from '@main/composables/useEmitter'
 import ReplyBoxAttachmentPreview from '@/features/conversation/message/attachment/ReplyBoxAttachmentPreview.vue'
 import MacroActionsPreview from '@/features/conversation/MacroActionsPreview.vue'
 import ReplyBoxMenuBar from '@/features/conversation/ReplyBoxMenuBar.vue'
+import MessageTemplatesMenu from '@/features/message-templates/MessageTemplatesMenu.vue'
 import { useI18n } from 'vue-i18n'
 import { validateEmail } from '@shared-ui/utils/string'
 import { useMacroStore } from '@main/stores/macro'

@@ -173,6 +173,7 @@ const permissions = ref([
       { name: perms.INBOXES_MANAGE, label: t('admin.role.inboxes.manage') },
       { name: perms.ROLES_MANAGE, label: t('admin.role.roles.manage') },
       { name: perms.TEMPLATES_MANAGE, label: t('admin.role.templates.manage') },
+      { name: perms.MESSAGE_TEMPLATES_SUPPORT, label: 'Gemeinsame Kundensupport-Vorlagen verwenden und verwalten' },
       { name: perms.REPORTS_MANAGE, label: t('admin.role.reports.manage') },
       { name: perms.BUSINESS_HOURS_MANAGE, label: t('admin.role.businessHours.manage') },
       { name: perms.SLA_MANAGE, label: t('admin.role.sla.manage') },

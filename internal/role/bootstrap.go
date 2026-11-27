@@ -64,7 +64,7 @@ func EnsureCustomerSupportRole(ctx context.Context, db *sqlx.DB) error {
 		return err
 	}
 	if count == 0 {
-		if _, err = tx.ExecContext(ctx, `INSERT INTO roles(name,description,permissions) VALUES($1,$2,$3)`, models.RoleCustomerSupport, "Technical customer visibility and service-address management role", pq.Array(customerSupportPermissions())); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO roles(name,description,permissions) VALUES($1,$2,$3)`, models.RoleCustomerSupport, "Technical customer visibility and service-address management role", pq.Array(append(customerSupportPermissions(), authzmodels.PermMessageTemplatesSupport))); err != nil {
 			return fmt.Errorf("creating customer support role: %w", err)
 		}
 	}

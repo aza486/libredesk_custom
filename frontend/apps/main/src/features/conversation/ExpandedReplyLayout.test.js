@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   send: null,
   sendStatus: null
 }))
+vi.mock('@main/stores/user', () => ({ useUserStore: () => ({ userID: 101, roles: [], permissions: ['messages:write'] }) }))
 vi.mock('@main/stores/conversation', () => ({ useConversationStore: () => state.store }))
 vi.mock('@main/stores/macro', () => ({ useMacroStore: () => ({ setCurrentView: () => {} }) }))
 vi.mock('@main/stores/users', () => ({ useUsersStore: () => ({ users: [] }) }))

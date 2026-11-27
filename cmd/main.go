@@ -47,6 +47,7 @@ import (
 	"github.com/abhinavxd/libredesk/internal/importer"
 	"github.com/abhinavxd/libredesk/internal/inbox"
 	"github.com/abhinavxd/libredesk/internal/media"
+	"github.com/abhinavxd/libredesk/internal/messagetemplate"
 	"github.com/abhinavxd/libredesk/internal/oidc"
 	"github.com/abhinavxd/libredesk/internal/ratelimit"
 	"github.com/abhinavxd/libredesk/internal/role"
@@ -120,6 +121,7 @@ type App struct {
 	tag              *tag.Manager
 	inbox            *inbox.Manager
 	tmpl             *template.Manager
+	messageTemplates *messagetemplate.Manager
 	macro            *macro.Manager
 	conversation     *conversation.Manager
 	automation       *automation.Engine
@@ -360,6 +362,7 @@ func main() {
 		status:           status,
 		priority:         priority,
 		tmpl:             template,
+		messageTemplates: messagetemplate.New(db),
 		notifier:         notifier,
 		consts:           atomic.Value{},
 		conversation:     conversation,

@@ -32,6 +32,7 @@ import EditorToolbar from './EditorToolbar.vue'
 import EditorLinkDialog from './EditorLinkDialog.vue'
 import { buildConversationExtensions } from './editorExtensions'
 import { useTextEditor } from './useTextEditor'
+import { captureTemplatePosition, insertMessageTemplate } from './insertMessageTemplate'
 
 const textContent = defineModel('textContent', { default: '' })
 const htmlContent = defineModel('htmlContent', { default: '' })
@@ -102,7 +103,17 @@ watch(
   (disabled) => editor.value?.setEditable(!disabled, false)
 )
 
-defineExpose({ focus, extractMentions })
+let templatePosition = null
+const captureTemplateSelection = () => {
+  templatePosition = captureTemplatePosition(editor.value)
+}
+const insertTemplate = (content) => {
+  if (props.disabled) return false
+  const result = insertMessageTemplate(editor.value, content, templatePosition)
+  templatePosition = null
+  return result
+}
+defineExpose({ focus, extractMentions, captureTemplateSelection, insertTemplate })
 </script>
 
 <style lang="scss" src="./editorStyles.scss"></style>

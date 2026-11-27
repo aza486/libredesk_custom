@@ -68,7 +68,7 @@ func checkRuntimeSchema(ctx context.Context, db *sqlx.DB) error {
  embeddings help_centers article_collections help_articles help_article_feedback help_search_queries ai_tools
  ai_assistants ai_assistant_tools ai_agent_events copilot_messages ai_faq_suggestions custom_attribute_definitions contact_notes
  activity_logs webhooks context_links user_notifications conversation_mail_versions manual_resolution_feedback manual_review_annotations
- sidebar_folders`)
+ sidebar_folders message_templates`)
 	if err := checkTables(ctx, db, tables); err != nil {
 		return err
 	}
@@ -76,6 +76,7 @@ func checkRuntimeSchema(ctx context.Context, db *sqlx.DB) error {
  inboxes.access_mode inboxes.owner_user_id inboxes.default_signature_id inboxes.linked_email_inbox_id
  conversations.contact_id conversations.custom_attributes conversations.last_continuity_email_sent_at
  conversation_statuses.category conversation_messages.meta conversation_messages.status
+ message_templates.uuid message_templates.owner_id message_templates.scope message_templates.revision
  sidebar_folders.scope_type sidebar_folders.scope_id sidebar_folders.filters
  manual_resolution_feedback.feedback_reason manual_resolution_feedback.committed_at
  manual_review_annotations.feedback_reason conversation_mail_versions.version conversation_mail_versions.resolved_version`)
@@ -97,7 +98,7 @@ func checkRuntimeSchema(ctx context.Context, db *sqlx.DB) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("incomplete runtime schema: missing/disabled triggers: %s", strings.Join(missing, ", "))
 	}
-	constraints := strings.Fields(`users.users_pkey roles.roles_pkey settings.settings_key_key user_roles.user_roles_user_id_fkey user_roles.user_roles_role_id_fkey conversations.conversations_inbox_id_fkey conversation_messages.conversation_messages_conversation_id_fkey conversations.conversations_contact_required inboxes.inboxes_access_owner_check sidebar_folders.sidebar_folders_scope_type_check sidebar_folders.sidebar_folders_scope_id_check`)
+	constraints := strings.Fields(`message_templates.message_templates_owner_check users.users_pkey roles.roles_pkey settings.settings_key_key user_roles.user_roles_user_id_fkey user_roles.user_roles_role_id_fkey conversations.conversations_inbox_id_fkey conversation_messages.conversation_messages_conversation_id_fkey conversations.conversations_contact_required inboxes.inboxes_access_owner_check sidebar_folders.sidebar_folders_scope_type_check sidebar_folders.sidebar_folders_scope_id_check`)
 	if err := db.SelectContext(ctx, &missing, `SELECT k FROM unnest($1::text[]) k WHERE NOT EXISTS(SELECT 1 FROM pg_constraint ct JOIN pg_class c ON c.oid=ct.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=current_schema() AND c.relname=split_part(k,'.',1) AND ct.conname=split_part(k,'.',2) AND ct.convalidated) ORDER BY k`, pq.Array(constraints)); err != nil {
 		return err
 	}

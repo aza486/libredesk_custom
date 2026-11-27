@@ -29,6 +29,7 @@ export const permissions = {
   AUTOMATIONS_MANAGE: 'automations:manage',
   INBOXES_MANAGE: 'inboxes:manage',
   ROLES_MANAGE: 'roles:manage',
+  MESSAGE_TEMPLATES_SUPPORT: 'message_templates:customer_support',
   TEMPLATES_MANAGE: 'templates:manage',
   REPORTS_MANAGE: 'reports:manage',
   BUSINESS_HOURS_MANAGE: 'business_hours:manage',

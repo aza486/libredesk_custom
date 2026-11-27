@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	authzmodels "github.com/abhinavxd/libredesk/internal/authz/models"
 	"github.com/abhinavxd/libredesk/internal/role/models"
 	"github.com/abhinavxd/libredesk/internal/testutil"
 	"github.com/jmoiron/sqlx"
@@ -68,7 +69,7 @@ func TestCustomerSupportBootstrap(t *testing.T) {
 				if err := db.Get(&perms, `SELECT permissions FROM roles WHERE name=$1`, models.RoleCustomerSupport); err != nil {
 					t.Fatal(err)
 				}
-				if strings.Join(perms, ",") != strings.Join(customerSupportPermissions(), ",") {
+				if strings.Join(perms, ",") != strings.Join(append(customerSupportPermissions(), authzmodels.PermMessageTemplatesSupport), ",") {
 					t.Fatal(perms)
 				}
 			}
